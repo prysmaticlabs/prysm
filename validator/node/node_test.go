@@ -242,11 +242,15 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
+							},
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
+						},
 					},
 				}
 			},
@@ -270,14 +274,18 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
 								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 							},
 						},
 						bytesutil.ToBytes48(key2): {
-							FeeRecipient: common.HexToAddress("0x60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4"),
+							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
 								GasLimit: validatorserviceconfig.Uint64(35000000),
@@ -285,7 +293,9 @@ func TestProposerSettings(t *testing.T) {
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: validatorserviceconfig.Uint64(40000000),
@@ -310,11 +320,15 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 					},
 				}
 			},
@@ -335,7 +349,9 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
 								GasLimit: 40000000,
@@ -343,7 +359,9 @@ func TestProposerSettings(t *testing.T) {
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
 							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
@@ -366,7 +384,9 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 					},
 				}
 			},
@@ -385,7 +405,9 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
@@ -410,7 +432,9 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: 50000000,
@@ -436,11 +460,15 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 					},
 				}
 			},
@@ -461,7 +489,9 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
 								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
@@ -469,7 +499,9 @@ func TestProposerSettings(t *testing.T) {
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
@@ -495,7 +527,9 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
 								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
@@ -503,7 +537,9 @@ func TestProposerSettings(t *testing.T) {
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
@@ -528,7 +564,9 @@ func TestProposerSettings(t *testing.T) {
 				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
 								GasLimit: validatorserviceconfig.Uint64(40000000),
@@ -536,7 +574,9 @@ func TestProposerSettings(t *testing.T) {
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
 							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
