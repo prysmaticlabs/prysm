@@ -193,8 +193,3 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	return params.SetActive(c)
 }
 
-func configureFastSSZHashingAlgorithm() {
-	if features.Get().EnableVectorizedHTR {
-		fastssz.EnableVectorizedHTR = true
-	}
-}

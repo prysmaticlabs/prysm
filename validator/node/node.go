@@ -124,8 +124,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 
-	configureFastSSZHashingAlgorithm()
-
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
@@ -880,10 +878,4 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 	}
 
 	return nil
-}
-
-func configureFastSSZHashingAlgorithm() {
-	if features.Get().EnableVectorizedHTR {
-		fastssz.EnableVectorizedHTR = true
-	}
 }

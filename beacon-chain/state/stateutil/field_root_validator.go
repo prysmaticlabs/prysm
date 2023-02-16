@@ -36,17 +36,10 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 
 	var err error
 	var roots [][32]byte
-	if features.Get().EnableVectorizedHTR {
-		roots, err = optimizedValidatorRoots(validators)
-		if err != nil {
-			return [32]byte{}, err
-		}
-	} else {
-		roots, err = validatorRoots(hasher, validators)
-		if err != nil {
-			return [32]byte{}, err
-		}
-	}
+    roots, err = optimizedValidatorRoots(validators)
+    if err != nil {
+        return [32]byte{}, err
+    }
 
 	validatorsRootsRoot, err := ssz.BitwiseMerkleize(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
 	if err != nil {
@@ -62,18 +55,6 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	res := ssz.MixInLength(validatorsRootsRoot, validatorsRootsBufRoot[:])
 
 	return res, nil
-}
-
-func validatorRoots(hasher func([]byte) [32]byte, validators []*ethpb.Validator) ([][32]byte, error) {
-	roots := make([][32]byte, len(validators))
-	for i := 0; i < len(validators); i++ {
-		val, err := validatorRoot(hasher, validators[i])
-		if err != nil {
-			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
-		}
-		roots[i] = val
-	}
-	return roots, nil
 }
 
 func optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {

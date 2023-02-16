@@ -993,6 +993,8 @@ github.com/prysmaticlabs/fastssz v0.0.0-20220628121656-93dfe28febab h1:Y3PcvUrnn
 github.com/prysmaticlabs/fastssz v0.0.0-20220628121656-93dfe28febab/go.mod h1:MA5zShstUwCQaE9faGHgCGvEWUbG87p4SAXINhmCkvg=
 github.com/prysmaticlabs/fastssz v0.0.0-20230215205823-6741487670ed h1:JVxN5Ca7ds0ZqvEBfoMsXOBWS+GA7uPkhPZiaLXSep8=
 github.com/prysmaticlabs/fastssz v0.0.0-20230215205823-6741487670ed/go.mod h1:MA5zShstUwCQaE9faGHgCGvEWUbG87p4SAXINhmCkvg=
+github.com/prysmaticlabs/fastssz v0.0.0-20230216165902-cac1483628fe h1:ygSxa+M1uZZ01Rd+AjHFQmjeuoohcfgmy5mVOxmpBJ0=
+github.com/prysmaticlabs/fastssz v0.0.0-20230216165902-cac1483628fe/go.mod h1:MA5zShstUwCQaE9faGHgCGvEWUbG87p4SAXINhmCkvg=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210108222456-8e92c3709aa0/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7 h1:0tVE4tdWQK9ZpYygoV7+vS6QkDvQVySboMVEIxBJmXw=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7/go.mod h1:wmuf/mdK4VMD+jA9ThwcUKjg3a2XWM9cVfFYjDyY4j4=

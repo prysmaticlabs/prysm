@@ -67,39 +67,19 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	for i := uint8(0); i < depth; i++ {
 		layerLen := len(layers[i])
 		oddNodeLength := layerLen%2 == 1
-		if features.Get().EnableVectorizedHTR {
-			if oddNodeLength {
-				zerohash := trie.ZeroHashes[i]
-				elements = append(elements, zerohash)
-				layerLen++
-			}
+        if oddNodeLength {
+            zerohash := trie.ZeroHashes[i]
+            elements = append(elements, zerohash)
+            layerLen++
+        }
 
-			layers[i+1] = make([]*[32]byte, layerLen/2)
-			newElems := make([][32]byte, layerLen/2)
-			htr.VectorizedSha256(elements, newElems)
-			elements = newElems
-			for j := range elements {
-				layers[i+1][j] = &elements[j]
-			}
-		} else {
-			if oddNodeLength {
-				zerohash := trie.ZeroHashes[i]
-				layers[i] = append(layers[i], &zerohash)
-			}
-			updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
-			for j := 0; j < len(layers[i]); j += 2 {
-				buffer.Write(layers[i][j][:])
-				buffer.Write(layers[i][j+1][:])
-				concat := hasher(buffer.Bytes())
-				updatedValues = append(updatedValues, &concat)
-				buffer.Reset()
-			}
-			// remove zerohash node from tree
-			if oddNodeLength {
-				layers[i] = layers[i][:len(layers[i])-1]
-			}
-			layers[i+1] = updatedValues
-		}
+        layers[i+1] = make([]*[32]byte, layerLen/2)
+        newElems := make([][32]byte, layerLen/2)
+        htr.VectorizedSha256(elements, newElems)
+        elements = newElems
+        for j := range elements {
+            layers[i+1][j] = &elements[j]
+        }
 	}
 	return layers
 }
@@ -319,21 +299,9 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 		if !math.IsPowerOf2(uint64(len(hashLayer))) {
 			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
 		}
-		if features.Get().EnableVectorizedHTR {
-			newLayer := make([][32]byte, len(hashLayer)/2)
-			htr.VectorizedSha256(hashLayer, newLayer)
-			hashLayer = newLayer
-		} else {
-			layer := make([][32]byte, len(hashLayer)/2)
-			for j := 0; j < len(hashLayer); j += 2 {
-				chunkBuffer.Write(hashLayer[j][:])
-				chunkBuffer.Write(hashLayer[j+1][:])
-				hashedChunk := hasher(chunkBuffer.Bytes())
-				layer[j/2] = hashedChunk
-				chunkBuffer.Reset()
-			}
-			hashLayer = layer
-		}
+        newLayer := make([][32]byte, len(hashLayer)/2)
+        htr.VectorizedSha256(hashLayer, newLayer)
+        hashLayer = newLayer
 		layers[i] = hashLayer
 		i++
 	}
