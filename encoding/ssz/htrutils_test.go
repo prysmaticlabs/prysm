@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -190,8 +189,7 @@ func TestWithdrawalRoot(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hasher := hash.CustomSHA256Hasher()
-			got, err := ssz.WithdrawalRoot(hasher, tt.input)
+			got, err := ssz.WithdrawalRoot(tt.input)
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, tt.want, got)
 		})
