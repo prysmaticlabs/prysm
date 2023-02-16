@@ -15,6 +15,7 @@ go_library(
         "payload.go",
         "proposer_slashing.go",
         "randao.go",
+        "rewards.go",
         "signature.go",
         "withdrawals.go",
     ],
