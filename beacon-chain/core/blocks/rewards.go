@@ -13,7 +13,7 @@ type validatorInfo struct {
 	isSlashed           bool
 }
 
-func AttestationRewards(st state.ReadOnlyBeaconState, b interfaces.BeaconBlockBody) (uint64, error) {
+func AttestationRewards(st state.ReadOnlyBeaconState, b interfaces.ReadOnlyBeaconBlockBody) (uint64, error) {
 	currEpochActiveBalance := uint64(0)
 	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		currEpochActiveBalance += val.EffectiveBalance()
