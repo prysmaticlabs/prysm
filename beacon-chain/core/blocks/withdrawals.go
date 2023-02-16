@@ -144,19 +144,7 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 		return nil, fmt.Errorf("expected withdrawals root %#x, got %#x", expectedRoot, wdRoot)
 	}
 
-	for i, withdrawal := range expectedWithdrawals {
-		if withdrawal.Index != expectedWithdrawals[i].Index {
-			return nil, errInvalidWithdrawalIndex
-		}
-		if withdrawal.ValidatorIndex != expectedWithdrawals[i].ValidatorIndex {
-			return nil, errInvalidValidatorIndex
-		}
-		if !bytes.Equal(withdrawal.Address, expectedWithdrawals[i].Address) {
-			return nil, errInvalidExecutionAddress
-		}
-		if withdrawal.Amount != expectedWithdrawals[i].Amount {
-			return nil, errInvalidWithdrawalAmount
-		}
+	for _, withdrawal := range expectedWithdrawals {
 		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not decrease balance")
