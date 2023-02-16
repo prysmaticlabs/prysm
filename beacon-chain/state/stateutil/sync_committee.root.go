@@ -1,7 +1,6 @@
 package stateutil
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"

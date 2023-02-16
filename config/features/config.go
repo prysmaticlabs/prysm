@@ -20,13 +20,9 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
-	"github.com/prysmaticlabs/gohashtree"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/sirupsen/logrus"
