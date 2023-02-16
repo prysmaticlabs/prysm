@@ -19,7 +19,7 @@ func String(version int) string {
 	case Capella:
 		return "capella"
 	case Deneb:
-		return "deneb"
+		return "eip4844"
 	default:
 		return "unknown version"
 	}
