@@ -85,7 +85,7 @@ func TestStore_NewSlot(t *testing.T) {
 		require.NoError(t, f.InsertNode(ctx, state, blkRoot)) // bad
 
 		require.NoError(t, f.UpdateFinalizedCheckpoint(test.args.finalized))
-		require.NoError(t, f.UpdateJustifiedCheckpoint(test.args.justified))
+		require.NoError(t, f.UpdateJustifiedCheckpoint(ctx, test.args.justified))
 		f.store.bestJustifiedCheckpoint = test.args.bestJustified
 
 		require.NoError(t, f.NewSlot(ctx, test.args.slot))

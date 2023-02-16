@@ -15,9 +15,15 @@ import (
 
 // applyProposerBoostScore applies the current proposer boost scores to the
 // relevant nodes. This function requires a lock in Store.nodesLock.
-func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
+func (f *ForkChoice) applyProposerBoostScore() error {
+	s := f.store
 	s.proposerBoostLock.Lock()
 	defer s.proposerBoostLock.Unlock()
+
+	// acquire checkpoints lock for the justified balances
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
+	newBalances := f.justifiedBalances
 
 	proposerScore := uint64(0)
 	var err error
