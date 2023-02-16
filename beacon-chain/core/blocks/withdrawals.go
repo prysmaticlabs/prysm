@@ -115,7 +115,7 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 func ProcessWithdrawals(st state.BeaconState, executionData interfaces.ExecutionData) (state.BeaconState, error) {
 	expectedWithdrawals, err := st.ExpectedWithdrawals()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get expectedWithdrawals withdrawals")
+		return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
 
 	var wdRoot [32]byte
