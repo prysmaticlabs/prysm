@@ -223,14 +223,6 @@ func (BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) IsNil() bool {
-	return false
-}
-
-func (BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) {
-	panic("implement me")
-}
-
 func (BeaconBlockBody) Deposits() []*eth.Deposit {
 	panic("implement me")
 }
@@ -308,6 +300,15 @@ func (b *BeaconBlockBody) SetExecution(interfaces.ExecutionData) error {
 }
 
 func (b *BeaconBlockBody) SetBLSToExecutionChanges([]*eth.SignedBLSToExecutionChange) error {
+	panic("implement me")
+}
+
+// BlobKzgCommitments returns the blob kzg commitments in the block.
+func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) Attestations() []*eth.Attestation {
 	panic("implement me")
 }
 
