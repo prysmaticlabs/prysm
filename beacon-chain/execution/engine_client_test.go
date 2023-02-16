@@ -125,7 +125,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
 		require.Equal(t, true, ok)
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, big.NewInt(0))
 		require.NoError(t, err)
 		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload)
 		require.NoError(t, err)
@@ -415,7 +415,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.NoError(t, err)
@@ -443,7 +443,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -471,7 +471,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -499,7 +499,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -743,7 +743,7 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 	t.Run("nil block", func(t *testing.T) {
 		service := &Service{}
 
-		_, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{nil})
+		_, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{nil})
 		require.ErrorContains(t, "nil data", err)
 	})
 	t.Run("only blinded block", func(t *testing.T) {
@@ -752,7 +752,7 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		bellatrixBlock := util.NewBeaconBlockBellatrix()
 		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
 		require.NoError(t, err)
-		_, err = service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrapped})
+		_, err = service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{wrapped})
 		require.ErrorContains(t, want, err)
 	})
 	t.Run("pre-merge execution payload", func(t *testing.T) {
@@ -767,7 +767,7 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		require.NoError(t, err)
 		wantedWrapped, err := blocks.NewSignedBeaconBlock(wanted)
 		require.NoError(t, err)
-		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrapped})
+		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{wrapped})
 		require.NoError(t, err)
 		require.DeepEqual(t, []interfaces.SignedBeaconBlock{wantedWrapped}, reconstructed)
 	})
@@ -864,7 +864,7 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		copiedWrapped, err := wrapped.Copy()
 		require.NoError(t, err)
 
-		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrappedEmpty, wrapped, copiedWrapped})
+		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{wrappedEmpty, wrapped, copiedWrapped})
 		require.NoError(t, err)
 
 		// Make sure empty blocks are handled correctly

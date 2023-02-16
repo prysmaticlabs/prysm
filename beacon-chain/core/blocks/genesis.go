@@ -39,7 +39,7 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 
 var ErrUnrecognizedState = errors.New("unknown underlying type for state.BeaconState value")
 
-func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfaces.SignedBeaconBlock, error) {
+func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	root, err := st.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,8 @@
 package blocks
 
 import (
+	"math/big"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -847,7 +849,7 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload)
+	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err
@@ -875,7 +877,7 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader)
+	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err

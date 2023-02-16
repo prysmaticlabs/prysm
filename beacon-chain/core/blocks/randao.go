@@ -18,7 +18,7 @@ import (
 //
 // Spec pseudocode definition:
 //
-//	def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
+//	def process_randao(state: BeaconState, body: ReadOnlyBeaconBlockBody) -> None:
 //	 epoch = get_current_epoch(state)
 //	 # Verify RANDAO reveal
 //	 proposer = state.validators[get_beacon_proposer_index(state)]
@@ -30,7 +30,7 @@ import (
 func ProcessRandao(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b interfaces.SignedBeaconBlock,
+	b interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err

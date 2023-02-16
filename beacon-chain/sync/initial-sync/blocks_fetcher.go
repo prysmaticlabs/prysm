@@ -108,7 +108,7 @@ type fetchRequestResponse struct {
 	pid    peer.ID
 	start  primitives.Slot
 	count  uint64
-	blocks []interfaces.SignedBeaconBlock
+	blocks []interfaces.ReadOnlySignedBeaconBlock
 	blobs  []*p2ppb.BlobsSidecar
 	err    error
 }
@@ -250,7 +250,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 	response := &fetchRequestResponse{
 		start:  start,
 		count:  count,
-		blocks: []interfaces.SignedBeaconBlock{},
+		blocks: []interfaces.ReadOnlySignedBeaconBlock{},
 		blobs:  []*p2ppb.BlobsSidecar{},
 		err:    nil,
 	}
@@ -298,7 +298,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
 	start primitives.Slot, count uint64,
 	peers []peer.ID,
-) ([]interfaces.SignedBeaconBlock, peer.ID, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
@@ -351,7 +351,7 @@ func (f *blocksFetcher) requestBlocks(
 	ctx context.Context,
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -405,7 +405,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	ctx context.Context,
 	req *p2pTypes.BeaconBlockByRootsReq,
 	pid peer.ID,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -488,6 +488,12 @@ func timeToWait(wanted, rem, capacity int64, timeTillEmpty time.Duration) time.D
 	// Defensive check if we have more than enough blocks
 	// to request from the peer.
 	if rem >= wanted {
+		return 0
+	}
+	// Handle edge case where capacity is equal to the remaining amount
+	// of blocks. This also handles the impossible case in where remaining blocks
+	// exceed the limiter's capacity.
+	if capacity <= rem {
 		return 0
 	}
 	blocksNeeded := wanted - rem

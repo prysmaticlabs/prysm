@@ -47,7 +47,7 @@ type stateMachine struct {
 	start   primitives.Slot
 	state   stateID
 	pid     peer.ID
-	blocks  []interfaces.SignedBeaconBlock
+	blocks  []interfaces.ReadOnlySignedBeaconBlock
 	blobs   []*eth.BlobsSidecar
 	updated time.Time
 }
@@ -80,7 +80,7 @@ func (smm *stateMachineManager) addStateMachine(startSlot primitives.Slot) *stat
 		smm:     smm,
 		start:   startSlot,
 		state:   stateNew,
-		blocks:  []interfaces.SignedBeaconBlock{},
+		blocks:  []interfaces.ReadOnlySignedBeaconBlock{},
 		blobs:   []*eth.BlobsSidecar{},
 		updated: prysmTime.Now(),
 	}

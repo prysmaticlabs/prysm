@@ -240,7 +240,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 			}),
 	}
 
-	var blocks []interfaces.SignedBeaconBlock
+	var blocks []interfaces.ReadOnlySignedBeaconBlock
 	for _, b := range unwrappedBlocks {
 		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)

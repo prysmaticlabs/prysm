@@ -38,6 +38,7 @@ type FeeRecipientsRequestJSON struct {
 type StateRootResponseJson struct {
 	Data                *StateRootResponse_StateRootJson `json:"data"`
 	ExecutionOptimistic bool                             `json:"execution_optimistic"`
+	Finalized           bool                             `json:"finalized"`
 }
 
 type StateRootResponse_StateRootJson struct {
@@ -47,11 +48,13 @@ type StateRootResponse_StateRootJson struct {
 type StateForkResponseJson struct {
 	Data                *ForkJson `json:"data"`
 	ExecutionOptimistic bool      `json:"execution_optimistic"`
+	Finalized           bool      `json:"finalized"`
 }
 
 type StateFinalityCheckpointResponseJson struct {
 	Data                *StateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
 	ExecutionOptimistic bool                                                         `json:"execution_optimistic"`
+	Finalized           bool                                                         `json:"finalized"`
 }
 
 type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
@@ -63,26 +66,31 @@ type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 type StateValidatorsResponseJson struct {
 	Data                []*ValidatorContainerJson `json:"data"`
 	ExecutionOptimistic bool                      `json:"execution_optimistic"`
+	Finalized           bool                      `json:"finalized"`
 }
 
 type StateValidatorResponseJson struct {
 	Data                *ValidatorContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
+	Finalized           bool                    `json:"finalized"`
 }
 
 type ValidatorBalancesResponseJson struct {
 	Data                []*ValidatorBalanceJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
+	Finalized           bool                    `json:"finalized"`
 }
 
 type StateCommitteesResponseJson struct {
 	Data                []*CommitteeJson `json:"data"`
 	ExecutionOptimistic bool             `json:"execution_optimistic"`
+	Finalized           bool             `json:"finalized"`
 }
 
 type SyncCommitteesResponseJson struct {
 	Data                *SyncCommitteeValidatorsJson `json:"data"`
 	ExecutionOptimistic bool                         `json:"execution_optimistic"`
+	Finalized           bool                         `json:"finalized"`
 }
 
 type RandaoResponseJson struct {
@@ -90,6 +98,7 @@ type RandaoResponseJson struct {
 		Randao string `json:"randao" hex:"true"`
 	} `json:"data"`
 	ExecutionOptimistic bool `json:"execution_optimistic"`
+	Finalized           bool `json:"finalized"`
 }
 
 type BlockHeadersResponseJson struct {
@@ -201,6 +210,7 @@ type BeaconStateV2ResponseJson struct {
 	Version             string                      `json:"version" enum:"true"`
 	Data                *BeaconStateContainerV2Json `json:"data"`
 	ExecutionOptimistic bool                        `json:"execution_optimistic"`
+	Finalized           bool                        `json:"finalized"`
 }
 
 type ForkChoiceHeadsResponseJson struct {

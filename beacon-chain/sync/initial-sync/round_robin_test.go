@@ -365,7 +365,7 @@ func TestService_processBlock(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
@@ -375,7 +375,7 @@ func TestService_processBlock(t *testing.T) {
 		wsb, err = blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
@@ -384,7 +384,7 @@ func TestService_processBlock(t *testing.T) {
 		wsb, err = blocks.NewSignedBeaconBlock(blk2)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
@@ -418,7 +418,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
-		var batch []interfaces.SignedBeaconBlock
+		var batch []interfaces.ReadOnlySignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
 		for i := primitives.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
@@ -434,7 +434,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			currBlockRoot = blk1Root
 		}
 
-		var batch2 []interfaces.SignedBeaconBlock
+		var batch2 []interfaces.ReadOnlySignedBeaconBlock
 		for i := primitives.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := util.NewBeaconBlock()
@@ -451,7 +451,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Process block normally.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
@@ -459,12 +459,12 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Duplicate processing should trigger error.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blocks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, "block is already processed", err)
 
-		var badBatch2 []interfaces.SignedBeaconBlock
+		var badBatch2 []interfaces.ReadOnlySignedBeaconBlock
 		for i, b := range batch2 {
 			// create a non-linear batch
 			if i%3 == 0 && i != 0 {
@@ -475,7 +475,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Bad batch should fail because it is non linear
 		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		expectedSubErr := "expected linear block list"
@@ -483,7 +483,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})

@@ -118,5 +118,5 @@ type BackfillDB interface {
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	BackfillBlockRoot(ctx context.Context) ([32]byte, error)
-	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
+	Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 }

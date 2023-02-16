@@ -39,6 +39,7 @@ type EngineClient struct {
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
 	BlobsBundle                 *pb.BlobsBundle
+	BlockValue                  *big.Int
 }
 
 // NewPayload --
@@ -59,7 +60,7 @@ func (e *EngineClient) ForkchoiceUpdated(
 // GetPayload --
 func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, error) {
 	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
-		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella)
+		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
 	}
 	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
 	if err != nil {
@@ -89,7 +90,7 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ 
 
 // ReconstructFullBlock --
 func (e *EngineClient) ReconstructFullBlock(
-	_ context.Context, blindedBlock interfaces.SignedBeaconBlock,
+	_ context.Context, blindedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("block must be blinded")
@@ -108,7 +109,7 @@ func (e *EngineClient) ReconstructFullBlock(
 
 // ReconstructFullBellatrixBlockBatch --
 func (e *EngineClient) ReconstructFullBellatrixBlockBatch(
-	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
+	ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
 ) ([]interfaces.SignedBeaconBlock, error) {
 	fullBlocks := make([]interfaces.SignedBeaconBlock, 0, len(blindedBlocks))
 	for _, b := range blindedBlocks {

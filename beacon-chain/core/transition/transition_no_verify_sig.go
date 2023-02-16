@@ -30,7 +30,7 @@ import (
 //
 // Spec pseudocode definition:
 //
-//	def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
+//	def state_transition(state: BeaconState, signed_block: ReadOnlySignedBeaconBlock, validate_result: bool=True) -> None:
 //	  block = signed_block.message
 //	  # Process slots (including those with no blocks) since block
 //	  process_slots(state, block.slot)
@@ -45,7 +45,7 @@ import (
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	st state.BeaconState,
-	signed interfaces.SignedBeaconBlock,
+	signed interfaces.ReadOnlySignedBeaconBlock,
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
@@ -94,7 +94,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 //
 // Spec pseudocode definition:
 //
-//	def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
+//	def state_transition(state: BeaconState, signed_block: ReadOnlySignedBeaconBlock, validate_result: bool=True) -> None:
 //	  block = signed_block.message
 //	  # Process slots (including those with no blocks) since block
 //	  process_slots(state, block.slot)
@@ -109,7 +109,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 func CalculateStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
-	signed interfaces.SignedBeaconBlock,
+	signed interfaces.ReadOnlySignedBeaconBlock,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
 	defer span.End()
@@ -151,7 +151,7 @@ func CalculateStateRoot(
 //
 // Spec pseudocode definition:
 //
-//	def process_block(state: BeaconState, block: BeaconBlock) -> None:
+//	def process_block(state: BeaconState, block: ReadOnlyBeaconBlock) -> None:
 //	  process_block_header(state, block)
 //	  process_randao(state, block.body)
 //	  process_eth1_data(state, block.body)
@@ -159,7 +159,7 @@ func CalculateStateRoot(
 func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
 	st state.BeaconState,
-	signed interfaces.SignedBeaconBlock,
+	signed interfaces.ReadOnlySignedBeaconBlock,
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
@@ -220,7 +220,7 @@ func ProcessBlockNoVerifyAnySig(
 //
 // Spec pseudocode definition:
 //
-//	def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
+//	def process_operations(state: BeaconState, body: ReadOnlyBeaconBlockBody) -> None:
 //	  # Verify that outstanding deposits are processed up to the maximum number of deposits
 //	  assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
 //
@@ -236,7 +236,7 @@ func ProcessBlockNoVerifyAnySig(
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state state.BeaconState,
-	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	signedBeaconBlock interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 	if err := blocks.BeaconBlockIsNil(signedBeaconBlock); err != nil {
@@ -270,7 +270,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 // and randao signature verifications.
 //
 // Spec pseudocode definition:
-// def process_block(state: BeaconState, block: BeaconBlock) -> None:
+// def process_block(state: BeaconState, block: ReadOnlyBeaconBlock) -> None:
 //
 //	process_block_header(state, block)
 //	if is_execution_enabled(state, block.body):
@@ -282,7 +282,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
-	signed interfaces.SignedBeaconBlock,
+	signed interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
@@ -400,7 +400,7 @@ func ValidateBlobKzgs(ctx context.Context, body interfaces.BeaconBlockBody) erro
 func altairOperations(
 	ctx context.Context,
 	st state.BeaconState,
-	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	signedBeaconBlock interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 	st, err := b.ProcessProposerSlashings(ctx, st, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process altair proposer slashing")
@@ -427,7 +427,7 @@ func altairOperations(
 func phase0Operations(
 	ctx context.Context,
 	st state.BeaconState,
-	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	signedBeaconBlock interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 	st, err := b.ProcessProposerSlashings(ctx, st, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")

@@ -90,7 +90,7 @@ type blocksQueue struct {
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
 	pid    peer.ID
-	blocks []interfaces.SignedBeaconBlock
+	blocks []interfaces.ReadOnlySignedBeaconBlock
 	blobs  []*eth.BlobsSidecar
 }
 
