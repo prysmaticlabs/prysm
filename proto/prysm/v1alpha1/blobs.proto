@@ -27,7 +27,7 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
 // The blobs sidecar which contains the beacon block root, slot, blobs and an aggregated proof
 // for fast validation.
-message BlobsSidecar {
+message BlobsSidecar { // TODO: To be removed soon once spec is finalized.
         // The beacon block root which corresponds to the beacon block.
         bytes beacon_block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
         // The beacon block slot which corresponds ot the beacon block.
@@ -36,4 +36,25 @@ message BlobsSidecar {
         repeated ethereum.engine.v1.Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "4"];
         // The aggregated proof for blobs and commitments for validation.
         bytes aggregated_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+}
+
+message BlobSidecar {
+        bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+        uint64 index = 2;
+        uint64 slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+        bytes block_parent_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+        uint64 proposer_index = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+        ethereum.engine.v1.Blob blob = 6;
+        bytes kzg_commitment = 7 [(ethereum.eth.ext.ssz_size) = "48"];
+        bytes kzg_proof = 8 [(ethereum.eth.ext.ssz_size) = "48"];
+}
+
+message SignedBlobSidecar {
+        BlobSidecar message = 1;
+        bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BlobIdentifier {
+        bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+        uint64 index = 2;
 }
