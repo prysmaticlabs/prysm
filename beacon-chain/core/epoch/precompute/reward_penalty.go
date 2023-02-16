@@ -175,7 +175,7 @@ func ProposersDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Valida
 			// This should never happen with a valid state / validator.
 			return nil, errors.New("proposer index out of range")
 		}
-		// Only apply inclusion rewards to proposer only if the attested hasn't been slashed.
+		// Only apply inclusion rewards to proposer only if the attester hasn't been slashed.
 		if v.IsPrevEpochAttester && !v.IsSlashed {
 			vBalance := v.CurrentEpochEffectiveBalance
 			baseReward := vBalance * baseRewardFactor / balanceSqrt / baseRewardsPerEpoch
