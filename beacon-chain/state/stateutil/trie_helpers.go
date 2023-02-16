@@ -67,19 +67,19 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	for i := uint8(0); i < depth; i++ {
 		layerLen := len(layers[i])
 		oddNodeLength := layerLen%2 == 1
-        if oddNodeLength {
-            zerohash := trie.ZeroHashes[i]
-            elements = append(elements, zerohash)
-            layerLen++
-        }
+		if oddNodeLength {
+			zerohash := trie.ZeroHashes[i]
+			elements = append(elements, zerohash)
+			layerLen++
+		}
 
-        layers[i+1] = make([]*[32]byte, layerLen/2)
-        newElems := make([][32]byte, layerLen/2)
-        htr.VectorizedSha256(elements, newElems)
-        elements = newElems
-        for j := range elements {
-            layers[i+1][j] = &elements[j]
-        }
+		layers[i+1] = make([]*[32]byte, layerLen/2)
+		newElems := make([][32]byte, layerLen/2)
+		htr.VectorizedSha256(elements, newElems)
+		elements = newElems
+		for j := range elements {
+			layers[i+1][j] = &elements[j]
+		}
 	}
 	return layers
 }
@@ -299,9 +299,9 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 		if !math.IsPowerOf2(uint64(len(hashLayer))) {
 			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
 		}
-        newLayer := make([][32]byte, len(hashLayer)/2)
-        htr.VectorizedSha256(hashLayer, newLayer)
-        hashLayer = newLayer
+		newLayer := make([][32]byte, len(hashLayer)/2)
+		htr.VectorizedSha256(hashLayer, newLayer)
+		hashLayer = newLayer
 		layers[i] = hashLayer
 		i++
 	}

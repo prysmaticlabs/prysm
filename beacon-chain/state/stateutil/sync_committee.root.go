@@ -48,8 +48,8 @@ func merkleizePubkey(hasher ssz.HashFn, pubkey []byte) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	var pubKeyRoot [32]byte
-    outputChunk := make([][32]byte, 1)
-    htr.VectorizedSha256(chunks, outputChunk)
-    pubKeyRoot = outputChunk[0]
+	outputChunk := make([][32]byte, 1)
+	htr.VectorizedSha256(chunks, outputChunk)
+	pubKeyRoot = outputChunk[0]
 	return pubKeyRoot, nil
 }

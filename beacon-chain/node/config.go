@@ -192,4 +192,3 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
 	return params.SetActive(c)
 }
-

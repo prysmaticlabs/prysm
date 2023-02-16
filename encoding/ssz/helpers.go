@@ -51,7 +51,7 @@ func BitwiseMerkleize(hasher HashFn, chunks [][32]byte, count, limit uint64) ([3
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-    return MerkleizeVector(chunks, limit), nil
+	return MerkleizeVector(chunks, limit), nil
 }
 
 // PackByChunk a given byte array's final chunk with zeroes if needed.

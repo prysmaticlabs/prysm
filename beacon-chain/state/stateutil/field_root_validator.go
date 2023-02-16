@@ -36,10 +36,10 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 
 	var err error
 	var roots [][32]byte
-    roots, err = optimizedValidatorRoots(validators)
-    if err != nil {
-        return [32]byte{}, err
-    }
+	roots, err = optimizedValidatorRoots(validators)
+	if err != nil {
+		return [32]byte{}, err
+	}
 
 	validatorsRootsRoot, err := ssz.BitwiseMerkleize(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
 	if err != nil {
