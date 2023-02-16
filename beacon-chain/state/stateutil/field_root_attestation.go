@@ -34,12 +34,8 @@ func EpochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
 		roots[i] = pendingRoot
 	}
 
-	attsRootsRoot, err := ssz.BitwiseMerkleize(
-		hasher,
-		roots,
-		uint64(len(roots)),
-		params.BeaconConfig().CurrentEpochAttestationsLength(),
-	)
+	atLen := params.BeaconConfig().CurrentEpochAttestationsLength()
+	attsRootsRoot, err := ssz.BitwiseMerkleize(roots, uint64(len(roots)), atLen)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute epoch attestations merkleization")
 	}
@@ -58,5 +54,5 @@ func pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.PendingAttestation) ([
 	if att == nil {
 		return [32]byte{}, errors.New("nil pending attestation")
 	}
-	return PendingAttRootWithHasher(hasher, att)
+	return PendingAttRootWithHasher(att)
 }

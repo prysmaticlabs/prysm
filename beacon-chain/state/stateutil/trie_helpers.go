@@ -45,7 +45,6 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) 
 // provided with the elements of a variable sized trie and the corresponding depth of
 // it.
 func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
-	hasher := hash.CustomSHA256Hasher()
 	depth := ssz.Depth(length)
 	layers := make([][]*[32]byte, depth+1)
 	// Return zerohash at depth
