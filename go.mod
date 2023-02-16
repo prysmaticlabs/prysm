@@ -59,7 +59,6 @@ require (
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/prom2json v1.3.0
 	github.com/protolambda/go-kzg v0.0.0-20221129234330-612948a21fb0
-	github.com/protolambda/ztyp v0.2.1
 	github.com/prysmaticlabs/fastssz v0.0.0-20221107182844-78142813af44
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
@@ -200,6 +199,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/protolambda/ztyp v0.2.1 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
