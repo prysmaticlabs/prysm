@@ -278,7 +278,7 @@ func emptyPayload() (interfaces.ExecutionData, error) {
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
-	}
+	})
 }
 
 func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {

@@ -1076,19 +1076,6 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	}
 }
 
-// SetBlobKzgCommitments sets the blob kzg commitments in the block.
-func (b *BeaconBlockBody) SetBlobKzgCommitments(c [][]byte) error {
-	switch b.version {
-	case version.Phase0, version.Altair, version.Bellatrix, version.Capella:
-		return ErrNotSupported("BlobKzgCommitments", b.version)
-	case version.Deneb:
-		b.blobKzgCommitments = c
-		return nil
-	default:
-		return errIncorrectBlockVersion
-	}
-}
-
 // HashTreeRoot returns the ssz root of the block body.
 func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	pb, err := b.Proto()

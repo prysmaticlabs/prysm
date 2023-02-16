@@ -308,7 +308,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	}, nil
 }
 
-func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.SignedBeaconBlock) error {
+func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.ReadOnlySignedBeaconBlock) error {
 	blkPb, err := blk.PbDenebBlock()
 	if err != nil {
 		return errors.Wrap(err, "could not get protobuf block")

@@ -124,3 +124,16 @@ func (b *SignedBeaconBlock) SetBLSToExecutionChanges(blsToExecutionChanges []*et
 	b.block.body.blsToExecutionChanges = blsToExecutionChanges
 	return nil
 }
+
+// SetBlobKzgCommitments sets the blob kzg commitments in the block.
+func (b *SignedBeaconBlock) SetBlobKzgCommitments(c [][]byte) error {
+	switch b.version {
+	case version.Phase0, version.Altair, version.Bellatrix, version.Capella:
+		return ErrNotSupported("BlobKzgCommitments", b.version)
+	case version.Deneb:
+		b.block.body.blobKzgCommitments = c
+		return nil
+	default:
+		return errIncorrectBlockVersion
+	}
+}

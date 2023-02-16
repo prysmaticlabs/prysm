@@ -24,6 +24,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
+	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
 )
 
@@ -246,7 +247,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
 }
 
-func (s *Service) broadcastBlockAndBlobsSidecar(ctx context.Context, b interfaces.SignedBeaconBlock, blobs *ethpb.BlobsSidecar) error {
+func (s *Service) broadcastBlockAndBlobsSidecar(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blobs *ethpb.BlobsSidecar) error {
 	blkPb, err := b.PbDenebBlock()
 	if err != nil {
 		return err

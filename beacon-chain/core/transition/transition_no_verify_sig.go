@@ -370,7 +370,7 @@ func ProcessBlockForStateRoot(
 // def process_blob_kzg_commitments(state: BeaconState, body: BeaconBlockBody):
 //
 //	assert verify_kzg_commitments_against_transactions(body.execution_payload.transactions, body.blob_kzg_commitments)
-func ValidateBlobKzgs(ctx context.Context, body interfaces.BeaconBlockBody) error {
+func ValidateBlobKzgs(ctx context.Context, body interfaces.ReadOnlyBeaconBlockBody) error {
 	_, span := trace.StartSpan(ctx, "core.state.ValidateBlobKzgs")
 	defer span.End()
 

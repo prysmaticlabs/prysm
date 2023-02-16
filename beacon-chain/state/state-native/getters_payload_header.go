@@ -1,6 +1,8 @@
 package state_native
 
 import (
+	"math/big"
+
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"

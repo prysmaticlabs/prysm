@@ -54,7 +54,7 @@ func InitializeDataMaps() {
 			)
 		},
 		// TODO(Deneb): Is this right?
-		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() (interfaces.SignedBeaconBlock, error) {
+		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() (interfaces.ReadOnlySignedBeaconBlock, error) {
 			return blocks.NewSignedBeaconBlock(
 				&ethpb.SignedBeaconBlockDeneb{Block: &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{}}},
 			)

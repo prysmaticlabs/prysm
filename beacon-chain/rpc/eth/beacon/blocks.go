@@ -1095,7 +1095,7 @@ func (bs *Server) getSSZBlockCapella(ctx context.Context, blk interfaces.ReadOnl
 	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_CAPELLA, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
 }
 
-func (bs *Server) getSSZBlockDeneb(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+func (bs *Server) getSSZBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	denebBlk, err := blk.PbDenebBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type

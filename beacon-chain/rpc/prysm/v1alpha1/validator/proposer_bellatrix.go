@@ -55,15 +55,9 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 		} else {
 			switch {
 			case blk.Version() >= version.Capella:
-				localPayload, blobsBundle, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
+				localPayload, _, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 				if err != nil {
 					return errors.Wrap(err, "failed to get execution payload")
-				}
-				if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-					if err := blk.Body().SetBlobKzgCommitments(blobsBundle.KzgCommitments); err != nil {
-						return errors.Wrap(err, "could not set blob kzg commitments")
-					}
-					vs.BlobsCache.Put(slot, blobsBundle.Blobs)
 				}
 				// Compare payload values between local and builder. Default to the local value if it is higher.
 				localValue, err := localPayload.Value()
@@ -95,9 +89,15 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 		}
 	}
 
-	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
+	executionData, blobsBundle, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload")
+	}
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
+		if err := blk.SetBlobKzgCommitments(blobsBundle.KzgCommitments); err != nil {
+			return errors.Wrap(err, "could not set blob kzg commitments")
+		}
+		vs.BlobsCache.Put(slot, blobsBundle.Blobs)
 	}
 	return blk.SetExecution(executionData)
 }

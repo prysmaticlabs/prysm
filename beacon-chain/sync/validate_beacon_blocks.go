@@ -74,7 +74,7 @@ func (s *Service) validateBlockPubsubHelper(
 	ctx context.Context,
 	receivedTime time.Time,
 	msg *pubsub.Message,
-	blk interfaces.SignedBeaconBlock,
+	blk interfaces.ReadOnlySignedBeaconBlock,
 	blob *eth.BlobsSidecar) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBlockPubsubHelper")
 	defer span.End()

@@ -183,9 +183,6 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return err
 		}
-		copy(blks[blindedIndex:], reconstructedBlks)
-
-		// TODO(Deneb): Handle blind construction for Deneb
 	}
 
 	for _, b := range blks {

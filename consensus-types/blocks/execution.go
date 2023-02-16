@@ -829,7 +829,8 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderDeneb struct {
-	p *enginev1.ExecutionPayloadHeaderDeneb
+	p     *enginev1.ExecutionPayloadHeaderDeneb
+	value *big.Int
 }
 
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
@@ -980,11 +981,16 @@ func (e executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCape
 	return nil, ErrUnsupportedGetter
 }
 
+func (e executionPayloadHeaderDeneb) Value() (*big.Int, error) {
+	return e.value, nil
+}
+
 // executionPayloadDeneb is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadDeneb struct {
-	p *enginev1.ExecutionPayloadDeneb
+	p     *enginev1.ExecutionPayloadDeneb
+	value *big.Int
 }
 
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
@@ -1133,4 +1139,8 @@ func (e executionPayloadDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error)
 // PbCapella --
 func (e executionPayloadDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
+}
+
+func (e executionPayloadDeneb) Value() (*big.Int, error) {
+	return e.value, nil
 }
