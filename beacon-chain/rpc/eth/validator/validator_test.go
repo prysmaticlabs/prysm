@@ -2694,11 +2694,8 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
 		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
 		require.NoError(t, err)
-		wds := []*enginev1.Withdrawal{{
-			Index:          1,
-			ValidatorIndex: 2,
-			Amount:         3,
-		}}
+		wds, err := beaconState.ExpectedWithdrawals()
+		require.NoError(t, err)
 		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bid := &ethpbalpha.BuilderBidCapella{
