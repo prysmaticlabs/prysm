@@ -845,7 +845,6 @@ func marshalBlockFull(
 ) ([]byte, error) {
 	var encodedBlock []byte
 	var err error
-	blockToSave := blk
 	encodedBlock, err = blk.MarshalSSZ()
 	if err != nil {
 		return nil, err
@@ -871,7 +870,6 @@ func marshalBlockBlinded(
 	ctx context.Context,
 	blk interfaces.ReadOnlySignedBeaconBlock,
 ) ([]byte, error) {
-	var encodedBlock []byte
 	blindedBlock, err := blk.ToBlinded()
 	if err != nil {
 		switch {
@@ -881,7 +879,7 @@ func marshalBlockBlinded(
 			return nil, errors.Wrap(err, "could not convert block to blinded format")
 		}
 	}
-	encodedBlock, err = blindedBlock.MarshalSSZ()
+	encodedBlock, err := blindedBlock.MarshalSSZ()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal blinded block")
 	}
