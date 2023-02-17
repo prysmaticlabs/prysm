@@ -12,12 +12,12 @@ import (
 )
 
 func TestFFGUpdates_OneBranch(t *testing.T) {
-	balances := []uint64{1, 1}
 	f := setup(0, 0)
+	f.justifiedBalances = []uint64{1, 1}
 	ctx := context.Background()
 
 	// The head should always start at the finalized block.
-	r, err := f.Head(context.Background(), balances)
+	r, err := f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
 
@@ -47,7 +47,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2
 	//            |
 	//            3 <- head
-	r, err = f.Head(context.Background(), balances)
+	r, err = f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(3), r, "Incorrect head for with justified epoch at 0")
 
@@ -61,7 +61,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            3
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(1), Epoch: 1}
 	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(0), Epoch: 0}
-	r, err = f.Head(context.Background(), balances)
+	r, err = f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head with justified epoch at 1")
 
@@ -74,17 +74,17 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            |
 	//            3 <- head
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(3), Epoch: 2}
-	r, err = f.Head(context.Background(), balances)
+	r, err = f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(3), r, "Incorrect head with justified epoch at 2")
 }
 
 func TestFFGUpdates_TwoBranches(t *testing.T) {
-	balances := []uint64{1, 1}
 	f := setup(0, 0)
+	f.justifiedBalances = []uint64{1, 1}
 	ctx := context.Background()
 
-	r, err := f.Head(context.Background(), balances)
+	r, err := f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
 
@@ -145,7 +145,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	//         9  10 <-- head
-	r, err = f.Head(context.Background(), balances)
+	r, err = f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(10), r, "Incorrect head with justified epoch at 0")
 
@@ -175,7 +175,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	// head -> 9  10
-	r, err = f.Head(context.Background(), balances)
+	r, err = f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(9), r, "Incorrect head with justified epoch at 0")
 
@@ -205,12 +205,12 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	//         9  10 <-- head
-	r, err = f.Head(context.Background(), balances)
+	r, err = f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(10), r, "Incorrect head with justified epoch at 0")
 
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: indexToHash(1)}
-	r, err = f.Head(context.Background(), balances)
+	r, err = f.Head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(7), r, "Incorrect head with justified epoch at 0")
 }
@@ -225,6 +225,7 @@ func setup(justifiedEpoch, finalizedEpoch primitives.Epoch) *ForkChoice {
 	if err != nil {
 		return nil
 	}
+	f.SetBalancesByRooter(func(_ context.Context, _ [32]byte) ([]uint64, error) { return f.justifiedBalances, nil })
 	err = f.InsertNode(ctx, state, blkRoot)
 	if err != nil {
 		return nil

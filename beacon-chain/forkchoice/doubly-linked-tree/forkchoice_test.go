@@ -82,7 +82,8 @@ func TestForkChoice_UpdateBalancesPositiveChange(t *testing.T) {
 
 	// Each node gets one unique vote. The weight should look like 103 <- 102 <- 101 because
 	// they get propagated back.
-	require.NoError(t, f.updateBalances([]uint64{10, 20, 30}))
+	f.justifiedBalances = []uint64{10, 20, 30}
+	require.NoError(t, f.updateBalances())
 	s := f.store
 	assert.Equal(t, uint64(10), s.nodeByRoot[indexToHash(1)].balance)
 	assert.Equal(t, uint64(20), s.nodeByRoot[indexToHash(2)].balance)
@@ -113,7 +114,8 @@ func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 		{indexToHash(3), indexToHash(3), 0},
 	}
 
-	require.NoError(t, f.updateBalances([]uint64{10, 20, 30}))
+	f.justifiedBalances = []uint64{10, 20, 30}
+	require.NoError(t, f.updateBalances())
 	assert.Equal(t, uint64(10), s.nodeByRoot[indexToHash(1)].balance)
 	assert.Equal(t, uint64(20), s.nodeByRoot[indexToHash(2)].balance)
 	assert.Equal(t, uint64(30), s.nodeByRoot[indexToHash(3)].balance)
@@ -143,7 +145,8 @@ func TestForkChoice_UpdateBalancesUnderflow(t *testing.T) {
 		{indexToHash(3), indexToHash(3), 0},
 	}
 
-	require.NoError(t, f.updateBalances([]uint64{10, 20, 30}))
+	f.justifiedBalances = []uint64{10, 20, 30}
+	require.NoError(t, f.updateBalances())
 	assert.Equal(t, uint64(0), s.nodeByRoot[indexToHash(1)].balance)
 	assert.Equal(t, uint64(0), s.nodeByRoot[indexToHash(2)].balance)
 	assert.Equal(t, uint64(5), s.nodeByRoot[indexToHash(3)].balance)
@@ -297,7 +300,7 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	st, blkRoot, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
-	head, err := f.Head(ctx, []uint64{})
+	head, err := f.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, head)
 
@@ -308,21 +311,23 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	st, blkRoot, err = prepareForkchoiceState(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
-	head, err = f.Head(ctx, []uint64{})
+	head, err = f.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 
 	// Insert two attestations for block b, one for c it becomes head
 	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, 1)
 	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, 1)
-	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
+	f.justifiedBalances = []uint64{100, 200, 200, 300}
+	head, err = f.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, head)
 
 	// Process b's slashing, c is now head
 	f.InsertSlashedIndex(ctx, 1)
 	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].balance)
-	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
+	f.justifiedBalances = []uint64{100, 200, 200, 300}
+	head, err = f.Head(ctx)
 	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].weight)
 	require.Equal(t, uint64(300), f.store.nodeByRoot[[32]byte{'c'}].weight)
 	require.NoError(t, err)
@@ -331,7 +336,8 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	// Process b's slashing again, should be a noop
 	f.InsertSlashedIndex(ctx, 1)
 	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].balance)
-	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
+	f.justifiedBalances = []uint64{100, 200, 200, 300}
+	head, err = f.Head(ctx)
 	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].weight)
 	require.Equal(t, uint64(300), f.store.nodeByRoot[[32]byte{'c'}].weight)
 	require.NoError(t, err)
@@ -351,11 +357,12 @@ func indexToHash(i uint64) [32]byte {
 
 func TestForkChoice_UpdateJustifiedAndFinalizedCheckpoints(t *testing.T) {
 	f := setup(1, 1)
+	ctx := context.Background()
 	jr := [32]byte{'j'}
 	fr := [32]byte{'f'}
 	jc := &forkchoicetypes.Checkpoint{Root: jr, Epoch: 3}
 	fc := &forkchoicetypes.Checkpoint{Root: fr, Epoch: 2}
-	require.NoError(t, f.UpdateJustifiedCheckpoint(jc))
+	require.NoError(t, f.UpdateJustifiedCheckpoint(ctx, jc))
 	require.NoError(t, f.UpdateFinalizedCheckpoint(fc))
 	require.Equal(t, f.store.justifiedCheckpoint.Epoch, jc.Epoch)
 	require.Equal(t, f.store.justifiedCheckpoint.Root, jc.Root)
