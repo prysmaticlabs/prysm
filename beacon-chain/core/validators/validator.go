@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/rewards"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -143,22 +144,22 @@ func SlashValidator(
 	s state.BeaconState,
 	slashedIdx primitives.ValidatorIndex,
 	penaltyQuotient uint64,
-	proposerRewardQuotient uint64) (state.BeaconState, error) {
+	proposerRewardQuotient uint64) (state.BeaconState, rewards.Reward, error) {
 	s, err := InitiateValidatorExit(ctx, s, slashedIdx)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
+		return nil, 0, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
 	}
 	currentEpoch := slots.ToEpoch(s.Slot())
 	validator, err := s.ValidatorAtIndex(slashedIdx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	validator.Slashed = true
 	maxWithdrawableEpoch := primitives.MaxEpoch(validator.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
 	validator.WithdrawableEpoch = maxWithdrawableEpoch
 
 	if err := s.UpdateValidatorAtIndex(slashedIdx, validator); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// The slashing amount is represented by epochs per slashing vector. The validator's effective balance is then applied to that amount.
@@ -168,28 +169,28 @@ func SlashValidator(
 		uint64(currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector),
 		currentSlashing+validator.EffectiveBalance,
 	); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if err := helpers.DecreaseBalance(s, slashedIdx, validator.EffectiveBalance/penaltyQuotient); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, s)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get proposer idx")
+		return nil, 0, errors.Wrap(err, "could not get proposer idx")
 	}
 	whistleBlowerIdx := proposerIdx
 	whistleblowerReward := validator.EffectiveBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
 	proposerReward := whistleblowerReward / proposerRewardQuotient
 	err = helpers.IncreaseBalance(s, proposerIdx, proposerReward)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	err = helpers.IncreaseBalance(s, whistleBlowerIdx, whistleblowerReward-proposerReward)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return s, nil
+	return s, rewards.Reward(whistleblowerReward), nil
 }
 
 // ActivatedValidatorIndices determines the indices activated during the given epoch.

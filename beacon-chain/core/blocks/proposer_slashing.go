@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/rewards"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -17,7 +18,13 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type slashValidatorFunc func(ctx context.Context, st state.BeaconState, vid primitives.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (state.BeaconState, error)
+type slashValidatorFunc func(
+	ctx context.Context,
+	st state.BeaconState,
+	vid primitives.ValidatorIndex,
+	penaltyQuotient,
+	proposerRewardQuotient uint64,
+) (state.BeaconState, rewards.Reward, error)
 
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
@@ -50,15 +57,18 @@ func ProcessProposerSlashings(
 	beaconState state.BeaconState,
 	slashings []*ethpb.ProposerSlashing,
 	slashFunc slashValidatorFunc,
-) (state.BeaconState, error) {
+) (state.BeaconState, rewards.Reward, error) {
 	var err error
+	var totalReward rewards.Reward
 	for _, slashing := range slashings {
-		beaconState, err = ProcessProposerSlashing(ctx, beaconState, slashing, slashFunc)
+		var reward rewards.Reward
+		beaconState, reward, err = ProcessProposerSlashing(ctx, beaconState, slashing, slashFunc)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
+		totalReward += reward
 	}
-	return beaconState, nil
+	return beaconState, totalReward, nil
 }
 
 // ProcessProposerSlashing processes individual proposer slashing.
@@ -67,13 +77,13 @@ func ProcessProposerSlashing(
 	beaconState state.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 	slashFunc slashValidatorFunc,
-) (state.BeaconState, error) {
+) (state.BeaconState, rewards.Reward, error) {
 	var err error
 	if slashing == nil {
-		return nil, errors.New("nil proposer slashings in block body")
+		return nil, 0, errors.New("nil proposer slashings in block body")
 	}
 	if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
-		return nil, errors.Wrap(err, "could not verify proposer slashing")
+		return nil, 0, errors.Wrap(err, "could not verify proposer slashing")
 	}
 	cfg := params.BeaconConfig()
 	var slashingQuotient uint64
@@ -85,13 +95,14 @@ func ProcessProposerSlashing(
 	case beaconState.Version() >= version.Bellatrix:
 		slashingQuotient = cfg.MinSlashingPenaltyQuotientBellatrix
 	default:
-		return nil, errors.New("unknown state version")
+		return nil, 0, errors.New("unknown state version")
 	}
-	beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
+	var reward rewards.Reward
+	beaconState, reward, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
+		return nil, 0, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 	}
-	return beaconState, nil
+	return beaconState, reward, nil
 }
 
 // VerifyProposerSlashing verifies that the data provided from slashing is valid.

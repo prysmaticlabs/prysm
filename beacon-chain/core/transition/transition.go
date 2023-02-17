@@ -15,6 +15,7 @@ import (
 	e "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/rewards"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
@@ -51,21 +52,21 @@ func ExecuteStateTransition(
 	ctx context.Context,
 	state state.BeaconState,
 	signed interfaces.ReadOnlySignedBeaconBlock,
-) (state.BeaconState, error) {
+) (state.BeaconState, *rewards.ProposerRewards, error) {
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		return nil, nil, ctx.Err()
 	}
 	if err := blocks.BeaconBlockIsNil(signed); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransition")
 	defer span.End()
 	var err error
 
-	set, postState, err := ExecuteStateTransitionNoVerifyAnySig(ctx, state, signed)
+	set, postState, proposerRewards, err := ExecuteStateTransitionNoVerifyAnySig(ctx, state, signed)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not execute state transition")
+		return nil, nil, errors.Wrap(err, "could not execute state transition")
 	}
 
 	var valid bool
@@ -75,13 +76,13 @@ func ExecuteStateTransition(
 		valid, err = set.Verify()
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "could not batch verify signature")
+		return nil, nil, errors.Wrap(err, "could not batch verify signature")
 	}
 	if !valid {
-		return nil, errors.New("signature in block failed to verify")
+		return nil, nil, errors.New("signature in block failed to verify")
 	}
 
-	return postState, nil
+	return postState, proposerRewards, nil
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
