@@ -2,12 +2,14 @@ package operations
 
 import (
 	"context"
+	"math/big"
 	"path"
 	"testing"
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -42,7 +44,9 @@ func RunWithdrawalsTest(t *testing.T, config string) {
 				if err != nil {
 					return nil, err
 				}
-				return blocks.ProcessWithdrawals(s, withdrawals)
+				p, err := consensusblocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{Withdrawals: withdrawals}, big.NewInt(0))
+				require.NoError(t, err)
+				return blocks.ProcessWithdrawals(s, p)
 			})
 		})
 	}
