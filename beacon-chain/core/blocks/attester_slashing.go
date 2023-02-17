@@ -43,11 +43,11 @@ func ProcessAttesterSlashings(
 	beaconState state.BeaconState,
 	slashings []*ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
-) (state.BeaconState, rewards.Reward, error) {
+) (state.BeaconState, rewards.ProposerReward, error) {
 	var err error
-	var totalReward rewards.Reward
+	var totalReward rewards.ProposerReward
 	for _, slashing := range slashings {
-		var reward rewards.Reward
+		var reward rewards.ProposerReward
 		beaconState, reward, err = ProcessAttesterSlashing(ctx, beaconState, slashing, slashFunc)
 		if err != nil {
 			return nil, 0, err
@@ -63,7 +63,7 @@ func ProcessAttesterSlashing(
 	beaconState state.BeaconState,
 	slashing *ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
-) (state.BeaconState, rewards.Reward, error) {
+) (state.BeaconState, rewards.ProposerReward, error) {
 	if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 		return nil, 0, errors.Wrap(err, "could not verify attester slashing")
 	}
@@ -75,7 +75,7 @@ func ProcessAttesterSlashing(
 	var err error
 	var slashedAny bool
 	var val state.ReadOnlyValidator
-	var totalReward rewards.Reward
+	var totalReward rewards.ProposerReward
 	for _, validatorIndex := range slashableIndices {
 		val, err = beaconState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(validatorIndex))
 		if err != nil {
@@ -94,7 +94,7 @@ func ProcessAttesterSlashing(
 			default:
 				return nil, 0, errors.New("unknown state version")
 			}
-			var reward rewards.Reward
+			var reward rewards.ProposerReward
 			beaconState, reward, err = slashFunc(ctx, beaconState, primitives.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "could not slash validator index %d",

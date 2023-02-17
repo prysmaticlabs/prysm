@@ -144,7 +144,7 @@ func SlashValidator(
 	s state.BeaconState,
 	slashedIdx primitives.ValidatorIndex,
 	penaltyQuotient uint64,
-	proposerRewardQuotient uint64) (state.BeaconState, rewards.Reward, error) {
+	proposerRewardQuotient uint64) (state.BeaconState, rewards.ProposerReward, error) {
 	s, err := InitiateValidatorExit(ctx, s, slashedIdx)
 	if err != nil {
 		return nil, 0, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
@@ -190,7 +190,7 @@ func SlashValidator(
 	if err != nil {
 		return nil, 0, err
 	}
-	return s, rewards.Reward(whistleblowerReward), nil
+	return s, rewards.ProposerReward(whistleblowerReward), nil
 }
 
 // ActivatedValidatorIndices determines the indices activated during the given epoch.

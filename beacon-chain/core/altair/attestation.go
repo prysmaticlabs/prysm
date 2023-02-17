@@ -26,7 +26,7 @@ func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
 	b interfaces.ReadOnlySignedBeaconBlock,
-) (state.BeaconState, rewards.Reward, error) {
+) (state.BeaconState, rewards.ProposerReward, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, 0, err
 	}
@@ -35,9 +35,9 @@ func ProcessAttestationsNoVerifySignature(
 	if err != nil {
 		return nil, 0, err
 	}
-	var totalReward rewards.Reward
+	var totalReward rewards.ProposerReward
 	for idx, att := range body.Attestations() {
-		var reward rewards.Reward
+		var reward rewards.ProposerReward
 		beaconState, reward, err = ProcessAttestationNoVerifySignature(ctx, beaconState, att, totalBalance)
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
@@ -54,7 +54,7 @@ func ProcessAttestationNoVerifySignature(
 	beaconState state.BeaconState,
 	att *ethpb.Attestation,
 	totalBalance uint64,
-) (state.BeaconState, rewards.Reward, error) {
+) (state.BeaconState, rewards.ProposerReward, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
@@ -109,7 +109,7 @@ func SetParticipationAndRewardProposer(
 	beaconState state.BeaconState,
 	targetEpoch primitives.Epoch,
 	indices []uint64,
-	participatedFlags map[uint8]bool, totalBalance uint64) (state.BeaconState, rewards.Reward, error) {
+	participatedFlags map[uint8]bool, totalBalance uint64) (state.BeaconState, rewards.ProposerReward, error) {
 	var proposerRewardNumerator uint64
 	currentEpoch := time.CurrentEpoch(beaconState)
 	var stateErr error
@@ -229,7 +229,7 @@ func EpochParticipation(beaconState state.BeaconState, indices []uint64, epochPa
 //	proposer_reward_denominator = (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR // PROPOSER_WEIGHT
 //	proposer_reward = Gwei(proposer_reward_numerator // proposer_reward_denominator)
 //	increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
-func RewardProposer(ctx context.Context, beaconState state.BeaconState, proposerRewardNumerator uint64) (rewards.Reward, error) {
+func RewardProposer(ctx context.Context, beaconState state.BeaconState, proposerRewardNumerator uint64) (rewards.ProposerReward, error) {
 	cfg := params.BeaconConfig()
 	d := (cfg.WeightDenominator - cfg.ProposerWeight) * cfg.WeightDenominator / cfg.ProposerWeight
 	proposerReward := proposerRewardNumerator / d
@@ -242,7 +242,7 @@ func RewardProposer(ctx context.Context, beaconState state.BeaconState, proposer
 		return 0, err
 	}
 
-	return rewards.Reward(proposerReward), nil
+	return rewards.ProposerReward(proposerReward), nil
 }
 
 // AttestationParticipationFlagIndices retrieves a map of attestation scoring based on Altair's participation flag indices.

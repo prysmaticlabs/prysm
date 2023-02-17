@@ -371,12 +371,12 @@ func altairOperations(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process altair proposer slashing")
 	}
-	var attesterSlashingsReward rewards.Reward
+	var attesterSlashingsReward rewards.ProposerReward
 	st, attesterSlashingsReward, err = b.ProcessAttesterSlashings(ctx, st, signedBeaconBlock.Block().Body().AttesterSlashings(), v.SlashValidator)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process altair attester slashing")
 	}
-	var attestationsReward rewards.Reward
+	var attestationsReward rewards.ProposerReward
 	st, attestationsReward, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, signedBeaconBlock)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process altair attestation")

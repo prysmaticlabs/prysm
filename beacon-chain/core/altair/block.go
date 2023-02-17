@@ -46,7 +46,7 @@ import (
 //	        increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //	    else:
 //	        decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (state.BeaconState, rewards.Reward, error) {
+func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (state.BeaconState, rewards.ProposerReward, error) {
 	s, votedKeys, reward, err := processSyncAggregate(ctx, s, sync)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "could not filter sync committee votes")
@@ -64,7 +64,7 @@ func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.
 func processSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (
 	state.BeaconState,
 	[]bls.PublicKey,
-	rewards.Reward,
+	rewards.ProposerReward,
 	error) {
 	currentSyncCommittee, err := s.CurrentSyncCommittee()
 	if err != nil {
@@ -119,7 +119,7 @@ func processSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.
 	if err := helpers.IncreaseBalance(s, proposerIndex, earnedProposerReward); err != nil {
 		return nil, nil, 0, err
 	}
-	return s, votedKeys, rewards.Reward(proposerReward), err
+	return s, votedKeys, rewards.ProposerReward(proposerReward), err
 }
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
