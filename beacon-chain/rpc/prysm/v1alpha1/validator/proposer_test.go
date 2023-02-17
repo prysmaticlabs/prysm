@@ -442,6 +442,7 @@ func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	proposerServer := &Server{
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		SyncChecker:           &mockSync.Sync{},
+		HeadUpdater:           &mock.ChainService{},
 		TimeFetcher:           &mock.ChainService{}}
 	req := &ethpb.BlockRequest{
 		Slot: bellatrixSlot + 1,
