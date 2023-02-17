@@ -83,10 +83,18 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 		}
 		validator, err := state.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 		if err != nil {
-			p.handleInvalidExit(err, exit)
+			logrus.WithError(err).Warning("removing invalid exit from pool")
+			// MarkIncluded removes the invalid exit from the pool
+			p.lock.RUnlock()
+			p.MarkIncluded(exit)
+			p.lock.RLock()
 		}
 		if err = blocks.VerifyExitConditions(validator, state.Slot(), exit.Exit); err != nil {
-			p.handleInvalidExit(err, exit)
+			logrus.WithError(err).Warning("removing invalid exit from pool")
+			// MarkIncluded removes the invalid exit from the pool
+			p.lock.RUnlock()
+			p.MarkIncluded(exit)
+			p.lock.RLock()
 		}
 		result = append(result, exit)
 		node, err = node.Prev()
@@ -156,12 +164,4 @@ func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 
 	delete(p.m, exit.Exit.ValidatorIndex)
 	p.pending.Remove(node)
-}
-
-func (p *Pool) handleInvalidExit(err error, exit *ethpb.SignedVoluntaryExit) {
-	logrus.WithError(err).Warning("removing invalid exit from pool")
-	// MarkIncluded removes the invalid exit from the pool
-	p.lock.RUnlock()
-	p.MarkIncluded(exit)
-	p.lock.RLock()
 }
