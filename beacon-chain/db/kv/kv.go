@@ -243,20 +243,16 @@ func (s *Store) setupBlockStorageType(isFreshDatabase bool) error {
 			return bkt.Put(saveBlindedBeaconBlocksKey, []byte{1})
 		})
 	}
-	var hasSaveBlindedBeaconBlocksKey bool
-	if err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(chainMetadataBucket)
-		hasSaveBlindedBeaconBlocksKey = bkt.Get(saveBlindedBeaconBlocksKey) != nil
-		return nil
-	}); err != nil {
+	saveBlinded, err := s.shouldSaveBlinded()
+	if err != nil {
 		return err
 	}
 	// If the user wants to save full execution payloads but their database is saving blinded blocks only,
 	// we then throw an error as the node should not start.
-	if features.Get().SaveFullExecutionPayloads && hasSaveBlindedBeaconBlocksKey {
+	if features.Get().SaveFullExecutionPayloads && saveBlinded {
 		return fmt.Errorf(
 			"cannot use the %s flag with this existing database, as it has already been initialized to only store "+
-				"execution payload headers. If you want to use this flag, you must re-sync your node with a fresh "+
+				"execution payload headers (aka blinded beacon blocks). If you want to use this flag, you must re-sync your node with a fresh "+
 				"database. We recommend using checkpoint sync https://docs.prylabs.network/docs/prysm-usage/checkpoint-sync/",
 			features.SaveFullExecutionPayloads.Name,
 		)

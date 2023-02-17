@@ -1524,6 +1524,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 	})
 
 	t.Run("Capella", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
@@ -1869,6 +1873,10 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 	})
 
 	t.Run("Capella", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 

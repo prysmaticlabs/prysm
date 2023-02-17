@@ -769,6 +769,10 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
 	t.Run("capella block", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		blk := util.NewBeaconBlockCapella()
 		blk.Block.Slot = 300
 		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
