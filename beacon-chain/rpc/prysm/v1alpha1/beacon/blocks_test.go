@@ -558,10 +558,6 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 }
 
 func runListBlocksGenesis(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOnlyBlindedBeaconBlocks: true,
-	})
-	defer resetFn()
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
