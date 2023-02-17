@@ -9,9 +9,10 @@ import (
 // and thus may be reorged when proposing the next block.
 // This function should only be called if the following two conditions are
 // satisfied:
-// 1- It is immediately after receiving a block that may be subject to a reorg
+// 1-   It is immediately after receiving a block that may be subject to a reorg
 //
 //	or
+//
 //	It is right after processAttestationsThreshold and we have processed the
 //	current slots attestations.
 //
@@ -47,6 +48,7 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 	// Only reorg blocks that arrive late
 	early, err := head.arrivedEarly(f.store.genesisTime)
 	if err != nil {
+		log.WithError(err).Error("could not check if block arrived early")
 		return
 	}
 	if early {
@@ -72,7 +74,7 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 	//		return
 	// }
 
-	// Only orfan a block if the head LMD vote is weak
+	// Only orphan a block if the head LMD vote is weak
 	if head.weight*100 > f.store.committeeWeight*params.BeaconConfig().ReorgWeightThreshold {
 		return
 	}

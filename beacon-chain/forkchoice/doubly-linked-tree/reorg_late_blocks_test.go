@@ -52,6 +52,12 @@ func TestForkChoice_ShouldOverrideFCU(t *testing.T) {
 		require.Equal(t, false, f.ShouldOverrideFCU())
 		f.store.headNode.slot = saved
 	})
+	t.Run("head is early", func(t *testing.T) {
+		saved := f.store.headNode.timestamp
+		f.store.headNode.timestamp = saved - 2
+		require.Equal(t, false, f.ShouldOverrideFCU())
+		f.store.headNode.timestamp = saved
+	})
 	t.Run("chain not finalizing", func(t *testing.T) {
 		saved := f.store.headNode.slot
 		f.store.headNode.slot = 97
