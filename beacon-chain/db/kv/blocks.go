@@ -859,7 +859,7 @@ func marshalBlockFull(
 	case version.Phase0:
 		return snappy.Encode(nil, encodedBlock), nil
 	default:
-		return nil, errors.New("Unknown block version")
+		return nil, errors.New("unknown block version")
 	}
 }
 
@@ -888,11 +888,7 @@ func marshalBlockBlinded(
 		return snappy.Encode(nil, append(capellaBlindKey, encodedBlock...)), nil
 	case version.Bellatrix:
 		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
-	case version.Altair:
-		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
-	case version.Phase0:
-		return snappy.Encode(nil, encodedBlock), nil
 	default:
-		return nil, errors.New("Unknown block version")
+		return nil, fmt.Errorf("unsupported block version: %v", blk.Version())
 	}
 }
