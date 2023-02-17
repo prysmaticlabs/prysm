@@ -139,6 +139,7 @@ type Service struct {
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
+	blobCache                        *blobCache
 }
 
 // NewService initializes new regular sync service.
@@ -156,6 +157,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
+		blobCache:            newBlobCache(),
 	}
 	for _, opt := range opts {
 		if err := opt(r); err != nil {

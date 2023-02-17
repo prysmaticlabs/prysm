@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -87,6 +88,11 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 
 	// [IGNORE] The sidecar is the only sidecar with valid signature received for the tuple (sidecar.slot, sidecar.proposer_index, sidecar.index)
+	blkRoot := bytesutil.ToBytes32(blob.BlockRoot)
+	b := s.blobCache.getBlob(blkRoot, blob.Index)
+	if b != nil {
+		return pubsub.ValidationIgnore, nil
+	}
 
 	// [REJECT] The sidecar is proposed by the expected proposer_index for the block's slot in the context of the current shuffling (defined by block_parent_root/slot)
 	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], blob.Slot)
@@ -143,4 +149,39 @@ func blobFields(b *eth.BlobSidecar) logrus.Fields {
 		"blockRoot":     fmt.Sprintf("%#x", b.BlockRoot),
 		"index":         b.Index,
 	}
+}
+
+type blobCache struct {
+	sync.RWMutex
+	blobsByBlockRoot map[[32]byte][]*eth.SignedBlobSidecar
+}
+
+func newBlobCache() *blobCache {
+	return &blobCache{
+		blobsByBlockRoot: make(map[[32]byte][]*eth.SignedBlobSidecar),
+	}
+}
+
+func (b *blobCache) getBlob(blockRoot [32]byte, blobIndex uint64) *eth.SignedBlobSidecar {
+	b.RLock()
+	defer b.RUnlock()
+	blobs, ok := b.blobsByBlockRoot[blockRoot]
+	if !ok {
+		return nil
+	}
+	if blobIndex >= uint64(len(blobs)) {
+		return nil
+	}
+	return b.blobsByBlockRoot[blockRoot][blobIndex]
+}
+
+func (b *blobCache) insertBlob(blob *eth.SignedBlobSidecar) {
+	b.Lock()
+	defer b.Unlock()
+	r := bytesutil.ToBytes32(blob.Message.BlockRoot)
+	_, ok := b.blobsByBlockRoot[r]
+	if !ok {
+		b.blobsByBlockRoot[r] = make([]*eth.SignedBlobSidecar, params.BeaconNetworkConfig().BlobSubnetCount)
+	}
+	b.blobsByBlockRoot[r][blob.Message.Index] = blob
 }
