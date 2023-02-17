@@ -2,18 +2,20 @@ package blocks
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -110,39 +112,51 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 	return val, nil
 }
 
-func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal) (state.BeaconState, error) {
-	expected, err := st.ExpectedWithdrawals()
+func ProcessWithdrawals(st state.BeaconState, executionData interfaces.ExecutionData) (state.BeaconState, error) {
+	expectedWithdrawals, err := st.ExpectedWithdrawals()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
-	if len(expected) != len(withdrawals) {
-		return nil, errInvalidWithdrawalNumber
+
+	var wdRoot [32]byte
+	if executionData.IsBlinded() {
+		r, err := executionData.WithdrawalsRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals root")
+		}
+		wdRoot = bytesutil.ToBytes32(r)
+	} else {
+		wds, err := executionData.Withdrawals()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals")
+		}
+		wdRoot, err = ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals root")
+		}
 	}
-	for i, withdrawal := range withdrawals {
-		if withdrawal.Index != expected[i].Index {
-			return nil, errInvalidWithdrawalIndex
-		}
-		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
-			return nil, errInvalidValidatorIndex
-		}
-		if !bytes.Equal(withdrawal.Address, expected[i].Address) {
-			return nil, errInvalidExecutionAddress
-		}
-		if withdrawal.Amount != expected[i].Amount {
-			return nil, errInvalidWithdrawalAmount
-		}
+
+	expectedRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), expectedWithdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get expected withdrawals root")
+	}
+	if expectedRoot != wdRoot {
+		return nil, fmt.Errorf("expected withdrawals root %#x, got %#x", expectedRoot, wdRoot)
+	}
+
+	for _, withdrawal := range expectedWithdrawals {
 		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not decrease balance")
 		}
 	}
-	if len(withdrawals) > 0 {
-		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].Index + 1); err != nil {
+	if len(expectedWithdrawals) > 0 {
+		if err := st.SetNextWithdrawalIndex(expectedWithdrawals[len(expectedWithdrawals)-1].Index + 1); err != nil {
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
 	}
 	var nextValidatorIndex primitives.ValidatorIndex
-	if uint64(len(withdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
+	if uint64(len(expectedWithdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
 		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
@@ -150,7 +164,7 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
 		nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
 	} else {
-		nextValidatorIndex = withdrawals[len(withdrawals)-1].ValidatorIndex + 1
+		nextValidatorIndex = expectedWithdrawals[len(expectedWithdrawals)-1].ValidatorIndex + 1
 		if nextValidatorIndex == primitives.ValidatorIndex(st.NumValidators()) {
 			nextValidatorIndex = 0
 		}
