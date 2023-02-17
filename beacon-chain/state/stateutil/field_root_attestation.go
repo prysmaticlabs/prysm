@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	params "github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -24,10 +23,9 @@ func EpochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("epoch attestation exceeds max length %d", max)
 	}
 
-	hasher := hash.CustomSHA256Hasher()
 	roots := make([][32]byte, len(atts))
 	for i := 0; i < len(atts); i++ {
-		pendingRoot, err := pendingAttestationRoot(hasher, atts[i])
+		pendingRoot, err := pendingAttestationRoot(atts[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
 		}
@@ -50,7 +48,7 @@ func EpochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
 	return res, nil
 }
 
-func pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.PendingAttestation) ([32]byte, error) {
+func pendingAttestationRoot(att *ethpb.PendingAttestation) ([32]byte, error) {
 	if att == nil {
 		return [32]byte{}, errors.New("nil pending attestation")
 	}

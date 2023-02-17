@@ -16,7 +16,6 @@ import (
 // provided with the elements of a fixed sized trie and the corresponding depth of
 // it.
 func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
 	leaves := elements
 
 	if len(leaves) == 1 {
@@ -26,7 +25,7 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) 
 	layers := make([][][32]byte, ssz.Depth(length)+1)
 	layers[0] = hashLayer
 	var err error
-	layers, _, err = MerkleizeTrieLeaves(layers, hashLayer, hasher)
+	layers, _, err = MerkleizeTrieLeaves(layers, hashLayer)
 	if err != nil {
 		return nil, err
 	}
@@ -283,8 +282,7 @@ func Merkleize(leaves [][]byte) [][][]byte {
 }
 
 // MerkleizeTrieLeaves merkleize the trie leaves.
-func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
-	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte, error) {
+func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte) ([][][32]byte, [][32]byte, error) {
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.

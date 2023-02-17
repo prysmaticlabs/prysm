@@ -207,9 +207,7 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 func TestMerkleizeTrieLeaves_BadHashLayer(t *testing.T) {
 	hashLayer := make([][32]byte, 12)
 	layers := make([][][32]byte, 20)
-	_, _, err := stateutil.MerkleizeTrieLeaves(layers, hashLayer, func(bytes []byte) [32]byte {
-		return [32]byte{}
-	})
+	_, _, err := stateutil.MerkleizeTrieLeaves(layers, hashLayer)
 	assert.ErrorContains(t, "hash layer is a non power of 2", err)
 }
 
