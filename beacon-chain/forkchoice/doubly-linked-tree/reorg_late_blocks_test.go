@@ -1,11 +1,11 @@
 package doublylinkedtree
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"golang.org/x/net/context"
 )
 
 func TestForkChoice_ShouldOverrideFCU(t *testing.T) {
