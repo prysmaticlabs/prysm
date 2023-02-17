@@ -48,8 +48,10 @@ func TestForkChoice_ShouldOverrideFCU(t *testing.T) {
 	})
 	t.Run("head is from epoch boundary", func(t *testing.T) {
 		saved := f.store.headNode.slot
+		driftGenesisTime(f, params.BeaconConfig().SlotsPerEpoch-1, 0)
 		f.store.headNode.slot = params.BeaconConfig().SlotsPerEpoch - 1
 		require.Equal(t, false, f.ShouldOverrideFCU())
+		driftGenesisTime(f, 2, orphanLateBlockFirstThreshold+1)
 		f.store.headNode.slot = saved
 	})
 	t.Run("head is early", func(t *testing.T) {
