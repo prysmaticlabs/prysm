@@ -21,7 +21,6 @@ type ForkChoicer interface {
 	AttestationProcessor // to track new attestation for fork choice.
 	Getter               // to retrieve fork choice information.
 	Setter               // to set fork choice information.
-	ProposerBooster      // ability to boost timely-proposed block roots.
 }
 
 // HeadRetriever retrieves head root and optimistic info of the current chain.
@@ -42,11 +41,6 @@ type BlockProcessor interface {
 type AttestationProcessor interface {
 	ProcessAttestation(context.Context, []uint64, [32]byte, primitives.Epoch)
 	InsertSlashedIndex(context.Context, primitives.ValidatorIndex)
-}
-
-// ProposerBooster is able to boost the proposer's root score during fork choice.
-type ProposerBooster interface {
-	ResetBoostedProposerRoot(ctx context.Context) error
 }
 
 // Getter returns fork choice related information.
