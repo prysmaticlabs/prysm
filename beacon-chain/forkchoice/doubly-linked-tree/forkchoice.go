@@ -249,20 +249,6 @@ func (f *ForkChoice) HasNode(root [32]byte) bool {
 	return ok
 }
 
-// HasParent returns true if the node parent exists in fork choice store,
-// false else wise.
-func (f *ForkChoice) HasParent(root [32]byte) bool {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
-		return false
-	}
-
-	return node.parent != nil
-}
-
 // IsCanonical returns true if the given root is part of the canonical chain.
 func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 	f.store.nodesLock.RLock()
@@ -289,6 +275,10 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
+
+	if f.store.allTipsAreInvalid {
+		return true, nil
+	}
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
@@ -575,7 +565,7 @@ func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byt
 // number). All blocks are assumed to be a strict chain
 // where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
 // last block in this list is already included in forkchoice store.
-func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
+func (f *ForkChoice) InsertChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
 	if len(chain) == 0 {
 		return nil
 	}
