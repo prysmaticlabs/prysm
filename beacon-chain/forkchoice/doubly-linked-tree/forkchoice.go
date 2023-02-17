@@ -290,6 +290,10 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
+	if f.store.allTipsAreInvalid {
+		return true, nil
+	}
+
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
 		return true, ErrNilNode
