@@ -2695,7 +2695,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		wds, err := beaconState.ExpectedWithdrawals()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bid := &ethpbalpha.BuilderBidCapella{
 			Header: &enginev1.ExecutionPayloadHeaderCapella{
