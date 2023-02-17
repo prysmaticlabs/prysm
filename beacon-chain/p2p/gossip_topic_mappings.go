@@ -22,6 +22,7 @@ var gossipTopicMappings = map[string]proto.Message{
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
 	BlockAndBlobsSubnetTopicFormat:            &ethpb.SignedBeaconBlockAndBlobsSidecar{},
 	BlsToExecutionChangeSubnetTopicFormat:     &ethpb.SignedBLSToExecutionChange{},
+	BlobSubnetTopicFormat:                     &ethpb.SignedBlobSidecar{},
 }
 
 // GossipTopicMappings is a function to return the assigned data type
@@ -29,7 +30,7 @@ var gossipTopicMappings = map[string]proto.Message{
 func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat {
 		if epoch >= params.BeaconConfig().DenebForkEpoch {
-			return &ethpb.SignedBeaconBlockAndBlobsSidecar{}
+			return &ethpb.SignedBeaconBlockDeneb{}
 		}
 		if epoch >= params.BeaconConfig().CapellaForkEpoch {
 			return &ethpb.SignedBeaconBlockCapella{}

@@ -13,14 +13,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -90,6 +87,7 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 			s.validateCommitteeIndexBeaconAttestation,   /* validator */
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
 			digest,
+			params.BeaconNetworkConfig().AttestationSubnetCount,
 		)
 	} else {
 		s.subscribeDynamicWithSubnets(
@@ -141,6 +139,13 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 			s.validateBeaconBlockAndBlobsPubSub,
 			s.beaconBlockAndBlobsSubscriber,
 			digest,
+		)
+		s.subscribeStaticWithSubnets(
+			p2p.BlobSubnetTopicFormat,
+			s.validateBlob,   /* validator */
+			s.blobSubscriber, /* message handler */
+			digest,
+			params.BeaconNetworkConfig().BlobSubnetCount,
 		)
 	}
 }
@@ -292,31 +297,6 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			if features.Get().EnableFullSSZDataLogging {
 				fields["message"] = hexutil.Encode(msg.Data)
 			}
-			d, err := s.decodePubsubMessage(msg)
-			if err != nil {
-				log.WithError(err).Warn("Could not decode pubsub message")
-			} else {
-				switch d.(type) {
-				case *ethpb.SignedBeaconBlockAndBlobsSidecar:
-					bb, ok := d.(*ethpb.SignedBeaconBlockAndBlobsSidecar)
-					if ok {
-						interop.WriteBadBlobsToDisk("p2p", bb.BlobsSidecar)
-						sb, err := blocks.NewSignedBeaconBlock(bb.BeaconBlock)
-						if err != nil {
-							log.WithError(err).Warn("Could not decode beacon block")
-						} else {
-							interop.WriteBlockToDisk("p2p", sb, true)
-						}
-					}
-				case interfaces.SignedBeaconBlock:
-					bb, ok := d.(interfaces.SignedBeaconBlock)
-					if ok {
-						interop.WriteBlockToDisk("p2p", bb, true)
-					}
-				default:
-				}
-			}
-
 			log.WithError(err).WithFields(fields).Debugf("Gossip message was rejected")
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}
@@ -338,7 +318,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
-func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
+func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte, subnetCount uint64) {
 	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
@@ -350,7 +330,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 		// Impossible condition as it would mean topic does not exist.
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
-	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+	for i := uint64(0); i < subnetCount; i++ {
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, digest, i), validator, handle)
 	}
 	genesis := s.cfg.chain.GenesisTime()
@@ -374,7 +354,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 				if !valid {
 					log.Warnf("Attestation subnets with digest %#x are no longer valid, unsubscribing from all of them.", digest)
 					// Unsubscribes from all our current subnets.
-					for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+					for i := uint64(0); i < subnetCount; i++ {
 						fullTopic := fmt.Sprintf(topic, digest, i) + s.cfg.p2p.Encoding().ProtocolSuffix()
 						s.unSubscribeFromTopic(fullTopic)
 					}
@@ -382,7 +362,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 					return
 				}
 				// Check every slot that there are enough peers
-				for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+				for i := uint64(0); i < subnetCount; i++ {
 					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)

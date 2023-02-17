@@ -34,6 +34,7 @@ var mainnetNetworkConfig = &NetworkConfig{
 	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
 	AttestationSubnetCount:          64,
 	AttestationPropagationSlotRange: 32,
+	BlobSubnetCount:                 4,
 	MaxRequestBlocks:                1 << 10, // 1024
 	TtfbTimeout:                     5 * time.Second,
 	RespTimeout:                     10 * time.Second,
