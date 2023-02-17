@@ -3,6 +3,7 @@ package blocks
 import (
 	"bytes"
 	"errors"
+	"math/big"
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -33,6 +34,11 @@ func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.Execution
 // IsNil checks if the underlying data is nil.
 func (e executionPayload) IsNil() bool {
 	return e.p == nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayload) IsBlinded() bool {
+	return false
 }
 
 // MarshalSSZ --
@@ -140,8 +146,33 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
+// TransactionsRoot --
+func (e executionPayload) TransactionsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // Withdrawals --
 func (e executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// WithdrawalsRoot --
+func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbBellatrix --
+func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return e.p, nil
+}
+
+// PbCapella --
+func (executionPayload) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// Value --
+func (executionPayload) Value() (*big.Int, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -164,6 +195,11 @@ func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfac
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadHeader) IsNil() bool {
 	return e.p == nil
+}
+
+// IsBlinded returns true if the underlying data is a header.
+func (e executionPayloadHeader) IsBlinded() bool {
+	return true
 }
 
 // MarshalSSZ --
@@ -271,8 +307,33 @@ func (executionPayloadHeader) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// TransactionsRoot --
+func (e executionPayloadHeader) TransactionsRoot() ([]byte, error) {
+	return e.p.TransactionsRoot, nil
+}
+
 // Withdrawals --
 func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbCapella --
+func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbBellatrix --
+func (executionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// Value --
+func (executionPayloadHeader) Value() (*big.Int, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -308,12 +369,13 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadCapella struct {
-	p *enginev1.ExecutionPayloadCapella
+	p     *enginev1.ExecutionPayloadCapella
+	value *big.Int
 }
 
 // WrappedExecutionPayloadCapella is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella) (interfaces.ExecutionData, error) {
-	w := executionPayloadCapella{p: p}
+func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value *big.Int) (interfaces.ExecutionData, error) {
+	w := executionPayloadCapella{p: p, value: value}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -323,6 +385,11 @@ func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella) (interf
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadCapella) IsNil() bool {
 	return e.p == nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadCapella) IsBlinded() bool {
+	return false
 }
 
 // MarshalSSZ --
@@ -430,21 +497,47 @@ func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
+// TransactionsRoot --
+func (e executionPayloadCapella) TransactionsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // Withdrawals --
 func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return e.p.Withdrawals, nil
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbCapella --
+func (e executionPayloadCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return e.p, nil
+}
+
+// PbBellatrix --
+func (executionPayloadCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// Value --
+func (e executionPayloadCapella) Value() (*big.Int, error) {
+	return e.value, nil
 }
 
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderCapella struct {
-	p *enginev1.ExecutionPayloadHeaderCapella
+	p     *enginev1.ExecutionPayloadHeaderCapella
+	value *big.Int
 }
 
 // WrappedExecutionPayloadHeaderCapella is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderCapella{p: p}
+func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value *big.Int) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderCapella{p: p, value: value}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -454,6 +547,11 @@ func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCape
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadHeaderCapella) IsNil() bool {
 	return e.p == nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadHeaderCapella) IsBlinded() bool {
+	return true
 }
 
 // MarshalSSZ --
@@ -561,9 +659,34 @@ func (executionPayloadHeaderCapella) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// TransactionsRoot --
+func (e executionPayloadHeaderCapella) TransactionsRoot() ([]byte, error) {
+	return e.p.TransactionsRoot, nil
+}
+
 // Withdrawals --
 func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return nil, ErrUnsupportedGetter
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
+	return e.p.WithdrawalsRoot, nil
+}
+
+// PbCapella --
+func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbBellatrix --
+func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// Value --
+func (e executionPayloadHeaderCapella) Value() (*big.Int, error) {
+	return e.value, nil
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.

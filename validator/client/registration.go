@@ -19,7 +19,7 @@ import (
 // SubmitValidatorRegistrations signs validator registration objects and submits it to the beacon node.
 func SubmitValidatorRegistrations(
 	ctx context.Context,
-	validatorClient ethpb.BeaconNodeValidatorClient,
+	validatorClient iface.ValidatorClient,
 	signedRegs []*ethpb.SignedValidatorRegistrationV1,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistrations")

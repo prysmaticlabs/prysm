@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -109,8 +109,8 @@ func pruneBucket(bkt *bolt.Bucket) error {
 // the slashing protection database. This is computed by taking in an epoch and subtracting
 // SLASHING_PROTECTION_PRUNING_EPOCHS from the value. For example, if we are keeping track of 512 epochs
 // in the database, if we pass in epoch 612, then we want to prune all epochs before epoch 100.
-func pruningEpochCutoff(epoch types.Epoch) types.Epoch {
-	minEpoch := types.Epoch(0)
+func pruningEpochCutoff(epoch primitives.Epoch) primitives.Epoch {
+	minEpoch := primitives.Epoch(0)
 	if epoch > params.BeaconConfig().SlashingProtectionPruningEpochs {
 		minEpoch = epoch - params.BeaconConfig().SlashingProtectionPruningEpochs
 	}

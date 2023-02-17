@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 
@@ -102,7 +102,7 @@ func TestFname(t *testing.T) {
 		Config: params.MainnetConfig(),
 		Fork:   version.Phase0,
 	}
-	slot := types.Slot(23)
+	slot := primitives.Slot(23)
 	prefix := "block"
 	var root [32]byte
 	copy(root[:], []byte{0x23, 0x23, 0x23})
@@ -335,7 +335,7 @@ func TestGetWeakSubjectivityEpochFromHead(t *testing.T) {
 	require.Equal(t, expectedEpoch, actualEpoch)
 }
 
-func forkForEpoch(cfg *params.BeaconChainConfig, epoch types.Epoch) (*ethpb.Fork, error) {
+func forkForEpoch(cfg *params.BeaconChainConfig, epoch primitives.Epoch) (*ethpb.Fork, error) {
 	os := forks.NewOrderedSchedule(cfg)
 	currentVersion, err := os.VersionForEpoch(epoch)
 	if err != nil {
@@ -357,7 +357,7 @@ func forkForEpoch(cfg *params.BeaconChainConfig, epoch types.Epoch) (*ethpb.Fork
 	}, nil
 }
 
-func defaultTestHeadState(t *testing.T, cfg *params.BeaconChainConfig) (state.BeaconState, types.Epoch) {
+func defaultTestHeadState(t *testing.T, cfg *params.BeaconChainConfig) (state.BeaconState, primitives.Epoch) {
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
 

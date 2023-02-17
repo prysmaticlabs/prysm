@@ -15,7 +15,7 @@ import (
 func (s *Service) syncContributionAndProofSubscriber(_ context.Context, msg proto.Message) error {
 	sContr, ok := msg.(*ethpb.SignedContributionAndProof)
 	if !ok {
-		return fmt.Errorf("message was not type *eth.SignedAggregateAttestationAndProof, type=%T", msg)
+		return fmt.Errorf("message was not type *ethpb.SignedContributionAndProof, type=%T", msg)
 	}
 
 	if sContr.Message == nil || sContr.Message.Contribution == nil {

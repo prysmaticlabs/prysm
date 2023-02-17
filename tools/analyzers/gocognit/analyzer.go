@@ -25,7 +25,8 @@ var Analyzer = &analysis.Analyzer{
 // Recommended thresholds according to the 2008 presentation titled
 // "Software Quality Metrics to Identify Risk" by Thomas McCabe Jr.
 //
-//  1 - 10 Simple procedure, little risk
+//	1 - 10 Simple procedure, little risk
+//
 // 11 - 20 More complex, moderate risk
 // 21 - 50 Complex, high risk
 // > 50 Untestable code, very high risk

@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -430,6 +431,8 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GraffitiStruct:             gStruct,
 		Web3SignerConfig:           wsc,
 		ProposerSettings:           bpc,
+		BeaconApiTimeout:           time.Second * 30,
+		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -540,7 +543,9 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		return nil, err
 	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
-		FeeRecipient:  common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+			FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		},
 		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
 	}
 	if vpSettings.DefaultConfig.BuilderConfig == nil {
@@ -584,7 +589,9 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 				option.BuilderConfig = builderConfig
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipient:  common.HexToAddress(option.FeeRecipient),
+				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipient: common.HexToAddress(option.FeeRecipient),
+				},
 				BuilderConfig: option.BuilderConfig,
 			}
 

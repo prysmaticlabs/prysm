@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -14,7 +14,7 @@ func TestNewAttestationHistoryArray(t *testing.T) {
 	ba := newDeprecatedAttestingHistory(0)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
 	ba = newDeprecatedAttestingHistory(params.BeaconConfig().WeakSubjectivityPeriod - 1)
-	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, types.Epoch(len(ba)))
+	assert.Equal(t, latestEpochWrittenSize+historySize*params.BeaconConfig().WeakSubjectivityPeriod, primitives.Epoch(len(ba)))
 	ba = newDeprecatedAttestingHistory(params.BeaconConfig().WeakSubjectivityPeriod)
 	assert.Equal(t, latestEpochWrittenSize+historySize, len(ba))
 	ba = newDeprecatedAttestingHistory(params.BeaconConfig().WeakSubjectivityPeriod + 1)
@@ -37,7 +37,7 @@ func TestGetLatestEpochWritten(t *testing.T) {
 	ha[0] = 28
 	lew, err := ha.getLatestEpochWritten()
 	require.NoError(t, err)
-	assert.Equal(t, types.Epoch(28), lew)
+	assert.Equal(t, primitives.Epoch(28), lew)
 }
 
 func TestSetLatestEpochWritten(t *testing.T) {
@@ -63,8 +63,8 @@ func TestSetTargetData(t *testing.T) {
 	type testStruct struct {
 		name        string
 		enc         deprecatedEncodedAttestingHistory
-		target      types.Epoch
-		source      types.Epoch
+		target      primitives.Epoch
+		source      primitives.Epoch
 		signingRoot []byte
 		expected    deprecatedEncodedAttestingHistory
 		error       string

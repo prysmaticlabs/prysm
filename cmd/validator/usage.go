@@ -86,6 +86,7 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			flags.BeaconRPCProviderFlag,
 			flags.BeaconRPCGatewayProviderFlag,
+			flags.BeaconRESTApiProviderFlag,
 			flags.CertFlag,
 			flags.EnableWebFlag,
 			flags.DisablePenaltyRewardLogFlag,

@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -119,7 +119,7 @@ func TestProcessSlashings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := &Service{
-				TrackedValidators: map[types.ValidatorIndex]bool{
+				TrackedValidators: map[primitives.ValidatorIndex]bool{
 					1: true,
 					2: true,
 				},
@@ -170,7 +170,7 @@ func TestProcessProposedBlock(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := setupService(t)
 			beaconState, _ := util.DeterministicGenesisState(t, 256)
-			root := [32]byte{}
+			var root [32]byte
 			copy(root[:], "hello-world")
 			wb, err := blocks.NewBeaconBlock(tt.block)
 			require.NoError(t, err)

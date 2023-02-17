@@ -6,7 +6,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -29,7 +29,7 @@ func newSyncSubnetIDs() *syncSubnetIDs {
 }
 
 // GetSyncCommitteeSubnets retrieves the sync committee subnet and expiration time of that validator's subscription.
-func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch) ([]uint64, types.Epoch, bool, time.Time) {
+func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte, epoch primitives.Epoch) ([]uint64, primitives.Epoch, bool, time.Time) {
 	s.sCommiteeLock.RLock()
 	defer s.sCommiteeLock.RUnlock()
 
@@ -50,13 +50,13 @@ func (s *syncSubnetIDs) GetSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch
 	// Index 0 was used to store validator's join epoch. We do not
 	// return it to the caller.
 	// Index 1 and beyond were used to store subnets.
-	return idxs[1:], types.Epoch(idxs[0]), ok, duration
+	return idxs[1:], primitives.Epoch(idxs[0]), ok, duration
 }
 
 // GetAllSubnets retrieves all the non-expired subscribed subnets of all the validators
 // in the cache. This method also takes the epoch as an argument to only retrieve
 // assignments for epochs that have happened.
-func (s *syncSubnetIDs) GetAllSubnets(currEpoch types.Epoch) []uint64 {
+func (s *syncSubnetIDs) GetAllSubnets(currEpoch primitives.Epoch) []uint64 {
 	s.sCommiteeLock.RLock()
 	defer s.sCommiteeLock.RUnlock()
 
@@ -79,7 +79,7 @@ func (s *syncSubnetIDs) GetAllSubnets(currEpoch types.Epoch) []uint64 {
 		// Check if the subnet is valid in the current epoch. If our
 		// join epoch is still in the future we skip retrieving the
 		// relevant committee index.
-		if types.Epoch(idxs[0]) > currEpoch {
+		if primitives.Epoch(idxs[0]) > currEpoch {
 			continue
 		}
 		// Ignore the first index as that represents the
@@ -92,7 +92,7 @@ func (s *syncSubnetIDs) GetAllSubnets(currEpoch types.Epoch) []uint64 {
 // AddSyncCommitteeSubnets adds the relevant committee for that particular validator along with its
 // expiration period. An Epoch argument here denotes the epoch from which the sync committee subnets
 // will be active.
-func (s *syncSubnetIDs) AddSyncCommitteeSubnets(pubkey []byte, epoch types.Epoch, comIndex []uint64, duration time.Duration) {
+func (s *syncSubnetIDs) AddSyncCommitteeSubnets(pubkey []byte, epoch primitives.Epoch, comIndex []uint64, duration time.Duration) {
 	s.sCommiteeLock.Lock()
 	defer s.sCommiteeLock.Unlock()
 	subComCount := params.BeaconConfig().SyncCommitteeSubnetCount
@@ -125,7 +125,7 @@ func (s *syncSubnetIDs) EmptyAllCaches() {
 
 // build a key composed of both the pubkey and epoch here. The epoch
 // here would be the 1st epoch of the sync committee period.
-func keyBuilder(pubkey []byte, epoch types.Epoch) string {
+func keyBuilder(pubkey []byte, epoch primitives.Epoch) string {
 	epochBytes := bytesutil.Bytes8(uint64(epoch))
 	return string(append(pubkey, epochBytes...))
 }

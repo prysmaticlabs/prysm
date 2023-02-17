@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
 	pmath "github.com/prysmaticlabs/prysm/v3/math"
 )
 
@@ -21,7 +21,7 @@ type FieldTrie struct {
 	*sync.RWMutex
 	reference     *stateutil.Reference
 	fieldLayers   [][]*[32]byte
-	field         types.BeaconStateField
+	field         types.FieldIndex
 	dataType      types.DataType
 	length        uint64
 	numOfElems    int
@@ -31,7 +31,7 @@ type FieldTrie struct {
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(field types.BeaconStateField, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
 			field:      field,
@@ -43,14 +43,7 @@ func NewFieldTrie(field types.BeaconStateField, dataType types.DataType, element
 		}, nil
 	}
 
-	var fieldRoots [][32]byte
-	var err error
-	if field.Native() {
-		fieldRoots, err = fieldConvertersNative(field, []uint64{}, elements, true)
-	} else {
-		fieldRoots, err = fieldConverters(field, []uint64{}, elements, true)
-	}
-
+	fieldRoots, err := fieldConverters(field, []uint64{}, elements, true)
 	if err != nil {
 		return nil, err
 	}
@@ -100,13 +93,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		return f.TrieRoot()
 	}
 
-	var fieldRoots [][32]byte
-	var err error
-	if f.field.Native() {
-		fieldRoots, err = fieldConvertersNative(f.field, indices, elements, false)
-	} else {
-		fieldRoots, err = fieldConverters(f.field, indices, elements, false)
-	}
+	fieldRoots, err := fieldConverters(f.field, indices, elements, false)
 	if err != nil {
 		return [32]byte{}, err
 	}

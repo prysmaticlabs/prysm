@@ -64,7 +64,7 @@ type Store struct {
 	db                                 *bolt.DB
 	databasePath                       string
 	batchedAttestations                *QueuedAttestationRecords
-	batchedAttestationsChan            chan *AttestationRecord
+	batchedAttestationsChan            chan *AttestationRecordSaveRequest
 	batchAttestationsFlushedFeed       *event.Feed
 	batchedAttestationsFlushInProgress abool.AtomicBool
 }
@@ -134,7 +134,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		db:                           boltDB,
 		databasePath:                 dirPath,
 		batchedAttestations:          NewQueuedAttestationRecords(),
-		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
+		batchedAttestationsChan:      make(chan *AttestationRecordSaveRequest, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}
 

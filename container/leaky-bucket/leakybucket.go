@@ -18,7 +18,6 @@ This means it is the exact mirror of a token bucket.
 	n := b.Add(1)
 	// n == 0
 
-
 A Collector is a convenient way to keep track of multiple LeakyBucket's.
 Buckets are associated with string keys for fast lookup. It can dynamically
 add new buckets and automatically remove them as they become empty, freeing

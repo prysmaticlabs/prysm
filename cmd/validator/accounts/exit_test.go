@@ -21,7 +21,7 @@ import (
 func TestExitAccountsCli_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
 	mockNodeClient := mock2.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
@@ -113,7 +113,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
 	mockNodeClient := mock2.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
@@ -220,7 +220,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 func TestExitAccountsCli_OK_ForceExit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
 	mockNodeClient := mock2.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().

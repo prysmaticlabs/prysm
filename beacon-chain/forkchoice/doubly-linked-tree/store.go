@@ -8,16 +8,22 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
 // applyProposerBoostScore applies the current proposer boost scores to the
 // relevant nodes. This function requires a lock in Store.nodesLock.
-func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
+func (f *ForkChoice) applyProposerBoostScore() error {
+	s := f.store
 	s.proposerBoostLock.Lock()
 	defer s.proposerBoostLock.Unlock()
+
+	// acquire checkpoints lock for the justified balances
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
+	newBalances := f.justifiedBalances
 
 	proposerScore := uint64(0)
 	var err error
@@ -86,7 +92,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 		bestDescendant = justifiedNode
 	}
 	currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
-	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch, currentEpoch) {
+	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, currentEpoch) {
 		s.allTipsAreInvalid = true
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
 			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
@@ -106,9 +112,9 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 // insert registers a new block node to the fork choice store's node list.
 // It then updates the new node's parent with best child and descendant node.
 func (s *Store) insert(ctx context.Context,
-	slot types.Slot,
+	slot primitives.Slot,
 	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch) (*Node, error) {
+	justifiedEpoch, finalizedEpoch primitives.Epoch) (*Node, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
 	defer span.End()
 
@@ -204,6 +210,7 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 
 	node.children = nil
 	delete(s.nodeByRoot, node.root)
+	delete(s.nodeByPayload, node.payloadHash)
 	return nil
 }
 
@@ -217,8 +224,8 @@ func (s *Store) prune(ctx context.Context) error {
 	defer s.nodesLock.Unlock()
 	s.checkpointsLock.RLock()
 	finalizedRoot := s.finalizedCheckpoint.Root
+	finalizedEpoch := s.finalizedCheckpoint.Epoch
 	s.checkpointsLock.RUnlock()
-
 	finalizedNode, ok := s.nodeByRoot[finalizedRoot]
 	if !ok || finalizedNode == nil {
 		return errors.WithMessage(errUnknownFinalizedRoot, fmt.Sprintf("%#x", finalizedRoot))
@@ -237,14 +244,30 @@ func (s *Store) prune(ctx context.Context) error {
 	s.treeRootNode = finalizedNode
 
 	prunedCount.Inc()
+	// Prune all children of the finalized checkpoint block that are incompatible with it
+	checkpointMaxSlot, err := slots.EpochStart(finalizedEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not compute epoch start")
+	}
+	if finalizedNode.slot == checkpointMaxSlot {
+		return nil
+	}
+
+	for _, child := range finalizedNode.children {
+		if child != nil && child.slot <= checkpointMaxSlot {
+			if err := s.pruneFinalizedNodeByRootMap(ctx, child, finalizedNode); err != nil {
+				return errors.Wrap(err, "could not prune incompatible finalized child")
+			}
+		}
+	}
 	return nil
 }
 
 // tips returns a list of possible heads from fork choice store, it returns the
 // roots and the slots of the leaf nodes.
-func (s *Store) tips() ([][32]byte, []types.Slot) {
+func (s *Store) tips() ([][32]byte, []primitives.Slot) {
 	var roots [][32]byte
-	var slots []types.Slot
+	var slots []primitives.Slot
 
 	s.nodesLock.RLock()
 	defer s.nodesLock.RUnlock()
@@ -259,7 +282,7 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 }
 
 // HighestReceivedBlockSlot returns the highest slot received by the forkchoice
-func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
+func (f *ForkChoice) HighestReceivedBlockSlot() primitives.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	if f.store.highestReceivedNode == nil {

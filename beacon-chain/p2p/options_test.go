@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
@@ -95,7 +96,7 @@ func TestDefaultMultiplexers(t *testing.T) {
 	err = cfg.Apply(append(opts, libp2p.FallbackDefaults)...)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "/mplex/6.7.0", cfg.Muxers[0].ID)
-	assert.Equal(t, "/yamux/1.0.0", cfg.Muxers[1].ID)
+	assert.Equal(t, protocol.ID("/mplex/6.7.0"), cfg.Muxers[0].ID)
+	assert.Equal(t, protocol.ID("/yamux/1.0.0"), cfg.Muxers[1].ID)
 
 }

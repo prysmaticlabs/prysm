@@ -11,13 +11,13 @@ import (
 
 // HandleKeyReload makes sure the validator keeps operating correctly after a change to the underlying keys.
 // It is also responsible for logging out information about the new state of keys.
-func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (anyActive bool, err error) {
+func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (anyActive bool, err error) {
 	ctx, span := trace.StartSpan(ctx, "validator.HandleKeyReload")
 	defer span.End()
 
-	statusRequestKeys := make([][]byte, len(newKeys))
-	for i := range newKeys {
-		statusRequestKeys[i] = newKeys[i][:]
+	statusRequestKeys := make([][]byte, len(currentKeys))
+	for i := range currentKeys {
+		statusRequestKeys[i] = currentKeys[i][:]
 	}
 	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &eth.MultipleValidatorStatusRequest{
 		PublicKeys: statusRequestKeys,

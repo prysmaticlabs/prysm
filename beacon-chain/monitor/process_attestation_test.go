@@ -103,7 +103,7 @@ func TestProcessUnaggregatedAttestationStateCached(t *testing.T) {
 	participation := []byte{0xff, 0xff, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	require.NoError(t, state.SetCurrentParticipationBits(participation))
 
-	root := [32]byte{}
+	var root [32]byte
 	copy(root[:], "hello-world")
 
 	att := &ethpb.Attestation{
@@ -175,7 +175,7 @@ func TestProcessAggregatedAttestationStateCached(t *testing.T) {
 	participation := []byte{0xff, 0xff, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	require.NoError(t, state.SetCurrentParticipationBits(participation))
 
-	root := [32]byte{}
+	var root [32]byte
 	copy(root[:], "hello-world")
 
 	att := &ethpb.AggregateAttestationAndProof{

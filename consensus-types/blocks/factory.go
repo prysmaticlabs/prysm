@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -23,7 +24,8 @@ var (
 	// ErrNilObject is returned in a constructor when the underlying object is nil.
 	ErrNilObject = errors.New("received nil object")
 	// ErrNilSignedBeaconBlock is returned when a nil signed beacon block is received.
-	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
+	ErrNilSignedBeaconBlock        = errors.New("signed beacon block can't be nil")
+	errNonBlindedSignedBeaconBlock = errors.New("can only build signed beacon block from blinded format")
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
@@ -61,7 +63,7 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 }
 
 // NewBeaconBlock creates a beacon block from a protobuf beacon block.
-func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
+func NewBeaconBlock(i interface{}) (interfaces.ReadOnlyBeaconBlock, error) {
 	switch b := i.(type) {
 	case nil:
 		return nil, ErrNilObject
@@ -95,7 +97,7 @@ func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 }
 
 // NewBeaconBlockBody creates a beacon block body from a protobuf beacon block body.
-func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
+func NewBeaconBlockBody(i interface{}) (interfaces.ReadOnlyBeaconBlockBody, error) {
 	switch b := i.(type) {
 	case nil:
 		return nil, ErrNilObject
@@ -116,10 +118,10 @@ func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 	}
 }
 
-// BuildSignedBeaconBlock assembles a block.SignedBeaconBlock interface compatible struct from a
+// BuildSignedBeaconBlock assembles a block.ReadOnlySignedBeaconBlock interface compatible struct from a
 // given beacon block and the appropriate signature. This method may be used to easily create a
 // signed beacon block.
-func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (interfaces.SignedBeaconBlock, error) {
+func BuildSignedBeaconBlock(blk interfaces.ReadOnlyBeaconBlock, signature []byte) (interfaces.SignedBeaconBlock, error) {
 	pb, err := blk.Proto()
 	if err != nil {
 		return nil, err
@@ -172,19 +174,18 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 // BuildSignedBeaconBlockFromExecutionPayload takes a signed, blinded beacon block and converts into
 // a full, signed beacon block by specifying an execution payload.
 func BuildSignedBeaconBlockFromExecutionPayload(
-	blk interfaces.SignedBeaconBlock, payload interface{},
+	blk interfaces.ReadOnlySignedBeaconBlock, payload interface{},
 ) (interfaces.SignedBeaconBlock, error) {
 	if err := BeaconBlockIsNil(blk); err != nil {
 		return nil, err
 	}
+	if !blk.IsBlinded() {
+		return nil, errNonBlindedSignedBeaconBlock
+	}
 	b := blk.Block()
 	payloadHeader, err := b.Body().Execution()
-	switch {
-	case errors.Is(err, ErrUnsupportedGetter):
-		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")
-	case err != nil:
+	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload header")
-	default:
 	}
 
 	var wrappedPayload interfaces.ExecutionData
@@ -193,7 +194,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	case *enginev1.ExecutionPayload:
 		wrappedPayload, wrapErr = WrappedExecutionPayload(p)
 	case *enginev1.ExecutionPayloadCapella:
-		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p)
+		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p, big.NewInt(0))
 	default:
 		return nil, fmt.Errorf("%T is not a type of execution payload", p)
 	}
@@ -287,4 +288,25 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	}
 
 	return NewSignedBeaconBlock(fullBlock)
+}
+
+// BeaconBlockContainerToSignedBeaconBlock converts BeaconBlockContainer (API response) to a SignedBeaconBlock.
+// This is particularly useful for using the values from API calls.
+func BeaconBlockContainerToSignedBeaconBlock(obj *eth.BeaconBlockContainer) (interfaces.ReadOnlySignedBeaconBlock, error) {
+	switch obj.Block.(type) {
+	case *eth.BeaconBlockContainer_BlindedCapellaBlock:
+		return NewSignedBeaconBlock(obj.GetBlindedCapellaBlock())
+	case *eth.BeaconBlockContainer_CapellaBlock:
+		return NewSignedBeaconBlock(obj.GetCapellaBlock())
+	case *eth.BeaconBlockContainer_BlindedBellatrixBlock:
+		return NewSignedBeaconBlock(obj.GetBlindedBellatrixBlock())
+	case *eth.BeaconBlockContainer_BellatrixBlock:
+		return NewSignedBeaconBlock(obj.GetBellatrixBlock())
+	case *eth.BeaconBlockContainer_AltairBlock:
+		return NewSignedBeaconBlock(obj.GetAltairBlock())
+	case *eth.BeaconBlockContainer_Phase0Block:
+		return NewSignedBeaconBlock(obj.GetPhase0Block())
+	default:
+		return nil, errors.New("container block type not recognized")
+	}
 }

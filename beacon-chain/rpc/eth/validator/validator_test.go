@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strconv"
 	"testing"
 	"time"
@@ -21,7 +22,7 @@ import (
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations/mock"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -30,14 +31,17 @@ import (
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -80,12 +84,22 @@ func TestGetAttesterDuties(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
-	chainSlot := types.Slot(0)
+	// nextEpochState must not be used for committee calculations when requesting next epoch
+	nextEpochState := bs.Copy()
+	require.NoError(t, nextEpochState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, nextEpochState.SetValidators(vals[:512]))
+
+	chainSlot := primitives.Slot(0)
 	chain := &mockChain.ChainService{
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
-		HeadFetcher:           chain,
+		StateFetcher: &testutil.MockFetcher{
+			StatesBySlot: map[primitives.Slot]state.BeaconState{
+				0:                                   bs,
+				params.BeaconConfig().SlotsPerEpoch: nextEpochState,
+			},
+		},
 		TimeFetcher:           chain,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		OptimisticModeFetcher: chain,
@@ -94,26 +108,26 @@ func TestGetAttesterDuties(t *testing.T) {
 	t.Run("Single validator", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{0},
+			Index: []primitives.ValidatorIndex{0},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(0), duty.Slot)
-		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
+		assert.Equal(t, primitives.CommitteeIndex(1), duty.CommitteeIndex)
+		assert.Equal(t, primitives.Slot(0), duty.Slot)
+		assert.Equal(t, primitives.ValidatorIndex(0), duty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
 		assert.Equal(t, uint64(171), duty.CommitteeLength)
 		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(80), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, primitives.CommitteeIndex(80), duty.ValidatorCommitteeIndex)
 	})
 
 	t.Run("Multiple validators", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{0, 1},
+			Index: []primitives.ValidatorIndex{0, 1},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
@@ -123,76 +137,27 @@ func TestGetAttesterDuties(t *testing.T) {
 	t.Run("Next epoch", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: slots.ToEpoch(bs.Slot()) + 1,
-			Index: []types.ValidatorIndex{0},
+			Index: []primitives.ValidatorIndex{0},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(0), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(62), duty.Slot)
-		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
+		assert.Equal(t, primitives.CommitteeIndex(0), duty.CommitteeIndex)
+		assert.Equal(t, primitives.Slot(62), duty.Slot)
+		assert.Equal(t, primitives.ValidatorIndex(0), duty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
 		assert.Equal(t, uint64(170), duty.CommitteeLength)
 		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(110), duty.ValidatorCommitteeIndex)
-	})
-
-	t.Run("Require slot processing", func(t *testing.T) {
-		// We create local variables to not interfere with other tests.
-		// Slot processing might have unexpected side-effects.
-
-		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
-		require.NoError(t, err, "Could not set up genesis state")
-		// Set state to non-epoch start slot.
-		require.NoError(t, bs.SetSlot(5))
-		genesisRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		roots := make([][]byte, fieldparams.BlockRootsLength)
-		roots[0] = genesisRoot[:]
-		require.NoError(t, bs.SetBlockRoots(roots))
-
-		pubKeys := make([][]byte, len(deposits))
-		indices := make([]uint64, len(deposits))
-		for i := 0; i < len(deposits); i++ {
-			pubKeys[i] = deposits[i].Data.PublicKey
-			indices[i] = uint64(i)
-		}
-		chainSlot := params.BeaconConfig().SlotsPerEpoch.Mul(2)
-		chain := &mockChain.ChainService{
-			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
-		}
-		vs := &Server{
-			HeadFetcher:           chain,
-			TimeFetcher:           chain,
-			OptimisticModeFetcher: chain,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-		}
-
-		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: 2,
-			Index: []types.ValidatorIndex{0},
-		}
-		resp, err := vs.GetAttesterDuties(ctx, req)
-		require.NoError(t, err)
-		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
-		require.Equal(t, 1, len(resp.Data))
-		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(86), duty.Slot)
-		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(128), duty.CommitteeLength)
-		assert.Equal(t, uint64(4), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(44), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, primitives.CommitteeIndex(110), duty.ValidatorCommitteeIndex)
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
 		currentEpoch := slots.ToEpoch(bs.Slot())
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: currentEpoch + 2,
-			Index: []types.ValidatorIndex{0},
+			Index: []primitives.ValidatorIndex{0},
 		}
 		_, err := vs.GetAttesterDuties(ctx, req)
 		require.NotNil(t, err)
@@ -202,7 +167,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	t.Run("Validator index out of bound", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{types.ValidatorIndex(len(pubKeys))},
+			Index: []primitives.ValidatorIndex{primitives.ValidatorIndex(len(pubKeys))},
 		}
 		_, err := vs.GetAttesterDuties(ctx, req)
 		require.NotNil(t, err)
@@ -212,7 +177,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	t.Run("Inactive validator - no duties", func(t *testing.T) {
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{types.ValidatorIndex(len(pubKeys) - 1)},
+			Index: []primitives.ValidatorIndex{primitives.ValidatorIndex(len(pubKeys) - 1)},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
@@ -229,19 +194,19 @@ func TestGetAttesterDuties(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainSlot := types.Slot(0)
+		chainSlot := primitives.Slot(0)
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			HeadFetcher:           chain,
+			StateFetcher:          &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{0},
+			Index: []primitives.ValidatorIndex{0},
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
@@ -271,15 +236,12 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
-	require.NoError(t, err, "Could not set up genesis state")
-	// Set state to non-epoch start slot.
-	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
-	require.NoError(t, bs.SetBlockRoots(roots))
+	// We DON'T WANT this root to be returned when testing the next epoch
+	roots[31] = []byte("next_epoch_dependent_root")
 	db := dbutil.SetupDB(t)
 
 	pubKeys := make([][]byte, len(deposits))
@@ -287,19 +249,24 @@ func TestGetProposerDuties(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
-	chainSlot := types.Slot(0)
-	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
-	}
-	vs := &Server{
-		HeadFetcher:            chain,
-		TimeFetcher:            chain,
-		OptimisticModeFetcher:  chain,
-		SyncChecker:            &mockSync.Sync{IsSyncing: false},
-		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
-	}
-
 	t.Run("Ok", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, bs.SetBlockRoots(roots))
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		vs := &Server{
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:            chain,
+			TimeFetcher:            chain,
+			OptimisticModeFetcher:  chain,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		}
+
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: 0,
 		}
@@ -316,59 +283,22 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, types.ValidatorIndex(9982), vid)
+		require.Equal(t, primitives.ValidatorIndex(9982), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, types.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
+		assert.Equal(t, primitives.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
 	})
 
-	t.Run("Prune payload ID cache ok", func(t *testing.T) {
-		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: 1,
-		}
-		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
-		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
-		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
-
-		_, err := vs.GetProposerDuties(ctx, req)
-		require.NoError(t, err)
-
-		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(1, [32]byte{})
-		require.Equal(t, false, has)
-		require.Equal(t, types.ValidatorIndex(0), vid)
-		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{})
-		require.Equal(t, false, has)
-		require.Equal(t, types.ValidatorIndex(0), vid)
-		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
-		require.Equal(t, true, has)
-		require.Equal(t, types.ValidatorIndex(4309), vid)
-	})
-
-	t.Run("Require slot processing", func(t *testing.T) {
-		// We create local variables to not interfere with other tests.
-		// Slot processing might have unexpected side-effects.
-
+	t.Run("Next epoch", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
-		// Set state to non-epoch start slot.
-		require.NoError(t, bs.SetSlot(5))
-		genesisRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		roots := make([][]byte, fieldparams.BlockRootsLength)
-		roots[0] = genesisRoot[:]
 		require.NoError(t, bs.SetBlockRoots(roots))
-
-		pubKeys := make([][]byte, len(deposits))
-		indices := make([]uint64, len(deposits))
-		for i := 0; i < len(deposits); i++ {
-			pubKeys[i] = deposits[i].Data.PublicKey
-			indices[i] = uint64(i)
-		}
-		chainSlot := params.BeaconConfig().SlotsPerEpoch.Mul(2)
+		chainSlot := primitives.Slot(0)
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -377,35 +307,100 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 
 		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: 2,
+			Epoch: 1,
 		}
 		resp, err := vs.GetProposerDuties(ctx, req)
 		require.NoError(t, err)
-		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
+		assert.DeepEqual(t, bytesutil.PadTo(genesisRoot[:], 32), resp.DependentRoot)
 		assert.Equal(t, 32, len(resp.Data))
-		// We expect a proposer duty for slot 74.
+		// We expect a proposer duty for slot 43.
 		var expectedDuty *ethpbv1.ProposerDuty
 		for _, duty := range resp.Data {
-			if duty.Slot == 74 {
+			if duty.Slot == 43 {
 				expectedDuty = duty
 			}
 		}
-		require.NotNil(t, expectedDuty, "Expected duty for slot 74 not found")
-		assert.Equal(t, types.ValidatorIndex(11741), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[11741], expectedDuty.Pubkey)
+		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
+		require.Equal(t, true, has)
+		require.Equal(t, primitives.ValidatorIndex(4863), vid)
+		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
+		assert.Equal(t, primitives.ValidatorIndex(4863), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[4863], expectedDuty.Pubkey)
+	})
+
+	t.Run("Prune payload ID cache ok", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, bs.SetBlockRoots(roots))
+		chainSlot := params.BeaconConfig().SlotsPerEpoch
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		vs := &Server{
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
+			HeadFetcher:            chain,
+			TimeFetcher:            chain,
+			OptimisticModeFetcher:  chain,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		}
+
+		req := &ethpbv1.ProposerDutiesRequest{
+			Epoch: 1,
+		}
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
+
+		_, err = vs.GetProposerDuties(ctx, req)
+		require.NoError(t, err)
+
+		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(1, [32]byte{})
+		require.Equal(t, false, has)
+		require.Equal(t, primitives.ValidatorIndex(0), vid)
+		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{})
+		require.Equal(t, false, has)
+		require.Equal(t, primitives.ValidatorIndex(0), vid)
+		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
+		require.Equal(t, true, has)
+		require.Equal(t, primitives.ValidatorIndex(4309), vid)
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		// Set state to non-epoch start slot.
+		require.NoError(t, bs.SetSlot(5))
+		require.NoError(t, bs.SetBlockRoots(roots))
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		vs := &Server{
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:            chain,
+			TimeFetcher:            chain,
+			OptimisticModeFetcher:  chain,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		}
+
 		currentEpoch := slots.ToEpoch(bs.Slot())
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: currentEpoch + 2,
 		}
-		_, err := vs.GetProposerDuties(ctx, req)
+		_, err = vs.GetProposerDuties(ctx, req)
 		require.NotNil(t, err)
 		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), err)
 	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		// Set state to non-epoch start slot.
+		require.NoError(t, bs.SetSlot(5))
+		require.NoError(t, bs.SetBlockRoots(roots))
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
@@ -415,11 +410,12 @@ func TestGetProposerDuties(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainSlot := types.Slot(0)
+		chainSlot := primitives.Slot(0)
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -482,7 +478,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	t.Run("Single validator", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{1},
+			Index: []primitives.ValidatorIndex{1},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
@@ -491,7 +487,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.DeepEqual(t, vals[1].PublicKey, duty.Pubkey)
-		assert.Equal(t, types.ValidatorIndex(1), duty.ValidatorIndex)
+		assert.Equal(t, primitives.ValidatorIndex(1), duty.ValidatorIndex)
 		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
 		assert.Equal(t, uint64(1), duty.ValidatorSyncCommitteeIndices[0])
 	})
@@ -499,7 +495,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	t.Run("Epoch not at period start", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 1,
-			Index: []types.ValidatorIndex{1},
+			Index: []primitives.ValidatorIndex{1},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
@@ -508,7 +504,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.DeepEqual(t, vals[1].PublicKey, duty.Pubkey)
-		assert.Equal(t, types.ValidatorIndex(1), duty.ValidatorIndex)
+		assert.Equal(t, primitives.ValidatorIndex(1), duty.ValidatorIndex)
 		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
 		assert.Equal(t, uint64(1), duty.ValidatorSyncCommitteeIndices[0])
 	})
@@ -516,7 +512,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	t.Run("Multiple validators", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{1, 2},
+			Index: []primitives.ValidatorIndex{1, 2},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
@@ -526,18 +522,18 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	t.Run("Validator without duty not returned", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{1, 10},
+			Index: []primitives.ValidatorIndex{1, 10},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Data))
-		assert.Equal(t, types.ValidatorIndex(1), resp.Data[0].ValidatorIndex)
+		assert.Equal(t, primitives.ValidatorIndex(1), resp.Data[0].ValidatorIndex)
 	})
 
 	t.Run("Multiple indices for validator", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{0},
+			Index: []primitives.ValidatorIndex{0},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
@@ -549,7 +545,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	t.Run("Validator index out of bound", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{types.ValidatorIndex(numVals)},
+			Index: []primitives.ValidatorIndex{primitives.ValidatorIndex(numVals)},
 		}
 		_, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NotNil(t, err)
@@ -559,7 +555,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	t.Run("next sync committee period", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod,
-			Index: []types.ValidatorIndex{5},
+			Index: []primitives.ValidatorIndex{5},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
@@ -568,7 +564,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.DeepEqual(t, vals[5].PublicKey, duty.Pubkey)
-		assert.Equal(t, types.ValidatorIndex(5), duty.ValidatorIndex)
+		assert.Equal(t, primitives.ValidatorIndex(5), duty.ValidatorIndex)
 		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
 		assert.Equal(t, uint64(0), duty.ValidatorSyncCommitteeIndices[0])
 	})
@@ -576,7 +572,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	t.Run("epoch too far in the future", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod * 2,
-			Index: []types.ValidatorIndex{5},
+			Index: []primitives.ValidatorIndex{5},
 		}
 		_, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NotNil(t, err)
@@ -586,7 +582,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	t.Run("correct sync committee is fetched", func(t *testing.T) {
 		// in this test we swap validators in the current and next sync committee inside the new state
 
-		newSyncPeriodStartSlot := types.Slot(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * uint64(params.BeaconConfig().SlotsPerEpoch))
+		newSyncPeriodStartSlot := primitives.Slot(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * uint64(params.BeaconConfig().SlotsPerEpoch))
 		newSyncPeriodSt, _ := util.DeterministicGenesisStateAltair(t, numVals)
 		require.NoError(t, newSyncPeriodSt.SetSlot(newSyncPeriodStartSlot))
 		require.NoError(t, newSyncPeriodSt.SetGenesisTime(uint64(genesisTime.Unix())))
@@ -602,7 +598,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		require.NoError(t, newSyncPeriodSt.SetNextSyncCommittee(nextCommittee))
 
-		stateFetchFn := func(slot types.Slot) state.BeaconState {
+		stateFetchFn := func(slot primitives.Slot) state.BeaconState {
 			if slot < newSyncPeriodStartSlot {
 				return st
 			} else {
@@ -620,7 +616,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod,
-			Index: []types.ValidatorIndex{8},
+			Index: []primitives.ValidatorIndex{8},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
@@ -629,7 +625,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.DeepEqual(t, vals[8].PublicKey, duty.Pubkey)
-		assert.Equal(t, types.ValidatorIndex(8), duty.ValidatorIndex)
+		assert.Equal(t, primitives.ValidatorIndex(8), duty.ValidatorIndex)
 		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
 		assert.Equal(t, uint64(3), duty.ValidatorSyncCommitteeIndices[0])
 	})
@@ -653,7 +649,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
-			Index: []types.ValidatorIndex{1},
+			Index: []primitives.ValidatorIndex{1},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
 		require.NoError(t, err)
@@ -695,23 +691,27 @@ func TestProduceBlockV2(t *testing.T) {
 
 		beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
+		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
+		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
-			SyncChecker:       &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:     &mockChain.ChainService{},
-			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockExecution.Chain{},
-			Eth1InfoFetcher:   &mockExecution.Chain{},
-			Eth1BlockFetcher:  &mockExecution.Chain{},
-			MockEth1Votes:     true,
-			AttPool:           attestations.NewPool(),
-			SlashingsPool:     slashings.NewPool(),
-			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db, doublylinkedtree.New()),
+			HeadFetcher:           mockChainService,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:         mockChainService,
+			HeadUpdater:           mockChainService,
+			ChainStartFetcher:     mockExecutionChain,
+			Eth1InfoFetcher:       mockExecutionChain,
+			Eth1BlockFetcher:      mockExecutionChain,
+			MockEth1Votes:         true,
+			AttPool:               attestations.NewPool(),
+			SlashingsPool:         slashings.NewPool(),
+			ExitPool:              voluntaryexits.NewPool(),
+			StateGen:              stategen.New(db, doublylinkedtree.New()),
+			TimeFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-		for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
 			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 				beaconState,
 				privKeys[i],
@@ -728,7 +728,7 @@ func TestProduceBlockV2(t *testing.T) {
 			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 				beaconState,
 				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-				types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
 			)
 			require.NoError(t, err)
 			attSlashings[i] = attesterSlashing
@@ -750,8 +750,8 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
-		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
 
+		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
 		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_Phase0Block)
 		require.Equal(t, true, ok)
 		blk := containerBlock.Phase0Block
@@ -759,12 +759,14 @@ func TestProduceBlockV2(t *testing.T) {
 		assert.DeepEqual(t, parentRoot[:], blk.ParentRoot, "Expected block to have correct parent root")
 		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
 		assert.DeepEqual(t, req.Graffiti, blk.Body.Graffiti, "Expected block to have correct graffiti")
+
 		assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(blk.Body.ProposerSlashings)))
 		expectedPropSlashings := make([]*ethpbv1.ProposerSlashing, len(proposerSlashings))
 		for i, slash := range proposerSlashings {
 			expectedPropSlashings[i] = migration.V1Alpha1ProposerSlashingToV1(slash)
 		}
 		assert.DeepEqual(t, expectedPropSlashings, blk.Body.ProposerSlashings)
+
 		assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(blk.Body.AttesterSlashings)))
 		expectedAttSlashings := make([]*ethpbv1.AttesterSlashing, len(attSlashings))
 		for i, slash := range attSlashings {
@@ -779,7 +781,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		params.SetupTestConfigCleanup(t)
 		bc := params.BeaconConfig().Copy()
-		bc.AltairForkEpoch = types.Epoch(0)
+		bc.AltairForkEpoch = primitives.Epoch(0)
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
@@ -799,24 +801,28 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
+		mochChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
+		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
-			SyncChecker:       &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:     &mockChain.ChainService{},
-			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockExecution.Chain{},
-			Eth1InfoFetcher:   &mockExecution.Chain{},
-			Eth1BlockFetcher:  &mockExecution.Chain{},
-			MockEth1Votes:     true,
-			AttPool:           attestations.NewPool(),
-			SlashingsPool:     slashings.NewPool(),
-			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db, doublylinkedtree.New()),
-			SyncCommitteePool: synccommittee.NewStore(),
+			HeadFetcher:           mochChainService,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:         mochChainService,
+			HeadUpdater:           mochChainService,
+			ChainStartFetcher:     mockExecutionChain,
+			Eth1InfoFetcher:       mockExecutionChain,
+			Eth1BlockFetcher:      mockExecutionChain,
+			MockEth1Votes:         true,
+			AttPool:               attestations.NewPool(),
+			SlashingsPool:         slashings.NewPool(),
+			ExitPool:              voluntaryexits.NewPool(),
+			StateGen:              stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:     synccommittee.NewStore(),
+			TimeFetcher:           mochChainService,
+			OptimisticModeFetcher: mochChainService,
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-		for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
 			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 				beaconState,
 				privKeys[i],
@@ -833,7 +839,7 @@ func TestProduceBlockV2(t *testing.T) {
 			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 				beaconState,
 				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-				types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
 			)
 			require.NoError(t, err)
 			attSlashings[i] = attesterSlashing
@@ -884,8 +890,8 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
-		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 
+		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_AltairBlock)
 		require.Equal(t, true, ok)
 		blk := containerBlock.AltairBlock
@@ -894,17 +900,20 @@ func TestProduceBlockV2(t *testing.T) {
 		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
 		assert.DeepEqual(t, req.Graffiti, blk.Body.Graffiti, "Expected block to have correct graffiti")
 		assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(blk.Body.ProposerSlashings)))
+
 		expectedPropSlashings := make([]*ethpbv1.ProposerSlashing, len(proposerSlashings))
 		for i, slash := range proposerSlashings {
 			expectedPropSlashings[i] = migration.V1Alpha1ProposerSlashingToV1(slash)
 		}
 		assert.DeepEqual(t, expectedPropSlashings, blk.Body.ProposerSlashings)
+
 		assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(blk.Body.AttesterSlashings)))
 		expectedAttSlashings := make([]*ethpbv1.AttesterSlashing, len(attSlashings))
 		for i, slash := range attSlashings {
 			expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
 		}
 		assert.DeepEqual(t, expectedAttSlashings, blk.Body.AttesterSlashings)
+
 		expectedBits := bitfield.NewBitvector512()
 		for i := 0; i <= 15; i++ {
 			expectedBits[i] = 0xAA
@@ -919,8 +928,8 @@ func TestProduceBlockV2(t *testing.T) {
 
 		params.SetupTestConfigCleanup(t)
 		bc := params.BeaconConfig().Copy()
-		bc.AltairForkEpoch = types.Epoch(0)
-		bc.BellatrixForkEpoch = types.Epoch(1)
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().SyncCommitteeSize)
@@ -929,6 +938,47 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.UpdateRandaoMixesAtIndex(1, bytesutil.PadTo([]byte("prev_randao"), 32)))
+
+		payloadHeader, err := blocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+			ParentHash:   bytesutil.PadTo([]byte("parent_hash"), 32),
+			FeeRecipient: bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:    bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot: bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:    bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:   bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:  123,
+			GasLimit:     123,
+			GasUsed:      123,
+			// State time at slot 33
+			Timestamp:     396,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			// Must be equal to payload.ParentHash
+			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
+			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
+		})
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
+
+		payload := &enginev1.ExecutionPayload{
+			// Must be equal to payloadHeader.BlockHash
+			ParentHash:   bytesutil.PadTo([]byte("equal_hash"), 32),
+			FeeRecipient: bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:    bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot: bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:    bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:   bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:  123,
+			GasLimit:     123,
+			GasUsed:      123,
+			// State time at slot 33
+			Timestamp:     396,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			BlockHash:     bytesutil.PadTo([]byte("block_hash"), 32),
+			Transactions:  [][]byte{[]byte("transaction1"), []byte("transaction2")},
+		}
 
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
@@ -941,21 +991,25 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
+		var payloadIdBytes enginev1.PayloadIDBytes
+		copy(payloadIdBytes[:], "payload_id")
+		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
+		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller: &mockExecution.EngineClient{
-				ExecutionBlock: &enginev1.ExecutionBlock{
-					TotalDifficulty: "0x1",
-				},
+				OverrideValidHash: bytesutil.ToBytes32([]byte("parent_hash")),
+				PayloadIDBytes:    &payloadIdBytes,
+				ExecutionPayload:  payload,
 			},
-			TimeFetcher:            &mockChain.ChainService{},
-			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
-			OptimisticModeFetcher:  &mockChain.ChainService{},
+			TimeFetcher:            mockChainService,
+			HeadFetcher:            mockChainService,
+			OptimisticModeFetcher:  mockChainService,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:          &mockChain.ChainService{},
-			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockExecution.Chain{},
-			Eth1InfoFetcher:        &mockExecution.Chain{},
-			Eth1BlockFetcher:       &mockExecution.Chain{},
+			BlockReceiver:          mockChainService,
+			HeadUpdater:            mockChainService,
+			ChainStartFetcher:      mockExecutionChain,
+			Eth1InfoFetcher:        mockExecutionChain,
+			Eth1BlockFetcher:       mockExecutionChain,
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
@@ -969,7 +1023,7 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-		for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
 			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 				beaconState,
 				privKeys[i],
@@ -986,7 +1040,7 @@ func TestProduceBlockV2(t *testing.T) {
 			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 				beaconState,
 				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-				types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
 			)
 			require.NoError(t, err)
 			attSlashings[i] = attesterSlashing
@@ -1035,13 +1089,13 @@ func TestProduceBlockV2(t *testing.T) {
 			Graffiti:     graffiti[:],
 		}
 		v1Server.V1Alpha1Server.BeaconDB = db
-		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{348},
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
 			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
 
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
-		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
 
+		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
 		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_BellatrixBlock)
 		require.Equal(t, true, ok)
 		blk := containerBlock.BellatrixBlock
@@ -1050,23 +1104,271 @@ func TestProduceBlockV2(t *testing.T) {
 		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
 		assert.DeepEqual(t, req.Graffiti, blk.Body.Graffiti, "Expected block to have correct graffiti")
 		assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(blk.Body.ProposerSlashings)))
+
 		expectedPropSlashings := make([]*ethpbv1.ProposerSlashing, len(proposerSlashings))
 		for i, slash := range proposerSlashings {
 			expectedPropSlashings[i] = migration.V1Alpha1ProposerSlashingToV1(slash)
 		}
 		assert.DeepEqual(t, expectedPropSlashings, blk.Body.ProposerSlashings)
+
 		assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(blk.Body.AttesterSlashings)))
 		expectedAttSlashings := make([]*ethpbv1.AttesterSlashing, len(attSlashings))
 		for i, slash := range attSlashings {
 			expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
 		}
 		assert.DeepEqual(t, expectedAttSlashings, blk.Body.AttesterSlashings)
+
 		expectedBits := bitfield.NewBitvector512()
 		for i := 0; i <= 15; i++ {
 			expectedBits[i] = 0xAA
 		}
 		assert.DeepEqual(t, expectedBits, blk.Body.SyncAggregate.SyncCommitteeBits)
 		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
+
+		assert.DeepEqual(t, payload, blk.Body.ExecutionPayload)
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig().Copy()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		params.OverrideBeaconConfig(bc)
+
+		beaconState, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.UpdateRandaoMixesAtIndex(2, bytesutil.PadTo([]byte("prev_randao"), 32)))
+
+		vals := beaconState.Validators()
+		creds0 := make([]byte, 32)
+		creds0[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		copy(creds0[state_native.ETH1AddressOffset:], "address0")
+		vals[0].WithdrawalCredentials = creds0
+		vals[0].EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		creds1 := make([]byte, 32)
+		creds1[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		copy(creds1[state_native.ETH1AddressOffset:], "address1")
+		vals[1].WithdrawalCredentials = creds1
+		vals[1].EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		require.NoError(t, beaconState.SetValidators(vals))
+		balances := beaconState.Balances()
+		balances[0] += 123
+		balances[1] += 123
+		require.NoError(t, beaconState.SetBalances(balances))
+		withdrawals := []*enginev1.Withdrawal{
+			{
+				Index:          0,
+				ValidatorIndex: 0,
+				Address:        bytesutil.PadTo([]byte("address0"), 20),
+				Amount:         123,
+			},
+			{
+				Index:          1,
+				ValidatorIndex: 1,
+				Address:        bytesutil.PadTo([]byte("address1"), 20),
+				Amount:         123,
+			},
+		}
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, 2)
+		require.NoError(t, err)
+
+		payloadHeader, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:   bytesutil.PadTo([]byte("parent_hash"), 32),
+			FeeRecipient: bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:    bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot: bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:    bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:   bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:  123,
+			GasLimit:     123,
+			GasUsed:      123,
+			// State time at slot 65
+			Timestamp:     780,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			// Must be equal to payload.ParentHash
+			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
+			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
+			WithdrawalsRoot:  withdrawalsRoot[:],
+		}, big.NewInt(0))
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
+
+		payload := &enginev1.ExecutionPayloadCapella{
+			// Must be equal to payloadHeader.BlockHash
+			ParentHash:   bytesutil.PadTo([]byte("equal_hash"), 32),
+			FeeRecipient: bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:    bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot: bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:    bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:   bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:  123,
+			GasLimit:     123,
+			GasUsed:      123,
+			// State time at slot 65
+			Timestamp:     780,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			BlockHash:     bytesutil.PadTo([]byte("block_hash"), 32),
+			Transactions:  [][]byte{[]byte("transaction1"), []byte("transaction2")},
+			Withdrawals:   withdrawals,
+		}
+
+		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		var payloadIdBytes enginev1.PayloadIDBytes
+		copy(payloadIdBytes[:], "payload_id")
+		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
+		mockExecutionChain := &mockExecution.Chain{}
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
+				OverrideValidHash:       bytesutil.ToBytes32([]byte("parent_hash")),
+				PayloadIDBytes:          &payloadIdBytes,
+				ExecutionPayloadCapella: payload,
+			},
+			TimeFetcher:            mockChainService,
+			HeadFetcher:            mockChainService,
+			OptimisticModeFetcher:  mockChainService,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          mockChainService,
+			HeadUpdater:            mockChainService,
+			ChainStartFetcher:      mockExecutionChain,
+			Eth1InfoFetcher:        mockExecutionChain,
+			Eth1BlockFetcher:       mockExecutionChain,
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
+		}
+
+		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
+				beaconState,
+				privKeys[i],
+				i,
+			)
+			require.NoError(t, err)
+			proposerSlashings[i] = proposerSlashing
+			err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+			require.NoError(t, err)
+		}
+
+		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+		for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
+			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
+				beaconState,
+				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+			)
+			require.NoError(t, err)
+			attSlashings[i] = attesterSlashing
+			err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
+			require.NoError(t, err)
+		}
+
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := signing.ComputeDomainAndSign(beaconState, coreTime.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+		contribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
+			BlockRoot:         parentRoot[:],
+			SubcommitteeIndex: 0,
+			AggregationBits:   aggregationBits,
+			Signature:         aggregatedSig,
+		}
+		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
+
+		v1Server := &Server{
+			V1Alpha1Server: v1Alpha1Server,
+			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+		}
+		randaoReveal, err := util.RandaoReveal(beaconState, 2, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
+		resp, err := v1Server.ProduceBlockV2(ctx, req)
+		require.NoError(t, err)
+
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_CapellaBlock)
+		require.Equal(t, true, ok)
+		blk := containerBlock.CapellaBlock
+		assert.Equal(t, req.Slot, blk.Slot, "Expected block to have slot of 1")
+		assert.DeepEqual(t, parentRoot[:], blk.ParentRoot, "Expected block to have correct parent root")
+		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
+		assert.DeepEqual(t, req.Graffiti, blk.Body.Graffiti, "Expected block to have correct graffiti")
+		assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(blk.Body.ProposerSlashings)))
+
+		expectedPropSlashings := make([]*ethpbv1.ProposerSlashing, len(proposerSlashings))
+		for i, slash := range proposerSlashings {
+			expectedPropSlashings[i] = migration.V1Alpha1ProposerSlashingToV1(slash)
+		}
+		assert.DeepEqual(t, expectedPropSlashings, blk.Body.ProposerSlashings)
+
+		assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(blk.Body.AttesterSlashings)))
+		expectedAttSlashings := make([]*ethpbv1.AttesterSlashing, len(attSlashings))
+		for i, slash := range attSlashings {
+			expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
+		}
+		assert.DeepEqual(t, expectedAttSlashings, blk.Body.AttesterSlashings)
+
+		expectedBits := bitfield.NewBitvector512()
+		for i := 0; i <= 15; i++ {
+			expectedBits[i] = 0xAA
+		}
+		assert.DeepEqual(t, expectedBits, blk.Body.SyncAggregate.SyncCommitteeBits)
+		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
+
+		assert.DeepEqual(t, payload, blk.Body.ExecutionPayload)
 	})
 }
 
@@ -1219,7 +1521,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 
 		params.SetupTestConfigCleanup(t)
 		bc := params.BeaconConfig()
-		bc.AltairForkEpoch = types.Epoch(0)
+		bc.AltairForkEpoch = primitives.Epoch(0)
 		params.OverrideBeaconConfig(bc)
 
 		bs, privKeys := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
@@ -1414,8 +1716,8 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 
 		params.SetupTestConfigCleanup(t)
 		bc := params.BeaconConfig()
-		bc.AltairForkEpoch = types.Epoch(0)
-		bc.BellatrixForkEpoch = types.Epoch(1)
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
 		params.OverrideBeaconConfig(bc)
 
 		bs, privKeys := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().SyncCommitteeSize)
@@ -1527,7 +1829,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			Graffiti:     graffiti[:],
 		}
 		v1Server.V1Alpha1Server.BeaconDB = db
-		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{348},
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
 			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
 
 		resp, err := v1Server.ProduceBlockV2SSZ(ctx, req)
@@ -1631,6 +1933,252 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		assert.NoError(t, err)
 		assert.DeepEqual(t, expectedData, resp.Data)
 	})
+
+	t.Run("Capella", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		params.OverrideBeaconConfig(bc)
+
+		bs, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), bs)
+		require.NoError(t, err)
+		require.NoError(t, bs.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, bs.SetNextSyncCommittee(syncCommittee))
+
+		stateRoot, err := bs.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		prevRandao, err := helpers.RandaoMix(bs, 2)
+		require.NoError(t, err)
+
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
+				ExecutionBlock: &enginev1.ExecutionBlock{
+					TotalDifficulty: "0x1",
+				},
+				PayloadIDBytes: &enginev1.PayloadIDBytes{},
+				ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{
+					ParentHash:   make([]byte, 32),
+					FeeRecipient: make([]byte, 20),
+					StateRoot:    make([]byte, 32),
+					ReceiptsRoot: make([]byte, 32),
+					LogsBloom:    make([]byte, 256),
+					PrevRandao:   prevRandao,
+					// State time at slot 65
+					Timestamp:     780,
+					ExtraData:     make([]byte, 32),
+					BaseFeePerGas: make([]byte, 32),
+					BlockHash:     make([]byte, 32),
+				},
+			},
+			TimeFetcher:            &mockChain.ChainService{},
+			HeadFetcher:            &mockChain.ChainService{State: bs, Root: parentRoot[:]},
+			OptimisticModeFetcher:  &mockChain.ChainService{},
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          &mockChain.ChainService{},
+			HeadUpdater:            &mockChain.ChainService{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
+		}
+
+		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
+		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
+			bs,
+			privKeys[0],
+			0,
+		)
+		require.NoError(t, err)
+		proposerSlashings[0] = proposerSlashing
+		err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), bs, proposerSlashing)
+		require.NoError(t, err)
+
+		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
+			bs,
+			privKeys[1],
+			1,
+		)
+		require.NoError(t, err)
+		attSlashings[0] = attesterSlashing
+		err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), bs, attesterSlashing)
+		require.NoError(t, err)
+
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), bs)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := signing.ComputeDomainAndSign(bs, coreTime.CurrentEpoch(bs), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+		contribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
+			BlockRoot:         parentRoot[:],
+			SubcommitteeIndex: 0,
+			AggregationBits:   aggregationBits,
+			Signature:         aggregatedSig,
+		}
+		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
+
+		v1Server := &Server{
+			V1Alpha1Server: v1Alpha1Server,
+			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+		}
+		randaoReveal, err := util.RandaoReveal(bs, 2, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
+		resp, err := v1Server.ProduceBlockV2SSZ(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+
+		expectedBlock := &ethpbv2.BeaconBlockCapella{
+			Slot:          65,
+			ProposerIndex: 372,
+			ParentRoot:    []byte{98, 110, 62, 255, 200, 27, 255, 78, 6, 11, 199, 119, 47, 57, 40, 250, 3, 255, 123, 149, 158, 235, 206, 73, 197, 53, 194, 112, 193, 78, 30, 209},
+			StateRoot:     []byte{15, 201, 220, 7, 167, 148, 124, 27, 100, 119, 219, 2, 159, 243, 76, 2, 101, 209, 32, 213, 21, 158, 75, 203, 184, 93, 189, 243, 179, 78, 150, 171},
+			Body: &ethpbv2.BeaconBlockBodyCapella{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &ethpbv1.Eth1Data{
+					DepositRoot:  []byte{209, 112, 83, 246, 47, 50, 100, 179, 169, 154, 93, 33, 128, 212, 195, 171, 204, 14, 180, 156, 134, 217, 151, 150, 60, 190, 195, 214, 0, 7, 248, 51},
+					DepositCount: params.BeaconConfig().SyncCommitteeSize,
+					BlockHash:    []byte{81, 55, 109, 120, 46, 24, 197, 204, 4, 239, 233, 63, 224, 130, 143, 78, 98, 6, 148, 78, 34, 173, 90, 38, 115, 7, 146, 56, 102, 19, 237, 43},
+				},
+				Graffiti: graffiti[:],
+				ProposerSlashings: []*ethpbv1.ProposerSlashing{
+					{
+						SignedHeader_1: &ethpbv1.SignedBeaconBlockHeader{
+							Message: &ethpbv1.BeaconBlockHeader{
+								Slot:          proposerSlashing.Header_1.Header.Slot,
+								ProposerIndex: proposerSlashing.Header_1.Header.ProposerIndex,
+								ParentRoot:    proposerSlashing.Header_1.Header.ParentRoot,
+								StateRoot:     proposerSlashing.Header_1.Header.StateRoot,
+								BodyRoot:      proposerSlashing.Header_1.Header.BodyRoot,
+							},
+							Signature: proposerSlashing.Header_1.Signature,
+						},
+						SignedHeader_2: &ethpbv1.SignedBeaconBlockHeader{
+							Message: &ethpbv1.BeaconBlockHeader{
+								Slot:          proposerSlashing.Header_2.Header.Slot,
+								ProposerIndex: proposerSlashing.Header_2.Header.ProposerIndex,
+								ParentRoot:    proposerSlashing.Header_2.Header.ParentRoot,
+								StateRoot:     proposerSlashing.Header_2.Header.StateRoot,
+								BodyRoot:      proposerSlashing.Header_2.Header.BodyRoot,
+							},
+							Signature: proposerSlashing.Header_2.Signature,
+						},
+					},
+				},
+				AttesterSlashings: []*ethpbv1.AttesterSlashing{
+					{
+						Attestation_1: &ethpbv1.IndexedAttestation{
+							AttestingIndices: attesterSlashing.Attestation_1.AttestingIndices,
+							Data: &ethpbv1.AttestationData{
+								Slot:            attesterSlashing.Attestation_1.Data.Slot,
+								Index:           attesterSlashing.Attestation_1.Data.CommitteeIndex,
+								BeaconBlockRoot: attesterSlashing.Attestation_1.Data.BeaconBlockRoot,
+								Source: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_1.Data.Source.Epoch,
+									Root:  attesterSlashing.Attestation_1.Data.Source.Root,
+								},
+								Target: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_1.Data.Target.Epoch,
+									Root:  attesterSlashing.Attestation_1.Data.Target.Root,
+								},
+							},
+							Signature: attesterSlashing.Attestation_1.Signature,
+						},
+						Attestation_2: &ethpbv1.IndexedAttestation{
+							AttestingIndices: attesterSlashing.Attestation_2.AttestingIndices,
+							Data: &ethpbv1.AttestationData{
+								Slot:            attesterSlashing.Attestation_2.Data.Slot,
+								Index:           attesterSlashing.Attestation_2.Data.CommitteeIndex,
+								BeaconBlockRoot: attesterSlashing.Attestation_2.Data.BeaconBlockRoot,
+								Source: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_2.Data.Source.Epoch,
+									Root:  attesterSlashing.Attestation_2.Data.Source.Root,
+								},
+								Target: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_2.Data.Target.Epoch,
+									Root:  attesterSlashing.Attestation_2.Data.Target.Root,
+								},
+							},
+							Signature: attesterSlashing.Attestation_2.Signature,
+						},
+					},
+				},
+				SyncAggregate: &ethpbv1.SyncAggregate{
+					SyncCommitteeBits:      []byte{170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					SyncCommitteeSignature: []byte{166, 223, 239, 55, 64, 151, 124, 78, 34, 159, 22, 51, 216, 224, 97, 5, 3, 97, 106, 183, 24, 71, 180, 209, 40, 202, 128, 169, 176, 187, 134, 85, 104, 150, 180, 125, 117, 192, 82, 189, 14, 15, 245, 196, 141, 54, 235, 23, 4, 41, 66, 171, 1, 35, 136, 193, 40, 242, 154, 63, 19, 13, 215, 141, 195, 110, 10, 201, 153, 85, 50, 0, 152, 237, 80, 68, 104, 181, 63, 237, 114, 83, 206, 252, 210, 155, 50, 136, 125, 141, 173, 158, 34, 165, 36, 95},
+				},
+				ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+					ParentHash:   make([]byte, 32),
+					FeeRecipient: make([]byte, 20),
+					StateRoot:    make([]byte, 32),
+					ReceiptsRoot: make([]byte, 32),
+					LogsBloom:    make([]byte, 256),
+					PrevRandao:   prevRandao,
+					// State time at slot 65
+					Timestamp:     780,
+					ExtraData:     make([]byte, 32),
+					BaseFeePerGas: make([]byte, 32),
+					BlockHash:     make([]byte, 32),
+					Transactions:  nil,
+					Withdrawals:   nil,
+				},
+			},
+		}
+		expectedData, err := expectedBlock.MarshalSSZ()
+		assert.NoError(t, err)
+		assert.DeepEqual(t, expectedData, resp.Data)
+	})
 }
 
 func TestProduceBlockV2_SyncNotReady(t *testing.T) {
@@ -1684,7 +2232,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-		for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
 			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 				beaconState,
 				privKeys[i],
@@ -1701,7 +2249,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 				beaconState,
 				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-				types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
 			)
 			require.NoError(t, err)
 			attSlashings[i] = attesterSlashing
@@ -1752,7 +2300,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		params.SetupTestConfigCleanup(t)
 		bc := params.BeaconConfig().Copy()
-		bc.AltairForkEpoch = types.Epoch(0)
+		bc.AltairForkEpoch = primitives.Epoch(0)
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
@@ -1789,7 +2337,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-		for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
 			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 				beaconState,
 				privKeys[i],
@@ -1806,7 +2354,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 				beaconState,
 				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-				types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
 			)
 			require.NoError(t, err)
 			attSlashings[i] = attesterSlashing
@@ -1886,14 +2434,14 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
 	})
 
-	t.Run("Can get blind block from builder service", func(t *testing.T) {
+	t.Run("Bellatrix", func(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
 		params.SetupTestConfigCleanup(t)
 		bc := params.BeaconConfig().Copy()
-		bc.AltairForkEpoch = types.Epoch(0)
-		bc.BellatrixForkEpoch = types.Epoch(1)
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
 		bc.MaxBuilderConsecutiveMissedSlots = params.BeaconConfig().SlotsPerEpoch + 1
 		bc.MaxBuilderEpochMissedSlots = params.BeaconConfig().SlotsPerEpoch
 		params.OverrideBeaconConfig(bc)
@@ -1927,7 +2475,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
 		ti := time.Unix(0, 0)
-		ts, err := slots.ToTime(uint64(ti.Unix()), 33)
+		ts, err := slots.ToTime(uint64(ti.Unix()), params.BeaconConfig().SlotsPerEpoch+1)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
 		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
@@ -1992,7 +2540,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-		for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
 			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
 				beaconState,
 				privKeys[i],
@@ -2009,7 +2557,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
 				beaconState,
 				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-				types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
 			)
 			require.NoError(t, err)
 			attSlashings[i] = attesterSlashing
@@ -2055,6 +2603,14 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
 
+		copied := beaconState.Copy()
+		require.NoError(t, copied.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		idx, err := helpers.BeaconProposerIndex(ctx, copied)
+		require.NoError(t, err)
+		require.NoError(t,
+			db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{idx},
+				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Pubkey: make([]byte, 48)}}))
+
 		req := &ethpbv1.ProduceBlockRequest{
 			Slot:         params.BeaconConfig().SlotsPerEpoch + 1,
 			RandaoReveal: randaoReveal,
@@ -2067,6 +2623,227 @@ func TestProduceBlindedBlock(t *testing.T) {
 		containerBlock, ok := resp.Data.Block.(*ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock)
 		require.Equal(t, true, ok)
 		blk := containerBlock.BellatrixBlock
+		assert.Equal(t, req.Slot, blk.Slot, "Expected block to have slot of 1")
+		assert.DeepEqual(t, parentRoot[:], blk.ParentRoot, "Expected block to have correct parent root")
+		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
+		assert.DeepEqual(t, req.Graffiti, blk.Body.Graffiti, "Expected block to have correct graffiti")
+		assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(blk.Body.ProposerSlashings)))
+		expectedPropSlashings := make([]*ethpbv1.ProposerSlashing, len(proposerSlashings))
+		for i, slash := range proposerSlashings {
+			expectedPropSlashings[i] = migration.V1Alpha1ProposerSlashingToV1(slash)
+		}
+		assert.DeepEqual(t, expectedPropSlashings, blk.Body.ProposerSlashings)
+		assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(blk.Body.AttesterSlashings)))
+		expectedAttSlashings := make([]*ethpbv1.AttesterSlashing, len(attSlashings))
+		for i, slash := range attSlashings {
+			expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
+		}
+		assert.DeepEqual(t, expectedAttSlashings, blk.Body.AttesterSlashings)
+		expectedBits := bitfield.NewBitvector512()
+		for i := 0; i <= 15; i++ {
+			expectedBits[i] = 0xAA
+		}
+		assert.DeepEqual(t, expectedBits, blk.Body.SyncAggregate.SyncCommitteeBits)
+		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig().Copy()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		bc.MaxBuilderConsecutiveMissedSlots = params.BeaconConfig().SlotsPerEpoch*2 + 1
+		bc.MaxBuilderEpochMissedSlots = params.BeaconConfig().SlotsPerEpoch * 2
+		params.OverrideBeaconConfig(bc)
+
+		beaconState, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
+
+		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		fb := util.HydrateSignedBeaconBlockCapella(&ethpbalpha.SignedBeaconBlockCapella{})
+		fb.Block.Body.ExecutionPayload.GasLimit = 123
+		wfb, err := blocks.NewSignedBeaconBlock(fb)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wfb), "Could not save block")
+		r, err := wfb.Block().HashTreeRoot()
+		require.NoError(t, err)
+
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		ti := time.Unix(0, 0)
+		ts, err := slots.ToTime(uint64(ti.Unix()), params.BeaconConfig().SlotsPerEpoch*2+1)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
+		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
+		require.NoError(t, err)
+		wds, err := beaconState.ExpectedWithdrawals()
+		require.NoError(t, err)
+		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		bid := &ethpbalpha.BuilderBidCapella{
+			Header: &enginev1.ExecutionPayloadHeaderCapella{
+				ParentHash:       make([]byte, fieldparams.RootLength),
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       random,
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: make([]byte, fieldparams.RootLength),
+				BlockNumber:      1,
+				Timestamp:        uint64(ts.Unix()),
+				WithdrawalsRoot:  wr[:],
+			},
+			Pubkey: sk.PublicKey().Marshal(),
+			Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+		}
+		d := params.BeaconConfig().DomainApplicationBuilder
+		domain, err := signing.ComputeDomain(d, nil, nil)
+		require.NoError(t, err)
+		sr, err := signing.ComputeSigningRoot(bid, domain)
+		require.NoError(t, err)
+		sBid := &ethpbalpha.SignedBuilderBidCapella{
+			Message:   bid,
+			Signature: sk.Sign(sr[:]).Marshal(),
+		}
+		id := &enginev1.PayloadIDBytes{0x1}
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: big.NewInt(0)},
+			BeaconDB:              db,
+			ForkFetcher:           &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
+			TimeFetcher: &mockChain.ChainService{
+				Genesis: ti,
+			},
+			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:], Block: wfb},
+			OptimisticModeFetcher:  &mockChain.ChainService{},
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          &mockChain.ChainService{},
+			HeadUpdater:            &mockChain.ChainService{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				BidCapella:    sBid,
+			},
+			FinalizationFetcher: &mockChain.ChainService{
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{
+					Root: r[:],
+				},
+			},
+		}
+
+		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
+				beaconState,
+				privKeys[i],
+				i,
+			)
+			require.NoError(t, err)
+			proposerSlashings[i] = proposerSlashing
+			err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+			require.NoError(t, err)
+		}
+
+		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+		for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
+			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
+				beaconState,
+				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+			)
+			require.NoError(t, err)
+			attSlashings[i] = attesterSlashing
+			err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
+			require.NoError(t, err)
+		}
+
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := signing.ComputeDomainAndSign(beaconState, coreTime.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+		contribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
+			BlockRoot:         parentRoot[:],
+			SubcommitteeIndex: 0,
+			AggregationBits:   aggregationBits,
+			Signature:         aggregatedSig,
+		}
+		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
+
+		v1Server := &Server{
+			V1Alpha1Server:        v1Alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           &mockChain.ChainService{},
+			OptimisticModeFetcher: &mockChain.ChainService{},
+		}
+		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+
+		copied := beaconState.Copy()
+		require.NoError(t, copied.SetSlot(params.BeaconConfig().SlotsPerEpoch*2+1))
+		idx, err := helpers.BeaconProposerIndex(ctx, copied)
+		require.NoError(t, err)
+		require.NoError(t,
+			db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{idx},
+				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Pubkey: make([]byte, 48)}}))
+
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		resp, err := v1Server.ProduceBlindedBlock(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+
+		containerBlock, ok := resp.Data.Block.(*ethpbv2.BlindedBeaconBlockContainer_CapellaBlock)
+		require.Equal(t, true, ok)
+		blk := containerBlock.CapellaBlock
 		assert.Equal(t, req.Slot, blk.Slot, "Expected block to have slot of 1")
 		assert.DeepEqual(t, parentRoot[:], blk.ParentRoot, "Expected block to have correct parent root")
 		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
@@ -2241,7 +3018,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 
 		params.SetupTestConfigCleanup(t)
 		bc := params.BeaconConfig()
-		bc.AltairForkEpoch = types.Epoch(0)
+		bc.AltairForkEpoch = primitives.Epoch(0)
 		params.OverrideBeaconConfig(bc)
 
 		bs, privKeys := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
@@ -2436,8 +3213,8 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 
 		params.SetupTestConfigCleanup(t)
 		bc := params.BeaconConfig()
-		bc.AltairForkEpoch = types.Epoch(0)
-		bc.BellatrixForkEpoch = types.Epoch(1)
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
 		params.OverrideBeaconConfig(bc)
 
 		bs, privKeys := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().SyncCommitteeSize)
@@ -2647,6 +3424,252 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		assert.NoError(t, err)
 		assert.DeepEqual(t, expectedData, resp.Data)
 	})
+
+	t.Run("Capella", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		params.OverrideBeaconConfig(bc)
+
+		bs, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), bs)
+		require.NoError(t, err)
+		require.NoError(t, bs.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, bs.SetNextSyncCommittee(syncCommittee))
+
+		stateRoot, err := bs.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		prevRandao, err := helpers.RandaoMix(bs, 2)
+		require.NoError(t, err)
+
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
+				ExecutionBlock: &enginev1.ExecutionBlock{
+					TotalDifficulty: "0x1",
+				},
+				PayloadIDBytes: &enginev1.PayloadIDBytes{},
+				ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{
+					ParentHash:   make([]byte, 32),
+					FeeRecipient: make([]byte, 20),
+					StateRoot:    make([]byte, 32),
+					ReceiptsRoot: make([]byte, 32),
+					LogsBloom:    make([]byte, 256),
+					PrevRandao:   prevRandao,
+					// State time at slot 65
+					Timestamp:     780,
+					ExtraData:     make([]byte, 32),
+					BaseFeePerGas: make([]byte, 32),
+					BlockHash:     make([]byte, 32),
+				},
+			},
+			TimeFetcher:            &mockChain.ChainService{},
+			HeadFetcher:            &mockChain.ChainService{State: bs, Root: parentRoot[:]},
+			OptimisticModeFetcher:  &mockChain.ChainService{},
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          &mockChain.ChainService{},
+			HeadUpdater:            &mockChain.ChainService{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
+		}
+
+		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
+		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
+			bs,
+			privKeys[0],
+			0,
+		)
+		require.NoError(t, err)
+		proposerSlashings[0] = proposerSlashing
+		err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), bs, proposerSlashing)
+		require.NoError(t, err)
+
+		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
+			bs,
+			privKeys[1],
+			1,
+		)
+		require.NoError(t, err)
+		attSlashings[0] = attesterSlashing
+		err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), bs, attesterSlashing)
+		require.NoError(t, err)
+
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), bs)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := signing.ComputeDomainAndSign(bs, coreTime.CurrentEpoch(bs), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+		contribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
+			BlockRoot:         parentRoot[:],
+			SubcommitteeIndex: 0,
+			AggregationBits:   aggregationBits,
+			Signature:         aggregatedSig,
+		}
+		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
+
+		v1Server := &Server{
+			V1Alpha1Server: v1Alpha1Server,
+			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+		}
+		randaoReveal, err := util.RandaoReveal(bs, 2, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
+		resp, err := v1Server.ProduceBlindedBlockSSZ(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+
+		expectedBlock := &ethpbv2.BlindedBeaconBlockCapella{
+			Slot:          65,
+			ProposerIndex: 372,
+			ParentRoot:    []byte{98, 110, 62, 255, 200, 27, 255, 78, 6, 11, 199, 119, 47, 57, 40, 250, 3, 255, 123, 149, 158, 235, 206, 73, 197, 53, 194, 112, 193, 78, 30, 209},
+			StateRoot:     []byte{15, 201, 220, 7, 167, 148, 124, 27, 100, 119, 219, 2, 159, 243, 76, 2, 101, 209, 32, 213, 21, 158, 75, 203, 184, 93, 189, 243, 179, 78, 150, 171},
+			Body: &ethpbv2.BlindedBeaconBlockBodyCapella{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &ethpbv1.Eth1Data{
+					DepositRoot:  []byte{209, 112, 83, 246, 47, 50, 100, 179, 169, 154, 93, 33, 128, 212, 195, 171, 204, 14, 180, 156, 134, 217, 151, 150, 60, 190, 195, 214, 0, 7, 248, 51},
+					DepositCount: params.BeaconConfig().SyncCommitteeSize,
+					BlockHash:    []byte{81, 55, 109, 120, 46, 24, 197, 204, 4, 239, 233, 63, 224, 130, 143, 78, 98, 6, 148, 78, 34, 173, 90, 38, 115, 7, 146, 56, 102, 19, 237, 43},
+				},
+				Graffiti: graffiti[:],
+				ProposerSlashings: []*ethpbv1.ProposerSlashing{
+					{
+						SignedHeader_1: &ethpbv1.SignedBeaconBlockHeader{
+							Message: &ethpbv1.BeaconBlockHeader{
+								Slot:          proposerSlashing.Header_1.Header.Slot,
+								ProposerIndex: proposerSlashing.Header_1.Header.ProposerIndex,
+								ParentRoot:    proposerSlashing.Header_1.Header.ParentRoot,
+								StateRoot:     proposerSlashing.Header_1.Header.StateRoot,
+								BodyRoot:      proposerSlashing.Header_1.Header.BodyRoot,
+							},
+							Signature: proposerSlashing.Header_1.Signature,
+						},
+						SignedHeader_2: &ethpbv1.SignedBeaconBlockHeader{
+							Message: &ethpbv1.BeaconBlockHeader{
+								Slot:          proposerSlashing.Header_2.Header.Slot,
+								ProposerIndex: proposerSlashing.Header_2.Header.ProposerIndex,
+								ParentRoot:    proposerSlashing.Header_2.Header.ParentRoot,
+								StateRoot:     proposerSlashing.Header_2.Header.StateRoot,
+								BodyRoot:      proposerSlashing.Header_2.Header.BodyRoot,
+							},
+							Signature: proposerSlashing.Header_2.Signature,
+						},
+					},
+				},
+				AttesterSlashings: []*ethpbv1.AttesterSlashing{
+					{
+						Attestation_1: &ethpbv1.IndexedAttestation{
+							AttestingIndices: attesterSlashing.Attestation_1.AttestingIndices,
+							Data: &ethpbv1.AttestationData{
+								Slot:            attesterSlashing.Attestation_1.Data.Slot,
+								Index:           attesterSlashing.Attestation_1.Data.CommitteeIndex,
+								BeaconBlockRoot: attesterSlashing.Attestation_1.Data.BeaconBlockRoot,
+								Source: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_1.Data.Source.Epoch,
+									Root:  attesterSlashing.Attestation_1.Data.Source.Root,
+								},
+								Target: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_1.Data.Target.Epoch,
+									Root:  attesterSlashing.Attestation_1.Data.Target.Root,
+								},
+							},
+							Signature: attesterSlashing.Attestation_1.Signature,
+						},
+						Attestation_2: &ethpbv1.IndexedAttestation{
+							AttestingIndices: attesterSlashing.Attestation_2.AttestingIndices,
+							Data: &ethpbv1.AttestationData{
+								Slot:            attesterSlashing.Attestation_2.Data.Slot,
+								Index:           attesterSlashing.Attestation_2.Data.CommitteeIndex,
+								BeaconBlockRoot: attesterSlashing.Attestation_2.Data.BeaconBlockRoot,
+								Source: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_2.Data.Source.Epoch,
+									Root:  attesterSlashing.Attestation_2.Data.Source.Root,
+								},
+								Target: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_2.Data.Target.Epoch,
+									Root:  attesterSlashing.Attestation_2.Data.Target.Root,
+								},
+							},
+							Signature: attesterSlashing.Attestation_2.Signature,
+						},
+					},
+				},
+				SyncAggregate: &ethpbv1.SyncAggregate{
+					SyncCommitteeBits:      []byte{170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					SyncCommitteeSignature: []byte{166, 223, 239, 55, 64, 151, 124, 78, 34, 159, 22, 51, 216, 224, 97, 5, 3, 97, 106, 183, 24, 71, 180, 209, 40, 202, 128, 169, 176, 187, 134, 85, 104, 150, 180, 125, 117, 192, 82, 189, 14, 15, 245, 196, 141, 54, 235, 23, 4, 41, 66, 171, 1, 35, 136, 193, 40, 242, 154, 63, 19, 13, 215, 141, 195, 110, 10, 201, 153, 85, 50, 0, 152, 237, 80, 68, 104, 181, 63, 237, 114, 83, 206, 252, 210, 155, 50, 136, 125, 141, 173, 158, 34, 165, 36, 95},
+				},
+				ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderCapella{
+					ParentHash:   make([]byte, 32),
+					FeeRecipient: make([]byte, 20),
+					StateRoot:    make([]byte, 32),
+					ReceiptsRoot: make([]byte, 32),
+					LogsBloom:    make([]byte, 256),
+					PrevRandao:   prevRandao,
+					// State time at slot 65
+					Timestamp:        780,
+					ExtraData:        make([]byte, 32),
+					BaseFeePerGas:    make([]byte, 32),
+					BlockHash:        make([]byte, 32),
+					TransactionsRoot: []byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225},
+					WithdrawalsRoot:  []byte{121, 41, 48, 187, 213, 186, 172, 67, 188, 199, 152, 238, 73, 170, 129, 133, 239, 118, 187, 59, 68, 186, 98, 185, 29, 134, 174, 86, 158, 75, 181, 53},
+				},
+			},
+		}
+		expectedData, err := expectedBlock.MarshalSSZ()
+		assert.NoError(t, err)
+		assert.DeepEqual(t, expectedData, resp.Data)
+	})
 }
 
 func TestProduceBlindedBlock_SyncNotReady(t *testing.T) {
@@ -2812,8 +3835,31 @@ func TestGetAggregateAttestation(t *testing.T) {
 		},
 		Signature: sig22,
 	}
+	root33 := bytesutil.PadTo([]byte("root3_3"), 32)
+	sig33 := bls.NewAggregateSignature().Marshal()
+
+	attslot33 := &ethpbalpha.Attestation{
+		AggregationBits: []byte{1, 0, 0, 1},
+		Data: &ethpbalpha.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  3,
+			BeaconBlockRoot: root33,
+			Source: &ethpbalpha.Checkpoint{
+				Epoch: 1,
+				Root:  root33,
+			},
+			Target: &ethpbalpha.Checkpoint{
+				Epoch: 1,
+				Root:  root33,
+			},
+		},
+		Signature: sig33,
+	}
+	pool := attestations.NewPool()
+	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{attSlot1, attslot21, attslot22})
+	assert.NoError(t, err)
 	vs := &Server{
-		AttestationsPool: &mock.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{attSlot1, attslot21, attslot22}},
+		AttestationsPool: pool,
 	}
 
 	t.Run("OK", func(t *testing.T) {
@@ -2829,17 +3875,34 @@ func TestGetAggregateAttestation(t *testing.T) {
 		require.NotNil(t, att.Data)
 		assert.DeepEqual(t, bitfield.Bitlist{0, 1, 1, 1}, att.Data.AggregationBits)
 		assert.DeepEqual(t, sig22, att.Data.Signature)
-		assert.Equal(t, types.Slot(2), att.Data.Data.Slot)
-		assert.Equal(t, types.CommitteeIndex(3), att.Data.Data.Index)
+		assert.Equal(t, primitives.Slot(2), att.Data.Data.Slot)
+		assert.Equal(t, primitives.CommitteeIndex(3), att.Data.Data.Index)
 		assert.DeepEqual(t, root22, att.Data.Data.BeaconBlockRoot)
 		require.NotNil(t, att.Data.Data.Source)
-		assert.Equal(t, types.Epoch(1), att.Data.Data.Source.Epoch)
+		assert.Equal(t, primitives.Epoch(1), att.Data.Data.Source.Epoch)
 		assert.DeepEqual(t, root22, att.Data.Data.Source.Root)
 		require.NotNil(t, att.Data.Data.Target)
-		assert.Equal(t, types.Epoch(1), att.Data.Data.Target.Epoch)
+		assert.Equal(t, primitives.Epoch(1), att.Data.Data.Target.Epoch)
 		assert.DeepEqual(t, root22, att.Data.Data.Target.Root)
 	})
 
+	t.Run("Aggregate Beforehand", func(t *testing.T) {
+		reqRoot, err := attslot33.Data.HashTreeRoot()
+		require.NoError(t, err)
+		err = vs.AttestationsPool.SaveUnaggregatedAttestation(attslot33)
+		require.NoError(t, err)
+		newAtt := ethpbalpha.CopyAttestation(attslot33)
+		newAtt.AggregationBits = []byte{0, 1, 0, 1}
+		err = vs.AttestationsPool.SaveUnaggregatedAttestation(newAtt)
+		require.NoError(t, err)
+		req := &ethpbv1.AggregateAttestationRequest{
+			AttestationDataRoot: reqRoot[:],
+			Slot:                2,
+		}
+		aggAtt, err := vs.GetAggregateAttestation(ctx, req)
+		require.NoError(t, err)
+		assert.DeepEqual(t, bitfield.Bitlist{1, 1, 0, 1}, aggAtt.Data.AggregationBits)
+	})
 	t.Run("No matching attestation", func(t *testing.T) {
 		req := &ethpbv1.AggregateAttestationRequest{
 			AttestationDataRoot: bytesutil.PadTo([]byte("foo"), 32),
@@ -2855,7 +3918,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 	root := bytesutil.PadTo([]byte("root"), 32)
 	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
 	att1 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 1},
+		AggregationBits: []byte{3, 0, 0, 1},
 		Data: &ethpbalpha.AttestationData{
 			Slot:            1,
 			CommitteeIndex:  1,
@@ -2872,7 +3935,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		Signature: sig,
 	}
 	att2 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 1, 1},
+		AggregationBits: []byte{0, 3, 0, 1},
 		Data: &ethpbalpha.AttestationData{
 			Slot:            1,
 			CommitteeIndex:  1,
@@ -2888,10 +3951,12 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		},
 		Signature: sig,
 	}
+	pool := attestations.NewPool()
+	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{att1, att2})
+	assert.NoError(t, err)
 	vs := &Server{
-		AttestationsPool: &mock.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{att1, att2}},
+		AttestationsPool: pool,
 	}
-
 	reqRoot, err := att1.Data.HashTreeRoot()
 	require.NoError(t, err)
 	req := &ethpbv1.AggregateAttestationRequest{
@@ -2902,7 +3967,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 	require.NoError(t, err)
 	require.NotNil(t, att)
 	require.NotNil(t, att.Data)
-	assert.DeepEqual(t, bitfield.Bitlist{0, 1, 1}, att.Data.AggregationBits)
+	assert.DeepEqual(t, bitfield.Bitlist{3, 0, 0, 1}, att.Data.AggregationBits)
 }
 
 func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
@@ -2928,7 +3993,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
-	chainSlot := types.Slot(0)
+	chainSlot := primitives.Slot(0)
 	chain := &mockChain.ChainService{
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
@@ -2996,7 +4061,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		}
 		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
 		require.NoError(t, err)
-		ids := cache.SubnetIDs.GetAggregatorSubnetIDs(types.Slot(1))
+		ids := cache.SubnetIDs.GetAggregatorSubnetIDs(primitives.Slot(1))
 		assert.Equal(t, 1, len(ids))
 	})
 
@@ -3072,7 +4137,7 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 		pubkeys[i] = deposits[i].Data.PublicKey
 	}
 
-	chainSlot := types.Slot(0)
+	chainSlot := primitives.Slot(0)
 	chain := &mockChain.ChainService{
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
@@ -3239,7 +4304,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	}
 
 	t.Run("OK", func(t *testing.T) {
-		chainSlot := types.Slot(0)
+		chainSlot := primitives.Slot(0)
 		chain := &mockChain.ChainService{
 			Genesis: time.Now(), Slot: &chainSlot,
 		}
@@ -3461,7 +4526,7 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	})
 
 	t.Run("invalid attestation time", func(t *testing.T) {
-		chainSlot := types.Slot(0)
+		chainSlot := primitives.Slot(0)
 		chain := &mockChain.ChainService{
 			Genesis: time.Now().Add(time.Hour * 2), Slot: &chainSlot,
 		}
@@ -3506,7 +4571,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	v1Server := &v1alpha1validator.Server{
 		SyncCommitteePool: syncCommitteePool,
 		HeadFetcher: &mockChain.ChainService{
-			SyncCommitteeIndices: []types.CommitteeIndex{0},
+			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 		},
 	}
 	server := Server{
@@ -3521,7 +4586,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	}
 	resp, err := server.ProduceSyncCommitteeContribution(ctx, req)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(0), resp.Data.Slot)
+	assert.Equal(t, primitives.Slot(0), resp.Data.Slot)
 	assert.Equal(t, uint64(0), resp.Data.SubcommitteeIndex)
 	assert.DeepEqual(t, root, resp.Data.BeaconBlockRoot)
 	aggregationBits := resp.Data.AggregationBits
@@ -3532,7 +4597,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	v1Server = &v1alpha1validator.Server{
 		SyncCommitteePool: syncCommitteePool,
 		HeadFetcher: &mockChain.ChainService{
-			SyncCommitteeIndices: []types.CommitteeIndex{0},
+			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 		},
 	}
 	server = Server{
@@ -3704,6 +4769,7 @@ func TestPrepareBeaconProposer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := dbutil.SetupDB(t)
 			ctx := context.Background()
+			hook := logTest.NewGlobal()
 			v1Server := &v1alpha1validator.Server{
 				BeaconDB: db,
 			}
@@ -3719,6 +4785,11 @@ func TestPrepareBeaconProposer(t *testing.T) {
 			address, err := server.V1Alpha1Server.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
 			require.NoError(t, err)
 			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+			indexs := make([]primitives.ValidatorIndex, len(tt.args.request.Recipients))
+			for i, recipient := range tt.args.request.Recipients {
+				indexs[i] = recipient.ValidatorIndex
+			}
+			require.LogsContain(t, hook, fmt.Sprintf(`validatorIndices="%v"`, indexs))
 		})
 	}
 }
@@ -3791,7 +4862,7 @@ func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
 	recipients := make([]*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer, 0)
 	for i := 0; i < 10000; i++ {
-		recipients = append(recipients, &ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{FeeRecipient: f, ValidatorIndex: types.ValidatorIndex(i)})
+		recipients = append(recipients, &ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{FeeRecipient: f, ValidatorIndex: primitives.ValidatorIndex(i)})
 	}
 
 	req := &ethpbv1.PrepareBeaconProposerRequest{
@@ -3865,4 +4936,83 @@ func TestServer_SubmitValidatorRegistrations(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestGetLiveness(t *testing.T) {
+	ctx := context.Background()
+
+	// Setup:
+	// Epoch 0 - both validators not live
+	// Epoch 1 - validator with index 1 is live
+	// Epoch 2 - validator with index 0 is live
+	oldSt, err := util.NewBeaconStateBellatrix()
+	require.NoError(t, err)
+	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
+	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
+	headSt, err := util.NewBeaconStateBellatrix()
+	require.NoError(t, err)
+	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+	require.NoError(t, headSt.AppendPreviousParticipationBits(0))
+	require.NoError(t, headSt.AppendPreviousParticipationBits(1))
+	require.NoError(t, headSt.AppendCurrentParticipationBits(1))
+	require.NoError(t, headSt.AppendCurrentParticipationBits(0))
+
+	server := &Server{
+		HeadFetcher: &mockChain.ChainService{State: headSt},
+		StateFetcher: &testutil.MockFetcher{
+			// We configure states for last slots of an epoch
+			StatesBySlot: map[primitives.Slot]state.BeaconState{
+				params.BeaconConfig().SlotsPerEpoch - 1:   oldSt,
+				params.BeaconConfig().SlotsPerEpoch*3 - 1: headSt,
+			},
+		},
+	}
+
+	t.Run("old epoch", func(t *testing.T) {
+		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{0, 1},
+		})
+		require.NoError(t, err)
+		data0 := resp.Data[0]
+		data1 := resp.Data[1]
+		assert.Equal(t, true, (data0.Index == 0 && !data0.IsLive) || (data0.Index == 1 && !data0.IsLive))
+		assert.Equal(t, true, (data1.Index == 0 && !data1.IsLive) || (data1.Index == 1 && !data1.IsLive))
+	})
+	t.Run("previous epoch", func(t *testing.T) {
+		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
+			Epoch: 1,
+			Index: []primitives.ValidatorIndex{0, 1},
+		})
+		require.NoError(t, err)
+		data0 := resp.Data[0]
+		data1 := resp.Data[1]
+		assert.Equal(t, true, (data0.Index == 0 && !data0.IsLive) || (data0.Index == 1 && data0.IsLive))
+		assert.Equal(t, true, (data1.Index == 0 && !data1.IsLive) || (data1.Index == 1 && data1.IsLive))
+	})
+	t.Run("current epoch", func(t *testing.T) {
+		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
+			Epoch: 2,
+			Index: []primitives.ValidatorIndex{0, 1},
+		})
+		require.NoError(t, err)
+		data0 := resp.Data[0]
+		data1 := resp.Data[1]
+		assert.Equal(t, true, (data0.Index == 0 && data0.IsLive) || (data0.Index == 1 && !data0.IsLive))
+		assert.Equal(t, true, (data1.Index == 0 && data1.IsLive) || (data1.Index == 1 && !data1.IsLive))
+	})
+	t.Run("future epoch", func(t *testing.T) {
+		_, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
+			Epoch: 3,
+			Index: []primitives.ValidatorIndex{0, 1},
+		})
+		require.ErrorContains(t, "Requested epoch cannot be in the future", err)
+	})
+	t.Run("unknown validator index", func(t *testing.T) {
+		_, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{0, 1, 2},
+		})
+		require.ErrorContains(t, "Validator index 2 is invalid", err)
+	})
 }

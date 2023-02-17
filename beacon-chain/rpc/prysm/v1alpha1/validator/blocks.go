@@ -89,6 +89,17 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{BellatrixBlock: phBlk}
+	case version.Capella:
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockCapella)
+		if !ok {
+			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockCapella")
+			return nil
+		}
+		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: phBlk}
 	}
 
 	if err := stream.Send(b); err != nil {
@@ -113,7 +124,7 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		return nil
 	}
 	log := log.WithField("blockSlot", data.SignedBlock.Block().Slot())
-	headState, err := vs.HeadFetcher.HeadState(vs.Ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(vs.Ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not get head state")
 		return nil
@@ -136,6 +147,8 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: p}
 	case *ethpb.SignedBeaconBlockBellatrix:
 		b.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{BellatrixBlock: p}
+	case *ethpb.SignedBeaconBlockCapella:
+		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: p}
 	default:
 		log.Errorf("Unknown block type %T", p)
 	}

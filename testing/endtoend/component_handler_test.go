@@ -2,11 +2,13 @@ package endtoend
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components/eth1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
@@ -35,23 +37,30 @@ type componentHandler struct {
 }
 
 func NewComponentHandler(cfg *e2etypes.E2EConfig, t *testing.T) *componentHandler {
-	return &componentHandler{cfg: cfg, t: t}
+	ctx, done := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
+
+	return &componentHandler{
+		ctx:       ctx,
+		done:      done,
+		group:     g,
+		cfg:       cfg,
+		t:         t,
+		eth1Miner: eth1.NewMiner(),
+	}
 }
 
 func (c *componentHandler) setup() {
 	t, config := c.t, c.cfg
+	ctx, g := c.ctx, c.group
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
 
-	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
 	var keyGen e2etypes.ComponentRunner
 	var lighthouseValidatorNodes e2etypes.MultipleComponentRunners
 	var lighthouseNodes *components.LighthouseBeaconNodeSet
-
-	c.ctx, c.done = context.WithCancel(context.Background())
-	g, ctx := errgroup.WithContext(c.ctx)
 
 	tracingSink := components.NewTracingSink(config.TracingSinkEndpoint)
 	g.Go(func() error {
@@ -92,43 +101,38 @@ func (c *componentHandler) setup() {
 	})
 	c.bootnode = bootNode
 
+	miner, ok := c.eth1Miner.(*eth1.Miner)
+	if !ok {
+		g.Go(func() error {
+			return errors.New("c.eth1Miner fails type assertion to *eth1.Miner")
+		})
+		return
+	}
 	// ETH1 miner.
-	eth1Miner := eth1.NewMiner()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
 			return errors.Wrap(err, "miner require boot node to run")
 		}
-		eth1Miner.SetBootstrapENR(bootNode.ENR())
-		if err := eth1Miner.Start(ctx); err != nil {
+		miner.SetBootstrapENR(bootNode.ENR())
+		if err := miner.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start the ETH1 miner")
 		}
 		return nil
 	})
-	c.eth1Miner = eth1Miner
 
 	// ETH1 non-mining nodes.
 	eth1Nodes := eth1.NewNodeSet()
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Miner}); err != nil {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{miner}); err != nil {
 			return errors.Wrap(err, "execution nodes require miner to run")
 		}
-		eth1Nodes.SetMinerENR(eth1Miner.ENR())
+		eth1Nodes.SetMinerENR(miner.ENR())
 		if err := eth1Nodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start ETH1 nodes")
 		}
 		return nil
 	})
 	c.eth1Nodes = eth1Nodes
-
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
-		}
-		if err := components.SendAndMineDeposits(eth1Miner.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
-			return errors.Wrap(err, "failed to send and mine deposits")
-		}
-		return nil
-	})
 
 	if config.TestCheckpointSync {
 		appendDebugEndpoints(config)
@@ -217,6 +221,37 @@ func (c *componentHandler) required() []e2etypes.ComponentRunner {
 		requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{c.keygen, c.lighthouseBeaconNodes, c.lighthouseValidatorNodes}...)
 	}
 	return requiredComponents
+}
+
+func (c *componentHandler) printPIDs(logger func(string, ...interface{})) {
+	msg := "\nPID of components. Attach a debugger... if you dare!\n\n"
+
+	msg = "This test PID: " + strconv.Itoa(os.Getpid()) + " (parent=" + strconv.Itoa(os.Getppid()) + ")\n"
+
+	// Beacon chain nodes
+	msg += fmt.Sprintf("Beacon chain nodes: %v\n", PIDsFromMultiComponentRunner(c.beaconNodes))
+	// Validator nodes
+	msg += fmt.Sprintf("Validators: %v\n", PIDsFromMultiComponentRunner(c.validatorNodes))
+	// ETH1 nodes
+	msg += fmt.Sprintf("ETH1 nodes: %v\n", PIDsFromMultiComponentRunner(c.eth1Nodes))
+
+	logger(msg)
+}
+
+func PIDsFromMultiComponentRunner(runner e2etypes.MultipleComponentRunners) []int {
+	var pids []int
+
+	for i := 0; true; i++ {
+		c, err := runner.ComponentAtIndex(i)
+		if c == nil || err != nil {
+			break
+		}
+		p := c.UnderlyingProcess()
+		if p != nil {
+			pids = append(pids, p.Pid)
+		}
+	}
+	return pids
 }
 
 func appendDebugEndpoints(cfg *e2etypes.E2EConfig) {

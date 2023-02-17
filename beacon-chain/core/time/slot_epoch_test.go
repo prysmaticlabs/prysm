@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -17,8 +17,8 @@ import (
 
 func TestSlotToEpoch_OK(t *testing.T) {
 	tests := []struct {
-		slot  types.Slot
-		epoch types.Epoch
+		slot  primitives.Slot
+		epoch primitives.Epoch
 	}{
 		{slot: 0, epoch: 0},
 		{slot: 50, epoch: 1},
@@ -33,8 +33,8 @@ func TestSlotToEpoch_OK(t *testing.T) {
 
 func TestCurrentEpoch_OK(t *testing.T) {
 	tests := []struct {
-		slot  types.Slot
-		epoch types.Epoch
+		slot  primitives.Slot
+		epoch primitives.Epoch
 	}{
 		{slot: 0, epoch: 0},
 		{slot: 50, epoch: 1},
@@ -51,8 +51,8 @@ func TestCurrentEpoch_OK(t *testing.T) {
 
 func TestPrevEpoch_OK(t *testing.T) {
 	tests := []struct {
-		slot  types.Slot
-		epoch types.Epoch
+		slot  primitives.Slot
+		epoch primitives.Epoch
 	}{
 		{slot: 0, epoch: 0},
 		{slot: 0 + params.BeaconConfig().SlotsPerEpoch + 1, epoch: 0},
@@ -67,14 +67,14 @@ func TestPrevEpoch_OK(t *testing.T) {
 
 func TestNextEpoch_OK(t *testing.T) {
 	tests := []struct {
-		slot  types.Slot
-		epoch types.Epoch
+		slot  primitives.Slot
+		epoch primitives.Epoch
 	}{
-		{slot: 0, epoch: types.Epoch(0/params.BeaconConfig().SlotsPerEpoch + 1)},
-		{slot: 50, epoch: types.Epoch(0/params.BeaconConfig().SlotsPerEpoch + 2)},
-		{slot: 64, epoch: types.Epoch(64/params.BeaconConfig().SlotsPerEpoch + 1)},
-		{slot: 128, epoch: types.Epoch(128/params.BeaconConfig().SlotsPerEpoch + 1)},
-		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 0, epoch: primitives.Epoch(0/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 50, epoch: primitives.Epoch(0/params.BeaconConfig().SlotsPerEpoch + 2)},
+		{slot: 64, epoch: primitives.Epoch(64/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 128, epoch: primitives.Epoch(128/params.BeaconConfig().SlotsPerEpoch + 1)},
+		{slot: 200, epoch: primitives.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
 		st, err := state_native.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
@@ -90,7 +90,7 @@ func TestCanUpgradeToAltair(t *testing.T) {
 	params.OverrideBeaconConfig(bc)
 	tests := []struct {
 		name string
-		slot types.Slot
+		slot primitives.Slot
 		want bool
 	}{
 		{
@@ -105,7 +105,7 @@ func TestCanUpgradeToAltair(t *testing.T) {
 		},
 		{
 			name: "altair epoch",
-			slot: types.Slot(params.BeaconConfig().AltairForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			slot: primitives.Slot(params.BeaconConfig().AltairForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
 			want: true,
 		},
 	}
@@ -125,7 +125,7 @@ func TestCanUpgradeBellatrix(t *testing.T) {
 	params.OverrideBeaconConfig(bc)
 	tests := []struct {
 		name string
-		slot types.Slot
+		slot primitives.Slot
 		want bool
 	}{
 		{
@@ -140,7 +140,7 @@ func TestCanUpgradeBellatrix(t *testing.T) {
 		},
 		{
 			name: "bellatrix epoch",
-			slot: types.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			slot: primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
 			want: true,
 		},
 	}
@@ -155,7 +155,7 @@ func TestCanUpgradeBellatrix(t *testing.T) {
 
 func TestCanProcessEpoch_TrueOnEpochsLastSlot(t *testing.T) {
 	tests := []struct {
-		slot            types.Slot
+		slot            primitives.Slot
 		canProcessEpoch bool
 	}{
 		{
@@ -194,7 +194,7 @@ func TestAltairCompatible(t *testing.T) {
 
 	type args struct {
 		s state.BeaconState
-		e types.Epoch
+		e primitives.Epoch
 	}
 	tests := []struct {
 		name string
@@ -259,6 +259,41 @@ func TestAltairCompatible(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := time.HigherEqualThanAltairVersionAndEpoch(tt.args.s, tt.args.e); got != tt.want {
 				t.Errorf("HigherEqualThanAltairVersionAndEpoch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCanUpgradeToCapella(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bc := params.BeaconConfig()
+	bc.CapellaForkEpoch = 5
+	params.OverrideBeaconConfig(bc)
+	tests := []struct {
+		name string
+		slot primitives.Slot
+		want bool
+	}{
+		{
+			name: "not epoch start",
+			slot: 1,
+			want: false,
+		},
+		{
+			name: "not capella epoch",
+			slot: params.BeaconConfig().SlotsPerEpoch,
+			want: false,
+		},
+		{
+			name: "capella epoch",
+			slot: primitives.Slot(params.BeaconConfig().CapellaForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := time.CanUpgradeToCapella(tt.slot); got != tt.want {
+				t.Errorf("CanUpgradeToCapella() = %v, want %v", got, tt.want)
 			}
 		})
 	}

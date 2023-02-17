@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -143,19 +143,17 @@ func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
 func TestNode_ViableForHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
-		justifiedEpoch types.Epoch
-		finalizedEpoch types.Epoch
+		justifiedEpoch primitives.Epoch
 		want           bool
 	}{
-		{&Node{}, 0, 0, true},
-		{&Node{}, 1, 0, false},
-		{&Node{}, 0, 1, false},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, 1, true},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, 2, false},
-		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, true},
+		{&Node{}, 0, true},
+		{&Node{}, 1, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, false},
+		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, true},
 	}
 	for _, tc := range tests {
-		got := tc.n.viableForHead(tc.justifiedEpoch, tc.finalizedEpoch, 5)
+		got := tc.n.viableForHead(tc.justifiedEpoch, 5)
 		assert.Equal(t, tc.want, got)
 	}
 }
@@ -179,10 +177,10 @@ func TestNode_LeadsToViableHead(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	require.Equal(t, true, f.store.treeRootNode.leadsToViableHead(4, 3, 5))
-	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 3, 5))
-	require.Equal(t, false, f.store.nodeByRoot[indexToHash(2)].leadsToViableHead(4, 3, 5))
-	require.Equal(t, false, f.store.nodeByRoot[indexToHash(4)].leadsToViableHead(4, 3, 5))
+	require.Equal(t, true, f.store.treeRootNode.leadsToViableHead(4, 5))
+	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 5))
+	require.Equal(t, false, f.store.nodeByRoot[indexToHash(2)].leadsToViableHead(4, 5))
+	require.Equal(t, false, f.store.nodeByRoot[indexToHash(4)].leadsToViableHead(4, 5))
 }
 
 func TestNode_SetFullyValidated(t *testing.T) {
@@ -250,7 +248,7 @@ func TestNode_SetFullyValidated(t *testing.T) {
 
 	for i, respNode := range respNodes {
 		require.Equal(t, storeNodes[i].slot, respNode.Slot)
-		require.DeepEqual(t, storeNodes[i].root[:], respNode.Root)
+		require.DeepEqual(t, storeNodes[i].root[:], respNode.BlockRoot)
 		require.Equal(t, storeNodes[i].balance, respNode.Balance)
 		require.Equal(t, storeNodes[i].weight, respNode.Weight)
 		require.Equal(t, storeNodes[i].optimistic, respNode.ExecutionOptimistic)
@@ -284,8 +282,8 @@ func TestStore_VotedFraction(t *testing.T) {
 	require.Equal(t, uint64(0), vote)
 
 	// Attestations are not counted until we process Head
-	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance}
-	_, err = f.Head(context.Background(), balances)
+	f.justifiedBalances = []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance}
+	_, err = f.Head(context.Background())
 	require.NoError(t, err)
 	f.ProcessAttestation(context.Background(), []uint64{0, 1}, [32]byte{'b'}, 2)
 	vote, err = f.VotedFraction([32]byte{'b'})
@@ -293,7 +291,7 @@ func TestStore_VotedFraction(t *testing.T) {
 	require.Equal(t, uint64(0), vote)
 
 	// After we call head the voted fraction is obtained.
-	_, err = f.Head(context.Background(), balances)
+	_, err = f.Head(context.Background())
 	require.NoError(t, err)
 	vote, err = f.VotedFraction([32]byte{'b'})
 	require.NoError(t, err)

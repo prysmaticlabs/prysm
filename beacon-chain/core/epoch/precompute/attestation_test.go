@@ -70,7 +70,7 @@ func TestUpdateBalance(t *testing.T) {
 	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
 }
 
-func TestUpdateBalanceBellatrixVersion(t *testing.T) {
+func TestUpdateBalanceDifferentVersions(t *testing.T) {
 	vp := []*precompute.Validator{
 		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
 		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
@@ -91,6 +91,9 @@ func TestUpdateBalanceBellatrixVersion(t *testing.T) {
 		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
 	}
 	pBal := precompute.UpdateBalance(vp, &precompute.Balance{}, version.Bellatrix)
+	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
+
+	pBal = precompute.UpdateBalance(vp, &precompute.Balance{}, version.Capella)
 	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
 }
 

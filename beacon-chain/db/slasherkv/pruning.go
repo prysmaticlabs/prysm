@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	bolt "go.etcd.io/bbolt"
 )
@@ -14,13 +14,13 @@ import (
 // PruneAttestationsAtEpoch deletes all attestations from the slasher DB with target epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneAttestationsAtEpoch(
-	_ context.Context, maxEpoch types.Epoch,
+	_ context.Context, maxEpoch primitives.Epoch,
 ) (numPruned uint, err error) {
 	// We can prune everything less than the current epoch - history length.
 	encodedEndPruneEpoch := fssz.MarshalUint64([]byte{}, uint64(maxEpoch))
 
 	// We retrieve the lowest stored epoch in the attestations bucket.
-	var lowestEpoch types.Epoch
+	var lowestEpoch primitives.Epoch
 	var hasData bool
 	if err = s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationDataRootsBucket)
@@ -30,7 +30,7 @@ func (s *Store) PruneAttestationsAtEpoch(
 			return nil
 		}
 		hasData = true
-		lowestEpoch = types.Epoch(binary.LittleEndian.Uint64(k))
+		lowestEpoch = primitives.Epoch(binary.LittleEndian.Uint64(k))
 		return nil
 	}); err != nil {
 		return
@@ -85,9 +85,9 @@ func (s *Store) PruneAttestationsAtEpoch(
 // PruneProposalsAtEpoch deletes all proposals from the slasher DB with epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneProposalsAtEpoch(
-	ctx context.Context, maxEpoch types.Epoch,
+	ctx context.Context, maxEpoch primitives.Epoch,
 ) (numPruned uint, err error) {
-	var endPruneSlot types.Slot
+	var endPruneSlot primitives.Slot
 	endPruneSlot, err = slots.EpochEnd(maxEpoch)
 	if err != nil {
 		return
@@ -95,7 +95,7 @@ func (s *Store) PruneProposalsAtEpoch(
 	encodedEndPruneSlot := fssz.MarshalUint64([]byte{}, uint64(endPruneSlot))
 
 	// We retrieve the lowest stored slot in the proposals bucket.
-	var lowestSlot types.Slot
+	var lowestSlot primitives.Slot
 	var hasData bool
 	if err = s.db.View(func(tx *bolt.Tx) error {
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
@@ -156,8 +156,8 @@ func (s *Store) PruneProposalsAtEpoch(
 	return
 }
 
-func slotFromProposalKey(key []byte) types.Slot {
-	return types.Slot(binary.LittleEndian.Uint64(key[:8]))
+func slotFromProposalKey(key []byte) primitives.Slot {
+	return primitives.Slot(binary.LittleEndian.Uint64(key[:8]))
 }
 
 func uint64PrefixGreaterThan(key, lessThan []byte) bool {

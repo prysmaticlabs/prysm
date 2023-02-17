@@ -1,6 +1,8 @@
 package accounts
 
 import (
+	"time"
+
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
@@ -87,6 +89,15 @@ func WithGRPCHeaders(headers []string) Option {
 func WithBeaconRPCProvider(provider string) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.beaconRPCProvider = provider
+		return nil
+	}
+}
+
+// WithBeaconRESTApiProvider provides a beacon node REST API endpoint to the accounts cli manager.
+func WithBeaconRESTApiProvider(beaconApiEndpoint string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.beaconApiEndpoint = beaconApiEndpoint
+		acc.beaconApiTimeout = time.Second * 30
 		return nil
 	}
 }

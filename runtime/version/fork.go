@@ -21,3 +21,8 @@ func String(version int) string {
 		return "unknown version"
 	}
 }
+
+// All returns a list of all known fork versions.
+func All() []int {
+	return []int{Phase0, Altair, Bellatrix, Capella}
+}
