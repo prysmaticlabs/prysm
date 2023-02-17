@@ -284,7 +284,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if root != s.ensureRootNotZeros(finalized.Root) && !s.ForkChoicer().HasNode(root) {
 		return errNotDescendantOfFinalized
 	}
-	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
+	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)
 }
 
 // inserts finalized deposits into our finalized deposit trie.

@@ -580,7 +580,7 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 }
 
-func TestStore_InsertOptimisticChain(t *testing.T) {
+func TestStore_InsertChain(t *testing.T) {
 	f := setup(1, 1)
 	blks := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 	blk := util.NewBeaconBlock()
@@ -613,10 +613,10 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 	for i := 0; i < len(blks); i++ {
 		args[i] = blks[10-i-1]
 	}
-	require.NoError(t, f.InsertOptimisticChain(context.Background(), args))
+	require.NoError(t, f.InsertChain(context.Background(), args))
 
 	f = setup(1, 1)
-	require.NoError(t, f.InsertOptimisticChain(context.Background(), args[2:]))
+	require.NoError(t, f.InsertChain(context.Background(), args[2:]))
 }
 
 func TestForkChoice_UpdateCheckpoints(t *testing.T) {
