@@ -2,126 +2,50 @@ package rewards
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
-	"go.opencensus.io/trace"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
-func AttestationsReward(
-	ctx context.Context,
-	beaconState state.BeaconState,
-	b interfaces.ReadOnlySignedBeaconBlock,
-) (state.BeaconState, uint64, error) {
-	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return nil, 0, err
-	}
-	body := b.Block().Body()
-	totalBalance, err := helpers.TotalActiveBalance(beaconState)
-	if err != nil {
-		return nil, 0, err
-	}
-	var totalReward uint64
-	for idx, att := range body.Attestations() {
-		var reward uint64
-		beaconState, reward, err = AttestationReward(ctx, beaconState, att, totalBalance)
-		if err != nil {
-			return nil, 0, errors.Wrapf(err, "could not get reward for attestation at index %d in block", idx)
-		}
-		totalReward += reward
-	}
-	return beaconState, totalReward, nil
+type BlockRewardsInfo struct {
+	ProposerIndex     types.ValidatorIndex
+	Total             uint64
+	Attestations      uint64
+	SyncAggregate     uint64
+	ProposerSlashings uint64
+	AttesterSlashings uint64
 }
 
-func AttestationReward(
-	ctx context.Context,
-	beaconState state.BeaconState,
-	att *ethpb.Attestation,
-	totalBalance uint64,
-) (state.BeaconState, uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
-	defer span.End()
+func BlockRewards(ctx context.Context, st state.BeaconState, b interfaces.ReadOnlySignedBeaconBlock) (*BlockRewardsInfo, error) {
+	var err error
+	rewards := &BlockRewardsInfo{}
 
-	delay, err := beaconState.Slot().SafeSubSlot(att.Data.Slot)
+	st, err = attestationsReward(ctx, st, b, rewards)
 	if err != nil {
-		return nil, 0, fmt.Errorf("att slot %d can't be greater than state slot %d", att.Data.Slot, beaconState.Slot())
+		return nil, errors.Wrap(err, "could not calculate attestations part of block reward")
 	}
-	participatedFlags, err := altair.AttestationParticipationFlagIndices(beaconState, att.Data, delay)
+	st, err = processProposerSlashings(ctx, st, b.Block().Body().ProposerSlashings(), slashValidator, rewards)
 	if err != nil {
-		return nil, 0, err
+		return nil, errors.Wrap(err, "could not calculate proposer slashings part of block reward")
 	}
-	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	st, err = processAttesterSlashings(ctx, st, b.Block().Body().AttesterSlashings(), slashValidator, rewards)
 	if err != nil {
-		return nil, 0, err
+		return nil, errors.Wrap(err, "could not calculate attester slashings part of block reward")
 	}
-	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
+	totalActiveBalance, err := helpers.TotalActiveBalance(st)
 	if err != nil {
-		return nil, 0, err
+		return nil, errors.Wrap(err, "could not get state's total active balance")
 	}
+	rewards.SyncAggregate, _, err = altair.SyncRewards(totalActiveBalance)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not calculate sync committee part of block reward")
+	}
+	rewards.Total = rewards.Attestations + rewards.AttesterSlashings + rewards.ProposerSlashings + rewards.SyncAggregate
+	rewards.ProposerIndex = b.Block().ProposerIndex()
 
-	return SetParticipationAndRewardProposer(ctx, beaconState, att.Data.Target.Epoch, indices, participatedFlags, totalBalance)
-}
-
-func SetParticipationAndRewardProposer(
-	ctx context.Context,
-	beaconState state.BeaconState,
-	targetEpoch primitives.Epoch,
-	indices []uint64,
-	participatedFlags map[uint8]bool, totalBalance uint64) (state.BeaconState, uint64, error) {
-	var proposerRewardNumerator uint64
-	currentEpoch := time.CurrentEpoch(beaconState)
-	var stateErr error
-	if targetEpoch == currentEpoch {
-		stateErr = beaconState.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
-			propRewardNum, epochParticipation, err := altair.EpochParticipation(beaconState, indices, val, participatedFlags, totalBalance)
-			if err != nil {
-				return nil, err
-			}
-			proposerRewardNumerator = propRewardNum
-			return epochParticipation, nil
-		})
-	} else {
-		stateErr = beaconState.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
-			propRewardNum, epochParticipation, err := altair.EpochParticipation(beaconState, indices, val, participatedFlags, totalBalance)
-			if err != nil {
-				return nil, err
-			}
-			proposerRewardNumerator = propRewardNum
-			return epochParticipation, nil
-		})
-	}
-	if stateErr != nil {
-		return nil, 0, stateErr
-	}
-
-	reward, err := RewardProposer(ctx, beaconState, proposerRewardNumerator)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return beaconState, reward, nil
-}
-
-func RewardProposer(ctx context.Context, beaconState state.BeaconState, proposerRewardNumerator uint64) (uint64, error) {
-	cfg := params.BeaconConfig()
-	d := (cfg.WeightDenominator - cfg.ProposerWeight) * cfg.WeightDenominator / cfg.ProposerWeight
-	proposerReward := proposerRewardNumerator / d
-	i, err := helpers.BeaconProposerIndex(ctx, beaconState)
-	if err != nil {
-		return 0, err
-	}
-	if err := helpers.IncreaseBalance(beaconState, i, proposerReward); err != nil {
-		return 0, err
-	}
-	return proposerReward, nil
+	return rewards, nil
 }
