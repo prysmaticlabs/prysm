@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
-// ResetBoostedProposerRoot sets the value of the proposer boosted root to zeros.
-func (f *ForkChoice) ResetBoostedProposerRoot(_ context.Context) error {
+// resetBoostedProposerRoot sets the value of the proposer boosted root to zeros.
+func (f *ForkChoice) resetBoostedProposerRoot(_ context.Context) error {
 	f.store.proposerBoostLock.Lock()
 	f.store.proposerBoostRoot = [32]byte{}
 	f.store.proposerBoostLock.Unlock()

@@ -330,9 +330,6 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	headRoot := s.head.root
 	s.headLock.RUnlock()
 
-	if s.cfg.ForkChoiceStore.AllTipsAreInvalid() {
-		return true, nil
-	}
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(headRoot)
 	if err == nil {
 		return optimistic, nil
