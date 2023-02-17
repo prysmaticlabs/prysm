@@ -165,6 +165,7 @@ func VerifyExitConditions(validator state.ReadOnlyValidator, currentSlot primiti
 	return nil
 }
 
+// ExitSignatureBatch prepares a set of signatures, one for every passed in voluntary exit.
 func ExitSignatureBatch(
 	st state.ReadOnlyBeaconState,
 	exits []*ethpb.SignedVoluntaryExit,
