@@ -249,20 +249,6 @@ func (f *ForkChoice) HasNode(root [32]byte) bool {
 	return ok
 }
 
-// HasParent returns true if the node parent exists in fork choice store,
-// false else wise.
-func (f *ForkChoice) HasParent(root [32]byte) bool {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
-		return false
-	}
-
-	return node.parent != nil
-}
-
 // IsCanonical returns true if the given root is part of the canonical chain.
 func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 	f.store.nodesLock.RLock()
