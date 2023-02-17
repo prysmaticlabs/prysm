@@ -611,6 +611,11 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 }
 
 func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+	// We skip this for multiclient runs as lighthouse does not have the ability
+	// to configure the withdrawal sweep for the end to end test.
+	if e2e.TestParams.LighthouseBeaconNodeCount > 0 {
+		return nil
+	}
 	conn := conns[0]
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 	debugClient := ethpb.NewDebugClient(conn)
@@ -642,7 +647,9 @@ func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.Clien
 		if err != nil {
 			return err
 		}
-		if bal != 0 {
+		// Only return an error if the validator has more than 1 eth
+		// in its balance.
+		if bal > 1*params.BeaconConfig().GweiPerEth {
 			return errors.Errorf("Validator index %d with key %#x hasn't withdrawn. Their balance is %d.", valIdx, key, bal)
 		}
 

@@ -102,6 +102,7 @@ type ExecutionData interface {
 	ssz.Unmarshaler
 	ssz.HashRoot
 	IsNil() bool
+	IsBlinded() bool
 	Proto() proto.Message
 	ParentHash() []byte
 	FeeRecipient() []byte
