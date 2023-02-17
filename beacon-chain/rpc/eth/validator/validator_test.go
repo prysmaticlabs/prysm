@@ -2694,6 +2694,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
 		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
 		require.NoError(t, err)
+		wds, err := beaconState.ExpectedWithdrawals()
+		require.NoError(t, err)
+		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
 		bid := &ethpbalpha.BuilderBidCapella{
 			Header: &enginev1.ExecutionPayloadHeaderCapella{
 				ParentHash:       make([]byte, fieldparams.RootLength),
@@ -2707,7 +2711,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 				TransactionsRoot: make([]byte, fieldparams.RootLength),
 				BlockNumber:      1,
 				Timestamp:        uint64(ts.Unix()),
-				WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+				WithdrawalsRoot:  wr[:],
 			},
 			Pubkey: sk.PublicKey().Marshal(),
 			Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),

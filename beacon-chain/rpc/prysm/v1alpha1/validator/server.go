@@ -121,7 +121,7 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 // ValidatorIndex is called by a validator to get its index location in the beacon state.
 func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	st, err := vs.HeadFetcher.HeadState(ctx)
+	st, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
@@ -157,7 +157,7 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
 func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
-	head, err := vs.HeadFetcher.HeadState(stream.Context())
+	head, err := vs.HeadFetcher.HeadStateReadOnly(stream.Context())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}

@@ -11,11 +11,12 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store          *Store
-	votes          []Vote // tracks individual validator's last vote.
-	votesLock      sync.RWMutex
-	balances       []uint64                    // tracks individual validator's last justified balances.
-	balancesByRoot forkchoice.BalancesByRooter // handler to obtain balances for the state with a given root
+	store             *Store
+	votes             []Vote // tracks individual validator's last vote.
+	votesLock         sync.RWMutex
+	balances          []uint64                    // tracks individual validator's balances last accounted in votes.
+	justifiedBalances []uint64                    // tracks individual validator's last justified balances.
+	balancesByRoot    forkchoice.BalancesByRooter // handler to obtain balances for the state with a given root
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
