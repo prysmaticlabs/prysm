@@ -260,44 +260,71 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	}
 }
 
-func TestStore_VotedFraction(t *testing.T) {
-	f := setup(1, 1)
+func TestNode_TimeStampsChecks(t *testing.T) {
+	f := setup(0, 0)
 	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+
+	// early block
+	driftGenesisTime(f, 1, 1)
+	root := [32]byte{'a'}
+	f.justifiedBalances = []uint64{10}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	headRoot, err := f.Head(ctx)
+	require.NoError(t, err)
+	require.Equal(t, root, headRoot)
+	early, err := f.store.headNode.arrivedEarly(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, true, early)
+	late, err := f.store.headNode.arrivedAfterOrphanCheck(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, late)
+
+	// late block
+	driftGenesisTime(f, 2, orphanLateBlockFirstThreshold+1)
+	root = [32]byte{'b'}
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	headRoot, err = f.Head(ctx)
+	require.NoError(t, err)
+	require.Equal(t, root, headRoot)
+	early, err = f.store.headNode.arrivedEarly(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, early)
+	late, err = f.store.headNode.arrivedAfterOrphanCheck(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, late)
 
-	// No division by zero error
-	vote, err := f.VotedFraction([32]byte{'b'})
+	// very late block
+	driftGenesisTime(f, 3, processAttestationsThreshold+1)
+	root = [32]byte{'c'}
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, root, [32]byte{'b'}, [32]byte{'C'}, 0, 0)
 	require.NoError(t, err)
-	require.Equal(t, uint64(0), vote)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	headRoot, err = f.Head(ctx)
+	require.NoError(t, err)
+	require.Equal(t, root, headRoot)
+	early, err = f.store.headNode.arrivedEarly(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, early)
+	late, err = f.store.headNode.arrivedAfterOrphanCheck(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, true, late)
 
-	// Zero balance in the node
-	f.store.committeeBalance = 100 * params.BeaconConfig().MaxEffectiveBalance
-	vote, err = f.VotedFraction([32]byte{'b'})
+	// block from the future
+	root = [32]byte{'d'}
+	state, blkRoot, err = prepareForkchoiceState(ctx, 5, root, [32]byte{'c'}, [32]byte{'D'}, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(0), vote)
-
-	// Attestations are not counted until we process Head
-	f.justifiedBalances = []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance}
-	_, err = f.Head(context.Background())
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	headRoot, err = f.Head(ctx)
 	require.NoError(t, err)
-	f.ProcessAttestation(context.Background(), []uint64{0, 1}, [32]byte{'b'}, 2)
-	vote, err = f.VotedFraction([32]byte{'b'})
-	require.NoError(t, err)
-	require.Equal(t, uint64(0), vote)
-
-	// After we call head the voted fraction is obtained.
-	_, err = f.Head(context.Background())
-	require.NoError(t, err)
-	vote, err = f.VotedFraction([32]byte{'b'})
-	require.NoError(t, err)
-	require.Equal(t, uint64(2), vote)
-
-	// Check for non-existent root
-	_, err = f.VotedFraction([32]byte{'c'})
-	require.ErrorIs(t, err, ErrNilNode)
+	require.Equal(t, root, headRoot)
+	early, err = f.store.headNode.arrivedEarly(f.store.genesisTime)
+	require.ErrorContains(t, "invalid timestamp", err)
+	require.Equal(t, true, early)
+	late, err = f.store.headNode.arrivedAfterOrphanCheck(f.store.genesisTime)
+	require.ErrorContains(t, "invalid timestamp", err)
+	require.Equal(t, false, late)
 }

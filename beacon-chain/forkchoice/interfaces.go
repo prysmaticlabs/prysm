@@ -62,7 +62,6 @@ type Getter interface {
 	ReceivedBlocksLastEpoch() (uint64, error)
 	ForkChoiceDump(context.Context) (*v1.ForkChoiceDump, error)
 	Weight(root [32]byte) (uint64, error)
-	VotedFraction(root [32]byte) (uint64, error)
 }
 
 // Setter allows to set forkchoice information
