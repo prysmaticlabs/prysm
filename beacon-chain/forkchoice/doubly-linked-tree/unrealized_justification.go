@@ -16,9 +16,6 @@ import (
 )
 
 func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch primitives.Epoch) error {
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
-
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
 		return errors.Wrap(ErrNilNode, "could not set unrealized justified epoch")
@@ -31,9 +28,6 @@ func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch primitives.Epoc
 }
 
 func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch primitives.Epoch) error {
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
-
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
 		return errors.Wrap(ErrNilNode, "could not set unrealized finalized epoch")
@@ -48,10 +42,6 @@ func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch primitives.Epoc
 // updateUnrealizedCheckpoints "realizes" the unrealized justified and finalized
 // epochs stored within nodes. It should be called at the beginning of each epoch.
 func (f *ForkChoice) updateUnrealizedCheckpoints(ctx context.Context) error {
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
-	f.store.checkpointsLock.Lock()
-	defer f.store.checkpointsLock.Unlock()
 	for _, node := range f.store.nodeByRoot {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch
@@ -81,16 +71,9 @@ func (f *ForkChoice) updateUnrealizedCheckpoints(ctx context.Context) error {
 }
 
 func (s *Store) pullTips(state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
-
 	if node.parent == nil { // Nothing to do if the parent is nil.
 		return jc, fc
 	}
-
-	s.checkpointsLock.Lock()
-	defer s.checkpointsLock.Unlock()
-
 	currentEpoch := slots.ToEpoch(slots.CurrentSlot(s.genesisTime))
 	stateSlot := state.Slot()
 	stateEpoch := slots.ToEpoch(stateSlot)
