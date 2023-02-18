@@ -44,20 +44,19 @@ import (
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                     *config
-	ctx                     context.Context
-	cancel                  context.CancelFunc
-	genesisTime             time.Time
-	head                    *head
-	headLock                sync.RWMutex
-	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot   primitives.Slot
-	boundaryRoots           [][32]byte
-	checkpointStateCache    *cache.CheckpointStateCache
-	initSyncBlocks          map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
-	initSyncBlocksLock      sync.RWMutex
-	wsVerifier              *WeakSubjectivityVerifier
-	processAttestationsLock sync.Mutex
+	cfg                   *config
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	genesisTime           time.Time
+	head                  *head
+	headLock              sync.RWMutex
+	originBlockRoot       [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	nextEpochBoundarySlot primitives.Slot
+	boundaryRoots         [][32]byte
+	checkpointStateCache  *cache.CheckpointStateCache
+	initSyncBlocks        map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+	initSyncBlocksLock    sync.RWMutex
+	wsVerifier            *WeakSubjectivityVerifier
 }
 
 // config options for the service.

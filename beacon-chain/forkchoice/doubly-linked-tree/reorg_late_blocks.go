@@ -28,9 +28,6 @@ import (
 func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 	override = false
 
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
 	// We only need to override FCU if our current head is from the current
 	// slot. This differs from the spec implementation in that we assume
 	// that we will call this function in the previous slot to proposing.
@@ -55,9 +52,7 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 		return
 	}
 	// Only reorg if we have been finalizing
-	f.store.checkpointsLock.RLock()
 	finalizedEpoch := f.store.finalizedCheckpoint.Epoch
-	f.store.checkpointsLock.RUnlock()
 	if slots.ToEpoch(head.slot+1) > finalizedEpoch+params.BeaconConfig().ReorgMaxEpochsSinceFinalization {
 		return
 	}
