@@ -6,6 +6,7 @@ package node
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
 	"google.golang.org/grpc"
@@ -24,4 +25,5 @@ type Server struct {
 	MetadataProvider      p2p.MetadataProvider
 	GenesisTimeFetcher    blockchain.TimeFetcher
 	HeadFetcher           blockchain.HeadFetcher
+	ForkChoiceLocker      forkchoice.ForkChoiceLocker
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
@@ -176,6 +177,7 @@ func TestSyncStatus(t *testing.T) {
 		GenesisTimeFetcher:    chainService,
 		OptimisticModeFetcher: chainService,
 		SyncChecker:           syncChecker,
+		ForkChoiceLocker:      doublylinkedtree.New(),
 	}
 	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
