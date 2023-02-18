@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -57,30 +56,13 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.Wrap(err, "Could not decode message")
 	}
 
+	s.validateBlockLock.Lock()
+	defer s.validateBlockLock.Unlock()
+
 	blk, ok := m.(interfaces.ReadOnlySignedBeaconBlock)
 	if !ok {
 		return pubsub.ValidationReject, errors.New("msg is not ethpb.ReadOnlySignedBeaconBlock")
 	}
-
-	result, err := s.validateBlockPubsubHelper(ctx, receivedTime, msg, blk, nil)
-	if err != nil || result != pubsub.ValidationAccept {
-		return result, err
-	}
-
-	return pubsub.ValidationAccept, nil
-}
-
-func (s *Service) validateBlockPubsubHelper(
-	ctx context.Context,
-	receivedTime time.Time,
-	msg *pubsub.Message,
-	blk interfaces.ReadOnlySignedBeaconBlock,
-	blob *eth.BlobsSidecar) (pubsub.ValidationResult, error) {
-	ctx, span := trace.StartSpan(ctx, "sync.validateBlockPubsubHelper")
-	defer span.End()
-
-	s.validateBlockLock.Lock()
-	defer s.validateBlockLock.Unlock()
 
 	if blk.IsNil() || blk.Block().IsNil() {
 		return pubsub.ValidationReject, errors.New("block.Block is nil")
@@ -167,7 +149,7 @@ func (s *Service) validateBlockPubsubHelper(
 	// Otherwise queue it for processing in the right slot.
 	if isBlockQueueable(genesisTime, blk.Block().Slot(), receivedTime) {
 		s.pendingQueueLock.Lock()
-		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blockRoot, blob); err != nil {
+		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blockRoot, nil); err != nil {
 			s.pendingQueueLock.Unlock()
 			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not insert block to pending queue")
 			return pubsub.ValidationIgnore, err
@@ -181,7 +163,7 @@ func (s *Service) validateBlockPubsubHelper(
 	// Handle block when the parent is unknown.
 	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
 		s.pendingQueueLock.Lock()
-		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blockRoot, blob); err != nil {
+		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blockRoot, nil); err != nil {
 			s.pendingQueueLock.Unlock()
 			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not insert block to pending queue")
 			return pubsub.ValidationIgnore, err
