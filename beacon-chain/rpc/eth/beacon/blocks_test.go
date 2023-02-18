@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	executionTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -366,6 +367,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -470,6 +472,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -495,6 +498,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
 				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -550,6 +554,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -633,6 +638,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -670,6 +676,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{child1Root: true, child2Root: false},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1067,6 +1074,7 @@ func TestServer_GetBlock(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
+			ForkChoiceStore:     doublylinkedtree.New(),
 		},
 	}
 
@@ -1179,6 +1187,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1298,6 +1307,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1417,6 +1427,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1540,6 +1551,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1657,6 +1669,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1692,6 +1705,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
 				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1740,6 +1754,7 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		},
 	}
 
@@ -1770,6 +1785,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:            beaconDB,
@@ -1804,6 +1820,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:            beaconDB,
@@ -1838,6 +1855,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1873,6 +1891,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1910,6 +1929,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1945,6 +1965,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
 				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1987,6 +2008,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2081,6 +2103,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2109,6 +2132,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
 				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2150,6 +2174,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2258,6 +2283,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2367,6 +2393,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2477,6 +2504,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2509,6 +2537,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
 				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,

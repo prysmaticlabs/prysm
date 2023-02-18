@@ -12,6 +12,7 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
@@ -161,7 +162,9 @@ func TestListSyncCommittees(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
-	chainService := &mock.ChainService{}
+	chainService := &mock.ChainService{
+		ForkChoiceStore: doublylinkedtree.New(),
+	}
 	s := &Server{
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
@@ -173,6 +176,7 @@ func TestListSyncCommittees(t *testing.T) {
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
+		ChainInfoFetcher:      chainService,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{StateId: stRoot[:]}
 	resp, err := s.ListSyncCommittees(ctx, req)
@@ -205,7 +209,10 @@ func TestListSyncCommittees(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &mock.ChainService{Optimistic: true}
+		chainService := &mock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := &Server{
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
@@ -217,6 +224,7 @@ func TestListSyncCommittees(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
@@ -238,6 +246,7 @@ func TestListSyncCommittees(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		s := &Server{
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
@@ -250,6 +259,7 @@ func TestListSyncCommittees(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
@@ -297,7 +307,9 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 	}))
 	db := dbTest.SetupDB(t)
 
-	chainService := &mock.ChainService{}
+	chainService := &mock.ChainService{
+		ForkChoiceStore: doublylinkedtree.New(),
+	}
 	s := &Server{
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
@@ -309,6 +321,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
+		ChainInfoFetcher:      chainService,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{}
 	epoch := 2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod

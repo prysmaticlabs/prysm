@@ -24,6 +24,8 @@ import (
 func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv2.BlindedBlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlindedBlock")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
@@ -79,6 +81,8 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlindedBlockSSZ")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)

@@ -7,6 +7,7 @@ import (
 
 	chainMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -31,8 +32,9 @@ func TestGetGenesis(t *testing.T) {
 
 	t.Run("OK", func(t *testing.T) {
 		chainService := &chainMock.ChainService{
-			Genesis:        genesis,
-			ValidatorsRoot: validatorsRoot,
+			Genesis:         genesis,
+			ValidatorsRoot:  validatorsRoot,
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		s := Server{
 			GenesisTimeFetcher: chainService,
@@ -48,8 +50,9 @@ func TestGetGenesis(t *testing.T) {
 
 	t.Run("No genesis time", func(t *testing.T) {
 		chainService := &chainMock.ChainService{
-			Genesis:        time.Time{},
-			ValidatorsRoot: validatorsRoot,
+			Genesis:         time.Time{},
+			ValidatorsRoot:  validatorsRoot,
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		s := Server{
 			GenesisTimeFetcher: chainService,
@@ -61,8 +64,9 @@ func TestGetGenesis(t *testing.T) {
 
 	t.Run("No genesis validators root", func(t *testing.T) {
 		chainService := &chainMock.ChainService{
-			Genesis:        genesis,
-			ValidatorsRoot: [32]byte{},
+			Genesis:         genesis,
+			ValidatorsRoot:  [32]byte{},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		s := Server{
 			GenesisTimeFetcher: chainService,
@@ -81,7 +85,9 @@ func TestGetStateRoot(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
-	chainService := &chainMock.ChainService{}
+	chainService := &chainMock.ChainService{
+		ForkChoiceStore: doublylinkedtree.New(),
+	}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconStateRoot: stateRoot[:],
@@ -91,6 +97,7 @@ func TestGetStateRoot(t *testing.T) {
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
+		ChainInfoFetcher:      chainService,
 	}
 
 	resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
@@ -109,7 +116,10 @@ func TestGetStateRoot(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &chainMock.ChainService{Optimistic: true}
+		chainService := &chainMock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconStateRoot: stateRoot[:],
@@ -119,6 +129,7 @@ func TestGetStateRoot(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
@@ -143,6 +154,7 @@ func TestGetStateRoot(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
@@ -153,6 +165,7 @@ func TestGetStateRoot(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
@@ -177,7 +190,9 @@ func TestGetStateFork(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
-	chainService := &chainMock.ChainService{}
+	chainService := &chainMock.ChainService{
+		ForkChoiceStore: doublylinkedtree.New(),
+	}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
@@ -186,6 +201,7 @@ func TestGetStateFork(t *testing.T) {
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
+		ChainInfoFetcher:      chainService,
 	}
 
 	resp, err := server.GetStateFork(ctx, &eth.StateRequest{
@@ -207,7 +223,10 @@ func TestGetStateFork(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &chainMock.ChainService{Optimistic: true}
+		chainService := &chainMock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
@@ -216,6 +235,7 @@ func TestGetStateFork(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
@@ -240,6 +260,7 @@ func TestGetStateFork(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
@@ -249,6 +270,7 @@ func TestGetStateFork(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
@@ -280,7 +302,9 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
-	chainService := &chainMock.ChainService{}
+	chainService := &chainMock.ChainService{
+		ForkChoiceStore: doublylinkedtree.New(),
+	}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
@@ -289,6 +313,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
+		ChainInfoFetcher:      chainService,
 	}
 
 	resp, err := server.GetFinalityCheckpoints(ctx, &eth.StateRequest{
@@ -312,7 +337,10 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &chainMock.ChainService{Optimistic: true}
+		chainService := &chainMock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
@@ -321,6 +349,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
@@ -345,6 +374,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
@@ -354,6 +384,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
@@ -386,7 +417,9 @@ func TestGetRandao(t *testing.T) {
 	require.NoError(t, headSt.UpdateRandaoMixesAtIndex(uint64(headEpoch), headRandao))
 
 	db := dbTest.SetupDB(t)
-	chainService := &chainMock.ChainService{}
+	chainService := &chainMock.ChainService{
+		ForkChoiceStore: doublylinkedtree.New(),
+	}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: st,
@@ -395,6 +428,7 @@ func TestGetRandao(t *testing.T) {
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
+		ChainInfoFetcher:      chainService,
 	}
 
 	t.Run("no epoch requested", func(t *testing.T) {
@@ -439,7 +473,10 @@ func TestGetRandao(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &chainMock.ChainService{Optimistic: true}
+		chainService := &chainMock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
@@ -448,6 +485,7 @@ func TestGetRandao(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
 			StateId: make([]byte, 0),
@@ -471,6 +509,7 @@ func TestGetRandao(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
@@ -480,6 +519,7 @@ func TestGetRandao(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
 			StateId: make([]byte, 0),

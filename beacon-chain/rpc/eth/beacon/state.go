@@ -57,6 +57,8 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateRootResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetStateRoot")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	stateRoot, err := bs.StateFetcher.StateRoot(ctx, req.StateId)
 	if err != nil {
@@ -94,6 +96,8 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateForkResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetStateFork")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
@@ -126,6 +130,8 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateFinalityCheckpointResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetFinalityCheckpoints")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
@@ -159,6 +165,9 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2.RandaoResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetRandao")
 	defer span.End()
+
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {

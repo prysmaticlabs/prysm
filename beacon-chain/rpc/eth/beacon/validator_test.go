@@ -8,6 +8,7 @@ import (
 
 	chainMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
@@ -32,7 +33,9 @@ func TestGetValidator(t *testing.T) {
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head Get Validator by index", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
@@ -41,6 +44,7 @@ func TestGetValidator(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 
 		resp, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
@@ -52,7 +56,9 @@ func TestGetValidator(t *testing.T) {
 	})
 
 	t.Run("Head Get Validator by pubkey", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
@@ -61,6 +67,7 @@ func TestGetValidator(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 
 		pubKey := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
@@ -96,8 +103,12 @@ func TestGetValidator(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &chainMock.ChainService{Optimistic: true}
+		chainService := &chainMock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -129,8 +140,10 @@ func TestGetValidator(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -155,8 +168,11 @@ func TestListValidators(t *testing.T) {
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List All Validators", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -177,8 +193,11 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Head List Validators by index", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -202,8 +221,11 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Head List Validators by pubkey", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -231,8 +253,11 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Head List Validators by both index and pubkey", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -262,8 +287,11 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Unknown public key is ignored", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -285,8 +313,11 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Unknown index is ignored", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -315,8 +346,12 @@ func TestListValidators(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &chainMock.ChainService{Optimistic: true}
+		chainService := &chainMock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -347,8 +382,10 @@ func TestListValidators(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -438,8 +475,11 @@ func TestListValidators_Status(t *testing.T) {
 	}
 
 	t.Run("Head List All ACTIVE Validators", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
@@ -476,8 +516,11 @@ func TestListValidators_Status(t *testing.T) {
 	})
 
 	t.Run("Head List All ACTIVE_ONGOING Validators", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
@@ -513,8 +556,11 @@ func TestListValidators_Status(t *testing.T) {
 
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*35))
 	t.Run("Head List All EXITED Validators", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
@@ -549,8 +595,11 @@ func TestListValidators_Status(t *testing.T) {
 	})
 
 	t.Run("Head List All PENDING_INITIALIZED and EXITED_UNSLASHED Validators", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
@@ -585,8 +634,11 @@ func TestListValidators_Status(t *testing.T) {
 	})
 
 	t.Run("Head List All PENDING and EXITED Validators", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
@@ -636,8 +688,11 @@ func TestListValidatorBalances(t *testing.T) {
 	require.NoError(t, st.SetBalances(balances))
 
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -661,8 +716,11 @@ func TestListValidatorBalances(t *testing.T) {
 	})
 
 	t.Run("Head List Validators Balance by pubkey", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -689,8 +747,11 @@ func TestListValidatorBalances(t *testing.T) {
 	})
 
 	t.Run("Head List Validators Balance by both index and pubkey", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -724,8 +785,12 @@ func TestListValidatorBalances(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &chainMock.ChainService{Optimistic: true}
+		chainService := &chainMock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -759,8 +824,10 @@ func TestListValidatorBalances(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -789,8 +856,11 @@ func TestListCommittees(t *testing.T) {
 	epoch := slots.ToEpoch(st.Slot())
 
 	t.Run("Head All Committees", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -812,8 +882,11 @@ func TestListCommittees(t *testing.T) {
 	})
 
 	t.Run("Head All Committees of Epoch 10", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -834,8 +907,11 @@ func TestListCommittees(t *testing.T) {
 	})
 
 	t.Run("Head All Committees of Slot 4", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -862,8 +938,11 @@ func TestListCommittees(t *testing.T) {
 	})
 
 	t.Run("Head All Committees of Index 1", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -890,8 +969,11 @@ func TestListCommittees(t *testing.T) {
 	})
 
 	t.Run("Head All Committees of Slot 2, Index 1", func(t *testing.T) {
-		chainService := &chainMock.ChainService{}
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -926,8 +1008,12 @@ func TestListCommittees(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &chainMock.ChainService{Optimistic: true}
+		chainService := &chainMock.ChainService{
+			Optimistic:      true,
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -959,8 +1045,10 @@ func TestListCommittees(t *testing.T) {
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		s := Server{
+			ChainInfoFetcher: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},

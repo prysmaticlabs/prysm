@@ -57,6 +57,8 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 		return nil, status.Error(codes.NotFound, "Could not find validator")
 	}
 
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
@@ -85,6 +87,9 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 	if err != nil {
 		return nil, handleValContainerErr(err)
 	}
+
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
 	if err != nil {
@@ -155,6 +160,8 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 		}
 	}
 
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
@@ -219,6 +226,9 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 			committees = append(committees, committeeContainer)
 		}
 	}
+
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
 	if err != nil {

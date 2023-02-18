@@ -148,6 +148,8 @@ func (s *Service) Stop() error {
 // Status always returns nil unless there is an error condition that causes
 // this service to be unhealthy.
 func (s *Service) Status() error {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	optimistic, err := s.IsOptimistic(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to check if service is optimistic")

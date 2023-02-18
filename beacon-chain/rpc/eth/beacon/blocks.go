@@ -57,6 +57,8 @@ func (e *blockIdParseError) Error() string {
 // GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
 // determines the best block root and state root to use for a Checkpoint Sync starting from that point.
 func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// This is already a grpc error, so we can't wrap it any further
 		return nil, err
@@ -118,6 +120,8 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not hash block: %v", err)
 	}
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 	canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blkRoot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
@@ -145,6 +149,8 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeadersRequest) (*ethpbv1.BlockHeadersResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockHeaders")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	var err error
 	var blks []interfaces.ReadOnlySignedBeaconBlock
@@ -287,6 +293,8 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlock")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
@@ -310,6 +318,8 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockSSZResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZ")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
@@ -332,6 +342,8 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.BlockResponseV2, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockV2")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
@@ -441,6 +453,8 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockRootResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockRoot")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	var root []byte
 	var err error
@@ -528,6 +542,8 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockAttestationsResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockAttestations")
 	defer span.End()
+	bs.ChainInfoFetcher.ForkChoicer().RLock()
+	defer bs.ChainInfoFetcher.ForkChoicer().RUnlock()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)

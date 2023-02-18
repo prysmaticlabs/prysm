@@ -10,6 +10,7 @@ import (
 	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	executionTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
@@ -50,6 +51,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -168,6 +170,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -286,6 +289,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -407,6 +411,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			CanonicalRoots:      canonicalRoots,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -523,6 +528,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -557,6 +563,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
 				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -598,6 +605,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:            beaconDB,
@@ -632,6 +640,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:            beaconDB,
@@ -666,6 +675,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -701,6 +711,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -737,6 +748,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			ForkChoiceStore:     doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -771,6 +783,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
 				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
 			},
+			ForkChoiceStore: doublylinkedtree.New(),
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,

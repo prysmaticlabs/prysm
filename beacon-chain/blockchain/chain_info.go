@@ -90,6 +90,7 @@ type FinalizationFetcher interface {
 
 // OptimisticModeFetcher retrieves information about optimistic status of the node.
 type OptimisticModeFetcher interface {
+	ForkChoicer() forkchoice.ForkChoicer
 	IsOptimistic(ctx context.Context) (bool, error)
 	IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error)
 }
@@ -275,7 +276,7 @@ func (s *Service) CurrentFork() *ethpb.Fork {
 	return s.head.state.Fork()
 }
 
-// IsCanonical returns true if the input block root is part of the canonical chain.
+// IsCanonical returns true if the input block root is part of the canonical chain. Requires a read lock on forkchoice
 func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
 	// If the block has not been finalized, check fork choice store to see if the block is canonical
 	if s.cfg.ForkChoiceStore.HasNode(blockRoot) {
@@ -323,7 +324,7 @@ func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
 	return s.cfg.ForkChoiceStore
 }
 
-// IsOptimistic returns true if the current head is optimistic.
+// IsOptimistic returns true if the current head is optimistic. Requires a read lock on forkchoice
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return false, nil
@@ -346,6 +347,7 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 
 // IsFinalized returns true if the input root is finalized.
 // It first checks latest finalized root then checks finalized root index in DB.
+// Requires a read lock on Forkchoice
 func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
 	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
 		return true
