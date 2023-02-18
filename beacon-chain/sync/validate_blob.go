@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
@@ -88,8 +89,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 
 	// [IGNORE] The sidecar is the only sidecar with valid signature received for the tuple (sidecar.slot, sidecar.proposer_index, sidecar.index)
-	blkRoot := bytesutil.ToBytes32(blob.BlockRoot)
-	b := s.blobCache.getBlob(blkRoot, blob.Index)
+	b := s.blobCache.getBlob(blob.Slot, blob.ProposerIndex, blob.Index)
 	if b != nil {
 		return pubsub.ValidationIgnore, nil
 	}
@@ -153,35 +153,47 @@ func blobFields(b *eth.BlobSidecar) logrus.Fields {
 
 type blobCache struct {
 	sync.RWMutex
-	blobsByBlockRoot map[[32]byte][]*eth.SignedBlobSidecar
+	blobsBySlotAndProposerIndex map[types.Slot]map[types.ValidatorIndex][]*eth.SignedBlobSidecar
 }
 
 func newBlobCache() *blobCache {
 	return &blobCache{
-		blobsByBlockRoot: make(map[[32]byte][]*eth.SignedBlobSidecar),
+		blobsBySlotAndProposerIndex: make(map[types.Slot]map[types.ValidatorIndex][]*eth.SignedBlobSidecar),
 	}
 }
 
-func (b *blobCache) getBlob(blockRoot [32]byte, blobIndex uint64) *eth.SignedBlobSidecar {
+func (b *blobCache) getBlob(slot types.Slot, proposerIndex types.ValidatorIndex, blobIndex uint64) *eth.SignedBlobSidecar {
 	b.RLock()
 	defer b.RUnlock()
-	blobs, ok := b.blobsByBlockRoot[blockRoot]
+	blobsBySlot, ok := b.blobsBySlotAndProposerIndex[slot]
 	if !ok {
 		return nil
 	}
-	if blobIndex >= uint64(len(blobs)) {
+	blobsByProposerIndex, ok := blobsBySlot[proposerIndex]
+	if !ok {
 		return nil
 	}
-	return b.blobsByBlockRoot[blockRoot][blobIndex]
+	for _, blob := range blobsByProposerIndex {
+		if blob.Message.Index == blobIndex {
+			return blob
+		}
+	}
+	return nil
 }
 
 func (b *blobCache) insertBlob(blob *eth.SignedBlobSidecar) {
 	b.Lock()
 	defer b.Unlock()
-	r := bytesutil.ToBytes32(blob.Message.BlockRoot)
-	_, ok := b.blobsByBlockRoot[r]
+
+	slot := blob.Message.Slot
+	_, ok := b.blobsBySlotAndProposerIndex[slot]
 	if !ok {
-		b.blobsByBlockRoot[r] = make([]*eth.SignedBlobSidecar, params.BeaconNetworkConfig().BlobSubnetCount)
+		b.blobsBySlotAndProposerIndex[slot] = make(map[types.ValidatorIndex][]*eth.SignedBlobSidecar)
 	}
-	b.blobsByBlockRoot[r][blob.Message.Index] = blob
+	proposerIndex := blob.Message.ProposerIndex
+	_, ok = b.blobsBySlotAndProposerIndex[slot][proposerIndex]
+	if !ok {
+		b.blobsBySlotAndProposerIndex[slot][proposerIndex] = make([]*eth.SignedBlobSidecar, 0)
+	}
+	b.blobsBySlotAndProposerIndex[slot][proposerIndex] = append(b.blobsBySlotAndProposerIndex[slot][proposerIndex], blob)
 }
