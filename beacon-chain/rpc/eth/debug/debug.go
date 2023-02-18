@@ -36,6 +36,8 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconStateRequestV2) (*ethpbv2.BeaconStateResponseV2, error) {
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateV2")
 	defer span.End()
+	ds.ForkChoiceLocker.RLock()
+	defer ds.ForkChoiceLocker.RUnlock()
 
 	beaconSt, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
@@ -145,6 +147,8 @@ func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (
 	ctx, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeadsV2")
 	defer span.End()
 
+	ds.ForkChoiceLocker.RLock()
+	defer ds.ForkChoiceLocker.RUnlock()
 	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
 	resp := &ethpbv2.ForkChoiceHeadsResponse{
 		Data: make([]*ethpbv2.ForkChoiceHead, len(headRoots)),
@@ -166,5 +170,7 @@ func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (
 
 // GetForkChoice returns a dump fork choice store.
 func (ds *Server) GetForkChoice(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceDump, error) {
+	ds.ForkChoiceLocker.RLock()
+	defer ds.ForkChoiceLocker.RUnlock()
 	return ds.ForkFetcher.ForkChoicer().ForkChoiceDump(ctx)
 }

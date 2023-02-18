@@ -35,6 +35,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
+			ForkChoiceLocker:      doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -53,6 +54,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
+			ForkChoiceLocker:      doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -71,6 +73,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
+			ForkChoiceLocker:      doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -89,6 +92,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
+			ForkChoiceLocker:      doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -115,6 +119,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{Optimistic: true},
 			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
+			ForkChoiceLocker:      doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -148,6 +153,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ForkChoiceLocker:      doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -276,6 +282,7 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 	server := &Server{
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		ForkChoiceLocker:      doublylinkedtree.New(),
 	}
 	resp, err := server.ListForkChoiceHeadsV2(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
@@ -297,6 +304,7 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 		server := &Server{
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			ForkChoiceLocker:      doublylinkedtree.New(),
 		}
 		resp, err := server.ListForkChoiceHeadsV2(ctx, &emptypb.Empty{})
 		require.NoError(t, err)
@@ -320,7 +328,10 @@ func TestServer_GetForkChoice(t *testing.T) {
 	fRoot := [32]byte{'a'}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 2, Root: fRoot}
 	require.NoError(t, store.UpdateFinalizedCheckpoint(fc))
-	bs := &Server{ForkFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
+	bs := &Server{
+		ForkFetcher:      &blockchainmock.ChainService{ForkChoiceStore: store},
+		ForkChoiceLocker: doublylinkedtree.New(),
+	}
 	res, err := bs.GetForkChoice(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, primitives.Epoch(2), res.FinalizedCheckpoint.Epoch, "Did not get wanted finalized epoch")

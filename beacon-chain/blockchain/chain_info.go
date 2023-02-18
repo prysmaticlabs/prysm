@@ -288,10 +288,8 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 }
 
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
-// Heads roots and heads slots are returned.
+// Heads roots and heads slots are returned. Requires a lock on Forkchoice
 func (s *Service) ChainHeads() ([][32]byte, []primitives.Slot) {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
 	return s.ForkChoicer().Tips()
 }
 

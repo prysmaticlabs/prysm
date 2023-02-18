@@ -6,6 +6,7 @@ package debug
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
 )
 
@@ -18,4 +19,5 @@ type Server struct {
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
+	ForkChoiceLocker      forkchoice.ForkChoiceLocker
 }
