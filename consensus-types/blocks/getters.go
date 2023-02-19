@@ -117,18 +117,11 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 			Block: &eth.GenericSignedBeaconBlock_Capella{Capella: pb.(*eth.SignedBeaconBlockCapella)},
 		}, nil
 	case version.Deneb:
-		if b.IsBlinded() {
-			return &eth.GenericSignedBeaconBlock{
-				Block: &eth.GenericSignedBeaconBlock_Blinded_Deneb{Blinded_Deneb: pb.(*eth.SignedBlindedBeaconBlockDeneb)},
-			}, nil
-		}
-		return &eth.GenericSignedBeaconBlock{
-			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: pb.(*eth.SignedBeaconBlockDeneb)},
-		}, nil
+		// TODO(TT): Add Deneb support.
 	default:
 		return nil, errIncorrectBlockVersion
 	}
-
+	return nil, errIncorrectBlockVersion
 }
 
 // PbPhase0Block returns the underlying protobuf object.
@@ -1040,7 +1033,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 				if !ok {
 					return nil, errPayloadHeaderWrongType
 				}
-				return WrappedExecutionPayloadHeaderDeneb(ph)
+				return WrappedExecutionPayloadHeaderDeneb(ph, big.NewInt(0))
 			}
 		}
 		var p *enginev1.ExecutionPayloadDeneb
@@ -1051,7 +1044,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 				return nil, errPayloadWrongType
 			}
 		}
-		return WrappedExecutionPayloadDeneb(p)
+		return WrappedExecutionPayloadDeneb(p, big.NewInt(0))
 	default:
 		return nil, errIncorrectBlockVersion
 	}

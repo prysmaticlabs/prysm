@@ -225,12 +225,12 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 	defer cancel()
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-		result := &pb.ExecutionPayloadDeneb{}
+		result := &pb.ExecutionPayloadDenebWithValue{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-		return blocks.WrappedExecutionPayloadDeneb(result)
+		return blocks.WrappedExecutionPayloadDeneb(result.Payload, big.NewInt(0).SetBytes(result.Value))
 	}
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {

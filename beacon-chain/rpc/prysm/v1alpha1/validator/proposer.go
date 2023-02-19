@@ -138,7 +138,40 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().DenebForkEpoch {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: pb.(*ethpb.BeaconBlockDeneb)}}, nil
+		blk, ok := pb.(*ethpb.BeaconBlockDeneb)
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "Could not cast block to BeaconBlockDeneb")
+		}
+		validatorBlobs := make([]*ethpb.BlobSidecar, len(blk.Body.BlobKzgCommitments))
+		blobs, err := vs.BlobsCache.Get(blk.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get sidecars: %v", err)
+		}
+		br, err := blk.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		}
+		kzgs, err := sBlk.Block().Body().BlobKzgCommitments()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get kzg commitments: %v", err)
+		}
+		for i, b := range blobs {
+			validatorBlobs[i] = &ethpb.BlobSidecar{
+				BlockRoot:       br[:],
+				Index:           uint64(i),
+				Slot:            blk.Slot,
+				BlockParentRoot: blk.ParentRoot,
+				ProposerIndex:   blk.ProposerIndex,
+				Blob:            b,
+				KzgCommitment:   kzgs[i],
+				KzgProof:        []byte{}, // TODO(TT): add proof
+			}
+		}
+		blkAndBlobs := &ethpb.BeaconBlockDenebAndBlobs{
+			Block: blk,
+			Blobs: validatorBlobs,
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: blkAndBlobs}}, nil
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
 		if sBlk.IsBlinded() {
