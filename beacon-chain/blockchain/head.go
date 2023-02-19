@@ -163,7 +163,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		log.WithError(err).Error("could not check if node is optmistic")
 	} else {
 		go func() {
-			if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot[:], newHeadRoot[:], optimistic); err != nil {
+			if err := s.notifyNewHeadEvent(newHeadSlot, headState, newStateRoot[:], newHeadRoot[:], optimistic); err != nil {
 				log.WithError(err).Error("Could not notify event feed of new chain head")
 			}
 		}()
@@ -310,7 +310,6 @@ func (s *Service) hasHeadState() bool {
 // Notifies a common event feed of a new chain head event. Called right after a new
 // chain head is determined, set, and saved to disk.
 func (s *Service) notifyNewHeadEvent(
-	ctx context.Context,
 	newHeadSlot primitives.Slot,
 	newHeadState state.BeaconState,
 	newHeadStateRoot,

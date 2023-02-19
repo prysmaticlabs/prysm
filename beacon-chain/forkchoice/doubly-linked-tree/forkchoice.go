@@ -648,22 +648,22 @@ func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte)
 	return nil
 }
 
-// Lock() acquires the global write lock
+// Lock acquires the global write lock
 func (f *ForkChoice) Lock() {
 	f.lock.Lock()
 }
 
-// Unlock() acquires the global write lock
+// Unlock acquires the global write lock
 func (f *ForkChoice) Unlock() {
 	f.lock.Unlock()
 }
 
-// RLock() acquires the global read lock
+// RLock acquires the global read lock
 func (f *ForkChoice) RLock() {
 	f.lock.RLock()
 }
 
-// RUnlock() releases the global read lock
+// RUnlock releases the global read lock
 func (f *ForkChoice) RUnlock() {
 	f.lock.RUnlock()
 }
