@@ -298,6 +298,7 @@ func (s *Service) Start() {
 		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
 		ReplayerBuilder:             ch,
+		ForkChoiceLocker:            s.cfg.ChainInfoFetcher.ForkChoicer(),
 	}
 	beaconChainServerV1 := &beacon.Server{
 		CanonicalHistory:   ch,

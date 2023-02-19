@@ -1563,6 +1563,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 			},
 		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
+		ForkChoiceLocker:    doublylinkedtree.New(),
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -1642,6 +1643,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 			},
 		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
+		ForkChoiceLocker:    doublylinkedtree.New(),
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -1753,6 +1755,7 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
+		ForkChoiceLocker:    doublylinkedtree.New(),
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 

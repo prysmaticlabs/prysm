@@ -267,6 +267,8 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *Server) GetChainHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.ChainHead, error) {
+	bs.ForkChoiceLocker.RLock()
+	defer bs.ForkChoiceLocker.RUnlock()
 	return bs.chainHeadRetrieval(ctx)
 }
 

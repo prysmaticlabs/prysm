@@ -541,6 +541,8 @@ func (bs *Server) GetValidatorParticipation(
 		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", beaconState.Version())
 	}
 
+	bs.ForkChoiceLocker.RLock()
+	defer bs.ForkChoiceLocker.RUnlock()
 	cp := bs.FinalizationFetcher.FinalizedCheckpt()
 	p := &ethpb.ValidatorParticipationResponse{
 		Epoch:     requestedEpoch,

@@ -14,6 +14,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
@@ -48,4 +49,5 @@ type Server struct {
 	ReplayerBuilder             stategen.ReplayerBuilder
 	HeadUpdater                 blockchain.HeadUpdater
 	OptimisticModeFetcher       blockchain.OptimisticModeFetcher
+	ForkChoiceLocker            forkchoice.ForkChoiceLocker
 }

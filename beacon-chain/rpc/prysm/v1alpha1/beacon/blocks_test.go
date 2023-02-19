@@ -12,6 +12,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -81,6 +82,7 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 				CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 			OptimisticModeFetcher: &chainMock.ChainService{},
+			ForkChoiceLocker:      doublylinkedtree.New(),
 		}
 		_, err = bs.GetChainHead(context.Background(), nil)
 		require.ErrorContains(t, "Could not get genesis block", err)
@@ -115,6 +117,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 		OptimisticModeFetcher: &chainMock.ChainService{},
+		ForkChoiceLocker:      doublylinkedtree.New(),
 	}
 
 	_, err = bs.GetChainHead(context.Background(), nil)
@@ -125,6 +128,7 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 	bs := &Server{
 		HeadFetcher:           &chainMock.ChainService{Block: nil},
 		OptimisticModeFetcher: &chainMock.ChainService{},
+		ForkChoiceLocker:      doublylinkedtree.New(),
 	}
 	_, err := bs.GetChainHead(context.Background(), nil)
 	assert.ErrorContains(t, "Head block of chain was nil", err)
@@ -185,6 +189,7 @@ func TestServer_GetChainHead(t *testing.T) {
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	head, err := bs.GetChainHead(context.Background(), nil)
