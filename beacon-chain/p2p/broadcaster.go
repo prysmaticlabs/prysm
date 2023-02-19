@@ -141,6 +141,57 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 	}
 }
 
+// BroadcastBlob broadcasts a blob to the p2p network, the message is assumed to be
+// broadcasted to the current fork and to the input subnet.
+func (s *Service) BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.BlobSidecar) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastBlob")
+	defer span.End()
+	forkDigest, err := s.currentForkDigest()
+	if err != nil {
+		err := errors.Wrap(err, "could not retrieve fork digest")
+		tracing.AnnotateError(span, err)
+		return err
+	}
+
+	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
+	go s.broadcastBlob(ctx, subnet, blob, forkDigest)
+
+	return nil
+}
+
+func (s *Service) broadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.BlobSidecar, forkDigest [4]byte) {
+	ctx, span := trace.StartSpan(ctx, "p2p.broadcastBlob")
+	defer span.End()
+	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
+
+	// Ensure we have peers with this subnet.
+	s.subnetLocker(subnet).RLock()
+	hasPeer := s.hasPeerWithSubnet(blobSubnetToTopic(subnet, forkDigest))
+	s.subnetLocker(subnet).RUnlock()
+
+	if !hasPeer {
+		if err := func() error {
+			s.subnetLocker(subnet).Lock()
+			defer s.subnetLocker(subnet).Unlock()
+			ok, err := s.FindPeersWithSubnet(ctx, blobSubnetToTopic(subnet, forkDigest), subnet, 1)
+			if err != nil {
+				return err
+			}
+			if ok {
+				return nil
+			}
+			return errors.New("failed to find peers for subnet")
+		}(); err != nil {
+			log.WithError(err).Error("Failed to find peers")
+		}
+	}
+
+	if err := s.broadcastObject(ctx, blobSidecar, blobSubnetToTopic(subnet, forkDigest)); err != nil {
+		log.WithError(err).Error("Failed to broadcast blob sidecar")
+		tracing.AnnotateError(span, err)
+	}
+}
+
 func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMsg *ethpb.SyncCommitteeMessage, forkDigest [4]byte) {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastSyncCommittee")
 	defer span.End()
@@ -231,4 +282,8 @@ func attestationToTopic(subnet uint64, forkDigest [4]byte) string {
 
 func syncCommitteeToTopic(subnet uint64, forkDigest [4]byte) string {
 	return fmt.Sprintf(SyncCommitteeSubnetTopicFormat, forkDigest, subnet)
+}
+
+func blobSubnetToTopic(subnet uint64, forkDigest [4]byte) string {
+	return fmt.Sprintf(BlobSubnetTopicFormat, forkDigest, subnet)
 }
