@@ -40,6 +40,7 @@ func (vs *Server) validatorRegistered(ctx context.Context, id primitives.Validat
 }
 
 // circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
+// Requires a read lock on forkchoice (it has guaranteed a write lock coming from GetBeaconBlock)
 func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 	if vs.ForkFetcher == nil || vs.ForkFetcher.ForkChoicer() == nil {
 		return true, errors.New("no fork choicer configured")

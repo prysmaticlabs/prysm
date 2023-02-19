@@ -134,7 +134,8 @@ func TestGetAttestationData_OK(t *testing.T) {
 		TimeFetcher: &mock.ChainService{
 			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 		},
-		StateNotifier: chainService.StateNotifier(),
+		StateNotifier:    chainService.StateNotifier(),
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -164,7 +165,8 @@ func TestGetAttestationData_OK(t *testing.T) {
 
 func TestGetAttestationData_SyncNotReady(t *testing.T) {
 	as := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		SyncChecker:      &mockSync.Sync{IsSyncing: true},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	assert.ErrorContains(t, "Syncing to latest head", err)
@@ -181,6 +183,7 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		HeadFetcher:           &mock.ChainService{},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
+		ForkChoiceLocker:      doublylinkedtree.New(),
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	s, ok := status.FromError(err)
@@ -196,6 +199,7 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		HeadFetcher:           &mock.ChainService{Optimistic: false, State: beaconState},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		AttestationCache:      cache.NewAttestationCache(),
+		ForkChoiceLocker:      doublylinkedtree.New(),
 	}
 	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	require.NoError(t, err)
@@ -217,6 +221,7 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:      &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier:    chainService.StateNotifier(),
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -260,9 +265,10 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		HeadFetcher: &mock.ChainService{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		HeadFetcher:      &mock.ChainService{},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -336,6 +342,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		TimeFetcher:         &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
 		StateGen:            stategen.New(db, doublylinkedtree.New()),
+		ForkChoiceLocker:    doublylinkedtree.New(),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
 	util.SaveBlock(t, ctx, db, block)
@@ -408,8 +415,9 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
-		TimeFetcher:   &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
-		StateNotifier: chainService.StateNotifier(),
+		TimeFetcher:      &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
+		StateNotifier:    chainService.StateNotifier(),
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	req := &ethpb.AttestationDataRequest{

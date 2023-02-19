@@ -10,6 +10,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -34,8 +35,9 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	require.NoError(t, err)
 
 	aggregatorServer := &Server{
-		HeadFetcher: &mock.ChainService{State: s},
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:      &mock.ChainService{State: s},
+		SyncChecker:      &mockSync.Sync{IsSyncing: true},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1}
@@ -53,9 +55,10 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	server := &Server{
-		HeadFetcher: &mock.ChainService{State: s},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{State: s},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	priv, err := bls.RandKey()
@@ -80,10 +83,11 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	require.NoError(t, err)
 
 	server := &Server{
-		HeadFetcher: &mock.ChainService{State: s},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		AttPool:     attestations.NewPool(),
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{State: s},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttPool:          attestations.NewPool(),
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	priv, err := bls.RandKey()
@@ -113,11 +117,12 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	require.NoError(t, err)
 
 	aggregatorServer := &Server{
-		HeadFetcher: &mock.ChainService{State: beaconState},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		AttPool:     attestations.NewPool(),
-		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{State: beaconState},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttPool:          attestations.NewPool(),
+		P2P:              &mockp2p.MockBroadcaster{},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	priv, err := bls.RandKey()
@@ -151,11 +156,12 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	require.NoError(t, err)
 
 	aggregatorServer := &Server{
-		HeadFetcher: &mock.ChainService{State: beaconState},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		AttPool:     attestations.NewPool(),
-		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{State: beaconState},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttPool:          attestations.NewPool(),
+		P2P:              &mockp2p.MockBroadcaster{},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	priv, err := bls.RandKey()
@@ -191,11 +197,12 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	aggregatorServer := &Server{
-		HeadFetcher: &mock.ChainService{State: beaconState},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		AttPool:     attestations.NewPool(),
-		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{State: beaconState},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttPool:          attestations.NewPool(),
+		P2P:              &mockp2p.MockBroadcaster{},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	priv, err := bls.RandKey()
@@ -320,11 +327,12 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	require.NoError(t, err)
 
 	aggregatorServer := &Server{
-		HeadFetcher: &mock.ChainService{State: beaconState},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		AttPool:     attestations.NewPool(),
-		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{State: beaconState},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttPool:          attestations.NewPool(),
+		P2P:              &mockp2p.MockBroadcaster{},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	priv, err := bls.RandKey()
@@ -371,11 +379,12 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 	require.NoError(t, err)
 
 	aggregatorServer := &Server{
-		HeadFetcher: &mock.ChainService{State: beaconState},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		AttPool:     attestations.NewPool(),
-		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{State: beaconState},
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		AttPool:          attestations.NewPool(),
+		P2P:              &mockp2p.MockBroadcaster{},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	priv, err := bls.RandKey()

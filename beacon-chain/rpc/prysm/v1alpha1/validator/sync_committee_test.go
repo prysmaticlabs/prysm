@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -27,8 +28,9 @@ import (
 func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 	r := []byte{'a'}
 	server := &Server{
-		HeadFetcher: &mock.ChainService{Root: r},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		ForkChoiceLocker: doublylinkedtree.New(),
+		HeadFetcher:      &mock.ChainService{Root: r},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
 	}
 	res, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -42,6 +44,7 @@ func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 
 	server := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		HeadFetcher:           &mock.ChainService{},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
@@ -53,6 +56,7 @@ func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 	require.ErrorContains(t, errOptimisticMode.Error(), err)
 
 	server = &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		HeadFetcher:           &mock.ChainService{},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
@@ -64,6 +68,7 @@ func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 func TestSubmitSyncMessage_OK(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 10)
 	server := &Server{
+		ForkChoiceLocker:  doublylinkedtree.New(),
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
 		HeadFetcher: &mock.ChainService{
@@ -86,6 +91,7 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 	defer transition.SkipSlotCache.Enable()
 
 	server := &Server{
+		ForkChoiceLocker: doublylinkedtree.New(),
 		HeadFetcher: &mock.ChainService{
 			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 		},
@@ -102,6 +108,7 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 10)
 	server := &Server{
+		ForkChoiceLocker:  doublylinkedtree.New(),
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
 		HeadFetcher: &mock.ChainService{
@@ -137,6 +144,7 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 
 func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 	server := &Server{
+		ForkChoiceLocker:  doublylinkedtree.New(),
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
@@ -158,6 +166,7 @@ func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 
 func TestSubmitSignedContributionAndProof_Notification(t *testing.T) {
 	server := &Server{
+		ForkChoiceLocker:  doublylinkedtree.New(),
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
