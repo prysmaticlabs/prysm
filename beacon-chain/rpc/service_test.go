@@ -9,6 +9,7 @@ import (
 
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -24,7 +25,8 @@ func init() {
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := &mock.ChainService{
-		Genesis: time.Now(),
+		Genesis:         time.Now(),
+		ForkChoiceStore: doublylinkedtree.New(),
 	}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                  "7348",
