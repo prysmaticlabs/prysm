@@ -94,6 +94,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
+		ForkChoiceLocker: doublylinkedtree.New(),
 		StateFetcher: &testutil.MockFetcher{
 			StatesBySlot: map[primitives.Slot]state.BeaconState{
 				0:                                   bs,
@@ -199,6 +200,7 @@ func TestGetAttesterDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
+			ForkChoiceLocker:      doublylinkedtree.New(),
 			StateFetcher:          &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
@@ -219,6 +221,7 @@ func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
@@ -259,6 +262,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
+			ForkChoiceLocker:       doublylinkedtree.New(),
 			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -298,6 +302,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
+			ForkChoiceLocker:       doublylinkedtree.New(),
 			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -338,6 +343,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
+			ForkChoiceLocker:       doublylinkedtree.New(),
 			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -378,6 +384,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
+			ForkChoiceLocker:       doublylinkedtree.New(),
 			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -415,6 +422,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
+			ForkChoiceLocker:       doublylinkedtree.New(),
 			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -436,6 +444,7 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
@@ -468,6 +477,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 	mockChainService := &mockChain.ChainService{Genesis: genesisTime}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		StateFetcher:          &testutil.MockFetcher{BeaconState: st},
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:           mockChainService,
@@ -607,6 +617,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot}
 		vs := &Server{
+			ForkChoiceLocker:      doublylinkedtree.New(),
 			StateFetcher:          &testutil.MockFetcher{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           mockChainService,
@@ -641,6 +652,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Optimistic: true}
 		vs := &Server{
+			ForkChoiceLocker:      doublylinkedtree.New(),
 			StateFetcher:          &testutil.MockFetcher{BeaconState: st},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           mockChainService,
@@ -662,6 +674,7 @@ func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
@@ -694,6 +707,7 @@ func TestProduceBlockV2(t *testing.T) {
 		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
 		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:      doublylinkedtree.New(),
 			HeadFetcher:           mockChainService,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:         mockChainService,
@@ -737,8 +751,9 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 		require.NoError(t, err)
@@ -804,6 +819,7 @@ func TestProduceBlockV2(t *testing.T) {
 		mochChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
 		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:      doublylinkedtree.New(),
 			HeadFetcher:           mochChainService,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:         mochChainService,
@@ -876,8 +892,9 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 		require.NoError(t, err)
@@ -996,6 +1013,7 @@ func TestProduceBlockV2(t *testing.T) {
 		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
 		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker: doublylinkedtree.New(),
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				OverrideValidHash: bytesutil.ToBytes32([]byte("parent_hash")),
 				PayloadIDBytes:    &payloadIdBytes,
@@ -1077,8 +1095,9 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
 		require.NoError(t, err)
@@ -1238,6 +1257,7 @@ func TestProduceBlockV2(t *testing.T) {
 		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
 		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker: doublylinkedtree.New(),
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				OverrideValidHash:       bytesutil.ToBytes32([]byte("parent_hash")),
 				PayloadIDBytes:          &payloadIdBytes,
@@ -1320,8 +1340,9 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(beaconState, 2, privKeys)
 		require.NoError(t, err)
@@ -1381,6 +1402,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		bs, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 2)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:  doublylinkedtree.New(),
 			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
@@ -1418,8 +1440,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, err)
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(bs, 0, privKeys)
 		require.NoError(t, err)
@@ -1542,6 +1565,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:  doublylinkedtree.New(),
 			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
@@ -1608,8 +1632,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(bs, 0, privKeys)
 		require.NoError(t, err)
@@ -1739,6 +1764,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker: doublylinkedtree.New(),
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
@@ -1816,8 +1842,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(bs, 1, privKeys)
 		require.NoError(t, err)
@@ -1967,6 +1994,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, err)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker: doublylinkedtree.New(),
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
@@ -2059,8 +2087,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(bs, 2, privKeys)
 		require.NoError(t, err)
@@ -2186,6 +2215,7 @@ func TestProduceBlockV2_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
@@ -2200,6 +2230,7 @@ func TestProduceBlockV2SSZ_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
@@ -2217,6 +2248,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:  doublylinkedtree.New(),
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
@@ -2258,8 +2290,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 
 		v1Server := &Server{
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
-			V1Alpha1Server: v1Alpha1Server,
+			ForkChoiceLocker: doublylinkedtree.New(),
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
+			V1Alpha1Server:   v1Alpha1Server,
 		}
 		randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 		require.NoError(t, err)
@@ -2321,6 +2354,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:  doublylinkedtree.New(),
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
@@ -2391,8 +2425,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
-			V1Alpha1Server: v1Alpha1Server,
+			ForkChoiceLocker: doublylinkedtree.New(),
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
+			V1Alpha1Server:   v1Alpha1Server,
 		}
 		randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 		require.NoError(t, err)
@@ -2508,8 +2543,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			BeaconDB:    db,
-			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			BeaconDB:         db,
+			ForkFetcher:      &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
 			TimeFetcher: &mockChain.ChainService{
 				Genesis: ti,
 			},
@@ -2594,6 +2630,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
+			ForkChoiceLocker:      doublylinkedtree.New(),
 			V1Alpha1Server:        v1Alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           &mockChain.ChainService{},
@@ -2727,6 +2764,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 		id := &enginev1.PayloadIDBytes{0x1}
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:      doublylinkedtree.New(),
 			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: big.NewInt(0)},
 			BeaconDB:              db,
 			ForkFetcher:           &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
@@ -2815,6 +2853,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
+			ForkChoiceLocker:      doublylinkedtree.New(),
 			V1Alpha1Server:        v1Alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           &mockChain.ChainService{},
@@ -2878,6 +2917,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		bs, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 2)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:  doublylinkedtree.New(),
 			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
@@ -2915,8 +2955,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, err)
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(bs, 0, privKeys)
 		require.NoError(t, err)
@@ -3039,6 +3080,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker:  doublylinkedtree.New(),
 			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
@@ -3105,8 +3147,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(bs, 0, privKeys)
 		require.NoError(t, err)
@@ -3236,6 +3279,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker: doublylinkedtree.New(),
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
@@ -3310,8 +3354,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(bs, 1, privKeys)
 		require.NoError(t, err)
@@ -3458,6 +3503,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, err)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
+			ForkChoiceLocker: doublylinkedtree.New(),
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
@@ -3550,8 +3596,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			ForkChoiceLocker: doublylinkedtree.New(),
+			V1Alpha1Server:   v1Alpha1Server,
+			SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		}
 		randaoReveal, err := util.RandaoReveal(bs, 2, privKeys)
 		require.NoError(t, err)
@@ -3677,6 +3724,7 @@ func TestProduceBlindedBlock_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
@@ -3691,6 +3739,7 @@ func TestProduceBlindedBlockSSZ_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
@@ -3733,6 +3782,7 @@ func TestProduceAttestationData(t *testing.T) {
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	v1Alpha1Server := &v1alpha1validator.Server{
+		ForkChoiceLocker: doublylinkedtree.New(),
 		P2P:              &p2pmock.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		AttestationCache: cache.NewAttestationCache(),
@@ -3748,7 +3798,8 @@ func TestProduceAttestationData(t *testing.T) {
 		StateNotifier: chainService.StateNotifier(),
 	}
 	v1Server := &Server{
-		V1Alpha1Server: v1Alpha1Server,
+		ForkChoiceLocker: doublylinkedtree.New(),
+		V1Alpha1Server:   v1Alpha1Server,
 	}
 
 	req := &ethpbv1.ProduceAttestationDataRequest{
@@ -3859,6 +3910,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{attSlot1, attslot21, attslot22})
 	assert.NoError(t, err)
 	vs := &Server{
+		ForkChoiceLocker: doublylinkedtree.New(),
 		AttestationsPool: pool,
 	}
 
@@ -3955,6 +4007,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{att1, att2})
 	assert.NoError(t, err)
 	vs := &Server{
+		ForkChoiceLocker: doublylinkedtree.New(),
 		AttestationsPool: pool,
 	}
 	reqRoot, err := att1.Data.HashTreeRoot()
@@ -3998,10 +4051,11 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
-		HeadFetcher:    chain,
-		TimeFetcher:    chain,
-		SyncChecker:    &mockSync.Sync{IsSyncing: false},
-		V1Alpha1Server: &v1alpha1validator.Server{},
+		ForkChoiceLocker: doublylinkedtree.New(),
+		HeadFetcher:      chain,
+		TimeFetcher:      chain,
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		V1Alpha1Server:   &v1alpha1validator.Server{},
 	}
 
 	t.Run("Single subscription", func(t *testing.T) {
@@ -4108,6 +4162,7 @@ func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
@@ -4142,10 +4197,11 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
-		HeadFetcher:    chain,
-		TimeFetcher:    chain,
-		SyncChecker:    &mockSync.Sync{IsSyncing: false},
-		V1Alpha1Server: &v1alpha1validator.Server{},
+		ForkChoiceLocker: doublylinkedtree.New(),
+		HeadFetcher:      chain,
+		TimeFetcher:      chain,
+		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		V1Alpha1Server:   &v1alpha1validator.Server{},
 	}
 
 	t.Run("Single subscription", func(t *testing.T) {
@@ -4267,6 +4323,7 @@ func TestSubmitSyncCommitteeSubscription_SyncNotReady(t *testing.T) {
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
+		ForkChoiceLocker:      doublylinkedtree.New(),
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,

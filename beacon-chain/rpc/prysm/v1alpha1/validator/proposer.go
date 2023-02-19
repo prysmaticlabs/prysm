@@ -41,6 +41,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+	vs.ForkChoiceLocker.Lock()
+	defer vs.ForkChoiceLocker.Unlock()
 
 	// A syncing validator should not produce a block.
 	if vs.SyncChecker.Syncing() {

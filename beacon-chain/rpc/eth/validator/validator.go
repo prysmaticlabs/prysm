@@ -43,6 +43,8 @@ var errParticipation = status.Error(codes.Internal, "Could not obtain epoch part
 func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDutiesRequest) (*ethpbv1.AttesterDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetAttesterDuties")
 	defer span.End()
+	vs.ForkChoiceLocker.RLock()
+	defer vs.ForkChoiceLocker.RUnlock()
 
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
@@ -132,6 +134,8 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDutiesRequest) (*ethpbv1.ProposerDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetProposerDuties")
 	defer span.End()
+	vs.ForkChoiceLocker.RLock()
+	defer vs.ForkChoiceLocker.RUnlock()
 
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
@@ -223,6 +227,8 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
 	defer span.End()
+	vs.ForkChoiceLocker.RLock()
+	defer vs.ForkChoiceLocker.RUnlock()
 
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
@@ -299,11 +305,15 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlockResponseV2, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
+	vs.ForkChoiceLocker.RLock()
 
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
+	// releasing the forkchoice lock because GetBeaconBlock updates the head
+	// and therefore acquires a write lock
+	vs.ForkChoiceLocker.RUnlock()
 
 	v1alpha1req := &ethpbalpha.BlockRequest{
 		Slot:         req.Slot,
@@ -384,6 +394,7 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
 	defer span.End()
 
+	vs.ForkChoiceLocker.RLock()
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
@@ -395,6 +406,8 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 		Graffiti:     req.Graffiti,
 		SkipMevBoost: true, // Skip mev-boost and relayer network
 	}
+	// releasing the lock because GetBeaconBlock requires a write lock
+	vs.ForkChoiceLocker.RUnlock()
 	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
 		// We simply return err because it's already of a gRPC error type.
@@ -474,6 +487,7 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlindedBlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlock")
 	defer span.End()
+	vs.ForkChoiceLocker.RLock()
 
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
@@ -484,6 +498,9 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 		RandaoReveal: req.RandaoReveal,
 		Graffiti:     req.Graffiti,
 	}
+	// releasing the lock because GetBeaconBlock requires a write lock
+	vs.ForkChoiceLocker.RUnlock()
+
 	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
 		// We simply return err because it's already of a gRPC error type.
@@ -519,6 +536,8 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			}, nil
 		}
 	}
+	vs.ForkChoiceLocker.RLock()
+	defer vs.ForkChoiceLocker.RUnlock()
 	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
@@ -565,6 +584,7 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlockSSZ")
 	defer span.End()
 
+	vs.ForkChoiceLocker.RLock()
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
@@ -575,6 +595,9 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 		RandaoReveal: req.RandaoReveal,
 		Graffiti:     req.Graffiti,
 	}
+	// releasing the lock because GetBeaconBlock requires a write lock
+	vs.ForkChoiceLocker.RUnlock()
+
 	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
 		// We simply return err because it's already of a gRPC error type.
@@ -825,6 +848,8 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitBeaconCommitteeSubscription")
 	defer span.End()
 
+	vs.ForkChoiceLocker.RLock()
+	defer vs.ForkChoiceLocker.RUnlock()
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
@@ -902,6 +927,8 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeSubscription")
 	defer span.End()
 
+	vs.ForkChoiceLocker.RLock()
+	defer vs.ForkChoiceLocker.RUnlock()
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err

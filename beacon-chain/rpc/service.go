@@ -224,6 +224,7 @@ func (s *Service) Start() {
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 		BlockBuilder:           s.cfg.BlockBuilder,
 		BLSChangesPool:         s.cfg.BLSChangesPool,
+		ForkChoiceLocker:       s.cfg.ChainInfoFetcher.ForkChoicer(),
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:           s.cfg.HeadFetcher,
@@ -244,6 +245,7 @@ func (s *Service) Start() {
 		},
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
+		ForkChoiceLocker:       s.cfg.ChainInfoFetcher.ForkChoicer(),
 	}
 
 	nodeServer := &nodev1alpha1.Server{

@@ -120,6 +120,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-st.C():
+				s.ForkChoicer().Lock()
 				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("Could not process new slot")
 				}
@@ -127,6 +128,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 				if err := s.UpdateHead(s.ctx); err != nil {
 					log.WithError(err).Error("Could not process attestations and update head")
 				}
+				s.ForkChoicer().Unlock()
 			}
 		}
 	}()
@@ -136,8 +138,6 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 // It requires no external inputs.
 func (s *Service) UpdateHead(ctx context.Context) error {
 	start := time.Now()
-	s.ForkChoicer().Lock()
-	defer s.ForkChoicer().Unlock()
 	s.processAttestations(ctx)
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
