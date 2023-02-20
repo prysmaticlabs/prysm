@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
@@ -34,15 +33,4 @@ type IndexedVerificationFailure struct {
 type SingleIndexedVerificationFailure struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
-}
-
-// DefaultErrorJson is a JSON representation of a simple error value, containing only a message and an error code.
-type DefaultErrorJson struct {
-	Message string `json:"message"`
-	Code    int    `json:"code"`
-}
-
-// WriteError writes the error by manipulating headers and the body of the final response.
-func WriteError(w http.ResponseWriter, errJson *DefaultErrorJson) {
-
 }

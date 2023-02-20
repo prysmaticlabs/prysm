@@ -16,6 +16,7 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	apigateway "github.com/prysmaticlabs/prysm/v3/api/gateway"
 	"github.com/prysmaticlabs/prysm/v3/async/event"
@@ -257,12 +258,13 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering RPC Service")
-	if err := beacon.registerRPCService(); err != nil {
+	router := mux.NewRouter()
+	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering GRPC Gateway Service")
-	if err := beacon.registerGRPCGateway(); err != nil {
+	if err := beacon.registerGRPCGateway(router); err != nil {
 		return nil, err
 	}
 
@@ -738,7 +740,7 @@ func (b *BeaconNode) registerSlasherService() error {
 	return b.services.RegisterService(slasherSrv)
 }
 
-func (b *BeaconNode) registerRPCService() error {
+func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -793,6 +795,7 @@ func (b *BeaconNode) registerRPCService() error {
 
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
+		Router:                        router,
 		ExecutionEngineCaller:         web3Service,
 		ExecutionPayloadReconstructor: web3Service,
 		Host:                          host,
@@ -866,7 +869,7 @@ func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	return b.services.RegisterService(service)
 }
 
-func (b *BeaconNode) registerGRPCGateway() error {
+func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	if b.cliCtx.Bool(flags.DisableGRPCGateway.Name) {
 		return nil
 	}
@@ -907,7 +910,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	if flags.EnableHTTPEthAPI(httpModules) {
 		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
 	}
-	g, err := apigateway.New(b.ctx, opts...)
+	g, err := apigateway.New(b.ctx, router, opts...)
 	if err != nil {
 		return err
 	}

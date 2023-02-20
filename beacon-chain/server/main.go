@@ -65,12 +65,13 @@ func main() {
 		opts = append(opts, gateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
 	}
 
-	gw, err := gateway.New(context.Background(), opts...)
+	r := mux.NewRouter()
+
+	gw, err := gateway.New(context.Background(), r, opts...)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	r := mux.NewRouter()
 	r.HandleFunc("/swagger/", gateway.SwaggerServer())
 	r.HandleFunc("/healthz", healthzServer(gw))
 	gw.SetRouter(r)

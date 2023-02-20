@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/gorilla/mux"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -33,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/validator"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/debug"
@@ -73,7 +75,7 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	Router                        *mux.Router
 	Host                          string
 	Port                          string
 	CertFlag                      string
@@ -118,6 +120,7 @@ type Config struct {
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
+	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -190,6 +193,8 @@ func (s *Service) Start() {
 	}
 	withCache := stategen.WithCache(stateCache)
 	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
+
+	s.registerHTTPHandlers(ch)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
@@ -449,4 +454,23 @@ func (s *Service) logNewClientConnection(ctx context.Context) {
 			s.connectedRPCClients[clientInfo.Addr] = true
 		}
 	}
+}
+
+func (s *Service) registerHTTPHandlers(ch *stategen.CanonicalHistory) {
+	rewardsServer := &rewards.Server{
+		BlockFetcher: &blockfetcher.BlockProvider{
+			BeaconDB:         s.cfg.BeaconDB,
+			ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		},
+		StateFetcher: &statefetcher.StateProvider{
+			BeaconDB:           s.cfg.BeaconDB,
+			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+			StateGenService:    s.cfg.StateGen,
+			ReplayerBuilder:    ch,
+		},
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
 }

@@ -8,10 +8,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
-type BlockRewardsRequest struct {
-	BlockId string `json:"block_id"`
-}
-
 type BlockRewardsResponse struct {
 	Data                *BlockRewards `json:"data"`
 	ExecutionOptimistic bool          `json:"execution_optimistic"`
