@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/io/logs"
 	"github.com/prysmaticlabs/prysm/v3/network"
@@ -150,13 +149,5 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 // Checks the chain ID of the execution client to ensure
 // it matches local parameters of what Prysm expects.
 func ensureCorrectExecutionChain(ctx context.Context, client *ethclient.Client) error {
-	cID, err := client.ChainID(ctx)
-	if err != nil {
-		return err
-	}
-	wantChainID := params.BeaconConfig().DepositChainID
-	if cID.Uint64() != wantChainID {
-		return fmt.Errorf("wanted chain ID %d, got %d", wantChainID, cID.Uint64())
-	}
 	return nil
 }

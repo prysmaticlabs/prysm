@@ -58,6 +58,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
+	if err := vs.HeadUpdater.UpdateHead(ctx); err != nil {
+		log.WithError(err).Error("Could not process attestations and update head")
+	}
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)

@@ -649,16 +649,7 @@ func (s *Service) logTillChainStart(ctx context.Context) {
 // cacheHeadersForEth1DataVote makes sure that voting for eth1data after startup utilizes cached headers
 // instead of making multiple RPC requests to the eth1 endpoint.
 func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
-	// Find the end block to request from.
-	end, err := s.followedBlockHeight(ctx)
-	if err != nil {
-		return errors.Wrap(err, "followedBlockHeight")
-	}
-	start, err := s.determineEarliestVotingBlock(ctx, end)
-	if err != nil {
-		return errors.Wrapf(err, "determineEarliestVotingBlock=%d", end)
-	}
-	return s.cacheBlockHeaders(start, end)
+	return nil
 }
 
 // Caches block headers from the desired range.

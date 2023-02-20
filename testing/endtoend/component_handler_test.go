@@ -28,6 +28,7 @@ type componentHandler struct {
 	web3Signer               e2etypes.ComponentRunner
 	bootnode                 e2etypes.ComponentRunner
 	eth1Miner                e2etypes.ComponentRunner
+	builders                 e2etypes.MultipleComponentRunners
 	eth1Proxy                e2etypes.MultipleComponentRunners
 	eth1Nodes                e2etypes.MultipleComponentRunners
 	beaconNodes              e2etypes.MultipleComponentRunners
@@ -163,6 +164,18 @@ func (c *componentHandler) setup() {
 		return nil
 	})
 	c.beaconNodes = beaconNodes
+	// Builder
+	builders := components.NewBuilderSet()
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, beaconNodes}); err != nil {
+			return errors.Wrap(err, "builders require execution nodes to run")
+		}
+		if err := builders.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start builders")
+		}
+		return nil
+	})
+	c.builders = builders
 
 	if multiClientActive {
 		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
@@ -215,7 +228,7 @@ func (c *componentHandler) setup() {
 func (c *componentHandler) required() []e2etypes.ComponentRunner {
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
 	requiredComponents := []e2etypes.ComponentRunner{
-		c.tracingSink, c.eth1Nodes, c.bootnode, c.beaconNodes, c.validatorNodes, c.eth1Proxy,
+		c.tracingSink, c.eth1Nodes, c.bootnode, c.beaconNodes, c.validatorNodes, c.eth1Proxy, c.builders,
 	}
 	if multiClientActive {
 		requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{c.keygen, c.lighthouseBeaconNodes, c.lighthouseValidatorNodes}...)

@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "beacon_node.go",
         "boot_node.go",
+        "builder.go",
         "lighthouse_beacon.go",
         "lighthouse_validator.go",
         "log.go",
@@ -16,6 +17,7 @@ go_library(
     data = [
         "//testing/endtoend/static-files/eth1:eth1data",
         "@lighthouse//:lighthouse_bin",
+        "@mev_rs//:mev_rs_bin",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/components",
     visibility = ["//testing/endtoend:__subpackages__"],
