@@ -46,7 +46,7 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 		return nil, err
 	}
 
-	hs, err := bs.HeadFetcher.HeadState(ctx)
+	hs, err := bs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "could not get head state")
 	}
@@ -131,7 +131,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 	defer span.End()
 
 	var err error
-	var blks []interfaces.SignedBeaconBlock
+	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var blkRoots [][32]byte
 	if len(req.ParentRoot) == 32 {
 		blks, blkRoots, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(req.ParentRoot))
@@ -196,7 +196,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 }
 
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
-// included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
+// included in the beacon chain. The beacon node is not required to validate the signed ReadOnlyBeaconBlock, and a successful
 // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
@@ -229,7 +229,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 }
 
 // SubmitBlockSSZ instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
-// included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
+// included in the beacon chain. The beacon node is not required to validate the signed ReadOnlyBeaconBlock, and a successful
 // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
@@ -421,7 +421,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
 
-// GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
+// GetBlockRoot retrieves hashTreeRoot of ReadOnlyBeaconBlock/BeaconBlockHeader.
 func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockRootResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockRoot")
 	defer span.End()
@@ -540,7 +540,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	}, nil
 }
 
-func handleGetBlockError(blk interfaces.SignedBeaconBlock, err error) error {
+func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) error {
 	if invalidBlockIdErr, ok := err.(*blockfetcher.BlockIdParseError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
@@ -553,7 +553,7 @@ func handleGetBlockError(blk interfaces.SignedBeaconBlock, err error) error {
 	return nil
 }
 
-func getBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+func getBlockPhase0(blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
 	phase0Blk, err := blk.PbPhase0Block()
 	if err != nil {
 		return nil, err
@@ -575,7 +575,7 @@ func getBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2,
 	}, nil
 }
 
-func getBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+func getBlockAltair(blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
 	altairBlk, err := blk.PbAltairBlock()
 	if err != nil {
 		return nil, err
@@ -598,7 +598,7 @@ func getBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2,
 	}, nil
 }
 
-func (bs *Server) getBlockBellatrix(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+func (bs *Server) getBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -668,7 +668,7 @@ func (bs *Server) getBlockBellatrix(ctx context.Context, blk interfaces.SignedBe
 	}, nil
 }
 
-func (bs *Server) getBlockCapella(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+func (bs *Server) getBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
 	capellaBlk, err := blk.PbCapellaBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -738,7 +738,7 @@ func (bs *Server) getBlockCapella(ctx context.Context, blk interfaces.SignedBeac
 	}, nil
 }
 
-func getSSZBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+func getSSZBlockPhase0(blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	phase0Blk, err := blk.PbPhase0Block()
 	if err != nil {
 		return nil, err
@@ -757,7 +757,7 @@ func getSSZBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer,
 	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_PHASE0, ExecutionOptimistic: false, Data: sszBlock}, nil
 }
 
-func getSSZBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+func getSSZBlockAltair(blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	altairBlk, err := blk.PbAltairBlock()
 	if err != nil {
 		return nil, err
@@ -781,7 +781,7 @@ func getSSZBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer,
 	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_ALTAIR, ExecutionOptimistic: false, Data: sszData}, nil
 }
 
-func (bs *Server) getSSZBlockBellatrix(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+func (bs *Server) getSSZBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -857,7 +857,7 @@ func (bs *Server) getSSZBlockBellatrix(ctx context.Context, blk interfaces.Signe
 	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_BELLATRIX, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
 }
 
-func (bs *Server) getSSZBlockCapella(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+func (bs *Server) getSSZBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	capellaBlk, err := blk.PbCapellaBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -1004,7 +1004,7 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 	return bs.submitBlock(ctx, root, wrappedCapellaBlk)
 }
 
-func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.SignedBeaconBlock) error {
+func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.ReadOnlySignedBeaconBlock) error {
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
 		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).Debugf(

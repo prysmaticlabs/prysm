@@ -18,7 +18,7 @@ func (bs *Server) SubmitProposerSlashing(
 	ctx context.Context,
 	req *ethpb.ProposerSlashing,
 ) (*ethpb.SubmitSlashingResponse, error) {
-	beaconState, err := bs.HeadFetcher.HeadState(ctx)
+	beaconState, err := bs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
@@ -43,7 +43,7 @@ func (bs *Server) SubmitAttesterSlashing(
 	ctx context.Context,
 	req *ethpb.AttesterSlashing,
 ) (*ethpb.SubmitSlashingResponse, error) {
-	beaconState, err := bs.HeadFetcher.HeadState(ctx)
+	beaconState, err := bs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}

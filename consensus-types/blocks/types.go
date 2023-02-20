@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	_ = interfaces.SignedBeaconBlock(&SignedBeaconBlock{})
-	_ = interfaces.BeaconBlock(&BeaconBlock{})
-	_ = interfaces.BeaconBlockBody(&BeaconBlockBody{})
+	_ = interfaces.ReadOnlySignedBeaconBlock(&SignedBeaconBlock{})
+	_ = interfaces.ReadOnlyBeaconBlock(&BeaconBlock{})
+	_ = interfaces.ReadOnlyBeaconBlockBody(&BeaconBlockBody{})
 )
 
 var (

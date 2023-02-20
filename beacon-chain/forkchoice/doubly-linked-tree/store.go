@@ -13,47 +13,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// applyProposerBoostScore applies the current proposer boost scores to the
-// relevant nodes. This function requires a lock in Store.nodesLock.
-func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
-	s.proposerBoostLock.Lock()
-	defer s.proposerBoostLock.Unlock()
-
-	proposerScore := uint64(0)
-	var err error
-	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
-		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
-		if !ok || previousNode == nil {
-			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
-		} else {
-			previousNode.balance -= s.previousProposerBoostScore
-		}
-	}
-
-	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
-		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
-		if !ok || currentNode == nil {
-			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.proposerBoostRoot))
-		} else {
-			proposerScore, err = computeProposerBoostScore(newBalances)
-			if err != nil {
-				return err
-			}
-			currentNode.balance += proposerScore
-		}
-	}
-	s.previousProposerBoostRoot = s.proposerBoostRoot
-	s.previousProposerBoostScore = proposerScore
-	return nil
-}
-
-// ProposerBoost of fork choice store.
-func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
-	s.proposerBoostLock.RLock()
-	defer s.proposerBoostLock.RUnlock()
-	return s.proposerBoostRoot
-}
-
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head. This function assumes a lock on s.nodesLock
 func (s *Store) head(ctx context.Context) ([32]byte, error) {
@@ -86,7 +45,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 		bestDescendant = justifiedNode
 	}
 	currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
-	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch, currentEpoch) {
+	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, currentEpoch) {
 		s.allTipsAreInvalid = true
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
 			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
@@ -218,8 +177,8 @@ func (s *Store) prune(ctx context.Context) error {
 	defer s.nodesLock.Unlock()
 	s.checkpointsLock.RLock()
 	finalizedRoot := s.finalizedCheckpoint.Root
+	finalizedEpoch := s.finalizedCheckpoint.Epoch
 	s.checkpointsLock.RUnlock()
-
 	finalizedNode, ok := s.nodeByRoot[finalizedRoot]
 	if !ok || finalizedNode == nil {
 		return errors.WithMessage(errUnknownFinalizedRoot, fmt.Sprintf("%#x", finalizedRoot))
@@ -238,6 +197,22 @@ func (s *Store) prune(ctx context.Context) error {
 	s.treeRootNode = finalizedNode
 
 	prunedCount.Inc()
+	// Prune all children of the finalized checkpoint block that are incompatible with it
+	checkpointMaxSlot, err := slots.EpochStart(finalizedEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not compute epoch start")
+	}
+	if finalizedNode.slot == checkpointMaxSlot {
+		return nil
+	}
+
+	for _, child := range finalizedNode.children {
+		if child != nil && child.slot <= checkpointMaxSlot {
+			if err := s.pruneFinalizedNodeByRootMap(ctx, child, finalizedNode); err != nil {
+				return errors.Wrap(err, "could not prune incompatible finalized child")
+			}
+		}
+	}
 	return nil
 }
 

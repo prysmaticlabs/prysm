@@ -18,7 +18,7 @@ import (
 //
 // Spec pseudocode definition:
 //
-//	def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+//	def process_block_header(state: BeaconState, block: ReadOnlyBeaconBlock) -> None:
 //	  # Verify that the slots match
 //	  assert block.slot == state.slot
 //	  # Verify that the block is newer than latest block header
@@ -42,7 +42,7 @@ import (
 func ProcessBlockHeader(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	block interfaces.SignedBeaconBlock,
+	block interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(block); err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func ProcessBlockHeader(
 //
 // Spec pseudocode definition:
 //
-//	def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+//	def process_block_header(state: BeaconState, block: ReadOnlyBeaconBlock) -> None:
 //	  # Verify that the slots match
 //	  assert block.slot == state.slot
 //	  # Verify that the block is newer than latest block header

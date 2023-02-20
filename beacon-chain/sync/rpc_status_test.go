@@ -950,9 +950,9 @@ func TestShouldResync(t *testing.T) {
 	}
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.ReadOnlySignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]interfaces.SignedBeaconBlock, n)
+	ifaceBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])

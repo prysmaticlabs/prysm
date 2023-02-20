@@ -131,7 +131,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		blk              interfaces.BeaconBlock
+		blk              interfaces.ReadOnlyBeaconBlock
 		headRoot         [32]byte
 		finalizedRoot    [32]byte
 		justifiedRoot    [32]byte
@@ -140,7 +140,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	}{
 		{
 			name: "phase0 block",
-			blk: func() interfaces.BeaconBlock {
+			blk: func() interfaces.ReadOnlyBeaconBlock {
 				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
 				require.NoError(t, err)
 				return b
@@ -148,7 +148,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "altair block",
-			blk: func() interfaces.BeaconBlock {
+			blk: func() interfaces.ReadOnlyBeaconBlock {
 				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
 				require.NoError(t, err)
 				return b
@@ -156,7 +156,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "not execution block",
-			blk: func() interfaces.BeaconBlock {
+			blk: func() interfaces.ReadOnlyBeaconBlock {
 				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{
@@ -177,7 +177,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "happy case: finalized root is altair block",
-			blk: func() interfaces.BeaconBlock {
+			blk: func() interfaces.ReadOnlyBeaconBlock {
 				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -191,7 +191,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "happy case: finalized root is bellatrix block",
-			blk: func() interfaces.BeaconBlock {
+			blk: func() interfaces.ReadOnlyBeaconBlock {
 				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -205,7 +205,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "forkchoice updated with optimistic block",
-			blk: func() interfaces.BeaconBlock {
+			blk: func() interfaces.ReadOnlyBeaconBlock {
 				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -220,7 +220,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "forkchoice updated with invalid block",
-			blk: func() interfaces.BeaconBlock {
+			blk: func() interfaces.ReadOnlyBeaconBlock {
 				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -302,8 +302,8 @@ func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
 	service.cfg.ForkChoiceStore = fcs
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
-	service.justifiedBalances.balances = []uint64{50, 100, 200}
-	require.NoError(t, err)
+	fcs.SetBalancesByRooter(func(context.Context, [32]byte) ([]uint64, error) { return []uint64{50, 100, 200}, nil })
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{}))
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, bra, [32]byte{}, [32]byte{'A'}, ojc, ofc)
@@ -419,12 +419,15 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	service.cfg.ForkChoiceStore = fcs
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
-	service.justifiedBalances.balances = []uint64{50, 100, 200}
-	require.NoError(t, err)
+	fcs.SetBalancesByRooter(func(context.Context, [32]byte) ([]uint64, error) { return []uint64{50, 100, 200}, nil })
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{}))
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, bra, [32]byte{}, [32]byte{'A'}, ojc, ofc)
 	require.NoError(t, err)
+
+	bState, _ := util.DeterministicGenesisState(t, 10)
+	require.NoError(t, beaconDB.SaveState(ctx, bState, bra))
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 2, brb, bra, [32]byte{'B'}, ojc, ofc)
 	require.NoError(t, err)
@@ -450,9 +453,12 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	fcs.ProcessAttestation(ctx, []uint64{0}, brd, 1)
 	fcs.ProcessAttestation(ctx, []uint64{1}, brf, 1)
 	fcs.ProcessAttestation(ctx, []uint64{2}, brg, 1)
+	fcs.SetBalancesByRooter(service.cfg.StateGen.ActiveNonSlashedBalancesByRoot)
 	jc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: bra}
-	require.NoError(t, fcs.UpdateJustifiedCheckpoint(jc))
-	headRoot, err := fcs.Head(ctx, []uint64{50, 100, 200})
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, jc))
+	fcs.SetBalancesByRooter(func(context.Context, [32]byte) ([]uint64, error) { return []uint64{50, 100, 200}, nil })
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{}))
+	headRoot, err := fcs.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, brg, headRoot)
 
@@ -476,7 +482,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, brf, InvalidBlockRoot(err))
 
 	// Ensure Head is D
-	headRoot, err = fcs.Head(ctx, service.justifiedBalances.balances)
+	headRoot, err = fcs.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, brd, headRoot)
 
@@ -548,7 +554,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		postState      bstate.BeaconState
 		invalidBlock   bool
 		isValidPayload bool
-		blk            interfaces.SignedBeaconBlock
+		blk            interfaces.ReadOnlySignedBeaconBlock
 		newPayloadErr  error
 		errString      string
 		name           string
@@ -594,7 +600,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "altair pre state, happy case",
 			postState: bellatrixState,
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -613,7 +619,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "not at merge transition",
 			postState: bellatrixState,
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -639,7 +645,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "happy case",
 			postState: bellatrixState,
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -658,7 +664,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "undefined error from ee",
 			postState: bellatrixState,
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -678,7 +684,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "invalid block hash error from ee",
 			postState: bellatrixState,
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -886,7 +892,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	fjc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash}
-	require.NoError(t, fcs.UpdateJustifiedCheckpoint(fjc))
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, fjc))
 	require.NoError(t, fcs.UpdateFinalizedCheckpoint(fjc))
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, genesisRoot, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
@@ -953,6 +959,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	twentyfc := &ethpb.Checkpoint{Epoch: 20, Root: validRoot[:]}
 	state, blkRoot, err = prepareForkchoiceState(ctx, 640, validRoot, genesisRoot, params.BeaconConfig().ZeroHash, twentyjc, twentyfc)
 	require.NoError(t, err)
+	fcs.SetBalancesByRooter(func(_ context.Context, _ [32]byte) ([]uint64, error) { return []uint64{}, nil })
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, fcs.SetOptimisticToValid(ctx, validRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, validRoot))

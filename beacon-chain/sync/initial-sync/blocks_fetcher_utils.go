@@ -23,7 +23,7 @@ import (
 // either in DB or initial sync cache.
 type forkData struct {
 	peer   peer.ID
-	blocks []interfaces.SignedBeaconBlock
+	blocks []interfaces.ReadOnlySignedBeaconBlock
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -260,8 +260,8 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 }
 
 // findAncestor tries to figure out common ancestor slot that connects a given root to known block.
-func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfaces.SignedBeaconBlock) (*forkData, error) {
-	outBlocks := []interfaces.SignedBeaconBlock{b}
+func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfaces.ReadOnlySignedBeaconBlock) (*forkData, error) {
+	outBlocks := []interfaces.ReadOnlySignedBeaconBlock{b}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
 		parentRoot := outBlocks[len(outBlocks)-1].Block().ParentRoot()
 		if f.chain.HasBlock(ctx, parentRoot) {

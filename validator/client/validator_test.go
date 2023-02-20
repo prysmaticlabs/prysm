@@ -22,6 +22,7 @@ import (
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	blsmock "github.com/prysmaticlabs/prysm/v3/crypto/bls/common/mock"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -38,6 +39,8 @@ import (
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -1417,7 +1420,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 		doesntContainLogs    bool
 	}{
 		{
-			name: " Happy Path proposer config not nil",
+			name: "Happy Path proposer config not nil",
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
@@ -1458,7 +1461,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					},
 				}).Return(nil, nil)
 				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 40000000,
@@ -1467,7 +1472,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress(defaultFeeHex),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: 35000000,
@@ -1538,7 +1545,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					},
 				}).Return(nil, nil)
 				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 40000000,
@@ -1547,7 +1556,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress(defaultFeeHex),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
 							GasLimit: 35000000,
@@ -1614,12 +1625,16 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					},
 				}).Return(nil, nil)
 				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
 				}
 				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress(defaultFeeHex),
+						},
 					},
 				})
 				return &v
@@ -1659,7 +1674,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress(defaultFeeHex),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
@@ -1715,7 +1732,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress(defaultFeeHex),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: 40000000,
@@ -1788,12 +1807,16 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					},
 				}).Return(nil, nil)
 				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipient: common.Address{},
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.Address{},
+					},
 				}
 				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress(defaultFeeHex),
+						},
 					},
 				})
 				return &v
@@ -1826,12 +1849,16 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
 				).Return(nil, errors.New("could not find validator index for public key"))
 				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
 				}
 				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress(defaultFeeHex),
+						},
 					},
 				})
 				return &v
@@ -1867,7 +1894,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}, nil)
 
 				config[keys[0]] = &validatorserviceconfig.ProposerOption{
-					FeeRecipient: common.Address{},
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.Address{},
+					},
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
 						GasLimit: 40000000,
@@ -1876,7 +1905,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress(defaultFeeHex),
+						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
 							GasLimit: 40000000,
@@ -1942,4 +1973,434 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidator_buildPrepProposerReqs_InvalidValidatorIndex(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	client := mock2.NewMockValidatorClient(ctrl)
+	v := validator{validatorClient: client}
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{{}}
+
+	client.EXPECT().ValidatorIndex(
+		ctx,
+		gomock.Any(),
+	).Return(nil, errors.New("custom error"))
+
+	_, err := v.buildPrepProposerReqs(ctx, pubkeys)
+	assert.ErrorContains(t, "custom error", err)
+}
+
+func getPubkeyFromString(t *testing.T, stringPubkey string) [fieldparams.BLSPubkeyLength]byte {
+	pubkeyTemp, err := hexutil.Decode(stringPubkey)
+	require.NoError(t, err)
+
+	var pubkey [fieldparams.BLSPubkeyLength]byte
+	copy(pubkey[:], pubkeyTemp)
+
+	return pubkey
+}
+
+func getFeeRecipientFromString(t *testing.T, stringFeeRecipient string) common.Address {
+	feeRecipientTemp, err := hexutil.Decode(stringFeeRecipient)
+	require.NoError(t, err)
+
+	var feeRecipient common.Address
+	copy(feeRecipient[:], feeRecipientTemp)
+
+	return feeRecipient
+}
+
+func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
+	// pubkey1 => feeRecipient1 (already in `v.validatorIndex`)
+	// pubkey2 => feeRecipient2 (NOT in `v.validatorIndex`, index found by beacon node)
+	// pubkey3 => feeRecipient3 (NOT in `v.validatorIndex`, index NOT found by beacon node)
+	// pubkey4 => Nothing (already in `v.validatorIndex`)
+
+	// Public keys
+	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := getPubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	pubkey4 := getPubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
+
+	// Fee recipients
+	feeRecipient1 := getFeeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
+	feeRecipient2 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient3 := getFeeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	client := mock2.NewMockValidatorClient(ctrl)
+
+	client.EXPECT().ValidatorIndex(
+		ctx,
+		&ethpb.ValidatorIndexRequest{
+			PublicKey: pubkey2[:],
+		},
+	).Return(&ethpb.ValidatorIndexResponse{
+		Index: 2,
+	}, nil)
+
+	client.EXPECT().ValidatorIndex(
+		ctx,
+		&ethpb.ValidatorIndexRequest{
+			PublicKey: pubkey3[:],
+		},
+	).Return(nil, status.Error(codes.NotFound, "NOT_FOUND"))
+
+	v := validator{
+		validatorClient: client,
+		proposerSettings: &validatorserviceconfig.ProposerSettings{
+			DefaultConfig: nil,
+			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+				pubkey1: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient1,
+					},
+				},
+				pubkey2: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient2,
+					},
+				},
+				pubkey3: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient3,
+					},
+				},
+			},
+		},
+		pubkeyToValidatorIndex: map[[48]byte]primitives.ValidatorIndex{
+			pubkey1: 1,
+			pubkey4: 4,
+		},
+	}
+
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2, pubkey3, pubkey4}
+
+	expected := []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+		{
+			ValidatorIndex: 1,
+			FeeRecipient:   feeRecipient1[:],
+		},
+		{
+			ValidatorIndex: 2,
+			FeeRecipient:   feeRecipient2[:],
+		},
+	}
+
+	actual, err := v.buildPrepProposerReqs(ctx, pubkeys)
+	require.NoError(t, err)
+	assert.DeepEqual(t, expected, actual)
+}
+
+func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
+	// pubkey1 => feeRecipient1 (already in `v.validatorIndex`)
+	// pubkey2 => feeRecipient2 (NOT in `v.validatorIndex`, index found by beacon node)
+	// pubkey3 => feeRecipient3 (NOT in `v.validatorIndex`, index NOT found by beacon node)
+	// pubkey4 => Nothing (already in `v.validatorIndex`)
+
+	// Public keys
+	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := getPubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	pubkey4 := getPubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
+
+	// Fee recipients
+	feeRecipient1 := getFeeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
+	feeRecipient2 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient3 := getFeeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
+
+	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	client := mock2.NewMockValidatorClient(ctrl)
+
+	client.EXPECT().ValidatorIndex(
+		ctx,
+		&ethpb.ValidatorIndexRequest{
+			PublicKey: pubkey2[:],
+		},
+	).Return(&ethpb.ValidatorIndexResponse{
+		Index: 2,
+	}, nil)
+
+	client.EXPECT().ValidatorIndex(
+		ctx,
+		&ethpb.ValidatorIndexRequest{
+			PublicKey: pubkey3[:],
+		},
+	).Return(nil, status.Error(codes.NotFound, "NOT_FOUND"))
+
+	v := validator{
+		validatorClient: client,
+		proposerSettings: &validatorserviceconfig.ProposerSettings{
+			DefaultConfig: &validatorserviceconfig.ProposerOption{
+				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipient: defaultFeeRecipient,
+				},
+			},
+			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+				pubkey1: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient1,
+					},
+				},
+				pubkey2: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient2,
+					},
+				},
+				pubkey3: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient3,
+					},
+				},
+			},
+		},
+		pubkeyToValidatorIndex: map[[48]byte]primitives.ValidatorIndex{
+			pubkey1: 1,
+			pubkey4: 4,
+		},
+	}
+
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2, pubkey3, pubkey4}
+
+	expected := []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+		{
+			ValidatorIndex: 1,
+			FeeRecipient:   feeRecipient1[:],
+		},
+		{
+			ValidatorIndex: 2,
+			FeeRecipient:   feeRecipient2[:],
+		},
+		{
+			ValidatorIndex: 4,
+			FeeRecipient:   defaultFeeRecipient[:],
+		},
+	}
+
+	actual, err := v.buildPrepProposerReqs(ctx, pubkeys)
+	require.NoError(t, err)
+	assert.DeepEqual(t, expected, actual)
+}
+
+func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
+	// pubkey1 => feeRecipient1, builder enabled
+	// pubkey2 => feeRecipient2, builder disabled
+	// pubkey3 => Nothing, builder enabled
+
+	// Public keys
+	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := getPubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+
+	// Fee recipients
+	feeRecipient1 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient2 := getFeeRecipientFromString(t, "0x2222222222222222222222222222222222222222")
+
+	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	client := mock2.NewMockValidatorClient(ctrl)
+
+	signature := blsmock.NewMockSignature(ctrl)
+	signature.EXPECT().Marshal().Return([]byte{})
+
+	v := validator{
+		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
+		validatorClient:              client,
+		proposerSettings: &validatorserviceconfig.ProposerSettings{
+			DefaultConfig: &validatorserviceconfig.ProposerOption{
+				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipient: defaultFeeRecipient,
+				},
+				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					Enabled:  false,
+					GasLimit: 9999,
+				},
+			},
+			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+				pubkey1: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient1,
+					},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled:  true,
+						GasLimit: 1111,
+					},
+				},
+				pubkey2: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient2,
+					},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled:  false,
+						GasLimit: 2222,
+					},
+				},
+				pubkey3: {
+					FeeRecipientConfig: nil,
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled:  true,
+						GasLimit: 3333,
+					},
+				},
+			},
+		},
+	}
+
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2, pubkey3}
+
+	var signer = func(_ context.Context, _ *validatorpb.SignRequest) (bls.Signature, error) {
+		return signature, nil
+	}
+
+	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, len(actual))
+	assert.DeepEqual(t, feeRecipient1[:], actual[0].Message.FeeRecipient)
+	assert.Equal(t, uint64(1111), actual[0].Message.GasLimit)
+	assert.DeepEqual(t, pubkey1[:], actual[0].Message.Pubkey)
+}
+
+func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
+	// pubkey1 => feeRecipient1, builder enabled
+	// pubkey2 => feeRecipient2, builder disabled
+	// pubkey3 => Nothing, builder enabled
+
+	// Public keys
+	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := getPubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+
+	// Fee recipients
+	feeRecipient1 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+	feeRecipient2 := getFeeRecipientFromString(t, "0x2222222222222222222222222222222222222222")
+
+	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	client := mock2.NewMockValidatorClient(ctrl)
+
+	signature := blsmock.NewMockSignature(ctrl)
+	signature.EXPECT().Marshal().Return([]byte{}).Times(2)
+
+	v := validator{
+		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
+		validatorClient:              client,
+		proposerSettings: &validatorserviceconfig.ProposerSettings{
+			DefaultConfig: &validatorserviceconfig.ProposerOption{
+				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipient: defaultFeeRecipient,
+				},
+				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					Enabled:  true,
+					GasLimit: 9999,
+				},
+			},
+			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+				pubkey1: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient1,
+					},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled:  true,
+						GasLimit: 1111,
+					},
+				},
+				pubkey2: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient2,
+					},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled:  false,
+						GasLimit: 2222,
+					},
+				},
+				pubkey3: {
+					FeeRecipientConfig: nil,
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled:  true,
+						GasLimit: 3333,
+					},
+				},
+			},
+		},
+	}
+
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2, pubkey3}
+
+	var signer = func(_ context.Context, _ *validatorpb.SignRequest) (bls.Signature, error) {
+		return signature, nil
+	}
+
+	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, len(actual))
+
+	assert.DeepEqual(t, feeRecipient1[:], actual[0].Message.FeeRecipient)
+	assert.Equal(t, uint64(1111), actual[0].Message.GasLimit)
+	assert.DeepEqual(t, pubkey1[:], actual[0].Message.Pubkey)
+
+	assert.DeepEqual(t, defaultFeeRecipient[:], actual[1].Message.FeeRecipient)
+	assert.Equal(t, uint64(9999), actual[1].Message.GasLimit)
+	assert.DeepEqual(t, pubkey3[:], actual[1].Message.Pubkey)
+}
+
+func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
+	// Public keys
+	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+
+	// Fee recipients
+	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	client := mock2.NewMockValidatorClient(ctrl)
+
+	v := validator{
+		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
+		validatorClient:              client,
+		proposerSettings: &validatorserviceconfig.ProposerSettings{
+			DefaultConfig: &validatorserviceconfig.ProposerOption{
+				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipient: defaultFeeRecipient,
+				},
+				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					Enabled:  true,
+					GasLimit: 9999,
+				},
+			},
+		},
+	}
+
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1}
+
+	var signer = func(_ context.Context, _ *validatorpb.SignRequest) (bls.Signature, error) {
+		return nil, errors.New("custom error")
+	}
+
+	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
+	require.NoError(t, err)
+
+	assert.Equal(t, 0, len(actual))
 }

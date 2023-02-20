@@ -131,10 +131,10 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 }
 
 // SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
-// and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
-// The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
+// and publish a `ReadOnlySignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
+// The beacon node should broadcast a newly constructed `ReadOnlySignedBeaconBlock` to the beacon network,
 // to be included in the beacon chain. The beacon node is not required to validate the signed
-// `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
+// `ReadOnlyBeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
 // successful. The beacon node is expected to integrate the new block into its state, and
 // therefore validate the block internally, however blocks which fail the validation are still
 // broadcast but a different status code is returned (202).
@@ -167,10 +167,10 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 }
 
 // SubmitBlindedBlockSSZ instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
-// and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
-// The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
+// and publish a `ReadOnlySignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
+// The beacon node should broadcast a newly constructed `ReadOnlySignedBeaconBlock` to the beacon network,
 // to be included in the beacon chain. The beacon node is not required to validate the signed
-// `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
+// `ReadOnlyBeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
 // successful. The beacon node is expected to integrate the new block into its state, and
 // therefore validate the block internally, however blocks which fail the validation are still
 // broadcast but a different status code is returned (202).
@@ -229,7 +229,7 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
 }
 
-func getBlindedBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
+func getBlindedBlockPhase0(blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
 	phase0Blk, err := blk.PbPhase0Block()
 	if err != nil {
 		return nil, err
@@ -251,7 +251,7 @@ func getBlindedBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlindedBl
 	}, nil
 }
 
-func getBlindedBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
+func getBlindedBlockAltair(blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
 	altairBlk, err := blk.PbAltairBlock()
 	if err != nil {
 		return nil, err
@@ -274,7 +274,7 @@ func getBlindedBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlindedBl
 	}, nil
 }
 
-func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
+func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -344,7 +344,7 @@ func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.S
 	}, nil
 }
 
-func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
+func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
 	capellaBlk, err := blk.PbCapellaBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -414,7 +414,7 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Sig
 	}, nil
 }
 
-func (bs *Server) getBlindedSSZBlockBellatrix(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+func (bs *Server) getBlindedSSZBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -489,7 +489,7 @@ func (bs *Server) getBlindedSSZBlockBellatrix(ctx context.Context, blk interface
 	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_BELLATRIX, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
 }
 
-func (bs *Server) getBlindedSSZBlockCapella(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+func (bs *Server) getBlindedSSZBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	capellaBlk, err := blk.PbCapellaBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
