@@ -62,7 +62,6 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.MinGenesisActiveValidatorCount = 256
 	e2eConfig.GenesisDelay = 25 // 25 seconds so E2E has enough time to process deposits and get started.
 	e2eConfig.ChurnLimitQuotient = 65536
-	e2eConfig.MaxValidatorsPerWithdrawalsSweep = 128
 
 	// Time parameters.
 	e2eConfig.SecondsPerSlot = 6

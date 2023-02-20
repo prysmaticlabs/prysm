@@ -200,12 +200,9 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 //	    transactions_root=hash_tree_root(payload.transactions),
 //	)
 func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
+	var err error
 	if st.Version() >= version.Capella {
-		withdrawals, err := payload.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get payload withdrawals")
-		}
-		st, err = ProcessWithdrawals(st, withdrawals)
+		st, err = ProcessWithdrawals(st, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process withdrawals")
 		}
@@ -267,6 +264,13 @@ func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData
 
 // ProcessPayloadHeader processes the payload header.
 func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
+	var err error
+	if st.Version() >= version.Capella {
+		st, err = ProcessWithdrawals(st, header)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process withdrawals")
+		}
+	}
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}

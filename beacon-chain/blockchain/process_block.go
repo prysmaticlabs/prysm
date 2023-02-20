@@ -186,14 +186,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 
 	justified := s.ForkChoicer().JustifiedCheckpoint()
-	balances, err := s.justifiedBalances.get(ctx, justified.Root)
-	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
-		return errors.Wrap(err, msg)
-	}
-
 	start := time.Now()
-	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
+	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
@@ -449,7 +443,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 		}
 	}
 	// Insert all nodes but the last one to forkchoice
-	if err := s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes); err != nil {
+	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
 	}
 	// Insert the last block to forkchoice
