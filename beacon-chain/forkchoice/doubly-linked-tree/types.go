@@ -11,12 +11,13 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store             *Store
-	votes             []Vote // tracks individual validator's last vote.
-	votesLock         sync.RWMutex
-	balances          []uint64                    // tracks individual validator's balances last accounted in votes.
-	justifiedBalances []uint64                    // tracks individual validator's last justified balances.
-	balancesByRoot    forkchoice.BalancesByRooter // handler to obtain balances for the state with a given root
+	store               *Store
+	votes               []Vote // tracks individual validator's last vote.
+	votesLock           sync.RWMutex
+	balances            []uint64                    // tracks individual validator's balances last accounted in votes.
+	justifiedBalances   []uint64                    // tracks individual validator's last justified balances.
+	numActiveValidators uint64                      // tracks the total number of active validators. Requires a checkpoints lock to read/write
+	balancesByRoot      forkchoice.BalancesByRooter // handler to obtain balances for the state with a given root
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
@@ -30,6 +31,7 @@ type Store struct {
 	proposerBoostRoot             [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot     [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.
 	previousProposerBoostScore    uint64                                 // previous proposer boosted root score.
+	committeeWeight               uint64                                 // tracks the total active validator balance divided by the number of slots per Epoch. Requires a checkpoints lock to read/write
 	treeRootNode                  *Node                                  // the root node of the store tree.
 	headNode                      *Node                                  // last head Node
 	nodeByRoot                    map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
@@ -43,7 +45,6 @@ type Store struct {
 	highestReceivedNode           *Node                                      // The highest slot node.
 	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]primitives.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
 	allTipsAreInvalid             bool                                       // tracks if all tips are not viable for head
-	committeeBalance              uint64                                     // tracks the total active validator balance divided by slots per epoch. Requires a lock on nodes to read/write
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.

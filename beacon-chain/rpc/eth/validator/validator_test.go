@@ -2727,7 +2727,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 		id := &enginev1.PayloadIDBytes{0x1}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1}, BlockValue: big.NewInt(0)},
+			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: big.NewInt(0)},
 			BeaconDB:              db,
 			ForkFetcher:           &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
 			TimeFetcher: &mockChain.ChainService{
