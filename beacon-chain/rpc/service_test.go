@@ -37,6 +37,7 @@ func TestLifecycle_OK(t *testing.T) {
 		GenesisTimeFetcher:    chainService,
 		ExecutionChainService: &mockExecution.Chain{},
 		StateNotifier:         chainService.StateNotifier(),
+		ChainInfoFetcher:      chainService,
 	})
 
 	rpcService.Start()
@@ -77,6 +78,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		HeadFetcher:           chainService,
 		ExecutionChainService: &mockExecution.Chain{},
 		StateNotifier:         chainService.StateNotifier(),
+		ChainInfoFetcher:      chainService,
 	})
 
 	rpcService.Start()
