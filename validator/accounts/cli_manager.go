@@ -27,7 +27,7 @@ func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
 			return nil, err
 		}
 	}
-	return acc, nilS
+	return acc, nil
 }
 
 // AccountsCLIManager defines a struct capable of performing various validator
