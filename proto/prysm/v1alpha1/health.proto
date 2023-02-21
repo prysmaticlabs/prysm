@@ -12,6 +12,7 @@ option java_outer_classname = "HealthProto";
 option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
+// DEPRECATED: This endpoint doesn't appear to be used and have been marked for deprecation.
 // Health service API
 //
 // The health service is able to return important metadata about a beacon node
@@ -19,6 +20,7 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
 service Health {
     rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream LogsResponse) {
         option (google.api.http) = {
+            option deprecated = true;
             get: "/eth/v1alpha1/health/logs/stream"
         };
     }

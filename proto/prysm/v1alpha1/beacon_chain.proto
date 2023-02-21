@@ -61,7 +61,7 @@ service BeaconChain {
 
     // Server-side stream of attestations as they are received by
     // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     rpc StreamAttestations(google.protobuf.Empty) returns (stream Attestation) {
         option deprecated = true;
         option (google.api.http) = {
@@ -71,7 +71,7 @@ service BeaconChain {
 
     // Server-side stream of indexed attestations as they are received by
     // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     rpc StreamIndexedAttestations(google.protobuf.Empty) returns (stream IndexedAttestation) {
         option deprecated = true;
         option (google.api.http) = {
@@ -109,7 +109,7 @@ service BeaconChain {
 
     // Server-side stream of all signed blocks as they are received by
     // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     rpc StreamBlocks(StreamBlocksRequest) returns (stream SignedBeaconBlock) {
         option deprecated = true;
         option (google.api.http) = {
@@ -122,7 +122,7 @@ service BeaconChain {
     //
     // This includes the head block slot and root as well as information about
     // the most recent finalized and justified slots.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     rpc StreamChainHead(google.protobuf.Empty) returns (stream ChainHead) {
         option deprecated = true;
         option (google.api.http) = {
@@ -238,8 +238,9 @@ service BeaconChain {
         };
     }
 
+    // DEPRECATED: Streaming Validator Info is nolonger supported, the /eth/v1/events Beacon API endpoint will stream events and
+    // the /eth/v1/beacon/states/{state_id}/validators Beacon API endpoint will provide validator info.
     // Server-side stream of validator information at each epoch.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events
     rpc StreamValidatorsInfo(stream ValidatorChangeSet) returns (stream ValidatorInfo) {
         option deprecated = true;
         option (google.api.http) = {
@@ -279,8 +280,8 @@ enum SetAction {
     SET_VALIDATOR_KEYS = 2;
 }
 
+// DEPRECATED: This message's endpoint is superseded by the /eth/v1/events Beacon API endpoint
 // ValidatorChangeSet updates the server's list of keys on which to operate.
-// DEPRECATED: This message's endpoint is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events
 message ValidatorChangeSet {
     option deprecated = true;
     // Action (add/remove/set).
