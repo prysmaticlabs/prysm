@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	blocks2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	coreblocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/blockfetcher"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
@@ -73,7 +73,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	}
 	attsReward := newBalance - oldBalance
 	oldBalance = newBalance
-	st, err = blocks2.ProcessAttesterSlashings(r.Context(), st, blk.Block().Body().AttesterSlashings(), validators.SlashValidator)
+	st, err = coreblocks.ProcessAttesterSlashings(r.Context(), st, blk.Block().Body().AttesterSlashings(), validators.SlashValidator)
 	if err != nil {
 		errJson := &helpers.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get attester slashing rewards").Error(),
@@ -93,7 +93,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	}
 	attSlashingsReward := newBalance - oldBalance
 	oldBalance = newBalance
-	st, err = blocks2.ProcessProposerSlashings(r.Context(), st, blk.Block().Body().ProposerSlashings(), validators.SlashValidator)
+	st, err = coreblocks.ProcessProposerSlashings(r.Context(), st, blk.Block().Body().ProposerSlashings(), validators.SlashValidator)
 	if err != nil {
 		errJson := &helpers.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get proposer slashing rewards").Error(),
