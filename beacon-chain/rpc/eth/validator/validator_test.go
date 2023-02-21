@@ -5023,6 +5023,7 @@ func TestGetLiveness(t *testing.T) {
 				params.BeaconConfig().SlotsPerEpoch*3 - 1: headSt,
 			},
 		},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 
 	t.Run("old epoch", func(t *testing.T) {

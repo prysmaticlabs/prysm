@@ -174,6 +174,7 @@ func TestGetBeaconStateSSZ(t *testing.T) {
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
 		},
+		ForkChoiceLocker: doublylinkedtree.New(),
 	}
 	resp, err := server.GetBeaconStateSSZ(context.Background(), &ethpbv1.StateRequest{
 		StateId: make([]byte, 0),
@@ -195,6 +196,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
+			ForkChoiceLocker: doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -214,6 +216,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
+			ForkChoiceLocker: doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -233,6 +236,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
+			ForkChoiceLocker: doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
@@ -252,6 +256,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
+			ForkChoiceLocker: doublylinkedtree.New(),
 		}
 		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),

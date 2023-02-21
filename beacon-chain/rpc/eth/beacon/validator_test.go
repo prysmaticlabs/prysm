@@ -81,12 +81,16 @@ func TestGetValidator(t *testing.T) {
 	})
 
 	t.Run("Validator ID required", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			ForkChoiceStore: doublylinkedtree.New(),
+		}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:      &chainMock.ChainService{},
+			BeaconDB:         db,
+			ChainInfoFetcher: chainService,
 		}
 		_, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
 			StateId: []byte("head"),

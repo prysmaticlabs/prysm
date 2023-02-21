@@ -19,6 +19,8 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZ")
 	defer span.End()
 
+	ds.ForkChoiceLocker.RLock()
+	defer ds.ForkChoiceLocker.RUnlock()
 	state, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
@@ -115,6 +117,9 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.BeaconStateRequestV2) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZV2")
 	defer span.End()
+
+	ds.ForkChoiceLocker.RLock()
+	defer ds.ForkChoiceLocker.RUnlock()
 
 	st, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {

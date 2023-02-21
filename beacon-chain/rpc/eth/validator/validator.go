@@ -1068,6 +1068,9 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 	ctx, span := trace.StartSpan(ctx, "validator.GetLiveness")
 	defer span.End()
 
+	vs.ForkChoiceLocker.RLock()
+	defer vs.ForkChoiceLocker.RUnlock()
+
 	var participation []byte
 
 	// First we check if the requested epoch is the current epoch.

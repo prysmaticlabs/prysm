@@ -94,6 +94,8 @@ type StateProvider struct {
 //   - "justified"
 //   - <slot>
 //   - <hex encoded state root with '0x' prefix>
+//
+// Warning: this function requires a read lock on forkchoioce.
 func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.BeaconState, error) {
 	var (
 		s   state.BeaconState
@@ -213,6 +215,8 @@ func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (stat
 // between the found state's slot and the target slot.
 // process_blocks is applied for all canonical blocks, and process_slots is called for any skipped
 // slots, or slots following the most recent canonical block up to and including the target slot.
+//
+// This function requires a read lock on forkchoice.
 func (p *StateProvider) StateBySlot(ctx context.Context, target primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
