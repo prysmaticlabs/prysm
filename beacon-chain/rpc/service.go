@@ -471,6 +471,7 @@ func (s *Service) registerHTTPHandlers(ch *stategen.CanonicalHistory) {
 		},
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		CanonicalHistory:      ch,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
 }

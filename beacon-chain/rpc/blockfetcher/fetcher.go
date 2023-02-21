@@ -31,7 +31,7 @@ func (e BlockIdParseError) Error() string {
 
 // Fetcher is responsible for retrieving info related with the beacon block.
 type Fetcher interface {
-	Block(ctx context.Context, blockId []byte) (interfaces.SignedBeaconBlock, error)
+	Block(ctx context.Context, blockId []byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 }
 
 // BlockProvider is a real implementation of Fetcher.
@@ -40,9 +40,9 @@ type BlockProvider struct {
 	ChainInfoFetcher blockchain.ChainInfoFetcher
 }
 
-func (p *BlockProvider) Block(ctx context.Context, blockId []byte) (interfaces.SignedBeaconBlock, error) {
+func (p *BlockProvider) Block(ctx context.Context, blockId []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	var err error
-	var blk interfaces.SignedBeaconBlock
+	var blk interfaces.ReadOnlySignedBeaconBlock
 	switch string(blockId) {
 	case "head":
 		blk, err = p.ChainInfoFetcher.HeadBlock(ctx)

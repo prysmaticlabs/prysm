@@ -33,8 +33,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		helpers.WriteError(w, errJson)
 		return
 	}
-	stateRoot := blk.Block().StateRoot()
-	st, err := s.StateFetcher.State(r.Context(), stateRoot[:])
+	st, err := s.CanonicalHistory.ReplayerForSlot(blk.Block().Slot()-1).ReplayToSlot(r.Context(), blk.Block().Slot())
 	if err != nil {
 		errJson := &helpers.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get state").Error(),
@@ -167,7 +166,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJson(w, response)
 }
 
-func handleGetBlockError(blk interfaces.SignedBeaconBlock, err error) *helpers.DefaultErrorJson {
+func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) *helpers.DefaultErrorJson {
 	if errors.Is(err, blockfetcher.BlockIdParseError{}) {
 		return &helpers.DefaultErrorJson{
 			Message: errors.Wrapf(err, "invalid block ID").Error(),
