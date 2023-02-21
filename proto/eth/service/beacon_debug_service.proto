@@ -77,7 +77,7 @@ service BeaconDebug {
   // This function is not a part of the official Beacon APIs.
   rpc GetForkChoice(google.protobuf.Empty) returns (v1.ForkChoiceDump) {
     option (google.api.http) = {
-      get: "/internal/eth/v1/debug/forkchoice"
+      get: "/internal/eth/v1/debug/fork_choice"
     };
   }
 }

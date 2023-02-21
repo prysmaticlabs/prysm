@@ -36,6 +36,11 @@ func (e executionPayload) IsNil() bool {
 	return e.p == nil
 }
 
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayload) IsBlinded() bool {
+	return false
+}
+
 // MarshalSSZ --
 func (e executionPayload) MarshalSSZ() ([]byte, error) {
 	return e.p.MarshalSSZ()
@@ -190,6 +195,11 @@ func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfac
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadHeader) IsNil() bool {
 	return e.p == nil
+}
+
+// IsBlinded returns true if the underlying data is a header.
+func (e executionPayloadHeader) IsBlinded() bool {
+	return true
 }
 
 // MarshalSSZ --
@@ -377,6 +387,11 @@ func (e executionPayloadCapella) IsNil() bool {
 	return e.p == nil
 }
 
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadCapella) IsBlinded() bool {
+	return false
+}
+
 // MarshalSSZ --
 func (e executionPayloadCapella) MarshalSSZ() ([]byte, error) {
 	return e.p.MarshalSSZ()
@@ -532,6 +547,11 @@ func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCape
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadHeaderCapella) IsNil() bool {
 	return e.p == nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadHeaderCapella) IsBlinded() bool {
+	return true
 }
 
 // MarshalSSZ --
