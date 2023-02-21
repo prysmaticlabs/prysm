@@ -6,10 +6,13 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -28,8 +31,23 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 		return errors.New("message is not type BeaconBlockByRootsReq")
 	}
 	blobIdents := *ref
-	for _, id := range blobIdents {
-		log.Infof("blob identifier root=%#x, index=%d", id.BlockRoot, id.Index)
+	for i := range blobIdents {
+		root, idx := bytesutil.ToBytes32(blobIdents[i].BlockRoot), blobIdents[i].Index
+		sc, err := s.blobs.BlobsSidecar(root, idx)
+		if err != nil && !errors.Is(err, db.ErrNotFound) {
+			log.WithError(err).Debugf("error retrieving BlobsSidecar, root=%x, idnex=%d", root, idx)
+			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
+			return err
+		}
+
+		SetStreamWriteDeadline(stream, defaultWriteDuration)
+		if chunkErr := WriteBlobsSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
+			log.WithError(chunkErr).Debug("Could not send a chunked response")
+			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
+			tracing.AnnotateError(span, chunkErr)
+			return chunkErr
+		}
+		s.rateLimiter.add(stream, 1)
 	}
 	return nil
 }
