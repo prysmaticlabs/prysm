@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -53,10 +54,15 @@ func TestServer_setExecutionData(t *testing.T) {
 	}))
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []common.Address{{}}))
 
-	require.NoError(t, err)
+	withdrawals := []*v1.Withdrawal{{
+		Index:          1,
+		ValidatorIndex: 2,
+		Address:        make([]byte, fieldparams.FeeRecipientLength),
+		Amount:         3,
+	}}
 	id := &v1.PayloadIDBytes{0x1}
 	vs := &Server{
-		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1}, BlockValue: big.NewInt(0)},
+		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: big.NewInt(0)},
 		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
@@ -70,8 +76,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
 	})
-	t.Run("Builder configured. Builder Block has higher value", func(t *testing.T) {
-		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
+	t.Run("Builder configured. Builder Block has higher value. Incorrect withdrawals", func(t *testing.T) {
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
 			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
@@ -93,6 +99,59 @@ func TestServer_setExecutionData(t *testing.T) {
 				Timestamp:        uint64(ti.Unix()),
 				BlockNumber:      2,
 				WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+			},
+			Pubkey: sk.PublicKey().Marshal(),
+			Value:  bytesutil.PadTo([]byte{1}, 32),
+		}
+		d := params.BeaconConfig().DomainApplicationBuilder
+		domain, err := signing.ComputeDomain(d, nil, nil)
+		require.NoError(t, err)
+		sr, err := signing.ComputeSigningRoot(bid, domain)
+		require.NoError(t, err)
+		sBid := &ethpb.SignedBuilderBidCapella{
+			Message:   bid,
+			Signature: sk.Sign(sr[:]).Marshal(),
+		}
+		vs.BlockBuilder = &builderTest.MockBuilderService{
+			BidCapella: sBid,
+		}
+		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+		require.NoError(t, err)
+		chain := &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New(), Genesis: time.Now(), Block: wb}
+		vs.ForkFetcher = chain
+		vs.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
+		vs.TimeFetcher = chain
+		vs.HeadFetcher = chain
+		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
+	})
+	t.Run("Builder configured. Builder Block has higher value. Correct withdrawals.", func(t *testing.T) {
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
+		require.NoError(t, err)
+		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+		ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
+		require.NoError(t, err)
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		bid := &ethpb.BuilderBidCapella{
+			Header: &v1.ExecutionPayloadHeaderCapella{
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       make([]byte, fieldparams.RootLength),
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: bytesutil.PadTo([]byte{1}, fieldparams.RootLength),
+				ParentHash:       params.BeaconConfig().ZeroHash[:],
+				Timestamp:        uint64(ti.Unix()),
+				BlockNumber:      2,
+				WithdrawalsRoot:  wr[:],
 			},
 			Pubkey: sk.PublicKey().Marshal(),
 			Value:  bytesutil.PadTo([]byte{1}, 32),
@@ -466,4 +525,55 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 	sBid, err = builder.WrappedSignedBuilderBid(pbBid)
 	require.NoError(t, err)
 	require.ErrorIs(t, validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
+}
+
+func Test_matchingWithdrawalsRoot(t *testing.T) {
+	t.Run("could not get local withdrawals", func(t *testing.T) {
+		local := &v1.ExecutionPayload{}
+		p, err := blocks.WrappedExecutionPayload(local)
+		require.NoError(t, err)
+		_, err = matchingWithdrawalsRoot(p, p)
+		require.ErrorContains(t, "could not get local withdrawals", err)
+	})
+	t.Run("could not get builder withdrawals root", func(t *testing.T) {
+		local := &v1.ExecutionPayloadCapella{}
+		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
+		require.NoError(t, err)
+		header := &v1.ExecutionPayloadHeader{}
+		h, err := blocks.WrappedExecutionPayloadHeader(header)
+		require.NoError(t, err)
+		_, err = matchingWithdrawalsRoot(p, h)
+		require.ErrorContains(t, "could not get builder withdrawals root", err)
+	})
+	t.Run("withdrawals mismatch", func(t *testing.T) {
+		local := &v1.ExecutionPayloadCapella{}
+		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
+		require.NoError(t, err)
+		header := &v1.ExecutionPayloadHeaderCapella{}
+		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, big.NewInt(0))
+		require.NoError(t, err)
+		matched, err := matchingWithdrawalsRoot(p, h)
+		require.NoError(t, err)
+		require.Equal(t, false, matched)
+	})
+	t.Run("withdrawals match", func(t *testing.T) {
+		wds := []*v1.Withdrawal{{
+			Index:          1,
+			ValidatorIndex: 2,
+			Address:        make([]byte, fieldparams.FeeRecipientLength),
+			Amount:         3,
+		}}
+		local := &v1.ExecutionPayloadCapella{Withdrawals: wds}
+		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
+		require.NoError(t, err)
+		header := &v1.ExecutionPayloadHeaderCapella{}
+		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		header.WithdrawalsRoot = wr[:]
+		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, big.NewInt(0))
+		require.NoError(t, err)
+		matched, err := matchingWithdrawalsRoot(p, h)
+		require.NoError(t, err)
+		require.Equal(t, true, matched)
+	})
 }

@@ -13,10 +13,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -68,8 +70,13 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
 				}
+
+				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
+				if err != nil {
+					return errors.Wrap(err, "failed to match withdrawals root")
+				}
 				// If we can't get the builder value, just use local block.
-				if err == nil && builderValue.Cmp(localValue) > 0 { // Builder value is higher
+				if builderValue.Cmp(localValue) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
 					blk.SetBlinded(true)
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
@@ -87,6 +94,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				}
 			}
 		}
+
 	}
 
 	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
@@ -321,4 +329,28 @@ func validateBuilderSignature(signedBid builder.SignedBid) error {
 		return errors.New("builder returned nil bid")
 	}
 	return signing.VerifySigningRoot(bid, bid.Pubkey(), signedBid.Signature(), d)
+}
+
+func matchingWithdrawalsRoot(local, builder interfaces.ExecutionData) (bool, error) {
+	wds, err := local.Withdrawals()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get local withdrawals")
+	}
+	br, err := builder.WithdrawalsRoot()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get builder withdrawals root")
+	}
+	wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+	if err != nil {
+		return false, errors.Wrap(err, "could not compute local withdrawals root")
+	}
+
+	if !bytes.Equal(br, wr[:]) {
+		log.WithFields(logrus.Fields{
+			"local":   fmt.Sprintf("%#x", wr),
+			"builder": fmt.Sprintf("%#x", br),
+		}).Warn("Proposer: withdrawal roots don't match, using local block")
+		return false, nil
+	}
+	return true, nil
 }
