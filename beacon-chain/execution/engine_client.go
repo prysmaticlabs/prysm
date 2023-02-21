@@ -217,7 +217,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 			return nil, handleRPCError(err)
 		}
 
-		return blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(result.Value))
+		return blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value)))
 	}
 
 	result := &pb.ExecutionPayload{}
