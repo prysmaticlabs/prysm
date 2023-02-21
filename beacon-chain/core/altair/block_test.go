@@ -53,7 +53,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	beaconState, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
+	beaconState, _, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
 	require.NoError(t, err)
 
 	// Use a non-sync committee index to compare profitability.
@@ -127,7 +127,7 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	_, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
+	_, _, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
 	require.ErrorContains(t, "invalid sync committee signature", err)
 }
 
@@ -164,7 +164,7 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 
-	_, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
+	_, _, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
 	require.NoError(t, err)
 }
 
@@ -189,7 +189,7 @@ func TestProcessSyncCommittee_DontPrecompute(t *testing.T) {
 		SyncCommitteeBits: syncBits,
 	}
 	require.NoError(t, beaconState.UpdateBalancesAtIndex(idx, 0))
-	st, votedKeys, err := altair.ProcessSyncAggregateEported(context.Background(), beaconState, syncAggregate)
+	st, votedKeys, _, err := altair.ProcessSyncAggregateEported(context.Background(), beaconState, syncAggregate)
 	require.NoError(t, err)
 	require.Equal(t, 511, len(votedKeys))
 	require.DeepEqual(t, committeeKeys[0], votedKeys[0].Marshal())
@@ -212,7 +212,7 @@ func TestProcessSyncCommittee_processSyncAggregate(t *testing.T) {
 		SyncCommitteeBits: syncBits,
 	}
 
-	st, votedKeys, err := altair.ProcessSyncAggregateEported(context.Background(), beaconState, syncAggregate)
+	st, votedKeys, _, err := altair.ProcessSyncAggregateEported(context.Background(), beaconState, syncAggregate)
 	require.NoError(t, err)
 	votedMap := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	for _, key := range votedKeys {
