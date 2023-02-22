@@ -250,10 +250,10 @@ service BeaconChain {
     };
   }
 
-  // DEPRECATED: GetBlockSSZ is deprecated in favor of GetBlockV2SSZ
   // GetBlockSSZ returns the SSZ-serialized version of block details for given block id.
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getBlock
+  // DEPRECATED: GetBlockSSZ is deprecated in favor of GetBlockV2SSZ
   rpc GetBlockSSZ(v1.BlockRequest) returns (v1.BlockSSZResponse) {
     option deprecated = true;
     option (google.api.http) = {
