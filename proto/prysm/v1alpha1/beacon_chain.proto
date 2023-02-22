@@ -280,8 +280,8 @@ enum SetAction {
     SET_VALIDATOR_KEYS = 2;
 }
 
-// DEPRECATED: This message's endpoint is superseded by the /eth/v1/events Beacon API endpoint
 // ValidatorChangeSet updates the server's list of keys on which to operate.
+// DEPRECATED: This message's endpoint is superseded by the /eth/v1/events Beacon API endpoint
 message ValidatorChangeSet {
     option deprecated = true;
     // Action (add/remove/set).
