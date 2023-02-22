@@ -270,7 +270,7 @@ func (s *Service) Start() {
 		PeerManager:           s.cfg.PeerManager,
 		MetadataProvider:      s.cfg.MetadataProvider,
 		HeadFetcher:           s.cfg.HeadFetcher,
-		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
+		ChainInfoFetcher:      s.cfg.ExecutionChainInfoFetcher,
 	}
 
 	beaconChainServer := &beaconv1alpha1.Server{
