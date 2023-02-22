@@ -10,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -111,12 +110,13 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
 func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
+	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil, errors.New("can't get payload header from builder before bellatrix epoch")
+	}
+
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if blocks.IsPreBellatrixVersion(b.Version()) {
-		return nil, nil
 	}
 
 	h, err := b.Block().Body().Execution()
