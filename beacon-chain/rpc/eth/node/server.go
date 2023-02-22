@@ -16,14 +16,14 @@ import (
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information.
 type Server struct {
-	SyncChecker           sync.Checker
-	OptimisticModeFetcher blockchain.OptimisticModeFetcher
-	Server                *grpc.Server
-	BeaconDB              db.ReadOnlyDatabase
-	PeersFetcher          p2p.PeersProvider
-	PeerManager           p2p.PeerManager
-	MetadataProvider      p2p.MetadataProvider
-	GenesisTimeFetcher    blockchain.TimeFetcher
-	HeadFetcher           blockchain.HeadFetcher
-	ChainInfoFetcher      execution.ChainInfoFetcher
+	SyncChecker               sync.Checker
+	OptimisticModeFetcher     blockchain.OptimisticModeFetcher
+	Server                    *grpc.Server
+	BeaconDB                  db.ReadOnlyDatabase
+	PeersFetcher              p2p.PeersProvider
+	PeerManager               p2p.PeerManager
+	MetadataProvider          p2p.MetadataProvider
+	GenesisTimeFetcher        blockchain.TimeFetcher
+	HeadFetcher               blockchain.HeadFetcher
+	ExecutionChainInfoFetcher execution.ChainInfoFetcher
 }

@@ -173,11 +173,11 @@ func TestSyncStatus(t *testing.T) {
 	syncChecker.IsSyncing = true
 
 	s := &Server{
-		HeadFetcher:           chainService,
-		GenesisTimeFetcher:    chainService,
-		OptimisticModeFetcher: chainService,
-		SyncChecker:           syncChecker,
-		ChainInfoFetcher:      &testutil.MockExecutionChainInfoFetcher{},
+		HeadFetcher:               chainService,
+		GenesisTimeFetcher:        chainService,
+		OptimisticModeFetcher:     chainService,
+		SyncChecker:               syncChecker,
+		ExecutionChainInfoFetcher: &testutil.MockExecutionChainInfoFetcher{},
 	}
 	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
