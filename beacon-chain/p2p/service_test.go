@@ -165,7 +165,7 @@ func TestService_Start_NoDiscoverFlag(t *testing.T) {
 	require.NoError(t, err)
 
 	s.stateNotifier = &mock.MockStateNotifier{}
-	
+
 	// required params to addForkEntry in s.forkWatcher
 	s.genesisTime = time.Now()
 	beaconCfg := params.BeaconConfig().Copy()
