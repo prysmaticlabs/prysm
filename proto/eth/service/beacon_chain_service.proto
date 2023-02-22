@@ -239,10 +239,10 @@ service BeaconChain {
     };
   }
 
-  // DEPRECATED: GetBlock is deprecated in favor of GetBlockV2
   // GetBlock retrieves block details for given block id.
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getBlock
+  // DEPRECATED: GetBlock is deprecated in favor of GetBlockV2
   rpc GetBlock(v1.BlockRequest) returns (v1.BlockResponse) {
     option deprecated = true;
     option (google.api.http) = {
