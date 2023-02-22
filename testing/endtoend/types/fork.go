@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
-func StartAt(v int, c *params.BeaconChainConfig, useMulticlient bool) *params.BeaconChainConfig {
+func StartAt(v int, c *params.BeaconChainConfig) *params.BeaconChainConfig {
 	c = c.Copy()
 	if v >= version.Altair {
 		c.AltairForkEpoch = 0
@@ -22,10 +22,5 @@ func StartAt(v int, c *params.BeaconChainConfig, useMulticlient bool) *params.Be
 	// E2E sets EL block production rate equal to SecondsPerETH1Block to keep the math simple.
 	ttd := uint64(c.BellatrixForkEpoch) * uint64(c.SlotsPerEpoch) * c.SecondsPerSlot
 	c.TerminalTotalDifficulty = fmt.Sprintf("%d", ttd)
-	// Set withdrawal sweep for single client networks as lighthouse
-	// does not allow configurable withdrawal sweeps.
-	if !useMulticlient && c.ConfigName == params.EndToEndMainnetName {
-		c.MaxValidatorsPerWithdrawalsSweep = 128
-	}
 	return c
 }
