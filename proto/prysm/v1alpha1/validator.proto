@@ -52,12 +52,12 @@ service BeaconNodeValidator {
         };
     }
 
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     // Stream validator duties for the requested validators.
     //
     // The duties consist of:
     //   Proposer - the validator that creates a beacon chain block.
     //   Attester — a validator that is part of a committee that needs to sign off on a beacon chain
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     rpc StreamDuties(DutiesRequest) returns (stream DutiesResponse) {
         option deprecated = true;
         option (google.api.http) = {
