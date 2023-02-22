@@ -152,6 +152,51 @@ func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 	assert.NoError(t, s.Status(), "Status returned error")
 }
 
+func TestService_Start_NoDiscoverFlag(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	cfg := &Config{
+		TCPPort:       2000,
+		UDPPort:       2000,
+		StateNotifier: &mock.MockStateNotifier{},
+		NoDiscovery:   true, // <-- no s.dv5Listener is created
+	}
+	s, err := NewService(context.Background(), cfg)
+	require.NoError(t, err)
+
+	s.stateNotifier = &mock.MockStateNotifier{}
+	
+	// required params to addForkEntry in s.forkWatcher
+	s.genesisTime = time.Now()
+	beaconCfg := params.BeaconConfig().Copy()
+	beaconCfg.AltairForkEpoch = 0
+	beaconCfg.BellatrixForkEpoch = 0
+	beaconCfg.CapellaForkEpoch = 0
+	beaconCfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(beaconCfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
+	}()
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
+
+	time.Sleep(time.Second * 2)
+
+	exitRoutine <- true
+}
+
 func TestListenForNewNodes(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	// Setup bootnode.
