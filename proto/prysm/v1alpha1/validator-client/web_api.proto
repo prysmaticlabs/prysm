@@ -14,8 +14,9 @@ option java_outer_classname = "WebProto";
 option java_package = "org.ethereum.validator.accounts.v2";
 option php_namespace = "Ethereum\\Validator\\Accounts\\V2";
 
+
+// Wallet creation will need to be done through CLI when the Prysm UI is fully removed.
 // DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
-// Wallet creation will need to be done through CLI when the Prysm UI is fully removed
 service Wallet {
     rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
         option deprecated = true;
@@ -46,9 +47,9 @@ service Wallet {
     }
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 // Account related commands will either need to be done through the Keymanager APIs https://ethereum.github.io/keymanager-APIs/
 // or through validator client CLI commands
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Accounts {
     rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
         option deprecated = true;
@@ -72,8 +73,9 @@ service Accounts {
     }
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
+
 // Validator metrics should be viewed in the grafana dashboards and other relevant beacon node information through beacon APIs.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Beacon {
     rpc GetBeaconStatus(google.protobuf.Empty) returns (BeaconStatusResponse) {
         option deprecated = true;
@@ -127,8 +129,8 @@ service Beacon {
     }
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 // Slashing Protection imports and exports can be provided through validator CLI command as well as Keymanager API https://ethereum.github.io/keymanager-APIs/ import and delete.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service SlashingProtection {
     rpc ExportSlashingProtection(google.protobuf.Empty) returns (ExportSlashingProtectionResponse) {
         option deprecated = true;
@@ -145,8 +147,8 @@ service SlashingProtection {
     }
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 // Health endpoints and log streaming will no longer be available, please use grafana and local log setups for reivew.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Health {
     rpc GetBeaconNodeConnection(google.protobuf.Empty) returns (NodeConnectionResponse) {
         option deprecated = true;
@@ -180,9 +182,9 @@ service Health {
     }
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 // Web APIs such as the Keymanager APIs will no longer validate JWTs on the endpoint. Users should no longer expose the validator APIs to the public.
 // option deprecated = true; can't be added yet as it's used for keymanager API
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Auth {
     rpc Initialize(google.protobuf.Empty) returns (InitializeAuthResponse) {
         option (google.api.http) = {
@@ -191,8 +193,8 @@ service Auth {
     }
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 // Type of key manager for the wallet, either derived, imported, or remote.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 enum KeymanagerKind {
     option deprecated = true;
     DERIVED = 0;
