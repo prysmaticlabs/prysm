@@ -23,6 +23,10 @@ import (
 
 const executionToBLSPadding = 12
 
+// ProcessBLSToExecutionChanges processes a list of BLS Changes and validates them. However,
+// the method doesn't immediately verify the signatures in the changes and prefers to extract
+// a signature set from them at the end of the transition and then verify them via the
+// signature set.
 func ProcessBLSToExecutionChanges(
 	st state.BeaconState,
 	signed interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
@@ -112,6 +116,35 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 	return val, nil
 }
 
+// ProcessWithdrawals processes the validator withdrawals from the provided execution payload
+// into the beacon state.
+//
+// Spec pseudocode definition:
+//
+// def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
+//
+//	expected_withdrawals = get_expected_withdrawals(state)
+//	assert len(payload.withdrawals) == len(expected_withdrawals)
+//
+//	for expected_withdrawal, withdrawal in zip(expected_withdrawals, payload.withdrawals):
+//	    assert withdrawal == expected_withdrawal
+//	    decrease_balance(state, withdrawal.validator_index, withdrawal.amount)
+//
+//	# Update the next withdrawal index if this block contained withdrawals
+//	if len(expected_withdrawals) != 0:
+//	    latest_withdrawal = expected_withdrawals[-1]
+//	    state.next_withdrawal_index = WithdrawalIndex(latest_withdrawal.index + 1)
+//
+//	# Update the next validator index to start the next withdrawal sweep
+//	if len(expected_withdrawals) == MAX_WITHDRAWALS_PER_PAYLOAD:
+//	    # Next sweep starts after the latest withdrawal's validator index
+//	    next_validator_index = ValidatorIndex((expected_withdrawals[-1].validator_index + 1) % len(state.validators))
+//	    state.next_withdrawal_validator_index = next_validator_index
+//	else:
+//	    # Advance sweep by the max length of the sweep if there was not a full set of withdrawals
+//	    next_index = state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
+//	    next_validator_index = ValidatorIndex(next_index % len(state.validators))
+//	    state.next_withdrawal_validator_index = next_validator_index
 func ProcessWithdrawals(st state.BeaconState, executionData interfaces.ExecutionData) (state.BeaconState, error) {
 	expectedWithdrawals, err := st.ExpectedWithdrawals()
 	if err != nil {
@@ -175,6 +208,8 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 	return st, nil
 }
 
+// BLSChangesSignatureBatch extracts the relevant signatures from the provided execution change
+// messages and transforms them into a signature batch object.
 func BLSChangesSignatureBatch(
 	st state.ReadOnlyBeaconState,
 	changes []*ethpb.SignedBLSToExecutionChange,
