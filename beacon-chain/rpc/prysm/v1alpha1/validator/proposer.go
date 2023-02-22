@@ -47,7 +47,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	if err := vs.HeadUpdater.UpdateHead(ctx); err != nil {
+	_, err := vs.HeadUpdater.UpdateHead(ctx)
+	if err != nil {
 		log.WithError(err).Error("Could not process attestations and update head")
 	}
 
