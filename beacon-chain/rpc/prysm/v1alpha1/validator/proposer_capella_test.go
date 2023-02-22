@@ -9,6 +9,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -83,7 +84,9 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 				b := util.NewBlindedBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
-				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				txRoot, err := ssz.TransactionsRoot(make([][]byte, 0))
+				require.NoError(t, err)
+				wdRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), []*v1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
 				require.NoError(t, err)
 				b.Block.Body.ExecutionPayloadHeader = &v1.ExecutionPayloadHeaderCapella{
 					ParentHash:       make([]byte, fieldparams.RootLength),
@@ -96,7 +99,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 					BlockHash:        make([]byte, fieldparams.RootLength),
 					TransactionsRoot: txRoot[:],
 					GasLimit:         123,
-					WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+					WithdrawalsRoot:  wdRoot[:],
 				}
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
