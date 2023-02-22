@@ -19,6 +19,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// reorgLateBlockCountAttestations is the time until the end of the slot in which we count
+// attestations to see if we will reorg the incoming block
+const reorgLateBlockCountAttestations = 2 * time.Second
+
 // AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
 // root of an attestation's target checkpoint.
 type AttestationStateFetcher interface {
@@ -115,17 +119,31 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 		}
 
 		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+		pat := slots.NewSlotTickerWithOffset(s.genesisTime, -reorgLateBlockCountAttestations, params.BeaconConfig().SecondsPerSlot)
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
-			case <-st.C():
-				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
-					log.WithError(err).Error("Could not process new slot")
+			case <-pat.C():
+				root, err := s.UpdateHead(s.ctx)
+				if err != nil {
+					log.WithError(err).Error("could not process attestations and update head")
+				}
+				if err := s.forkchoiceUpdateWithExecution(s.ctx, root, s.CurrentSlot()+1); err != nil {
+					log.WithError(err).Error("could not update forkchoice")
 				}
 
-				if err := s.UpdateHead(s.ctx); err != nil {
-					log.WithError(err).Error("Could not process attestations and update head")
+			case <-st.C():
+				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+					log.WithError(err).Error("could not process new slot")
+				}
+
+				root, err := s.UpdateHead(s.ctx)
+				if err != nil {
+					log.WithError(err).Error("could not process attestations and update head")
+				}
+				if err := s.forkchoiceUpdateWithExecution(s.ctx, root, s.CurrentSlot()); err != nil {
+					log.WithError(err).Error("could not update forkchoice")
 				}
 			}
 		}
@@ -133,14 +151,16 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 }
 
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
-// It requires no external inputs.
-func (s *Service) UpdateHead(ctx context.Context) error {
+// It returns the new head root
+func (s *Service) UpdateHead(ctx context.Context) ([32]byte, error) {
 	// Only one process can process attestations and update head at a time.
 	s.processAttestationsLock.Lock()
 	defer s.processAttestationsLock.Unlock()
 
 	start := time.Now()
-	s.processAttestations(ctx)
+	// This function is only called at 10 seconds or 0 seconds into the slot
+	disparity := reorgLateBlockCountAttestations + params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	s.processAttestations(ctx, disparity)
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	start = time.Now()
@@ -158,21 +178,18 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	if err := s.forkchoiceUpdateWithExecution(ctx, newHeadRoot); err != nil {
-		return err
-	}
-	return nil
+	return newHeadRoot, nil
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
-func (s *Service) processAttestations(ctx context.Context) {
+func (s *Service) processAttestations(ctx context.Context, disparity time.Duration) {
 	atts := s.cfg.AttPool.ForkchoiceAttestations()
 	for _, a := range atts {
 		// Based on the spec, don't process the attestation until the subsequent slot.
 		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, disparity); err != nil {
 			continue
 		}
 
@@ -190,7 +207,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 			continue
 		}
 
-		if err := s.receiveAttestationNoPubsub(ctx, a); err != nil {
+		if err := s.receiveAttestationNoPubsub(ctx, a, disparity); err != nil {
 			log.WithFields(logrus.Fields{
 				"slot":             a.Data.Slot,
 				"committeeIndex":   a.Data.CommitteeIndex,
@@ -207,11 +224,11 @@ func (s *Service) processAttestations(ctx context.Context) {
 //  1. Validate attestation, update validator's latest vote
 //  2. Apply fork choice to the processed attestation
 //  3. Save latest head info
-func (s *Service) receiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error {
+func (s *Service) receiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation, disparity time.Duration) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.receiveAttestationNoPubsub")
 	defer span.End()
 
-	if err := s.OnAttestation(ctx, att); err != nil {
+	if err := s.OnAttestation(ctx, att, disparity); err != nil {
 		return errors.Wrap(err, "could not process attestation")
 	}
 
