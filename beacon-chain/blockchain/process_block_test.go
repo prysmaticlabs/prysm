@@ -157,7 +157,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 	bState := st.Copy()
 
-	var blks []interfaces.SignedBeaconBlock
+	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var blkRoots [][32]byte
 	for i := 0; i < 97; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), primitives.Slot(i))
@@ -200,7 +200,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 	bState := st.Copy()
 
-	var blks []interfaces.SignedBeaconBlock
+	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var blkRoots [][32]byte
 	blkCount := 4
 	for i := 0; i <= blkCount; i++ {
@@ -1072,7 +1072,7 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 	}
 }
 
-func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
+func TestRemoveBlockAttestationsInPool(t *testing.T) {
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -1089,27 +1089,8 @@ func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wsb))
+	require.NoError(t, service.pruneAttsFromPool(wsb))
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
-}
-
-func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
-	genesis, keys := util.DeterministicGenesisState(t, 64)
-	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
-	assert.NoError(t, err)
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-
-	atts := b.Block.Body.Attestations
-	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
-	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wsb))
-	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
 }
 
 func Test_getStateVersionAndPayload(t *testing.T) {
@@ -2011,10 +1992,12 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
 	newfc := doublylinkedtree.New()
+	newStateGen := stategen.New(beaconDB, newfc)
+	newfc.SetBalancesByRooter(newStateGen.ActiveNonSlashedBalancesByRoot)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
-		WithStateGen(stategen.New(beaconDB, newfc)),
+		WithStateGen(newStateGen),
 		WithForkChoiceStore(newfc),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
@@ -2124,6 +2107,12 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.Equal(t, blk, nil)
 
 	service.cfg.ForkChoiceStore = doublylinkedtree.New()
+	justified, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
+	require.NoError(t, err)
+
+	jroot := bytesutil.ToBytes32(justified.Root)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, genesisState, jroot))
+	service.cfg.ForkChoiceStore.SetBalancesByRooter(service.cfg.StateGen.ActiveNonSlashedBalancesByRoot)
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	// Forkchoice has the genesisRoot loaded at startup
@@ -2135,7 +2124,6 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, optimistic)
-	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
 	// last valid state's justified checkpoint
@@ -2162,7 +2150,6 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
-	require.Equal(t, true, service.ForkChoicer().AllTipsAreInvalid())
 	st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 	require.NoError(t, err)
 
@@ -2190,7 +2177,6 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
-	require.Equal(t, true, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Import block 24, it should justify Epoch 3 and become HEAD, the node
 	// recovers
@@ -2201,6 +2187,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
+	service.ForkChoicer().SetBalancesByRooter(service.cfg.StateGen.ActiveNonSlashedBalancesByRoot)
 	err = service.onBlock(ctx, wsb, root)
 	require.NoError(t, err)
 	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
@@ -2213,7 +2200,6 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, optimistic)
-	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 }
 
 func TestOnBlock_HandleBlockAttestations(t *testing.T) {

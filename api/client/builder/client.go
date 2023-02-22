@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -89,7 +90,7 @@ type BuilderClient interface {
 	NodeURL() string
 	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubkey [48]byte) (SignedBid, error)
 	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error
-	SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error)
+	SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error)
 	Status(ctx context.Context) error
 }
 
@@ -277,7 +278,7 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 
 // SubmitBlindedBlock calls the builder API endpoint that binds the validator to the builder and submits the block.
 // The response is the full execution payload used to create the blinded block.
-func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error) {
+func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error) {
 	if !sb.IsBlinded() {
 		return nil, errNotBlinded
 	}
@@ -335,7 +336,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBea
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not extract proto message from payload")
 		}
-		return blocks.WrappedExecutionPayloadCapella(p)
+		return blocks.WrappedExecutionPayloadCapella(p, big.NewInt(0))
 	default:
 		return nil, fmt.Errorf("unsupported block version %s", version.String(sb.Version()))
 	}

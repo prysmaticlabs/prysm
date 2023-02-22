@@ -22,7 +22,7 @@ import (
 
 // validateMergeBlock validates terminal block hash in the event of manual overrides before checking for total difficulty.
 //
-// def validate_merge_block(block: BeaconBlock) -> None:
+// def validate_merge_block(block: ReadOnlyBeaconBlock) -> None:
 //
 //	if TERMINAL_BLOCK_HASH != Hash32():
 //	    # If `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
@@ -38,7 +38,7 @@ import (
 //	assert pow_parent is not None
 //	# Check if `pow_block` is a valid terminal PoW block
 //	assert is_valid_terminal_pow_block(pow_block, pow_parent)
-func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBeaconBlock) error {
+func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) error {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}

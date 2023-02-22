@@ -154,8 +154,8 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		}
 		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
-		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges)-1, len(changes))
-		assert.Equal(t, primitives.ValidatorIndex(29), changes[1].Message.ValidatorIndex)
+		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
+		assert.Equal(t, primitives.ValidatorIndex(30), changes[1].Message.ValidatorIndex)
 	})
 }
 

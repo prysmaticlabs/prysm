@@ -1,6 +1,8 @@
 package interfaces
 
 import (
+	"math/big"
+
 	ssz "github.com/prysmaticlabs/fastssz"
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -10,19 +12,18 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// SignedBeaconBlock is an interface describing the method set of
+// ReadOnlySignedBeaconBlock is an interface describing the method set of
 // a signed beacon block.
-type SignedBeaconBlock interface {
-	Block() BeaconBlock
+type ReadOnlySignedBeaconBlock interface {
+	Block() ReadOnlyBeaconBlock
 	Signature() [field_params.BLSSignatureLength]byte
-	SetSignature(sig []byte)
 	IsNil() bool
-	Copy() (SignedBeaconBlock, error)
+	Copy() (ReadOnlySignedBeaconBlock, error)
 	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
-	ToBlinded() (SignedBeaconBlock, error)
+	ToBlinded() (ReadOnlySignedBeaconBlock, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
 	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
@@ -34,21 +35,16 @@ type SignedBeaconBlock interface {
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
-// BeaconBlock describes an interface which states the methods
+// ReadOnlyBeaconBlock describes an interface which states the methods
 // employed by an object that is a beacon block.
-type BeaconBlock interface {
+type ReadOnlyBeaconBlock interface {
 	Slot() primitives.Slot
-	SetSlot(slot primitives.Slot)
 	ProposerIndex() primitives.ValidatorIndex
-	SetProposerIndex(idx primitives.ValidatorIndex)
 	ParentRoot() [field_params.RootLength]byte
-	SetParentRoot([]byte)
 	StateRoot() [field_params.RootLength]byte
-	SetStateRoot([]byte)
-	Body() BeaconBlockBody
+	Body() ReadOnlyBeaconBlockBody
 	IsNil() bool
 	IsBlinded() bool
-	SetBlinded(bool)
 	HashTreeRoot() ([field_params.RootLength]byte, error)
 	Proto() (proto.Message, error)
 	ssz.Marshaler
@@ -56,37 +52,47 @@ type BeaconBlock interface {
 	ssz.HashRoot
 	Version() int
 	AsSignRequestObject() (validatorpb.SignRequestObject, error)
-	Copy() (BeaconBlock, error)
+	Copy() (ReadOnlyBeaconBlock, error)
 }
 
-// BeaconBlockBody describes the method set employed by an object
+// ReadOnlyBeaconBlockBody describes the method set employed by an object
 // that is a beacon block body.
-type BeaconBlockBody interface {
+type ReadOnlyBeaconBlockBody interface {
 	RandaoReveal() [field_params.BLSSignatureLength]byte
-	SetRandaoReveal([]byte)
 	Eth1Data() *ethpb.Eth1Data
-	SetEth1Data(*ethpb.Eth1Data)
 	Graffiti() [field_params.RootLength]byte
-	SetGraffiti([]byte)
 	ProposerSlashings() []*ethpb.ProposerSlashing
-	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	AttesterSlashings() []*ethpb.AttesterSlashing
-	SetAttesterSlashings([]*ethpb.AttesterSlashing)
 	Attestations() []*ethpb.Attestation
-	SetAttestations([]*ethpb.Attestation)
 	Deposits() []*ethpb.Deposit
-	SetDeposits([]*ethpb.Deposit)
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
-	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SyncAggregate() (*ethpb.SyncAggregate, error)
-	SetSyncAggregate(*ethpb.SyncAggregate) error
 	IsNil() bool
 	HashTreeRoot() ([field_params.RootLength]byte, error)
 	Proto() (proto.Message, error)
 	Execution() (ExecutionData, error)
-	SetExecution(ExecutionData) error
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
+}
+
+type SignedBeaconBlock interface {
+	ReadOnlySignedBeaconBlock
+	SetExecution(ExecutionData) error
 	SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange) error
+	SetSyncAggregate(*ethpb.SyncAggregate) error
+	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
+	SetDeposits([]*ethpb.Deposit)
+	SetAttestations([]*ethpb.Attestation)
+	SetAttesterSlashings([]*ethpb.AttesterSlashing)
+	SetProposerSlashings([]*ethpb.ProposerSlashing)
+	SetGraffiti([]byte)
+	SetEth1Data(*ethpb.Eth1Data)
+	SetRandaoReveal([]byte)
+	SetBlinded(bool)
+	SetStateRoot([]byte)
+	SetParentRoot([]byte)
+	SetProposerIndex(idx primitives.ValidatorIndex)
+	SetSlot(slot primitives.Slot)
+	SetSignature(sig []byte)
 }
 
 // ExecutionData represents execution layer information that is contained
@@ -96,6 +102,7 @@ type ExecutionData interface {
 	ssz.Unmarshaler
 	ssz.HashRoot
 	IsNil() bool
+	IsBlinded() bool
 	Proto() proto.Message
 	ParentHash() []byte
 	FeeRecipient() []byte
@@ -116,4 +123,5 @@ type ExecutionData interface {
 	WithdrawalsRoot() ([]byte, error)
 	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
 	PbBellatrix() (*enginev1.ExecutionPayload, error)
+	Value() (*big.Int, error)
 }

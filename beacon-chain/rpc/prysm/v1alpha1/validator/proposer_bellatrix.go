@@ -10,13 +10,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -37,9 +38,9 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlock, headState state.BeaconState) error {
-	idx := blk.ProposerIndex()
-	slot := blk.Slot()
+func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, headState state.BeaconState) error {
+	idx := blk.Block().ProposerIndex()
+	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
@@ -48,40 +49,79 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 	if err != nil {
 		log.WithError(err).Warn("Proposer: failed to check if builder can be used")
 	} else if canUseBuilder {
-		h, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
+		builderPayload, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
 		if err != nil {
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 		} else {
-			blk.SetBlinded(true)
-			if err := blk.Body().SetExecution(h); err != nil {
-				log.WithError(err).Warn("Proposer: failed to set execution payload")
-			} else {
-				return nil
+			switch {
+			case blk.Version() >= version.Capella:
+				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
+				if err != nil {
+					return errors.Wrap(err, "failed to get execution payload")
+				}
+				// Compare payload values between local and builder. Default to the local value if it is higher.
+				localValue, err := localPayload.Value()
+				if err != nil {
+					return errors.Wrap(err, "failed to get local payload value")
+				}
+				builderValue, err := builderPayload.Value()
+				if err != nil {
+					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+				}
+
+				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
+				if err != nil {
+					return errors.Wrap(err, "failed to match withdrawals root")
+				}
+				// If we can't get the builder value, just use local block.
+				if builderValue.Cmp(localValue) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
+					blk.SetBlinded(true)
+					if err := blk.SetExecution(builderPayload); err != nil {
+						log.WithError(err).Warn("Proposer: failed to set builder payload")
+					} else {
+						return nil
+					}
+				}
+				log.WithFields(logrus.Fields{
+					"localValue":   localValue,
+					"builderValue": builderValue,
+				}).Warn("Proposer: using local execution payload because higher value")
+				return blk.SetExecution(localPayload)
+			default: // Bellatrix case.
+				blk.SetBlinded(true)
+				if err := blk.SetExecution(builderPayload); err != nil {
+					log.WithError(err).Warn("Proposer: failed to set builder payload")
+				} else {
+					return nil
+				}
 			}
 		}
+
 	}
-	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
+
+	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload")
 	}
-	return blk.Body().SetExecution(executionData)
+	return blk.SetExecution(executionData)
 }
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
 func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
+	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil, errors.New("can't get payload header from builder before bellatrix epoch")
+	}
+
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if blocks.IsPreBellatrixVersion(b.Version()) {
-		return nil, nil
-	}
 
 	h, err := b.Block().Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get execution header")
 	}
 	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
 	if err != nil {
@@ -115,7 +155,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, err
 	}
-
 	header, err := bid.Header()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid header")
@@ -155,7 +194,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 // This function retrieves the full payload block using the input blind block. This input must be versioned as
 // bellatrix blind block. The output block will contain the full payload. The original header block
 // will be returned the block builder is not configured.
-func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
@@ -294,4 +333,28 @@ func validateBuilderSignature(signedBid builder.SignedBid) error {
 		return errors.New("builder returned nil bid")
 	}
 	return signing.VerifySigningRoot(bid, bid.Pubkey(), signedBid.Signature(), d)
+}
+
+func matchingWithdrawalsRoot(local, builder interfaces.ExecutionData) (bool, error) {
+	wds, err := local.Withdrawals()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get local withdrawals")
+	}
+	br, err := builder.WithdrawalsRoot()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get builder withdrawals root")
+	}
+	wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+	if err != nil {
+		return false, errors.Wrap(err, "could not compute local withdrawals root")
+	}
+
+	if !bytes.Equal(br, wr[:]) {
+		log.WithFields(logrus.Fields{
+			"local":   fmt.Sprintf("%#x", wr),
+			"builder": fmt.Sprintf("%#x", br),
+		}).Warn("Proposer: withdrawal roots don't match, using local block")
+		return false, nil
+	}
+	return true, nil
 }

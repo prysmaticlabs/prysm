@@ -14,7 +14,12 @@ def e2e_deps():
 
     http_archive(
         name = "lighthouse",
-        sha256 = "172bb132d5fdc5bd257d5a66e98d0799498f08cb60502f93a5f4437a70d9c5e0",
+        sha256 = "469d800ca8ed1e82af288d730d0e9f3e1e054fe1fe7262ab0964d315d1a15020",
         build_file = "@prysm//testing/endtoend:lighthouse.BUILD",
-        url = ("https://github.com/sigp/lighthouse/releases/download/%s/" + lighthouse_archive_name) % lighthouse_version,
+        #   url = ("https://github.com/sigp/lighthouse/releases/download/%s/" + lighthouse_archive_name) % lighthouse_version,
+        # This is a compiled version of lighthouse from their `capella` branch at this commit
+        # https://github.com/sigp/lighthouse/commit/10d32ee04c416200205a051724daafb76ae2bc50. Lighthouse does not have support
+        # for all the capella features as of their latest release, so this is a temporary compromise to allow multiclient test
+        # runs till their official release includes the required capella features in.
+        url = "https://prysmaticlabs.com/uploads/misc/lighthouse-10d32e.tar.gz",
     )

@@ -28,7 +28,7 @@ import (
 // blockContainer represents an instance of
 // block along with its relevant metadata.
 type blockContainer struct {
-	blk         interfaces.SignedBeaconBlock
+	blk         interfaces.ReadOnlySignedBeaconBlock
 	root        [32]byte
 	isCanonical bool
 }
@@ -89,7 +89,7 @@ func convertFromV1Containers(ctrs []blockContainer) ([]*ethpb.BeaconBlockContain
 	return protoCtrs, nil
 }
 
-func convertToBlockContainer(blk interfaces.SignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainer, error) {
+func convertToBlockContainer(blk interfaces.ReadOnlySignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainer, error) {
 	ctr := &ethpb.BeaconBlockContainer{
 		BlockRoot: root[:],
 		Canonical: isCanonical,
@@ -310,7 +310,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 						// One nil block shouldn't stop the stream.
 						continue
 					}
-					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+					headState, err := bs.HeadFetcher.HeadStateReadOnly(bs.Ctx)
 					if err != nil {
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not get head state")
 						continue

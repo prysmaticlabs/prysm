@@ -41,7 +41,7 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 	if s.cfg.blsToExecPool.ValidatorExists(blsChange.Message.ValidatorIndex) {
 		return pubsub.ValidationIgnore, nil
 	}
-	st, err := s.cfg.chain.HeadState(ctx)
+	st, err := s.cfg.chain.HeadStateReadOnly(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}

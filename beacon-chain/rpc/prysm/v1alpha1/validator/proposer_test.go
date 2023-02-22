@@ -442,6 +442,7 @@ func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	proposerServer := &Server{
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		SyncChecker:           &mockSync.Sync{},
+		HeadUpdater:           &mock.ChainService{},
 		TimeFetcher:           &mock.ChainService{}}
 	req := &ethpb.BlockRequest{
 		Slot: bellatrixSlot + 1,
@@ -534,6 +535,16 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
+		{
+			name: "blind capella",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBlindedBeaconBlockCapella()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -561,6 +572,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				HeadFetcher:       c,
 				BlockNotifier:     c.BlockNotifier(),
 				P2P:               mockp2p.NewTestP2P(t),
+				BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella()},
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
