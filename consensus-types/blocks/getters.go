@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
@@ -854,7 +855,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 				if !ok {
 					return nil, errPayloadHeaderWrongType
 				}
-				return WrappedExecutionPayloadHeaderCapella(ph)
+				return WrappedExecutionPayloadHeaderCapella(ph, big.NewInt(0))
 			}
 		}
 		var p *enginev1.ExecutionPayloadCapella
@@ -865,7 +866,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 				return nil, errPayloadWrongType
 			}
 		}
-		return WrappedExecutionPayloadCapella(p)
+		return WrappedExecutionPayloadCapella(p, big.NewInt(0))
 	default:
 		return nil, errIncorrectBlockVersion
 	}

@@ -193,7 +193,7 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 }
 
 func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (state.BeaconState, error) {
-	headState, err := p.ChainInfoFetcher.HeadState(ctx)
+	headState, err := p.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
 	}
@@ -288,7 +288,7 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 func (p *StateProvider) stateRootByRoot(ctx context.Context, stateRoot []byte) ([]byte, error) {
 	var r [32]byte
 	copy(r[:], stateRoot)
-	headState, err := p.ChainInfoFetcher.HeadState(ctx)
+	headState, err := p.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
 	}

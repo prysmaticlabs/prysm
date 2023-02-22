@@ -28,14 +28,7 @@ import (
 // UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
 // This function is only used in spec-tests, it does save the head after updating it.
 func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
-	jp := s.CurrentJustifiedCheckpt()
-
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(jp.Root))
-	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", jp.Root)
-		return errors.Wrap(err, msg)
-	}
-	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
+	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not update head")
 	}

@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -193,7 +194,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	case *enginev1.ExecutionPayload:
 		wrappedPayload, wrapErr = WrappedExecutionPayload(p)
 	case *enginev1.ExecutionPayloadCapella:
-		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p)
+		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p, big.NewInt(0))
 	default:
 		return nil, fmt.Errorf("%T is not a type of execution payload", p)
 	}
@@ -293,6 +294,10 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 // This is particularly useful for using the values from API calls.
 func BeaconBlockContainerToSignedBeaconBlock(obj *eth.BeaconBlockContainer) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	switch obj.Block.(type) {
+	case *eth.BeaconBlockContainer_BlindedCapellaBlock:
+		return NewSignedBeaconBlock(obj.GetBlindedCapellaBlock())
+	case *eth.BeaconBlockContainer_CapellaBlock:
+		return NewSignedBeaconBlock(obj.GetCapellaBlock())
 	case *eth.BeaconBlockContainer_BlindedBellatrixBlock:
 		return NewSignedBeaconBlock(obj.GetBlindedBellatrixBlock())
 	case *eth.BeaconBlockContainer_BellatrixBlock:
