@@ -619,8 +619,6 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 }
 
 func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
-	// We skip this for multiclient runs as lighthouse does not have the ability
-	// to configure the withdrawal sweep for the end to end test.
 	conn := conns[0]
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 	debugClient := ethpb.NewDebugClient(conn)
