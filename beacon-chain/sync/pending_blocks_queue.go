@@ -188,12 +188,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 			if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 				sc := blobs[i]
-				_, err := s.validateBlobsSidecar(sc, false)
-				if err != nil {
-					log.WithError(err).WithField("slot", b.Block().Slot()).Error("Could not validate blobs sidecar")
-					s.setBadBlock(ctx, blkRoot)
-					continue
-				}
+				// TODO(TT): Add blob validation
+
 				kzgs, err := b.Block().Body().BlobKzgCommitments()
 				if err != nil {
 					log.WithError(err).WithField("slot", b.Block().Slot()).Error("Could not get blob kzg commitments")
