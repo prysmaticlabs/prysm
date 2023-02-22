@@ -26,7 +26,7 @@ service Health {
     }
 }
 
-// DEPRECATED: This endpoint doesn't appear to be used and have been marked for deprecation.
+// DEPRECATED: StreamBeaconLogs endpoint doesn't appear to be used and have been marked for deprecation.
 message LogsResponse {
   option deprecated = true;
   repeated string logs = 1;
