@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	syncmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
@@ -176,6 +177,7 @@ func TestSyncStatus(t *testing.T) {
 		GenesisTimeFetcher:    chainService,
 		OptimisticModeFetcher: chainService,
 		SyncChecker:           syncChecker,
+		ChainInfoFetcher:      &testutil.MockExecutionChainInfoFetcher{},
 	}
 	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -183,6 +185,7 @@ func TestSyncStatus(t *testing.T) {
 	assert.Equal(t, primitives.Slot(10), resp.Data.SyncDistance)
 	assert.Equal(t, true, resp.Data.IsSyncing)
 	assert.Equal(t, true, resp.Data.IsOptimistic)
+	assert.Equal(t, false, resp.Data.ElOffline)
 }
 
 func TestGetPeer(t *testing.T) {
