@@ -82,6 +82,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedInteropGenesisState = &cli.StringFlag{
+		Name:   "interop-genesis-state",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -100,6 +105,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedFallbackProvider,
 	deprecatedEnableDefensivePull,
 	deprecatedDisableNativeState,
+	deprecatedInteropGenesisState,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
