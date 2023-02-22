@@ -569,7 +569,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 	changes := make([]*v2.SignedBLSToExecutionChange, 0)
 	// Only send half the number of changes each time, to allow us to test
 	// at the fork boundary.
-	wantedChanges := numOfExits
+	wantedChanges := numOfExits / 2
 	for _, idx := range exitedIndices {
 		// Exit sending more change messages.
 		if len(changes) >= wantedChanges {
