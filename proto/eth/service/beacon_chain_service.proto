@@ -51,9 +51,9 @@ service BeaconChain {
     option (google.api.http) = { get: "/internal/eth/v1/beacon/genesis" };
   }
 
-  // DEPRECATED: GetWeakSubjectivity endpoint will no longer be supported
   // GetWeakSubjectivity is a new proposed endpoint to retrieve the details necessary to download
   // the ssz data needed to start a beacon node - checkpoint(epoch + block_root) and state_root
+  // DEPRECATED: GetWeakSubjectivity endpoint will no longer be supported
   rpc GetWeakSubjectivity(google.protobuf.Empty) returns (v1.WeakSubjectivityResponse) {
     option deprecated = true;
     option (google.api.http) = { get: "/internal/eth/v1/beacon/weak_subjectivity" };
