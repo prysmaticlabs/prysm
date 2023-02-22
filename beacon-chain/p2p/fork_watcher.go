@@ -22,9 +22,11 @@ func (s *Service) forkWatcher() {
 				// the updated fork digest. These repeatedly does
 				// this over the epoch, which might be slightly wasteful
 				// but is fine nonetheless.
-				_, err := addForkEntry(s.dv5Listener.LocalNode(), s.genesisTime, s.genesisValidatorsRoot)
-				if err != nil {
-					log.WithError(err).Error("Could not add fork entry")
+				if s.dv5Listener != nil { // make sure it's not a local network
+					_, err := addForkEntry(s.dv5Listener.LocalNode(), s.genesisTime, s.genesisValidatorsRoot)
+					if err != nil {
+						log.WithError(err).Error("Could not add fork entry")
+					}
 				}
 
 				// from Bellatrix Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10Mb.

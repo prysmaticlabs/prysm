@@ -203,6 +203,11 @@ func TestServer_setExecutionData(t *testing.T) {
 }
 
 func TestServer_getPayloadHeader(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bc := params.BeaconConfig()
+	bc.BellatrixForkEpoch = 1
+	params.OverrideBeaconConfig(bc)
+
 	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
 	require.NoError(t, err)
 	ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
@@ -246,7 +251,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 		returnedHeader *v1.ExecutionPayloadHeader
 	}{
 		{
-			name: "head is not bellatrix ready",
+			name: "can't request before bellatrix epoch",
 			mock: &builderTest.MockBuilderService{},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.ReadOnlySignedBeaconBlock {
@@ -255,6 +260,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 					return wb
 				}(),
 			},
+			err: "can't get payload header from builder before bellatrix epoch",
 		},
 		{
 			name: "get header failed",
@@ -266,6 +272,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 					return wb
 				}(),
 			},
@@ -286,6 +293,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 					return wb
 				}(),
 			},
@@ -308,6 +316,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 					return wb
 				}(),
 			},
@@ -322,6 +331,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 					return wb
 				}(),
 			},
@@ -331,9 +341,11 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			vs := &Server{BlockBuilder: tc.mock, HeadFetcher: tc.fetcher, TimeFetcher: &blockchainTest.ChainService{
-				Genesis: time.Now(),
+				Genesis: time.Now().Add(-time.Duration(params.BeaconConfig().SlotsPerEpoch) * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			}}
-			h, err := vs.getPayloadHeaderFromBuilder(context.Background(), 0, 0)
+			hb, err := vs.HeadFetcher.HeadBlock(context.Background())
+			require.NoError(t, err)
+			h, err := vs.getPayloadHeaderFromBuilder(context.Background(), hb.Block().Slot(), 0)
 			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {
