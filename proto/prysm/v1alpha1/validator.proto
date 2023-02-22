@@ -296,7 +296,7 @@ service BeaconNodeValidator {
 
     // Server-side stream of all signed blocks as they are received by
     // the beacon chain node.
-    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     rpc StreamBlocksAltair(StreamBlocksRequest) returns (stream StreamBlocksResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/blocks/stream"
@@ -343,7 +343,7 @@ message SyncSubcommitteeIndexResponse {
     repeated uint64 indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
 }
 
-//
+// DEPRECATED: This endpoint StreamBlocks is superseded by the /eth/v1/events Beacon API endpoint
 message StreamBlocksResponse {
     option deprecated = true;
     oneof block {
