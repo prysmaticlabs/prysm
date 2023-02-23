@@ -151,21 +151,7 @@ func TestCallWithdrawalEndpoint_Mutiple_notfound(t *testing.T) {
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)
 	require.NoError(t, err)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodGet {
-			b, err := os.ReadFile(filepath.Clean(respFile))
-			require.NoError(t, err)
-			var to []*apimiddleware.SignedBLSToExecutionChangeJson
-			err = json.Unmarshal(b, &to)
-			require.NoError(t, err)
-			err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
-				Data: to,
-			})
-			require.NoError(t, err)
-		}
-	}))
+	srv := getHappyPathTestServer(respFile, t)
 	err = srv.Listener.Close()
 	require.NoError(t, err)
 	srv.Listener = l
@@ -222,14 +208,34 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 	l, err := net.Listen("tcp", baseurl)
 	require.NoError(t, err)
 	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(400)
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(&apimiddleware.IndexedVerificationFailureErrorJson{
-			Failures: []*apimiddleware.SingleIndexedVerificationFailureJson{
-				{Index: 0, Message: "Could not validate SignedBLSToExecutionChange"},
-			},
-		})
-		require.NoError(t, err)
+		if r.Method == http.MethodPost && r.RequestURI == "/eth/v1/beacon/pool/bls_to_execution_changes" {
+			w.WriteHeader(400)
+			w.Header().Set("Content-Type", "application/json")
+			err = json.NewEncoder(w).Encode(&apimiddleware.IndexedVerificationFailureErrorJson{
+				Failures: []*apimiddleware.SingleIndexedVerificationFailureJson{
+					{Index: 0, Message: "Could not validate SignedBLSToExecutionChange"},
+				},
+			})
+			require.NoError(t, err)
+		} else if r.Method == http.MethodGet {
+			if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
+				w.WriteHeader(200)
+				w.Header().Set("Content-Type", "application/json")
+				err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
+					Data: &apimiddleware.ForkJson{
+						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
+						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
+						Epoch:           fmt.Sprintf("%d", params.BeaconConfig().CapellaForkEpoch),
+					},
+					ExecutionOptimistic: false,
+					Finalized:           true,
+				})
+				require.NoError(t, err)
+			} else {
+				w.WriteHeader(400)
+				w.Header().Set("Content-Type", "application/json")
+			}
+		}
 	}))
 	err = srv.Listener.Close()
 	require.NoError(t, err)
