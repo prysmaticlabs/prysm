@@ -39,7 +39,7 @@ func TestValidateSync(t *testing.T) {
 		require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 		assert.DeepEqual(
 			t,
-			[]string{"{\"sync_details\":{\"head_slot\":\"50\",\"sync_distance\":\"50\",\"is_syncing\":true,\"is_optimistic\":false}}"},
+			[]string{`{"sync_details":{"head_slot":"50","sync_distance":"50","is_syncing":true,"is_optimistic":false,"el_offline":false}}`},
 			v,
 		)
 	})
