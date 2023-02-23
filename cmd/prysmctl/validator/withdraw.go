@@ -91,10 +91,10 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimid
 	}
 	fork, err := client.GetFork(ctx, "head")
 	if err != nil {
-		log.Errorf("could not retrieve current fork: %s", err)
+		return errors.Wrap(err, "could not retrieve current fork information")
 	}
 	if !(params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(fork.CurrentVersion)] >= params.BeaconConfig().CapellaForkEpoch) {
-		return errors.New("ERROR: setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork.")
+		return errors.New("setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork.")
 	}
 	err = client.SubmitChangeBLStoExecution(ctx, request)
 	if err != nil && strings.Contains(err.Error(), "POST error") {
