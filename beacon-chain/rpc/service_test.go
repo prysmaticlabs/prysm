@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
@@ -35,6 +36,7 @@ func TestLifecycle_OK(t *testing.T) {
 		GenesisTimeFetcher:    chainService,
 		ExecutionChainService: &mockExecution.Chain{},
 		StateNotifier:         chainService.StateNotifier(),
+		Router:                mux.NewRouter(),
 	})
 
 	rpcService.Start()
