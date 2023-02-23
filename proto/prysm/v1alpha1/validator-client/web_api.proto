@@ -14,25 +14,32 @@ option java_outer_classname = "WebProto";
 option java_package = "org.ethereum.validator.accounts.v2";
 option php_namespace = "Ethereum\\Validator\\Accounts\\V2";
 
+
+// Wallet creation will need to be done through CLI when the Prysm UI is fully removed.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Wallet {
     rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             post: "/v2/validator/wallet/create",
             body: "*"
         };
     }
     rpc WalletConfig(google.protobuf.Empty) returns (WalletResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/wallet"
         };
     }
     rpc ValidateKeystores(ValidateKeystoresRequest) returns (google.protobuf.Empty) {
+        option deprecated = true;
         option (google.api.http) = {
             post: "/v2/validator/wallet/keystores/validate",
             body: "*"
         };
     }
     rpc RecoverWallet(RecoverWalletRequest) returns (CreateWalletResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             post: "/v2/validator/wallet/recover"
             body: "*"
@@ -40,19 +47,25 @@ service Wallet {
     }
 }
 
+// Account related commands will either need to be done through the Keymanager APIs https://ethereum.github.io/keymanager-APIs/
+// or through validator client CLI commands
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Accounts {
     rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/accounts"
         };
     }
     rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             post: "/v2/validator/accounts/backup",
             body: "*"
         };
     }
     rpc VoluntaryExit(VoluntaryExitRequest) returns (VoluntaryExitResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             post: "/v2/validator/accounts/voluntary-exit",
             body: "*"
@@ -60,8 +73,12 @@ service Accounts {
     }
 }
 
+
+// Validator metrics should be viewed in the grafana dashboards and other relevant beacon node information through beacon APIs.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Beacon {
     rpc GetBeaconStatus(google.protobuf.Empty) returns (BeaconStatusResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/beacon/status"
         };
@@ -69,6 +86,7 @@ service Beacon {
     rpc GetValidatorParticipation(
         ethereum.eth.v1alpha1.GetValidatorParticipationRequest
     ) returns (ethereum.eth.v1alpha1.ValidatorParticipationResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/beacon/participation"
         };
@@ -76,6 +94,7 @@ service Beacon {
     rpc GetValidatorPerformance(
         ethereum.eth.v1alpha1.ValidatorPerformanceRequest
     ) returns (ethereum.eth.v1alpha1.ValidatorPerformanceResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/beacon/summary"
         };
@@ -83,6 +102,7 @@ service Beacon {
     rpc GetValidators(
         ethereum.eth.v1alpha1.ListValidatorsRequest
     ) returns (ethereum.eth.v1alpha1.Validators) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/beacon/validators"
         };
@@ -90,29 +110,36 @@ service Beacon {
     rpc GetValidatorBalances(
         ethereum.eth.v1alpha1.ListValidatorBalancesRequest
     ) returns (ethereum.eth.v1alpha1.ValidatorBalances) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/beacon/balances"
         };
     }
     rpc GetValidatorQueue(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.ValidatorQueue) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/beacon/queue"
         };
     }
     rpc GetPeers(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.Peers) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/beacon/peers"
         };
     }
 }
 
+// Slashing Protection imports and exports can be provided through validator CLI command as well as Keymanager API https://ethereum.github.io/keymanager-APIs/ import and delete.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service SlashingProtection {
     rpc ExportSlashingProtection(google.protobuf.Empty) returns (ExportSlashingProtectionResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/slashing-protection/export"
         };
     }
     rpc ImportSlashingProtection(ImportSlashingProtectionRequest) returns (google.protobuf.Empty) {
+        option deprecated = true;
         option (google.api.http) = {
             post: "/v2/validator/slashing-protection/import"
             body: "*"
@@ -120,34 +147,44 @@ service SlashingProtection {
     }
 }
 
+// Health endpoints and log streaming will no longer be available, please use grafana and local log setups for reivew.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Health {
     rpc GetBeaconNodeConnection(google.protobuf.Empty) returns (NodeConnectionResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/health/node_connection"
         };
     }
     rpc GetLogsEndpoints(google.protobuf.Empty) returns (LogsEndpointResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/health/logs/endpoints"
         };
     }
     rpc GetVersion(google.protobuf.Empty) returns (VersionResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/health/version"
         };
     }
     rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.LogsResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/health/logs/beacon/stream"
         };
     }
     rpc StreamValidatorLogs(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.LogsResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/v2/validator/health/logs/validator/stream"
         };
     }
 }
 
+// Web APIs such as the Keymanager APIs will no longer validate JWTs on the endpoint. Users should no longer expose the validator APIs to the public.
+// option deprecated = true; can't be added yet as it's used for keymanager API
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 service Auth {
     rpc Initialize(google.protobuf.Empty) returns (InitializeAuthResponse) {
         option (google.api.http) = {
@@ -157,14 +194,18 @@ service Auth {
 }
 
 // Type of key manager for the wallet, either derived, imported, or remote.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 enum KeymanagerKind {
+    option deprecated = true;
     DERIVED = 0;
     IMPORTED = 1;
     REMOTE = 2;
     WEB3SIGNER = 3;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message CreateWalletRequest {
+    option deprecated = true;
     // Path on disk where the wallet will be stored.
     KeymanagerKind keymanager = 1;
 
@@ -187,27 +228,36 @@ message CreateWalletRequest {
     string mnemonic_language = 9;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message CreateWalletResponse {
+    option deprecated = true;
     WalletResponse wallet = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message EditWalletConfigRequest {
+    option deprecated = true;
     string remote_addr = 1;
     string remote_crt_path = 2;
     string remote_key_path = 3;
     string remote_ca_crt_path = 4;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message GenerateMnemonicResponse {
+    option deprecated = true;
     string mnemonic = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message WalletResponse {
     string wallet_path = 1;
     KeymanagerKind keymanager_kind = 2;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message RecoverWalletRequest {
+    option deprecated = true;
     string mnemonic = 1;
     uint64 num_accounts = 2;
     string wallet_password = 3;
@@ -215,7 +265,9 @@ message RecoverWalletRequest {
     string mnemonic25th_word = 5;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ValidateKeystoresRequest {
+    option deprecated = true;
     // JSON-encoded keystore files to validate.
     repeated string keystores = 1;
 
@@ -223,7 +275,9 @@ message ValidateKeystoresRequest {
     string keystores_password = 2;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ListAccountsRequest {
+    option deprecated = true;
     // Whether or not to return the raw RLP deposit tx data.
     bool get_deposit_tx_data = 1;
 
@@ -240,7 +294,9 @@ message ListAccountsRequest {
     bool all = 4;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ListAccountsResponse {
+    option deprecated = true;
     repeated Account accounts = 1;
 
     // A pagination token returned from a previous call to `ListAccounts`
@@ -252,7 +308,9 @@ message ListAccountsResponse {
     int32 total_size = 3;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message Account {
+    option deprecated = true;
     // The validating public key.
     bytes validating_public_key = 1;
     // The human readable account name.
@@ -263,14 +321,18 @@ message Account {
     string derivation_path = 4;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message AccountRequest {
+    option deprecated = true;
     // A list of validator public keys.
     repeated bytes public_keys = 1;
     // A list of validator indices.
     repeated uint64 indices = 2;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message NodeConnectionResponse {
+    option deprecated = true;
     // The host address of the beacon node the validator
     // client is connected to.
     string beacon_node_endpoint = 1;
@@ -284,22 +346,30 @@ message NodeConnectionResponse {
     bytes deposit_contract_address = 5;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message LogsEndpointResponse {
+    option deprecated = true;
 	string validator_logs_endpoint = 1;
 	string beacon_logs_endpoint = 2;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message VersionResponse {
+    option deprecated = true;
 	string beacon = 1;
 	string validator = 2;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message HasWalletResponse {
+    option deprecated = true;
     // Whether or not the user has a wallet on disk.
     bool wallet_exists = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ImportAccountsRequest {
+    option deprecated = true;
     // JSON-encoded keystore files to import during wallet creation.
     repeated string keystores_imported = 1;
 
@@ -307,20 +377,28 @@ message ImportAccountsRequest {
     string keystores_password = 2;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ImportAccountsResponse {
+    option deprecated = true;
     repeated bytes imported_public_keys = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message InitializeAuthRequest {
+    option deprecated = true;
     string token = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message InitializeAuthResponse {
+    option deprecated = true;
     bool has_signed_up = 1;
     bool has_wallet = 2;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message BeaconStatusResponse {
+    option deprecated = true;
     // The host address of the beacon node the validator
     // client is connected to.
     string beacon_node_endpoint = 1;
@@ -336,44 +414,60 @@ message BeaconStatusResponse {
     ethereum.eth.v1alpha1.ChainHead chain_head = 6;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message VoluntaryExitRequest {
+    option deprecated = true;
     // List of public keys to voluntarily exit.
     repeated bytes public_keys = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message VoluntaryExitResponse {
+    option deprecated = true;
     // List of keys that successfully exited.
     repeated bytes exited_keys = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message BackupAccountsRequest {
+    option deprecated = true;
     // List of public keys to backup.
     repeated bytes public_keys = 1;
 
     string backup_password = 2;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message BackupAccountsResponse {
+    option deprecated = true;
     // Zip file containing backed up keystores.
     bytes zip_file = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message DeleteAccountsRequest {
+    option deprecated = true;
     // List of public keys to delete.
     repeated bytes public_keys_to_delete = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message DeleteAccountsResponse {
+    option deprecated = true;
     // List of public keys successfully deleted.
     repeated bytes deleted_keys = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ExportSlashingProtectionResponse {
+    option deprecated = true;
     // JSON representation of the slash protection
     string file = 1;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ImportSlashingProtectionRequest {
+    option deprecated = true;
     // JSON representation of the slash protection
     string slashing_protection_json = 1;
 }
