@@ -48,7 +48,7 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Capella fork blinded beacon block.
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
-        SignedBeaconBlockDeneb Deneb  = 7;
+        SignedBeaconBlockDenebAndBlobs Deneb  = 7;
 
         SignedBlindedBeaconBlockDeneb blinded_Deneb  = 8;
     }
@@ -74,7 +74,7 @@ message GenericBeaconBlock {
         // Representing a post-Capella fork blinded beacon block.
         BlindedBeaconBlockCapella blinded_capella = 6;
 
-        BeaconBlockDeneb Deneb  = 7;
+        BeaconBlockDenebAndBlobs Deneb  = 7;
 
         BlindedBeaconBlockDeneb blinded_Deneb  = 8;
     }
@@ -454,12 +454,22 @@ message SignedBeaconBlockAndBlobsSidecar {
     BlobsSidecar blobs_sidecar = 2;
 }
 
+message SignedBeaconBlockDenebAndBlobs {
+    SignedBeaconBlockDeneb block = 1;
+    repeated SignedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
 message SignedBeaconBlockDeneb {
     // The unsigned beacon block itself.
     BeaconBlockDeneb block = 1;
 
     // 96 byte BLS signature from the validator that produced this block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BeaconBlockDenebAndBlobs {
+    BeaconBlockDeneb block = 1;
+    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }
 
 message BeaconBlockDeneb {

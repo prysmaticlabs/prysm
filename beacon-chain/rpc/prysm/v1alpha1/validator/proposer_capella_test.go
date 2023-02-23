@@ -22,10 +22,10 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		blk         interfaces.ReadOnlySignedBeaconBlock
+		blk         interfaces.SignedBeaconBlock
 		mock        *builderTest.MockBuilderService
 		err         string
-		returnedBlk interfaces.ReadOnlySignedBeaconBlock
+		returnedBlk interfaces.SignedBeaconBlock
 	}{
 		{
 			name: "nil block",
@@ -34,12 +34,12 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 		},
 		{
 			name: "old block version",
-			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
-			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
+			returnedBlk: func() interfaces.SignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
@@ -47,7 +47,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 		},
 		{
 			name: "not configured",
-			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
@@ -55,7 +55,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 			mock: &builderTest.MockBuilderService{
 				HasConfigured: false,
 			},
-			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
+			returnedBlk: func() interfaces.SignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
@@ -63,7 +63,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 		},
 		{
 			name: "submit blind block error",
-			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
@@ -80,7 +80,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 		},
 		{
 			name: "can get payload",
-			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
@@ -109,7 +109,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 				HasConfigured:  true,
 				PayloadCapella: p,
 			},
-			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
+			returnedBlk: func() interfaces.SignedBeaconBlock {
 				b := util.NewBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2

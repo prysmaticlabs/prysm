@@ -905,7 +905,7 @@ func initBlockBodyFromProtoDeneb(pb *eth.BeaconBlockBodyDeneb) (*BeaconBlockBody
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload)
+	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err
@@ -934,7 +934,7 @@ func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*B
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader)
+	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader, big.NewInt(0))
 	// We allow the payload to be nil
 	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err

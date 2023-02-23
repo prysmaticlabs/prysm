@@ -854,8 +854,8 @@ type executionPayloadHeaderDeneb struct {
 }
 
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderDeneb{p: p}
+func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value *big.Int) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderDeneb{p: p, value: value}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -1019,8 +1019,8 @@ type executionPayloadDeneb struct {
 }
 
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb) (interfaces.ExecutionData, error) {
-	w := executionPayloadDeneb{p: p}
+func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value *big.Int) (interfaces.ExecutionData, error) {
+	w := executionPayloadDeneb{p: p, value: value}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}

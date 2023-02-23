@@ -121,16 +121,46 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	// Propose and broadcast block via beacon node
-	proposal, err := blk.PbGenericBlock()
-	if err != nil {
-		log.WithError(err).Error("Failed to create proposal request")
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
+	if blk.Version() == version.Deneb {
+		signedBlobs := make([]*ethpb.SignedBlobSidecar, 0)
+		for _, blob := range b.GetDeneb().Blobs {
+			blobSig, err := v.signBlob(ctx, blob, pubKey)
+			if err != nil {
+				log.WithError(err).Error("Failed to sign blob")
+				return
+			}
+			signedBlobs = append(signedBlobs, &ethpb.SignedBlobSidecar{
+				Message:   blob,
+				Signature: blobSig,
+			})
 		}
-		return
+		denebBlock, err := blk.PbDenebBlock()
+		if err != nil {
+			log.WithError(err).Error("Failed to get deneb block")
+			return
+		}
+		genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
+			Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+				Deneb: &ethpb.SignedBeaconBlockDenebAndBlobs{
+					Block: denebBlock,
+					Blobs: signedBlobs,
+				},
+			},
+		}
+	} else {
+		// Propose and broadcast block via beacon node
+		genericSignedBlock, err = blk.PbGenericBlock()
+		if err != nil {
+			log.WithError(err).Error("Failed to create proposal request")
+			if v.emitAccountMetrics {
+				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
 	}
-	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, proposal)
+
+	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, genericSignedBlock)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
@@ -304,6 +334,32 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 		return nil, [32]byte{}, errors.Wrap(err, "could not sign block proposal")
 	}
 	return sig.Marshal(), blockRoot, nil
+}
+
+func (v *validator) signBlob(ctx context.Context, blob *ethpb.BlobSidecar, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	epoch := slots.ToEpoch(blob.Slot)
+	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBlobSidecar[:])
+	if err != nil {
+		return nil, errors.Wrap(err, domainDataErr)
+	}
+	if domain == nil {
+		return nil, errors.New(domainDataErr)
+	}
+	sr, err := signing.ComputeSigningRoot(blob, domain.SignatureDomain)
+	if err != nil {
+		return nil, errors.Wrap(err, signingRootErr)
+	}
+	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     sr[:],
+		SignatureDomain: domain.SignatureDomain,
+		Object:          &validatorpb.SignRequest_Blob{Blob: blob},
+		SigningSlot:     blob.Slot,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not sign block proposal")
+	}
+	return sig.Marshal(), nil
 }
 
 // Sign voluntary exit with proposer domain and private key.

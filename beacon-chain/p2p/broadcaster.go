@@ -143,7 +143,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 
 // BroadcastBlob broadcasts a blob to the p2p network, the message is assumed to be
 // broadcasted to the current fork and to the input subnet.
-func (s *Service) BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.BlobSidecar) error {
+func (s *Service) BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.SignedBlobSidecar) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastBlob")
 	defer span.End()
 	forkDigest, err := s.currentForkDigest()
@@ -159,7 +159,7 @@ func (s *Service) BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.
 	return nil
 }
 
-func (s *Service) broadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.BlobSidecar, forkDigest [4]byte) {
+func (s *Service) broadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar, forkDigest [4]byte) {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastBlob")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
