@@ -47,7 +47,7 @@ var (
 		Help: "Total number of block capella sign requests",
 	})
 	blindedBlockCapellaSignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "remote_web3signer_block_capella_sign_requests_total",
+		Name: "remote_web3signer_blinded_block_capella_sign_requests_total",
 		Help: "Total number of block capella sign requests",
 	})
 	randaoRevealSignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
