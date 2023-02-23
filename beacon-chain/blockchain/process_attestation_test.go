@@ -352,7 +352,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	err = service.VerifyFinalizedConsistency(r33[:])
 	require.ErrorContains(t, "Root and finalized store are not consistent", err)
 }
 
@@ -377,7 +377,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	err = service.VerifyFinalizedConsistency(r33[:])
 	require.NoError(t, err)
 }
 
@@ -414,6 +414,6 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	require.NoError(t, service.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(ctx, jc))
 	_, err = service.cfg.ForkChoiceStore.Head(ctx)
 	require.NoError(t, err)
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	err = service.VerifyFinalizedConsistency(r33[:])
 	require.NoError(t, err)
 }
