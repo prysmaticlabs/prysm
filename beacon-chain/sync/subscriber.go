@@ -136,12 +136,7 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 
 	// New Gossip Topic in Deneb
 	if epoch >= params.BeaconConfig().DenebForkEpoch {
-		s.subscribe(
-			p2p.BlockAndBlobsSubnetTopicFormat,
-			s.validateBeaconBlockAndBlobsPubSub,
-			s.beaconBlockAndBlobsSubscriber,
-			digest,
-		)
+		// TOOD(TT): Add gossip topic for Deneb
 	}
 }
 

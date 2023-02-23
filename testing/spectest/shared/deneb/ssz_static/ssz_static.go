@@ -15,7 +15,7 @@ import (
 
 // RunSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
-	common.RunSSZStaticTests(t, config, "eip4844", unmarshalledSSZ, customHtr)
+	common.RunSSZStaticTests(t, config, "deneb", unmarshalledSSZ, customHtr)
 }
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
@@ -128,8 +128,12 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "LightClientHeader":
 		t.Skip("not a beacon node type, this is a light node type")
 		return nil, nil
-	case "BlobsSidecar":
-		obj = &ethpb.BlobsSidecar{}
+	case "BlobIdentifier":
+		obj = &ethpb.BlobIdentifier{}
+	case "BlobSidecar":
+		obj = &ethpb.BlobSidecar{}
+	case "SignedBlobSidecar":
+		obj = &ethpb.SignedBlobSidecar{}
 	case "SignedBeaconBlockAndBlobsSidecar":
 		obj = &ethpb.SignedBeaconBlockAndBlobsSidecar{}
 	case "PowBlock":
