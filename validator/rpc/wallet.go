@@ -32,6 +32,7 @@ const (
 
 // CreateWallet via an API request, allowing a user to save a new
 // imported wallet via RPC.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	exists, err := wallet.Exists(walletDir)
@@ -100,6 +101,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 }
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResponse, error) {
 	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
@@ -147,6 +149,7 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 // Create N validator keystores from the seed specified by req.NumAccounts.
 // Set the wallet password to req.WalletPassword, then create the wallet from
 // the provided Mnemonic and return CreateWalletResponse.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error) {
 	numAccounts := int(req.NumAccounts)
 	if numAccounts == 0 {
@@ -226,6 +229,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 // can indeed be decrypted using a password in the request. If there is no issue,
 // we return an empty response with no error. If the password is incorrect for a single keystore,
 // we return an appropriate error.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (*Server) ValidateKeystores(
 	_ context.Context, req *pb.ValidateKeystoresRequest,
 ) (*emptypb.Empty, error) {
@@ -262,6 +266,7 @@ func (*Server) ValidateKeystores(
 }
 
 // Initialize a wallet and send it over a global feed.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error {
 	// We first ensure the user has a wallet.
 	exists, err := wallet.Exists(cfg.WalletDir)
