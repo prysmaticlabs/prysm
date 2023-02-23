@@ -109,10 +109,3 @@ func (s *Store) removeNodeAndChildren(ctx context.Context, node *Node, invalidRo
 	delete(s.nodeByPayload, node.payloadHash)
 	return invalidRoots, nil
 }
-
-// AllTipsAreInvalid returns true if no forkchoice tip is viable for head
-func (f *ForkChoice) AllTipsAreInvalid() bool {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	return f.store.allTipsAreInvalid
-}

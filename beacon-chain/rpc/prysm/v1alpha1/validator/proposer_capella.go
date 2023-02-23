@@ -98,10 +98,23 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.R
 		return nil, errors.Wrap(err, "could not submit blinded block")
 	}
 
+	payloadHtr, err := payload.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get payload hash tree root")
+	}
+	headerHtr, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get header hash tree root")
+	}
+	if payloadHtr != headerHtr {
+		return nil, fmt.Errorf("payload hash tree root %x does not match header hash tree root %x", payloadHtr, headerHtr)
+	}
+
 	capellaPayload, err := payload.PbCapella()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get payload")
 	}
+
 	bb := &ethpb.SignedBeaconBlockCapella{
 		Block: &ethpb.BeaconBlockCapella{
 			Slot:          sb.Block.Slot,

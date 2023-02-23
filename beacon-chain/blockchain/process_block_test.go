@@ -2124,7 +2124,6 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, optimistic)
-	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
 	// last valid state's justified checkpoint
@@ -2151,7 +2150,6 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
-	require.Equal(t, true, service.ForkChoicer().AllTipsAreInvalid())
 	st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 	require.NoError(t, err)
 
@@ -2179,7 +2177,6 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
-	require.Equal(t, true, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Import block 24, it should justify Epoch 3 and become HEAD, the node
 	// recovers
@@ -2203,7 +2200,6 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, optimistic)
-	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 }
 
 func TestOnBlock_HandleBlockAttestations(t *testing.T) {

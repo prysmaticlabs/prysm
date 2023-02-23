@@ -57,7 +57,9 @@ service BeaconNodeValidator {
     // The duties consist of:
     //   Proposer - the validator that creates a beacon chain block.
     //   Attester — a validator that is part of a committee that needs to sign off on a beacon chain
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     rpc StreamDuties(DutiesRequest) returns (stream DutiesResponse) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/duties/stream"
         };
@@ -294,10 +296,12 @@ service BeaconNodeValidator {
 
     // Server-side stream of all signed blocks as they are received by
     // the beacon chain node.
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
     rpc StreamBlocksAltair(StreamBlocksRequest) returns (stream StreamBlocksResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/blocks/stream"
         };
+        option deprecated = true;
     }
 
     rpc SubmitValidatorRegistrations(SignedValidatorRegistrationsV1) returns (google.protobuf.Empty) {
@@ -339,7 +343,9 @@ message SyncSubcommitteeIndexResponse {
     repeated uint64 indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
 }
 
+// DEPRECATED: This endpoint StreamBlocks is superseded by the /eth/v1/events Beacon API endpoint
 message StreamBlocksResponse {
+    option deprecated = true;
     oneof block {
         // Representing a phase 0 block.
         SignedBeaconBlock phase0_block = 1 ;
@@ -719,7 +725,9 @@ message DoppelGangerResponse {
 }
 
 // Request to only return blocks that is verified by the beacon node.
+// DEPRECATED: This endpoint StreamBlocks is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events, this message will no longer be needed.
 message StreamBlocksRequest {
+    option deprecated = true;
     bool verified_only = 1;
 }
 

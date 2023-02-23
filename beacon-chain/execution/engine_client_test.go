@@ -80,7 +80,7 @@ func TestClient_IPC(t *testing.T) {
 		require.DeepEqual(t, want, resPb)
 	})
 	t.Run(GetPayloadMethodV2, func(t *testing.T) {
-		want, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		want, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
 		resp, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
@@ -155,8 +155,6 @@ func TestClient_IPC(t *testing.T) {
 }
 
 func TestClient_HTTP(t *testing.T) {
-	t.Skip("Skipping HTTP test to support Capella devnet-3")
-
 	ctx := context.Background()
 	fix := fixtures()
 
@@ -211,7 +209,7 @@ func TestClient_HTTP(t *testing.T) {
 	})
 	t.Run(GetPayloadMethodV2, func(t *testing.T) {
 		payloadId := [8]byte{1}
-		want, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		want, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.GetPayloadV2ResponseJson)
 		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -251,7 +249,17 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		pb, err := resp.PbCapella()
 		require.NoError(t, err)
-		require.DeepEqual(t, want, pb)
+		require.DeepEqual(t, want.ExecutionPayload.BlockHash.Bytes(), pb.BlockHash)
+		require.DeepEqual(t, want.ExecutionPayload.StateRoot.Bytes(), pb.StateRoot)
+		require.DeepEqual(t, want.ExecutionPayload.ParentHash.Bytes(), pb.ParentHash)
+		require.DeepEqual(t, want.ExecutionPayload.FeeRecipient.Bytes(), pb.FeeRecipient)
+		require.DeepEqual(t, want.ExecutionPayload.PrevRandao.Bytes(), pb.PrevRandao)
+		require.DeepEqual(t, want.ExecutionPayload.ParentHash.Bytes(), pb.ParentHash)
+
+		v, err := resp.Value()
+		require.NoError(t, err)
+		wantedValue := []byte{17, 255} // 0x11ff
+		require.DeepEqual(t, wantedValue, v.Bytes())
 	})
 	t.Run(ForkchoiceUpdatedMethod+" VALID status", func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{
@@ -1297,6 +1305,26 @@ func fixtures() map[string]interface{} {
 		Transactions:  [][]byte{foo[:]},
 		Withdrawals:   []*pb.Withdrawal{},
 	}
+	hexUint := hexutil.Uint64(1)
+	executionPayloadWithValueFixtureCapella := &pb.GetPayloadV2ResponseJson{
+		ExecutionPayload: &pb.ExecutionPayloadCapellaJSON{
+			ParentHash:    &common.Hash{'a'},
+			FeeRecipient:  &common.Address{'b'},
+			StateRoot:     &common.Hash{'c'},
+			ReceiptsRoot:  &common.Hash{'d'},
+			LogsBloom:     &hexutil.Bytes{'e'},
+			PrevRandao:    &common.Hash{'f'},
+			BaseFeePerGas: fmt.Sprintf("%s", "0x123"),
+			BlockHash:     &common.Hash{'g'},
+			Transactions:  []hexutil.Bytes{{'h'}},
+			Withdrawals:   []*pb.Withdrawal{},
+			BlockNumber:   &hexUint,
+			GasLimit:      &hexUint,
+			GasUsed:       &hexUint,
+			Timestamp:     &hexUint,
+		},
+		BlockValue: fmt.Sprintf("%s", "0x11ff"),
+	}
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 	sha3Uncles := bytesutil.PadTo([]byte("sha3Uncles"), fieldparams.RootLength)
 	miner := bytesutil.PadTo([]byte("miner"), fieldparams.FeeRecipientLength)
@@ -1392,6 +1420,7 @@ func fixtures() map[string]interface{} {
 		"ExecutionBlock":                    executionBlock,
 		"ExecutionPayload":                  executionPayloadFixture,
 		"ExecutionPayloadCapella":           executionPayloadFixtureCapella,
+		"ExecutionPayloadCapellaWithValue":  executionPayloadWithValueFixtureCapella,
 		"ValidPayloadStatus":                validStatus,
 		"InvalidBlockHashStatus":            inValidBlockHashStatus,
 		"AcceptedStatus":                    acceptedStatus,
@@ -1577,9 +1606,9 @@ func (*testEngineService) GetPayloadV1(
 
 func (*testEngineService) GetPayloadV2(
 	_ context.Context, _ pb.PayloadIDBytes,
-) *pb.ExecutionPayloadCapella {
+) *pb.ExecutionPayloadCapellaWithValue {
 	fix := fixtures()
-	item, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+	item, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
 	if !ok {
 		panic("not found")
 	}
