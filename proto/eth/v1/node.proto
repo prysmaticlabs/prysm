@@ -146,4 +146,7 @@ message SyncInfo {
 
   // A bool indicating whether the node is currently in optimistic mode.
   bool is_optimistic = 4;
+
+  // Set to true if the execution client is offline.
+  bool el_offline = 5;
 }
