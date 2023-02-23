@@ -122,7 +122,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		reorgDistance.Observe(float64(dis))
 		reorgDepth.Observe(float64(dep))
 
-		isOptimistic, err := s.IsOptimistic(ctx)
+		isOptimistic, err := s.ForkChoicer().IsOptimistic(newHeadRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
 		}
