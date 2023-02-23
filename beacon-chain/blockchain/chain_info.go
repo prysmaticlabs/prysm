@@ -359,6 +359,8 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 // IsFinalized returns true if the input root is finalized.
 // It first checks latest finalized root then checks finalized root index in DB.
 func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
 		return true
 	}
