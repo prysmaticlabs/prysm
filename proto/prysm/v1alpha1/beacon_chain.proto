@@ -654,7 +654,9 @@ message ValidatorPerformanceRequest {
     repeated uint64 indices = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ValidatorPerformanceResponse {
+    option deprecated = true;
     // A list of validator effective balances mapped 1-to-1 with the request's
     // public keys.
     repeated uint64 current_effective_balances = 1;
@@ -692,7 +694,9 @@ message ValidatorPerformanceResponse {
     repeated uint64 inactivity_scores = 12;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ValidatorQueue {
+    option deprecated = true;
     // The amount of ether in gwei allowed to enter or exit the active
     // validator set.
     uint64 churn_limit = 1;
@@ -777,7 +781,9 @@ message ValidatorAssignments {
     int32 total_size = 4;
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message GetValidatorParticipationRequest {
+    option deprecated = true;
     oneof query_filter {
         // Epoch to request participation information.
         uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
@@ -787,7 +793,9 @@ message GetValidatorParticipationRequest {
     }
 }
 
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ValidatorParticipationResponse {
+    option deprecated = true;
     // Epoch which this message is applicable.
     uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
