@@ -84,7 +84,6 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
-	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
 

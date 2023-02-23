@@ -389,11 +389,6 @@ func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
 	return [32]byte{}
 }
 
-// VerifyFinalizedBlkDescendant mocks VerifyBlkDescendant and always returns nil.
-func (s *ChainService) VerifyFinalizedBlkDescendant(_ context.Context, _ [32]byte) error {
-	return s.VerifyBlkDescendantErr
-}
-
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
 func (_ *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
 	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {

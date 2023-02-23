@@ -214,7 +214,8 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := s.cfg.chain.VerifyFinalizedBlkDescendant(ctx, blk.Block().ParentRoot()); err != nil {
+	parentRoot := blk.Block().ParentRoot()
+	if err := s.cfg.chain.VerifyFinalizedConsistency(parentRoot[:]); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
@@ -230,7 +231,6 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	}
 	// In the event the block is more than an epoch ahead from its
 	// parent state, we have to advance the state forward.
-	parentRoot := blk.Block().ParentRoot()
 	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], blk.Block().Slot())
 	if err != nil {
 		return err
