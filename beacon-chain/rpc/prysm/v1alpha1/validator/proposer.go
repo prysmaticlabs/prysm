@@ -146,7 +146,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		if !ok {
 			return nil, status.Errorf(codes.Internal, "Could not cast block to BeaconBlockDeneb")
 		}
-		validatorBlobs := make([]*ethpb.BlobSidecar, len(blk.Body.BlobKzgCommitments))
 		blobs, err := vs.BlobsCache.Get(blk.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get sidecars: %v", err)
@@ -159,6 +158,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get kzg commitments: %v", err)
 		}
+		validatorBlobs := make([]*ethpb.BlobSidecar, len(blk.Body.BlobKzgCommitments))
 		for i, b := range blobs {
 			validatorBlobs[i] = &ethpb.BlobSidecar{
 				BlockRoot:       br[:],
@@ -200,11 +200,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
-	blk, err := blocks.NewSignedBeaconBlock(req.Block)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
-	}
-	return vs.proposeGenericBeaconBlock(ctx, blk)
+	return vs.proposeGenericBeaconBlock(ctx, req)
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
@@ -287,9 +283,15 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}, nil
 }
 
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
+
+	blk, err := blocks.NewSignedBeaconBlock(req.Block)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
+	}
+
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
@@ -318,7 +320,11 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	}()
 
 	if blk.Version() == version.Deneb {
-		if err := vs.proposeBlockAndBlobs(ctx, root, blk); err != nil {
+		b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
+		if !ok {
+			return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
+		}
+		if err := vs.proposeBlockAndBlobs(ctx, root, blk, b.Deneb.Blobs); err != nil {
 			return nil, errors.Wrap(err, "could not propose block and blob")
 		}
 	} else {
@@ -345,11 +351,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	}, nil
 }
 
-func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.ReadOnlySignedBeaconBlock) error {
-	blkPb, err := blk.PbDenebBlock()
-	if err != nil {
-		return errors.Wrap(err, "could not get protobuf block")
-	}
+func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.ReadOnlySignedBeaconBlock, blobSidecars []*ethpb.SignedBlobSidecar) error {
 	blobs, err := vs.BlobsCache.Get(blk.Block().Slot())
 	if err != nil {
 		return errors.Wrap(err, "could not get blobs from cache")
@@ -366,11 +368,10 @@ func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk i
 	}
 	sc.AggregatedProof = aggregatedProof[:]
 
-	if err := vs.P2P.Broadcast(ctx, &ethpb.SignedBeaconBlockAndBlobsSidecar{
-		BeaconBlock:  blkPb,
-		BlobsSidecar: sc,
-	}); err != nil {
-		return fmt.Errorf("could not broadcast block: %v", err)
+	for _, sidecar := range blobSidecars {
+		if err := vs.P2P.BroadcastBlob(ctx, sidecar.Message.Index, sidecar); err != nil {
+			return errors.Wrap(err, "could not broadcast blob sidecar")
+		}
 	}
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return fmt.Errorf("could not process beacon block: %v", err)

@@ -35,7 +35,7 @@ func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlock, headState s
 	}
 }
 
-func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, errors.Wrap(err, "block is nil")
 	}
