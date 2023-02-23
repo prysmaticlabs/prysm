@@ -8,6 +8,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -66,11 +67,13 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	}
 
 	// Reports on block and fork choice metrics.
-	finalized := s.FinalizedCheckpt()
+	cp := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
-	justified := s.CurrentJustifiedCheckpt()
+	cp = s.ForkChoicer().JustifiedCheckpoint()
+	justified := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		log.WithError(err).Error("Unable to log block sync status")
 	}
@@ -120,14 +123,15 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		finalized := s.FinalizedCheckpt()
+		cp := s.ForkChoicer().FinalizedCheckpoint()
+		finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
 
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	finalized := s.FinalizedCheckpt()
+	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -185,11 +189,12 @@ func (s *Service) handleBlockBLSToExecChanges(blk interfaces.ReadOnlyBeaconBlock
 
 // This checks whether it's time to start saving hot state to DB.
 // It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
+// Requires a read lock on forkchoice
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality primitives.Epoch
-	finalized := s.FinalizedCheckpt()
+	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
