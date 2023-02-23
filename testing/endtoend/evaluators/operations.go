@@ -99,6 +99,10 @@ var ValidatorsHaveWithdrawn = e2etypes.Evaluator{
 		// differs for our minimal and mainnet config which is why we calculate it
 		// each time the policy is executed.
 		validWithdrawnEpoch := exitSubmissionEpoch + 1 + params.BeaconConfig().MaxSeedLookahead
+		// Only run this for minimal setups after capella
+		if params.BeaconConfig().ConfigName == params.EndToEndName {
+			validWithdrawnEpoch = helpers.CapellaE2EForkEpoch + 1
+		}
 		requiredPolicy := policies.OnEpoch(validWithdrawnEpoch)
 		return requiredPolicy(currentEpoch)
 	},
