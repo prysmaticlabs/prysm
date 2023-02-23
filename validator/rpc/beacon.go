@@ -64,6 +64,7 @@ func (s *Server) registerBeaconClient() error {
 // GetBeaconStatus retrieves information about the beacon node gRPC connection
 // and certain chain metadata, such as the genesis time, the chain head, and the
 // deposit contract address.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validatorpb.BeaconStatusResponse, error) {
 	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -94,6 +95,7 @@ func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validato
 }
 
 // GetValidatorParticipation is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
@@ -101,6 +103,7 @@ func (s *Server) GetValidatorParticipation(
 }
 
 // GetValidatorPerformance is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
@@ -108,6 +111,7 @@ func (s *Server) GetValidatorPerformance(
 }
 
 // GetValidatorBalances is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidatorBalances(
 	ctx context.Context, req *ethpb.ListValidatorBalancesRequest,
 ) (*ethpb.ValidatorBalances, error) {
@@ -115,6 +119,7 @@ func (s *Server) GetValidatorBalances(
 }
 
 // GetValidators is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidators(
 	ctx context.Context, req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
@@ -122,6 +127,7 @@ func (s *Server) GetValidators(
 }
 
 // GetValidatorQueue is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidatorQueue(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpb.ValidatorQueue, error) {
@@ -129,6 +135,7 @@ func (s *Server) GetValidatorQueue(
 }
 
 // GetPeers is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetPeers(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpb.Peers, error) {

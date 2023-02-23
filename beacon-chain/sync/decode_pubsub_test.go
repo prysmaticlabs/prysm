@@ -72,7 +72,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				},
 			},
 			wantErr: nil,
-			want: func() interfaces.SignedBeaconBlock {
+			want: func() interfaces.ReadOnlySignedBeaconBlock {
 				wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wsb

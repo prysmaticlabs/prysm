@@ -51,10 +51,10 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 // IsExecutionBlock returns whether the block has a non-empty ExecutionPayload.
 //
 // Spec code:
-// def is_execution_block(block: BeaconBlock) -> bool:
+// def is_execution_block(block: ReadOnlyBeaconBlock) -> bool:
 //
 //	return block.body.execution_payload != ExecutionPayload()
-func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
+func IsExecutionBlock(body interfaces.ReadOnlyBeaconBlockBody) (bool, error) {
 	if body == nil {
 		return false, errors.New("nil block body")
 	}
@@ -77,10 +77,10 @@ func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
 // Meaning the payload header is beacon state is non-empty or the payload in block body is non-empty.
 //
 // Spec code:
-// def is_execution_enabled(state: BeaconState, body: BeaconBlockBody) -> bool:
+// def is_execution_enabled(state: BeaconState, body: ReadOnlyBeaconBlockBody) -> bool:
 //
 //	return is_merge_block(state, body) or is_merge_complete(state)
-func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (bool, error) {
+func IsExecutionEnabled(st state.BeaconState, body interfaces.ReadOnlyBeaconBlockBody) (bool, error) {
 	if st == nil || body == nil {
 		return false, errors.New("nil state or block body")
 	}
@@ -96,7 +96,7 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
-func IsExecutionEnabledUsingHeader(header interfaces.ExecutionData, body interfaces.BeaconBlockBody) (bool, error) {
+func IsExecutionEnabledUsingHeader(header interfaces.ExecutionData, body interfaces.ReadOnlyBeaconBlockBody) (bool, error) {
 	isEmpty, err := blocks.IsEmptyExecutionData(header)
 	if err != nil {
 		return false, err
@@ -200,12 +200,9 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 //	    transactions_root=hash_tree_root(payload.transactions),
 //	)
 func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
+	var err error
 	if st.Version() >= version.Capella {
-		withdrawals, err := payload.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get payload withdrawals")
-		}
-		st, err = ProcessWithdrawals(st, withdrawals)
+		st, err = ProcessWithdrawals(st, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process withdrawals")
 		}
@@ -267,6 +264,13 @@ func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData
 
 // ProcessPayloadHeader processes the payload header.
 func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
+	var err error
+	if st.Version() >= version.Capella {
+		st, err = ProcessWithdrawals(st, header)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process withdrawals")
+		}
+	}
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}
@@ -280,7 +284,7 @@ func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData)
 }
 
 // GetBlockPayloadHash returns the hash of the execution payload of the block
-func GetBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
+func GetBlockPayloadHash(blk interfaces.ReadOnlyBeaconBlock) ([32]byte, error) {
 	var payloadHash [32]byte
 	if IsPreBellatrixVersion(blk.Version()) {
 		return payloadHash, nil

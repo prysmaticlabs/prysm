@@ -28,7 +28,7 @@ func (s *Service) CurrentSlot() primitives.Slot {
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
-func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock) (state.BeaconState, error) {
+func (s *Service) getBlockPreState(ctx context.Context, b interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
 
@@ -59,7 +59,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
-func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBlock) error {
+func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
@@ -119,7 +119,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
-func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
+func (s *Service) verifyBlkFinalizedSlot(b interfaces.ReadOnlyBeaconBlock) error {
 	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
@@ -201,7 +201,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot primitives.Slo
 	r := bytesutil.ToBytes32(root)
 	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
 	// This is most optimal outcome.
-	ar, err := s.ancestorByForkChoiceStore(ctx, r, slot)
+	ar, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
 	if err != nil {
 		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
 		// This is the second line of defense for retrieving ancestor root.
@@ -211,38 +211,28 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot primitives.Slo
 		}
 	}
 
-	return ar, nil
-}
-
-// This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
-func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot primitives.Slot) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByForkChoiceStore")
-	defer span.End()
-
-	if !s.cfg.ForkChoiceStore.HasParent(r) {
-		return nil, errors.New("could not find root in fork choice store")
-	}
-	root, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
-	return root[:], err
+	return ar[:], nil
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
-func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot primitives.Slot) ([]byte, error) {
+func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot primitives.Slot) (root [32]byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
 	defer span.End()
 
+	root = [32]byte{}
 	// Stop recursive ancestry lookup if context is cancelled.
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		err = ctx.Err()
+		return
 	}
 
 	signed, err := s.getBlock(ctx, r)
 	if err != nil {
-		return nil, err
+		return root, err
 	}
 	b := signed.Block()
 	if b.Slot() == slot || b.Slot() < slot {
-		return r[:], nil
+		return r, nil
 	}
 
 	return s.ancestorByDB(ctx, b.ParentRoot(), slot)
@@ -250,7 +240,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot primitives.
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
-func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
@@ -284,7 +274,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if root != s.ensureRootNotZeros(finalized.Root) && !s.ForkChoicer().HasNode(root) {
 		return errNotDescendantOfFinalized
 	}
-	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
+	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)
 }
 
 // inserts finalized deposits into our finalized deposit trie.

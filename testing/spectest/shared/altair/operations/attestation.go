@@ -34,7 +34,7 @@ func RunAttestationTest(t *testing.T, config string) {
 			require.NoError(t, att.UnmarshalSSZ(attestationSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBodyAltair{Attestations: []*ethpb.Attestation{att}}
-			processAtt := func(ctx context.Context, st state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+			processAtt := func(ctx context.Context, st state.BeaconState, blk interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 				st, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, blk)
 				if err != nil {
 					return nil, err

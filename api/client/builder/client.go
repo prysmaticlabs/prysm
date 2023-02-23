@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v3/network"
 	"github.com/prysmaticlabs/prysm/v3/network/authorization"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	log "github.com/sirupsen/logrus"
@@ -89,7 +89,7 @@ type BuilderClient interface {
 	NodeURL() string
 	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubkey [48]byte) (SignedBid, error)
 	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error
-	SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error)
+	SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error)
 	Status(ctx context.Context) error
 }
 
@@ -277,7 +277,7 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 
 // SubmitBlindedBlock calls the builder API endpoint that binds the validator to the builder and submits the block.
 // The response is the full execution payload used to create the blinded block.
-func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error) {
+func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error) {
 	if !sb.IsBlinded() {
 		return nil, errNotBlinded
 	}
@@ -295,7 +295,10 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBea
 
 		ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
 		defer cancel()
-		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
+		versionOpt := func(r *http.Request) {
+			r.Header.Add("Eth-Consensus-Version", version.String(version.Bellatrix))
+		}
+		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
 
 		if err != nil {
 			return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
@@ -322,7 +325,10 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBea
 
 		ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
 		defer cancel()
-		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
+		versionOpt := func(r *http.Request) {
+			r.Header.Add("Eth-Consensus-Version", version.String(version.Capella))
+		}
+		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
 
 		if err != nil {
 			return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockCapella to the builder api")
@@ -335,33 +341,10 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBea
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not extract proto message from payload")
 		}
-		return blocks.WrappedExecutionPayloadCapella(p)
+		return blocks.WrappedExecutionPayloadCapella(p, big.NewInt(0))
 	default:
 		return nil, fmt.Errorf("unsupported block version %s", version.String(sb.Version()))
 	}
-}
-
-// SubmitBlindedBlockCapella calls the builder API endpoint that binds the validator to the builder and submits the block.
-// The response is the full ExecutionPayloadCapella used to create the blinded block.
-func (c *Client) SubmitBlindedBlockCapella(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockCapella) (*v1.ExecutionPayloadCapella, error) {
-	v := &SignedBlindedBeaconBlockCapella{SignedBlindedBeaconBlockCapella: sb}
-	body, err := json.Marshal(v)
-	if err != nil {
-		return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockCapella value body in SubmitBlindedBlockCapella")
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
-	defer cancel()
-	rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
-
-	if err != nil {
-		return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
-	}
-	ep := &ExecPayloadResponseCapella{}
-	if err := json.Unmarshal(rb, ep); err != nil {
-		return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockCapella response")
-	}
-	return ep.ToProto()
 }
 
 // Status asks the remote builder server for a health check. A response of 200 with an empty body is the success/healthy

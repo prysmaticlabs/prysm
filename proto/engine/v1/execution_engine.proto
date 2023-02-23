@@ -60,6 +60,11 @@ message ExecutionPayloadCapella {
 	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"]; // New in Capella.
 }
 
+message ExecutionPayloadCapellaWithValue {
+	ExecutionPayloadCapella payload = 1;
+	bytes value = 2;
+}
+
 message ExecutionPayloadHeader {
 	bytes parent_hash       = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes fee_recipient     = 2 [(ethereum.eth.ext.ssz_size) = "20"];

@@ -9,6 +9,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -21,10 +22,10 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		blk         interfaces.SignedBeaconBlock
+		blk         interfaces.ReadOnlySignedBeaconBlock
 		mock        *builderTest.MockBuilderService
 		err         string
-		returnedBlk interfaces.SignedBeaconBlock
+		returnedBlk interfaces.ReadOnlySignedBeaconBlock
 	}{
 		{
 			name: "nil block",
@@ -33,12 +34,12 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 		},
 		{
 			name: "old block version",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
-			returnedBlk: func() interfaces.SignedBeaconBlock {
+			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
@@ -46,7 +47,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 		},
 		{
 			name: "not configured",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
@@ -54,7 +55,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 			mock: &builderTest.MockBuilderService{
 				HasConfigured: false,
 			},
-			returnedBlk: func() interfaces.SignedBeaconBlock {
+			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
@@ -62,7 +63,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 		},
 		{
 			name: "submit blind block error",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
@@ -79,11 +80,13 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 		},
 		{
 			name: "can get payload",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
-				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				txRoot, err := ssz.TransactionsRoot(make([][]byte, 0))
+				require.NoError(t, err)
+				wdRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), []*v1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
 				require.NoError(t, err)
 				b.Block.Body.ExecutionPayloadHeader = &v1.ExecutionPayloadHeaderCapella{
 					ParentHash:       make([]byte, fieldparams.RootLength),
@@ -96,7 +99,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 					BlockHash:        make([]byte, fieldparams.RootLength),
 					TransactionsRoot: txRoot[:],
 					GasLimit:         123,
-					WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+					WithdrawalsRoot:  wdRoot[:],
 				}
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
@@ -106,7 +109,7 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 				HasConfigured:  true,
 				PayloadCapella: p,
 			},
-			returnedBlk: func() interfaces.SignedBeaconBlock {
+			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
 				b := util.NewBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2

@@ -10,6 +10,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
@@ -150,20 +151,6 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.LogsContain(t, hook, "Chain reorg occurred")
 	require.LogsContain(t, hook, "distance=1")
 	require.LogsContain(t, hook, "depth=1")
-}
-
-func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-	ctx := context.Background()
-
-	state, _ := util.DeterministicGenesisState(t, 100)
-	r := [32]byte{'a'}
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:]}))
-	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
-	balances, err := service.justifiedBalances.get(ctx, r)
-	require.NoError(t, err)
-	require.DeepEqual(t, balances, state.Balances(), "Incorrect justified balances")
 }
 
 func Test_notifyNewHeadEvent(t *testing.T) {
@@ -559,7 +546,9 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	st, blkRoot, err = prepareForkchoiceState(ctx, 0, bellatrixBlkRoot, [32]byte{}, [32]byte{}, fcp, fcp)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, st, blkRoot))
-	newRoot, err := service.cfg.ForkChoiceStore.Head(ctx, []uint64{1, 2})
+	fcs.SetBalancesByRooter(func(context.Context, [32]byte) ([]uint64, error) { return []uint64{1, 2}, nil })
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{}))
+	newRoot, err := service.cfg.ForkChoiceStore.Head(ctx)
 	require.NoError(t, err)
 	require.NotEqual(t, headRoot, newRoot)
 	require.Equal(t, headRoot, service.headRoot())

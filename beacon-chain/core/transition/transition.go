@@ -35,7 +35,7 @@ import (
 //
 // Spec pseudocode definition:
 //
-//	def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
+//	def state_transition(state: BeaconState, signed_block: ReadOnlySignedBeaconBlock, validate_result: bool=True) -> None:
 //	  block = signed_block.message
 //	  # Process slots (including those with no blocks) since block
 //	  process_slots(state, block.slot)
@@ -50,7 +50,7 @@ import (
 func ExecuteStateTransition(
 	ctx context.Context,
 	state state.BeaconState,
-	signed interfaces.SignedBeaconBlock,
+	signed interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -312,7 +312,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}

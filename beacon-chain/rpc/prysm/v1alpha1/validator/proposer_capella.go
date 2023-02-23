@@ -15,11 +15,11 @@ import (
 )
 
 // Sets the bls to exec data for a block.
-func (vs *Server) setBlsToExecData(blk interfaces.BeaconBlock, headState state.BeaconState) {
+func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlock, headState state.BeaconState) {
 	if blk.Version() < version.Capella {
 		return
 	}
-	if err := blk.Body().SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange{}); err != nil {
+	if err := blk.SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange{}); err != nil {
 		log.WithError(err).Error("Could not set bls to execution data in block")
 		return
 	}
@@ -28,14 +28,14 @@ func (vs *Server) setBlsToExecData(blk interfaces.BeaconBlock, headState state.B
 		log.WithError(err).Error("Could not get bls to execution changes")
 		return
 	} else {
-		if err := blk.Body().SetBLSToExecutionChanges(changes); err != nil {
+		if err := blk.SetBLSToExecutionChanges(changes); err != nil {
 			log.WithError(err).Error("Could not set bls to execution changes")
 			return
 		}
 	}
 }
 
-func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, errors.Wrap(err, "block is nil")
 	}
@@ -98,10 +98,23 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.S
 		return nil, errors.Wrap(err, "could not submit blinded block")
 	}
 
+	payloadHtr, err := payload.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get payload hash tree root")
+	}
+	headerHtr, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get header hash tree root")
+	}
+	if payloadHtr != headerHtr {
+		return nil, fmt.Errorf("payload hash tree root %x does not match header hash tree root %x", payloadHtr, headerHtr)
+	}
+
 	capellaPayload, err := payload.PbCapella()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get payload")
 	}
+
 	bb := &ethpb.SignedBeaconBlockCapella{
 		Block: &ethpb.BeaconBlockCapella{
 			Slot:          sb.Block.Slot,

@@ -261,7 +261,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
-			blks := []interfaces.SignedBeaconBlock{wsb}
+			blks := []interfaces.ReadOnlySignedBeaconBlock{wsb}
 			roots := [][32]byte{root}
 			err = s.ReceiveBlockBatch(ctx, blks, roots)
 			if tt.wantedErr != "" {

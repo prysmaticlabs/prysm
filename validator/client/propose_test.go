@@ -616,7 +616,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			var sentBlock interfaces.SignedBeaconBlock
+			var sentBlock interfaces.ReadOnlySignedBeaconBlock
 			var err error
 
 			m.validatorClient.EXPECT().ProposeBeaconBlock(
