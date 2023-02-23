@@ -31,13 +31,7 @@ func TestServer_getExits(t *testing.T) {
 		exits[i] = exit
 	}
 
-	// the exit pool is a LIFO structure, so we expect exits in reverse order
-	reverseExits := make([]*eth.SignedVoluntaryExit, params.BeaconConfig().MaxVoluntaryExits)
-	for i := range exits {
-		reverseExits[i] = exits[len(exits)-1-i]
-	}
-
 	e := proposerServer.getExits(beaconState, 1)
 	require.Equal(t, len(e), int(params.BeaconConfig().MaxVoluntaryExits))
-	require.DeepEqual(t, e, reverseExits)
+	require.DeepEqual(t, e, exits)
 }
