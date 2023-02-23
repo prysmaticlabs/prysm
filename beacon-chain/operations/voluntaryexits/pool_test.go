@@ -129,10 +129,9 @@ func TestExitsForInclusion(t *testing.T) {
 		}
 		exits, err := pool.ExitsForInclusion(st, stateSlot)
 		require.NoError(t, err)
-		// We want LIFO semantics, which means validator with index 0 shouldn't be returned
 		assert.Equal(t, int(params.BeaconConfig().MaxVoluntaryExits), len(exits))
 		for _, ch := range exits {
-			assert.NotEqual(t, types.ValidatorIndex(0), ch.Exit.ValidatorIndex)
+			assert.NotEqual(t, types.ValidatorIndex(params.BeaconConfig().MaxVoluntaryExits), ch.Exit.ValidatorIndex)
 		}
 	})
 	t.Run("exit for future epoch not returned", func(t *testing.T) {
@@ -142,15 +141,12 @@ func TestExitsForInclusion(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(exits))
 	})
-	t.Run("one bad exit", func(t *testing.T) {
+	t.Run("invalid exit not returned", func(t *testing.T) {
 		pool := NewPool()
-		for i := uint64(0); i < numValidators; i++ {
-			pool.InsertVoluntaryExit(signedExits[i])
-		}
+		pool.InsertVoluntaryExit(signedExits[len(signedExits)-2])
 		exits, err := pool.ExitsForInclusion(st, stateSlot)
 		require.NoError(t, err)
-		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(exits))
-		assert.Equal(t, types.ValidatorIndex(29), exits[1].Exit.ValidatorIndex)
+		assert.Equal(t, 0, len(exits))
 	})
 }
 

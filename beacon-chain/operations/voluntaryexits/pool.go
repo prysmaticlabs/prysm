@@ -65,7 +65,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 	p.lock.RLock()
 	length := int(math.Min(float64(params.BeaconConfig().MaxVoluntaryExits), float64(p.pending.Len())))
 	result := make([]*ethpb.SignedVoluntaryExit, 0, length)
-	node := p.pending.Last()
+	node := p.pending.First()
 	for node != nil && len(result) < length {
 		exit, err := node.Value()
 		if err != nil {
@@ -73,7 +73,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 			return nil, err
 		}
 		if exit.Exit.Epoch > slots.ToEpoch(slot) {
-			node, err = node.Prev()
+			node, err = node.Next()
 			if err != nil {
 				p.lock.RUnlock()
 				return nil, err
@@ -90,9 +90,10 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 			// MarkIncluded removes the invalid exit from the pool
 			p.MarkIncluded(exit)
 			p.lock.RLock()
+		} else {
+			result = append(result, exit)
 		}
-		result = append(result, exit)
-		node, err = node.Prev()
+		node, err = node.Next()
 		if err != nil {
 			p.lock.RUnlock()
 			return nil, err
