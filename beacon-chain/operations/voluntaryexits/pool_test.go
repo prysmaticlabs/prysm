@@ -152,17 +152,6 @@ func TestExitsForInclusion(t *testing.T) {
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(exits))
 		assert.Equal(t, types.ValidatorIndex(29), exits[1].Exit.ValidatorIndex)
 	})
-	t.Run("one bad signature", func(t *testing.T) {
-		pool := NewPool()
-		copy(signedExits[25].Signature, signedExits[26].Signature)
-		for i := uint64(0); i < numValidators; i++ {
-			pool.InsertVoluntaryExit(signedExits[i])
-		}
-		exits, err := pool.ExitsForInclusion(st, stateSlot)
-		require.NoError(t, err)
-		assert.Equal(t, int(params.BeaconConfig().MaxVoluntaryExits)-1, len(exits))
-		assert.Equal(t, types.ValidatorIndex(29), exits[1].Exit.ValidatorIndex)
-	})
 }
 
 func TestInsertExit(t *testing.T) {

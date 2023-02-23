@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -246,53 +245,4 @@ func TestVerifyExitAndSignature(t *testing.T) {
 			params.BeaconConfig().ShardCommitteePeriod = c // prevent contamination
 		})
 	}
-}
-
-func TestExitSignatureBatch(t *testing.T) {
-	spb := &ethpb.BeaconStateCapella{
-		Fork: &ethpb.Fork{
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		},
-	}
-	numValidators := 10
-	validators := make([]*ethpb.Validator, numValidators)
-	exits := make([]*ethpb.VoluntaryExit, numValidators)
-	privKeys := make([]common.SecretKey, numValidators)
-
-	for i := range validators {
-		v := &ethpb.Validator{}
-		priv, err := bls.RandKey()
-		require.NoError(t, err)
-		privKeys[i] = priv
-		pubkey := priv.PublicKey().Marshal()
-		v.PublicKey = pubkey
-
-		message := &ethpb.VoluntaryExit{
-			ValidatorIndex: primitives.ValidatorIndex(i),
-		}
-
-		validators[i] = v
-		exits[i] = message
-	}
-	spb.Validators = validators
-	st, err := state_native.InitializeFromProtoCapella(spb)
-	require.NoError(t, err)
-
-	signedExits := make([]*ethpb.SignedVoluntaryExit, numValidators)
-	for i, message := range exits {
-		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainVoluntaryExit, privKeys[i])
-		require.NoError(t, err)
-
-		signed := &ethpb.SignedVoluntaryExit{
-			Exit:      message,
-			Signature: signature,
-		}
-		signedExits[i] = signed
-	}
-	batch, err := blocks.ExitSignatureBatch(st, signedExits)
-	require.NoError(t, err)
-	verify, err := batch.Verify()
-	require.NoError(t, err)
-	require.Equal(t, true, verify)
 }

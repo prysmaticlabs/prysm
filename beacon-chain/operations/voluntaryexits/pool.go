@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -84,12 +83,11 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 		validator, err := state.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 		if err != nil {
 			logrus.WithError(err).Warningf("could not get validator at index %d", exit.Exit.ValidatorIndex)
-			// MarkIncluded removes the invalid exit from the pool
 		}
 		if err = blocks.VerifyExitConditions(validator, state.Slot(), exit.Exit); err != nil {
 			logrus.WithError(err).Warning("removing invalid exit from pool")
-			// MarkIncluded removes the invalid exit from the pool
 			p.lock.RUnlock()
+			// MarkIncluded removes the invalid exit from the pool
 			p.MarkIncluded(exit)
 			p.lock.RLock()
 		}
@@ -101,37 +99,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 		}
 	}
 	p.lock.RUnlock()
-	if len(result) == 0 {
-		return result, nil
-	}
-	// We now verify the signatures in batches
-	cSet, err := blocks.ExitSignatureBatch(state, result)
-	if err != nil {
-		logrus.WithError(err).Warning("could not get exit signatures")
-	} else {
-		ok, err := cSet.Verify()
-		if err != nil {
-			logrus.WithError(err).Warning("could not batch verify exit signatures")
-		} else if ok {
-			return result, nil
-		}
-	}
-	// Batch signature failed, check signatures individually
-	verified := make([]*ethpb.SignedVoluntaryExit, 0, length)
-	for i, sig := range cSet.Signatures {
-		signature, err := blst.SignatureFromBytes(sig)
-		if err != nil {
-			logrus.WithError(err).Warning("could not get signature from bytes")
-			continue
-		}
-		if !signature.Verify(cSet.PublicKeys[i], cSet.Messages[i][:]) {
-			logrus.Warning("removing exit with invalid signature from pool")
-			p.MarkIncluded(result[i])
-		} else {
-			verified = append(verified, result[i])
-		}
-	}
-	return verified, nil
+	return result, nil
 }
 
 // InsertVoluntaryExit into the pool.
