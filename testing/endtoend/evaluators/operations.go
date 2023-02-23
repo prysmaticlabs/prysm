@@ -40,6 +40,7 @@ var depositsInBlockStart = params.E2ETestConfig().EpochsPerEth1VotingPeriod * 2
 // deposits included + finalization + MaxSeedLookahead for activation.
 var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead
 var depositEndEpoch = depositActivationStartEpoch + primitives.Epoch(math.Ceil(float64(depositValCount)/float64(churnLimit)))
+var exitSubmissionEpoch = primitives.Epoch(7)
 
 // ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.
 var ProcessesDepositsInBlocks = e2etypes.Evaluator{
@@ -72,7 +73,7 @@ var DepositedValidatorsAreActive = e2etypes.Evaluator{
 // ProposeVoluntaryExit sends a voluntary exit from randomly selected validator in the genesis set.
 var ProposeVoluntaryExit = e2etypes.Evaluator{
 	Name:       "propose_voluntary_exit_epoch_%d",
-	Policy:     policies.OnEpoch(7),
+	Policy:     policies.OnEpoch(exitSubmissionEpoch),
 	Evaluation: proposeVoluntaryExit,
 }
 
@@ -92,8 +93,19 @@ var SubmitWithdrawal = e2etypes.Evaluator{
 
 // ValidatorsHaveWithdrawn checks the beacon state for the withdrawn validator and ensures it has been withdrawn.
 var ValidatorsHaveWithdrawn = e2etypes.Evaluator{
-	Name:       "validator_has_withdrawn_%d",
-	Policy:     policies.OnEpoch(helpers.CapellaE2EForkEpoch + 1),
+	Name: "validator_has_withdrawn_%d",
+	Policy: func(currentEpoch primitives.Epoch) bool {
+		// Determine the withdrawal epoch by using the max seed lookahead. This value
+		// differs for our minimal and mainnet config which is why we calculate it
+		// each time the policy is executed.
+		validWithdrawnEpoch := exitSubmissionEpoch + 1 + params.BeaconConfig().MaxSeedLookahead
+		// Only run this for minimal setups after capella
+		if params.BeaconConfig().ConfigName == params.EndToEndName {
+			validWithdrawnEpoch = helpers.CapellaE2EForkEpoch + 1
+		}
+		requiredPolicy := policies.OnEpoch(validWithdrawnEpoch)
+		return requiredPolicy(currentEpoch)
+	},
 	Evaluation: validatorsAreWithdrawn,
 }
 
@@ -611,11 +623,6 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 }
 
 func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
-	// We skip this for multiclient runs as lighthouse does not have the ability
-	// to configure the withdrawal sweep for the end to end test.
-	if e2e.TestParams.LighthouseBeaconNodeCount > 0 {
-		return nil
-	}
 	conn := conns[0]
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 	debugClient := ethpb.NewDebugClient(conn)
