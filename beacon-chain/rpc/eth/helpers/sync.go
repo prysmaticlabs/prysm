@@ -81,6 +81,7 @@ type SyncDetailsJson struct {
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
 	IsOptimistic bool   `json:"is_optimistic"`
+	ElOffline    bool   `json:"el_offline"`
 }
 
 // SyncDetailsContainer is a wrapper for SyncDetails.
