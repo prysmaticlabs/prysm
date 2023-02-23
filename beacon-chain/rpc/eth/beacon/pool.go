@@ -253,7 +253,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.VoluntaryExitsPoolResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
+	_, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
 	defer span.End()
 
 	sourceExits, err := bs.VoluntaryExitsPool.PendingExits()
