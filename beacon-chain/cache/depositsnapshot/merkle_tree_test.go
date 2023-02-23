@@ -123,7 +123,7 @@ func Test_generateProof(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testCases, err := readTestCases(TestDataPath)
+			testCases, err := readTestCases()
 			require.NoError(t, err)
 			tree := New()
 			for _, c := range testCases[:tt.leaves] {

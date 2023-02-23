@@ -3,18 +3,17 @@ package depositsnapshot
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"gopkg.in/yaml.v3"
 )
-
-var TestDataPath = "testdata/test_cases.yaml"
 
 type testCase struct {
 	DepositData     depositData `yaml:"deposit_data"`
@@ -160,21 +159,31 @@ func (sd *snapshot) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func readTestCases(filename string) ([]testCase, error) {
-	var testCases []testCase
-	file, err := os.ReadFile(filename)
+func readTestCases() ([]testCase, error) {
+	testFolders, err := bazel.ListRunfiles()
 	if err != nil {
-		return []testCase{}, err
+		return nil, err
 	}
-	err = yaml.Unmarshal(file, &testCases)
-	if err != nil {
-		return []testCase{}, err
+	for _, ff := range testFolders {
+		if strings.Contains(ff.ShortPath, "eip4881_spec_tests") &&
+			strings.Contains(ff.ShortPath, "eip-4881/test_cases.yaml") {
+			enc, err := file.ReadFileAsBytes(ff.Path)
+			if err != nil {
+				return nil, err
+			}
+			var testCases []testCase
+			err = yaml.Unmarshal(enc, &testCases)
+			if err != nil {
+				return []testCase{}, err
+			}
+			return testCases, nil
+		}
 	}
-	return testCases, nil
+	return nil, errors.New("spec test file not found")
 }
 
 func TestRead(t *testing.T) {
-	tcs, err := readTestCases(TestDataPath)
+	tcs, err := readTestCases()
 	require.NoError(t, err)
 	for _, tc := range tcs {
 		t.Log(tc)
@@ -246,7 +255,7 @@ func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []t
 
 func TestDepositCases(t *testing.T) {
 	tree := New()
-	testCases, err := readTestCases(TestDataPath)
+	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)
@@ -256,7 +265,7 @@ func TestDepositCases(t *testing.T) {
 
 func TestFinalization(t *testing.T) {
 	tree := New()
-	testCases, err := readTestCases(TestDataPath)
+	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases[:128] {
 		err = tree.pushLeaf(c.DepositDataRoot)
@@ -307,7 +316,7 @@ func TestFinalization(t *testing.T) {
 
 func TestSnapshotCases(t *testing.T) {
 	tree := New()
-	testCases, err := readTestCases(TestDataPath)
+	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)

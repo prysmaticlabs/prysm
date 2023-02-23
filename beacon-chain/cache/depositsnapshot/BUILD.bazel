@@ -27,13 +27,17 @@ go_test(
         "merkle_tree_test.go",
         "spec_test.go",
     ],
-    data = glob(["testdata/**"]),
+    data = [
+        "@eip4881_spec_tests//:test_data",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//io/file:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@in_gopkg_yaml_v3//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
