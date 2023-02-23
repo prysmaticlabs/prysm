@@ -277,6 +277,7 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
 			IsSyncing:    ns.SyncChecker.Syncing(),
 			IsOptimistic: isOptimistic,
+			ElOffline:    !ns.ExecutionChainInfoFetcher.ExecutionClientConnected(),
 		},
 	}, nil
 }
