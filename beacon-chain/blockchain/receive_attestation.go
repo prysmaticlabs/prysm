@@ -29,7 +29,7 @@ type AttestationStateFetcher interface {
 type AttestationReceiver interface {
 	AttestationStateFetcher
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
-	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
+	VerifyFinalizedConsistency(root []byte) error
 }
 
 // AttestationTargetState returns the pre state of attestation.
