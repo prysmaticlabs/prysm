@@ -128,6 +128,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
+	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
 		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
 			log.Warn("Remote Keymanager API enabled. Prysm web does not properly support web3signer at this time")
@@ -751,10 +752,12 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 			h(w, req)
 		} else {
 			// Finally, we handle with the web server.
+			// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 			web.Handler(w, req)
 		}
 	}
 
+	// remove "/accounts/", "/v2/" after WebUI DEPRECATED
 	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
 		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},

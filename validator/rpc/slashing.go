@@ -22,6 +22,8 @@ import (
 //  1. Call the function which exports the data from
 //     the validator's db into an EIP standard slashing protection format.
 //  2. Format and send JSON in the response.
+//
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork. Use the Keymanager APIs if an API is required.
 func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (*pb.ExportSlashingProtectionResponse, error) {
 	if s.valDB == nil {
 		return nil, errors.New("err finding validator database at path")
@@ -47,7 +49,8 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 // standard JSON string and inserts the data into validator DB.
 //
 // Read the JSON string passed through rpc, then call the func
-// which actually imports the data from the JSON file into our database.
+// which actually imports the data from the JSON file into our database. Use the Keymanager APIs if an API is required.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) ImportSlashingProtection(ctx context.Context, req *pb.ImportSlashingProtectionRequest) (*emptypb.Empty, error) {
 	if s.valDB == nil {
 		return nil, errors.New("err finding validator database at path")
