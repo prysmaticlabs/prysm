@@ -92,6 +92,8 @@ var (
 // Note that this will stream information whilst syncing; this is intended, to allow for complete validator state capture
 // over time.  If this is not required then the client can either wait until the beacon node is synced, or filter results
 // based on the epoch value in the returned validator info.
+// DEPRECATED: Streaming Validator Info is no longer supported.
+// The Beacon API /eth/v1/beacon/states/{state_id}/validators will provide validator info in unstreamed format.
 func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidatorsInfoServer) error {
 	stateChannel := make(chan *feed.Event, params.BeaconConfig().SlotsPerEpoch)
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
