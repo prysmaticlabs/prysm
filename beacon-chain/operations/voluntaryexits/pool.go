@@ -84,7 +84,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 		if err != nil {
 			logrus.WithError(err).Warningf("could not get validator at index %d", exit.Exit.ValidatorIndex)
 		}
-		if err = blocks.VerifyExitConditions(validator, state.Slot(), exit.Exit); err != nil {
+		if err = blocks.VerifyExitAndSignature(validator, state.Slot(), state.Fork(), exit, state.GenesisValidatorsRoot()); err != nil {
 			logrus.WithError(err).Warning("removing invalid exit from pool")
 			p.lock.RUnlock()
 			// MarkIncluded removes the invalid exit from the pool
