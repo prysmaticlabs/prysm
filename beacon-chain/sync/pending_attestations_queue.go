@@ -115,7 +115,7 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 			// This is an important validation before retrieving attestation pre state to defend against
 			// attestation's target intentionally reference checkpoint that's long ago.
 			// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-			if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
+			if err := s.cfg.chain.VerifyFinalizedConsistency(att.Aggregate.Data.BeaconBlockRoot); err != nil {
 				log.WithError(err).Debug("Could not verify finalized consistency")
 				continue
 			}
