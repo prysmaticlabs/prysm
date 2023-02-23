@@ -362,22 +362,12 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-
-	b32 := util.NewBeaconBlock()
-	b32.Block.Slot = 32
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
-	r32, err := b32.Block.HashTreeRoot()
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 33, [32]byte{'a'}, [32]byte{}, [32]byte{}, ojc, ojc)
 	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
-	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1, Root: r32}))
-	b33 := util.NewBeaconBlock()
-	b33.Block.Slot = 33
-	b33.Block.ParentRoot = r32[:]
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
-	r33, err := b33.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	err = service.VerifyFinalizedConsistency(r33[:])
+	err = service.VerifyFinalizedConsistency(blkRoot[:])
 	require.NoError(t, err)
 }
 
