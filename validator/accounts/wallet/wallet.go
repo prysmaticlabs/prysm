@@ -4,27 +4,28 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/io/prompt"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	accountsprompt "github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	accountsprompt "github.com/prysmaticlabs/prysm/v3/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 const (
-	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, or remote.
+	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, remote, or web3signer.
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// NewWalletPasswordPromptText for wallet creation.
 	NewWalletPasswordPromptText = "New wallet password"
@@ -52,9 +53,10 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
-		keymanager.Imported: "Imported Wallet (Recommended)",
-		keymanager.Derived:  "HD Wallet",
-		keymanager.Remote:   "Remote Signing Wallet (Advanced)",
+		keymanager.Local:      "Imported Wallet (Recommended)",
+		keymanager.Derived:    "HD Wallet",
+		keymanager.Remote:     "Remote Signing Wallet (Advanced)",
+		keymanager.Web3Signer: "Consensys Web3Signer (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
@@ -193,6 +195,17 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	})
 }
 
+// NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
+func NewWalletForWeb3Signer() *Wallet {
+	// wallet is just a temporary wallet for web3 signer used to call intialize keymanager.
+	return &Wallet{
+		walletDir:      "",
+		accountsPath:   "",
+		keymanagerKind: keymanager.Web3Signer,
+		walletPassword: "",
+	}
+}
+
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
@@ -258,8 +271,8 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 	var km keymanager.IKeymanager
 	var err error
 	switch w.KeymanagerKind() {
-	case keymanager.Imported:
-		km, err = imported.NewKeymanager(ctx, &imported.SetupConfig{
+	case keymanager.Local:
+		km, err = local.NewKeymanager(ctx, &local.SetupConfig{
 			Wallet:           w,
 			ListenForChanges: cfg.ListenForChanges,
 		})
@@ -289,6 +302,20 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
+		}
+	case keymanager.Web3Signer:
+		config := cfg.Web3SignerConfig
+		if config == nil {
+			return nil, errors.New("web3signer config is nil")
+		}
+		// TODO(9883): future work needs to address how initialize keymanager is called for web3signer.
+		// an error may be thrown for genesis validators root for some InitializeKeymanager calls.
+		if !bytesutil.IsValidRoot(config.GenesisValidatorsRoot) {
+			return nil, errors.New("web3signer requires a genesis validators root value")
+		}
+		km, err = remoteweb3signer.NewKeymanager(ctx, config)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize web3signer keymanager")
 		}
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)
@@ -339,7 +366,7 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([
 	if len(matches) == 0 {
 		return []byte{}, fmt.Errorf("no files found in path: %s", fullPath)
 	}
-	rawData, err := ioutil.ReadFile(matches[0])
+	rawData, err := os.ReadFile(matches[0])
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read path: %s", filePath)
 	}

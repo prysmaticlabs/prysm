@@ -7,9 +7,13 @@ go_library(
         "log.go",
         "pending_deposits.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache",
-    visibility = ["//beacon-chain:__subpackages__"],
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache",
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//testing/spectest:__subpackages__",
+    ],
     deps = [
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//container/trie:go_default_library",
         "//crypto/hash:go_default_library",

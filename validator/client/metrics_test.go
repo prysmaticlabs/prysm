@@ -3,26 +3,27 @@ package client
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestUpdateLogAggregateStats(t *testing.T) {
 	v := &validator{
 		logValidatorBalances: true,
-		startBalances:        make(map[[48]byte]uint64),
-		prevBalance:          make(map[[48]byte]uint64),
+		startBalances:        make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
+		prevBalance:          make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		voteStats: voteStats{
 			startEpoch: 0, // this would otherwise have been previously set in LogValidatorGainsAndLosses()
 		},
 	}
 
-	pubKeyBytes := [][48]byte{
+	pubKeyBytes := [][fieldparams.BLSPubkeyLength]byte{
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000012345678")),
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000099999999")),
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000055555555")),
@@ -39,8 +40,6 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []types.Slot{types.Slot(^uint64(0)), 10, 11}, // exact slot doesn't matter, only if it is == or != ^uint64(0)
-			InclusionDistances:   []types.Slot{0, 5, 2},
 			CorrectlyVotedHead:   []bool{false, true, false},
 			CorrectlyVotedSource: []bool{false, true, true},
 			CorrectlyVotedTarget: []bool{false, true, true},
@@ -51,8 +50,6 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []types.Slot{33, 34, 35},
-			InclusionDistances:   []types.Slot{1, 2, 3},
 			CorrectlyVotedHead:   []bool{true, true, true},
 			CorrectlyVotedSource: []bool{true, true, true},
 			CorrectlyVotedTarget: []bool{true, true, true},
@@ -63,8 +60,6 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []types.Slot{65, types.Slot(^uint64(0)), 67},
-			InclusionDistances:   []types.Slot{1, 0, 2},
 			CorrectlyVotedHead:   []bool{true, false, true},
 			CorrectlyVotedSource: []bool{true, false, true},
 			CorrectlyVotedTarget: []bool{false, false, true},
@@ -81,13 +76,13 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		if i == len(responses)-1 { // Handle last log.
 			hook = logTest.NewGlobal()
 		}
-		v.UpdateLogAggregateStats(val, types.Slot(params.BeaconConfig().SlotsPerEpoch*types.Slot(i+1)))
+		v.UpdateLogAggregateStats(val, params.BeaconConfig().SlotsPerEpoch*primitives.Slot(i+1))
 	}
 
 	require.LogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+
 		"correctlyVotedHeadPct=\"100%\" correctlyVotedSourcePct=\"100%\" correctlyVotedTargetPct=\"50%\" epoch=2")
 	require.LogsContain(t, hook, "msg=\"Vote summary since launch\" attestationsInclusionPct=\"78%\" "+
-		"averageInclusionDistance=\"2.29 slots\" correctlyVotedHeadPct=\"86%\" correctlyVotedSourcePct=\"100%\" "+
+		"averageInclusionDistance=\"0.00 slots\" correctlyVotedHeadPct=\"86%\" correctlyVotedSourcePct=\"100%\" "+
 		"correctlyVotedTargetPct=\"86%\" numberOfEpochs=3 pctChangeCombinedBalance=\"0.20555%\"")
 
 }
@@ -95,14 +90,14 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 func TestUpdateLogAltairAggregateStats(t *testing.T) {
 	v := &validator{
 		logValidatorBalances: true,
-		startBalances:        make(map[[48]byte]uint64),
-		prevBalance:          make(map[[48]byte]uint64),
+		startBalances:        make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
+		prevBalance:          make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		voteStats: voteStats{
 			startEpoch: params.BeaconConfig().AltairForkEpoch, // this would otherwise have been previously set in LogValidatorGainsAndLosses()
 		},
 	}
 
-	pubKeyBytes := [][48]byte{
+	pubKeyBytes := [][fieldparams.BLSPubkeyLength]byte{
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000012345678")),
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000099999999")),
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000055555555")),
@@ -159,7 +154,7 @@ func TestUpdateLogAltairAggregateStats(t *testing.T) {
 		altairStart, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 		require.NoError(t, err)
 
-		v.UpdateLogAggregateStats(val, altairStart+params.BeaconConfig().SlotsPerEpoch*types.Slot(i+1))
+		v.UpdateLogAggregateStats(val, altairStart+params.BeaconConfig().SlotsPerEpoch*primitives.Slot(i+1))
 	}
 
 	require.LogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+

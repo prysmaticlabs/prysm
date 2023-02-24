@@ -6,12 +6,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 )
 
 var _ Scorer = (*BlockProviderScorer)(nil)
@@ -178,13 +178,13 @@ func (s *BlockProviderScorer) processedBlocks(pid peer.ID) uint64 {
 // Block provider scorer cannot guarantee that lower score of a peer is indeed a sign of a bad peer.
 // Therefore this scorer never marks peers as bad, and relies on scores to probabilistically sort
 // out low-scorers (see WeightSorted method).
-func (s *BlockProviderScorer) IsBadPeer(_ peer.ID) bool {
+func (_ *BlockProviderScorer) IsBadPeer(_ peer.ID) bool {
 	return false
 }
 
 // BadPeers returns the peers that are considered bad.
 // No peers are considered bad by block providers scorer.
-func (s *BlockProviderScorer) BadPeers() []peer.ID {
+func (_ *BlockProviderScorer) BadPeers() []peer.ID {
 	return []peer.ID{}
 }
 

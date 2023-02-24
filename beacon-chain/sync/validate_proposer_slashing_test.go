@@ -10,22 +10,22 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.BeaconState) {
@@ -44,8 +44,8 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	currentSlot := types.Slot(0)
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	currentSlot := primitives.Slot(0)
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot,
 		Balances:   validatorBalances,
@@ -76,7 +76,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			BodyRoot:      someRoot[:],
 		},
 	}
-	header1.Signature, err = signing.ComputeDomainAndSign(state, coreTime.CurrentEpoch(state), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	header1.Signature, err = signing.ComputeDomainAndSign(st, coreTime.CurrentEpoch(st), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
 	require.NoError(t, err)
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
@@ -88,23 +88,23 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			BodyRoot:      someRoot2[:],
 		},
 	}
-	header2.Signature, err = signing.ComputeDomainAndSign(state, coreTime.CurrentEpoch(state), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	header2.Signature, err = signing.ComputeDomainAndSign(st, coreTime.CurrentEpoch(st), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
 	require.NoError(t, err)
 
 	slashing := &ethpb.ProposerSlashing{
 		Header_1: header1,
 		Header_2: header2,
 	}
-	val, err := state.ValidatorAtIndex(1)
+	val, err := st.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	val.PublicKey = privKey.PublicKey().Marshal()
-	require.NoError(t, state.UpdateValidatorAtIndex(1, val))
+	require.NoError(t, st.UpdateValidatorAtIndex(1, val))
 
 	b := make([]byte, 32)
 	_, err = rand.Read(b)
 	require.NoError(t, err)
 
-	return slashing, state
+	return slashing, st
 }
 
 func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
@@ -146,11 +146,11 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
-	slashing, state := setupValidProposerSlashing(t)
+	slashing, st := setupValidProposerSlashing(t)
 	slashing.Header_1.Header.Slot = 100000000
-	err := state.SetJustificationBits(bitfield.Bitvector4{0x0F}) // 0b1111
+	err := st.SetJustificationBits(bitfield.Bitvector4{0x0F}) // 0b1111
 	require.NoError(t, err)
-	err = state.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 0, Root: []byte{}})
+	err = st.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 0, Root: []byte{}})
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
@@ -158,7 +158,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: state},
+			chain:       &mock.ChainService{State: st},
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenProposerSlashingCache: lruwrpr.New(10),

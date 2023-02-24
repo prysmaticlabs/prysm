@@ -1,18 +1,18 @@
 package epoch_processing
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -34,7 +34,7 @@ func RunEpochOperationTest(
 	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preBeaconState, err := stateAltair.InitializeFromProto(preBeaconStateBase)
+	preBeaconState, err := state_native.InitializeFromProtoAltair(preBeaconStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -50,7 +50,7 @@ func RunEpochOperationTest(
 	if postSSZExists {
 		require.NoError(t, err)
 
-		postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath) // #nosec G304
+		postBeaconStateFile, err := os.ReadFile(postSSZFilepath) // #nosec G304
 		require.NoError(t, err)
 		postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 		require.NoError(t, err, "Failed to decompress")
@@ -59,10 +59,10 @@ func RunEpochOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		pbState, err := stateAltair.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
+			diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
 			t.Log(diff)
 			t.Fatal("Post state does not match expected")
 		}

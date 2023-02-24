@@ -2,16 +2,16 @@ package prometheus_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -73,7 +73,7 @@ func TestLogrusCollector(t *testing.T) {
 func metrics(t *testing.T) []string {
 	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", addr))
 	require.NoError(t, err)
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	return strings.Split(string(body), "\n")
 }

@@ -7,12 +7,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 var (
@@ -62,12 +62,67 @@ var (
 			Help: "Count the number of times a node resyncs.",
 		},
 	)
-
+	duplicatesRemovedCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_duplicates_removed",
+			Help: "Count the number of times a duplicate signature set has been removed.",
+		},
+	)
+	numberOfSetsAggregated = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "number_of_sets_aggregated",
+			Help:    "Count the number of times different sets have been successfully aggregated in a batch.",
+			Buckets: []float64{10, 50, 100, 200, 400, 800, 1600, 3200},
+		},
+	)
+	rpcBlocksByRangeResponseLatency = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "rpc_blocks_by_range_response_latency_milliseconds",
+			Help:    "Captures total time to respond to rpc blocks by range requests in a milliseconds distribution",
+			Buckets: []float64{5, 10, 50, 100, 150, 250, 500, 1000, 2000},
+		},
+	)
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
 			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
-			Buckets: []float64{250, 500, 1000, 1500, 2000, 4000, 8000, 16000},
+			Buckets: []float64{100, 250, 500, 750, 1000, 1500, 2000, 4000, 8000, 12000, 16000, 20000, 24000},
+		},
+	)
+	arrivalBlockPropagationGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "block_arrival_latency_milliseconds_gauge",
+		Help: "Captures blocks propagation time. Blocks arrival in milliseconds",
+	})
+
+	// Attestation processing granular error tracking.
+	attBadBlockCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_block_total",
+		Help: "Increased when a gossip attestation references a bad block",
+	})
+	attBadLmdConsistencyCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_lmd_consistency_total",
+		Help: "Increased when a gossip attestation has bad LMD GHOST consistency",
+	})
+	attBadSelectionProofCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_selection_proof_total",
+		Help: "Increased when a gossip attestation has a bad selection proof",
+	})
+	attBadSignatureBatchCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_signature_batch_total",
+		Help: "Increased when a gossip attestation has a bad signature batch",
+	})
+
+	// Attestation and block gossip verification performance.
+	aggregateAttestationVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_aggregate_attestation_verification_milliseconds",
+			Help: "Time to verify gossiped attestations",
+		},
+	)
+	blockVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_block_verification_milliseconds",
+			Help: "Time to verify gossiped blocks",
 		},
 	)
 )

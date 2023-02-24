@@ -5,11 +5,11 @@ import (
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 )
 
 // RunInactivityUpdatesTest executes "epoch_processing/inactivity_updates" tests.
@@ -18,6 +18,9 @@ func RunInactivityUpdatesTest(t *testing.T, config string) {
 
 	testPath := "epoch_processing/inactivity_updates/pyspec_tests"
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", testPath)
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "altair", testPath)
+	}
 	for _, folder := range testFolders {
 		helpers.ClearCache()
 		t.Run(folder.Name(), func(t *testing.T) {

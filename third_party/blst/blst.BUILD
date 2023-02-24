@@ -1,6 +1,17 @@
 load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
+config_setting(
+    name = "blst_modern",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    values = {
+        "define": "blst_modern=true",
+    },
+)
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -12,7 +23,6 @@ go_library(
         "-D__BLST_CGO__",
         "-Ibindings",
         "-Isrc",
-        "-D__BLST_PORTABLE__",
         "-O",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
@@ -20,6 +30,11 @@ go_library(
             "-D__ADX__",
         ],
         "//conditions:default": [],
+    }) + select({
+        "//conditions:default": [
+            "-D__BLST_PORTABLE__",
+        ],
+        ":blst_modern": [],
     }),
     cdeps = [":blst"],
     importpath = "github.com/supranational/blst/bindings/go",
@@ -71,7 +86,6 @@ cc_library(
         "build/assembly.S",
     ],
     copts = [
-            "-D__BLST_PORTABLE__",
             "-O",
     ] + select({
         "@io_bazel_rules_go//go/platform:amd64": [
@@ -79,6 +93,11 @@ cc_library(
             "-D__ADX__",
         ],
         "//conditions:default": [],
+    }) + select({
+        "//conditions:default": [
+            "-D__BLST_PORTABLE__",
+        ],
+        ":blst_modern": [],
     }),
     deps = [":asm_hdrs"],
     linkstatic = True,

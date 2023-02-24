@@ -18,12 +18,12 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/status-im/keycard-go/hexutils"
 	bolt "go.etcd.io/bbolt"
@@ -66,7 +66,7 @@ type modifiedState struct {
 
 // used to parallelize state summary bucket processing
 type modifiedStateSummary struct {
-	slot      types.Slot
+	slot      primitives.Slot
 	root      []byte
 	key       []byte
 	valueSize uint64
@@ -87,7 +87,7 @@ func main() {
 	// check if the database file is present.
 	dbNameWithPath := filepath.Join(*datadir, *dbName)
 	if _, err := os.Stat(dbNameWithPath); os.IsNotExist(err) {
-		log.Fatalf("could not locate database file : %s, %v", dbNameWithPath, err)
+		log.WithError(err).WithField("path", dbNameWithPath).Fatal("could not locate database file")
 	}
 
 	switch *command {
@@ -104,7 +104,7 @@ func main() {
 	case "migration-check":
 		destDbNameWithPath := filepath.Join(*destDatadir, *dbName)
 		if _, err := os.Stat(destDbNameWithPath); os.IsNotExist(err) {
-			log.Fatalf("could not locate destination database file : %s, %v", destDbNameWithPath, err)
+			log.WithError(err).WithField("path", destDbNameWithPath).Fatal("could not locate database file")
 		}
 		switch *migrationName {
 		case "validator-entries":
@@ -116,11 +116,10 @@ func main() {
 }
 
 func printBucketStats(dbNameWithPath string) {
-	ctx := context.Background()
 	groupSize := uint64(128)
 	doneC := make(chan bool)
 	statsC := make(chan *bucketStat, groupSize)
-	go readBucketStat(ctx, dbNameWithPath, statsC)
+	go readBucketStat(dbNameWithPath, statsC)
 	go printBucketStat(statsC, doneC)
 	<-doneC
 }
@@ -132,16 +131,16 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 
 	// create a new KV Store.
 	dbDirectory := filepath.Dir(dbNameWithPath)
-	db, openErr := kv.NewKVStore(context.Background(), dbDirectory, &kv.Config{})
+	db, openErr := kv.NewKVStore(context.Background(), dbDirectory)
 	if openErr != nil {
-		log.Fatalf("could not open db, %v", openErr)
+		log.WithError(openErr).Fatal("could not open db")
 	}
 
 	// don't forget to close it when ejecting out of this function.
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
-			log.Fatalf("could not close db, %v", closeErr)
+			log.WithError(closeErr).Fatal("could not close db")
 		}
 	}()
 
@@ -163,30 +162,33 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 	<-doneC
 }
 
-func readBucketStat(ctx context.Context, dbNameWithPath string, statsC chan<- *bucketStat) {
+func readBucketStat(dbNameWithPath string, statsC chan<- *bucketStat) {
 	// open the raw database file. If the file is busy, then exit.
 	db, openErr := bolt.Open(dbNameWithPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if openErr != nil {
-		log.Fatalf("could not open db to show bucket stats, %v", openErr)
+		log.WithError(openErr).Fatal("could not open db to show bucket stats")
 	}
 
 	// make sure we close the database before ejecting out of this function.
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
-			log.Fatalf("could not close db after showing bucket stats, %v", closeErr)
+			log.WithError(closeErr).Fatalf("could not close db after showing bucket stats")
 		}
 	}()
 
 	// get a list of all the existing buckets.
 	var buckets []string
+	var bucketsMut sync.Mutex
 	if viewErr1 := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, buc *bolt.Bucket) error {
+			bucketsMut.Lock()
 			buckets = append(buckets, string(name))
+			bucketsMut.Unlock()
 			return nil
 		})
 	}); viewErr1 != nil {
-		log.Fatalf("could not read buckets from db while getting list of buckets: %v", viewErr1)
+		log.WithError(viewErr1).Fatal("could not read buckets from db while getting list of buckets")
 	}
 
 	// for every bucket, calculate the stats and send it for printing.
@@ -324,9 +326,9 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("---- row = %04d, slot = %8d, epoch = %8d, key = %s ----", mst.rowCount, st.Slot(), st.Slot()/params.BeaconConfig().SlotsPerEpoch, hexutils.BytesToHex(mst.key))
 		log.Infof("key                           : %s", hexutils.BytesToHex(mst.key))
 		log.Infof("value                         : compressed size = %s", humanize.Bytes(mst.valueSize))
-		t := time.Unix(int64(st.GenesisTime()), 0)
+		t := time.Unix(int64(st.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
 		log.Infof("genesis_time                  : %s", t.Format(time.UnixDate))
-		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(st.GenesisValidatorRoot()))
+		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(st.GenesisValidatorsRoot()))
 		log.Infof("slot                          : %d", st.Slot())
 		log.Infof("fork                          : previous_version = %b,  current_version = %b", st.Fork().PreviousVersion, st.Fork().CurrentVersion)
 		log.Infof("latest_block_header           : sizeSSZ = %s", humanize.Bytes(uint64(st.LatestBlockHeader().SizeSSZ())))
@@ -334,8 +336,13 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("block_roots                   : size = %s, count =  %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfByteList(st.StateRoots())
 		log.Infof("state_roots                   : size = %s, count = %d", humanize.Bytes(size), count)
-		size, count = sizeAndCountOfByteList(st.HistoricalRoots())
-		log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
+		roots, err := st.HistoricalRoots()
+		if err != nil {
+			log.WithError(err).Error("could not get historical roots")
+		} else {
+			size, count = sizeAndCountOfByteList(roots)
+			log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
+		}
 		log.Infof("eth1_data                     : sizeSSZ = %s", humanize.Bytes(uint64(st.Eth1Data().SizeSSZ())))
 		size, count = sizeAndCountGeneric(st.Eth1DataVotes(), nil)
 		log.Infof("eth1_data_votes               : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
@@ -352,7 +359,8 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("previous_epoch_attestations   : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountGeneric(st.CurrentEpochAttestations())
 		log.Infof("current_epoch_attestations    : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
-		log.Infof("justification_bits            : size =  %s, count = %d", humanize.Bytes(st.JustificationBits().Len()), st.JustificationBits().Count())
+		justificationBits := st.JustificationBits()
+		log.Infof("justification_bits            : size =  %s, count = %d", humanize.Bytes(justificationBits.Len()), justificationBits.Count())
 		log.Infof("previous_justified_checkpoint : sizeSSZ = %s", humanize.Bytes(uint64(st.PreviousJustifiedCheckpoint().SizeSSZ())))
 		log.Infof("current_justified_checkpoint  : sizeSSZ = %s", humanize.Bytes(uint64(st.CurrentJustifiedCheckpoint().SizeSSZ())))
 		log.Infof("finalized_checkpoint          : sizeSSZ = %s", humanize.Bytes(uint64(st.FinalizedCheckpoint().SizeSSZ())))
@@ -379,19 +387,19 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 
 	// create the source and destination KV stores.
 	sourceDbDirectory := filepath.Dir(dbNameWithPath)
-	sourceDB, openErr := kv.NewKVStore(context.Background(), sourceDbDirectory, &kv.Config{})
+	sourceDB, openErr := kv.NewKVStore(context.Background(), sourceDbDirectory)
 	if openErr != nil {
-		log.Fatalf("could not open sourceDB: %v", openErr)
+		log.WithError(openErr).Fatal("could not open sourceDB")
 	}
 
 	destinationDbDirectory := filepath.Dir(destDbNameWithPath)
-	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory, &kv.Config{})
+	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory)
 	if openErr != nil {
 		// dirty hack alert: Ignore this prometheus error as we are opening two DB with same metric name
 		// if you want to avoid this then we should pass the metric name when opening the DB which touches
 		// too many places.
 		if openErr.Error() != "duplicate metrics collector registration attempted" {
-			log.Fatalf("could not open sourceDB, %v", openErr)
+			log.WithError(openErr).Fatalf("could not open sourceDB")
 		}
 	}
 
@@ -399,13 +407,13 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	defer func() {
 		closeErr := sourceDB.Close()
 		if closeErr != nil {
-			log.Fatalf("could not close sourceDB: %v", closeErr)
+			log.WithError(closeErr).Fatal("could not close sourceDB")
 		}
 	}()
 	defer func() {
 		closeErr := destDB.Close()
 		if closeErr != nil {
-			log.Fatalf("could not close sourceDB: %v", closeErr)
+			log.WithError(closeErr).Fatal("could not close sourceDB")
 		}
 	}()
 
@@ -414,11 +422,11 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	for rowCount, key := range sourceStateKeys[910:] {
 		sourceState, stateErr := sourceDB.State(ctx, bytesutil.ToBytes32(key))
 		if stateErr != nil {
-			log.Fatalf("could not get from source db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
+			log.WithError(stateErr).WithField("key", hexutils.BytesToHex(key)).Fatalf("could not get from source db, the state for key")
 		}
 		destinationState, stateErr := destDB.State(ctx, bytesutil.ToBytes32(key))
 		if stateErr != nil {
-			log.Fatalf("could not get destination db, the state for key : %s, %v", hexutils.BytesToHex(key), stateErr)
+			log.WithError(stateErr).WithField("key", hexutils.BytesToHex(key)).Fatalf("could not get from destination db, the state for key")
 		}
 		if destinationState == nil {
 			log.Infof("could not find state in migrated DB: index = %d, slot = %d, epoch = %d,  numOfValidators = %d, key = %s",
@@ -432,13 +440,13 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 		}
 		sourceStateHash, err := sourceState.HashTreeRoot(ctx)
 		if err != nil {
-			log.Fatalf("could not find hash of source state: %v", err)
+			log.WithError(err).Fatal("could not find hash of source state")
 		}
-		destinationSatteHash, err := destinationState.HashTreeRoot(ctx)
+		destinationStateHash, err := destinationState.HashTreeRoot(ctx)
 		if err != nil {
-			log.Fatalf("could not find hash of destination state: %v", err)
+			log.WithError(err).Fatal("could not find hash of destination state")
 		}
-		if !bytes.Equal(sourceStateHash[:], destinationSatteHash[:]) {
+		if !bytes.Equal(sourceStateHash[:], destinationStateHash[:]) {
 			log.Fatalf("state mismatch : key = %s", hexutils.BytesToHex(key))
 		}
 	}
@@ -449,14 +457,14 @@ func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([]
 	// open the raw database file. If the file is busy, then exit.
 	db, openErr := bolt.Open(dbNameWithPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if openErr != nil {
-		log.Fatalf("could not open db while getting keys of a bucket, %v", openErr)
+		log.WithError(openErr).Fatal("could not open db while getting keys of a bucket")
 	}
 
 	// make sure we close the database before ejecting out of this function.
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
-			log.Fatalf("could not close db while getting keys of a bucket, %v", closeErr)
+			log.WithError(closeErr).Fatal("could not close db while getting keys of a bucket")
 		}
 	}()
 
@@ -481,7 +489,7 @@ func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([]
 		}
 		return nil
 	}); viewErr != nil {
-		log.Fatalf("could not read keys of bucket from db: %v", viewErr)
+		log.WithError(viewErr).Fatal("could not read keys of bucket from db")
 	}
 	return keys, sizes
 }

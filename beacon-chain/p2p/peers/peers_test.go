@@ -1,17 +1,17 @@
 package peers_test
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/sirupsen/logrus"
 )
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	resetCfg := features.InitWithReset(&features.Flags{
 		EnablePeerScorer: true,

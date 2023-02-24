@@ -1,12 +1,12 @@
 package kv
 
 import (
-	"context"
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 // deprecatedHistoryData stores the needed data to confirm if an attestation is slashable
 // or repeated.
 type deprecatedHistoryData struct {
-	Source      types.Epoch
+	Source      primitives.Epoch
 	SigningRoot []byte
 }
 
@@ -57,16 +57,15 @@ func emptyHistoryData() *deprecatedHistoryData {
 
 // newDeprecatedAttestingHistory creates a new encapsulated attestation history byte array
 // sized by the latest epoch written.
-func newDeprecatedAttestingHistory(target types.Epoch) deprecatedEncodedAttestingHistory {
+func newDeprecatedAttestingHistory(target primitives.Epoch) deprecatedEncodedAttestingHistory {
 	relativeTarget := target % params.BeaconConfig().WeakSubjectivityPeriod
 	historyDataSize := (relativeTarget + 1) * historySize
 	arraySize := latestEpochWrittenSize + historyDataSize
 	en := make(deprecatedEncodedAttestingHistory, arraySize)
 	enc := en
-	ctx := context.Background()
 	var err error
-	for i := types.Epoch(0); i <= target%params.BeaconConfig().WeakSubjectivityPeriod; i++ {
-		enc, err = enc.setTargetData(ctx, i, emptyHistoryData())
+	for i := primitives.Epoch(0); i <= target%params.BeaconConfig().WeakSubjectivityPeriod; i++ {
+		enc, err = enc.setTargetData(i, emptyHistoryData())
 		if err != nil {
 			log.WithError(err).Error("Failed to set empty target data")
 		}
@@ -74,17 +73,14 @@ func newDeprecatedAttestingHistory(target types.Epoch) deprecatedEncodedAttestin
 	return enc
 }
 
-func (dh deprecatedEncodedAttestingHistory) getLatestEpochWritten(ctx context.Context) (types.Epoch, error) {
+func (dh deprecatedEncodedAttestingHistory) getLatestEpochWritten() (primitives.Epoch, error) {
 	if err := dh.assertSize(); err != nil {
 		return 0, err
 	}
-	return types.Epoch(bytesutil.FromBytes8(dh[:latestEpochWrittenSize])), nil
+	return primitives.Epoch(bytesutil.FromBytes8(dh[:latestEpochWrittenSize])), nil
 }
 
-func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(
-	ctx context.Context,
-	latestEpochWritten types.Epoch,
-) (deprecatedEncodedAttestingHistory, error) {
+func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(latestEpochWritten primitives.Epoch) (deprecatedEncodedAttestingHistory, error) {
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
@@ -92,7 +88,7 @@ func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(
 	return dh, nil
 }
 
-func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, target types.Epoch) (*deprecatedHistoryData, error) {
+func (dh deprecatedEncodedAttestingHistory) getTargetData(target primitives.Epoch) (*deprecatedHistoryData, error) {
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
@@ -103,18 +99,14 @@ func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, t
 		return nil, nil
 	}
 	history := &deprecatedHistoryData{}
-	history.Source = types.Epoch(bytesutil.FromBytes8(dh[cursor : cursor+sourceSize]))
-	sr := make([]byte, 32)
+	history.Source = primitives.Epoch(bytesutil.FromBytes8(dh[cursor : cursor+sourceSize]))
+	sr := make([]byte, fieldparams.RootLength)
 	copy(sr, dh[cursor+sourceSize:cursor+historySize])
 	history.SigningRoot = sr
 	return history, nil
 }
 
-func (dh deprecatedEncodedAttestingHistory) setTargetData(
-	ctx context.Context,
-	target types.Epoch,
-	historyData *deprecatedHistoryData,
-) (deprecatedEncodedAttestingHistory, error) {
+func (dh deprecatedEncodedAttestingHistory) setTargetData(target primitives.Epoch, historyData *deprecatedHistoryData) (deprecatedEncodedAttestingHistory, error) {
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}

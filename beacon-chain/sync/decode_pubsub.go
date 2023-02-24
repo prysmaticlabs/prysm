@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"strings"
 
-	ssz "github.com/ferranbt/fastssz"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -61,7 +61,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 }
 
 // Replaces our fork digest with the formatter.
-func (s *Service) replaceForkDigest(topic string) (string, error) {
+func (_ *Service) replaceForkDigest(topic string) (string, error) {
 	subStrings := strings.Split(topic, "/")
 	if len(subStrings) != 4 {
 		return "", errInvalidTopic

@@ -6,21 +6,21 @@ import (
 	"fmt"
 	"math"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	attv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	attv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,12 +29,12 @@ func NewAttestation() *ethpb.Attestation {
 	return &ethpb.Attestation{
 		AggregationBits: bitfield.Bitlist{0b1101},
 		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: make([]byte, 32),
+			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 			Source: &ethpb.Checkpoint{
-				Root: make([]byte, 32),
+				Root: make([]byte, fieldparams.RootLength),
 			},
 			Target: &ethpb.Checkpoint{
-				Root: make([]byte, 32),
+				Root: make([]byte, fieldparams.RootLength),
 			},
 		},
 		Signature: make([]byte, 96),
@@ -49,7 +49,7 @@ func NewAttestation() *ethpb.Attestation {
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(
-	bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot types.Slot, randomRoot bool,
+	bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot primitives.Slot, randomRoot bool,
 ) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
@@ -61,7 +61,7 @@ func GenerateAttestations(
 	}
 	currentEpoch := slots.ToEpoch(slot)
 
-	targetRoot := make([]byte, 32)
+	targetRoot := make([]byte, fieldparams.RootLength)
 	var headRoot []byte
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
@@ -69,25 +69,45 @@ func GenerateAttestations(
 		var headState state.BeaconState
 		switch bState.Version() {
 		case version.Phase0:
-			pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStatePhase0(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := v1.InitializeFromProtoUnsafe(pbState)
+			genState, err := state_native.InitializeFromProtoUnsafePhase0(pbState)
 			if err != nil {
 				return nil, err
 			}
-			headState = state.BeaconState(genState)
+			headState = genState
 		case version.Altair:
-			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateAltair(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := v2.InitializeFromProtoUnsafe(pbState)
+			genState, err := state_native.InitializeFromProtoUnsafeAltair(pbState)
 			if err != nil {
 				return nil, err
 			}
-			headState = state.BeaconState(genState)
+			headState = genState
+		case version.Bellatrix:
+			pbState, err := state_native.ProtobufBeaconStateBellatrix(bState.ToProto())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := state_native.InitializeFromProtoUnsafeBellatrix(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = genState
+		case version.Capella:
+			pbState, err := state_native.ProtobufBeaconStateCapella(bState.ToProto())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := state_native.InitializeFromProtoUnsafeCapella(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = genState
 		default:
 			return nil, errors.New("state type isn't supported")
 		}
@@ -112,7 +132,7 @@ func GenerateAttestations(
 	}
 	if randomRoot {
 		randGen := rand.NewDeterministicGenerator()
-		b := make([]byte, 32)
+		b := make([]byte, fieldparams.RootLength)
 		_, err := randGen.Read(b)
 		if err != nil {
 			return nil, err
@@ -150,11 +170,11 @@ func GenerateAttestations(
 		)
 	}
 
-	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
+	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
-	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot && uint64(c) < numToGen; c++ {
+	for c := primitives.CommitteeIndex(0); uint64(c) < committeesPerSlot && uint64(c) < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, slot, c)
 		if err != nil {
 			return nil, err
@@ -238,19 +258,19 @@ func HydrateV1Attestation(a *attv1.Attestation) *attv1.Attestation {
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
 	if d.BeaconBlockRoot == nil {
-		d.BeaconBlockRoot = make([]byte, 32)
+		d.BeaconBlockRoot = make([]byte, fieldparams.RootLength)
 	}
 	if d.Target == nil {
 		d.Target = &ethpb.Checkpoint{}
 	}
 	if d.Target.Root == nil {
-		d.Target.Root = make([]byte, 32)
+		d.Target.Root = make([]byte, fieldparams.RootLength)
 	}
 	if d.Source == nil {
 		d.Source = &ethpb.Checkpoint{}
 	}
 	if d.Source.Root == nil {
-		d.Source.Root = make([]byte, 32)
+		d.Source.Root = make([]byte, fieldparams.RootLength)
 	}
 	return d
 }
@@ -259,19 +279,19 @@ func HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateV1AttestationData(d *attv1.AttestationData) *attv1.AttestationData {
 	if d.BeaconBlockRoot == nil {
-		d.BeaconBlockRoot = make([]byte, 32)
+		d.BeaconBlockRoot = make([]byte, fieldparams.RootLength)
 	}
 	if d.Target == nil {
 		d.Target = &attv1.Checkpoint{}
 	}
 	if d.Target.Root == nil {
-		d.Target.Root = make([]byte, 32)
+		d.Target.Root = make([]byte, fieldparams.RootLength)
 	}
 	if d.Source == nil {
 		d.Source = &attv1.Checkpoint{}
 	}
 	if d.Source.Root == nil {
-		d.Source.Root = make([]byte, 32)
+		d.Source.Root = make([]byte, fieldparams.RootLength)
 	}
 	return d
 }

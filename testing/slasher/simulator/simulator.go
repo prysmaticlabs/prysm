@@ -2,21 +2,23 @@ package simulator
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,13 +33,14 @@ type ServiceConfig struct {
 	HeadStateFetcher            blockchain.HeadFetcher
 	StateGen                    stategen.StateManager
 	SlashingsPool               slashings.PoolManager
-	PrivateKeysByValidatorIndex map[types.ValidatorIndex]bls.SecretKey
+	PrivateKeysByValidatorIndex map[primitives.ValidatorIndex]bls.SecretKey
+	SyncChecker                 sync.Checker
 }
 
 // Parameters for a slasher simulator.
 type Parameters struct {
 	SecondsPerSlot         uint64
-	SlotsPerEpoch          types.Slot
+	SlotsPerEpoch          primitives.Slot
 	AggregationPercent     float64
 	ProposerSlashingProbab float64
 	AttesterSlashingProbab float64
@@ -90,6 +93,7 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 		AttestationStateFetcher: srvConfig.AttestationStateFetcher,
 		StateGen:                srvConfig.StateGen,
 		SlashingPoolInserter:    srvConfig.SlashingsPool,
+		SyncChecker:             srvConfig.SyncChecker,
 	})
 	if err != nil {
 		return nil, err
@@ -121,8 +125,15 @@ func (s *Simulator) Start() {
 	config := params.BeaconConfig().Copy()
 	config.SecondsPerSlot = s.srvConfig.Params.SecondsPerSlot
 	config.SlotsPerEpoch = s.srvConfig.Params.SlotsPerEpoch
-	params.OverrideBeaconConfig(config)
-	defer params.OverrideBeaconConfig(params.BeaconConfig())
+	undo, err := params.SetActiveWithUndo(config)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := undo(); err != nil {
+			panic(err)
+		}
+	}()
 
 	// Start slasher in the background.
 	go s.slasher.Start()
@@ -132,8 +143,8 @@ func (s *Simulator) Start() {
 	time.Sleep(time.Second)
 	s.genesisTime = time.Now()
 	s.srvConfig.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.ChainStarted,
-		Data: &statefeed.ChainStartedData{StartTime: s.genesisTime},
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{StartTime: s.genesisTime},
 	})
 
 	// We simulate blocks and attestations for N epochs.
@@ -157,7 +168,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			totalEpochs := types.Epoch(s.srvConfig.Params.NumEpochs)
+			totalEpochs := primitives.Epoch(s.srvConfig.Params.NumEpochs)
 			if slots.ToEpoch(slot) >= totalEpochs {
 				return
 			}
@@ -193,7 +204,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 
 			atts, attSlashings, err := s.generateAttestationsForSlot(ctx, slot)
 			if err != nil {
-				log.WithError(err).Fatal("Could not generate block headers for slot")
+				log.WithError(err).Fatal("Could not generate attestations for slot")
 			}
 			log.WithFields(logrus.Fields{
 				"numAtts":      len(atts),
@@ -256,10 +267,12 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 	for slashingRoot, slashing := range s.sentAttesterSlashings {
 		if _, ok := detectedAttesterSlashings[slashingRoot]; !ok {
 			log.WithFields(logrus.Fields{
-				"targetEpoch":     slashing.Attestation_1.Data.Target.Epoch,
-				"prevTargetEpoch": slashing.Attestation_2.Data.Target.Epoch,
-				"sourceEpoch":     slashing.Attestation_1.Data.Source.Epoch,
-				"prevSourceEpoch": slashing.Attestation_2.Data.Source.Epoch,
+				"targetEpoch":         slashing.Attestation_1.Data.Target.Epoch,
+				"prevTargetEpoch":     slashing.Attestation_2.Data.Target.Epoch,
+				"sourceEpoch":         slashing.Attestation_1.Data.Source.Epoch,
+				"prevSourceEpoch":     slashing.Attestation_2.Data.Source.Epoch,
+				"prevBeaconBlockRoot": fmt.Sprintf("%#x", slashing.Attestation_1.Data.BeaconBlockRoot),
+				"newBeaconBlockRoot":  fmt.Sprintf("%#x", slashing.Attestation_2.Data.BeaconBlockRoot),
 			}).Errorf("Did not detect simulated attester slashing")
 			continue
 		}

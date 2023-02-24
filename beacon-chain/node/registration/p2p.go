@@ -1,11 +1,11 @@
 package registration
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v2"
 )
@@ -42,7 +42,7 @@ func P2PPreregistration(cliCtx *cli.Context) (bootstrapNodeAddrs []string, dataD
 }
 
 func readbootNodes(fileName string) ([]string, error) {
-	fileContent, err := ioutil.ReadFile(fileName) // #nosec G304
+	fileContent, err := os.ReadFile(fileName) // #nosec G304
 	if err != nil {
 		return nil, err
 	}

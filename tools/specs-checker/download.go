@@ -3,10 +3,11 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 
 	"github.com/urfave/cli/v2"
@@ -39,7 +40,7 @@ func download(cliCtx *cli.Context) error {
 
 func getAndSaveFile(specDocUrl, outFilePath string) error {
 	// Create output file.
-	f, err := os.Create(outFilePath)
+	f, err := os.Create(filepath.Clean(outFilePath))
 	if err != nil {
 		return fmt.Errorf("cannot create output file: %w", err)
 	}
@@ -50,7 +51,7 @@ func getAndSaveFile(specDocUrl, outFilePath string) error {
 	}()
 
 	// Download spec doc.
-	resp, err := http.Get(specDocUrl) /* #nosec G107 */
+	resp, err := http.Get(specDocUrl) // #nosec G107 -- False positive
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,7 @@ func getAndSaveFile(specDocUrl, outFilePath string) error {
 	}()
 
 	// Transform and save spec docs.
-	specDoc, err := ioutil.ReadAll(resp.Body)
+	specDoc, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

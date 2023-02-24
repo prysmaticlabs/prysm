@@ -6,14 +6,15 @@ import (
 	"encoding/binary"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func TestBlockSignature(t *testing.T) {
@@ -47,10 +48,10 @@ func TestRandaoReveal(t *testing.T) {
 
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	assert.NoError(t, err)
-	buf := make([]byte, 32)
+	buf := make([]byte, fieldparams.RootLength)
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	// We make the previous validator's index sign the message instead of the proposer.
-	sszUint := types.SSZUint64(epoch)
+	sszUint := primitives.SSZUint64(epoch)
 	epochSignature, err := signing.ComputeDomainAndSign(beaconState, epoch, &sszUint, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 	require.NoError(t, err)
 

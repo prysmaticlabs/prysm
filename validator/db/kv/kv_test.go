@@ -2,22 +2,23 @@ package kv
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/sirupsen/logrus"
 )
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	m.Run()
 }
 
 // setupDB instantiates and returns a DB instance for the validator client.
-func setupDB(t testing.TB, pubkeys [][48]byte) *Store {
+func setupDB(t testing.TB, pubkeys [][fieldparams.BLSPubkeyLength]byte) *Store {
 	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{
 		PubKeys: pubkeys,
 	})

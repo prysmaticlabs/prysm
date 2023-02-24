@@ -6,9 +6,9 @@ package events
 import (
 	"context"
 
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 )
 
 // Server defines a server implementation of the gRPC events service,

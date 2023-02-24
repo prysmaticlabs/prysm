@@ -6,11 +6,11 @@ import (
 	"math/big"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
@@ -18,30 +18,6 @@ import (
 )
 
 func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
-	if features.Get().EnableGetBlockOptimizations {
-		deposits, atts, err := vs.optimizedPackDepositsAndAttestations(ctx, head, eth1Data)
-		if err != nil {
-			return nil, nil, err
-		}
-		return deposits, atts, nil
-	}
-
-	// Pack ETH1 deposits which have not been included in the beacon chain.
-	deposits, err := vs.deposits(ctx, head, eth1Data)
-	if err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
-	}
-
-	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := vs.packAttestations(ctx, head)
-	if err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
-	}
-
-	return deposits, atts, nil
-}
-
-func (vs *Server) optimizedPackDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
 	eg, egctx := errgroup.WithContext(ctx)
 	var deposits []*ethpb.Deposit
 	var atts []*ethpb.Attestation
@@ -98,7 +74,7 @@ func (vs *Server) deposits(
 		return []*ethpb.Deposit{}, nil
 	}
 
-	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
 		log.Warn("not connected to eth1 node, skip pending deposit insertion")
 		return []*ethpb.Deposit{}, nil
 	}
@@ -109,7 +85,7 @@ func (vs *Server) deposits(
 		return nil, err
 	}
 
-	_, genesisEth1Block := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
+	_, genesisEth1Block := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	if genesisEth1Block.Cmp(canonicalEth1DataHeight) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
@@ -161,9 +137,16 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 
 	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
 	depositTrie = finalizedDeposits.Deposits
-	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
+	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, finalizedDeposits.MerkleTrieIndex, canonicalEth1DataHeight)
 	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
+	if shouldRebuildTrie(canonicalEth1Data.DepositCount, uint64(len(upToEth1DataDeposits))) {
+		log.WithFields(logrus.Fields{
+			"unfinalized deposits": len(upToEth1DataDeposits),
+			"total deposit count":  canonicalEth1Data.DepositCount,
+		}).Warn("Too many unfinalized deposits, building a deposit trie from scratch.")
+		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
+	}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := dep.Data.HashTreeRoot()
 		if err != nil {
@@ -174,10 +157,10 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 		}
 		insertIndex++
 	}
-	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
+	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log a warning here, as the cached trie is invalid.
 	if !valid {
-		log.Warnf("Cached deposit trie is invalid, rebuilding it now: %v", err)
+		log.WithError(err).Warn("Cached deposit trie is invalid, rebuilding it now")
 		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	}
 
@@ -204,20 +187,26 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 		return nil, err
 	}
 
-	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
+	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log an error here, as even with rebuilding the trie, it is still invalid.
 	if !valid {
-		log.Errorf("Rebuilt deposit trie is invalid: %v", err)
+		log.WithError(err).Error("Rebuilt deposit trie is invalid")
 	}
 	return depositTrie, nil
 }
 
 // validate that the provided deposit trie matches up with the canonical eth1 data provided.
-func (vs *Server) validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
+func validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
+	if trie == nil || canonicalEth1Data == nil {
+		return false, errors.New("nil trie or eth1data provided")
+	}
 	if trie.NumOfItems() != int(canonicalEth1Data.DepositCount) {
 		return false, errors.Errorf("wanted the canonical count of %d but received %d", canonicalEth1Data.DepositCount, trie.NumOfItems())
 	}
-	rt := trie.HashTreeRoot()
+	rt, err := trie.HashTreeRoot()
+	if err != nil {
+		return false, err
+	}
 	if !bytes.Equal(rt[:], canonicalEth1Data.DepositRoot) {
 		return false, errors.Errorf("wanted the canonical deposit root of %#x but received %#x", canonicalEth1Data.DepositRoot, rt)
 	}
@@ -234,4 +223,22 @@ func constructMerkleProof(trie *trie.SparseMerkleTrie, index int, deposit *ethpb
 	// property changes during a state transition after a voting period.
 	deposit.Proof = proof
 	return deposit, nil
+}
+
+// This checks whether we should fallback to rebuild the whole deposit trie.
+func shouldRebuildTrie(totalDepCount, unFinalizedDeps uint64) bool {
+	if totalDepCount == 0 || unFinalizedDeps == 0 {
+		return false
+	}
+	// The total number interior nodes hashed in a binary trie would be
+	// x - 1, where x is the total number of leaves of the trie. For simplicity's
+	// sake we assume it as x here as this function is meant as a heuristic rather than
+	// and exact calculation.
+	//
+	// Since the effective_depth = log(x) , the total depth can be represented as
+	// depth = log(x) + k. We can then find the total number of nodes to be hashed by
+	// calculating  y (log(x) + k) , where y is the number of unfinalized deposits. For
+	// the deposit trie, the value of log(x) + k is fixed at 32.
+	unFinalizedCompute := unFinalizedDeps * params.BeaconConfig().DepositContractTreeDepth
+	return unFinalizedCompute > totalDepCount
 }

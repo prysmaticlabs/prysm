@@ -13,7 +13,6 @@ coverage --define=coverage_enabled=1
 
 # Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
 build --host_force_python=PY2
-test --host_force_python=PY2
 run --host_force_python=PY2
 
 # Networking is blocked for tests by default, add "requires-network" tag to your test if networking
@@ -22,15 +21,12 @@ build --sandbox_default_allow_network=false
 
 # Stamp binaries with git information
 build --workspace_status_command=./hack/workspace_status.sh
-build --stamp
 
 # Prevent PATH changes from rebuilding when switching from IDE to command line.
 build --incompatible_strict_action_env
-test --incompatible_strict_action_env
 run --incompatible_strict_action_env
 
 build --define blst_disabled=false
-test --define blst_disabled=false
 run --define blst_disabled=false
 
 build:blst_disabled --define blst_disabled=true
@@ -41,13 +37,14 @@ build:minimal --@io_bazel_rules_go//go/config:tags=minimal
 
 # Release flags
 build:release --compilation_mode=opt
-build:release --config=llvm
+build:release --stamp
 
 # LLVM compiler for building C/C++ dependencies.
-build:llvm --crosstool_top=@llvm_toolchain//:toolchain
 build:llvm --define compiler=llvm
 build:llvm --copt -fno-sanitize=vptr,function
 build:llvm --linkopt -fno-sanitize=vptr,function
+# --incompatible_enable_cc_toolchain_resolution not needed after this issue is closed https://github.com/bazelbuild/bazel/issues/7260
+build:llvm --incompatible_enable_cc_toolchain_resolution
 
 build:asan --copt -fsanitize=address,undefined
 build:asan --copt -fno-omit-frame-pointer
@@ -62,20 +59,7 @@ build:llvm-asan --config=llvm
 build:llvm-asan --config=asan
 build:llvm-asan --linkopt -fuse-ld=ld.lld
 
-build:fuzz --define=gotags=libfuzzer
-build:fuzz --config=llvm-asan
-build:fuzz --copt=-fsanitize=fuzzer-no-link
-build:fuzz --linkopt=-fsanitize=fuzzer
-build:fuzz --copt=-fno-omit-frame-pointer
-build:fuzz --define=FUZZING_ENGINE=libfuzzer
-build:fuzz --copt=-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-build:fuzz --linkopt -Wl,--no-as-needed
-build:fuzz --define=gc_goopts=-d=libfuzzer,checkptr
-build:fuzz --run_under=//tools:fuzz_wrapper
-build:fuzz --compilation_mode=opt
-build:fuzz --define=blst_disabled=true
-
-test:fuzz --local_test_jobs="HOST_CPUS*.5"
+build:fuzz --@io_bazel_rules_go//go/config:tags=fuzz
 
 # Build binary with cgo symbolizer for debugging / profiling.
 build:cgo_symbolizer --config=llvm
@@ -97,6 +81,12 @@ build:linux_amd64 --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64_cgo
 build:osx_amd64 --config=cross
 build:osx_amd64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo
 build:osx_amd64 --compiler=osxcross
+
+# osx_arm64 config for cross compiler toolchain
+build:osx_arm64 --config=cross
+build:osx_arm64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_arm64_cgo
+build:osx_arm64 --compiler=osxcross
+build:osx_arm64 --cpu=aarch64
 
 # windows
 build:windows_amd64 --config=cross
@@ -128,6 +118,10 @@ build:windows_amd64_debug --config=debug
 # osx_amd64 debug config
 build:osx_amd64_debug --config=debug
 build:osx_amd64_debug --config=osx_amd64
+
+# osx_arm64 debug config
+build:osx_arm64_debug --config=debug
+build:osx_arm64_debug --config=osx_arm64
 
 # linux_arm64_debug
 build:linux_arm64_debug --config=linux_arm64
@@ -163,6 +157,10 @@ build:windows_amd64_docker_debug --config=windows_amd64_docker --config=debug
 # osx_amd64 docker sandbox build config
 build:osx_amd64_docker --config=docker-sandbox --config=osx_amd64
 build:osx_amd64_docker_debug --config=osx_amd64_docker --config=debug
+
+# osx_arm64 docker sandbox build config
+build:osx_arm64_docker --config=docker-sandbox --config=osx_arm64
+build:osx_arm64_docker_debug --config=osx_arm64_docker --config=debug
 
 # linux_arm64 docker sandbox build config
 build:linux_arm64_docker --config=docker-sandbox --config=linux_arm64
@@ -230,3 +228,6 @@ build:remote --remote_local_fallback
 
 # Ignore GoStdLib with remote caching
 build --modify_execution_info='GoStdlib.*=+no-remote-cache'
+
+# Set bazel gotag
+build --define gotags=bazel

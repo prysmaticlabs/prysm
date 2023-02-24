@@ -2,17 +2,17 @@ package blocks_test
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 // Beaconfuzz discovered an off by one issue where an attestation could be produced which would pass
@@ -20,7 +20,7 @@ import (
 // valid att.Data.Committee index would be 0, so this is an off by one error.
 // See: https://github.com/sigp/beacon-fuzz/issues/78
 func TestProcessAttestationNoVerifySignature_BeaconFuzzIssue78(t *testing.T) {
-	attData, err := ioutil.ReadFile("testdata/beaconfuzz_78_attestation.ssz")
+	attData, err := os.ReadFile("testdata/beaconfuzz_78_attestation.ssz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestProcessAttestationNoVerifySignature_BeaconFuzzIssue78(t *testing.T) {
 	if err := att.UnmarshalSSZ(attData); err != nil {
 		t.Fatal(err)
 	}
-	stateData, err := ioutil.ReadFile("testdata/beaconfuzz_78_beacon.ssz")
+	stateData, err := os.ReadFile("testdata/beaconfuzz_78_beacon.ssz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestProcessAttestationNoVerifySignature_BeaconFuzzIssue78(t *testing.T) {
 	if err := spb.UnmarshalSSZ(stateData); err != nil {
 		t.Fatal(err)
 	}
-	st, err := v1.InitializeFromProtoUnsafe(spb)
+	st, err := state_native.InitializeFromProtoUnsafePhase0(spb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestVerifyAttestationNoVerifySignature_IncorrectSourceEpoch(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	zeroSig := [96]byte{}
+	var zeroSig [96]byte
 	att.Signature = zeroSig[:]
 
 	err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)

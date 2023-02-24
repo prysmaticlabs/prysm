@@ -10,28 +10,28 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	types "github.com/prysmaticlabs/eth2-types"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.BeaconState) {
-	state, privKeys := util.DeterministicGenesisState(t, 5)
-	vals := state.Validators()
+	s, privKeys := util.DeterministicGenesisState(t, 5)
+	vals := s.Validators()
 	for _, vv := range vals {
-		vv.WithdrawableEpoch = types.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
+		vv.WithdrawableEpoch = primitives.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
 	}
-	require.NoError(t, state.SetValidators(vals))
+	require.NoError(t, s.SetValidators(vals))
 
 	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -39,7 +39,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
+	domain, err := signing.Domain(s.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorsRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err)
@@ -64,13 +64,13 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 	}
 
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
-	require.NoError(t, state.SetSlot(currentSlot))
+	require.NoError(t, s.SetSlot(currentSlot))
 
 	b := make([]byte, 32)
 	_, err = rand.Read(b)
 	require.NoError(t, err)
 
-	return slashing, state
+	return slashing, s
 }
 
 func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
@@ -178,7 +178,7 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
-	slashing, state := setupValidAttesterSlashing(t)
+	slashing, s := setupValidAttesterSlashing(t)
 	slashing.Attestation_1.Data.Target.Epoch = 100000000
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -187,7 +187,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: state},
+			chain:       &mock.ChainService{State: s},
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),

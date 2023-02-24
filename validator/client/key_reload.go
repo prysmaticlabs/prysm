@@ -3,19 +3,21 @@ package client
 import (
 	"context"
 
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
 // HandleKeyReload makes sure the validator keeps operating correctly after a change to the underlying keys.
 // It is also responsible for logging out information about the new state of keys.
-func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) (anyActive bool, err error) {
+func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (anyActive bool, err error) {
 	ctx, span := trace.StartSpan(ctx, "validator.HandleKeyReload")
 	defer span.End()
 
-	statusRequestKeys := make([][]byte, len(newKeys))
-	for i := range newKeys {
-		statusRequestKeys[i] = newKeys[i][:]
+	statusRequestKeys := make([][]byte, len(currentKeys))
+	for i := range currentKeys {
+		statusRequestKeys[i] = currentKeys[i][:]
 	}
 	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &eth.MultipleValidatorStatusRequest{
 		PublicKeys: statusRequestKeys,
@@ -31,7 +33,11 @@ func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) (an
 			index:     resp.Indices[i],
 		}
 	}
-	anyActive = v.checkAndLogValidatorStatus(statuses)
+	vals, err := v.beaconClient.ListValidators(ctx, &eth.ListValidatorsRequest{Active: true, PageSize: 0})
+	if err != nil {
+		return false, errors.Wrap(err, "could not get active validator count")
+	}
+	anyActive = v.checkAndLogValidatorStatus(statuses, uint64(vals.TotalSize))
 	if anyActive {
 		logActiveValidatorStatus(statuses)
 	}

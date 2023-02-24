@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestUpdateValidator_Works(t *testing.T) {
@@ -39,7 +39,7 @@ func TestUpdateValidator_InclusionOnlyCountsPrevEpoch(t *testing.T) {
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true}
 	a := &ethpb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
 
-	// Verify inclusion info doesnt get updated.
+	// Verify inclusion info doesn't get updated.
 	vp = precompute.UpdateValidator(vp, record, []uint64{0}, a, 100)
 	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true, InclusionSlot: e}
 	wantedVp := []*precompute.Validator{wanted}
@@ -67,6 +67,33 @@ func TestUpdateBalance(t *testing.T) {
 		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
 	}
 	pBal := precompute.UpdateBalance(vp, &precompute.Balance{}, version.Phase0)
+	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
+}
+
+func TestUpdateBalanceDifferentVersions(t *testing.T) {
+	vp := []*precompute.Validator{
+		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+	}
+	wantedPBal := &precompute.Balance{
+		ActiveCurrentEpoch:         params.BeaconConfig().EffectiveBalanceIncrement,
+		ActivePrevEpoch:            params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochAttested:       200 * params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochTargetAttested: 200 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochAttested:          params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochTargetAttested:    100 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
+	}
+	pBal := precompute.UpdateBalance(vp, &precompute.Balance{}, version.Bellatrix)
+	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
+
+	pBal = precompute.UpdateBalance(vp, &precompute.Balance{}, version.Capella)
 	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
 }
 
@@ -147,8 +174,8 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	validators := uint64(128)
 	beaconState, _ := util.DeterministicGenesisState(t, validators)

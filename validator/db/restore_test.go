@@ -3,16 +3,15 @@ package db
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -47,7 +46,7 @@ func TestRestore(t *testing.T) {
 
 	assert.NoError(t, Restore(cliCtx))
 
-	files, err := ioutil.ReadDir(restoreDir)
+	files, err := os.ReadDir(restoreDir)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(files))
 	assert.Equal(t, kv.ProtectionDbFileName, files[0].Name())

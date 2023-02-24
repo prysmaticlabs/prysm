@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -73,10 +74,15 @@ func EnterPassword(confirmPassword bool, pr PasswordReader) (string, error) {
 	return passphrase, nil
 }
 
-// ExpandSingleEndpointIfFile expands the path for --http-web3provider if specified as a file.
+// ExpandSingleEndpointIfFile expands the path for --execution-provider if specified as a file.
 func ExpandSingleEndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
 	// Return early if no flag value is set.
 	if !ctx.IsSet(flag.Name) {
+		return nil
+	}
+	// Return early for non-unix operating systems, as there is
+	// no shell path expansion for ipc endpoints on windows.
+	if runtime.GOOS == "windows" {
 		return nil
 	}
 	web3endpoint := ctx.String(flag.Name)
@@ -88,38 +94,10 @@ func ExpandSingleEndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
 	default:
 		web3endpoint, err := file.ExpandPath(ctx.String(flag.Name))
 		if err != nil {
-			return errors.Wrapf(err, "could not expand path for %s", web3endpoint)
+			return errors.Wrapf(err, "could not expand path for %s", ctx.String(flag.Name))
 		}
 		if err := ctx.Set(flag.Name, web3endpoint); err != nil {
 			return errors.Wrapf(err, "could not set %s to %s", flag.Name, web3endpoint)
-		}
-	}
-	return nil
-}
-
-// ExpandWeb3EndpointsIfFile expands the path for --fallback-web3provider if specified as a file.
-func ExpandWeb3EndpointsIfFile(ctx *cli.Context, flags *cli.StringSliceFlag) error {
-	// Return early if no flag value is set.
-	if !ctx.IsSet(flags.Name) {
-		return nil
-	}
-	rawFlags := ctx.StringSlice(flags.Name)
-	for i, rawValue := range rawFlags {
-		switch {
-		case strings.HasPrefix(rawValue, "http://"):
-		case strings.HasPrefix(rawValue, "https://"):
-		case strings.HasPrefix(rawValue, "ws://"):
-		case strings.HasPrefix(rawValue, "wss://"):
-		default:
-			web3endpoint, err := file.ExpandPath(rawValue)
-			if err != nil {
-				return errors.Wrapf(err, "could not expand path for %s", rawValue)
-			}
-			// Given that rawFlags is a pointer this will replace the unexpanded path
-			// with the expanded one. Also there is no easy way to replace the string
-			// slice flag value compared to other flag types. This is why we resort to
-			// replacing it like this.
-			rawFlags[i] = web3endpoint
 		}
 	}
 	return nil

@@ -2,14 +2,14 @@ package keystore
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"testing"
 
 	"github.com/pborman/uuid"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestMarshalAndUnmarshal(t *testing.T) {
@@ -65,7 +65,7 @@ func TestWriteFile(t *testing.T) {
 	err := writeKeyFile(tempDir, testKeystore)
 	require.NoError(t, err)
 
-	keystore, err := ioutil.ReadFile(tempDir)
+	keystore, err := os.ReadFile(tempDir)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(keystore, testKeystore))
 }

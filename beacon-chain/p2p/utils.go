@@ -7,22 +7,20 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
 	"time"
 
-	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/network"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -41,24 +39,8 @@ func SerializeENR(record *enr.Record) (string, error) {
 	if err := record.EncodeRLP(buf); err != nil {
 		return "", errors.Wrap(err, "could not encode ENR record to bytes")
 	}
-	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
+	enrString := base64.RawURLEncoding.EncodeToString(buf.Bytes())
 	return enrString, nil
-}
-
-func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
-	typeAssertedKey := (*ecdsa.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey))
-	typeAssertedKey.Curve = gcrypto.S256() // Temporary hack, so libp2p Secp256k1 is recognized as geth Secp256k1 in disc v5.1.
-	return typeAssertedKey
-}
-
-func convertToInterfacePrivkey(privkey *ecdsa.PrivateKey) crypto.PrivKey {
-	typeAssertedKey := crypto.PrivKey((*crypto.Secp256k1PrivateKey)(privkey))
-	return typeAssertedKey
-}
-
-func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
-	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)(pubkey))
-	return typeAssertedKey
 }
 
 // Determines a private key for p2p networking from the p2p service's
@@ -78,8 +60,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		if err != nil {
 			return nil, err
 		}
-		convertedKey := convertFromInterfacePrivKey(priv)
-		return convertedKey, nil
+		return ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 	}
 	if defaultKeysExist && privateKeyPath == "" {
 		privateKeyPath = defaultKeyPath
@@ -89,7 +70,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 
 // Retrieves a p2p networking private key from a file path.
 func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
-	src, err := ioutil.ReadFile(path) // #nosec G304
+	src, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
@@ -103,7 +84,7 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return convertFromInterfacePrivKey(unmarshalledKey), nil
+	return ecdsaprysm.ConvertFromInterfacePrivKey(unmarshalledKey)
 }
 
 // Retrieves node p2p metadata from a set of configuration values
@@ -135,7 +116,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
 	}
-	src, err := ioutil.ReadFile(metaDataPath) // #nosec G304
+	src, err := os.ReadFile(metaDataPath) // #nosec G304
 	if err != nil {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err
@@ -145,15 +126,6 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 		return nil, err
 	}
 	return wrapper.WrappedMetadataV0(metaData), nil
-}
-
-// Retrieves an external ipv4 address and converts into a libp2p formatted value.
-func ipAddr() net.IP {
-	ip, err := network.ExternalIP()
-	if err != nil {
-		log.Fatalf("Could not get IPv4 address: %v", err)
-	}
-	return net.ParseIP(ip)
 }
 
 // Attempt to dial an address to verify its connectivity

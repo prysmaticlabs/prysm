@@ -3,24 +3,25 @@ package sync
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -39,7 +40,7 @@ func (s *Service) maintainPeerStatuses() {
 				if s.cfg.p2p.Host().Network().Connectedness(id) != network.Connected {
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
 					if err := s.cfg.p2p.Disconnect(id); err != nil {
-						log.Debugf("Error when disconnecting with peer: %v", err)
+						log.WithError(err).Debug("Error when disconnecting with peer")
 					}
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
@@ -79,7 +80,7 @@ func (s *Service) maintainPeerStatuses() {
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers
 // by more than an epoch, in which case we attempt a resync using the initial sync method to catch up.
 func (s *Service) resyncIfBehind() {
-	millisecondsPerEpoch := int64(params.BeaconConfig().SlotsPerEpoch.Mul(1000).Mul(params.BeaconConfig().SecondsPerSlot))
+	millisecondsPerEpoch := params.BeaconConfig().SlotsPerEpoch.Mul(1000).Mul(params.BeaconConfig().SecondsPerSlot)
 	// Run sixteen times per epoch.
 	interval := time.Duration(millisecondsPerEpoch/16) * time.Millisecond
 	async.RunEvery(s.ctx, interval, func() {
@@ -99,7 +100,7 @@ func (s *Service) resyncIfBehind() {
 				numberOfTimesResyncedCounter.Inc()
 				s.clearPendingSlots()
 				if err := s.cfg.initialSync.Resync(); err != nil {
-					log.Errorf("Could not resync chain: %v", err)
+					log.WithError(err).Errorf("Could not resync chain")
 				}
 			}
 		}
@@ -110,7 +111,7 @@ func (s *Service) resyncIfBehind() {
 func (s *Service) shouldReSync() bool {
 	syncedEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot())
 	currentEpoch := slots.ToEpoch(s.cfg.chain.CurrentSlot())
-	prevEpoch := types.Epoch(0)
+	prevEpoch := primitives.Epoch(0)
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}
@@ -131,10 +132,11 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
-		FinalizedRoot:  s.cfg.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch: s.cfg.chain.FinalizedCheckpt().Epoch,
+		FinalizedRoot:  cp.Root,
+		FinalizedEpoch: cp.Epoch,
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.chain.HeadSlot(),
 	}
@@ -150,6 +152,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 
 	code, errMsg, err := ReadStatusCode(stream, s.cfg.p2p.Encoding())
 	if err != nil {
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return err
 	}
 
@@ -159,6 +162,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 	msg := &pb.Status{}
 	if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return err
 	}
 
@@ -260,10 +264,11 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	if err != nil {
 		return err
 	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
-		FinalizedRoot:  s.cfg.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch: s.cfg.chain.FinalizedCheckpt().Epoch,
+		FinalizedRoot:  cp.Root,
+		FinalizedEpoch: cp.Epoch,
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.chain.HeadSlot(),
 	}
@@ -284,11 +289,12 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return p2ptypes.ErrWrongForkDigestVersion
 	}
 	genesis := s.cfg.chain.GenesisTime()
-	finalizedEpoch := s.cfg.chain.FinalizedCheckpt().Epoch
+	cp := s.cfg.chain.FinalizedCheckpt()
+	finalizedEpoch := cp.Epoch
 	maxEpoch := slots.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
-	maxFinalizedEpoch := types.Epoch(0)
+	maxFinalizedEpoch := primitives.Epoch(0)
 	if maxEpoch > 2 {
 		maxFinalizedEpoch = maxEpoch - 2
 	}
@@ -306,7 +312,8 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if finalizedAtGenesis && rootIsEqual {
 		return nil
 	}
-	if !s.cfg.beaconDB.IsFinalizedBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
+	if !s.cfg.chain.IsFinalized(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
+		log.WithField("root", fmt.Sprintf("%#x", msg.FinalizedRoot)).Debug("Could not validate finalized root")
 		return p2ptypes.ErrInvalidFinalizedRoot
 	}
 	blk, err := s.cfg.beaconDB.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))

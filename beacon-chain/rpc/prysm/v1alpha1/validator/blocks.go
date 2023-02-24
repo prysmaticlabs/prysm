@@ -1,13 +1,14 @@
 package validator
 
 import (
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -27,74 +28,12 @@ func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 		select {
 		case blockEvent := <-blocksChannel:
 			if req.VerifiedOnly {
-				if blockEvent.Type == statefeed.BlockProcessed {
-					data, ok := blockEvent.Data.(*statefeed.BlockProcessedData)
-					if !ok || data == nil {
-						continue
-					}
-					b := &ethpb.StreamBlocksResponse{}
-					switch data.SignedBlock.Version() {
-					case version.Phase0:
-						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlock)
-						if !ok {
-							log.Warn("Mismatch between version and block type, was expecting *ethpb.SignedBeaconBlock")
-							continue
-						}
-						b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
-					case version.Altair:
-						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockAltair)
-						if !ok {
-							log.Warn("Mismatch between version and block type, was expecting *v2.SignedBeaconBlockAltair")
-							continue
-						}
-						b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
-					}
-
-					if err := stream.Send(b); err != nil {
-						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-					}
+				if err := sendVerifiedBlocks(stream, blockEvent); err != nil {
+					return err
 				}
 			} else {
-				if blockEvent.Type == blockfeed.ReceivedBlock {
-					data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
-					if !ok {
-						// Got bad data over the stream.
-						continue
-					}
-					if data.SignedBlock == nil {
-						// One nil block shouldn't stop the stream.
-						continue
-					}
-					headState, err := vs.HeadFetcher.HeadState(vs.Ctx)
-					if err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not get head state")
-						continue
-					}
-					signed := data.SignedBlock
-					if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), signed.Signature(), signed.Block().HashTreeRoot); err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not verify block signature")
-						continue
-					}
-					b := &ethpb.StreamBlocksResponse{}
-					switch data.SignedBlock.Version() {
-					case version.Phase0:
-						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlock)
-						if !ok {
-							log.Warn("Mismatch between version and block type, was expecting *ethpb.SignedBeaconBlock")
-							continue
-						}
-						b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
-					case version.Altair:
-						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockAltair)
-						if !ok {
-							log.Warn("Mismatch between version and block type, was expecting *v2.SignedBeaconBlockAltair")
-							continue
-						}
-						b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
-					}
-					if err := stream.Send(b); err != nil {
-						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-					}
+				if err := vs.sendBlocks(stream, blockEvent); err != nil {
+					return err
 				}
 			}
 		case <-blockSub.Err():
@@ -105,4 +44,117 @@ func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 			return status.Error(codes.Canceled, "Context canceled")
 		}
 	}
+}
+
+func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer, blockEvent *feed.Event) error {
+	if blockEvent.Type != statefeed.BlockProcessed {
+		return nil
+	}
+	data, ok := blockEvent.Data.(*statefeed.BlockProcessedData)
+	if !ok || data == nil {
+		return nil
+	}
+	b := &ethpb.StreamBlocksResponse{}
+	switch data.SignedBlock.Version() {
+	case version.Phase0:
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlock)
+		if !ok {
+			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlock")
+			return nil
+		}
+		b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
+	case version.Altair:
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockAltair)
+		if !ok {
+			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockAltair")
+			return nil
+		}
+		b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
+	case version.Bellatrix:
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockBellatrix)
+		if !ok {
+			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockBellatrix")
+			return nil
+		}
+		b.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{BellatrixBlock: phBlk}
+	case version.Capella:
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockCapella)
+		if !ok {
+			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockCapella")
+			return nil
+		}
+		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: phBlk}
+	}
+
+	if err := stream.Send(b); err != nil {
+		return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+	}
+
+	return nil
+}
+
+func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer, blockEvent *feed.Event) error {
+	if blockEvent.Type != blockfeed.ReceivedBlock {
+		return nil
+	}
+
+	data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
+	if !ok || data == nil {
+		// Got bad data over the stream.
+		return nil
+	}
+	if data.SignedBlock == nil {
+		// One nil block shouldn't stop the stream.
+		return nil
+	}
+	log := log.WithField("blockSlot", data.SignedBlock.Block().Slot())
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(vs.Ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get head state")
+		return nil
+	}
+	signed := data.SignedBlock
+	sig := signed.Signature()
+	if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), sig[:], signed.Block().HashTreeRoot); err != nil {
+		log.WithError(err).Error("Could not verify block signature")
+		return nil
+	}
+	b := &ethpb.StreamBlocksResponse{}
+	pb, err := data.SignedBlock.Proto()
+	if err != nil {
+		return errors.Wrap(err, "could not get protobuf block")
+	}
+	switch p := pb.(type) {
+	case *ethpb.SignedBeaconBlock:
+		b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: p}
+	case *ethpb.SignedBeaconBlockAltair:
+		b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: p}
+	case *ethpb.SignedBeaconBlockBellatrix:
+		b.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{BellatrixBlock: p}
+	case *ethpb.SignedBeaconBlockCapella:
+		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: p}
+	default:
+		log.Errorf("Unknown block type %T", p)
+	}
+	if err := stream.Send(b); err != nil {
+		return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+	}
+
+	return nil
 }

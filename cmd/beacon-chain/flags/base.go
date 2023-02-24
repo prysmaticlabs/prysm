@@ -3,24 +3,60 @@
 package flags
 
 import (
-	"encoding/hex"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/urfave/cli/v2"
 )
 
 var (
-	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
-	HTTPWeb3ProviderFlag = &cli.StringFlag{
-		Name:  "http-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
+	// MevRelayEndpoint provides an HTTP access endpoint to a MEV builder network.
+	MevRelayEndpoint = &cli.StringFlag{
+		Name:  "http-mev-relay",
+		Usage: "A MEV builder relay string http endpoint, this wil be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
 		Value: "",
 	}
-	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
-	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
-		Name:  "fallback-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag may be used multiple times.",
+	MaxBuilderConsecutiveMissedSlots = &cli.IntFlag{
+		Name:  "max-builder-consecutive-missed-slots",
+		Usage: "Number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction",
+		Value: 3,
+	}
+	MaxBuilderEpochMissedSlots = &cli.IntFlag{
+		Name:  "max-builder-epoch-missed-slots",
+		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
+		Value: 8,
+	}
+	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
+	ExecutionEngineEndpoint = &cli.StringFlag{
+		Name:  "execution-endpoint",
+		Usage: "An execution client http endpoint. Can contain auth header as well in the format",
+		Value: "http://localhost:8551",
+	}
+	// ExecutionEngineHeaders defines a list of HTTP headers to send with all execution client requests.
+	ExecutionEngineHeaders = &cli.StringFlag{
+		Name: "execution-headers",
+		Usage: "A comma separated list of key value pairs to pass as HTTP headers for all execution " +
+			"client calls. Example: --execution-headers=key1=value1,key2=value2",
+	}
+	// Deprecated: HTTPWeb3ProviderFlag is a deprecated flag and is an alias for the ExecutionEngineEndpoint flag.
+	HTTPWeb3ProviderFlag = &cli.StringFlag{
+		Name:   "http-web3provider",
+		Usage:  "DEPRECATED: A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
+		Value:  "http://localhost:8551",
+		Hidden: true,
+	}
+	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
+	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests
+	// to execution nodes for consensus-related calls will fail. This is not required if using an IPC connection.
+	ExecutionJWTSecretFlag = &cli.StringFlag{
+		Name: "jwt-secret",
+		Usage: "REQUIRED if connecting to an execution node via HTTP. Provides a path to a file containing " +
+			"a hex-encoded string representing a 32 byte secret used for authentication with an execution node via " +
+			"HTTP. If this is not set, all requests to execution nodes via HTTP for consensus-related calls will " +
+			"fail, which will prevent your validators from performing their duties. " +
+			"This is not required if using an IPC connection.",
+		Value: "",
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
@@ -84,7 +120,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500",
+		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000",
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
@@ -105,10 +141,13 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// HeadSync starts the beacon node from the previously saved head state and syncs from there.
-	HeadSync = &cli.BoolFlag{
-		Name:  "head-sync",
-		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
+	// SafeSlotsToImportOptimistically specifies the number of slots that a
+	// node should wait before being able to optimistically sync blocks
+	// across the merge boundary
+	SafeSlotsToImportOptimistically = &cli.IntFlag{
+		Name:  "safe-slots-to-import-optimistically",
+		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
+		Value: 128,
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
@@ -116,11 +155,6 @@ var (
 		Name:  "slots-per-archive-point",
 		Usage: "The slot durations of when an archived state gets saved in the beaconDB.",
 		Value: 2048,
-	}
-	// DisableDiscv5 disables running discv5.
-	DisableDiscv5 = &cli.BoolFlag{
-		Name:  "disable-discv5",
-		Usage: "Does not run the discoveryV5 dht.",
 	}
 	// BlockBatchLimit specifies the requested block batch size.
 	BlockBatchLimit = &cli.IntFlag{
@@ -132,13 +166,7 @@ var (
 	BlockBatchLimitBurstFactor = &cli.IntFlag{
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
-		Value: 10,
-	}
-	// DisableSync disables a node from syncing at start-up. Instead the node enters regular sync
-	// immediately.
-	DisableSync = &cli.BoolFlag{
-		Name:  "disable-sync",
-		Usage: "Starts the beacon node without entering initial sync and instead exits to regular sync immediately.",
+		Value: 2,
 	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
@@ -165,12 +193,12 @@ var (
 		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
 	}
-	// WeakSubjectivityCheckpt defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
-	WeakSubjectivityCheckpt = &cli.StringFlag{
-		Name: "weak-subjectivity-checkpoint",
-		Usage: "Input in `block_root:epoch_number` format. This guarantees that syncing leads to the given Weak Subjectivity Checkpoint along the canonical chain. " +
-			"If such a sync is not possible, the node will treat it a critical and irrecoverable failure",
-		Value: "",
+	// EngineEndpointTimeoutSeconds defines the seconds to wait before timing out engine endpoints with execution payload execution semantics (newPayload, forkchoiceUpdated).
+	// If this flag is not used then default will be used as defined here:
+	// https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
+	EngineEndpointTimeoutSeconds = &cli.Uint64Flag{
+		Name:  "engine-endpoint-timeout-seconds",
+		Usage: "Sets the execution engine timeout (seconds) for execution payload semantics (forkchoiceUpdated, newPayload)",
 	}
 	// Eth1HeaderReqLimit defines a flag to set the maximum number of headers that a deposit log query can fetch. If none is set, 1000 will be the limit.
 	Eth1HeaderReqLimit = &cli.Uint64Flag{
@@ -178,11 +206,13 @@ var (
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
 	}
-	// GenesisStatePath defines a flag to start the beacon chain from a give genesis state file.
-	GenesisStatePath = &cli.StringFlag{
-		Name: "genesis-state",
-		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
-			"eth2-clients/eth2-testnets repository on github.",
+	// WeakSubjectivityCheckpoint defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
+	WeakSubjectivityCheckpoint = &cli.StringFlag{
+		Name: "weak-subjectivity-checkpoint",
+		Usage: "Input in `block_root:epoch_number` format." +
+			" This guarantees that syncing leads to the given Weak Subjectivity Checkpoint along the canonical chain. " +
+			"If such a sync is not possible, the node will treat it as a critical and irrecoverable failure",
+		Value: "",
 	}
 	// MinPeersPerSubnet defines a flag to set the minimum number of peers that a node will attempt to peer with for a subnet.
 	MinPeersPerSubnet = &cli.Uint64Flag{
@@ -190,8 +220,14 @@ var (
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
 	}
+	// SuggestedFeeRecipient specifies the fee recipient for the transaction fees.
+	SuggestedFeeRecipient = &cli.StringFlag{
+		Name:  "suggested-fee-recipient",
+		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state. Validator client can override this value through the preparebeaconproposer api.",
+		Value: params.BeaconConfig().EthBurnAddressHex,
+	}
 	// TerminalTotalDifficultyOverride specifies the total difficulty to manual overrides the `TERMINAL_TOTAL_DIFFICULTY` parameter.
-	TerminalTotalDifficultyOverride = &cli.Uint64Flag{
+	TerminalTotalDifficultyOverride = &cli.StringFlag{
 		Name: "terminal-total-difficulty-override",
 		Usage: "Sets the total difficulty to manual overrides the default TERMINAL_TOTAL_DIFFICULTY value. " +
 			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty. " +
@@ -211,10 +247,10 @@ var (
 			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch. " +
 			"Incorrect usage will result in your node experience consensus failure.",
 	}
-	// Coinbase specifies the fee recipient for the transaction fees.
-	Coinbase = &cli.StringFlag{
-		Name:  "coinbase",
-		Usage: "Post merge, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst merge is in development state.",
-		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
+	// SlasherDirFlag defines a path on disk where the slasher database is stored.
+	SlasherDirFlag = &cli.StringFlag{
+		Name:  "slasher-datadir",
+		Usage: "Directory for the slasher database",
+		Value: cmd.DefaultDataDir(),
 	}
 )

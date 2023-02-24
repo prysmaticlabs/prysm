@@ -5,19 +5,20 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	fuzz "github.com/google/gofuzz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestSigningRoot_ComputeSigningRoot(t *testing.T) {
@@ -51,7 +52,7 @@ func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 	tests := []struct {
 		name       string
 		genState   func(t *testing.T) (state.BeaconState, []bls.SecretKey)
-		genBlock   func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock
+		genBlock   func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock
 		domainType [4]byte
 		want       []byte
 	}{
@@ -62,7 +63,7 @@ func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 				require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 				return beaconState, privKeys
 			},
-			genBlock: func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
+			genBlock: func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock {
 				block, err := util.GenerateFullBlock(st, keys, nil, 1)
 				require.NoError(t, err)
 				return block
@@ -112,25 +113,68 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 
 func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconState{}
-	pubkey := [48]byte{}
-	sig := [96]byte{}
-	domain := [4]byte{}
+	st := &ethpb.BeaconState{}
+	var pubkey [fieldparams.BLSPubkeyLength]byte
+	var sig [96]byte
+	var domain [4]byte
 	var p []byte
 	var s []byte
 	var d []byte
 	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(st)
 		fuzzer.Fuzz(&pubkey)
 		fuzzer.Fuzz(&sig)
 		fuzzer.Fuzz(&domain)
-		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(st)
 		fuzzer.Fuzz(&p)
 		fuzzer.Fuzz(&s)
 		fuzzer.Fuzz(&d)
-		err := signing.VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
+		err := signing.VerifySigningRoot(st, pubkey[:], sig[:], domain[:])
 		_ = err
-		err = signing.VerifySigningRoot(state, p, s, d)
+		err = signing.VerifySigningRoot(st, p, s, d)
 		_ = err
+	}
+}
+
+func TestDigestMap(t *testing.T) {
+	testVersion := []byte{'A', 'B', 'C', 'D'}
+	testValRoot := [32]byte{'t', 'e', 's', 't', 'r', 'o', 'o', 't'}
+	digest, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+
+	cachedDigest, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.Equal(t, digest, cachedDigest)
+	testVersion[3] = 'E'
+	cachedDigest, err = signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.NotEqual(t, digest, cachedDigest)
+	testValRoot[5] = 'z'
+	cachedDigest2, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.NotEqual(t, digest, cachedDigest2)
+	assert.NotEqual(t, cachedDigest, cachedDigest2)
+}
+func TestBlockSignatureBatch_NoSigVerification(t *testing.T) {
+	tests := []struct {
+		pubkey          []byte
+		mockSignature   []byte
+		domain          []byte
+		wantMessageHexs []string
+	}{
+		{
+			pubkey:          []byte{0xa9, 0x9a, 0x76, 0xed, 0x77, 0x96, 0xf7, 0xbe, 0x22, 0xd5, 0xb7, 0xe8, 0x5d, 0xee, 0xb7, 0xc5, 0x67, 0x7e, 0x88, 0xe5, 0x11, 0xe0, 0xb3, 0x37, 0x61, 0x8f, 0x8c, 0x4e, 0xb6, 0x13, 0x49, 0xb4, 0xbf, 0x2d, 0x15, 0x3f, 0x64, 0x9f, 0x7b, 0x53, 0x35, 0x9f, 0xe8, 0xb9, 0x4a, 0x38, 0xe4, 0x4c},
+			mockSignature:   []byte{0xa9, 0x9a, 0x76, 0xed, 0x77},
+			domain:          []byte{4, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169},
+			wantMessageHexs: []string{"0xe6012bc68e112797a91ed6889e7453f8e304fb76fbffcec1c62eef280a93f7ba"},
+		},
+	}
+	for _, tt := range tests {
+		block := util.NewBeaconBlock()
+		got, err := signing.BlockSignatureBatch(tt.pubkey, tt.mockSignature, tt.domain, block.Block.HashTreeRoot)
+		require.NoError(t, err)
+		for i, message := range got.Messages {
+			require.Equal(t, hexutil.Encode(message[:]), tt.wantMessageHexs[i])
+		}
 	}
 }

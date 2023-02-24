@@ -10,22 +10,22 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState) {
@@ -41,7 +41,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Fork: &ethpb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -50,24 +50,24 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
 	})
 	require.NoError(t, err)
-	err = state.SetSlot(state.Slot() + params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)))
+	err = st.SetSlot(st.Slot() + params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)))
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	exit.Signature, err = signing.ComputeDomainAndSign(state, coreTime.CurrentEpoch(state), exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	exit.Signature, err = signing.ComputeDomainAndSign(st, coreTime.CurrentEpoch(st), exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)
 
-	val, err := state.ValidatorAtIndex(0)
+	val, err := st.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	val.PublicKey = priv.PublicKey().Marshal()
-	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
+	require.NoError(t, st.UpdateValidatorAtIndex(0, val))
 
 	b := make([]byte, 32)
 	_, err = rand.Read(b)
 	require.NoError(t, err)
 
-	return exit, state
+	return exit, st
 }
 
 func TestValidateVoluntaryExit_ValidExit(t *testing.T) {

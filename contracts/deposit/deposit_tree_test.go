@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/runtime/interop"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	depositcontract "github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
+	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestDepositTrieRoot_OK(t *testing.T) {
@@ -23,7 +23,9 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 	require.NoError(t, err)
 
-	assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal")
+	localRoot, err := localTrie.HashTreeRoot()
+	require.NoError(t, err)
+	assert.Equal(t, depRoot, localRoot, "Local deposit trie root and contract deposit trie root are not equal")
 
 	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 101)
 	require.NoError(t, err)
@@ -34,7 +36,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		data := depositDataItems[i]
-		dataRoot := [32]byte{}
+		var dataRoot [32]byte
 		copy(dataRoot[:], depositDataRoots[i])
 
 		_, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)
@@ -47,7 +49,9 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		assert.NoError(t, localTrie.Insert(item[:], i))
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		require.NoError(t, err)
-		assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal for index %d", i)
+		localRoot, err := localTrie.HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, depRoot, localRoot, "Local deposit trie root and contract deposit trie root are not equal for index %d", i)
 	}
 }
 
@@ -61,7 +65,9 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 	depRoot, err := testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 	require.NoError(t, err)
 
-	assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal")
+	localRoot, err := localTrie.HashTreeRoot()
+	require.NoError(t, err)
+	assert.Equal(t, depRoot, localRoot, "Local deposit trie root and contract deposit trie root are not equal")
 
 	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 101)
 	require.NoError(t, err)
@@ -71,7 +77,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		data := depositDataItems[i]
-		dataRoot := [32]byte{}
+		var dataRoot [32]byte
 		copy(dataRoot[:], depositDataRoots[i])
 
 		_, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)
@@ -89,6 +95,8 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		require.NoError(t, err)
 
-		assert.NotEqual(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are equal for index %d", i)
+		localRoot, err := localTrie.HashTreeRoot()
+		require.NoError(t, err)
+		assert.NotEqual(t, depRoot, localRoot, "Local deposit trie root and contract deposit trie root are equal for index %d", i)
 	}
 }

@@ -3,11 +3,13 @@ package apimiddleware
 import (
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/wealdtech/go-bytesutil"
@@ -30,26 +32,26 @@ func processField(s interface{}, processors []fieldProcessor) error {
 			sliceElem := t.Field(i).Type.Elem()
 			kind := sliceElem.Kind()
 			// Recursively process slices to struct pointers.
-			if kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct {
+			switch {
+			case kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct:
 				for j := 0; j < v.Field(i).Len(); j++ {
 					if err := processField(v.Field(i).Index(j).Interface(), processors); err != nil {
 						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 					}
 				}
-			}
 			// Process each string in string slices.
-			if kind == reflect.String {
+			case kind == reflect.String:
 				for _, proc := range processors {
 					_, hasTag := t.Field(i).Tag.Lookup(proc.tag)
-					if hasTag {
-						for j := 0; j < v.Field(i).Len(); j++ {
-							if err := proc.f(v.Field(i).Index(j)); err != nil {
-								return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
-							}
+					if !hasTag {
+						continue
+					}
+					for j := 0; j < v.Field(i).Len(); j++ {
+						if err := proc.f(v.Field(i).Index(j)); err != nil {
+							return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 						}
 					}
 				}
-
 			}
 		// Recursively process struct pointers.
 		case reflect.Ptr:
@@ -73,6 +75,10 @@ func processField(s interface{}, processors []fieldProcessor) error {
 }
 
 func hexToBase64Processor(v reflect.Value) error {
+	if v.String() == "0x" {
+		v.SetString("")
+		return nil
+	}
 	b, err := bytesutil.FromHexString(v.String())
 	if err != nil {
 		return err
@@ -83,6 +89,8 @@ func hexToBase64Processor(v reflect.Value) error {
 
 func base64ToHexProcessor(v reflect.Value) error {
 	if v.String() == "" {
+		// Empty hex values are represented as "0x".
+		v.SetString("0x")
 		return nil
 	}
 	b, err := base64.StdEncoding.DecodeString(v.String())
@@ -90,6 +98,69 @@ func base64ToHexProcessor(v reflect.Value) error {
 		return err
 	}
 	v.SetString(hexutil.Encode(b))
+	return nil
+}
+
+func base64ToChecksumAddressProcessor(v reflect.Value) error {
+	if v.String() == "" {
+		// Empty hex values are represented as "0x".
+		v.SetString("0x")
+		return nil
+	}
+	b, err := base64.StdEncoding.DecodeString(v.String())
+	if err != nil {
+		return err
+	}
+	v.SetString(common.BytesToAddress(b).Hex())
+	return nil
+}
+
+func base64ToUint256Processor(v reflect.Value) error {
+	if v.String() == "" {
+		return nil
+	}
+	littleEndian, err := base64.StdEncoding.DecodeString(v.String())
+	if err != nil {
+		return err
+	}
+	if len(littleEndian) != 32 {
+		return errors.New("invalid length for Uint256")
+	}
+
+	// Integers are stored as little-endian, but
+	// big.Int expects big-endian. So we need to reverse
+	// the byte order before decoding.
+	var bigEndian [32]byte
+	for i := 0; i < len(littleEndian); i++ {
+		bigEndian[i] = littleEndian[len(littleEndian)-1-i]
+	}
+	var uint256 big.Int
+	uint256.SetBytes(bigEndian[:])
+	v.SetString(uint256.String())
+	return nil
+}
+
+func uint256ToBase64Processor(v reflect.Value) error {
+	if v.String() == "" {
+		return nil
+	}
+	uint256, ok := new(big.Int).SetString(v.String(), 10)
+	if !ok {
+		return fmt.Errorf("could not parse Uint256")
+	}
+	bigEndian := uint256.Bytes()
+	if len(bigEndian) > 32 {
+		return fmt.Errorf("number too big for Uint256")
+	}
+
+	// Integers are stored as little-endian, but
+	// big.Int gives big-endian. So we need to reverse
+	// the byte order before encoding.
+	var littleEndian [32]byte
+	for i := 0; i < len(bigEndian); i++ {
+		littleEndian[i] = bigEndian[len(bigEndian)-1-i]
+	}
+	v.SetString(base64.StdEncoding.EncodeToString(littleEndian[:]))
 	return nil
 }
 

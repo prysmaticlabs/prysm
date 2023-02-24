@@ -5,16 +5,16 @@ import (
 	"sort"
 	"testing"
 
-	fssz "github.com/ferranbt/fastssz"
 	c "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
@@ -41,7 +41,7 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
-	genData := func(slot types.Slot, committeeIndex types.CommitteeIndex) *ethpb.AttestationData {
+	genData := func(slot primitives.Slot, committeeIndex primitives.CommitteeIndex) *ethpb.AttestationData {
 		return util.HydrateAttestationData(&ethpb.AttestationData{
 			Slot:           slot,
 			CommitteeIndex: committeeIndex,
@@ -125,7 +125,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 				}),
 				AggregationBits: bitfield.Bitlist{0b10111},
 			},
-			wantErrString: "could not tree hash attestation: " + fssz.ErrBytesLength.Error(),
+			wantErrString: "could not tree hash attestation: --.BeaconBlockRoot (" + fssz.ErrBytesLength.Error() + ")",
 		},
 		{
 			name: "already seen",
@@ -286,7 +286,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 			},
 		}
 		err := cache.DeleteAggregatedAttestation(att)
-		wantErr := "could not tree hash attestation data: " + fssz.ErrBytesLength.Error()
+		wantErr := "could not tree hash attestation data: --.BeaconBlockRoot (" + fssz.ErrBytesLength.Error() + ")"
 		assert.ErrorContains(t, wantErr, err)
 	})
 

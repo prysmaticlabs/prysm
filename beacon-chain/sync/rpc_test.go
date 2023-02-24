@@ -1,21 +1,23 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"testing"
 	"time"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	prysmP2P "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	prysmP2P "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func init() {
@@ -79,4 +81,47 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive RPC in 1 second")
 	}
+}
+
+func TestRPC_ReceivesInvalidMessage(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	remotePeer := p2ptest.NewTestP2P(t)
+	remotePeer.Connect(p2p)
+
+	r := &Service{
+		ctx:         context.Background(),
+		cfg:         &config{p2p: p2p},
+		rateLimiter: newRateLimiter(p2p),
+	}
+
+	topic := "/testing/foobar/1"
+	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+		m, ok := msg.(*ethpb.Fork)
+		if !ok {
+			t.Error("Object is not of type *pb.Fork")
+		}
+		if !bytes.Equal(m.CurrentVersion, []byte("fooo")) {
+			t.Errorf("Unexpected incoming message: %+v", m)
+		}
+		return nil
+	}
+	prysmP2P.RPCTopicMappings[topic] = new(ethpb.Fork)
+	// Cleanup Topic mappings
+	defer func() {
+		delete(prysmP2P.RPCTopicMappings, topic)
+	}()
+	r.registerRPC(topic, handler)
+
+	stream, err := remotePeer.Host().NewStream(context.Background(), p2p.BHost.ID(), protocol.ID(topic+p2p.Encoding().ProtocolSuffix()))
+	require.NoError(t, err)
+	// Write invalid SSZ object to peer.
+	_, err = stream.Write([]byte("JUNK MESSAGE"))
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	faultCount, err := p2p.Peers().Scorers().BadResponsesScorer().Count(remotePeer.BHost.ID())
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, faultCount, "peer was not penalised for sending bad message")
+
 }

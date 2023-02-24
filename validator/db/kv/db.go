@@ -10,11 +10,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/async/abool"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/async/abool"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -28,6 +29,8 @@ const (
 	// Time interval after which we flush attestation records to the database
 	// from a batch kept in memory for slashing protection.
 	attestationBatchWriteInterval = time.Millisecond * 100
+	// Specifies the initial mmap size of bolt.
+	mmapSize = 536870912
 )
 
 // ProtectionDbFileName Validator slashing protection db file name.
@@ -52,8 +55,7 @@ var blockedBuckets = [][]byte{
 
 // Config represents store's config object.
 type Config struct {
-	PubKeys         [][48]byte
-	InitialMMapSize int
+	PubKeys [][fieldparams.BLSPubkeyLength]byte
 }
 
 // Store defines an implementation of the Prysm Database interface
@@ -62,7 +64,7 @@ type Store struct {
 	db                                 *bolt.DB
 	databasePath                       string
 	batchedAttestations                *QueuedAttestationRecords
-	batchedAttestationsChan            chan *AttestationRecord
+	batchedAttestationsChan            chan *AttestationRecordSaveRequest
 	batchAttestationsFlushedFeed       *event.Feed
 	batchedAttestationsFlushInProgress abool.AtomicBool
 }
@@ -119,7 +121,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	datafile := filepath.Join(dirPath, ProtectionDbFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{
 		Timeout:         params.BeaconIoConfig().BoltTimeout,
-		InitialMmapSize: config.InitialMMapSize,
+		InitialMmapSize: mmapSize,
 	})
 	if err != nil {
 		if errors.Is(err, bolt.ErrTimeout) {
@@ -132,7 +134,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		db:                           boltDB,
 		databasePath:                 dirPath,
 		batchedAttestations:          NewQueuedAttestationRecords(),
-		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
+		batchedAttestationsChan:      make(chan *AttestationRecordSaveRequest, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}
 
@@ -177,7 +179,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 }
 
 // UpdatePublicKeysBuckets for a specified list of keys.
-func (s *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
+func (s *Store) UpdatePublicKeysBuckets(pubKeys [][fieldparams.BLSPubkeyLength]byte) error {
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKey := range pubKeys {

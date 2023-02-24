@@ -3,9 +3,9 @@ package types
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestInitializeDataMaps(t *testing.T) {
@@ -24,7 +24,7 @@ func TestInitializeDataMaps(t *testing.T) {
 		{
 			name: "fork version changes",
 			action: func() {
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.GenesisForkVersion = []byte{0x01, 0x02, 0x00, 0x00}
 				params.OverrideBeaconConfig(cfg)
 			},
@@ -33,7 +33,7 @@ func TestInitializeDataMaps(t *testing.T) {
 		{
 			name: "fork version changes with reset",
 			action: func() {
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.GenesisForkVersion = []byte{0x01, 0x02, 0x00, 0x00}
 				params.OverrideBeaconConfig(cfg)
 				InitializeDataMaps()

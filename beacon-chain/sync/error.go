@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"errors"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/mux"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -95,7 +94,7 @@ func readStatusCodeNoDeadline(stream network.Stream, encoding encoder.NetworkEnc
 func isValidStreamError(err error) bool {
 	// check the error message itself as well as libp2p doesn't currently
 	// return the correct error type from Close{Read,Write,}.
-	return err != nil && !errors.Is(err, mux.ErrReset) && err.Error() != mux.ErrReset.Error()
+	return err != nil && !errors.Is(err, network.ErrReset) && err.Error() != network.ErrReset.Error()
 }
 
 func closeStream(stream network.Stream, log *logrus.Entry) {

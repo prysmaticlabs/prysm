@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	history "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
-	slashtest "github.com/prysmaticlabs/prysm/validator/testing"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	dbtest "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
+	history "github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
+	slashtest "github.com/prysmaticlabs/prysm/v3/validator/testing"
 )
 
 func TestImportExport_RoundTrip(t *testing.T) {
@@ -39,6 +39,11 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	// Next, we attempt to import it into our validator database.
 	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
+
+	rawPublicKeys := make([][]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		rawPublicKeys[i] = publicKeys[i][:]
+	}
 
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
@@ -114,6 +119,11 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
+	rawPublicKeys := make([][]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		rawPublicKeys[i] = pubKeys[i][:]
+	}
+
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
 	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB)
@@ -157,6 +167,7 @@ func TestImportExport_FilterKeys(t *testing.T) {
 	for i := 0; i < len(rawKeys); i++ {
 		rawKeys[i] = publicKeys[i][:]
 	}
+
 	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB, rawKeys...)
 	require.NoError(t, err)
 
@@ -207,7 +218,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 		proposals := proposalHistory[i].Proposals
 		receivedProposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
 		require.NoError(t, err)
-		rootsBySlot := make(map[types.Slot][]byte)
+		rootsBySlot := make(map[primitives.Slot][]byte)
 		for _, proposal := range receivedProposalHistory {
 			rootsBySlot[proposal.Slot] = proposal.SigningRoot
 		}

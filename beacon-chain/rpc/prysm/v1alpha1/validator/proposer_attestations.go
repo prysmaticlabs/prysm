@@ -5,18 +5,17 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
-	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation"
+	attaggregation "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -86,10 +85,9 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
 	var attestationProcessor func(context.Context, state.BeaconState, *ethpb.Attestation) (state.BeaconState, error)
 
-	switch st.Version() {
-	case version.Phase0:
+	if st.Version() == version.Phase0 {
 		attestationProcessor = blocks.ProcessAttestationNoVerifySignature
-	case version.Altair:
+	} else if st.Version() >= version.Altair {
 		// Use a wrapper here, as go needs strong typing for the function signature.
 		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {
 			totalBalance, err := helpers.TotalActiveBalance(st)
@@ -98,10 +96,11 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 			}
 			return altair.ProcessAttestationNoVerifySignature(ctx, st, attestation, totalBalance)
 		}
-	default:
+	} else {
 		// Exit early if there is an unknown state type.
 		return validAtts, invalidAtts
 	}
+
 	for _, att := range a {
 		if _, err := attestationProcessor(ctx, st, att); err == nil {
 			validAtts = append(validAtts, att)
@@ -117,24 +116,15 @@ func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	if features.Get().ProposerAttsSelectionUsingMaxCover {
-		return a.sortByProfitabilityUsingMaxCover()
-	}
-	sort.Slice(a, func(i, j int) bool {
-		if a[i].Data.Slot == a[j].Data.Slot {
-			return a[i].AggregationBits.Count() > a[j].AggregationBits.Count()
-		}
-		return a[i].Data.Slot > a[j].Data.Slot
-	})
-	return a, nil
+	return a.sortByProfitabilityUsingMaxCover()
 }
 
 // sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.
 // Duplicate bits are counted only once, using max-cover algorithm.
 func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 	// Separate attestations by slot, as slot number takes higher precedence when sorting.
-	var slots []types.Slot
-	attsBySlot := map[types.Slot]proposerAtts{}
+	var slots []primitives.Slot
+	attsBySlot := map[primitives.Slot]proposerAtts{}
 	for _, att := range a {
 		if _, ok := attsBySlot[att.Data.Slot]; !ok {
 			slots = append(slots, att.Data.Slot)

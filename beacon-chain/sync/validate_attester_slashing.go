@@ -3,12 +3,12 @@ package sync
 import (
 	"context"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -53,6 +53,8 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
 		return pubsub.ValidationReject, err
 	}
+
+	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil

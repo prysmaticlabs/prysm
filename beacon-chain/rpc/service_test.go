@@ -3,22 +3,22 @@ package rpc
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 }
 
 func TestLifecycle_OK(t *testing.T) {
@@ -27,14 +27,14 @@ func TestLifecycle_OK(t *testing.T) {
 		Genesis: time.Now(),
 	}
 	rpcService := NewService(context.Background(), &Config{
-		Port:                "7348",
-		SyncService:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       chainService,
-		AttestationReceiver: chainService,
-		HeadFetcher:         chainService,
-		GenesisTimeFetcher:  chainService,
-		POWChainService:     &mockPOW.POWChain{},
-		StateNotifier:       chainService.StateNotifier(),
+		Port:                  "7348",
+		SyncService:           &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:         chainService,
+		AttestationReceiver:   chainService,
+		HeadFetcher:           chainService,
+		GenesisTimeFetcher:    chainService,
+		ExecutionChainService: &mockExecution.Chain{},
+		StateNotifier:         chainService.StateNotifier(),
 	})
 
 	rpcService.Start()
@@ -46,25 +46,35 @@ func TestLifecycle_OK(t *testing.T) {
 func TestStatus_CredentialError(t *testing.T) {
 	credentialErr := errors.New("credentialError")
 	s := &Service{
-		cfg:             &Config{SyncService: &mockSync.Sync{IsSyncing: false}},
+		cfg: &Config{SyncService: &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false}},
 		credentialError: credentialErr,
 	}
 
 	assert.ErrorContains(t, s.credentialError.Error(), s.Status())
 }
 
+func TestStatus_Optimistic(t *testing.T) {
+	s := &Service{
+		cfg: &Config{SyncService: &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: true}},
+	}
+
+	assert.ErrorContains(t, "service is optimistic", s.Status())
+}
+
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	rpcService := NewService(context.Background(), &Config{
-		Port:                "7777",
-		SyncService:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       chainService,
-		GenesisTimeFetcher:  chainService,
-		AttestationReceiver: chainService,
-		HeadFetcher:         chainService,
-		POWChainService:     &mockPOW.POWChain{},
-		StateNotifier:       chainService.StateNotifier(),
+		Port:                  "7777",
+		SyncService:           &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:         chainService,
+		GenesisTimeFetcher:    chainService,
+		AttestationReceiver:   chainService,
+		HeadFetcher:           chainService,
+		ExecutionChainService: &mockExecution.Chain{},
+		StateNotifier:         chainService.StateNotifier(),
 	})
 
 	rpcService.Start()

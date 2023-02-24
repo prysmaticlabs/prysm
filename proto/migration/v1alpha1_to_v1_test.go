@@ -3,36 +3,48 @@ package migration
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 var (
-	slot             = types.Slot(1)
-	epoch            = types.Epoch(1)
-	validatorIndex   = types.ValidatorIndex(1)
-	committeeIndex   = types.CommitteeIndex(1)
+	slot             = primitives.Slot(1)
+	epoch            = primitives.Epoch(1)
+	validatorIndex   = primitives.ValidatorIndex(1)
+	committeeIndex   = primitives.CommitteeIndex(1)
 	depositCount     = uint64(2)
 	attestingIndices = []uint64{1, 2}
-	parentRoot       = bytesutil.PadTo([]byte("parentroot"), 32)
-	stateRoot        = bytesutil.PadTo([]byte("stateroot"), 32)
+	blockNumber      = uint64(10)
+	gasLimit         = uint64(10)
+	gasUsed          = uint64(10)
+	timestamp        = uint64(10)
+	parentRoot       = bytesutil.PadTo([]byte("parentroot"), fieldparams.RootLength)
+	stateRoot        = bytesutil.PadTo([]byte("stateroot"), fieldparams.RootLength)
 	signature        = bytesutil.PadTo([]byte("signature"), 96)
 	randaoReveal     = bytesutil.PadTo([]byte("randaoreveal"), 96)
-	depositRoot      = bytesutil.PadTo([]byte("depositroot"), 32)
+	depositRoot      = bytesutil.PadTo([]byte("depositroot"), fieldparams.RootLength)
 	blockHash        = bytesutil.PadTo([]byte("blockhash"), 32)
-	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), 32)
-	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), 32)
-	targetRoot       = bytesutil.PadTo([]byte("targetroot"), 32)
-	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), 32)
+	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), fieldparams.RootLength)
+	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), fieldparams.RootLength)
+	targetRoot       = bytesutil.PadTo([]byte("targetroot"), fieldparams.RootLength)
+	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), fieldparams.RootLength)
 	selectionProof   = bytesutil.PadTo([]byte("selectionproof"), 96)
+	parentHash       = bytesutil.PadTo([]byte("parenthash"), 32)
+	feeRecipient     = bytesutil.PadTo([]byte("feerecipient"), 20)
+	receiptsRoot     = bytesutil.PadTo([]byte("receiptsroot"), 32)
+	logsBloom        = bytesutil.PadTo([]byte("logsbloom"), 256)
+	prevRandao       = bytesutil.PadTo([]byte("prevrandao"), 32)
+	extraData        = bytesutil.PadTo([]byte("extradata"), 32)
+	baseFeePerGas    = bytesutil.PadTo([]byte("basefeepergas"), 32)
+	transactionsRoot = bytesutil.PadTo([]byte("transactions"), 32)
 	aggregationBits  = bitfield.Bitlist{0x01}
 )
 
@@ -44,7 +56,9 @@ func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
 	alphaBlock.Block.StateRoot = stateRoot
 	alphaBlock.Signature = signature
 
-	v1Header, err := BlockIfaceToV1BlockHeader(wrapper.WrappedPhase0SignedBeaconBlock(alphaBlock))
+	wsb, err := blocks.NewSignedBeaconBlock(alphaBlock)
+	require.NoError(t, err)
+	v1Header, err := BlockIfaceToV1BlockHeader(wsb)
 	require.NoError(t, err)
 	bodyRoot, err := alphaBlock.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
@@ -69,7 +83,7 @@ func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 		SelectionProof:  proof[:],
 	}
 	v1 := V1Alpha1AggregateAttAndProofToV1(alpha)
-	assert.Equal(t, v1.AggregatorIndex, types.ValidatorIndex(1))
+	assert.Equal(t, v1.AggregatorIndex, primitives.ValidatorIndex(1))
 	assert.DeepSSZEqual(t, v1.Aggregate.Data.Slot, att.Data.Slot)
 	assert.DeepEqual(t, v1.SelectionProof, proof[:])
 }
@@ -118,35 +132,6 @@ func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
 	v1Root, err := v1Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, alphaRoot)
-}
-
-func Test_AltairToV1Alpha1SignedBlock(t *testing.T) {
-	v2Block := util.HydrateV2SignedBeaconBlock(&ethpbv2.SignedBeaconBlockAltair{})
-	v2Block.Message.Slot = slot
-	v2Block.Message.ProposerIndex = validatorIndex
-	v2Block.Message.ParentRoot = parentRoot
-	v2Block.Message.StateRoot = stateRoot
-	v2Block.Message.Body.RandaoReveal = randaoReveal
-	v2Block.Message.Body.Eth1Data = &ethpbv1.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	syncCommitteeBits := bitfield.NewBitvector512()
-	syncCommitteeBits.SetBitAt(100, true)
-	v2Block.Message.Body.SyncAggregate = &ethpbv1.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: signature,
-	}
-	v2Block.Signature = signature
-
-	alphaBlock, err := AltairToV1Alpha1SignedBlock(v2Block)
-	require.NoError(t, err)
-	alphaRoot, err := alphaBlock.HashTreeRoot()
-	require.NoError(t, err)
-	v2Root, err := v2Block.HashTreeRoot()
-	require.NoError(t, err)
-	assert.DeepEqual(t, v2Root, alphaRoot)
 }
 
 func Test_V1ToV1Alpha1Block(t *testing.T) {
@@ -380,7 +365,9 @@ func Test_BlockInterfaceToV1Block(t *testing.T) {
 	}
 	v1Alpha1Block.Signature = signature
 
-	v1Block, err := SignedBeaconBlock(wrapper.WrappedPhase0SignedBeaconBlock(v1Alpha1Block))
+	wsb, err := blocks.NewSignedBeaconBlock(v1Alpha1Block)
+	require.NoError(t, err)
+	v1Block, err := SignedBeaconBlock(wsb)
 	require.NoError(t, err)
 	v1Root, err := v1Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -407,10 +394,10 @@ func Test_V1Alpha1ValidatorToV1(t *testing.T) {
 	assert.DeepEqual(t, []byte("withdraw"), v1Validator.WithdrawalCredentials)
 	assert.Equal(t, uint64(99), v1Validator.EffectiveBalance)
 	assert.Equal(t, true, v1Validator.Slashed)
-	assert.Equal(t, types.Epoch(1), v1Validator.ActivationEligibilityEpoch)
-	assert.Equal(t, types.Epoch(11), v1Validator.ActivationEpoch)
-	assert.Equal(t, types.Epoch(111), v1Validator.ExitEpoch)
-	assert.Equal(t, types.Epoch(1111), v1Validator.WithdrawableEpoch)
+	assert.Equal(t, primitives.Epoch(1), v1Validator.ActivationEligibilityEpoch)
+	assert.Equal(t, primitives.Epoch(11), v1Validator.ActivationEpoch)
+	assert.Equal(t, primitives.Epoch(111), v1Validator.ExitEpoch)
+	assert.Equal(t, primitives.Epoch(1111), v1Validator.WithdrawableEpoch)
 }
 
 func Test_V1ValidatorToV1Alpha1(t *testing.T) {
@@ -431,10 +418,10 @@ func Test_V1ValidatorToV1Alpha1(t *testing.T) {
 	assert.DeepEqual(t, []byte("withdraw"), v1Alpha1Validator.WithdrawalCredentials)
 	assert.Equal(t, uint64(99), v1Alpha1Validator.EffectiveBalance)
 	assert.Equal(t, true, v1Alpha1Validator.Slashed)
-	assert.Equal(t, types.Epoch(1), v1Alpha1Validator.ActivationEligibilityEpoch)
-	assert.Equal(t, types.Epoch(11), v1Alpha1Validator.ActivationEpoch)
-	assert.Equal(t, types.Epoch(111), v1Alpha1Validator.ExitEpoch)
-	assert.Equal(t, types.Epoch(1111), v1Alpha1Validator.WithdrawableEpoch)
+	assert.Equal(t, primitives.Epoch(1), v1Alpha1Validator.ActivationEligibilityEpoch)
+	assert.Equal(t, primitives.Epoch(11), v1Alpha1Validator.ActivationEpoch)
+	assert.Equal(t, primitives.Epoch(111), v1Alpha1Validator.ExitEpoch)
+	assert.Equal(t, primitives.Epoch(1111), v1Alpha1Validator.WithdrawableEpoch)
 }
 
 func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
@@ -465,39 +452,10 @@ func Test_V1AttestationToV1Alpha1(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, v1Alpha1Root)
 }
-
-func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
-	alphaBlock := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
-	alphaBlock.Slot = slot
-	alphaBlock.ProposerIndex = validatorIndex
-	alphaBlock.ParentRoot = parentRoot
-	alphaBlock.StateRoot = stateRoot
-	alphaBlock.Body.RandaoReveal = randaoReveal
-	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	syncCommitteeBits := bitfield.NewBitvector512()
-	syncCommitteeBits.SetBitAt(100, true)
-	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: signature,
-	}
-
-	v2Block, err := V1Alpha1BeaconBlockAltairToV2(alphaBlock)
-	require.NoError(t, err)
-	alphaRoot, err := alphaBlock.HashTreeRoot()
-	require.NoError(t, err)
-	v2Root, err := v2Block.HashTreeRoot()
-	require.NoError(t, err)
-	assert.DeepEqual(t, alphaRoot, v2Root)
-}
-
-func TestBeaconStateToV1(t *testing.T) {
+func TestBeaconStateToProto(t *testing.T) {
 	source, err := util.NewBeaconState(util.FillRootsNaturalOpt, func(state *ethpbalpha.BeaconState) error {
 		state.GenesisTime = 1
-		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorroot"), 32)
+		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorsroot"), 32)
 		state.Slot = 2
 		state.Fork = &ethpbalpha.Fork{
 			PreviousVersion: bytesutil.PadTo([]byte("123"), 4),
@@ -591,27 +549,30 @@ func TestBeaconStateToV1(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	result, err := BeaconStateToV1(source)
+	result, err := BeaconStateToProto(source)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, uint64(1), result.GenesisTime)
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("genesisvalidatorroot"), 32), result.GenesisValidatorsRoot)
-	assert.Equal(t, types.Slot(2), result.Slot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("genesisvalidatorsroot"), 32), result.GenesisValidatorsRoot)
+	assert.Equal(t, primitives.Slot(2), result.Slot)
 	resultFork := result.Fork
 	require.NotNil(t, resultFork)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("123"), 4), resultFork.PreviousVersion)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("456"), 4), resultFork.CurrentVersion)
-	assert.Equal(t, types.Epoch(3), resultFork.Epoch)
+	assert.Equal(t, primitives.Epoch(3), resultFork.Epoch)
 	resultLatestBlockHeader := result.LatestBlockHeader
 	require.NotNil(t, resultLatestBlockHeader)
-	assert.Equal(t, types.Slot(4), resultLatestBlockHeader.Slot)
-	assert.Equal(t, types.ValidatorIndex(5), resultLatestBlockHeader.ProposerIndex)
+	assert.Equal(t, primitives.Slot(4), resultLatestBlockHeader.Slot)
+	assert.Equal(t, primitives.ValidatorIndex(5), resultLatestBlockHeader.ProposerIndex)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("lbhparentroot"), 32), resultLatestBlockHeader.ParentRoot)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("lbhstateroot"), 32), resultLatestBlockHeader.StateRoot)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("lbhbodyroot"), 32), resultLatestBlockHeader.BodyRoot)
-	assert.DeepEqual(t, [][]byte{bytesutil.PadTo([]byte("blockroots"), 32)}, result.BlockRoots)
-	assert.DeepEqual(t, [][]byte{bytesutil.PadTo([]byte("stateroots"), 32)}, result.StateRoots)
-	assert.DeepEqual(t, [][]byte{bytesutil.PadTo([]byte("historicalroots"), 32)}, result.HistoricalRoots)
+	assert.Equal(t, 8192, len(result.BlockRoots))
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("blockroots"), 32), result.BlockRoots[0])
+	assert.Equal(t, 8192, len(result.StateRoots))
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("stateroots"), 32), result.StateRoots[0])
+	assert.Equal(t, 1, len(result.HistoricalRoots))
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("historicalroots"), 32), result.HistoricalRoots[0])
 	resultEth1Data := result.Eth1Data
 	require.NotNil(t, resultEth1Data)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("e1ddepositroot"), 32), resultEth1Data.DepositRoot)
@@ -631,12 +592,13 @@ func TestBeaconStateToV1(t *testing.T) {
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("withdrawalcredentials"), 32), resultValidator.WithdrawalCredentials)
 	assert.Equal(t, uint64(9), resultValidator.EffectiveBalance)
 	assert.Equal(t, true, resultValidator.Slashed)
-	assert.Equal(t, types.Epoch(10), resultValidator.ActivationEligibilityEpoch)
-	assert.Equal(t, types.Epoch(11), resultValidator.ActivationEpoch)
-	assert.Equal(t, types.Epoch(12), resultValidator.ExitEpoch)
-	assert.Equal(t, types.Epoch(13), resultValidator.WithdrawableEpoch)
+	assert.Equal(t, primitives.Epoch(10), resultValidator.ActivationEligibilityEpoch)
+	assert.Equal(t, primitives.Epoch(11), resultValidator.ActivationEpoch)
+	assert.Equal(t, primitives.Epoch(12), resultValidator.ExitEpoch)
+	assert.Equal(t, primitives.Epoch(13), resultValidator.WithdrawableEpoch)
 	assert.DeepEqual(t, []uint64{14}, result.Balances)
-	assert.DeepEqual(t, [][]byte{bytesutil.PadTo([]byte("randaomixes"), 32)}, result.RandaoMixes)
+	assert.Equal(t, 65536, len(result.RandaoMixes))
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("randaomixes"), 32), result.RandaoMixes[0])
 	assert.DeepEqual(t, []uint64{15}, result.Slashings)
 	require.Equal(t, 1, len(result.PreviousEpochAttestations))
 	resultPrevEpochAtt := result.PreviousEpochAttestations[0]
@@ -644,79 +606,48 @@ func TestBeaconStateToV1(t *testing.T) {
 	assert.DeepEqual(t, bitfield.Bitlist{16}, resultPrevEpochAtt.AggregationBits)
 	resultPrevEpochAttData := resultPrevEpochAtt.Data
 	require.NotNil(t, resultPrevEpochAttData)
-	assert.Equal(t, types.Slot(17), resultPrevEpochAttData.Slot)
-	assert.Equal(t, types.CommitteeIndex(18), resultPrevEpochAttData.Index)
+	assert.Equal(t, primitives.Slot(17), resultPrevEpochAttData.Slot)
+	assert.Equal(t, primitives.CommitteeIndex(18), resultPrevEpochAttData.Index)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("peabeaconblockroot"), 32), resultPrevEpochAttData.BeaconBlockRoot)
 	resultPrevEpochAttSource := resultPrevEpochAttData.Source
 	require.NotNil(t, resultPrevEpochAttSource)
-	assert.Equal(t, types.Epoch(19), resultPrevEpochAttSource.Epoch)
+	assert.Equal(t, primitives.Epoch(19), resultPrevEpochAttSource.Epoch)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("peasroot"), 32), resultPrevEpochAttSource.Root)
 	resultPrevEpochAttTarget := resultPrevEpochAttData.Target
 	require.NotNil(t, resultPrevEpochAttTarget)
-	assert.Equal(t, types.Epoch(20), resultPrevEpochAttTarget.Epoch)
+	assert.Equal(t, primitives.Epoch(20), resultPrevEpochAttTarget.Epoch)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("peatroot"), 32), resultPrevEpochAttTarget.Root)
-	assert.Equal(t, types.Slot(21), resultPrevEpochAtt.InclusionDelay)
-	assert.Equal(t, types.ValidatorIndex(22), resultPrevEpochAtt.ProposerIndex)
+	assert.Equal(t, primitives.Slot(21), resultPrevEpochAtt.InclusionDelay)
+	assert.Equal(t, primitives.ValidatorIndex(22), resultPrevEpochAtt.ProposerIndex)
 	resultCurrEpochAtt := result.CurrentEpochAttestations[0]
 	require.NotNil(t, resultCurrEpochAtt)
 	assert.DeepEqual(t, bitfield.Bitlist{23}, resultCurrEpochAtt.AggregationBits)
 	resultCurrEpochAttData := resultCurrEpochAtt.Data
 	require.NotNil(t, resultCurrEpochAttData)
-	assert.Equal(t, types.Slot(24), resultCurrEpochAttData.Slot)
-	assert.Equal(t, types.CommitteeIndex(25), resultCurrEpochAttData.Index)
+	assert.Equal(t, primitives.Slot(24), resultCurrEpochAttData.Slot)
+	assert.Equal(t, primitives.CommitteeIndex(25), resultCurrEpochAttData.Index)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("ceabeaconblockroot"), 32), resultCurrEpochAttData.BeaconBlockRoot)
 	resultCurrEpochAttSource := resultCurrEpochAttData.Source
 	require.NotNil(t, resultCurrEpochAttSource)
-	assert.Equal(t, types.Epoch(26), resultCurrEpochAttSource.Epoch)
+	assert.Equal(t, primitives.Epoch(26), resultCurrEpochAttSource.Epoch)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("ceasroot"), 32), resultCurrEpochAttSource.Root)
 	resultCurrEpochAttTarget := resultCurrEpochAttData.Target
 	require.NotNil(t, resultCurrEpochAttTarget)
-	assert.Equal(t, types.Epoch(27), resultCurrEpochAttTarget.Epoch)
+	assert.Equal(t, primitives.Epoch(27), resultCurrEpochAttTarget.Epoch)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("ceatroot"), 32), resultCurrEpochAttTarget.Root)
-	assert.Equal(t, types.Slot(28), resultCurrEpochAtt.InclusionDelay)
-	assert.Equal(t, types.ValidatorIndex(29), resultCurrEpochAtt.ProposerIndex)
+	assert.Equal(t, primitives.Slot(28), resultCurrEpochAtt.InclusionDelay)
+	assert.Equal(t, primitives.ValidatorIndex(29), resultCurrEpochAtt.ProposerIndex)
 	assert.DeepEqual(t, bitfield.Bitvector4{1}, result.JustificationBits)
 	resultPrevJustifiedCheckpoint := result.PreviousJustifiedCheckpoint
 	require.NotNil(t, resultPrevJustifiedCheckpoint)
-	assert.Equal(t, types.Epoch(30), resultPrevJustifiedCheckpoint.Epoch)
+	assert.Equal(t, primitives.Epoch(30), resultPrevJustifiedCheckpoint.Epoch)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("pjcroot"), 32), resultPrevJustifiedCheckpoint.Root)
 	resultCurrJustifiedCheckpoint := result.CurrentJustifiedCheckpoint
 	require.NotNil(t, resultCurrJustifiedCheckpoint)
-	assert.Equal(t, types.Epoch(31), resultCurrJustifiedCheckpoint.Epoch)
+	assert.Equal(t, primitives.Epoch(31), resultCurrJustifiedCheckpoint.Epoch)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("cjcroot"), 32), resultCurrJustifiedCheckpoint.Root)
 	resultFinalizedCheckpoint := result.FinalizedCheckpoint
 	require.NotNil(t, resultFinalizedCheckpoint)
-	assert.Equal(t, types.Epoch(32), resultFinalizedCheckpoint.Epoch)
+	assert.Equal(t, primitives.Epoch(32), resultFinalizedCheckpoint.Epoch)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("fcroot"), 32), resultFinalizedCheckpoint.Root)
-}
-
-func TestV1Alpha1SignedContributionAndProofToV2(t *testing.T) {
-	alphaContribution := &ethpbalpha.SignedContributionAndProof{
-		Message: &ethpbalpha.ContributionAndProof{
-			AggregatorIndex: validatorIndex,
-			Contribution: &ethpbalpha.SyncCommitteeContribution{
-				Slot:              slot,
-				BlockRoot:         blockHash,
-				SubcommitteeIndex: 1,
-				AggregationBits:   bitfield.NewBitvector128(),
-				Signature:         signature,
-			},
-			SelectionProof: signature,
-		},
-		Signature: signature,
-	}
-	v2Contribution := V1Alpha1SignedContributionAndProofToV2(alphaContribution)
-	require.NotNil(t, v2Contribution)
-	require.NotNil(t, v2Contribution.Message)
-	require.NotNil(t, v2Contribution.Message.Contribution)
-	assert.DeepEqual(t, signature, v2Contribution.Signature)
-	msg := v2Contribution.Message
-	assert.Equal(t, validatorIndex, msg.AggregatorIndex)
-	assert.DeepEqual(t, signature, msg.SelectionProof)
-	contrib := msg.Contribution
-	assert.Equal(t, slot, contrib.Slot)
-	assert.DeepEqual(t, blockHash, contrib.BeaconBlockRoot)
-	assert.Equal(t, uint64(1), contrib.SubcommitteeIndex)
-	assert.DeepEqual(t, bitfield.NewBitvector128(), contrib.AggregationBits)
-	assert.DeepEqual(t, signature, contrib.Signature)
 }

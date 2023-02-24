@@ -4,16 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
@@ -29,7 +29,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -62,7 +62,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	require.NoError(t, err, "Could not generate proof")
 
 	deposit.Proof = proof
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: []byte{0},
 			BlockHash:   []byte{1},
@@ -87,7 +87,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -143,8 +143,9 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		},
 	}
 	balances := []uint64{0, 50}
-	root := depositTrie.HashTreeRoot()
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	root, err := depositTrie.HashTreeRoot()
+	require.NoError(t, err)
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data: &ethpb.Eth1Data{
@@ -172,7 +173,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -182,7 +183,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(context.Background(), beaconState, dep[0], true)
+	newState, err := altair.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Process deposit failed")
 	require.Equal(t, 2, len(newState.Validators()), "Expected validator list to have length 2")
 	require.Equal(t, 2, len(newState.Balances()), "Expected validator balances list to have length 2")
@@ -200,9 +201,10 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	dep, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	dep[0].Data.Signature = make([]byte, 96)
-	trie, _, err := util.DepositTrieFromDeposits(dep)
+	dt, _, err := util.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
-	root := trie.HashTreeRoot()
+	root, err := dt.HashTreeRoot()
+	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: 1,
@@ -214,7 +216,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -224,7 +226,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(context.Background(), beaconState, dep[0], true)
+	newState, err := altair.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
 
 	if newState.Eth1DepositIndex() != 1 {

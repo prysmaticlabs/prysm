@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/progress"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/progress"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -17,7 +18,7 @@ var migrationOptimalAttesterProtectionKey = []byte("optimal_attester_protection_
 // stored attesting history as large, 2Mb arrays per validator, we need to perform
 // this migration differently than the rest, ensuring we perform each expensive bolt
 // update in its own transaction to prevent having everything on the heap.
-func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
+func (s *Store) migrateOptimalAttesterProtectionUp(_ context.Context) error {
 	publicKeyBytes := make([][]byte, 0)
 	attestingHistoryBytes := make([][]byte, 0)
 	numKeys := 0
@@ -75,14 +76,14 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 			// Extract every single source, target, signing root
 			// from the attesting history then insert them into the
 			// respective buckets under the new db schema.
-			latestEpochWritten, err := attestingHistory.getLatestEpochWritten(ctx)
+			latestEpochWritten, err := attestingHistory.getLatestEpochWritten()
 			if err != nil {
 				return err
 			}
 			// For every epoch since genesis up to the highest epoch written, we then
 			// extract historical data and insert it into the new schema.
-			for targetEpoch := types.Epoch(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
-				historicalAtt, err := attestingHistory.getTargetData(ctx, targetEpoch)
+			for targetEpoch := primitives.Epoch(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
+				historicalAtt, err := attestingHistory.getTargetData(targetEpoch)
 				if err != nil {
 					return err
 				}
@@ -112,40 +113,17 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 }
 
 // Migrate attester protection from the more optimal format to the old format in the DB.
-func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
+func (s *Store) migrateOptimalAttesterProtectionDown(_ context.Context) error {
 	// First we extract the public keys we are migrating down for.
-	pubKeys := make([][48]byte, 0)
-	err := s.view(func(tx *bolt.Tx) error {
-		mb := tx.Bucket(migrationsBucket)
-		if b := mb.Get(migrationOptimalAttesterProtectionKey); b == nil {
-			// Migration has not occurred, meaning data is already in old format
-			// so no need to perform a down migration.
-			return nil
-		}
-		bkt := tx.Bucket(pubKeysBucket)
-		if bkt == nil {
-			return nil
-		}
-		return bkt.ForEach(func(pubKey, v []byte) error {
-			if pubKey == nil {
-				return nil
-			}
-			pkBucket := bkt.Bucket(pubKey)
-			if pkBucket == nil {
-				return nil
-			}
-			pubKeys = append(pubKeys, bytesutil.ToBytes48(pubKey))
-			return nil
-		})
-	})
+	pubKeys, err := s.extractPubKeysForMigratingDown()
 	if err != nil {
 		return err
 	}
 
 	// Next up, we extract the data for attested epochs and signing roots
 	// from the optimized db schema into maps we can use later.
-	signingRootsByTarget := make(map[types.Epoch][]byte)
-	targetEpochsBySource := make(map[types.Epoch][]types.Epoch)
+	signingRootsByTarget := make(map[primitives.Epoch][]byte)
+	targetEpochsBySource := make(map[primitives.Epoch][]primitives.Epoch)
 	err = s.view(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(pubKeysBucket)
 		if bkt == nil {
@@ -169,7 +147,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 			}
 			// Next up, extract the target epochs by source.
 			if err := sourceEpochsBucket.ForEach(func(sourceBytes, targetEpochsBytes []byte) error {
-				targetEpochs := make([]types.Epoch, 0)
+				targetEpochs := make([]primitives.Epoch, 0)
 				for i := 0; i < len(targetEpochsBytes); i += 8 {
 					targetEpochs = append(targetEpochs, bytesutil.BytesToEpochBigEndian(targetEpochsBytes[i:i+8]))
 				}
@@ -198,14 +176,14 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 			// Now we write the attesting history using the data we extracted
 			// from the buckets accordingly.
 			history := newDeprecatedAttestingHistory(0)
-			var maxTargetWritten types.Epoch
+			var maxTargetWritten primitives.Epoch
 			for source, targetEpochs := range targetEpochsBySource {
 				for _, target := range targetEpochs {
 					signingRoot := params.BeaconConfig().ZeroHash[:]
 					if sr, ok := signingRootsByTarget[target]; ok {
 						signingRoot = sr
 					}
-					newHist, err := history.setTargetData(ctx, target, &deprecatedHistoryData{
+					newHist, err := history.setTargetData(target, &deprecatedHistoryData{
 						Source:      source,
 						SigningRoot: signingRoot,
 					})
@@ -218,7 +196,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 					}
 				}
 			}
-			newHist, err := history.setLatestEpochWritten(ctx, maxTargetWritten)
+			newHist, err := history.setLatestEpochWritten(maxTargetWritten)
 			if err != nil {
 				return err
 			}
@@ -245,4 +223,35 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 		migrationsBkt := tx.Bucket(migrationsBucket)
 		return migrationsBkt.Delete(migrationOptimalAttesterProtectionKey)
 	})
+}
+
+func (s *Store) extractPubKeysForMigratingDown() ([][fieldparams.BLSPubkeyLength]byte, error) {
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
+	err := s.view(func(tx *bolt.Tx) error {
+		mb := tx.Bucket(migrationsBucket)
+		if b := mb.Get(migrationOptimalAttesterProtectionKey); b == nil {
+			// Migration has not occurred, meaning data is already in old format
+			// so no need to perform a down migration.
+			return nil
+		}
+		bkt := tx.Bucket(pubKeysBucket)
+		if bkt == nil {
+			return nil
+		}
+		return bkt.ForEach(func(pubKey, v []byte) error {
+			if pubKey == nil {
+				return nil
+			}
+			pkBucket := bkt.Bucket(pubKey)
+			if pkBucket == nil {
+				return nil
+			}
+			pubKeys = append(pubKeys, bytesutil.ToBytes48(pubKey))
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return pubKeys, nil
 }

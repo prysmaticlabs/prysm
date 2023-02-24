@@ -5,19 +5,18 @@ import (
 	"errors"
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -36,6 +35,11 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	// An optimistic validator MUST NOT participate in attestation. (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
+	if err := vs.optimisticStatus(ctx); err != nil {
+		return nil, err
 	}
 
 	if err := helpers.ValidateAttestationTime(req.Slot, vs.TimeFetcher.GenesisTime(),
@@ -97,16 +101,9 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	}
 
 	if time.CurrentEpoch(headState) < slots.ToEpoch(req.Slot) {
-		if features.Get().EnableNextSlotStateCache {
-			headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-			}
-		} else {
-			headState, err = transition.ProcessSlots(ctx, headState, req.Slot)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-			}
+		headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 		}
 	}
 
@@ -208,7 +205,7 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 		return nil, status.Error(codes.InvalidArgument, "no attester slots provided")
 	}
 
-	fetchValsLen := func(slot types.Slot) (uint64, error) {
+	fetchValsLen := func(slot primitives.Slot) (uint64, error) {
 		wantedEpoch := slots.ToEpoch(slot)
 		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {

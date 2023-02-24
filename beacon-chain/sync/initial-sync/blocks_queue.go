@@ -5,13 +5,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	beaconsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -62,7 +62,7 @@ type syncMode uint8
 type blocksQueueConfig struct {
 	blocksFetcher       *blocksFetcher
 	chain               blockchainService
-	highestExpectedSlot types.Slot
+	highestExpectedSlot primitives.Slot
 	p2p                 p2p.P2P
 	db                  db.ReadOnlyDatabase
 	mode                syncMode
@@ -76,20 +76,20 @@ type blocksQueue struct {
 	smm                 *stateMachineManager
 	blocksFetcher       *blocksFetcher
 	chain               blockchainService
-	highestExpectedSlot types.Slot
+	highestExpectedSlot primitives.Slot
 	mode                syncMode
 	exitConditions      struct {
 		noRequiredPeersErrRetries int
 	}
 	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
-	staleEpochs map[types.Epoch]uint8        // counter to keep track of stale FSMs
+	staleEpochs map[primitives.Epoch]uint8   // counter to keep track of stale FSMs
 	quit        chan struct{}                // termination notifier
 }
 
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
 	pid    peer.ID
-	blocks []block.SignedBeaconBlock
+	blocks []interfaces.ReadOnlySignedBeaconBlock
 }
 
 // newBlocksQueue creates initialized priority queue.
@@ -125,7 +125,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		mode:                cfg.mode,
 		fetchedData:         make(chan *blocksQueueFetchedData, 1),
 		quit:                make(chan struct{}),
-		staleEpochs:         make(map[types.Epoch]uint8),
+		staleEpochs:         make(map[primitives.Epoch]uint8),
 	}
 
 	// Configure state machines.
@@ -179,30 +179,16 @@ func (q *blocksQueue) loop() {
 	if startSlot > startBackSlots {
 		startSlot -= startBackSlots
 	}
-	blocksPerRequest := q.blocksFetcher.blocksPerSecond
-	for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
+	blocksPerRequest := q.blocksFetcher.blocksPerPeriod
+	for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += primitives.Slot(blocksPerRequest) {
 		q.smm.addStateMachine(i)
 	}
 
 	ticker := time.NewTicker(pollingInterval)
 	defer ticker.Stop()
 	for {
-		// Check highest expected slot when we approach chain's head slot.
-		if q.chain.HeadSlot() >= q.highestExpectedSlot {
-			// By the time initial sync is complete, highest slot may increase, re-check.
-			if q.mode == modeStopOnFinalizedEpoch {
-				if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
-					q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
-					continue
-				}
-			} else {
-				if q.highestExpectedSlot < q.blocksFetcher.bestNonFinalizedSlot() {
-					q.highestExpectedSlot = q.blocksFetcher.bestNonFinalizedSlot()
-					continue
-				}
-			}
-			log.WithField("slot", q.highestExpectedSlot).Debug("Highest expected slot reached")
-			q.cancel()
+		if waitHighestExpectedSlot(q) {
+			continue
 		}
 
 		log.WithFields(logrus.Fields{
@@ -277,6 +263,27 @@ func (q *blocksQueue) loop() {
 	}
 }
 
+func waitHighestExpectedSlot(q *blocksQueue) bool {
+	// Check highest expected slot when we approach chain's head slot.
+	if q.chain.HeadSlot() >= q.highestExpectedSlot {
+		// By the time initial sync is complete, highest slot may increase, re-check.
+		if q.mode == modeStopOnFinalizedEpoch {
+			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
+				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
+				return true
+			}
+		} else {
+			if q.highestExpectedSlot < q.blocksFetcher.bestNonFinalizedSlot() {
+				q.highestExpectedSlot = q.blocksFetcher.bestNonFinalizedSlot()
+				return true
+			}
+		}
+		log.WithField("slot", q.highestExpectedSlot).Debug("Highest expected slot reached")
+		q.cancel()
+	}
+	return false
+}
+
 // onScheduleEvent is an event called on newly arrived epochs. Transforms state to scheduled.
 func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 	return func(m *stateMachine, in interface{}) (stateID, error) {
@@ -287,7 +294,7 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 			m.setState(stateSkipped)
 			return m.state, errSlotIsTooHigh
 		}
-		blocksPerRequest := q.blocksFetcher.blocksPerSecond
+		blocksPerRequest := q.blocksFetcher.blocksPerPeriod
 		if err := q.blocksFetcher.scheduleRequest(ctx, m.start, blocksPerRequest); err != nil {
 			return m.state, err
 		}
@@ -425,7 +432,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 				delete(q.staleEpochs, slots.ToEpoch(startSlot))
 				fork, err := q.blocksFetcher.findFork(ctx, startSlot)
 				if err == nil {
-					return stateSkipped, q.resetFromFork(ctx, fork)
+					return stateSkipped, q.resetFromFork(fork)
 				}
 				log.WithFields(logrus.Fields{
 					"epoch": slots.ToEpoch(startSlot),
@@ -439,7 +446,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 // onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
-func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
+func (_ *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()

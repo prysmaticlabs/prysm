@@ -13,12 +13,12 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/io/file"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -29,6 +29,8 @@ const (
 )
 
 // Initialize returns metadata regarding whether the caller has authenticated and has a wallet.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork. Web APIs won't require JWT in the future.
+// Still used by Keymanager API until web ui is fully removed.
 func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.InitializeAuthResponse, error) {
 	walletExists, err := wallet.Exists(s.walletDir)
 	if err != nil {
@@ -44,6 +46,7 @@ func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.Initialize
 // CreateAuthToken generates a new jwt key, token and writes them
 // to a file in the specified directory. Also, it logs out a prepared URL
 // for the user to navigate to and authenticate with the Prysm web interface.
+// DEPRECATED: associated to Initialize Web UI API
 func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 	jwtKey, err := createRandomJWTSecret()
 	if err != nil {
@@ -58,7 +61,7 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 	if err := saveAuthToken(walletDirPath, jwtKey, token); err != nil {
 		return err
 	}
-	logValidatorWebAuth(validatorWebAddr, token)
+	logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 	return nil
 }
 
@@ -67,6 +70,7 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 // user via stdout and the validator client should then attempt to open the default
 // browser. The web interface authenticates by looking for this token in the query parameters
 // of the URL. This token is then used as the bearer token for jwt auth.
+// DEPRECATED: associated to Initialize Web UI API
 func (s *Server) initializeAuthToken(walletDir string) (string, error) {
 	authTokenFile := filepath.Join(walletDir, authTokenFileName)
 	if file.FileExists(authTokenFile) {
@@ -102,6 +106,7 @@ func (s *Server) initializeAuthToken(walletDir string) (string, error) {
 	return token, nil
 }
 
+// DEPRECATED: associated to Initialize Web UI API
 func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenPath string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -128,7 +133,7 @@ func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenP
 				continue
 			}
 			validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
-			logValidatorWebAuth(validatorWebAddr, token)
+			logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 		case err := <-watcher.Errors:
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", authTokenPath)
 		case <-ctx.Done():
@@ -137,7 +142,8 @@ func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenP
 	}
 }
 
-func logValidatorWebAuth(validatorWebAddr, token string) {
+// DEPRECATED: associated to Initialize Web UI API
+func logValidatorWebAuth(validatorWebAddr, token string, tokenPath string) {
 	webAuthURLTemplate := "http://%s/initialize?token=%s"
 	webAuthURL := fmt.Sprintf(
 		webAuthURLTemplate,
@@ -149,8 +155,10 @@ func logValidatorWebAuth(validatorWebAddr, token string) {
 			"the Prysm web interface",
 	)
 	log.Info(webAuthURL)
+	log.Infof("Validator CLient JWT for RPC and REST authentication set at:%s", tokenPath)
 }
 
+// DEPRECATED: associated to Initialize Web UI API
 func saveAuthToken(walletDirPath string, jwtKey []byte, token string) error {
 	hashFilePath := filepath.Join(walletDirPath, authTokenFileName)
 	bytesBuf := new(bytes.Buffer)
@@ -169,6 +177,7 @@ func saveAuthToken(walletDirPath string, jwtKey []byte, token string) error {
 	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
 }
 
+// DEPRECATED: associated to Initialize Web UI API
 func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 	br := bufio.NewReader(r)
 	var jwtKeyHex string
@@ -189,8 +198,9 @@ func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 }
 
 // Creates a JWT token string using the JWT key.
+// DEPRECATED: associated to Initialize Web UI API
 func createTokenString(jwtKey []byte) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{})
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
@@ -199,6 +209,7 @@ func createTokenString(jwtKey []byte) (string, error) {
 	return tokenString, nil
 }
 
+// DEPRECATED: associated to Initialize Web UI API
 func createRandomJWTSecret() ([]byte, error) {
 	r := rand.NewGenerator()
 	jwtKey := make([]byte, 32)

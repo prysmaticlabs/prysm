@@ -5,16 +5,16 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	"github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/math"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/math"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
@@ -37,8 +37,8 @@ func ProcessPreGenesisDeposits(
 
 // ActivateValidatorWithEffectiveBalance updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
 func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposits []*ethpb.Deposit) (state.BeaconState, error) {
-	for _, deposit := range deposits {
-		pubkey := deposit.Data.PublicKey
+	for _, d := range deposits {
+		pubkey := d.Data.PublicKey
 		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
 		// In the event of the pubkey not existing, we continue processing the other
 		// deposits.
@@ -71,8 +71,9 @@ func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposi
 // into the beacon chain.
 //
 // Spec pseudocode definition:
-//   For each deposit in block.body.deposits:
-//     process_deposit(state, deposit)
+//
+//	For each deposit in block.body.deposits:
+//	  process_deposit(state, deposit)
 func ProcessDeposits(
 	ctx context.Context,
 	beaconState state.BeaconState,
@@ -85,13 +86,13 @@ func ProcessDeposits(
 		return nil, err
 	}
 
-	for _, deposit := range deposits {
-		if deposit == nil || deposit.Data == nil {
+	for _, d := range deposits {
+		if d == nil || d.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, _, err = ProcessDeposit(beaconState, deposit, batchVerified)
+		beaconState, _, err = ProcessDeposit(beaconState, d, batchVerified)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(d.Data.PublicKey))
 		}
 	}
 	return beaconState, nil
@@ -120,40 +121,41 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 //
 // Spec pseudocode definition:
 // def process_deposit(state: BeaconState, deposit: Deposit) -> None:
-//    # Verify the Merkle branch
-//    assert is_valid_merkle_branch(
-//        leaf=hash_tree_root(deposit.data),
-//        branch=deposit.proof,
-//        depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the List length mix-in
-//        index=state.eth1_deposit_index,
-//        root=state.eth1_data.deposit_root,
-//    )
 //
-//    # Deposits must be processed in order
-//    state.eth1_deposit_index += 1
+//	# Verify the Merkle branch
+//	assert is_valid_merkle_branch(
+//	    leaf=hash_tree_root(deposit.data),
+//	    branch=deposit.proof,
+//	    depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the List length mix-in
+//	    index=state.eth1_deposit_index,
+//	    root=state.eth1_data.deposit_root,
+//	)
 //
-//    pubkey = deposit.data.pubkey
-//    amount = deposit.data.amount
-//    validator_pubkeys = [v.pubkey for v in state.validators]
-//    if pubkey not in validator_pubkeys:
-//        # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
-//        deposit_message = DepositMessage(
-//            pubkey=deposit.data.pubkey,
-//            withdrawal_credentials=deposit.data.withdrawal_credentials,
-//            amount=deposit.data.amount,
-//        )
-//        domain = compute_domain(DOMAIN_DEPOSIT)  # Fork-agnostic domain since deposits are valid across forks
-//        signing_root = compute_signing_root(deposit_message, domain)
-//        if not bls.Verify(pubkey, signing_root, deposit.data.signature):
-//            return
+//	# Deposits must be processed in order
+//	state.eth1_deposit_index += 1
 //
-//        # Add validator and balance entries
-//        state.validators.append(get_validator_from_deposit(state, deposit))
-//        state.balances.append(amount)
-//    else:
-//        # Increase balance by deposit amount
-//        index = ValidatorIndex(validator_pubkeys.index(pubkey))
-//        increase_balance(state, index, amount)
+//	pubkey = deposit.data.pubkey
+//	amount = deposit.data.amount
+//	validator_pubkeys = [v.pubkey for v in state.validators]
+//	if pubkey not in validator_pubkeys:
+//	    # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+//	    deposit_message = DepositMessage(
+//	        pubkey=deposit.data.pubkey,
+//	        withdrawal_credentials=deposit.data.withdrawal_credentials,
+//	        amount=deposit.data.amount,
+//	    )
+//	    domain = compute_domain(DOMAIN_DEPOSIT)  # Fork-agnostic domain since deposits are valid across forks
+//	    signing_root = compute_signing_root(deposit_message, domain)
+//	    if not bls.Verify(pubkey, signing_root, deposit.data.signature):
+//	        return
+//
+//	    # Add validator and balance entries
+//	    state.validators.append(get_validator_from_deposit(state, deposit))
+//	    state.balances.append(amount)
+//	else:
+//	    # Increase balance by deposit amount
+//	    index = ValidatorIndex(validator_pubkeys.index(pubkey))
+//	    increase_balance(state, index, amount)
 func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, bool, error) {
 	var newValidator bool
 	if err := verifyDeposit(beaconState, deposit); err != nil {
@@ -176,7 +178,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 			}
 			if err := verifyDepositDataSigningRoot(deposit.Data, domain); err != nil {
 				// Ignore this error as in the spec pseudo code.
-				log.Debugf("Skipping deposit: could not verify deposit data signature: %v", err)
+				log.WithError(err).Debug("Skipping deposit: could not verify deposit data signature")
 				return beaconState, newValidator, nil
 			}
 		}
@@ -222,10 +224,10 @@ func verifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
-	if ok := trie.VerifyMerkleBranch(
+	if ok := trie.VerifyMerkleProofWithDepth(
 		receiptRoot,
 		leaf[:],
-		int(beaconState.Eth1DepositIndex()),
+		beaconState.Eth1DepositIndex(),
 		deposit.Proof,
 		params.BeaconConfig().DepositContractTreeDepth,
 	); !ok {

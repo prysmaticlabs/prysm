@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 type mockService struct {
@@ -16,10 +16,10 @@ type secondMockService struct {
 	status error
 }
 
-func (m *mockService) Start() {
+func (_ *mockService) Start() {
 }
 
-func (m *mockService) Stop() error {
+func (_ *mockService) Stop() error {
 	return nil
 }
 
@@ -27,10 +27,10 @@ func (m *mockService) Status() error {
 	return m.status
 }
 
-func (s *secondMockService) Start() {
+func (_ *secondMockService) Start() {
 }
 
-func (s *secondMockService) Stop() error {
+func (_ *secondMockService) Stop() error {
 	return nil
 }
 

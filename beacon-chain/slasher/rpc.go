@@ -4,16 +4,17 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // HighestAttestations committed for an input list of validator indices.
 func (s *Service) HighestAttestations(
-	ctx context.Context, validatorIndices []types.ValidatorIndex,
+	ctx context.Context, validatorIndices []primitives.ValidatorIndex,
 ) ([]*ethpb.HighestAttestation, error) {
 	atts, err := s.serviceCfg.Database.HighestAttestations(ctx, validatorIndices)
 	if err != nil {
@@ -59,7 +60,8 @@ func (s *Service) IsSlashableAttestation(
 		SigningRoot:        dataRoot,
 	}
 
-	attesterSlashings, err := s.checkSlashableAttestations(ctx, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
+	currentEpoch := slots.EpochsSinceGenesis(s.genesisTime)
+	attesterSlashings, err := s.checkSlashableAttestations(ctx, currentEpoch, []*slashertypes.IndexedAttestationWrapper{indexedAttWrapper})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if attestation is slashable: %v", err)
 	}

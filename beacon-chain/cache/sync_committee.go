@@ -1,4 +1,4 @@
-// +build !libfuzzer
+//go:build !fuzz
 
 package cache
 
@@ -7,9 +7,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -40,13 +40,13 @@ type SyncCommitteeCache struct {
 // are cached where key is the validator index and the value is the `positionInCommittee` struct.
 type syncCommitteeIndexPosition struct {
 	currentSyncCommitteeRoot [32]byte
-	vIndexToPositionMap      map[types.ValidatorIndex]*positionInCommittee
+	vIndexToPositionMap      map[primitives.ValidatorIndex]*positionInCommittee
 }
 
 // Index position of individual validator of current period and next period sync committee.
 type positionInCommittee struct {
-	currentPeriod []types.CommitteeIndex
-	nextPeriod    []types.CommitteeIndex
+	currentPeriod []primitives.CommitteeIndex
+	nextPeriod    []primitives.CommitteeIndex
 }
 
 // NewSyncCommittee initializes and returns a new SyncCommitteeCache.
@@ -60,7 +60,7 @@ func NewSyncCommittee() *SyncCommitteeCache {
 // sync committee. If the input validator index has no assignment, an empty list will be returned.
 // If the input root does not exist in cache, `ErrNonExistingSyncCommitteeKey` is returned.
 // Manual checking of state for index position in state is recommended when `ErrNonExistingSyncCommitteeKey` is returned.
-func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]types.CommitteeIndex, error) {
+func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx primitives.ValidatorIndex) ([]primitives.CommitteeIndex, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -69,7 +69,7 @@ func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx ty
 		return nil, err
 	}
 	if pos == nil {
-		return []types.CommitteeIndex{}, nil
+		return []primitives.CommitteeIndex{}, nil
 	}
 
 	return pos.currentPeriod, nil
@@ -79,7 +79,7 @@ func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx ty
 // If the input validator index has no assignment, an empty list will be returned.
 // If the input root does not exist in cache, `ErrNonExistingSyncCommitteeKey` is returned.
 // Manual checking of state for index position in state is recommended when `ErrNonExistingSyncCommitteeKey` is returned.
-func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx types.ValidatorIndex) ([]types.CommitteeIndex, error) {
+func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx primitives.ValidatorIndex) ([]primitives.CommitteeIndex, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -88,7 +88,7 @@ func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx types
 		return nil, err
 	}
 	if pos == nil {
-		return []types.CommitteeIndex{}, nil
+		return []primitives.CommitteeIndex{}, nil
 	}
 	return pos.nextPeriod, nil
 }
@@ -96,7 +96,7 @@ func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx types
 // Helper function for `CurrentPeriodIndexPosition` and `NextPeriodIndexPosition` to return a mapping
 // of validator index to its index(s) position in the sync committee.
 func (s *SyncCommitteeCache) idxPositionInCommittee(
-	root [32]byte, valIdx types.ValidatorIndex,
+	root [32]byte, valIdx primitives.ValidatorIndex,
 ) (*positionInCommittee, error) {
 	obj, exists, err := s.cache.GetByKey(key(root))
 	if err != nil {
@@ -122,12 +122,12 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(
 // UpdatePositionsInCommittee updates caching of validators position in sync committee in respect to
 // current epoch and next epoch. This should be called when `current_sync_committee` and `next_sync_committee`
 // change and that happens every `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
-func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, st state.BeaconStateAltair) error {
+func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, st state.BeaconState) error {
 	csc, err := st.CurrentSyncCommittee()
 	if err != nil {
 		return err
 	}
-	positionsMap := make(map[types.ValidatorIndex]*positionInCommittee)
+	positionsMap := make(map[primitives.ValidatorIndex]*positionInCommittee)
 	for i, pubkey := range csc.Pubkeys {
 		p := bytesutil.ToBytes48(pubkey)
 		validatorIndex, ok := st.ValidatorIndexByPubkey(p)
@@ -135,10 +135,10 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 			continue
 		}
 		if _, ok := positionsMap[validatorIndex]; !ok {
-			m := &positionInCommittee{currentPeriod: []types.CommitteeIndex{types.CommitteeIndex(i)}, nextPeriod: []types.CommitteeIndex{}}
+			m := &positionInCommittee{currentPeriod: []primitives.CommitteeIndex{primitives.CommitteeIndex(i)}, nextPeriod: []primitives.CommitteeIndex{}}
 			positionsMap[validatorIndex] = m
 		} else {
-			positionsMap[validatorIndex].currentPeriod = append(positionsMap[validatorIndex].currentPeriod, types.CommitteeIndex(i))
+			positionsMap[validatorIndex].currentPeriod = append(positionsMap[validatorIndex].currentPeriod, primitives.CommitteeIndex(i))
 		}
 	}
 
@@ -153,10 +153,10 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 			continue
 		}
 		if _, ok := positionsMap[validatorIndex]; !ok {
-			m := &positionInCommittee{nextPeriod: []types.CommitteeIndex{types.CommitteeIndex(i)}, currentPeriod: []types.CommitteeIndex{}}
+			m := &positionInCommittee{nextPeriod: []primitives.CommitteeIndex{primitives.CommitteeIndex(i)}, currentPeriod: []primitives.CommitteeIndex{}}
 			positionsMap[validatorIndex] = m
 		} else {
-			positionsMap[validatorIndex].nextPeriod = append(positionsMap[validatorIndex].nextPeriod, types.CommitteeIndex(i))
+			positionsMap[validatorIndex].nextPeriod = append(positionsMap[validatorIndex].nextPeriod, primitives.CommitteeIndex(i))
 		}
 	}
 

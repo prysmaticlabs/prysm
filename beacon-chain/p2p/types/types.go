@@ -4,9 +4,9 @@
 package types
 
 import (
-	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
+	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
 const rootLength = 32

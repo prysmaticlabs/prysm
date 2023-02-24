@@ -5,16 +5,13 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
-
-var errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
-var errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
 
 type weakSubjectivityDB interface {
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
@@ -25,17 +22,15 @@ type WeakSubjectivityVerifier struct {
 	enabled  bool
 	verified bool
 	root     [32]byte
-	epoch    types.Epoch
-	slot     types.Slot
+	epoch    primitives.Epoch
+	slot     primitives.Slot
 	db       weakSubjectivityDB
 }
 
-// NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier
+// NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier.
 func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (*WeakSubjectivityVerifier, error) {
-	// TODO(7342): Weak subjectivity checks are currently optional. When we require the flag to be specified
-	// per 7342, a nil checkpoint, zero-root or zero-epoch should all fail validation
-	// and return an error instead of creating a WeakSubjectivityVerifier that permits any chain history.
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
+		log.Debug("--weak-subjectivity-checkpoint not provided")
 		return &WeakSubjectivityVerifier{
 			enabled: false,
 		}, nil
@@ -56,11 +51,10 @@ func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (
 
 // VerifyWeakSubjectivity verifies the weak subjectivity root in the service struct.
 // Reference design: https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
-func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, finalizedEpoch types.Epoch) error {
+func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, finalizedEpoch primitives.Epoch) error {
 	if v.verified || !v.enabled {
 		return nil
 	}
-
 	// Two conditions are described in the specs:
 	// IF epoch_number > store.finalized_checkpoint.epoch,
 	// then ASSERT during block sync that block with root block_root
@@ -79,19 +73,20 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	if !v.db.HasBlock(ctx, v.root) {
 		return errors.Wrap(errWSBlockNotFound, fmt.Sprintf("missing root %#x", v.root))
 	}
-	filter := filters.NewFilter().SetStartSlot(v.slot).SetEndSlot(v.slot + params.BeaconConfig().SlotsPerEpoch)
+	endSlot := v.slot + params.BeaconConfig().SlotsPerEpoch
+	filter := filters.NewFilter().SetStartSlot(v.slot).SetEndSlot(endSlot)
 	// A node should have the weak subjectivity block corresponds to the correct epoch in the DB.
+	log.Infof("Searching block roots for weak subjectivity root=%#x, between slots %d-%d", v.root, v.slot, endSlot)
 	roots, err := v.db.BlockRoots(ctx, filter)
 	if err != nil {
 		return errors.Wrap(err, "error while retrieving block roots to verify weak subjectivity")
 	}
 	for _, root := range roots {
 		if v.root == root {
-			log.Info("Weak subjectivity check has passed")
+			log.Info("Weak subjectivity check has passed!!")
 			v.verified = true
 			return nil
 		}
 	}
-
 	return errors.Wrap(errWSBlockNotFoundInEpoch, fmt.Sprintf("root=%#x, epoch=%d", v.root, v.epoch))
 }

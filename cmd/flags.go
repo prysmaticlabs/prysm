@@ -1,11 +1,11 @@
-// Package cmd defines the command line flags for the shared utlities.
+// Package cmd defines the command line flags for the shared utilities.
 package cmd
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -224,6 +224,13 @@ var (
 		Name:  "accept-terms-of-use",
 		Usage: "Accept Terms and Conditions (for non-interactive environments)",
 	}
+	// ValidatorMonitorIndicesFlag specifies a list of validator indices to
+	// track for performance updates
+	ValidatorMonitorIndicesFlag = &cli.IntSliceFlag{
+		Name:  "monitor-indices",
+		Usage: "List of validator indices to track performance",
+	}
+
 	// RestoreSourceFileFlag specifies the filepath to the backed-up database file
 	// which will be used to restore the database.
 	RestoreSourceFileFlag = &cli.StringFlag{
@@ -236,11 +243,17 @@ var (
 		Usage: "Target directory of the restored database",
 		Value: DefaultDataDir(),
 	}
-	// BoltMMapInitialSizeFlag specifies the initial size in bytes of boltdb's mmap syscall.
-	BoltMMapInitialSizeFlag = &cli.IntFlag{
-		Name:  "bolt-mmap-initial-size",
-		Usage: "Specifies the size in bytes of bolt db's mmap syscall allocation",
-		Value: 536870912, // 512 Mb as a default value.
+	// ApiTimeoutFlag specifies the timeout value for API requests in seconds. A timeout of zero means no timeout.
+	ApiTimeoutFlag = &cli.IntFlag{
+		Name:  "api-timeout",
+		Usage: "Specifies the timeout value for API requests in seconds",
+		Value: 120,
+	}
+	// JwtOutputFileFlag specifies the JWT file path that gets generated into when invoked by generate-jwt-secret.
+	JwtOutputFileFlag = &cli.StringFlag{
+		Name:    "output-file",
+		Usage:   "Target file path for outputting a generated JWT secret to be used for JSON-RPC authentication",
+		Aliases: []string{"o"},
 	}
 )
 

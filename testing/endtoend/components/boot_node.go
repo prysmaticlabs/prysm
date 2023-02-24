@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 )
 
 var _ e2etypes.ComponentRunner = (*BootNode)(nil)
@@ -21,6 +22,7 @@ type BootNode struct {
 	e2etypes.ComponentRunner
 	started chan struct{}
 	enr     string
+	cmd     *exec.Cmd
 }
 
 // NewBootNode creates and returns boot node.
@@ -43,37 +45,34 @@ func (node *BootNode) Start(ctx context.Context) error {
 		return errors.New("boot node binary not found")
 	}
 
-	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.BootNodeLogFileName)
+	args := []string{
+		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.Ports.BootNodePort),
+		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.Ports.BootNodeMetricsPort),
+	}
+
+	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
+	stdErrFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.BootNodeLogFileName)
 	if err != nil {
 		return err
 	}
-
-	args := []string{
-		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
-		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
-		"--debug",
-	}
-
-	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
-	cmd.Stdout = stdOutFile
-	cmd.Stderr = stdOutFile
+	cmd.Stderr = stdErrFile
 	log.Infof("Starting boot node with flags: %s", strings.Join(args[1:], " "))
 	if err = cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start beacon node: %w", err)
 	}
 
-	if err = helpers.WaitForTextInFile(stdOutFile, "Running bootnode"); err != nil {
+	if err = helpers.WaitForTextInFile(stdErrFile, "Running bootnode"); err != nil {
 		return fmt.Errorf("could not find enr for bootnode, this means the bootnode had issues starting: %w", err)
 	}
 
-	node.enr, err = enrFromLogFile(stdOutFile.Name())
+	node.enr, err = enrFromLogFile(stdErrFile.Name())
 	if err != nil {
 		return fmt.Errorf("could not get enr for bootnode: %w", err)
 	}
 
 	// Mark node as ready.
 	close(node.started)
+	node.cmd = cmd
 
 	return cmd.Wait()
 }
@@ -83,8 +82,23 @@ func (node *BootNode) Started() <-chan struct{} {
 	return node.started
 }
 
+// Pause pauses the component and its underlying process.
+func (node *BootNode) Pause() error {
+	return node.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (node *BootNode) Resume() error {
+	return node.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop stops the component and its underlying process.
+func (node *BootNode) Stop() error {
+	return node.cmd.Process.Kill()
+}
+
 func enrFromLogFile(name string) (string, error) {
-	byteContent, err := ioutil.ReadFile(name) // #nosec G304
+	byteContent, err := os.ReadFile(name) // #nosec G304
 	if err != nil {
 		return "", err
 	}

@@ -11,15 +11,16 @@ import (
 	"github.com/d4l3k/messagediff"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptesting "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestService_decodePubsubMessage(t *testing.T) {
@@ -71,7 +72,11 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				},
 			},
 			wantErr: nil,
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
+			want: func() interfaces.ReadOnlySignedBeaconBlock {
+				wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+				require.NoError(t, err)
+				return wsb
+			}(),
 		},
 	}
 	for _, tt := range tests {
@@ -85,10 +90,12 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				} else if tt.input.Message == nil {
 					tt.input.Message = &pb.Message{}
 				}
-				tt.input.Message.Topic = &tt.topic
+				// reassign because tt is a loop variable
+				topic := tt.topic
+				tt.input.Message.Topic = &topic
 			}
 			got, err := s.decodePubsubMessage(tt.input)
-			if err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
+			if err != nil && err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
 				t.Errorf("decodePubsubMessage() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

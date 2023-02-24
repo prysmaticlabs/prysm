@@ -7,15 +7,15 @@ import (
 	"time"
 
 	joonix "github.com/joonix/log"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/client-stats/flags"
-	"github.com/prysmaticlabs/prysm/io/logs"
-	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
-	"github.com/prysmaticlabs/prysm/monitoring/journald"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/client-stats/flags"
+	"github.com/prysmaticlabs/prysm/v3/io/logs"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/journald"
+	prefixed "github.com/prysmaticlabs/prysm/v3/runtime/logging/logrus-prefixed-formatter"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var appFlags = []cli.Flag{
@@ -27,6 +27,10 @@ var appFlags = []cli.Flag{
 	flags.ValidatorMetricsURLFlag,
 	flags.ClientStatsAPIURLFlag,
 	flags.ScrapeIntervalFlag,
+}
+
+func init() {
+	appFlags = cmd.WrapFlags(appFlags)
 }
 
 func main() {
@@ -126,12 +130,12 @@ func run(ctx *cli.Context) error {
 			for _, s := range scrapers {
 				r, err := s.Scrape()
 				if err != nil {
-					log.Errorf("Scraper error: %s", err)
+					log.WithError(err).Error("Scraper error")
 					continue
 				}
 				err = upd.Update(r)
 				if err != nil {
-					log.Errorf("client-stats collector error: %s", err)
+					log.WithError(err).Error("client-stats collector error")
 					continue
 				}
 			}

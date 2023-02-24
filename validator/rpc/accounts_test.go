@@ -6,25 +6,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	mock2 "github.com/prysmaticlabs/prysm/v3/testing/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
+	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -37,26 +37,34 @@ func TestServer_ListAccounts(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	// We attempt to create the wallet.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(defaultWalletPath),
+		accounts.WithKeymanagerType(keymanager.Derived),
+		accounts.WithWalletPassword(strongPass),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(ctx)
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 	numAccounts := 50
 	dr, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 	resp, err := s.ListAccounts(ctx, &pb.ListAccountsRequest{
 		PageSize: int32(numAccounts),
@@ -102,26 +110,34 @@ func TestServer_BackupAccounts(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	// We attempt to create the wallet.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(defaultWalletPath),
+		accounts.WithKeymanagerType(keymanager.Derived),
+		accounts.WithWalletPassword(strongPass),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(ctx)
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 	numAccounts := 50
 	dr, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 	resp, err := s.ListAccounts(ctx, &pb.ListAccountsRequest{
 		PageSize: int32(numAccounts),
@@ -152,7 +168,7 @@ func TestServer_BackupAccounts(t *testing.T) {
 	for i, f := range r.File {
 		keystoreFile, err := f.Open()
 		require.NoError(t, err)
-		encoded, err := ioutil.ReadAll(keystoreFile)
+		encoded, err := io.ReadAll(keystoreFile)
 		if err != nil {
 			require.NoError(t, keystoreFile.Close())
 			t.Fatal(err)
@@ -167,83 +183,11 @@ func TestServer_BackupAccounts(t *testing.T) {
 	}
 }
 
-func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
-	ctx := context.Background()
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	// We attempt to create the wallet.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	s := &Server{
-		keymanager:        km,
-		walletInitialized: true,
-		wallet:            w,
-	}
-	numAccounts := 5
-	dr, ok := km.(*derived.Keymanager)
-	require.Equal(t, true, ok)
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
-	require.NoError(t, err)
-
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: nil,
-	})
-	assert.ErrorContains(t, "No public keys specified to delete", err)
-
-	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: bytesutil.FromBytes48Array(keys),
-	})
-	require.NoError(t, err)
-}
-
-func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
-	s := &Server{}
-	ctx := context.Background()
-	_, err := s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
-	assert.ErrorContains(t, "No public keys specified to delete", err)
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: make([][]byte, 1),
-	})
-	assert.ErrorContains(t, "No wallet found", err)
-}
-
-func TestServer_DeleteAccounts_OK_ImportedWallet(t *testing.T) {
-	s, pubKeys := createImportedWalletWithAccounts(t, 3)
-	ctx := context.Background()
-	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	require.Equal(t, len(pubKeys), len(keys))
-
-	// Next, we attempt to delete one of the keystores.
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: pubKeys[:1], // Delete the 0th public key
-	})
-	require.NoError(t, err)
-	s.keymanager, err = s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-
-	// We expect one of the keys to have been deleted.
-	keys, err = s.keymanager.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, len(pubKeys)-1, len(keys))
-}
-
 func TestServer_VoluntaryExit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
 	mockNodeClient := mock2.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
@@ -277,28 +221,37 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	// We attempt to create the wallet.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(defaultWalletPath),
+		accounts.WithKeymanagerType(keymanager.Derived),
+		accounts.WithWalletPassword(strongPass),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(ctx)
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:                km,
 		walletInitialized:         true,
 		wallet:                    w,
 		beaconNodeClient:          mockNodeClient,
 		beaconNodeValidatorClient: mockValidatorClient,
+		validatorService:          vs,
 	}
 	numAccounts := 2
 	dr, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)

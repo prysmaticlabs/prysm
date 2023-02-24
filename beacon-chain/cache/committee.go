@@ -1,4 +1,4 @@
-// +build !libfuzzer
+//go:build !fuzz
 
 package cache
 
@@ -12,18 +12,20 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	types "github.com/prysmaticlabs/eth2-types"
-	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	mathutil "github.com/prysmaticlabs/prysm/math"
+	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	mathutil "github.com/prysmaticlabs/prysm/v3/math"
+)
+
+const (
+	// maxCommitteesCacheSize defines the max number of shuffled committees on per randao basis can cache.
+	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
+	maxCommitteesCacheSize = int(32)
 )
 
 var (
-	// maxCommitteesCacheSize defines the max number of shuffled committees on per randao basis can cache.
-	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
-	maxCommitteesCacheSize = uint64(32)
-
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "committee_cache_miss",
@@ -55,14 +57,14 @@ func committeeKeyFn(obj interface{}) (string, error) {
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
 	return &CommitteeCache{
-		CommitteeCache: lruwrpr.New(int(maxCommitteesCacheSize)),
+		CommitteeCache: lruwrpr.New(maxCommitteesCacheSize),
 		inProgress:     make(map[string]bool),
 	}
 }
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *CommitteeCache) Committee(ctx context.Context, slot types.Slot, seed [32]byte, index types.CommitteeIndex) ([]types.ValidatorIndex, error) {
+func (c *CommitteeCache) Committee(ctx context.Context, slot primitives.Slot, seed [32]byte, index primitives.CommitteeIndex) ([]primitives.ValidatorIndex, error) {
 	if err := c.checkInProgress(ctx, seed); err != nil {
 		return nil, err
 	}
@@ -100,9 +102,12 @@ func (c *CommitteeCache) Committee(ctx context.Context, slot types.Slot, seed [3
 
 // AddCommitteeShuffledList adds Committee shuffled list object to the cache. T
 // his method also trims the least recently list if the cache size has ready the max cache size limit.
-func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error {
+func (c *CommitteeCache) AddCommitteeShuffledList(ctx context.Context, committees *Committees) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	key, err := committeeKeyFn(committees)
 	if err != nil {
 		return err
@@ -112,7 +117,7 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 }
 
 // ActiveIndices returns the active indices of a given seed stored in cache.
-func (c *CommitteeCache) ActiveIndices(ctx context.Context, seed [32]byte) ([]types.ValidatorIndex, error) {
+func (c *CommitteeCache) ActiveIndices(ctx context.Context, seed [32]byte) ([]primitives.ValidatorIndex, error) {
 	if err := c.checkInProgress(ctx, seed); err != nil {
 		return nil, err
 	}

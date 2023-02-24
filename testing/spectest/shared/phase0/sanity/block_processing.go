@@ -3,22 +3,22 @@ package sanity
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -32,6 +32,9 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", folderPath)
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "phase0", folderPath)
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -41,7 +44,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &ethpb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := v1.InitializeFromProto(beaconStateBase)
+			beaconState, err := state_native.InitializeFromProtoPhase0(beaconStateBase)
 			require.NoError(t, err)
 
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
@@ -61,11 +64,13 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, transitionError = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+				wsb, err := blocks.NewSignedBeaconBlock(block)
+				require.NoError(t, err)
+				processedState, transitionError = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				if transitionError != nil {
 					break
 				}
-				beaconState, ok = processedState.(*v1.BeaconState)
+				beaconState, ok = processedState.(*state_native.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -83,17 +88,17 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 					t.Errorf("Unexpected error: %v", transitionError)
 				}
 
-				postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath) // #nosec G304
+				postBeaconStateFile, err := os.ReadFile(postSSZFilepath) // #nosec G304
 				require.NoError(t, err)
 				postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 				require.NoError(t, err, "Failed to decompress")
 
 				postBeaconState := &ethpb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+				pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
+					diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}

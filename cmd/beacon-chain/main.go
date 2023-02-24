@@ -11,29 +11,36 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
-	"github.com/prysmaticlabs/prysm/beacon-chain/node"
-	"github.com/prysmaticlabs/prysm/cmd"
-	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
-	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/io/logs"
-	"github.com/prysmaticlabs/prysm/monitoring/journald"
-	"github.com/prysmaticlabs/prysm/runtime/debug"
-	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/runtime/tos"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/node"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	blockchaincmd "github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/blockchain"
+	dbcommands "github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	jwtcommands "github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/jwt"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/logs"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/journald"
+	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v3/runtime/fdlimits"
+	prefixed "github.com/prysmaticlabs/prysm/v3/runtime/logging/logrus-prefixed-formatter"
+	_ "github.com/prysmaticlabs/prysm/v3/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/v3/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
+	flags.ExecutionEngineEndpoint,
+	flags.ExecutionEngineHeaders,
 	flags.HTTPWeb3ProviderFlag,
-	flags.FallbackWeb3ProviderFlag,
+	flags.ExecutionJWTSecretFlag,
 	flags.RPCHost,
 	flags.RPCPort,
 	flags.CertFlag,
@@ -46,9 +53,6 @@ var appFlags = []cli.Flag{
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
-	flags.HeadSync,
-	flags.DisableSync,
-	flags.DisableDiscv5,
 	flags.BlockBatchLimit,
 	flags.BlockBatchLimitBurstFactor,
 	flags.InteropMockEth1DataVotesFlag,
@@ -61,15 +65,17 @@ var appFlags = []cli.Flag{
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
-	flags.WeakSubjectivityCheckpt,
+	flags.WeakSubjectivityCheckpoint,
 	flags.Eth1HeaderReqLimit,
-	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
+	flags.SuggestedFeeRecipient,
 	flags.TerminalTotalDifficultyOverride,
 	flags.TerminalBlockHashOverride,
 	flags.TerminalBlockHashActivationEpochOverride,
-	flags.Coinbase,
-	cmd.EnableBackupWebhookFlag,
+	flags.MevRelayEndpoint,
+	flags.MaxBuilderEpochMissedSlots,
+	flags.MaxBuilderConsecutiveMissedSlots,
+	flags.EngineEndpointTimeoutSeconds,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
@@ -117,7 +123,14 @@ var appFlags = []cli.Flag{
 	cmd.AcceptTosFlag,
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
-	cmd.BoltMMapInitialSizeFlag,
+	cmd.ValidatorMonitorIndicesFlag,
+	cmd.ApiTimeoutFlag,
+	checkpoint.BlockPath,
+	checkpoint.StatePath,
+	checkpoint.RemoteURL,
+	genesis.StatePath,
+	genesis.BeaconAPIURL,
+	flags.SlasherDirFlag,
 }
 
 func init() {
@@ -128,10 +141,16 @@ func main() {
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum"
-	app.Action = startNode
+	app.Action = func(ctx *cli.Context) error {
+		if err := startNode(ctx); err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
+		return nil
+	}
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		dbcommands.Commands,
+		jwtcommands.Commands,
 	}
 
 	app.Flags = appFlags
@@ -174,10 +193,10 @@ func main() {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
-		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
+		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
 			return err
 		}
-		if err := cmd.ExpandWeb3EndpointsIfFile(ctx, flags.FallbackWeb3ProviderFlag); err != nil {
+		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
 			return err
 		}
 		if ctx.IsSet(flags.SetGCPercent.Name) {
@@ -185,6 +204,9 @@ func main() {
 		}
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		if err := debug.Setup(ctx); err != nil {
+			return err
+		}
+		if err := fdlimits.SetMaxFdLimits(); err != nil {
 			return err
 		}
 		return cmd.ValidateNoArgs(ctx)
@@ -221,6 +243,13 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
+	// Set libp2p logger to only panic logs for the info level.
+	golog.SetAllLoggers(golog.LevelPanic)
+
+	if level == logrus.DebugLevel {
+		// Set libp2p logger to error logs for the debug level.
+		golog.SetAllLoggers(golog.LevelError)
+	}
 	if level == logrus.TraceLevel {
 		// libp2p specific logging.
 		golog.SetAllLoggers(golog.LevelDebug)
@@ -232,16 +261,36 @@ func startNode(ctx *cli.Context) error {
 
 	blockchainFlagOpts, err := blockchaincmd.FlagOptions(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
-	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
+	executionFlagOpts, err := execution.FlagOptions(ctx)
 	if err != nil {
-		return nil
+		return err
+	}
+	builderFlagOpts, err := builder.FlagOptions(ctx)
+	if err != nil {
+		return err
 	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
-		node.WithPowchainFlagOptions(powchainFlagOpts),
+		node.WithExecutionChainOptions(executionFlagOpts),
+		node.WithBuilderFlagOptions(builderFlagOpts),
 	}
+
+	optFuncs := []func(*cli.Context) (node.Option, error){
+		genesis.BeaconNodeOptions,
+		checkpoint.BeaconNodeOptions,
+	}
+	for _, of := range optFuncs {
+		ofo, err := of(ctx)
+		if err != nil {
+			return err
+		}
+		if ofo != nil {
+			opts = append(opts, ofo)
+		}
+	}
+
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {
 		return err

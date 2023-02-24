@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"
 )
 
 // SaveGraffitiOrderedIndex writes the current graffiti index to the db
-func (s *Store) SaveGraffitiOrderedIndex(ctx context.Context, index uint64) error {
+func (s *Store) SaveGraffitiOrderedIndex(_ context.Context, index uint64) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(graffitiBucket)
 		indexBytes := bytesutil.Uint64ToBytesBigEndian(index)
@@ -18,7 +18,7 @@ func (s *Store) SaveGraffitiOrderedIndex(ctx context.Context, index uint64) erro
 }
 
 // GraffitiOrderedIndex fetches the ordered index, resetting if the file hash changed
-func (s *Store) GraffitiOrderedIndex(ctx context.Context, fileHash [32]byte) (uint64, error) {
+func (s *Store) GraffitiOrderedIndex(_ context.Context, fileHash [32]byte) (uint64, error) {
 	orderedIndex := uint64(0)
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(graffitiBucket)

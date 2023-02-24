@@ -5,17 +5,17 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // Initialize the state cache for sync committees.
@@ -24,30 +24,30 @@ var syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
 // HeadSyncCommitteeFetcher is the interface that wraps the head sync committee related functions.
 // The head sync committee functions return callers sync committee indices and public keys with respect to current head state.
 type HeadSyncCommitteeFetcher interface {
-	HeadSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error)
-	HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) ([][]byte, error)
+	HeadSyncCommitteeIndices(ctx context.Context, index primitives.ValidatorIndex, slot primitives.Slot) ([]primitives.CommitteeIndex, error)
+	HeadSyncCommitteePubKeys(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) ([][]byte, error)
 }
 
 // HeadDomainFetcher is the interface that wraps the head sync domain related functions.
 // The head sync committee domain functions return callers domain data with respect to slot and head state.
 type HeadDomainFetcher interface {
-	HeadSyncCommitteeDomain(ctx context.Context, slot types.Slot) ([]byte, error)
-	HeadSyncSelectionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error)
-	HeadSyncContributionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error)
+	HeadSyncCommitteeDomain(ctx context.Context, slot primitives.Slot) ([]byte, error)
+	HeadSyncSelectionProofDomain(ctx context.Context, slot primitives.Slot) ([]byte, error)
+	HeadSyncContributionProofDomain(ctx context.Context, slot primitives.Slot) ([]byte, error)
 }
 
 // HeadSyncCommitteeDomain returns the head sync committee domain using current head state advanced up to `slot`.
-func (s *Service) HeadSyncCommitteeDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+func (s *Service) HeadSyncCommitteeDomain(ctx context.Context, slot primitives.Slot) ([]byte, error) {
 	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainSyncCommittee)
 }
 
 // HeadSyncSelectionProofDomain returns the head sync committee domain using current head state advanced up to `slot`.
-func (s *Service) HeadSyncSelectionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+func (s *Service) HeadSyncSelectionProofDomain(ctx context.Context, slot primitives.Slot) ([]byte, error) {
 	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainSyncCommitteeSelectionProof)
 }
 
 // HeadSyncContributionProofDomain returns the head sync committee domain using current head state advanced up to `slot`.
-func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot types.Slot) ([]byte, error) {
+func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot primitives.Slot) ([]byte, error) {
 	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainContributionAndProof)
 }
 
@@ -61,7 +61,7 @@ func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot type
 // [compute_start_slot_at_epoch(epoch) - 1, compute_start_slot_at_epoch(epoch) + SLOTS_PER_EPOCH - 1)
 // rather than for the range
 // [compute_start_slot_at_epoch(epoch), compute_start_slot_at_epoch(epoch) + SLOTS_PER_EPOCH)
-func (s *Service) HeadSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+func (s *Service) HeadSyncCommitteeIndices(ctx context.Context, index primitives.ValidatorIndex, slot primitives.Slot) ([]primitives.CommitteeIndex, error) {
 	nextSlotEpoch := slots.ToEpoch(slot + 1)
 	currentEpoch := slots.ToEpoch(slot)
 
@@ -79,7 +79,7 @@ func (s *Service) HeadSyncCommitteeIndices(ctx context.Context, index types.Vali
 
 // headCurrentSyncCommitteeIndices returns the input validator `index`'s position indices in the current sync committee with respect to `slot`.
 // Head state advanced up to `slot` is used for calculation.
-func (s *Service) headCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+func (s *Service) headCurrentSyncCommitteeIndices(ctx context.Context, index primitives.ValidatorIndex, slot primitives.Slot) ([]primitives.CommitteeIndex, error) {
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (s *Service) headCurrentSyncCommitteeIndices(ctx context.Context, index typ
 
 // headNextSyncCommitteeIndices returns the input validator `index`'s position indices in the next sync committee with respect to `slot`.
 // Head state advanced up to `slot` is used for calculation.
-func (s *Service) headNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+func (s *Service) headNextSyncCommitteeIndices(ctx context.Context, index primitives.ValidatorIndex, slot primitives.Slot) ([]primitives.CommitteeIndex, error) {
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func (s *Service) headNextSyncCommitteeIndices(ctx context.Context, index types.
 
 // HeadSyncCommitteePubKeys returns the head sync committee public keys with respect to `slot` and subcommittee index `committeeIndex`.
 // Head state advanced up to `slot` is used for calculation.
-func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) ([][]byte, error) {
+func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) ([][]byte, error) {
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -125,17 +125,17 @@ func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot,
 }
 
 // returns calculated domain using input `domain` and `slot`.
-func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, domain [4]byte) ([]byte, error) {
+func (s *Service) domainWithHeadState(ctx context.Context, slot primitives.Slot, domain [4]byte) ([]byte, error) {
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
 	}
-	return signing.Domain(headState.Fork(), slots.ToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
+	return signing.Domain(headState.Fork(), slots.ToEpoch(headState.Slot()), domain, headState.GenesisValidatorsRoot())
 }
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.
 // For the cache miss, it processes head state up to slot and fill the cache with `slot` as key.
-func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
+func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot primitives.Slot) (state.BeaconState, error) {
 	var headState state.BeaconState
 	var err error
 	mLock := async.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
@@ -157,11 +157,9 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 		if headState == nil || headState.IsNil() {
 			return nil, errors.New("nil state")
 		}
-		if slot > headState.Slot() {
-			headState, err = transition.ProcessSlots(ctx, headState, slot)
-			if err != nil {
-				return nil, err
-			}
+		headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slot)
+		if err != nil {
+			return nil, err
 		}
 		syncHeadStateMiss.Inc()
 		err = syncCommitteeHeadStateCache.Put(slot, headState)

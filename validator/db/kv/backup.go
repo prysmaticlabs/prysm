@@ -6,8 +6,8 @@ import (
 	"path"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -67,7 +67,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 
 // Walks through each buckets and looks out for nested buckets so that
 // the backup db also includes them.
-func createNestedBuckets(srcBucket *bolt.Bucket, dstBucket *bolt.Bucket, fn func(k, v []byte) error) func(k, v []byte) error {
+func createNestedBuckets(srcBucket, dstBucket *bolt.Bucket, fn func(k, v []byte) error) func(k, v []byte) error {
 	return func(k, v []byte) error {
 		bkt := srcBucket.Bucket(k)
 		if bkt != nil {

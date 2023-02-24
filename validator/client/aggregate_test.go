@@ -6,16 +6,17 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -25,7 +26,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	pubKey := [48]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.SubmitAggregateAndProof(context.Background(), 0, pubKey)
 
@@ -35,7 +36,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [48]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
@@ -74,7 +75,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [48]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
@@ -119,7 +120,7 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
 	currentTime := time.Now()
-	numOfSlots := types.Slot(4)
+	numOfSlots := primitives.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
 	timeToSleep := oneThird + oneThird
@@ -134,7 +135,7 @@ func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
 	currentTime := time.Now()
-	numOfSlots := types.Slot(4)
+	numOfSlots := primitives.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	expectedTime := time.Now()
@@ -149,7 +150,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	pubKey := [48]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -163,7 +164,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 		}),
 		SelectionProof: make([]byte, 96),
 	}
-	sig, err := validator.aggregateAndProofSig(context.Background(), pubKey, agg)
+	sig, err := validator.aggregateAndProofSig(context.Background(), pubKey, agg, 0 /* slot */)
 	require.NoError(t, err)
 	_, err = bls.SignatureFromBytes(sig)
 	require.NoError(t, err)

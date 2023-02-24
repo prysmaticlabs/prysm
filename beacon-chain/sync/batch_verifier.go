@@ -6,8 +6,9 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"go.opencensus.io/trace"
 )
 
@@ -16,7 +17,7 @@ const signatureVerificationInterval = 50 * time.Millisecond
 const verifierLimit = 50
 
 type signatureVerifier struct {
-	set     *bls.SignatureSet
+	set     *bls.SignatureBatch
 	resChan chan error
 }
 
@@ -49,7 +50,7 @@ func (s *Service) verifierRoutine() {
 	}
 }
 
-func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureSet) (pubsub.ValidationResult, error) {
+func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureBatch) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
 	defer span.End()
 
@@ -83,19 +84,44 @@ func verifyBatch(verifierBatch []*signatureVerifier) {
 		return
 	}
 	aggSet := verifierBatch[0].set
-	verificationErr := error(nil)
 
 	for i := 1; i < len(verifierBatch); i++ {
 		aggSet = aggSet.Join(verifierBatch[i].set)
 	}
-	verified, err := aggSet.Verify()
-	switch {
-	case err != nil:
-		verificationErr = err
-	case !verified:
-		verificationErr = errors.New("batch signature verification failed")
+	var verificationErr error
+
+	if features.Get().EnableBatchGossipAggregation {
+		aggSet, verificationErr = performBatchAggregation(aggSet)
+	}
+	if verificationErr == nil {
+		verified, err := aggSet.Verify()
+		switch {
+		case err != nil:
+			verificationErr = err
+		case !verified:
+			verificationErr = errors.New("batch signature verification failed")
+		}
 	}
 	for i := 0; i < len(verifierBatch); i++ {
 		verifierBatch[i].resChan <- verificationErr
 	}
+}
+
+func performBatchAggregation(aggSet *bls.SignatureBatch) (*bls.SignatureBatch, error) {
+	currLen := len(aggSet.Signatures)
+	num, aggSet, err := aggSet.RemoveDuplicates()
+	if err != nil {
+		return nil, err
+	}
+	duplicatesRemovedCounter.Add(float64(num))
+	// Aggregate batches in the provided signature batch.
+	aggSet, err = aggSet.AggregateBatch()
+	if err != nil {
+		return nil, err
+	}
+	// Record number of signature sets successfully batched.
+	if currLen > len(aggSet.Signatures) {
+		numberOfSetsAggregated.Observe(float64(currLen - len(aggSet.Signatures)))
+	}
+	return aggSet, nil
 }

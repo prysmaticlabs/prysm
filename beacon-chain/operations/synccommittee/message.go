@@ -2,9 +2,9 @@ package synccommittee
 
 import (
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/container/queue"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/queue"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // SaveSyncCommitteeMessage saves a sync committee message in to a priority queue.
@@ -61,7 +61,7 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 
 // SyncCommitteeMessages returns sync committee messages by slot from the priority queue.
 // Upon retrieval, the message is removed from the queue.
-func (s *Store) SyncCommitteeMessages(slot types.Slot) ([]*ethpb.SyncCommitteeMessage, error) {
+func (s *Store) SyncCommitteeMessages(slot primitives.Slot) ([]*ethpb.SyncCommitteeMessage, error) {
 	s.messageLock.RLock()
 	defer s.messageLock.RUnlock()
 

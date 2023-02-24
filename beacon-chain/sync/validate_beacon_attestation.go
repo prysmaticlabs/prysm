@@ -6,22 +6,22 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -40,6 +40,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
+
 	ctx, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexBeaconAttestation")
 	defer span.End()
 
@@ -123,6 +124,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Target.Root)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Source.Root)) {
+		attBadBlockCount.Inc()
 		return pubsub.ValidationReject, errors.New("attestation data references bad block root")
 	}
 
@@ -134,12 +136,13 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore, nil
 	}
 
-	if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
+	if err := s.cfg.chain.VerifyFinalizedConsistency(att.Data.BeaconBlockRoot); err != nil {
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject, err
+		return pubsub.ValidationIgnore, err
 	}
 	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
 		tracing.AnnotateError(span, err)
+		attBadLmdConsistencyCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
@@ -218,23 +221,17 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 		return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
 	}
 
-	if features.Get().EnableBatchVerification {
-		set, err := blocks.AttestationSignatureSet(ctx, bs, []*eth.Attestation{a})
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject, err
-		}
-		return s.validateWithBatchVerifier(ctx, "attestation", set)
-	}
-	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
+	set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
+	if err != nil {
 		tracing.AnnotateError(span, err)
+		attBadSignatureBatchCount.Inc()
 		return pubsub.ValidationReject, err
 	}
-	return pubsub.ValidationAccept, nil
+	return s.validateWithBatchVerifier(ctx, "attestation", set)
 }
 
 // Returns true if the attestation was already seen for the participating validator for the slot.
-func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) bool {
+func (s *Service) hasSeenCommitteeIndicesSlot(slot primitives.Slot, committeeID primitives.CommitteeIndex, aggregateBits []byte) bool {
 	s.seenUnAggregatedAttestationLock.RLock()
 	defer s.seenUnAggregatedAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
@@ -244,11 +241,11 @@ func (s *Service) hasSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 }
 
 // Set committee's indices and slot as seen for incoming attestations.
-func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types.CommitteeIndex, aggregateBits []byte) {
+func (s *Service) setSeenCommitteeIndicesSlot(slot primitives.Slot, committeeID primitives.CommitteeIndex, aggregateBits []byte) {
 	s.seenUnAggregatedAttestationLock.Lock()
 	defer s.seenUnAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
-	b = append(b, aggregateBits...)
+	b = append(b, bytesutil.SafeCopyBytes(aggregateBits)...)
 	s.seenUnAggregatedAttestationCache.Add(string(b), true)
 }
 
@@ -257,6 +254,5 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
 	hasStateSummary := s.cfg.beaconDB.HasStateSummary(ctx, blockRoot)
 	hasState := hasStateSummary || s.cfg.beaconDB.HasState(ctx, blockRoot)
-	hasBlock := s.cfg.chain.HasInitSyncBlock(blockRoot) || s.cfg.beaconDB.HasBlock(ctx, blockRoot)
-	return hasState && hasBlock
+	return hasState && s.cfg.chain.HasBlock(ctx, blockRoot)
 }

@@ -6,17 +6,17 @@ go_library(
         "errors.go",
         "interface.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/iface",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface",
     # Other packages must use github.com/prysmaticlabs/prysm/beacon-chain/db.Database alias.
-    visibility = ["//beacon-chain/db:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/slasher/types:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//monitoring/backup:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v1alpha1/block:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

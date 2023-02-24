@@ -10,33 +10,34 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/async/abool"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/async/abool"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 var _ runtime.Service = (*Service)(nil)
@@ -68,21 +69,23 @@ type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
 // config to hold dependencies for the sync service.
 type config struct {
-	attestationNotifier     operation.Notifier
-	p2p                     p2p.P2P
-	beaconDB                db.NoHeadAccessDatabase
-	attPool                 attestations.Pool
-	exitPool                voluntaryexits.PoolManager
-	slashingPool            slashings.PoolManager
-	syncCommsPool           synccommittee.Pool
-	chain                   blockchainService
-	initialSync             Checker
-	stateNotifier           statefeed.Notifier
-	blockNotifier           blockfeed.Notifier
-	operationNotifier       operation.Notifier
-	stateGen                *stategen.State
-	slasherAttestationsFeed *event.Feed
-	slasherBlockHeadersFeed *event.Feed
+	attestationNotifier           operation.Notifier
+	p2p                           p2p.P2P
+	beaconDB                      db.NoHeadAccessDatabase
+	attPool                       attestations.Pool
+	exitPool                      voluntaryexits.PoolManager
+	slashingPool                  slashings.PoolManager
+	syncCommsPool                 synccommittee.Pool
+	blsToExecPool                 blstoexec.PoolManager
+	chain                         blockchainService
+	initialSync                   Checker
+	stateNotifier                 statefeed.Notifier
+	blockNotifier                 blockfeed.Notifier
+	operationNotifier             operation.Notifier
+	executionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	stateGen                      *stategen.State
+	slasherAttestationsFeed       *event.Feed
+	slasherBlockHeadersFeed       *event.Feed
 }
 
 // This defines the interface for interacting with block chain service
@@ -95,6 +98,8 @@ type blockchainService interface {
 	blockchain.TimeFetcher
 	blockchain.GenesisFetcher
 	blockchain.CanonicalFetcher
+	blockchain.OptimisticModeFetcher
+	blockchain.SlashingReceiver
 }
 
 // Service is responsible for handling all run time p2p related operations as the
@@ -130,6 +135,8 @@ type Service struct {
 	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
+	syncContributionBitsOverlapLock  sync.RWMutex
+	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
 }
 
@@ -154,6 +161,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	}
 	r.subHandler = newSubTopicHandler()
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
+	r.initCaches()
 
 	go r.registerHandlers()
 	go r.verifierRoutine()
@@ -163,8 +171,6 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 
 // Start the regular sync service.
 func (s *Service) Start() {
-	s.initCaches()
-
 	s.cfg.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
 	s.cfg.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
 		// no-op
@@ -174,9 +180,7 @@ func (s *Service) Start() {
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
-	if !flags.Get().DisableSync {
-		s.resyncIfBehind()
-	}
+	s.resyncIfBehind()
 
 	// Update sync metrics.
 	async.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
@@ -220,6 +224,7 @@ func (s *Service) initCaches() {
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
 	s.seenSyncContributionCache = lruwrpr.New(seenSyncContributionSize)
+	s.syncContributionBitsOverlapCache = lruwrpr.New(seenSyncContributionSize)
 	s.seenExitCache = lruwrpr.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
@@ -233,10 +238,10 @@ func (s *Service) registerHandlers() {
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			switch event.Type {
+		case e := <-stateChannel:
+			switch e.Type {
 			case statefeed.Initialized:
-				data, ok := event.Data.(*statefeed.InitializedData)
+				data, ok := e.Data.(*statefeed.InitializedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.InitializedData")
 					return
@@ -255,7 +260,7 @@ func (s *Service) registerHandlers() {
 					s.markForChainStart()
 				}()
 			case statefeed.Synced:
-				_, ok := event.Data.(*statefeed.SyncedData)
+				_, ok := e.Data.(*statefeed.SyncedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.SyncedData")
 					return

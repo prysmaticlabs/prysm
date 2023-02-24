@@ -5,8 +5,10 @@ go_library(
     srcs = [
         "gateway.go",
         "log.go",
+        "modifiers.go",
+        "options.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/api/gateway",
+    importpath = "github.com/prysmaticlabs/prysm/v3/api/gateway",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//validator:__subpackages__",
@@ -22,6 +24,7 @@ go_library(
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//connectivity:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
 

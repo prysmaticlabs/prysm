@@ -4,18 +4,16 @@ import (
 	"math"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
 func MainnetConfig() *BeaconChainConfig {
+	if mainnetBeaconConfig.ForkVersionSchedule == nil {
+		mainnetBeaconConfig.InitializeForkSchedule()
+	}
 	return mainnetBeaconConfig
-}
-
-// UseMainnetConfig for beacon chain services.
-func UseMainnetConfig() {
-	beaconConfig = MainnetConfig()
 }
 
 const (
@@ -23,11 +21,15 @@ const (
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
+	// Bellatrix Fork Epoch for mainnet config.
+	mainnetBellatrixForkEpoch = 144896 // Sept 6, 2022, 11:34:47am UTC
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                   1 << 20, // 1 MiB
-	MaxChunkSize:                    1 << 20, // 1 MiB
+	GossipMaxSize:                   1 << 20,      // 1 MiB
+	GossipMaxSizeBellatrix:          10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                    1 << 20,      // 1 MiB
+	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
 	AttestationSubnetCount:          64,
 	AttestationPropagationSlotRange: 32,
 	MaxRequestBlocks:                1 << 10, // 1024
@@ -92,8 +94,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	EffectiveBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
-	BLSWithdrawalPrefixByte: byte(0),
-	ZeroHash:                [32]byte{},
+	BLSWithdrawalPrefixByte:         byte(0),
+	ETH1AddressWithdrawalPrefixByte: byte(1),
+	ZeroHash:                        [32]byte{},
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
@@ -109,6 +112,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
+
+	// Fork choice algorithm constants.
+	ProposerScoreBoost:              40,
+	ReorgWeightThreshold:            20,
+	ReorgMaxEpochsSinceFinalization: 2,
+	IntervalsPerSlot:                3,
 
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.
@@ -142,43 +151,49 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ProportionalSlashingMultiplier: 1,
 
 	// Max operations per block constants.
-	MaxProposerSlashings: 16,
-	MaxAttesterSlashings: 2,
-	MaxAttestations:      128,
-	MaxDeposits:          16,
-	MaxVoluntaryExits:    16,
+	MaxProposerSlashings:             16,
+	MaxAttesterSlashings:             2,
+	MaxAttestations:                  128,
+	MaxDeposits:                      16,
+	MaxVoluntaryExits:                16,
+	MaxWithdrawalsPerPayload:         16,
+	MaxBlsToExecutionChanges:         16,
+	MaxValidatorsPerWithdrawalsSweep: 16384,
 
 	// BLS domain values.
-	DomainBeaconProposer:              bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester:              bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:                      bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:                     bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:               bytesutil.ToBytes4(bytesutil.Bytes4(4)),
-	DomainSelectionProof:              bytesutil.ToBytes4(bytesutil.Bytes4(5)),
-	DomainAggregateAndProof:           bytesutil.ToBytes4(bytesutil.Bytes4(6)),
-	DomainSyncCommittee:               bytesutil.ToBytes4(bytesutil.Bytes4(7)),
-	DomainSyncCommitteeSelectionProof: bytesutil.ToBytes4(bytesutil.Bytes4(8)),
-	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
+	DomainBeaconProposer:              bytesutil.Uint32ToBytes4(0x00000000),
+	DomainBeaconAttester:              bytesutil.Uint32ToBytes4(0x01000000),
+	DomainRandao:                      bytesutil.Uint32ToBytes4(0x02000000),
+	DomainDeposit:                     bytesutil.Uint32ToBytes4(0x03000000),
+	DomainVoluntaryExit:               bytesutil.Uint32ToBytes4(0x04000000),
+	DomainSelectionProof:              bytesutil.Uint32ToBytes4(0x05000000),
+	DomainAggregateAndProof:           bytesutil.Uint32ToBytes4(0x06000000),
+	DomainSyncCommittee:               bytesutil.Uint32ToBytes4(0x07000000),
+	DomainSyncCommitteeSelectionProof: bytesutil.Uint32ToBytes4(0x08000000),
+	DomainContributionAndProof:        bytesutil.Uint32ToBytes4(0x09000000),
+	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
+	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
+	DomainBLSToExecutionChange:        bytesutil.Uint32ToBytes4(0x0A000000),
 
 	// Prysm constants.
-	GweiPerEth:                  1000000000,
-	BLSSecretKeyLength:          32,
-	BLSPubkeyLength:             48,
-	BLSSignatureLength:          96,
-	DefaultBufferSize:           10000,
-	WithdrawalPrivkeyFileName:   "/shardwithdrawalkey",
-	ValidatorPrivkeyFileName:    "/validatorprivatekey",
-	RPCSyncCheck:                1,
-	EmptySignature:              [96]byte{},
-	DefaultPageSize:             250,
-	MaxPeersToSync:              15,
-	SlotsPerArchivedPoint:       2048,
-	GenesisCountdownInterval:    time.Minute,
-	ConfigName:                  ConfigNames[Mainnet],
-	PresetBase:                  "mainnet",
-	BeaconStateFieldCount:       21,
-	BeaconStateAltairFieldCount: 24,
-	BeaconStateMergeFieldCount:  25,
+	GweiPerEth:                     1000000000,
+	BLSSecretKeyLength:             32,
+	BLSPubkeyLength:                48,
+	DefaultBufferSize:              10000,
+	WithdrawalPrivkeyFileName:      "/shardwithdrawalkey",
+	ValidatorPrivkeyFileName:       "/validatorprivatekey",
+	RPCSyncCheck:                   1,
+	EmptySignature:                 [96]byte{},
+	DefaultPageSize:                250,
+	MaxPeersToSync:                 15,
+	SlotsPerArchivedPoint:          2048,
+	GenesisCountdownInterval:       time.Minute,
+	ConfigName:                     MainnetName,
+	PresetBase:                     "mainnet",
+	BeaconStateFieldCount:          21,
+	BeaconStateAltairFieldCount:    24,
+	BeaconStateBellatrixFieldCount: 25,
+	BeaconStateCapellaFieldCount:   28,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -189,19 +204,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisForkVersion:          []byte{0, 0, 0, 0},
-	AltairForkVersion:           []byte{1, 0, 0, 0},
-	AltairForkEpoch:             mainnetAltairForkEpoch,
-	MergeForkVersion:            []byte{2, 0, 0, 0},
-	MergeForkEpoch:              math.MaxUint64,
-	ShardingForkVersion:         []byte{3, 0, 0, 0},
-	ShardingForkEpoch:           math.MaxUint64,
-	MinAnchorPowBlockDifficulty: 4294967296,
-	ForkVersionSchedule: map[[4]byte]types.Epoch{
-		{0, 0, 0, 0}: genesisForkEpoch,
-		{1, 0, 0, 0}: mainnetAltairForkEpoch,
-		// Any further forks must be specified here by their epoch number.
-	},
+	GenesisEpoch:         genesisForkEpoch,
+	GenesisForkVersion:   []byte{0, 0, 0, 0},
+	AltairForkVersion:    []byte{1, 0, 0, 0},
+	AltairForkEpoch:      mainnetAltairForkEpoch,
+	BellatrixForkVersion: []byte{2, 0, 0, 0},
+	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
+	CapellaForkVersion:   []byte{3, 0, 0, 0},
+	CapellaForkEpoch:     math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -228,13 +238,56 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	EpochsPerSyncCommitteePeriod: 256,
 
 	// Updated penalty values.
-	InactivityPenaltyQuotientAltair:      3 * 1 << 24, //50331648
-	MinSlashingPenaltyQuotientAltair:     64,
-	ProportionalSlashingMultiplierAltair: 2,
+	InactivityPenaltyQuotientAltair:         3 * 1 << 24, //50331648
+	MinSlashingPenaltyQuotientAltair:        64,
+	ProportionalSlashingMultiplierAltair:    2,
+	MinSlashingPenaltyQuotientBellatrix:     32,
+	ProportionalSlashingMultiplierBellatrix: 3,
+	InactivityPenaltyQuotientBellatrix:      1 << 24,
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
 
-	// Merge
-	TerminalBlockHashActivationEpoch: math.MaxUint64,
+	// Bellatrix
+	TerminalBlockHashActivationEpoch: 18446744073709551615,
+	TerminalBlockHash:                [32]byte{},
+	TerminalTotalDifficulty:          "58750000000000000000000", // Estimated: Sept 15, 2022
+	EthBurnAddressHex:                "0x0000000000000000000000000000000000000000",
+	DefaultBuilderGasLimit:           uint64(30000000),
+
+	// Mevboost circuit breaker
+	MaxBuilderConsecutiveMissedSlots: 3,
+	MaxBuilderEpochMissedSlots:       8,
+
+	// Execution engine timeout value
+	ExecutionEngineTimeoutValue: 8, // 8 seconds default based on: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
+}
+
+// MainnetTestConfig provides a version of the mainnet config that has a different name
+// and a different fork choice schedule. This can be used in cases where we want to use config values
+// that are consistent with mainnet, but won't conflict or cause the hard-coded genesis to be loaded.
+func MainnetTestConfig() *BeaconChainConfig {
+	mn := MainnetConfig().Copy()
+	mn.ConfigName = MainnetTestName
+	FillTestVersions(mn, 128)
+	return mn
+}
+
+// FillTestVersions replaces the fork schedule in the given BeaconChainConfig with test values, using the given
+// byte argument as the high byte (common across forks).
+func FillTestVersions(c *BeaconChainConfig, b byte) {
+	c.GenesisForkVersion = make([]byte, fieldparams.VersionLength)
+	c.AltairForkVersion = make([]byte, fieldparams.VersionLength)
+	c.BellatrixForkVersion = make([]byte, fieldparams.VersionLength)
+	c.CapellaForkVersion = make([]byte, fieldparams.VersionLength)
+
+	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
+	c.AltairForkVersion[fieldparams.VersionLength-1] = b
+	c.BellatrixForkVersion[fieldparams.VersionLength-1] = b
+	c.CapellaForkVersion[fieldparams.VersionLength-1] = b
+
+	c.GenesisForkVersion[0] = 0
+	c.AltairForkVersion[0] = 1
+	c.BellatrixForkVersion[0] = 2
+	c.CapellaForkVersion[0] = 3
 }

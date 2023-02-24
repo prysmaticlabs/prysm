@@ -4,15 +4,16 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
-	pubkeys := [][48]byte{{30}, {25}, {20}}
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{{30}, {25}, {20}}
 	db := setupDB(t, pubkeys)
 
 	for _, pub := range pubkeys {
@@ -24,8 +25,8 @@ func TestProposalHistoryForSlot_InitializesNewPubKeys(t *testing.T) {
 }
 
 func TestNewProposalHistoryForSlot_ReturnsNilIfNoHistory(t *testing.T) {
-	valPubkey := [48]byte{1, 2, 3}
-	db := setupDB(t, [][48]byte{})
+	valPubkey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
+	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 
 	_, proposalExists, err := db.ProposalHistoryForSlot(context.Background(), valPubkey, 0)
 	require.NoError(t, err)
@@ -33,10 +34,10 @@ func TestNewProposalHistoryForSlot_ReturnsNilIfNoHistory(t *testing.T) {
 }
 
 func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
-	pubkey := [48]byte{3}
-	db := setupDB(t, [][48]byte{pubkey})
+	pubkey := [fieldparams.BLSPubkeyLength]byte{3}
+	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubkey})
 
-	slot := types.Slot(2)
+	slot := primitives.Slot(2)
 
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, []byte{1})
 	require.NoError(t, err, "Saving proposal history failed: %v")
@@ -48,8 +49,8 @@ func TestSaveProposalHistoryForSlot_OK(t *testing.T) {
 }
 
 func TestNewProposalHistoryForPubKey_ReturnsEmptyIfNoHistory(t *testing.T) {
-	valPubkey := [48]byte{1, 2, 3}
-	db := setupDB(t, [][48]byte{})
+	valPubkey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
+	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 
 	proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), valPubkey)
 	require.NoError(t, err)
@@ -57,10 +58,10 @@ func TestNewProposalHistoryForPubKey_ReturnsEmptyIfNoHistory(t *testing.T) {
 }
 
 func TestSaveProposalHistoryForPubKey_OK(t *testing.T) {
-	pubkey := [48]byte{3}
-	db := setupDB(t, [][48]byte{pubkey})
+	pubkey := [fieldparams.BLSPubkeyLength]byte{3}
+	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubkey})
 
-	slot := types.Slot(2)
+	slot := primitives.Slot(2)
 
 	root := [32]byte{1}
 	err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, slot, root[:])
@@ -79,7 +80,7 @@ func TestSaveProposalHistoryForPubKey_OK(t *testing.T) {
 }
 
 func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
-	pubkey := [48]byte{0}
+	pubkey := [fieldparams.BLSPubkeyLength]byte{0}
 	tests := []struct {
 		signingRoot []byte
 	}{
@@ -95,7 +96,7 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		db := setupDB(t, [][48]byte{pubkey})
+		db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubkey})
 		err := db.SaveProposalHistoryForSlot(context.Background(), pubkey, 0, tt.signingRoot)
 		require.NoError(t, err, "Saving proposal history failed")
 		proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), pubkey)
@@ -110,21 +111,21 @@ func TestSaveProposalHistoryForSlot_Overwrites(t *testing.T) {
 func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	pubKey := [48]byte{0}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{0}
 	tests := []struct {
-		slots        []types.Slot
-		storedSlots  []types.Slot
-		removedSlots []types.Slot
+		slots        []primitives.Slot
+		storedSlots  []primitives.Slot
+		removedSlots []primitives.Slot
 	}{
 		{
 			// Go 2 epochs past pruning point.
-			slots:        []types.Slot{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(uint64(wsPeriod+3)) + 8},
-			storedSlots:  []types.Slot{slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(uint64(wsPeriod+3)) + 8},
-			removedSlots: []types.Slot{slotsPerEpoch / 2},
+			slots:        []primitives.Slot{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(uint64(wsPeriod+3)) + 8},
+			storedSlots:  []primitives.Slot{slotsPerEpoch*5 + 6, slotsPerEpoch.Mul(uint64(wsPeriod+3)) + 8},
+			removedSlots: []primitives.Slot{slotsPerEpoch / 2},
 		},
 		{
 			// Go 10 epochs past pruning point.
-			slots: []types.Slot{
+			slots: []primitives.Slot{
 				slotsPerEpoch + 4,
 				slotsPerEpoch * 2,
 				slotsPerEpoch * 3,
@@ -132,8 +133,8 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 				slotsPerEpoch * 5,
 				slotsPerEpoch.Mul(uint64(wsPeriod+10)) + 8,
 			},
-			storedSlots: []types.Slot{slotsPerEpoch.Mul(uint64(wsPeriod+10)) + 8},
-			removedSlots: []types.Slot{
+			storedSlots: []primitives.Slot{slotsPerEpoch.Mul(uint64(wsPeriod+10)) + 8},
+			removedSlots: []primitives.Slot{
 				slotsPerEpoch + 4,
 				slotsPerEpoch * 2,
 				slotsPerEpoch * 3,
@@ -143,20 +144,20 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 		},
 		{
 			// Prune none.
-			slots:       []types.Slot{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
-			storedSlots: []types.Slot{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
+			slots:       []primitives.Slot{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
+			storedSlots: []primitives.Slot{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
 		},
 	}
 	signedRoot := bytesutil.PadTo([]byte{1}, 32)
 
 	for _, tt := range tests {
-		db := setupDB(t, [][48]byte{pubKey})
+		db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 		for _, slot := range tt.slots {
 			err := db.SaveProposalHistoryForSlot(context.Background(), pubKey, slot, signedRoot)
 			require.NoError(t, err, "Saving proposal history failed")
 		}
 
-		signingRootsBySlot := make(map[types.Slot][]byte)
+		signingRootsBySlot := make(map[primitives.Slot][]byte)
 		proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), pubKey)
 		require.NoError(t, err)
 
@@ -188,23 +189,23 @@ func TestStore_ProposedPublicKeys(t *testing.T) {
 
 	keys, err := validatorDB.ProposedPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, make([][48]byte, 0), keys)
+	assert.DeepEqual(t, make([][fieldparams.BLSPubkeyLength]byte, 0), keys)
 
-	pubKey := [48]byte{1}
-	dummyRoot := [32]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{1}
+	var dummyRoot [32]byte
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, 1, dummyRoot[:])
 	require.NoError(t, err)
 
 	keys, err = validatorDB.ProposedPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{pubKey}, keys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, keys)
 }
 
 func TestStore_LowestSignedProposal(t *testing.T) {
 	ctx := context.Background()
-	pubkey := [48]byte{3}
-	dummySigningRoot := [32]byte{}
-	validatorDB := setupDB(t, [][48]byte{pubkey})
+	pubkey := [fieldparams.BLSPubkeyLength]byte{3}
+	var dummySigningRoot [32]byte
+	validatorDB := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubkey})
 
 	_, exists, err := validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
@@ -218,7 +219,7 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	slot, exists, err := validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, types.Slot(2), slot)
+	assert.Equal(t, primitives.Slot(2), slot)
 
 	// We save a higher proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 3 /* slot */, dummySigningRoot[:])
@@ -228,7 +229,7 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	slot, exists, err = validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, types.Slot(2), slot)
+	assert.Equal(t, primitives.Slot(2), slot)
 
 	// We save a lower proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 1 /* slot */, dummySigningRoot[:])
@@ -238,14 +239,14 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 	slot, exists, err = validatorDB.LowestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, types.Slot(1), slot)
+	assert.Equal(t, primitives.Slot(1), slot)
 }
 
 func TestStore_HighestSignedProposal(t *testing.T) {
 	ctx := context.Background()
-	pubkey := [48]byte{3}
-	dummySigningRoot := [32]byte{}
-	validatorDB := setupDB(t, [][48]byte{pubkey})
+	pubkey := [fieldparams.BLSPubkeyLength]byte{3}
+	var dummySigningRoot [32]byte
+	validatorDB := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubkey})
 
 	_, exists, err := validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
@@ -259,7 +260,7 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	slot, exists, err := validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, types.Slot(2), slot)
+	assert.Equal(t, primitives.Slot(2), slot)
 
 	// We save a lower proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 1 /* slot */, dummySigningRoot[:])
@@ -269,7 +270,7 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	slot, exists, err = validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, types.Slot(2), slot)
+	assert.Equal(t, primitives.Slot(2), slot)
 
 	// We save a higher proposal history.
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 3 /* slot */, dummySigningRoot[:])
@@ -279,5 +280,5 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 	slot, exists, err = validatorDB.HighestSignedProposal(ctx, pubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	assert.Equal(t, types.Slot(3), slot)
+	assert.Equal(t, primitives.Slot(3), slot)
 }

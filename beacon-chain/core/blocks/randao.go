@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // ProcessRandao checks the block proposer's
@@ -17,21 +17,22 @@ import (
 // in the beacon state's latest randao mixes slice.
 //
 // Spec pseudocode definition:
-//   def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
-//    epoch = get_current_epoch(state)
-//    # Verify RANDAO reveal
-//    proposer = state.validators[get_beacon_proposer_index(state)]
-//    signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
-//    assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
-//    # Mix in RANDAO reveal
-//    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
-//    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
+//
+//	def process_randao(state: BeaconState, body: ReadOnlyBeaconBlockBody) -> None:
+//	 epoch = get_current_epoch(state)
+//	 # Verify RANDAO reveal
+//	 proposer = state.validators[get_beacon_proposer_index(state)]
+//	 signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
+//	 assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
+//	 # Mix in RANDAO reveal
+//	 mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
+//	 state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func ProcessRandao(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b block.SignedBeaconBlock,
+	b interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	body := b.Block().Body()
@@ -39,11 +40,13 @@ func ProcessRandao(
 	if err != nil {
 		return nil, err
 	}
-	if err := verifySignature(buf, proposerPub, body.RandaoReveal(), domain); err != nil {
+
+	randaoReveal := body.RandaoReveal()
+	if err := verifySignature(buf, proposerPub, randaoReveal[:], domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
-	beaconState, err = ProcessRandaoNoVerify(beaconState, body.RandaoReveal())
+	beaconState, err = ProcessRandaoNoVerify(beaconState, randaoReveal[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process randao")
 	}
@@ -54,11 +57,12 @@ func ProcessRandao(
 // in the beacon state's latest randao mixes slice.
 //
 // Spec pseudocode definition:
-//     # Mix it in
-//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
-//         xor(get_randao_mix(state, get_current_epoch(state)),
-//             hash(body.randao_reveal))
-//     )
+//
+//	# Mix it in
+//	state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
+//	    xor(get_randao_mix(state, get_current_epoch(state)),
+//	        hash(body.randao_reveal))
+//	)
 func ProcessRandaoNoVerify(
 	beaconState state.BeaconState,
 	randaoReveal []byte,
@@ -73,7 +77,7 @@ func ProcessRandaoNoVerify(
 	}
 	blockRandaoReveal := hash.Hash(randaoReveal)
 	if len(blockRandaoReveal) != len(latestMixSlice) {
-		return nil, errors.New("blockRandaoReveal length doesnt match latestMixSlice length")
+		return nil, errors.New("blockRandaoReveal length doesn't match latestMixSlice length")
 	}
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x

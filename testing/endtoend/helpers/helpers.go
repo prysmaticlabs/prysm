@@ -7,33 +7,39 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
 const (
-	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
-	filePollingInterval = 500 * time.Millisecond
-	memoryHeapFileName  = "node_heap_%d.pb.gz"
-	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
-	fileBufferSize      = 64 * 1024
-	maxFileBufferSize   = 1024 * 1024
-	AltairE2EForkEpoch  = 6
+	maxPollingWaitTime    = 60 * time.Second // A minute so timing out doesn't take very long.
+	filePollingInterval   = 500 * time.Millisecond
+	memoryHeapFileName    = "node_heap_%d.pb.gz"
+	cpuProfileFileName    = "node_cpu_profile_%d.pb.gz"
+	fileBufferSize        = 64 * 1024
+	maxFileBufferSize     = 1024 * 1024
+	AltairE2EForkEpoch    = params.AltairE2EForkEpoch
+	BellatrixE2EForkEpoch = params.BellatrixE2EForkEpoch
+	CapellaE2EForkEpoch   = params.CapellaE2EForkEpoch
 )
 
 // Graffiti is a list of sample graffiti strings.
@@ -48,15 +54,96 @@ func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
 			return nil, err
 		}
 	}
-	newFile, err := os.Create(path.Join(tmpPath, fileName))
+
+	newFile, err := os.Create(filepath.Clean(path.Join(tmpPath, fileName)))
+
 	if err != nil {
 		return nil, err
 	}
 	return newFile, nil
 }
 
+// DeleteAndCreatePath replaces DeleteAndCreateFile where a full path is more convenient than dir,file params.
+func DeleteAndCreatePath(fp string) (*os.File, error) {
+	if _, err := os.Stat(fp); os.IsExist(err) {
+		if err = os.Remove(fp); err != nil {
+			return nil, err
+		}
+	}
+	return os.Create(filepath.Clean(fp))
+}
+
 // WaitForTextInFile checks a file every polling interval for the text requested.
-func WaitForTextInFile(file *os.File, text string) error {
+func WaitForTextInFile(src *os.File, match string) error {
+	d := time.Now().Add(maxPollingWaitTime)
+	ctx, cancel := context.WithDeadline(context.Background(), d)
+	defer cancel()
+
+	// Open a new file descriptor pointed at the same path.
+	f, err := os.Open(src.Name())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if ferr := f.Close(); ferr != nil {
+			if !errors.Is(err, os.ErrClosed) {
+				log.WithError(ferr).Errorf("error calling .Close on the file handle for %s", f.Name())
+			}
+		}
+	}()
+
+	// spawn a goroutine to scan
+	errChan := make(chan error)
+	foundChan := make(chan struct{})
+	go func() {
+		t := time.NewTicker(filePollingInterval)
+		// This needs to happen in a loop because, even though the other process is still appending to the log file,
+		// scanner will see EOF once it hits the end of what's been written so far.
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				// This is a paranoid check because I'm not sure if the underlying fd handle can be stuck mid-line
+				// when Scanner sees a partially written line at EOF. It's probably safest to just keep this.
+				_, err = f.Seek(0, io.SeekStart)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				lineScanner := bufio.NewScanner(f)
+				// Scan will return true until it hits EOF or another error.
+				// If .Close is called on the underlying file, Scan will return false, causing this goroutine to exit.
+				for lineScanner.Scan() {
+					line := lineScanner.Text()
+					if strings.Contains(line, match) {
+						// closing foundChan causes the <-foundChan case in the outer select to execute,
+						// ending the function with a nil return (success result).
+						close(foundChan)
+						return
+					}
+				}
+				// If Scan returned false for an error (except EOF), Err will return it.
+				if err = lineScanner.Err(); err != nil {
+					// Bubble the error back up to the parent goroutine.
+					errChan <- err
+				}
+			}
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("could not find requested text \"%s\" in %s before deadline:\n", match, f.Name())
+	case <-foundChan:
+		return nil
+	case err = <-errChan:
+		return errors.Wrapf(err, "received error while scanning %s for %s", f.Name(), match)
+	}
+}
+
+// FindFollowingTextInFile checks a file every polling interval for the  following text requested.
+func FindFollowingTextInFile(file *os.File, text string) (string, error) {
 	d := time.Now().Add(maxPollingWaitTime)
 	ctx, cancel := context.WithDeadline(context.Background(), d)
 	defer cancel()
@@ -67,11 +154,11 @@ func WaitForTextInFile(file *os.File, text string) error {
 	for {
 		select {
 		case <-ctx.Done():
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			if err != nil {
-				return err
+				return "", err
 			}
-			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, contents)
+			return "", fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, contents)
 		case <-ticker.C:
 			fileScanner := bufio.NewScanner(file)
 			buf := make([]byte, 0, fileBufferSize)
@@ -79,15 +166,24 @@ func WaitForTextInFile(file *os.File, text string) error {
 			for fileScanner.Scan() {
 				scanned := fileScanner.Text()
 				if strings.Contains(scanned, text) {
-					return nil
+					lastIdx := strings.LastIndex(scanned, text)
+					truncatedIdx := lastIdx + len(text)
+					if len(scanned) <= truncatedIdx {
+						return "", fmt.Errorf("truncated index is larger than the size of whole scanned line")
+					}
+					splitObjs := strings.Split(scanned[truncatedIdx:], " ")
+					if len(splitObjs) == 0 {
+						return "", fmt.Errorf("0 split substrings retrieved")
+					}
+					return splitObjs[0], nil
 				}
 			}
 			if err := fileScanner.Err(); err != nil {
-				return err
+				return "", err
 			}
 			_, err := file.Seek(0, io.SeekStart)
 			if err != nil {
-				return err
+				return "", err
 			}
 		}
 	}
@@ -96,13 +192,13 @@ func WaitForTextInFile(file *os.File, text string) error {
 // GraffitiYamlFile outputs graffiti YAML file into a testing directory.
 func GraffitiYamlFile(testDir string) (string, error) {
 	b := []byte(`default: "Rice"
-random: 
+random:
   - "Sushi"
   - "Ramen"
   - "Takoyaki"
 `)
 	f := filepath.Join(testDir, "graffiti.yaml")
-	if err := ioutil.WriteFile(f, b, os.ModePerm); err != nil {
+	if err := os.WriteFile(f, b, os.ModePerm); err != nil {
 		return "", err
 	}
 	return f, nil
@@ -151,18 +247,18 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 
 // WritePprofFiles writes the memory heap and cpu profile files to the test path.
 func WritePprofFiles(testDir string, index int) error {
-	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath := filepath.Join(testDir, fmt.Sprintf(memoryHeapFileName, index))
 	if err := writeURLRespAtPath(url, filePath); err != nil {
 		return err
 	}
-	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath = filepath.Join(testDir, fmt.Sprintf(cpuProfileFileName, index))
 	return writeURLRespAtPath(url, filePath)
 }
 
-func writeURLRespAtPath(url, filePath string) error {
-	resp, err := http.Get(url) /* #nosec G107 */
+func writeURLRespAtPath(url, fp string) error {
+	resp, err := http.Get(url) // #nosec G107 -- Safe, used internally
 	if err != nil {
 		return err
 	}
@@ -172,11 +268,13 @@ func writeURLRespAtPath(url, filePath string) error {
 		}
 	}()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	file, err := os.Create(filePath)
+
+	file, err := os.Create(filepath.Clean(fp))
+
 	if err != nil {
 		return err
 	}
@@ -203,7 +301,7 @@ func NewLocalConnection(ctx context.Context, port int) (*grpc.ClientConn, error)
 func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn, func(), error) {
 	conns := make([]*grpc.ClientConn, numConns)
 	for i := 0; i < len(conns); i++ {
-		conn, err := NewLocalConnection(ctx, e2e.TestParams.BeaconNodeRPCPort+i)
+		conn, err := NewLocalConnection(ctx, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -216,6 +314,16 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn,
 			}
 		}
 	}, nil
+}
+
+// BeaconAPIHostnames constructs a hostname:port string for the
+func BeaconAPIHostnames(numConns int) []string {
+	hostnames := make([]string, 0)
+	for i := 0; i < numConns; i++ {
+		port := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + i
+		hostnames = append(hostnames, net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+	}
+	return hostnames
 }
 
 // ComponentsStarted checks, sequentially, each provided component, blocks until all of the components are ready.
@@ -269,4 +377,12 @@ func WaitOnNodes(ctx context.Context, nodes []e2etypes.ComponentRunner, nodesSta
 	}()
 
 	return g.Wait()
+}
+
+func MinerRPCClient() (*ethclient.Client, error) {
+	client, err := rpc.DialHTTP(e2e.TestParams.Eth1RPCURL(e2e.MinerComponentOffset).String())
+	if err != nil {
+		return nil, err
+	}
+	return ethclient.NewClient(client), nil
 }

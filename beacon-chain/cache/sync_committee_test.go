@@ -3,13 +3,11 @@ package cache_test
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
@@ -23,21 +21,21 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		name                 string
 		currentSyncCommittee *ethpb.SyncCommittee
 		nextSyncCommittee    *ethpb.SyncCommittee
-		currentSyncMap       map[types.ValidatorIndex][]types.CommitteeIndex
-		nextSyncMap          map[types.ValidatorIndex][]types.CommitteeIndex
+		currentSyncMap       map[primitives.ValidatorIndex][]primitives.CommitteeIndex
+		nextSyncMap          map[primitives.ValidatorIndex][]primitives.CommitteeIndex
 	}{
 		{
 			name: "only current epoch",
-			currentSyncCommittee: convertToCommittee([][]byte{
+			currentSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[1], pubKeys[2], pubKeys[3], pubKeys[2], pubKeys[2],
 			}),
-			nextSyncCommittee: convertToCommittee([][]byte{}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncCommittee: util.ConvertToCommittee([][]byte{}),
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {0},
 				2: {1, 3, 4},
 				3: {2},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {},
 				2: {},
 				3: {},
@@ -45,16 +43,16 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		},
 		{
 			name:                 "only next epoch",
-			currentSyncCommittee: convertToCommittee([][]byte{}),
-			nextSyncCommittee: convertToCommittee([][]byte{
+			currentSyncCommittee: util.ConvertToCommittee([][]byte{}),
+			nextSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[1], pubKeys[2], pubKeys[3], pubKeys[2], pubKeys[2],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {},
 				2: {},
 				3: {},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {0},
 				2: {1, 3, 4},
 				3: {2},
@@ -62,26 +60,26 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		},
 		{
 			name: "some current epoch and some next epoch",
-			currentSyncCommittee: convertToCommittee([][]byte{
+			currentSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[1],
 				pubKeys[2],
 				pubKeys[3],
 				pubKeys[2],
 				pubKeys[2],
 			}),
-			nextSyncCommittee: convertToCommittee([][]byte{
+			nextSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[7],
 				pubKeys[6],
 				pubKeys[5],
 				pubKeys[4],
 				pubKeys[7],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {0},
 				2: {1, 3, 4},
 				3: {2},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				7: {0, 4},
 				6: {1},
 				5: {2},
@@ -90,26 +88,26 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		},
 		{
 			name: "some current epoch and some next epoch duplicated across",
-			currentSyncCommittee: convertToCommittee([][]byte{
+			currentSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[1],
 				pubKeys[2],
 				pubKeys[3],
 				pubKeys[2],
 				pubKeys[2],
 			}),
-			nextSyncCommittee: convertToCommittee([][]byte{
+			nextSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[2],
 				pubKeys[1],
 				pubKeys[3],
 				pubKeys[2],
 				pubKeys[1],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {0},
 				2: {1, 3, 4},
 				3: {2},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {1, 4},
 				2: {0, 3},
 				3: {2},
@@ -117,43 +115,43 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		},
 		{
 			name: "all duplicated",
-			currentSyncCommittee: convertToCommittee([][]byte{
+			currentSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[100],
 				pubKeys[100],
 				pubKeys[100],
 				pubKeys[100],
 			}),
-			nextSyncCommittee: convertToCommittee([][]byte{
+			nextSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[100],
 				pubKeys[100],
 				pubKeys[100],
 				pubKeys[100],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				100: {0, 1, 2, 3},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				100: {0, 1, 2, 3},
 			},
 		},
 		{
 			name: "unknown keys",
-			currentSyncCommittee: convertToCommittee([][]byte{
+			currentSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[100],
 				pubKeys[100],
 				pubKeys[100],
 				pubKeys[100],
 			}),
-			nextSyncCommittee: convertToCommittee([][]byte{
+			nextSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[100],
 				pubKeys[100],
 				pubKeys[100],
 				pubKeys[100],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {},
 			},
 		},
@@ -163,16 +161,16 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			s, _ := util.DeterministicGenesisStateAltair(t, uint64(numValidators))
 			require.NoError(t, s.SetCurrentSyncCommittee(tt.currentSyncCommittee))
 			require.NoError(t, s.SetNextSyncCommittee(tt.nextSyncCommittee))
-			cache := cache.NewSyncCommittee()
+			c := cache.NewSyncCommittee()
 			r := [32]byte{'a'}
-			require.NoError(t, cache.UpdatePositionsInCommittee(r, s))
+			require.NoError(t, c.UpdatePositionsInCommittee(r, s))
 			for key, indices := range tt.currentSyncMap {
-				pos, err := cache.CurrentPeriodIndexPosition(r, key)
+				pos, err := c.CurrentPeriodIndexPosition(r, key)
 				require.NoError(t, err)
 				require.DeepEqual(t, indices, pos)
 			}
 			for key, indices := range tt.nextSyncMap {
-				pos, err := cache.NextPeriodIndexPosition(r, key)
+				pos, err := c.NextPeriodIndexPosition(r, key)
 				require.NoError(t, err)
 				require.DeepEqual(t, indices, pos)
 			}
@@ -189,13 +187,13 @@ func TestSyncCommitteeCache_RootDoesNotExist(t *testing.T) {
 func TestSyncCommitteeCache_CanRotate(t *testing.T) {
 	c := cache.NewSyncCommittee()
 	s, _ := util.DeterministicGenesisStateAltair(t, 64)
-	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{1}})))
+	require.NoError(t, s.SetCurrentSyncCommittee(util.ConvertToCommittee([][]byte{{1}})))
 	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'a'}, s))
-	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{2}})))
+	require.NoError(t, s.SetCurrentSyncCommittee(util.ConvertToCommittee([][]byte{{2}})))
 	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'b'}, s))
-	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{3}})))
+	require.NoError(t, s.SetCurrentSyncCommittee(util.ConvertToCommittee([][]byte{{3}})))
 	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'c'}, s))
-	require.NoError(t, s.SetCurrentSyncCommittee(convertToCommittee([][]byte{{4}})))
+	require.NoError(t, s.SetCurrentSyncCommittee(util.ConvertToCommittee([][]byte{{4}})))
 	require.NoError(t, c.UpdatePositionsInCommittee([32]byte{'d'}, s))
 
 	_, err := c.CurrentPeriodIndexPosition([32]byte{'a'}, 0)
@@ -203,20 +201,4 @@ func TestSyncCommitteeCache_CanRotate(t *testing.T) {
 
 	_, err = c.CurrentPeriodIndexPosition([32]byte{'c'}, 0)
 	require.NoError(t, err)
-}
-
-func convertToCommittee(inputKeys [][]byte) *ethpb.SyncCommittee {
-	var pubKeys [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
-		if i < uint64(len(inputKeys)) {
-			pubKeys = append(pubKeys, bytesutil.PadTo(inputKeys[i], params.BeaconConfig().BLSPubkeyLength))
-		} else {
-			pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
-		}
-	}
-
-	return &ethpb.SyncCommittee{
-		Pubkeys:         pubKeys,
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
-	}
 }

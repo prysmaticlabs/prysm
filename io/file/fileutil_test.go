@@ -18,25 +18,24 @@ package file_test
 import (
 	"bufio"
 	"bytes"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestPathExpansion(t *testing.T) {
-	user, err := user.Current()
+	u, err := user.Current()
 	require.NoError(t, err)
 	tests := map[string]string{
 		"/home/someuser/tmp": "/home/someuser/tmp",
-		"~/tmp":              user.HomeDir + "/tmp",
+		"~/tmp":              u.HomeDir + "/tmp",
 		"$DDDXXX/a/b":        "/tmp/a/b",
 		"/a/b/":              "/a/b",
 	}
@@ -112,7 +111,7 @@ func TestWriteFile_AlreadyExists_WrongPermissions(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, []byte("hi"), os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, []byte("hi"), os.ModePerm))
 	err = file.WriteFile(someFileName, []byte("hi"))
 	assert.ErrorContains(t, "already exists without proper 0600 permissions", err)
 }
@@ -122,7 +121,7 @@ func TestWriteFile_AlreadyExists_OK(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, []byte("hi"), params.BeaconIoConfig().ReadWritePermissions))
+	require.NoError(t, os.WriteFile(someFileName, []byte("hi"), params.BeaconIoConfig().ReadWritePermissions))
 	assert.NoError(t, file.WriteFile(someFileName, []byte("hi")))
 }
 
@@ -138,7 +137,7 @@ func TestWriteFile_OK(t *testing.T) {
 
 func TestCopyFile(t *testing.T) {
 	fName := t.TempDir() + "testfile"
-	err := ioutil.WriteFile(fName, []byte{1, 2, 3}, params.BeaconIoConfig().ReadWritePermissions)
+	err := os.WriteFile(fName, []byte{1, 2, 3}, params.BeaconIoConfig().ReadWritePermissions)
 	require.NoError(t, err)
 
 	err = file.CopyFile(fName, fName+"copy")
@@ -360,7 +359,7 @@ func tmpDirWithContents(t *testing.T) (string, []string) {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder12"), 0777))
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder2"), 0777))
 	for _, fname := range fnames {
-		require.NoError(t, ioutil.WriteFile(filepath.Join(dir, fname), []byte(fname), 0777))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, fname), []byte(fname), 0777))
 	}
 	sort.Strings(fnames)
 	return dir, fnames
@@ -378,7 +377,7 @@ func tmpDirWithContentsForRecursiveFind(t *testing.T) (string, []string) {
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder1", "subfolder11"), 0777))
 	require.NoError(t, os.MkdirAll(filepath.Join(dir, "subfolder2"), 0777))
 	for _, fname := range fnames {
-		require.NoError(t, ioutil.WriteFile(filepath.Join(dir, fname), []byte(fname), 0777))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, fname), []byte(fname), 0777))
 	}
 	sort.Strings(fnames)
 	return dir, fnames
@@ -414,13 +413,8 @@ func TestHasReadWritePermissions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fullPath := filepath.Join(os.TempDir(), tt.args.itemPath)
-			require.NoError(t, ioutil.WriteFile(fullPath, []byte("foo"), tt.args.perms))
-			t.Cleanup(func() {
-				if err := os.RemoveAll(fullPath); err != nil {
-					t.Fatalf("Could not delete temp dir: %v", err)
-				}
-			})
+			fullPath := filepath.Join(t.TempDir(), tt.args.itemPath)
+			require.NoError(t, os.WriteFile(fullPath, []byte("foo"), tt.args.perms))
 			got, err := file.HasReadWritePermissions(fullPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HasReadWritePermissions() error = %v, wantErr %v", err, tt.wantErr)

@@ -3,31 +3,30 @@ package slasher
 import (
 	"context"
 	"fmt"
-	"sort"
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
+	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func Test_processQueuedAttestations(t *testing.T) {
 	type args struct {
 		attestationQueue []*slashertypes.IndexedAttestationWrapper
-		currentEpoch     types.Epoch
+		currentEpoch     primitives.Epoch
 	}
 	tests := []struct {
 		name                 string
@@ -216,7 +215,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				beaconState.Fork(),
 				0,
 				params.BeaconConfig().DomainBeaconAttester,
-				beaconState.GenesisValidatorRoot(),
+				beaconState.GenesisValidatorsRoot(),
 			)
 			require.NoError(t, err)
 
@@ -233,19 +232,18 @@ func Test_processQueuedAttestations(t *testing.T) {
 				attestationWrapper.IndexedAttestation.Signature = bls.AggregateSignatures(sigs).Marshal()
 			}
 
-			s := &Service{
-				serviceCfg: &ServiceConfig{
+			s, err := New(context.Background(),
+				&ServiceConfig{
 					Database:                slasherDB,
 					StateNotifier:           &mock.MockStateNotifier{},
 					HeadStateFetcher:        mockChain,
 					AttestationStateFetcher: mockChain,
-					SlashingPoolInserter:    &slashings.PoolMock{},
-				},
-				params:      DefaultParams(),
-				attsQueue:   newAttestationsQueue(),
-				genesisTime: genesisTime,
-			}
-			currentSlotChan := make(chan types.Slot)
+					SlashingPoolInserter:    &slashingsmock.PoolMock{},
+				})
+			require.NoError(t, err)
+			s.genesisTime = genesisTime
+
+			currentSlotChan := make(chan primitives.Slot)
 			exitChan := make(chan struct{})
 			go func() {
 				s.processQueuedAttestations(ctx, currentSlotChan)
@@ -277,8 +275,8 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	// What we want to test here is if we can proceed
 	// with processing queued attestations once the chunk index changes.
 	// For example, epochs 0 - 15 are chunk 0, epochs 16 - 31 are chunk 1, etc.
-	startEpoch := types.Epoch(slasherParams.chunkSize)
-	endEpoch := types.Epoch(slasherParams.chunkSize + 1)
+	startEpoch := primitives.Epoch(slasherParams.chunkSize)
+	endEpoch := primitives.Epoch(slasherParams.chunkSize + 1)
 
 	currentTime := time.Now()
 	totalSlots := uint64(startEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
@@ -291,19 +289,18 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 		State: beaconState,
 	}
 
-	s := &Service{
-		serviceCfg: &ServiceConfig{
+	s, err := New(context.Background(),
+		&ServiceConfig{
 			Database:                slasherDB,
 			StateNotifier:           &mock.MockStateNotifier{},
 			HeadStateFetcher:        mockChain,
 			AttestationStateFetcher: mockChain,
-			SlashingPoolInserter:    &slashings.PoolMock{},
-		},
-		params:      slasherParams,
-		attsQueue:   newAttestationsQueue(),
-		genesisTime: genesisTime,
-	}
-	currentSlotChan := make(chan types.Slot)
+			SlashingPoolInserter:    &slashingsmock.PoolMock{},
+		})
+	require.NoError(t, err)
+	s.genesisTime = genesisTime
+
+	currentSlotChan := make(chan primitives.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, currentSlotChan)
@@ -311,8 +308,8 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	}()
 
 	for i := startEpoch; i <= endEpoch; i++ {
-		source := types.Epoch(0)
-		target := types.Epoch(0)
+		source := primitives.Epoch(0)
+		target := primitives.Epoch(0)
 		if i != 0 {
 			source = i - 1
 			target = i
@@ -344,7 +341,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	slasherParams := DefaultParams()
 
-	startEpoch := types.Epoch(slasherParams.chunkSize)
+	startEpoch := primitives.Epoch(slasherParams.chunkSize)
 
 	currentTime := time.Now()
 	totalSlots := uint64(startEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
@@ -357,19 +354,18 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 		State: beaconState,
 	}
 
-	s := &Service{
-		serviceCfg: &ServiceConfig{
+	s, err := New(context.Background(),
+		&ServiceConfig{
 			Database:                slasherDB,
 			StateNotifier:           &mock.MockStateNotifier{},
 			HeadStateFetcher:        mockChain,
 			AttestationStateFetcher: mockChain,
-			SlashingPoolInserter:    &slashings.PoolMock{},
-		},
-		params:      slasherParams,
-		attsQueue:   newAttestationsQueue(),
-		genesisTime: genesisTime,
-	}
-	currentSlotChan := make(chan types.Slot)
+			SlashingPoolInserter:    &slashingsmock.PoolMock{},
+		})
+	require.NoError(t, err)
+	s.genesisTime = genesisTime
+
+	currentSlotChan := make(chan primitives.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, currentSlotChan)
@@ -377,8 +373,8 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	}()
 
 	// We create two attestations fully spanning chunk indices 0 and chunk 1
-	att1 := createAttestationWrapper(t, types.Epoch(slasherParams.chunkSize-2), types.Epoch(slasherParams.chunkSize), []uint64{0, 1}, nil)
-	att2 := createAttestationWrapper(t, types.Epoch(slasherParams.chunkSize-1), types.Epoch(slasherParams.chunkSize+1), []uint64{0, 1}, nil)
+	att1 := createAttestationWrapper(t, primitives.Epoch(slasherParams.chunkSize-2), primitives.Epoch(slasherParams.chunkSize), []uint64{0, 1}, nil)
+	att2 := createAttestationWrapper(t, primitives.Epoch(slasherParams.chunkSize-1), primitives.Epoch(slasherParams.chunkSize+1), []uint64{0, 1}, nil)
 
 	// We attempt to process the batch.
 	s.attsQueue = newAttestationsQueue()
@@ -397,9 +393,9 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Could not detect")
 }
 
-func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing.T) {
-	slasherDB := dbtest.SetupSlasherDB(t)
+func Test_epochUpdateForValidators(t *testing.T) {
 	ctx := context.Background()
+	slasherDB := dbtest.SetupSlasherDB(t)
 
 	// Check if the chunk at chunk index already exists in-memory.
 	s := &Service{
@@ -408,89 +404,85 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 			validatorChunkSize: 2, // 2 validators in a chunk.
 			historyLength:      4,
 		},
-		serviceCfg: &ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
-		},
+		serviceCfg:                     &ServiceConfig{Database: slasherDB},
+		latestEpochWrittenForValidator: map[primitives.ValidatorIndex]primitives.Epoch{},
 	}
-	validators := []types.ValidatorIndex{
-		1, 2,
-	}
-	currentEpoch := types.Epoch(3)
 
-	// Set the latest written epoch for validators to current epoch - 1.
-	latestWrittenEpoch := currentEpoch - 1
-	err := slasherDB.SaveLastEpochWrittenForValidators(ctx, validators, latestWrittenEpoch)
-	require.NoError(t, err)
+	t.Run("no update if no latest written epoch", func(t *testing.T) {
+		validators := []primitives.ValidatorIndex{
+			1, 2,
+		}
+		currentEpoch := primitives.Epoch(3)
+		// No last written epoch for both validators.
+		s.latestEpochWrittenForValidator = map[primitives.ValidatorIndex]primitives.Epoch{}
 
-	// Because the validators have no recorded latest epoch written in the database,
-	// Because the latest written epoch for the input validators is == 2, we expect
-	// that we will update all epochs from 2 up to 3 (the current epoch). This is all
-	// safe contained in chunk index 1.
-	chunkIndices, err := s.determineChunksToUpdateForValidators(
-		ctx,
-		&chunkUpdateArgs{
-			currentEpoch: currentEpoch,
-		},
-		validators,
-	)
-	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{1}, chunkIndices)
-}
-
-func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
-	slasherDB := dbtest.SetupSlasherDB(t)
-	ctx := context.Background()
-
-	// Check if the chunk at chunk index already exists in-memory.
-	s := &Service{
-		params: &Parameters{
-			chunkSize:          2, // 2 epochs in a chunk.
-			validatorChunkSize: 2, // 2 validators in a chunk.
-			historyLength:      4,
-		},
-		serviceCfg: &ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
-		},
-	}
-	validators := []types.ValidatorIndex{
-		1, 2,
-	}
-	// Because the validators have no recorded latest epoch written in the database,
-	// we expect that we will update all epochs from genesis up to the current epoch.
-	// Given the chunk size is 2 epochs per chunk, updating with current epoch == 3
-	// will mean that we should be updating from epoch 0 to 3, meaning chunk indices 0 and 1.
-	chunkIndices, err := s.determineChunksToUpdateForValidators(
-		ctx,
-		&chunkUpdateArgs{
-			currentEpoch: 3,
-		},
-		validators,
-	)
-	require.NoError(t, err)
-	sort.Slice(chunkIndices, func(i, j int) bool {
-		return chunkIndices[i] < chunkIndices[j]
+		// Because the validators have no recorded latest epoch written, we expect
+		// no chunks to be loaded nor updated to.
+		updatedChunks := make(map[uint64]Chunker)
+		for _, valIdx := range validators {
+			err := s.epochUpdateForValidator(
+				ctx,
+				&chunkUpdateArgs{
+					currentEpoch: currentEpoch,
+				},
+				updatedChunks,
+				valIdx,
+			)
+			require.NoError(t, err)
+		}
+		require.Equal(t, 0, len(updatedChunks))
 	})
-	require.DeepEqual(t, []uint64{0, 1}, chunkIndices)
+
+	t.Run("update from latest written epoch", func(t *testing.T) {
+		validators := []primitives.ValidatorIndex{
+			1, 2,
+		}
+		currentEpoch := primitives.Epoch(3)
+
+		// Set the latest written epoch for validators to current epoch - 1.
+		latestWrittenEpoch := currentEpoch - 1
+		s.latestEpochWrittenForValidator = map[primitives.ValidatorIndex]primitives.Epoch{
+			1: latestWrittenEpoch,
+			2: latestWrittenEpoch,
+		}
+
+		// Because the latest written epoch for the input validators is == 2, we expect
+		// that we will update all epochs from 2 up to 3 (the current epoch). This is all
+		// safe contained in chunk index 1.
+		updatedChunks := make(map[uint64]Chunker)
+		for _, valIdx := range validators {
+			err := s.epochUpdateForValidator(
+				ctx,
+				&chunkUpdateArgs{
+					currentEpoch: currentEpoch,
+				},
+				updatedChunks,
+				valIdx,
+			)
+			require.NoError(t, err)
+		}
+		require.Equal(t, 1, len(updatedChunks))
+		_, ok := updatedChunks[1]
+		require.Equal(t, true, ok)
+	})
 }
 
 func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
-	params := DefaultParams()
-	srv := &Service{
-		params: params,
-		serviceCfg: &ServiceConfig{
+	defaultParams := DefaultParams()
+	srv, err := New(context.Background(),
+		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
-		},
-	}
+		})
+	require.NoError(t, err)
+
 	// We initialize an empty chunks slice.
-	chunk := EmptyMinSpanChunksSlice(params)
+	chunk := EmptyMinSpanChunksSlice(defaultParams)
 	chunkIdx := uint64(0)
-	currentEpoch := types.Epoch(3)
-	validatorIdx := types.ValidatorIndex(0)
+	currentEpoch := primitives.Epoch(3)
+	validatorIdx := primitives.ValidatorIndex(0)
 	args := &chunkUpdateArgs{
 		chunkIndex:   chunkIdx,
 		currentEpoch: currentEpoch,
@@ -500,8 +492,8 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	}
 
 	// We apply attestation with (source 1, target 2) for our validator.
-	source := types.Epoch(1)
-	target := types.Epoch(2)
+	source := primitives.Epoch(1)
+	target := primitives.Epoch(2)
 	att := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
@@ -521,8 +513,8 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 
 	// Next, we apply an attestation with (source 0, target 3) and
 	// expect a slashable offense to be returned.
-	source = types.Epoch(0)
-	target = types.Epoch(3)
+	source = primitives.Epoch(0)
+	target = primitives.Epoch(3)
 	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
@@ -538,19 +530,19 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
-	params := DefaultParams()
-	srv := &Service{
-		params: params,
-		serviceCfg: &ServiceConfig{
+	defaultParams := DefaultParams()
+	srv, err := New(context.Background(),
+		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
-		},
-	}
+		})
+	require.NoError(t, err)
+
 	// We initialize an empty chunks slice.
-	chunk := EmptyMaxSpanChunksSlice(params)
+	chunk := EmptyMaxSpanChunksSlice(defaultParams)
 	chunkIdx := uint64(0)
-	currentEpoch := types.Epoch(3)
-	validatorIdx := types.ValidatorIndex(0)
+	currentEpoch := primitives.Epoch(3)
+	validatorIdx := primitives.ValidatorIndex(0)
 	args := &chunkUpdateArgs{
 		chunkIndex:   chunkIdx,
 		currentEpoch: currentEpoch,
@@ -560,8 +552,8 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	}
 
 	// We apply attestation with (source 0, target 3) for our validator.
-	source := types.Epoch(0)
-	target := types.Epoch(3)
+	source := primitives.Epoch(0)
+	target := primitives.Epoch(3)
 	att := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
@@ -581,8 +573,8 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 
 	// Next, we apply an attestation with (source 1, target 2) and
 	// expect a slashable offense to be returned.
-	source = types.Epoch(1)
-	target = types.Epoch(2)
+	source = primitives.Epoch(1)
+	target = primitives.Epoch(2)
 	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
@@ -606,13 +598,13 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
 		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
 	}
-	srv := &Service{
-		serviceCfg: &ServiceConfig{
+	srv, err := New(context.Background(),
+		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
-		},
-		params: DefaultParams(),
-	}
+		})
+	require.NoError(t, err)
+
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
 	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
 	prev2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
@@ -642,14 +634,14 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 		createAttestationWrapper(t, 0, 1, []uint64{1, 2}, []byte{1}),
 		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
 	}
-	srv := &Service{
-		serviceCfg: &ServiceConfig{
+	srv, err := New(context.Background(),
+		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
-		},
-		params: DefaultParams(),
-	}
-	err := slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
+		})
+	require.NoError(t, err)
+
+	err = slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
 	require.NoError(t, err)
 
 	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
@@ -687,21 +679,22 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	ctx := context.Background()
 
 	// Check if the chunk at chunk index already exists in-memory.
-	params := DefaultParams()
-	s := &Service{
-		params: DefaultParams(),
-		serviceCfg: &ServiceConfig{
+	s, err := New(context.Background(),
+		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
-		},
-	}
+		})
+	require.NoError(t, err)
+
+	defaultParams := s.params
+
 	// If a chunk at a chunk index does not exist, ensure it
 	// is initialized as an empty chunk.
 	var emptyChunk Chunker
 	if kind == slashertypes.MinSpan {
-		emptyChunk = EmptyMinSpanChunksSlice(params)
+		emptyChunk = EmptyMinSpanChunksSlice(defaultParams)
 	} else {
-		emptyChunk = EmptyMaxSpanChunksSlice(params)
+		emptyChunk = EmptyMaxSpanChunksSlice(defaultParams)
 	}
 	chunkIdx := uint64(2)
 	received, err := s.loadChunks(ctx, &chunkUpdateArgs{
@@ -717,15 +710,15 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	// Save chunks to disk, then load them properly from disk.
 	var existingChunk Chunker
 	if kind == slashertypes.MinSpan {
-		existingChunk = EmptyMinSpanChunksSlice(params)
+		existingChunk = EmptyMinSpanChunksSlice(defaultParams)
 	} else {
-		existingChunk = EmptyMaxSpanChunksSlice(params)
+		existingChunk = EmptyMaxSpanChunksSlice(defaultParams)
 	}
-	validatorIdx := types.ValidatorIndex(0)
-	epochInChunk := types.Epoch(0)
-	targetEpoch := types.Epoch(2)
+	validatorIdx := primitives.ValidatorIndex(0)
+	epochInChunk := primitives.Epoch(0)
+	targetEpoch := primitives.Epoch(2)
 	err = setChunkDataAtEpoch(
-		params,
+		defaultParams,
 		existingChunk.Chunk(),
 		validatorIdx,
 		epochInChunk,
@@ -771,21 +764,19 @@ func TestService_processQueuedAttestations(t *testing.T) {
 		Slot:  &slot,
 	}
 
-	s := &Service{
-		params: DefaultParams(),
-		serviceCfg: &ServiceConfig{
+	s, err := New(context.Background(),
+		&ServiceConfig{
 			Database:         slasherDB,
 			StateNotifier:    &mock.MockStateNotifier{},
 			HeadStateFetcher: mockChain,
-		},
-		attsQueue: newAttestationsQueue(),
-	}
+		})
+	require.NoError(t, err)
 
 	s.attsQueue.extend([]*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(t, 0, 1, []uint64{0, 1} /* indices */, nil /* signingRoot */),
 	})
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan types.Slot)
+	tickerChan := make(chan primitives.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedAttestations(ctx, tickerChan)
@@ -796,7 +787,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	tickerChan <- 1
 	cancel()
 	<-exitChan
-	assert.LogsContain(t, hook, "New slot, processing queued")
+	assert.LogsContain(t, hook, "Processing queued")
 }
 
 func BenchmarkCheckSlashableAttestations(b *testing.B) {
@@ -804,21 +795,18 @@ func BenchmarkCheckSlashableAttestations(b *testing.B) {
 
 	beaconState, err := util.NewBeaconState()
 	require.NoError(b, err)
-	slot := types.Slot(0)
+	slot := primitives.Slot(0)
 	mockChain := &mock.ChainService{
 		State: beaconState,
 		Slot:  &slot,
 	}
 
-	s := &Service{
-		params: DefaultParams(),
-		serviceCfg: &ServiceConfig{
-			Database:         slasherDB,
-			StateNotifier:    &mock.MockStateNotifier{},
-			HeadStateFetcher: mockChain,
-		},
-		attsQueue: newAttestationsQueue(),
-	}
+	s, err := New(context.Background(), &ServiceConfig{
+		Database:         slasherDB,
+		StateNotifier:    &mock.MockStateNotifier{},
+		HeadStateFetcher: mockChain,
+	})
+	require.NoError(b, err)
 
 	b.Run("1 attestation 1 validator", func(b *testing.B) {
 		b.ResetTimer()
@@ -867,9 +855,9 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 	}
 	atts := make([]*slashertypes.IndexedAttestationWrapper, numAtts)
 	for i := uint64(0); i < numAtts; i++ {
-		source := types.Epoch(i)
-		target := types.Epoch(i + 1)
-		signingRoot := [32]byte{}
+		source := primitives.Epoch(i)
+		target := primitives.Epoch(i + 1)
+		var signingRoot [32]byte
 		copy(signingRoot[:], fmt.Sprintf("%d", i))
 		atts[i] = createAttestationWrapper(
 			b,
@@ -885,12 +873,13 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 		genesisTime := time.Now().Add(-time.Second * time.Duration(totalSeconds))
 		s.genesisTime = genesisTime
 
-		_, err := s.checkSlashableAttestations(context.Background(), atts)
+		epoch := slots.EpochsSinceGenesis(genesisTime)
+		_, err := s.checkSlashableAttestations(context.Background(), epoch, atts)
 		require.NoError(b, err)
 	}
 }
 
-func createAttestationWrapper(t testing.TB, source, target types.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
+func createAttestationWrapper(t testing.TB, source, target primitives.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
 	data := &ethpb.AttestationData{
 		BeaconBlockRoot: bytesutil.PadTo(signingRoot, 32),
 		Source: &ethpb.Checkpoint{

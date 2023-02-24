@@ -2,50 +2,149 @@ package accounts
 
 import (
 	"context"
+	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/mock"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
+	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
+	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
+const (
+	passwordFileName = "password.txt"
+	password         = "OhWOWthisisatest42!$"
+)
+
+type testWalletConfig struct {
+	exitAll                 bool
+	skipDepositConfirm      bool
+	keymanagerKind          keymanager.Kind
+	numAccounts             int64
+	grpcHeaders             string
+	privateKeyFile          string
+	accountPasswordFile     string
+	walletPasswordFile      string
+	backupPasswordFile      string
+	backupPublicKeys        string
+	voluntaryExitPublicKeys string
+	deletePublicKeys        string
+	keysDir                 string
+	backupDir               string
+	passwordsDir            string
+	walletDir               string
+}
+
+func setupWalletCtx(
+	tb testing.TB,
+	cfg *testWalletConfig,
+) *cli.Context {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletDirFlag.Name, cfg.walletDir, "")
+	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
+	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
+	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
+	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
+	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
+	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
+	set.String(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys, "")
+	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
+	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
+	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirm, "")
+	set.Bool(flags.SkipMnemonic25thWordCheckFlag.Name, true, "")
+	set.Bool(flags.ExitAllFlag.Name, cfg.exitAll, "")
+	set.String(flags.GrpcHeadersFlag.Name, cfg.grpcHeaders, "")
+
+	if cfg.privateKeyFile != "" {
+		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
+		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
+	}
+	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
+	assert.NoError(tb, set.Set(flags.SkipMnemonic25thWordCheckFlag.Name, "true"))
+	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
+	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
+	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
+	assert.NoError(tb, set.Set(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
+	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupPasswordFile.Name, cfg.backupPasswordFile))
+	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
+	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
+	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
+	assert.NoError(tb, set.Set(flags.SkipDepositConfirmationFlag.Name, strconv.FormatBool(cfg.skipDepositConfirm)))
+	assert.NoError(tb, set.Set(flags.ExitAllFlag.Name, strconv.FormatBool(cfg.exitAll)))
+	assert.NoError(tb, set.Set(flags.GrpcHeadersFlag.Name, cfg.grpcHeaders))
+	return cli.NewContext(&app, set, nil)
+}
+
+func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
+	walletDir := filepath.Join(t.TempDir(), "wallet")
+	passwordsDir := filepath.Join(t.TempDir(), "passwords")
+	passwordFileDir := filepath.Join(t.TempDir(), "passwordFile")
+	require.NoError(t, os.MkdirAll(passwordFileDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
+	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
+	require.NoError(t, os.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	return walletDir, passwordsDir, passwordFilePath
+}
+
 type mockRemoteKeymanager struct {
-	publicKeys [][48]byte
+	publicKeys [][fieldparams.BLSPubkeyLength]byte
 	opts       *remote.KeymanagerOpts
 }
 
-func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
+func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	return m.publicKeys, nil
 }
 
-func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
+func (*mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
 }
 
-func (m *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+func (*mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return nil
+}
+
+func (*mockRemoteKeymanager) ExtractKeystores(
+	_ context.Context, _ []bls.PublicKey, _ string,
+) ([]*keymanager.Keystore, error) {
+	return nil, nil
+}
+
+func (km *mockRemoteKeymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
+	return remote.ListKeymanagerAccountsImpl(ctx, cfg, km, km.opts)
+}
+
+func (*mockRemoteKeymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, nil
 }
 
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
@@ -66,25 +165,26 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	}
 }
 
-func TestListAccounts_ImportedKeymanager(t *testing.T) {
+func TestListAccounts_LocalKeymanager(t *testing.T) {
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager.Imported,
+		keymanagerKind:     keymanager.Local,
 		walletPasswordFile: walletPasswordFile,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: "Passwordz0320$",
-		},
-	})
+	opts := []Option{
+		WithWalletDir(walletDir),
+		WithKeymanagerType(keymanager.Local),
+		WithWalletPassword("Passwordz0320$"),
+	}
+	acc, err := NewCLIManager(opts...)
 	require.NoError(t, err)
-	km, err := imported.NewKeymanager(
+	w, err := acc.WalletCreate(cliCtx.Context)
+	require.NoError(t, err)
+	km, err := local.NewKeymanager(
 		cliCtx.Context,
-		&imported.SetupConfig{
+		&local.SetupConfig{
 			Wallet:           w,
 			ListenForChanges: false,
 		},
@@ -93,29 +193,31 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 
 	numAccounts := 5
 	keystores := make([]*keymanager.Keystore, numAccounts)
+	passwords := make([]string, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		keystores[i] = createRandomKeystore(t, password)
+		passwords[i] = password
 	}
-	require.NoError(t, km.ImportKeystores(cliCtx.Context, keystores, password))
+	_, err = km.ImportKeystores(cliCtx.Context, keystores, passwords)
+	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
 	r, writer, err := os.Pipe()
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list imported keymanager accounts function.
+	// We call the list local keymanager accounts function.
 	require.NoError(
 		t,
-		listImportedKeymanagerAccounts(
-			context.Background(),
-			true, /* show deposit data */
-			true, /*show private keys */
-			km,
-		),
+		km.ListKeymanagerAccounts(cliCtx.Context,
+			keymanager.ListKeymanagerAccountConfig{
+				ShowDepositData: true,
+				ShowPrivateKeys: true,
+			}),
 	)
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -125,7 +227,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) imported wallet
+		(keymanager kind) local wallet
 
 		Showing 5 validator accounts
 		View the eth1 deposit transaction data for your accounts by running `validator accounts list --show-deposit-data
@@ -176,7 +278,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	require.Equal(t, lineCount, len(lines))
 
 	// Assert the keymanager kind is printed on the first line.
-	kindString := "imported"
+	kindString := "local"
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
@@ -227,16 +329,17 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keymanagerKind:     keymanager.Derived,
 		walletPasswordFile: passwordFilePath,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: "Passwordz0320$",
-		},
-	})
+	opts := []Option{
+		WithWalletDir(walletDir),
+		WithKeymanagerType(keymanager.Derived),
+		WithWalletPassword("Passwordz0320$"),
+	}
+	acc, err := NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 
-	keymanager, err := derived.NewKeymanager(
+	km, err := derived.NewKeymanager(
 		cliCtx.Context,
 		&derived.SetupConfig{
 			Wallet:           w,
@@ -246,7 +349,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
-	err = keymanager.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
@@ -254,11 +357,12 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list imported keymanager accounts function.
-	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true, keymanager))
+	// We call the list local keymanager accounts function.
+	require.NoError(t, km.ListKeymanagerAccounts(cliCtx.Context,
+		keymanager.ListKeymanagerAccountConfig{ShowPrivateKeys: true}))
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -321,7 +425,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
 	// Get account names and require the correct count
-	accountNames, err := keymanager.ValidatingAccountNames(cliCtx.Context)
+	accountNames, err := km.ValidatingAccountNames(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(accountNames))
 
@@ -333,7 +437,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	}
 
 	// Get public keys and require the correct count
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(pubKeys))
 
@@ -346,7 +450,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	}
 
 	// Get validating private keys and require the correct count
-	validatingPrivKeys, err := keymanager.FetchValidatingPrivateKeys(cliCtx.Context)
+	validatingPrivKeys, err := km.FetchValidatingPrivateKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(pubKeys))
 
@@ -365,13 +469,14 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: keymanager.Remote,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Remote,
-			WalletPassword: password,
-		},
-	})
+	opts := []Option{
+		WithWalletDir(walletDir),
+		WithKeymanagerType(keymanager.Remote),
+		WithWalletPassword(password),
+	}
+	acc, err := NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
@@ -380,7 +485,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	os.Stdout = writer
 
 	numAccounts := 3
-	pubKeys := make([][48]byte, numAccounts)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		key := make([]byte, 48)
 		copy(key, strconv.Itoa(i))
@@ -399,10 +504,14 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		},
 	}
 	// We call the list remote keymanager accounts function.
-	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), w, km, km.opts))
+	require.NoError(t,
+		km.ListKeymanagerAccounts(context.Background(),
+			keymanager.ListKeymanagerAccountConfig{
+				KeymanagerConfigFileName: wallet.KeymanagerConfigFileName,
+			}))
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -480,7 +589,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	defer ctrl.Finish()
 
 	numAccounts := 3
-	pubKeys := make([][48]byte, numAccounts)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
 	pks := make([][]byte, numAccounts)
 
 	for i := 0; i < numAccounts; i++ {
@@ -499,10 +608,10 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	m := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	m := mock.NewMockValidatorClient(ctrl)
 
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
-	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
+	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []primitives.ValidatorIndex{1, math.MaxUint64, 2}}
 
 	m.
 		EXPECT().
@@ -519,7 +628,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	)
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 

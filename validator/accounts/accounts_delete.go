@@ -7,58 +7,23 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/io/prompt"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/urfave/cli/v2"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 )
 
-// DeleteAccountCli deletes the accounts that the user requests to be deleted from the wallet.
-// This function uses the CLI to extract necessary values.
-func DeleteAccountCli(cliCtx *cli.Context) error {
-	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, wallet.ErrNoWalletFound
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-	kManager, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
-	if err != nil {
-		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)
-	}
-	validatingPublicKeys, err := kManager.FetchValidatingPublicKeys(cliCtx.Context)
-	if err != nil {
-		return err
-	}
-	if len(validatingPublicKeys) == 0 {
-		return errors.New("wallet is empty, no accounts to delete")
-	}
-	// Allow the user to interactively select the accounts to delete or optionally
-	// provide them via cli flags as a string of comma-separated, hex strings.
-	filteredPubKeys, err := filterPublicKeysFromUserInput(
-		cliCtx,
-		flags.DeletePublicKeysFlag,
-		validatingPublicKeys,
-		userprompt.SelectAccountsDeletePromptText,
-	)
-	if err != nil {
-		return errors.Wrap(err, "could not filter public keys for deletion")
-	}
-	rawPublicKeys := make([][]byte, len(filteredPubKeys))
-	formattedPubKeys := make([]string, len(filteredPubKeys))
-	for i, pk := range filteredPubKeys {
+// Delete the accounts that the user requests to be deleted from the wallet.
+func (acm *AccountsCLIManager) Delete(ctx context.Context) error {
+	rawPublicKeys := make([][]byte, len(acm.filteredPubKeys))
+	formattedPubKeys := make([]string, len(acm.filteredPubKeys))
+	for i, pk := range acm.filteredPubKeys {
 		pubKeyBytes := pk.Marshal()
 		rawPublicKeys[i] = pubKeyBytes
 		formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
 	}
 	allAccountStr := strings.Join(formattedPubKeys, ", ")
-	if !cliCtx.IsSet(flags.DeletePublicKeysFlag.Name) {
-		if len(filteredPubKeys) == 1 {
+	if !acm.deletePublicKeys {
+		if len(acm.filteredPubKeys) == 1 {
 			promptText := "Are you sure you want to delete 1 account? (%s) Y/N"
 			resp, err := prompt.ValidatePrompt(
 				os.Stdin, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), prompt.ValidateYesOrNo,
@@ -71,10 +36,10 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			}
 		} else {
 			promptText := "Are you sure you want to delete %d accounts? (%s) Y/N"
-			if len(filteredPubKeys) == len(validatingPublicKeys) {
+			if len(acm.filteredPubKeys) == acm.walletKeyCount {
 				promptText = fmt.Sprintf("Are you sure you want to delete all accounts? Y/N (%s)", au.BrightGreen(allAccountStr))
 			} else {
-				promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
+				promptText = fmt.Sprintf(promptText, len(acm.filteredPubKeys), au.BrightGreen(allAccountStr))
 			}
 			resp, err := prompt.ValidatePrompt(os.Stdin, promptText, prompt.ValidateYesOrNo)
 			if err != nil {
@@ -85,9 +50,8 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	if err := DeleteAccount(cliCtx.Context, &Config{
-		Wallet:           w,
-		Keymanager:       kManager,
+	if err := DeleteAccount(ctx, &DeleteConfig{
+		Keymanager:       acm.keymanager,
 		DeletePublicKeys: rawPublicKeys,
 	}); err != nil {
 		return err
@@ -99,18 +63,14 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	return nil
 }
 
-// DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
-func DeleteAccount(ctx context.Context, cfg *Config) error {
-	deleter, ok := cfg.Keymanager.(keymanager.Deleter)
-	if !ok {
-		return errors.New("keymanager does not implement Deleter interface")
-	}
+// DeleteAccount performs the deletion on the Keymanager.
+func DeleteAccount(ctx context.Context, cfg *DeleteConfig) error {
 	if len(cfg.DeletePublicKeys) == 1 {
 		log.Info("Deleting account...")
 	} else {
 		log.Info("Deleting accounts...")
 	}
-	statuses, err := deleter.DeleteKeystores(ctx, cfg.DeletePublicKeys)
+	statuses, err := cfg.Keymanager.DeleteKeystores(ctx, cfg.DeletePublicKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not delete accounts")
 	}

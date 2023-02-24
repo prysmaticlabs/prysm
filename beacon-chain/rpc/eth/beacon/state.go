@@ -5,14 +5,15 @@ import (
 	"context"
 	"strconv"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	eth2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,7 +22,7 @@ import (
 )
 
 type stateRequest struct {
-	epoch   *types.Epoch
+	epoch   *primitives.Epoch
 	stateId []byte
 }
 
@@ -34,7 +35,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 	if genesisTime.IsZero() {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
-	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorRoot()
+	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorsRoot()
 	if bytes.Equal(validatorRoot[:], params.BeaconConfig().ZeroHash[:]) {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
@@ -57,12 +58,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	ctx, span := trace.StartSpan(ctx, "beacon.GetStateRoot")
 	defer span.End()
 
-	var (
-		root []byte
-		err  error
-	)
-
-	root, err = bs.StateFetcher.StateRoot(ctx, req.StateId)
+	stateRoot, err := bs.StateFetcher.StateRoot(ctx, req.StateId)
 	if err != nil {
 		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
@@ -71,11 +67,26 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	return &ethpb.StateRootResponse{
 		Data: &ethpb.StateRootResponse_StateRoot{
-			Root: root,
+			Root: stateRoot,
 		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}, nil
 }
 
@@ -84,23 +95,29 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	ctx, span := trace.StartSpan(ctx, "beacon.GetStateFork")
 	defer span.End()
 
-	var (
-		st  state.BeaconState
-		err error
-	)
-
-	st, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
-
 	fork := st.Fork()
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
 	return &ethpb.StateForkResponse{
 		Data: &ethpb.Fork{
 			PreviousVersion: fork.PreviousVersion,
 			CurrentVersion:  fork.CurrentVersion,
 			Epoch:           fork.Epoch,
 		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}, nil
 }
 
@@ -110,20 +127,19 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	ctx, span := trace.StartSpan(ctx, "beacon.GetFinalityCheckpoints")
 	defer span.End()
 
-	var (
-		st  state.BeaconState
-		err error
-	)
-
-	st, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	return &ethpb.StateFinalityCheckpointResponse{
 		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
@@ -131,6 +147,60 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 			CurrentJustified:  checkpoint(st.CurrentJustifiedCheckpoint()),
 			Finalized:         checkpoint(st.FinalizedCheckpoint()),
 		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
+	}, nil
+}
+
+// GetRandao fetches the RANDAO mix for the requested epoch from the state identified by state_id.
+// If an epoch is not specified then the RANDAO mix for the state's current epoch will be returned.
+// By adjusting the state_id parameter you can query for any historic value of the RANDAO mix.
+// Ordinarily states from the same epoch will mutate the RANDAO mix for that epoch as blocks are applied.
+func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2.RandaoResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.GetRandao")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	if err != nil {
+		return nil, helpers.PrepareStateFetchGRPCError(err)
+	}
+
+	stEpoch := slots.ToEpoch(st.Slot())
+	epoch := stEpoch
+	if req.Epoch != nil {
+		epoch = *req.Epoch
+	}
+
+	// future epochs and epochs too far back are not supported.
+	randaoEpochLowerBound := uint64(0)
+	// Lower bound should not underflow.
+	if uint64(stEpoch) > uint64(st.RandaoMixesLength()) {
+		randaoEpochLowerBound = uint64(stEpoch) - uint64(st.RandaoMixesLength())
+	}
+	if epoch > stEpoch || uint64(epoch) < randaoEpochLowerBound+1 {
+		return nil, status.Errorf(codes.InvalidArgument, "Epoch is out of range for the randao mixes of the state")
+	}
+	idx := epoch % params.BeaconConfig().EpochsPerHistoricalVector
+	randao, err := st.RandaoMixAtIndex(uint64(idx))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get randao mix at index %d", idx)
+	}
+
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	return &eth2.RandaoResponse{
+		Data:                &eth2.RandaoResponse_Randao{Randao: randao},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}, nil
 }
 

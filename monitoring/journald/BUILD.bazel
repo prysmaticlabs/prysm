@@ -6,7 +6,7 @@ go_library(
         "journald.go",
         "journald_linux.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/monitoring/journald",
+    importpath = "github.com/prysmaticlabs/prysm/v3/monitoring/journald",
     visibility = ["//visibility:public"],
     deps = select({
         "@io_bazel_rules_go//go/platform:android": [

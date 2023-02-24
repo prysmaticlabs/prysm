@@ -5,19 +5,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestCountdownToGenesis(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	logrus.SetLevel(logrus.DebugLevel)
 
 	hook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.GenesisCountdownInterval = time.Millisecond * 500
 	params.OverrideBeaconConfig(config)
 

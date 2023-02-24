@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestReadVarint(t *testing.T) {

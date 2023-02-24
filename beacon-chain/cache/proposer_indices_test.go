@@ -1,19 +1,21 @@
+//go:build !fuzz
+
 package cache
 
 import (
 	"strconv"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestProposerKeyFn_OK(t *testing.T) {
 	item := &ProposerIndices{
 		BlockRoot:       [32]byte{'A'},
-		ProposerIndices: []types.ValidatorIndex{1, 2, 3, 4, 5},
+		ProposerIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5},
 	}
 
 	k, err := proposerIndicesKeyFn(item)
@@ -49,7 +51,7 @@ func TestProposerCache_AddProposerIndicesList(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, true, has)
 
-	item := &ProposerIndices{BlockRoot: [32]byte{'B'}, ProposerIndices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}}
+	item := &ProposerIndices{BlockRoot: [32]byte{'B'}, ProposerIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6}}
 	require.NoError(t, cache.AddProposerIndices(item))
 
 	received, err = cache.ProposerIndices(item.BlockRoot)
@@ -68,7 +70,5 @@ func TestProposerCache_CanRotate(t *testing.T) {
 		item := &ProposerIndices{BlockRoot: bytesutil.ToBytes32(s)}
 		require.NoError(t, cache.AddProposerIndices(item))
 	}
-
-	k := cache.ProposerIndicesCache.ListKeys()
-	assert.Equal(t, maxProposerIndicesCacheSize, uint64(len(k)))
+	assert.Equal(t, int(maxProposerIndicesCacheSize), cache.Len())
 }

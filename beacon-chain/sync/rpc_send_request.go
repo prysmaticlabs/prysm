@@ -4,16 +4,16 @@ import (
 	"context"
 	"io"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // ErrInvalidFetchedData is thrown if stream fails to provide requested blocks.
@@ -21,13 +21,13 @@ var ErrInvalidFetchedData = errors.New("invalid data returned from peer")
 
 // BeaconBlockProcessor defines a block processing function, which allows to start utilizing
 // blocks even before all blocks are ready.
-type BeaconBlockProcessor func(block block.SignedBeaconBlock) error
+type BeaconBlockProcessor func(block interfaces.ReadOnlySignedBeaconBlock) error
 
 // SendBeaconBlocksByRangeRequest sends BeaconBlocksByRange and returns fetched blocks, if any.
 func SendBeaconBlocksByRangeRequest(
-	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
+	ctx context.Context, chain blockchain.ForkFetcher, p2pProvider p2p.SenderEncoder, pid peer.ID,
 	req *pb.BeaconBlocksByRangeRequest, blockProcessor BeaconBlockProcessor,
-) ([]block.SignedBeaconBlock, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))
 	if err != nil {
 		return nil, err
@@ -39,15 +39,15 @@ func SendBeaconBlocksByRangeRequest(
 	defer closeStream(stream, log)
 
 	// Augment block processing function, if non-nil block processor is provided.
-	blocks := make([]block.SignedBeaconBlock, 0, req.Count)
-	process := func(blk block.SignedBeaconBlock) error {
+	blocks := make([]interfaces.ReadOnlySignedBeaconBlock, 0, req.Count)
+	process := func(blk interfaces.ReadOnlySignedBeaconBlock) error {
 		blocks = append(blocks, blk)
 		if blockProcessor != nil {
 			return blockProcessor(blk)
 		}
 		return nil
 	}
-	var prevSlot types.Slot
+	var prevSlot primitives.Slot
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
 		blk, err := ReadChunkedBlock(stream, chain, p2pProvider, isFirstChunk)
@@ -89,7 +89,7 @@ func SendBeaconBlocksByRangeRequest(
 func SendBeaconBlocksByRootRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *p2ptypes.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
-) ([]block.SignedBeaconBlock, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, slots.ToEpoch(chain.CurrentSlot()))
 	if err != nil {
 		return nil, err
@@ -101,8 +101,8 @@ func SendBeaconBlocksByRootRequest(
 	defer closeStream(stream, log)
 
 	// Augment block processing function, if non-nil block processor is provided.
-	blocks := make([]block.SignedBeaconBlock, 0, len(*req))
-	process := func(block block.SignedBeaconBlock) error {
+	blocks := make([]interfaces.ReadOnlySignedBeaconBlock, 0, len(*req))
+	process := func(block interfaces.ReadOnlySignedBeaconBlock) error {
 		blocks = append(blocks, block)
 		if blockProcessor != nil {
 			return blockProcessor(block)

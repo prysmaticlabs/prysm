@@ -5,12 +5,12 @@ package db
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 )
 
 // NewDB initializes a new DB.
-func NewDB(ctx context.Context, dirPath string, config *kv.Config) (Database, error) {
-	return kv.NewKVStore(ctx, dirPath, config)
+func NewDB(ctx context.Context, dirPath string) (Database, error) {
+	return kv.NewKVStore(ctx, dirPath)
 }
 
 // NewDBFilename uses the KVStoreDatafilePath so that if this layer of

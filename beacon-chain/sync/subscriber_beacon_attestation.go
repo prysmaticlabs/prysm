@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -36,11 +36,11 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 	return s.cfg.attPool.SaveUnaggregatedAttestation(a)
 }
 
-func (s *Service) persistentSubnetIndices() []uint64 {
+func (_ *Service) persistentSubnetIndices() []uint64 {
 	return cache.SubnetIDs.GetAllSubnets()
 }
 
-func (s *Service) aggregatorSubnetIndices(currentSlot types.Slot) []uint64 {
+func (_ *Service) aggregatorSubnetIndices(currentSlot primitives.Slot) []uint64 {
 	endEpoch := slots.ToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64
@@ -50,7 +50,7 @@ func (s *Service) aggregatorSubnetIndices(currentSlot types.Slot) []uint64 {
 	return slice.SetUint64(commIds)
 }
 
-func (s *Service) attesterSubnetIndices(currentSlot types.Slot) []uint64 {
+func (_ *Service) attesterSubnetIndices(currentSlot primitives.Slot) []uint64 {
 	endEpoch := slots.ToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64

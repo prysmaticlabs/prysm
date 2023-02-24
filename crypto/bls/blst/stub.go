@@ -1,9 +1,9 @@
-// +build  blst_disabled libfuzzer
+//go:build blst_disabled
 
 package blst
 
 import (
-	"github.com/prysmaticlabs/prysm/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 )
 
 // This stub file exists until build issues can be resolved for libfuzz.
@@ -55,6 +55,11 @@ func (p PublicKey) IsInfinite() bool {
 	panic(err)
 }
 
+// Equals -- stub
+func (p PublicKey) Equals(_ common.PublicKey) bool {
+	panic(err)
+}
+
 // Signature -- stub
 type Signature struct{}
 
@@ -103,6 +108,11 @@ func SignatureFromBytes(_ []byte) (Signature, error) {
 	panic(err)
 }
 
+// MultipleSignaturesFromBytes -- stub
+func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error) {
+	panic(err)
+}
+
 // AggregatePublicKeys -- stub
 func AggregatePublicKeys(_ [][]byte) (PublicKey, error) {
 	panic(err)
@@ -110,6 +120,16 @@ func AggregatePublicKeys(_ [][]byte) (PublicKey, error) {
 
 // AggregateSignatures -- stub
 func AggregateSignatures(_ []common.Signature) common.Signature {
+	panic(err)
+}
+
+// AggregateMultiplePubkeys -- stub
+func AggregateMultiplePubkeys(pubs []common.PublicKey) common.PublicKey {
+	panic(err)
+}
+
+// AggregateCompressedSignatures -- stub
+func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
 	panic(err)
 }
 

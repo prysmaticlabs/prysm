@@ -3,7 +3,7 @@ package kv
 import (
 	"sync"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 const stateSummaryCachePruneCount = 128
@@ -35,6 +35,13 @@ func (c *stateSummaryCache) has(r [32]byte) bool {
 	defer c.initSyncStateSummariesLock.RUnlock()
 	_, ok := c.initSyncStateSummaries[r]
 	return ok
+}
+
+// delete state summary in cache.
+func (c *stateSummaryCache) delete(r [32]byte) {
+	c.initSyncStateSummariesLock.Lock()
+	defer c.initSyncStateSummariesLock.Unlock()
+	delete(c.initSyncStateSummaries, r)
 }
 
 // get retrieves a state summary from the initial sync state summaries cache using the root of

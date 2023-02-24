@@ -6,8 +6,8 @@ package state
 import (
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 const (
@@ -31,11 +31,11 @@ const (
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
 	// Slot is the slot of the processed block.
-	Slot types.Slot
+	Slot primitives.Slot
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// SignedBlock is the physical processed block.
-	SignedBlock block.SignedBeaconBlock
+	SignedBlock interfaces.ReadOnlySignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
 }

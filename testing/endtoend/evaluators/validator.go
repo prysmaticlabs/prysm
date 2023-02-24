@@ -5,18 +5,27 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	ethtypes "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	e2eparams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var expectedParticipation = 0.99
+
+var expectedMulticlientParticipation = 0.98
 
 var expectedSyncParticipation = 0.99
 
@@ -28,7 +37,7 @@ var ValidatorsAreActive = types.Evaluator{
 }
 
 // ValidatorsParticipatingAtEpoch ensures the expected amount of validators are participating.
-var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator {
+var ValidatorsParticipatingAtEpoch = func(epoch primitives.Epoch) types.Evaluator {
 	return types.Evaluator{
 		Name:       "validators_participating_epoch_%d",
 		Policy:     policies.AfterNthEpoch(epoch),
@@ -40,11 +49,11 @@ var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator 
 // are active.
 var ValidatorSyncParticipation = types.Evaluator{
 	Name:       "validator_sync_participation_%d",
-	Policy:     policies.AfterNthEpoch(helpers.AltairE2EForkEpoch - 1),
+	Policy:     policies.OnwardsNthEpoch(helpers.AltairE2EForkEpoch),
 	Evaluation: validatorsSyncParticipation,
 }
 
-func validatorsAreActive(conns ...*grpc.ClientConn) error {
+func validatorsAreActive(ec *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
@@ -67,7 +76,7 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
 	for _, item := range validators.ValidatorList {
-		if valExited && item.Index == exitedIndex {
+		if ec.ExitedVals[bytesutil.ToBytes48(item.Validator.PublicKey)] {
 			continue
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
@@ -97,9 +106,10 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 }
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
-func validatorsParticipating(conns ...*grpc.ClientConn) error {
+func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
+	debugClient := ethpbservice.NewBeaconDebugClient(conn)
 	validatorRequest := &ethpb.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
@@ -108,12 +118,53 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 
 	partRate := participation.Participation.GlobalParticipationRate
 	expected := float32(expectedParticipation)
+	if e2eparams.TestParams.LighthouseBeaconNodeCount != 0 {
+		expected = float32(expectedMulticlientParticipation)
+	}
+	if participation.Epoch > 0 && participation.Epoch.Sub(1) == helpers.BellatrixE2EForkEpoch {
+		// Reduce Participation requirement to 95% to account for longer EE calls for
+		// the merge block. Target and head will likely be missed for a few validators at
+		// slot 0.
+		expected = 0.95
+	}
 	if partRate < expected {
+		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.BeaconStateRequestV2{StateId: []byte("head")})
+		if err != nil {
+			return errors.Wrap(err, "failed to get beacon state")
+		}
+		var missSrcVals []uint64
+		var missTgtVals []uint64
+		var missHeadVals []uint64
+		switch obj := st.Data.State.(type) {
+		case *eth.BeaconStateContainer_Phase0State:
+		// Do Nothing
+		case *eth.BeaconStateContainer_AltairState:
+			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.AltairState.PreviousEpochParticipation)
+			if err != nil {
+				return errors.Wrap(err, "failed to get missing validators")
+			}
+		case *eth.BeaconStateContainer_BellatrixState:
+			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.BellatrixState.PreviousEpochParticipation)
+			if err != nil {
+				return errors.Wrap(err, "failed to get missing validators")
+			}
+		case *eth.BeaconStateContainer_CapellaState:
+			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.CapellaState.PreviousEpochParticipation)
+			if err != nil {
+				return errors.Wrap(err, "failed to get missing validators")
+			}
+		default:
+			return fmt.Errorf("unrecognized version: %v", st.Version)
+		}
 		return fmt.Errorf(
-			"validator participation was below for epoch %d, expected %f, received: %f",
+			"validator participation was below for epoch %d, expected %f, received: %f."+
+				" Missing Source,Target and Head validators are %v, %v, %v",
 			participation.Epoch,
 			expected,
 			partRate,
+			missSrcVals,
+			missTgtVals,
+			missHeadVals,
 		)
 	}
 	return nil
@@ -121,7 +172,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 
 // validatorsSyncParticipation ensures the validators have an acceptable participation rate for
 // sync committee assignments.
-func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
+func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewNodeClient(conn)
 	altairClient := ethpb.NewBeaconChainClient(conn)
@@ -131,7 +182,10 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	}
 	currSlot := slots.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
 	currEpoch := slots.ToEpoch(currSlot)
-	lowestBound := currEpoch - 1
+	lowestBound := primitives.Epoch(0)
+	if currEpoch >= 1 {
+		lowestBound = currEpoch - 1
+	}
 
 	if lowestBound < helpers.AltairE2EForkEpoch {
 		lowestBound = helpers.AltairE2EForkEpoch
@@ -141,25 +195,37 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validator participation")
 	}
 	for _, ctr := range blockCtrs.BlockContainers {
-		if ctr.GetAltairBlock() == nil {
-			return errors.Errorf("Altair block type doesn't exist for block at epoch %d", lowestBound)
+		b, err := syncCompatibleBlockFromCtr(ctr)
+		if err != nil {
+			return errors.Wrapf(err, "block type doesn't exist for block at epoch %d", lowestBound)
 		}
-		blk := ctr.GetAltairBlock()
-		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
+
+		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
+		forkStartSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}
-		// Skip evaluation of the fork slot.
-		if blk.Block.Slot == forkSlot {
+		if forkStartSlot == b.Block().Slot() {
+			// Skip fork slot.
 			continue
 		}
-		syncAgg := blk.Block.Body.SyncAggregate
-		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
+		expectedParticipation := expectedSyncParticipation
+		switch slots.ToEpoch(b.Block().Slot()) {
+		case helpers.AltairE2EForkEpoch:
+			// Drop expected sync participation figure.
+			expectedParticipation = 0.90
+		default:
+			// no-op
+		}
+		syncAgg, err := b.Block().Body().SyncAggregate()
+		if err != nil {
+			return err
+		}
+		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedParticipation)
 		if syncAgg.SyncCommitteeBits.Count() < threshold {
-			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, threshold, syncAgg.SyncCommitteeBits.Count())
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", b.Block().Slot(), threshold, syncAgg.SyncCommitteeBits.Count())
 		}
 	}
 	if lowestBound == currEpoch {
@@ -170,26 +236,93 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validator participation")
 	}
 	for _, ctr := range blockCtrs.BlockContainers {
-		if ctr.GetAltairBlock() == nil {
-			return errors.Errorf("Altair block type doesn't exist for block at epoch %d", lowestBound)
+		b, err := syncCompatibleBlockFromCtr(ctr)
+		if err != nil {
+			return errors.Wrapf(err, "block type doesn't exist for block at epoch %d", lowestBound)
 		}
-		blk := ctr.GetAltairBlock()
-		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
+
+		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
 		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}
-		// Skip evaluation of the fork slot.
-		if blk.Block.Slot == forkSlot {
-			continue
+		nexForkSlot, err := slots.EpochStart(helpers.BellatrixE2EForkEpoch)
+		if err != nil {
+			return err
 		}
-		syncAgg := blk.Block.Body.SyncAggregate
+		switch b.Block().Slot() {
+		case forkSlot, forkSlot + 1, nexForkSlot:
+			// Skip evaluation of the slot.
+			continue
+		default:
+			// no-op
+		}
+		syncAgg, err := b.Block().Body().SyncAggregate()
+		if err != nil {
+			return err
+		}
 		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
 		if syncAgg.SyncCommitteeBits.Count() < threshold {
-			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, threshold, syncAgg.SyncCommitteeBits.Count())
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", b.Block().Slot(), threshold, syncAgg.SyncCommitteeBits.Count())
 		}
 	}
 	return nil
+}
+
+func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfaces.ReadOnlySignedBeaconBlock, error) {
+	if container.GetPhase0Block() != nil {
+		return nil, errors.New("block doesn't support sync committees")
+	}
+	if container.GetAltairBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetAltairBlock())
+	}
+	if container.GetBellatrixBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBellatrixBlock())
+	}
+	if container.GetBlindedBellatrixBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBlindedBellatrixBlock())
+	}
+	if container.GetCapellaBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetCapellaBlock())
+	}
+	if container.GetBlindedCapellaBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBlindedCapellaBlock())
+	}
+	return nil, errors.New("no supported block type in container")
+}
+
+func findMissingValidators(participation []byte) ([]uint64, []uint64, []uint64, error) {
+	cfg := params.BeaconConfig()
+	sourceFlagIndex := cfg.TimelySourceFlagIndex
+	targetFlagIndex := cfg.TimelyTargetFlagIndex
+	headFlagIndex := cfg.TimelyHeadFlagIndex
+	var missingSourceValidators []uint64
+	var missingHeadValidators []uint64
+	var missingTargetValidators []uint64
+	for i, b := range participation {
+		hasSource, err := altair.HasValidatorFlag(b, sourceFlagIndex)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if !hasSource {
+			missingSourceValidators = append(missingSourceValidators, uint64(i))
+		}
+		hasTarget, err := altair.HasValidatorFlag(b, targetFlagIndex)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if !hasTarget {
+			missingTargetValidators = append(missingTargetValidators, uint64(i))
+		}
+		hasHead, err := altair.HasValidatorFlag(b, headFlagIndex)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if !hasHead {
+			missingHeadValidators = append(missingHeadValidators, uint64(i))
+		}
+	}
+	return missingSourceValidators, missingTargetValidators, missingHeadValidators, nil
 }

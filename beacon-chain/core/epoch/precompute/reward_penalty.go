@@ -2,12 +2,12 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/math"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/math"
 )
 
 type attesterRewardsFunc func(state.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, []uint64, error)
@@ -79,7 +79,7 @@ func AttestationsDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Val
 	return rewards, penalties, nil
 }
 
-func attestationDelta(pBal *Balance, sqrtActiveCurrentEpoch uint64, v *Validator, prevEpoch, finalizedEpoch types.Epoch) (uint64, uint64) {
+func attestationDelta(pBal *Balance, sqrtActiveCurrentEpoch uint64, v *Validator, prevEpoch, finalizedEpoch primitives.Epoch) (uint64, uint64) {
 	if !EligibleForRewards(v) || pBal.ActiveCurrentEpoch == 0 {
 		return 0, 0
 	}

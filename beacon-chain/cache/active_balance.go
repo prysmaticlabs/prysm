@@ -1,4 +1,4 @@
-// +build !libfuzzer
+//go:build !fuzz
 
 package cache
 
@@ -10,17 +10,18 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	ethTypes "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+)
+
+const (
+	// maxBalanceCacheSize defines the max number of active balances can cache.
+	maxBalanceCacheSize = int(4)
 )
 
 var (
-	// maxBalanceCacheSize defines the max number of active balances can cache.
-	maxBalanceCacheSize = uint64(4)
-
 	// BalanceCacheMiss tracks the number of balance requests that aren't present in the cache.
 	balanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "total_effective_balance_cache_miss",
@@ -42,15 +43,12 @@ type BalanceCache struct {
 // NewEffectiveBalanceCache creates a new effective balance cache for storing/accessing total balance by epoch.
 func NewEffectiveBalanceCache() *BalanceCache {
 	return &BalanceCache{
-		cache: lruwrpr.New(int(maxBalanceCacheSize)),
+		cache: lruwrpr.New(maxBalanceCacheSize),
 	}
 }
 
 // AddTotalEffectiveBalance adds a new total effective balance entry for current balance for state `st` into the cache.
 func (c *BalanceCache) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, balance uint64) error {
-	if !features.Get().EnableActiveBalanceCache {
-		return nil
-	}
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return err
@@ -65,9 +63,6 @@ func (c *BalanceCache) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, ba
 
 // Get returns the current epoch's effective balance for state `st` in cache.
 func (c *BalanceCache) Get(st state.ReadOnlyBeaconState) (uint64, error) {
-	if !features.Get().EnableActiveBalanceCache {
-		return 0, ErrNotFound
-	}
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return 0, err
@@ -95,7 +90,7 @@ func balanceCacheKey(st state.ReadOnlyBeaconState) (string, error) {
 		// impossible condition due to early division
 		return "", errors.Errorf("start slot calculation overflows: %v", err)
 	}
-	prevSlot := ethTypes.Slot(0)
+	prevSlot := primitives.Slot(0)
 	if epochStartSlot > 1 {
 		prevSlot = epochStartSlot - 1
 	}

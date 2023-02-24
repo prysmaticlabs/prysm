@@ -7,24 +7,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/network/forks"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/stretchr/testify/require"
+	"github.com/libp2p/go-libp2p/core/peer"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 )
 
 func TestService_CanSubscribe(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
-	valRoot := [32]byte{}
+	var valRoot [32]byte
 	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type test struct {
@@ -115,11 +117,13 @@ func TestService_CanSubscribe(t *testing.T) {
 }
 
 func TestService_CanSubscribe_uninitialized(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s := &Service{}
-	require.False(t, s.CanSubscribe("foo"))
+	require.Equal(t, false, s.CanSubscribe("foo"))
 }
 
 func Test_scanfcheck(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	type args struct {
 		input  string
 		format string
@@ -191,6 +195,7 @@ func Test_scanfcheck(t *testing.T) {
 }
 
 func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	// scanfcheck only supports integer based substitutions at the moment. Any others will
 	// inaccurately fail validation.
 	for _, topic := range AllTopics() {
@@ -208,9 +213,10 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 }
 
 func TestService_FilterIncomingSubscriptions(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
-	valRoot := [32]byte{}
+	var valRoot [32]byte
 	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type args struct {
@@ -328,6 +334,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 }
 
 func TestService_MonitorsStateForkUpdates(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	notifier := &mock.MockStateNotifier{}
@@ -336,7 +343,7 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.False(t, s.isInitialized())
+	require.Equal(t, false, s.isInitialized())
 
 	go s.awaitStateInitialized()
 
@@ -355,5 +362,5 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	require.True(t, s.isInitialized())
+	require.Equal(t, true, s.isInitialized())
 }

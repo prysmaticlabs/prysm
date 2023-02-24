@@ -16,28 +16,27 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	prysmNetwork "github.com/prysmaticlabs/prysm/network"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
+	testp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	prysmNetwork "github.com/prysmaticlabs/prysm/v3/network"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -216,8 +215,8 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		})
 	}
 	time.Sleep(4 * time.Second)
-	peers := s.host.Network().Peers()
-	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
+	ps := s.host.Network().Peers()
+	assert.Equal(t, 5, len(ps), "Not all peers added to peerstore")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
@@ -247,7 +246,7 @@ func TestInboundPeerLimit(t *testing.T) {
 	fakePeer := testp2p.NewTestP2P(t)
 	s := &Service{
 		cfg:       &Config{MaxPeers: 30},
-		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
+		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, 1*time.Second, false),
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
 			PeerLimit:    30,
 			ScorerParams: &scorers.Config{},
@@ -337,7 +336,7 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	require.NoError(t, err)
 	p.Add(new(enr.Record), id, nil, network.DirInbound)
 	p.SetConnectionState(id, state)
-	p.SetMetadata(id, wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+	p.SetMetadata(id, wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
 	}))
@@ -367,7 +366,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				listener, err := s.createListener(ipAddr, pkey)
 				assert.NoError(t, err)
 				s.dv5Listener = listener
-				s.metaData = wrapper.WrappedMetadataV0(new(pb.MetaDataV0))
+				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 				s.updateSubnetRecordWithMetadata([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 				return s
 			},
@@ -388,7 +387,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				listener, err := s.createListener(ipAddr, pkey)
 				assert.NoError(t, err)
 				s.dv5Listener = listener
-				s.metaData = wrapper.WrappedMetadataV0(new(pb.MetaDataV0))
+				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 				s.updateSubnetRecordWithMetadata([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})
 				cache.SubnetIDs.AddPersistentCommittee([]byte{'A'}, []uint64{1, 2, 3, 23}, 0)
 				return s
@@ -411,13 +410,13 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Update params
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.AltairForkEpoch = 5
 				params.OverrideBeaconConfig(cfg)
 				params.BeaconConfig().InitializeForkSchedule()
 
 				s.dv5Listener = listener
-				s.metaData = wrapper.WrappedMetadataV0(new(pb.MetaDataV0))
+				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 				s.updateSubnetRecordWithMetadata([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})
 				cache.SubnetIDs.AddPersistentCommittee([]byte{'A'}, []uint64{1, 2, 3, 23}, 0)
 				return s
@@ -442,13 +441,13 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Update params
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.AltairForkEpoch = 5
 				params.OverrideBeaconConfig(cfg)
 				params.BeaconConfig().InitializeForkSchedule()
 
 				s.dv5Listener = listener
-				s.metaData = wrapper.WrappedMetadataV0(new(pb.MetaDataV0))
+				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 				s.updateSubnetRecordWithMetadata([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 				return s
 			},
@@ -472,13 +471,13 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Update params
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.AltairForkEpoch = 5
 				params.OverrideBeaconConfig(cfg)
 				params.BeaconConfig().InitializeForkSchedule()
 
 				s.dv5Listener = listener
-				s.metaData = wrapper.WrappedMetadataV0(new(pb.MetaDataV0))
+				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 				s.updateSubnetRecordWithMetadata([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 				cache.SubnetIDs.AddPersistentCommittee([]byte{'A'}, []uint64{1, 2, 3, 23}, 0)
 				cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte{'A'}, 0, []uint64{0, 1}, 0)

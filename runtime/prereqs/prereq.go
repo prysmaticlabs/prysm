@@ -27,7 +27,7 @@ var (
 
 // execShellOutputFunc passes a command and args to exec.CommandContext and returns the result as a string
 func execShellOutputFunc(ctx context.Context, command string, args ...string) (string, error) {
-	result, err := exec.CommandContext(ctx, command, args...).Output() /* #nosec G204 */
+	result, err := exec.CommandContext(ctx, command, args...).Output() // #nosec G204
 	if err != nil {
 		return "", errors.Wrap(err, "error in command execution")
 	}
@@ -39,6 +39,7 @@ func supportedPlatforms() []platform {
 		{os: "linux", arch: "amd64"},
 		{os: "linux", arch: "arm64"},
 		{os: "darwin", arch: "amd64", majorVersion: 10, minorVersion: 14},
+		{os: "darwin", arch: "arm64", majorVersion: 12, minorVersion: 5},
 		{os: "windows", arch: "amd64"},
 	}
 }
@@ -98,7 +99,7 @@ func meetsMinPlatformReqs(ctx context.Context) (bool, error) {
 func WarnIfPlatformNotSupported(ctx context.Context) {
 	supported, err := meetsMinPlatformReqs(ctx)
 	if err != nil {
-		log.Warnf("Failed to detect host platform:  %v", err)
+		log.WithError(err).Warn("Failed to detect host platform")
 		return
 	}
 	if !supported {

@@ -4,40 +4,45 @@ import (
 	"context"
 	"errors"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
-var nonExistentIndex = types.ValidatorIndex(^uint64(0))
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
+var nonExistentIndex = primitives.ValidatorIndex(^uint64(0))
+
+var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch participation")
 
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
-//  DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
-//  PENDING - validator is in Ethereum's activation queue.
-//  ACTIVE - validator is active.
-//  EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
-//  EXITED - validator is no longer validating.
-//  SLASHING - validator has been kicked out due to meeting a slashing condition.
-//  UNKNOWN_STATUS - validator does not have a known status in the network.
+//
+//	DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
+//	PENDING - validator is in Ethereum's activation queue.
+//	ACTIVE - validator is active.
+//	EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
+//	EXITED - validator is no longer validating.
+//	SLASHING - validator has been kicked out due to meeting a slashing condition.
+//	UNKNOWN_STATUS - validator does not have a known status in the network.
 func (vs *Server) ValidatorStatus(
 	ctx context.Context,
 	req *ethpb.ValidatorStatusRequest,
 ) (*ethpb.ValidatorStatusResponse, error) {
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
@@ -54,14 +59,14 @@ func (vs *Server) MultipleValidatorStatus(
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 	responseCap := len(req.PublicKeys) + len(req.Indices)
 	pubKeys := make([][]byte, 0, responseCap)
-	filtered := make(map[[48]byte]bool)
-	filtered[[48]byte{}] = true // Filter out keys with all zeros.
+	filtered := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
+	filtered[[fieldparams.BLSPubkeyLength]byte{}] = true // Filter out keys with all zeros.
 	// Filter out duplicate public keys.
 	for _, pubKey := range req.PublicKeys {
 		pubkeyBytes := bytesutil.ToBytes48(pubKey)
@@ -72,7 +77,7 @@ func (vs *Server) MultipleValidatorStatus(
 	}
 	// Convert indices to public keys.
 	for _, idx := range req.Indices {
-		pubkeyBytes := headState.PubkeyAtIndex(types.ValidatorIndex(idx))
+		pubkeyBytes := headState.PubkeyAtIndex(primitives.ValidatorIndex(idx))
 		if !filtered[pubkeyBytes] {
 			pubKeys = append(pubKeys, pubkeyBytes[:])
 			filtered[pubkeyBytes] = true
@@ -80,7 +85,7 @@ func (vs *Server) MultipleValidatorStatus(
 	}
 	// Fetch statuses from beacon state.
 	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubKeys))
-	indices := make([]types.ValidatorIndex, len(pubKeys))
+	indices := make([]primitives.ValidatorIndex, len(pubKeys))
 	for i, pubKey := range pubKeys {
 		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey)
 	}
@@ -102,40 +107,76 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
 		}, nil
 	}
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	// We walk back from the current head state to the state at the beginning of the previous 2 epochs.
-	// Where S_i , i := 0,1,2. i = 0 would signify the current head state in this epoch.
-	currEpoch := slots.ToEpoch(headState.Slot())
-	previousEpoch, err := currEpoch.SafeSub(1)
-	if err != nil {
-		previousEpoch = currEpoch
+
+	// Return early if we are in phase0.
+	if headState.Version() == version.Phase0 {
+		log.Info("Skipping doppelganger check for Phase 0")
+
+		resp := &ethpb.DoppelGangerResponse{
+			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
+		}
+		for _, v := range req.ValidatorRequests {
+			resp.Responses = append(resp.Responses,
+				&ethpb.DoppelGangerResponse_ValidatorResponse{
+					PublicKey:       v.PublicKey,
+					DuplicateExists: false,
+				})
+		}
+		return resp, nil
 	}
-	olderEpoch, err := previousEpoch.SafeSub(1)
-	if err != nil {
-		olderEpoch = previousEpoch
+
+	headSlot := headState.Slot()
+	currEpoch := slots.ToEpoch(headSlot)
+
+	// If all provided keys are recent we skip this check
+	// as we are unable to effectively determine if a doppelganger
+	// is active.
+	isRecent, resp := checkValidatorsAreRecent(currEpoch, req)
+	if isRecent {
+		return resp, nil
 	}
-	prevState, err := vs.retrieveAfterEpochTransition(ctx, previousEpoch)
+
+	// We request a state 32 slots ago. We are guaranteed to have
+	// currentSlot > 32 since we assume that we are in Altair's fork.
+	prevStateSlot := headSlot - params.BeaconConfig().SlotsPerEpoch
+	prevEpochEnd, err := slots.EpochEnd(slots.ToEpoch(prevStateSlot))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get previous epoch's end")
+	}
+	prevState, err := vs.ReplayerBuilder.ReplayerForSlot(prevEpochEnd).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get previous state")
 	}
-	olderState, err := vs.retrieveAfterEpochTransition(ctx, olderEpoch)
+
+	headCurrentParticipation, err := headState.CurrentEpochParticipation()
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get older state")
+		return nil, errParticipation
 	}
-	resp := &ethpb.DoppelGangerResponse{
+	headPreviousParticipation, err := headState.PreviousEpochParticipation()
+	if err != nil {
+		return nil, errParticipation
+	}
+	prevCurrentParticipation, err := prevState.CurrentEpochParticipation()
+	if err != nil {
+		return nil, errParticipation
+	}
+	prevPreviousParticipation, err := prevState.PreviousEpochParticipation()
+	if err != nil {
+		return nil, errParticipation
+	}
+
+	resp = &ethpb.DoppelGangerResponse{
 		Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
 	}
 	for _, v := range req.ValidatorRequests {
-		// If the validator's last recorded epoch was
-		// less than or equal to 2 epochs ago, this method will not
-		// be able to catch duplicates. This is due to how attestation
-		// inclusion works, where an attestation for the current epoch
-		// is able to included in the current or next epoch. Depending
-		// on which epoch it is included the balance change will be
-		// reflected in the following epoch.
+		// If the validator's last recorded epoch was less than 1 epoch
+		// ago, the current doppelganger check will not be able to
+		// identify dopplelgangers since an attestation can take up to
+		// 31 slots to be included.
 		if v.Epoch+2 >= currEpoch {
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
@@ -144,37 +185,15 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 				})
 			continue
 		}
-		valIndex, ok := olderState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
+		valIndex, ok := prevState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
 		if !ok {
 			// Ignore if validator pubkey doesn't exist.
 			continue
 		}
-		baseBal, err := olderState.BalanceAtIndex(valIndex)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get validator's balance")
-		}
-		nextBal, err := prevState.BalanceAtIndex(valIndex)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get validator's balance")
-		}
-		// If the next epoch's balance is higher, we mark it as an existing
-		// duplicate.
-		if nextBal > baseBal {
-			log.Infof("current %d with last epoch %d and difference in bal %d gwei", currEpoch, v.Epoch, nextBal-baseBal)
-			resp.Responses = append(resp.Responses,
-				&ethpb.DoppelGangerResponse_ValidatorResponse{
-					PublicKey:       v.PublicKey,
-					DuplicateExists: true,
-				})
-			continue
-		}
-		currBal, err := headState.BalanceAtIndex(valIndex)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get validator's balance")
-		}
-		// If the current epoch's balance is higher, we mark it as an existing
-		// duplicate.
-		if currBal > nextBal {
+
+		if (headCurrentParticipation[valIndex] != 0) || (headPreviousParticipation[valIndex] != 0) ||
+			(prevCurrentParticipation[valIndex] != 0) || (prevPreviousParticipation[valIndex] != 0) {
+			log.WithField("ValidatorIndex", valIndex).Infof("Participation flag found")
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
 					PublicKey:       v.PublicKey,
@@ -198,7 +217,7 @@ func (vs *Server) activationStatus(
 	ctx context.Context,
 	pubKeys [][]byte,
 ) (bool, []*ethpb.ValidatorActivationResponse_Status, error) {
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return false, nil, err
 	}
@@ -226,12 +245,35 @@ func (vs *Server) activationStatus(
 	return activeValidatorExists, statusResponses, nil
 }
 
+// optimisticStatus returns an error if the node is currently optimistic with respect to head.
+// by definition, an optimistic node is not a full node. It is unable to produce blocks,
+// since an execution engine cannot produce a payload upon an unknown parent.
+// It cannot faithfully attest to the head block of the chain, since it has not fully verified that block.
+//
+// Spec:
+// https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md
+func (vs *Server) optimisticStatus(ctx context.Context) error {
+	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil
+	}
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if !optimistic {
+		return nil
+	}
+
+	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
+
+}
+
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
 func (vs *Server) validatorStatus(
 	ctx context.Context,
 	headState state.ReadOnlyBeaconState,
 	pubKey []byte,
-) (*ethpb.ValidatorStatusResponse, types.ValidatorIndex) {
+) (*ethpb.ValidatorStatusResponse, primitives.ValidatorIndex) {
 	ctx, span := trace.StartSpan(ctx, "ValidatorServer.validatorStatus")
 	defer span.End()
 
@@ -259,7 +301,7 @@ func (vs *Server) validatorStatus(
 	// Unknown status means the validator has not been put into the state yet.
 	case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 		// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
-		if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+		if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
 			return resp, nonExistentIndex
 		}
@@ -293,22 +335,22 @@ func (vs *Server) validatorStatus(
 				log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit.")
 			} else {
 				// Check if there was a deposit deposit.
-				deposit, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+				d, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 				if eth1BlockNumBigInt != nil {
-					resp.Status = depositStatus(deposit.Data.Amount)
+					resp.Status = depositStatus(d.Data.Amount)
 					resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 				}
 			}
 		}
 
-		var lastActivatedvalidatorIndex types.ValidatorIndex
+		var lastActivatedvalidatorIndex primitives.ValidatorIndex
 		for j := headState.NumValidators() - 1; j >= 0; j-- {
-			val, err := headState.ValidatorAtIndexReadOnly(types.ValidatorIndex(j))
+			val, err := headState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(j))
 			if err != nil {
 				return resp, idx
 			}
 			if helpers.IsActiveValidatorUsingTrie(val, time.CurrentEpoch(headState)) {
-				lastActivatedvalidatorIndex = types.ValidatorIndex(j)
+				lastActivatedvalidatorIndex = primitives.ValidatorIndex(j)
 				break
 			}
 		}
@@ -322,7 +364,33 @@ func (vs *Server) validatorStatus(
 	}
 }
 
-func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, types.ValidatorIndex, error) {
+func checkValidatorsAreRecent(headEpoch primitives.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {
+	validatorsAreRecent := true
+	resp := &ethpb.DoppelGangerResponse{
+		Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
+	}
+	for _, v := range req.ValidatorRequests {
+		// Due to how balances are reflected for individual
+		// validators, we can only effectively determine if a
+		// validator voted or not if we are able to look
+		// back more than 2 epoch into the past.
+		if v.Epoch+2 < headEpoch {
+			validatorsAreRecent = false
+			// Zero out response if we encounter non-recent validators to
+			// guard against potential misuse.
+			resp.Responses = []*ethpb.DoppelGangerResponse_ValidatorResponse{}
+			break
+		}
+		resp.Responses = append(resp.Responses,
+			&ethpb.DoppelGangerResponse_ValidatorResponse{
+				PublicKey:       v.PublicKey,
+				DuplicateExists: false,
+			})
+	}
+	return validatorsAreRecent, resp
+}
+
+func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, primitives.ValidatorIndex, error) {
 	if headState == nil || headState.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
@@ -333,7 +401,7 @@ func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.
 	return assignmentStatus(headState, idx), idx, nil
 }
 
-func assignmentStatus(beaconState state.ReadOnlyBeaconState, validatorIndex types.ValidatorIndex) ethpb.ValidatorStatus {
+func assignmentStatus(beaconState state.ReadOnlyBeaconState, validatorIndex primitives.ValidatorIndex) ethpb.ValidatorStatus {
 	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIndex)
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
@@ -370,16 +438,4 @@ func depositStatus(depositOrBalance uint64) ethpb.ValidatorStatus {
 		return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
 	}
 	return ethpb.ValidatorStatus_DEPOSITED
-}
-
-func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
-	endSlot, err := slots.EpochEnd(epoch)
-	if err != nil {
-		return nil, err
-	}
-	retState, err := vs.StateGen.StateBySlot(ctx, endSlot)
-	if err != nil {
-		return nil, err
-	}
-	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
 }

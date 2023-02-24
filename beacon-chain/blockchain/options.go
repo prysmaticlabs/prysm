@@ -1,19 +1,21 @@
 package blockchain
 
 import (
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 type Option func(s *Service) error
@@ -43,9 +45,17 @@ func WithDatabase(beaconDB db.HeadAccessDatabase) Option {
 }
 
 // WithChainStartFetcher to retrieve information about genesis.
-func WithChainStartFetcher(f powchain.ChainStartFetcher) Option {
+func WithChainStartFetcher(f execution.ChainStartFetcher) Option {
 	return func(s *Service) error {
 		s.cfg.ChainStartFetcher = f
+		return nil
+	}
+}
+
+// WithExecutionEngineCaller to call execution engine.
+func WithExecutionEngineCaller(c execution.EngineCaller) Option {
+	return func(s *Service) error {
+		s.cfg.ExecutionEngineCaller = c
 		return nil
 	}
 }
@@ -54,6 +64,14 @@ func WithChainStartFetcher(f powchain.ChainStartFetcher) Option {
 func WithDepositCache(c *depositcache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.DepositCache = c
+		return nil
+	}
+}
+
+// WithProposerIdsCache for proposer id cache.
+func WithProposerIdsCache(c *cache.ProposerPayloadIDsCache) Option {
+	return func(s *Service) error {
+		s.cfg.ProposerSlotIndexCache = c
 		return nil
 	}
 }
@@ -78,6 +96,14 @@ func WithExitPool(p voluntaryexits.PoolManager) Option {
 func WithSlashingPool(p slashings.PoolManager) Option {
 	return func(s *Service) error {
 		s.cfg.SlashingPool = p
+		return nil
+	}
+}
+
+// WithBLSToExecPool to keep track of BLS to Execution address changes.
+func WithBLSToExecPool(p blstoexec.PoolManager) Option {
+	return func(s *Service) error {
+		s.cfg.BLSToExecPool = p
 		return nil
 	}
 }
@@ -126,13 +152,6 @@ func WithStateGen(g *stategen.State) Option {
 func WithSlasherAttestationsFeed(f *event.Feed) Option {
 	return func(s *Service) error {
 		s.cfg.SlasherAttestationsFeed = f
-		return nil
-	}
-}
-
-func withStateBalanceCache(c *stateBalanceCache) Option {
-	return func(s *Service) error {
-		s.justifiedBalances = c
 		return nil
 	}
 }

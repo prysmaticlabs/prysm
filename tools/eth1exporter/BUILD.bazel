@@ -7,7 +7,7 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools/eth1exporter",
+    importpath = "github.com/prysmaticlabs/prysm/v3/tools/eth1exporter",
     visibility = ["//visibility:private"],
     deps = [
         "//runtime/maxprocs:go_default_library",

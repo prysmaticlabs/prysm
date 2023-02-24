@@ -3,16 +3,16 @@ package blocks_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestVerifyBlockHeaderSignature(t *testing.T) {
@@ -41,7 +41,7 @@ func TestVerifyBlockHeaderSignature(t *testing.T) {
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
-		beaconState.GenesisValidatorRoot(),
+		beaconState.GenesisValidatorsRoot(),
 	)
 	require.NoError(t, err)
 	htr, err := blockHeader.Header.HashTreeRoot()
@@ -77,13 +77,13 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 	}
-	domain, err := signing.Domain(fData, 100, params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := signing.Domain(fData, 100, params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
 	assert.NoError(t, err)
 	rt, err := signing.ComputeSigningRoot(altairBlk.Block, domain)
 	assert.NoError(t, err)
 	sig := keys[0].Sign(rt[:]).Marshal()
 	altairBlk.Signature = sig
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(altairBlk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(altairBlk)
 	require.NoError(t, err)
 	assert.NoError(t, blocks.VerifyBlockSignatureUsingCurrentFork(bState, wsb))
 }

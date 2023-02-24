@@ -3,7 +3,7 @@ package validator
 import (
 	"bytes"
 
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 type proposerSyncContributions []*eth.SyncCommitteeContribution

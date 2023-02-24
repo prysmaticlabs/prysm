@@ -3,11 +3,11 @@ package validator
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,14 +17,14 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request")
 	}
-	s, err := vs.HeadFetcher.HeadState(ctx)
+	s, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	if req.Exit == nil {
 		return nil, status.Error(codes.InvalidArgument, "voluntary exit does not exist")
 	}
-	if req.Signature == nil || len(req.Signature) != params.BeaconConfig().BLSSignatureLength {
+	if req.Signature == nil || len(req.Signature) != fieldparams.BLSSignatureLength {
 		return nil, status.Error(codes.InvalidArgument, "invalid signature provided")
 	}
 
@@ -34,7 +34,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		return nil, status.Error(codes.InvalidArgument, "validator index exceeds validator set length")
 	}
 
-	if err := blocks.VerifyExitAndSignature(val, s.Slot(), s.Fork(), req, s.GenesisValidatorRoot()); err != nil {
+	if err := blocks.VerifyExitAndSignature(val, s.Slot(), s.Fork(), req, s.GenesisValidatorsRoot()); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 

@@ -2,15 +2,16 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/api/pagination"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/api/pagination"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -32,9 +33,9 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	filtered := map[types.ValidatorIndex]bool{} // track filtered validators to prevent duplication in the response.
-	filteredIndices := make([]types.ValidatorIndex, 0)
-	var requestedEpoch types.Epoch
+	filtered := map[primitives.ValidatorIndex]bool{} // track filtered validators to prevent duplication in the response.
+	filteredIndices := make([]primitives.ValidatorIndex, 0)
+	var requestedEpoch primitives.Epoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorAssignmentsRequest_Genesis:
 		if q.Genesis {
@@ -58,9 +59,11 @@ func (bs *Server) ListValidatorAssignments(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
+		msg := fmt.Sprintf("could not replay all blocks from the closest stored state (at slot %d) "+
+			"to the requested epoch (%d) - %v", startSlot, requestedEpoch, err)
+		return nil, status.Error(codes.Internal, msg)
 	}
 
 	// Filter out assignments by public keys.

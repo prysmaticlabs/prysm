@@ -11,22 +11,23 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
-	noise "github.com/libp2p/go-libp2p-noise"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
+	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/prysm/async/event"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/network/forks"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -75,12 +76,13 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	ipAddr := net.ParseIP("127.0.0.1")
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
 	require.NoError(t, err, "Failed to p2p listen")
-	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.Security(noise.ID, noise.New)}...)
+	h, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.Security(noise.ID, noise.New)}...)
 	require.NoError(t, err)
 	return h, pkey, ipAddr
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	s.started = true
@@ -90,12 +92,14 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	assert.NoError(t, s.Stop())
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
@@ -131,12 +135,14 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 }
 
 func TestService_Status_NotRunning(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s := &Service{started: false}
 	s.dv5Listener = &mockListener{}
 	assert.ErrorContains(t, "not running", s.Status(), "Status returned wrong error")
 }
 
 func TestService_Status_NoGenesisTimeSet(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s := &Service{started: true}
 	s.dv5Listener = &mockListener{}
 	assert.ErrorContains(t, "no genesis time set", s.Status(), "Status returned wrong error")
@@ -146,7 +152,53 @@ func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 	assert.NoError(t, s.Status(), "Status returned error")
 }
 
+func TestService_Start_NoDiscoverFlag(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	cfg := &Config{
+		TCPPort:       2000,
+		UDPPort:       2000,
+		StateNotifier: &mock.MockStateNotifier{},
+		NoDiscovery:   true, // <-- no s.dv5Listener is created
+	}
+	s, err := NewService(context.Background(), cfg)
+	require.NoError(t, err)
+
+	s.stateNotifier = &mock.MockStateNotifier{}
+
+	// required params to addForkEntry in s.forkWatcher
+	s.genesisTime = time.Now()
+	beaconCfg := params.BeaconConfig().Copy()
+	beaconCfg.AltairForkEpoch = 0
+	beaconCfg.BellatrixForkEpoch = 0
+	beaconCfg.CapellaForkEpoch = 0
+	beaconCfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(beaconCfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
+	}()
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
+
+	time.Sleep(time.Second * 2)
+
+	exitRoutine <- true
+}
+
 func TestListenForNewNodes(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
 	cfg := &Config{StateNotifier: notifier}
@@ -241,6 +293,7 @@ func TestListenForNewNodes(t *testing.T) {
 }
 
 func TestPeer_Disconnect(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	h1, _, _ := createHost(t, 5000)
 	defer func() {
 		if err := h1.Close(); err != nil {
@@ -271,6 +324,7 @@ func TestPeer_Disconnect(t *testing.T) {
 }
 
 func TestService_JoinLeaveTopic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
@@ -306,7 +360,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 // digest associated with that genesis event.
 func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.Feed) [4]byte {
 	gt := prysmTime.Now()
-	gvr := bytesutil.PadTo([]byte("genesis validator root"), 32)
+	gvr := bytesutil.PadTo([]byte("genesis validators root"), 32)
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {
 			t.Fatal(ctx.Err())
@@ -329,6 +383,7 @@ func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.
 }
 
 func TestService_connectWithPeer(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name    string
 		peers   *peers.Status

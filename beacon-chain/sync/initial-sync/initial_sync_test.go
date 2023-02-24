@@ -3,58 +3,57 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	types "github.com/prysmaticlabs/eth2-types"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	p2pt "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	beaconsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
 type testCache struct {
 	sync.RWMutex
-	rootCache       map[types.Slot][32]byte
-	parentSlotCache map[types.Slot]types.Slot
+	rootCache       map[primitives.Slot][32]byte
+	parentSlotCache map[primitives.Slot]primitives.Slot
 }
 
 var cache = &testCache{}
 
 type peerData struct {
-	blocks         []types.Slot // slots that peer has blocks
-	finalizedEpoch types.Epoch
-	headSlot       types.Slot
-	failureSlots   []types.Slot // slots at which the peer will return an error
+	blocks         []primitives.Slot // slots that peer has blocks
+	finalizedEpoch primitives.Epoch
+	headSlot       primitives.Slot
+	failureSlots   []primitives.Slot // slots at which the peer will return an error
 	forkedPeer     bool
 }
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	resetCfg := features.InitWithReset(&features.Flags{
 		EnablePeerScorer: true,
@@ -73,7 +72,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
+func initializeTestServices(t *testing.T, slots []primitives.Slot, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
 	cache.initializeRootCache(slots, t)
 	beaconDB := dbtest.SetupDB(t)
 
@@ -83,8 +82,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, util.NewBeaconBlock())
 
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -93,7 +91,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 		State: st,
 		Root:  genesisRoot[:],
 		DB:    beaconDB,
-		FinalizedCheckPoint: &eth.Checkpoint{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 		},
 		Genesis:        time.Now(),
@@ -102,36 +100,36 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 }
 
 // makeGenesisTime where now is the current slot.
-func makeGenesisTime(currentSlot types.Slot) time.Time {
+func makeGenesisTime(currentSlot primitives.Slot) time.Time {
 	return prysmTime.Now().Add(-1 * time.Second * time.Duration(currentSlot) * time.Duration(params.BeaconConfig().SecondsPerSlot))
 }
 
 // sanity test on helper function
 func TestMakeGenesisTime(t *testing.T) {
-	currentSlot := types.Slot(64)
+	currentSlot := primitives.Slot(64)
 	gt := makeGenesisTime(currentSlot)
 	require.Equal(t, currentSlot, slots.Since(gt))
 }
 
 // helper function for sequences of block slots
-func makeSequence(start, end types.Slot) []types.Slot {
+func makeSequence(start, end primitives.Slot) []primitives.Slot {
 	if end < start {
 		panic("cannot make sequence where end is before start")
 	}
-	seq := make([]types.Slot, 0, end-start+1)
+	seq := make([]primitives.Slot, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		seq = append(seq, i)
 	}
 	return seq
 }
 
-func (c *testCache) initializeRootCache(reqSlots []types.Slot, t *testing.T) {
+func (c *testCache) initializeRootCache(reqSlots []primitives.Slot, t *testing.T) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.rootCache = make(map[types.Slot][32]byte)
-	c.parentSlotCache = make(map[types.Slot]types.Slot)
-	parentSlot := types.Slot(0)
+	c.rootCache = make(map[primitives.Slot][32]byte)
+	c.parentSlotCache = make(map[primitives.Slot]primitives.Slot)
+	parentSlot := primitives.Slot(0)
 
 	genesisBlock := util.NewBeaconBlock().Block
 	genesisRoot, err := genesisBlock.HashTreeRoot()
@@ -153,7 +151,7 @@ func (c *testCache) initializeRootCache(reqSlots []types.Slot, t *testing.T) {
 // sanity test on helper function
 func TestMakeSequence(t *testing.T) {
 	got := makeSequence(3, 5)
-	want := []types.Slot{3, 4, 5}
+	want := []primitives.Slot{3, 4, 5}
 	require.DeepEqual(t, want, got)
 }
 
@@ -174,7 +172,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			assert.NoError(t, stream.Close())
 		}()
 
-		req := &p2ppb.BeaconBlocksByRangeRequest{}
+		req := &ethpb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
 		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot.Add((req.Count-1)*req.Step))
@@ -190,10 +188,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		}
 
 		// Determine the correct subset of blocks to return as dictated by the test scenario.
-		slots := slice.IntersectionSlot(datum.blocks, requestedBlocks)
+		ss := slice.IntersectionSlot(datum.blocks, requestedBlocks)
 
-		ret := make([]*eth.SignedBeaconBlock, 0)
-		for _, slot := range slots {
+		ret := make([]*ethpb.SignedBeaconBlock, 0)
+		for _, slot := range ss {
 			if (slot - req.StartSlot).Mod(req.Step) != 0 {
 				continue
 			}
@@ -220,7 +218,9 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 		mChain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		for i := 0; i < len(ret); i++ {
-			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(ret[i])))
+			wsb, err := blocks.NewSignedBeaconBlock(ret[i])
+			require.NoError(t, err)
+			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wsb))
 		}
 	})
 
@@ -228,7 +228,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 	peerStatus.Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
 	peerStatus.SetConnectionState(p.PeerID(), peers.PeerConnected)
-	peerStatus.SetChainState(p.PeerID(), &p2ppb.Status{
+	peerStatus.SetChainState(p.PeerID(), &ethpb.Status{
 		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
 		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
 		FinalizedEpoch: datum.finalizedEpoch,
@@ -240,9 +240,9 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 }
 
 // extendBlockSequence extends block chain sequentially (creating genesis block, if necessary).
-func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int) []*eth.SignedBeaconBlock {
+func extendBlockSequence(t *testing.T, inSeq []*ethpb.SignedBeaconBlock, size int) []*ethpb.SignedBeaconBlock {
 	// Start from the original sequence.
-	outSeq := make([]*eth.SignedBeaconBlock, len(inSeq)+size)
+	outSeq := make([]*ethpb.SignedBeaconBlock, len(inSeq)+size)
 	copy(outSeq, inSeq)
 
 	// See if genesis block needs to be created.
@@ -257,7 +257,7 @@ func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int)
 	// Extend block chain sequentially.
 	for slot := startSlot; slot < len(outSeq); slot++ {
 		outSeq[slot] = util.NewBeaconBlock()
-		outSeq[slot].Block.Slot = types.Slot(slot)
+		outSeq[slot].Block.Slot = primitives.Slot(slot)
 		parentRoot, err := outSeq[slot-1].Block.HashTreeRoot()
 		require.NoError(t, err)
 		outSeq[slot].Block.ParentRoot = parentRoot[:]
@@ -271,7 +271,7 @@ func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int)
 
 // connectPeerHavingBlocks connect host with a peer having provided blocks.
 func connectPeerHavingBlocks(
-	t *testing.T, host *p2pt.TestP2P, blocks []*eth.SignedBeaconBlock, finalizedSlot types.Slot,
+	t *testing.T, host *p2pt.TestP2P, blks []*ethpb.SignedBeaconBlock, finalizedSlot primitives.Slot,
 	peerStatus *peers.Status,
 ) peer.ID {
 	p := p2pt.NewTestP2P(t)
@@ -282,15 +282,17 @@ func connectPeerHavingBlocks(
 			_ = _err
 		}()
 
-		req := &p2ppb.BeaconBlocksByRangeRequest{}
+		req := &ethpb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
-		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
-			if uint64(i) >= uint64(len(blocks)) {
+		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
+			if uint64(i) >= uint64(len(blks)) {
 				break
 			}
 			chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(blocks[i])))
+			wsb, err := blocks.NewSignedBeaconBlock(blks[i])
+			require.NoError(t, err)
+			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wsb))
 		}
 	})
 
@@ -306,7 +308,7 @@ func connectPeerHavingBlocks(
 			return
 		}
 		for _, expectedRoot := range *req {
-			for _, blk := range blocks {
+			for _, blk := range blks {
 				if root, err := blk.Block.HashTreeRoot(); err == nil && expectedRoot == root {
 					log.Printf("Found blocks_by_root: %#x for slot: %v", root, blk.Block.Slot)
 					_, err := stream.Write([]byte{0x00})
@@ -321,17 +323,17 @@ func connectPeerHavingBlocks(
 	p.Connect(host)
 
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
-	headRoot, err := blocks[len(blocks)-1].Block.HashTreeRoot()
+	headRoot, err := blks[len(blks)-1].Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	peerStatus.Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
 	peerStatus.SetConnectionState(p.PeerID(), peers.PeerConnected)
-	peerStatus.SetChainState(p.PeerID(), &p2ppb.Status{
+	peerStatus.SetChainState(p.PeerID(), &ethpb.Status{
 		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
 		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		FinalizedEpoch: finalizedEpoch,
 		HeadRoot:       headRoot[:],
-		HeadSlot:       blocks[len(blocks)-1].Block.Slot,
+		HeadSlot:       blks[len(blks)-1].Block.Slot,
 	})
 
 	return p.PeerID()

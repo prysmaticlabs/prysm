@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	dbtest "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
 )
 
 func TestExportStandardProtectionJSON_EmptyGenesisRoot(t *testing.T) {
 	ctx := context.Background()
-	pubKeys := [][48]byte{
+	pubKeys := [][fieldparams.BLSPubkeyLength]byte{
 		{1},
 	}
 	validatorDB := dbtest.SetupDB(t, pubKeys)
@@ -29,7 +30,7 @@ func TestExportStandardProtectionJSON_EmptyGenesisRoot(t *testing.T) {
 
 func Test_getSignedAttestationsByPubKey(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		pubKeys := [][48]byte{
+		pubKeys := [][fieldparams.BLSPubkeyLength]byte{
 			{1},
 		}
 		ctx := context.Background()
@@ -41,8 +42,8 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		assert.Equal(t, 0, len(signedAttestations))
 
 		// We write a real attesting history to disk for the public key.
-		lowestSourceEpoch := types.Epoch(0)
-		lowestTargetEpoch := types.Epoch(4)
+		lowestSourceEpoch := primitives.Epoch(0)
+		lowestTargetEpoch := primitives.Epoch(4)
 
 		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
 			lowestSourceEpoch,
@@ -72,7 +73,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		assert.DeepEqual(t, wanted, signedAttestations)
 	})
 	t.Run("old_schema_bug_edge_case_genesis", func(t *testing.T) {
-		pubKeys := [][48]byte{
+		pubKeys := [][fieldparams.BLSPubkeyLength]byte{
 			{1},
 		}
 		ctx := context.Background()
@@ -85,8 +86,8 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 
 		// We write a real attesting history to disk for the public key with
 		// source epoch 0 and target epoch 1000.
-		lowestSourceEpoch := types.Epoch(0)
-		lowestTargetEpoch := types.Epoch(1000)
+		lowestSourceEpoch := primitives.Epoch(0)
+		lowestTargetEpoch := primitives.Epoch(1000)
 
 		// Next up, we simulate a DB affected by the bug where the next entry
 		// has a target epoch less than the previous one.
@@ -114,7 +115,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		assert.DeepEqual(t, wanted, signedAttestations)
 	})
 	t.Run("old_schema_bug_edge_case_not_genesis", func(t *testing.T) {
-		pubKeys := [][48]byte{
+		pubKeys := [][fieldparams.BLSPubkeyLength]byte{
 			{1},
 		}
 		ctx := context.Background()
@@ -127,8 +128,8 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 
 		// We write a real attesting history to disk for the public key with
 		// source epoch 1 and target epoch 1000.
-		lowestSourceEpoch := types.Epoch(1)
-		lowestTargetEpoch := types.Epoch(1000)
+		lowestSourceEpoch := primitives.Epoch(1)
+		lowestTargetEpoch := primitives.Epoch(1000)
 
 		// Next up, we simulate a DB affected by the bug where the next entry
 		// has a target epoch less than the previous one.
@@ -163,7 +164,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 }
 
 func Test_getSignedBlocksByPubKey(t *testing.T) {
-	pubKeys := [][48]byte{
+	pubKeys := [][fieldparams.BLSPubkeyLength]byte{
 		{1},
 	}
 	ctx := context.Background()

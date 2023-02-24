@@ -3,14 +3,15 @@ package slashings
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 var (
 	_ = PoolManager(&Pool{})
 	_ = PoolInserter(&Pool{})
-	_ = PoolManager(&PoolMock{})
-	_ = PoolInserter(&PoolMock{})
+	_ = PoolManager(&mock.PoolMock{})
+	_ = PoolInserter(&mock.PoolMock{})
 )
 
 func TestPool_validatorSlashingPreconditionCheck_requiresLock(t *testing.T) {

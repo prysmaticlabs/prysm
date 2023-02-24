@@ -1,7 +1,7 @@
 package slasherkv
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -9,6 +9,6 @@ import (
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 	m.Run()
 }

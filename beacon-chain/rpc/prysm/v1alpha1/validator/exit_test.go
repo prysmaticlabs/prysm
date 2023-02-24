@@ -5,21 +5,22 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestProposeExit_Notification(t *testing.T) {
@@ -29,7 +30,7 @@ func TestProposeExit_Notification(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := transition.GenesisBeaconState(ctx, deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
-	epoch := types.Epoch(2048)
+	epoch := primitives.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
@@ -55,7 +56,7 @@ func TestProposeExit_Notification(t *testing.T) {
 	defer opSub.Unsubscribe()
 
 	// Send the request, expect a result on the state feed.
-	validatorIndex := types.ValidatorIndex(0)
+	validatorIndex := primitives.ValidatorIndex(0)
 	req := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
 			Epoch:          epoch,
@@ -96,7 +97,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := transition.GenesisBeaconState(ctx, deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
-	epoch := types.Epoch(2048)
+	epoch := primitives.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
@@ -126,7 +127,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.ErrorContains(t, "voluntary exit does not exist", err, "Expected error for no exit existing")
 
 	// Send the request, expect a result on the state feed.
-	validatorIndex := types.ValidatorIndex(0)
+	validatorIndex := primitives.ValidatorIndex(0)
 	req = &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
 			Epoch:          epoch,
@@ -136,7 +137,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for no signature exists")
-	req.Signature = bytesutil.FromBytes48([48]byte{})
+	req.Signature = bytesutil.FromBytes48([fieldparams.BLSPubkeyLength]byte{})
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for invalid signature length")

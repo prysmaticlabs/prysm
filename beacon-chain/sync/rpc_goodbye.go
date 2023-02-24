@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"time"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
-var backOffTime = map[types.SSZUint64]time.Duration{
+var backOffTime = map[primitives.SSZUint64]time.Duration{
 	// Do not dial peers which are from a different/unverifiable
 	// network.
 	p2ptypes.GoodbyeCodeWrongNetwork:          24 * time.Hour,
@@ -37,7 +37,7 @@ var backOffTime = map[types.SSZUint64]time.Duration{
 func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	SetRPCStreamDeadlines(stream)
 
-	m, ok := msg.(*types.SSZUint64)
+	m, ok := msg.(*primitives.SSZUint64)
 	if !ok {
 		return fmt.Errorf("wrong message type for goodbye, got %T, wanted *uint64", msg)
 	}
@@ -64,7 +64,7 @@ func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
 		goodbyeCode = p2ptypes.GoodbyeCodeBanned
 	}
 	if err := s.sendGoodByeAndDisconnect(ctx, goodbyeCode, id); err != nil {
-		log.Debugf("Error when disconnecting with bad peer: %v", err)
+		log.WithError(err).Debug("Error when disconnecting with bad peer")
 	}
 }
 

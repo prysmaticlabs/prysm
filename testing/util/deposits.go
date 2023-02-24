@@ -6,16 +6,16 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
 )
 
 var lock sync.Mutex
@@ -75,7 +75,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 		}
 	}
 
-	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits))
+	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits)) // lint:ignore uintcast
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create deposit trie")
 	}
@@ -126,6 +126,7 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trie.SparseMerkl
 	// Create the new deposits and add them to the trie.
 	for i := uint64(0); i < numDeposits; i++ {
 		balance := params.BeaconConfig().MaxEffectiveBalance
+		// lint:ignore uintcast -- test code
 		if len(balances) == int(numDeposits) {
 			balance = balances[i]
 		}
@@ -140,12 +141,13 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trie.SparseMerkl
 			return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 		}
 
+		// lint:ignore uintcast -- test code
 		if err = sparseTrie.Insert(hashedDeposit[:], int(i)); err != nil {
 			return nil, nil, err
 		}
 	}
 
-	depositTrie, _, err := DepositTrieSubset(sparseTrie, int(numDeposits))
+	depositTrie, _, err := DepositTrieSubset(sparseTrie, int(numDeposits)) // lint:ignore uintcast -- test code
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create deposit trie")
 	}
@@ -240,7 +242,10 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create trie")
 	}
-	root := depositTrie.HashTreeRoot()
+	root, err := depositTrie.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute deposit trie root")
+	}
 	eth1Data := &ethpb.Eth1Data{
 		BlockHash:    root[:],
 		DepositRoot:  root[:],
@@ -270,22 +275,19 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (state.Beacon
 // DepositTrieFromDeposits takes an array of deposits and returns the deposit trie.
 func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trie.SparseMerkleTrie, [][32]byte, error) {
 	encodedDeposits := make([][]byte, len(deposits))
+	roots := make([][32]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
 		hashedDeposit, err := deposits[i].Data.HashTreeRoot()
 		if err != nil {
 			return nil, [][32]byte{}, errors.Wrap(err, "could not tree hash deposit data")
 		}
 		encodedDeposits[i] = hashedDeposit[:]
+		roots[i] = hashedDeposit
 	}
 
 	depositTrie, err := trie.GenerateTrieFromItems(encodedDeposits, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, [][32]byte{}, errors.Wrap(err, "Could not generate deposit trie")
-	}
-
-	roots := make([][32]byte, len(deposits))
-	for i, dep := range encodedDeposits {
-		roots[i] = bytesutil.ToBytes32(dep)
 	}
 
 	return depositTrie, roots, nil
@@ -374,6 +376,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 		}
 	}
 
+	// lint:ignore uintcast -- test code
 	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create deposit trie")

@@ -3,12 +3,14 @@ package iface
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 )
 
 // InitKeymanagerConfig defines configuration options for initializing a keymanager.
 type InitKeymanagerConfig struct {
 	ListenForChanges bool
+	Web3SignerConfig *remoteweb3signer.SetupConfig
 }
 
 // Wallet defines a struct which has capabilities and knowledge of how

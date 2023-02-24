@@ -20,12 +20,12 @@ func (s *Sync) Initialized() bool {
 }
 
 // Status --
-func (s *Sync) Status() error {
+func (_ *Sync) Status() error {
 	return nil
 }
 
 // Resync --
-func (s *Sync) Resync() error {
+func (_ *Sync) Resync() error {
 	return nil
 }
 

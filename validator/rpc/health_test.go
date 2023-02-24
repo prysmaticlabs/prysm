@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/client"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -23,7 +23,7 @@ func (m *mockSyncChecker) Syncing(_ context.Context) (bool, error) {
 
 type mockGenesisFetcher struct{}
 
-func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, error) {
+func (_ *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, error) {
 	genesis := timestamppb.New(time.Unix(0, 0))
 	return &ethpb.Genesis{
 		GenesisTime: genesis,
@@ -46,7 +46,7 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	require.NoError(t, err)
 	want := &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: endpoint,
-		Connected:          false,
+		Connected:          true,
 		Syncing:            false,
 		GenesisTime:        uint64(time.Unix(0, 0).Unix()),
 	}

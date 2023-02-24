@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"text/template"
 
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 )
 
 var (
@@ -48,7 +47,7 @@ func main() {
 		if err != nil {
 			panic(fmt.Sprintf("%s does not end in an integer for the filename.", p))
 		}
-		b, err := ioutil.ReadFile(p) // #nosec G304
+		b, err := os.ReadFile(p) // #nosec G304
 		if err != nil {
 			panic(err)
 		}

@@ -2,11 +2,11 @@ package sync
 
 import (
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/network/forks"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // Is a background routine that observes for new incoming forks. Depending on the epoch
@@ -28,6 +28,9 @@ func (s *Service) forkWatcher() {
 				log.WithError(err).Error("Unable to check for fork in the previous epoch")
 				continue
 			}
+			// Broadcast BLS changes at the Capella fork boundary
+			s.broadcastBLSChanges(currSlot)
+
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			slotTicker.Done()
@@ -38,8 +41,8 @@ func (s *Service) forkWatcher() {
 
 // Checks if there is a fork in the next epoch and if there is
 // it registers the appropriate gossip and rpc topics.
-func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+func (s *Service) registerForUpcomingFork(currEpoch primitives.Epoch) error {
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	isNextForkEpoch, err := forks.IsForkNextEpoch(s.cfg.chain.GenesisTime(), genRoot[:])
 	if err != nil {
 		return errors.Wrap(err, "Could not retrieve next fork epoch")
@@ -49,15 +52,15 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 	// will subscribe the new topics in advance.
 	if isNextForkEpoch {
 		nextEpoch := currEpoch + 1
+		digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve fork digest")
+		}
+		if s.subHandler.digestExists(digest) {
+			return nil
+		}
+		s.registerSubscribers(nextEpoch, digest)
 		if nextEpoch == params.BeaconConfig().AltairForkEpoch {
-			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
-			if err != nil {
-				return errors.Wrap(err, "Could not retrieve fork digest")
-			}
-			if s.subHandler.digestExists(digest) {
-				return nil
-			}
-			s.registerSubscribers(nextEpoch, digest)
 			s.registerRPCHandlersAltair()
 		}
 	}
@@ -66,8 +69,8 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 
 // Checks if there was a fork in the previous epoch, and if there
 // was then we deregister the topics from that particular fork.
-func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+func (s *Service) deregisterFromPastFork(currEpoch primitives.Epoch) error {
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	// This method takes care of the de-registration of
 	// old gossip pubsub handlers. Once we are at the epoch
 	// after the fork, we de-register from all the outdated topics.
@@ -95,7 +98,13 @@ func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
 		if !s.subHandler.digestExists(prevDigest) {
 			return nil
 		}
-		s.unregisterPhase0Handlers()
+		prevFork, err := forks.Fork(epochBeforeFork)
+		if err != nil {
+			return errors.Wrap(err, "failed to determine previous epoch fork data")
+		}
+		if prevFork.Epoch == params.BeaconConfig().GenesisEpoch {
+			s.unregisterPhase0Handlers()
+		}
 		// Run through all our current active topics and see
 		// if there are any subscriptions to be removed.
 		for _, t := range s.subHandler.allTopics() {

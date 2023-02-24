@@ -3,23 +3,26 @@ package client
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
+	"time"
 
 	emptypb "github.com/golang/protobuf/ptypes/empty"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // SubmitSyncCommitteeMessage submits the sync committee message to the beacon chain.
-func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeMessage")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
@@ -44,17 +47,21 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not get sync committee domain data")
 		return
 	}
-	sszRoot := types.SSZBytes(res.Root)
+	sszRoot := primitives.SSZBytes(res.Root)
 	r, err := signing.ComputeSigningRoot(&sszRoot, d.SignatureDomain)
 	if err != nil {
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
 	}
+
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
-		Object:          &validatorpb.SignRequest_SyncMessageBlockRoot{SyncMessageBlockRoot: res.Root},
+		Object: &validatorpb.SignRequest_SyncMessageBlockRoot{
+			SyncMessageBlockRoot: res.Root,
+		},
+		SigningSlot: slot,
 	})
 	if err != nil {
 		log.WithError(err).Error("Could not sign sync committee message")
@@ -72,22 +79,27 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		return
 	}
 
+	msgSlot := msg.Slot
+	slotTime := time.Unix(int64(v.genesisTime+uint64(msgSlot)*params.BeaconConfig().SecondsPerSlot), 0)
 	log.WithFields(logrus.Fields{
-		"slot":           msg.Slot,
-		"blockRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
-		"validatorIndex": msg.ValidatorIndex,
+		"slot":               msg.Slot,
+		"slotStartTime":      slotTime,
+		"timeSinceSlotStart": time.Since(slotTime),
+		"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
+		"validatorIndex":     msg.ValidatorIndex,
 	}).Info("Submitted new sync message")
+	atomic.AddUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 1)
 }
 
 // SubmitSignedContributionAndProof submits the signed sync committee contribution and proof to the beacon chain.
-func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSignedContributionAndProof")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 
 	duty, err := v.duty(pubKey)
 	if err != nil {
-		log.Errorf("Could not fetch validator assignment: %v", err)
+		log.WithError(err).Error("Could not fetch validator assignment")
 		return
 	}
 
@@ -96,7 +108,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		Slot:      slot,
 	})
 	if err != nil {
-		log.Errorf("Could not get sync subcommittee index: %v", err)
+		log.WithError(err).Error("Could not get sync subcommittee index")
 		return
 	}
 	if len(indexRes.Indices) == 0 {
@@ -106,7 +118,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 
 	selectionProofs, err := v.selectionProofs(ctx, slot, pubKey, indexRes)
 	if err != nil {
-		log.Errorf("Could not get selection proofs: %v", err)
+		log.WithError(err).Error("Could not get selection proofs")
 		return
 	}
 
@@ -115,7 +127,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 	for i, comIdx := range indexRes.Indices {
 		isAggregator, err := altair.IsSyncCommitteeAggregator(selectionProofs[i])
 		if err != nil {
-			log.Errorf("Could check in aggregator: %v", err)
+			log.WithError(err).Error("Could check in aggregator")
 			return
 		}
 		if !isAggregator {
@@ -129,7 +141,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			SubnetId:  subnet,
 		})
 		if err != nil {
-			log.Errorf("Could not get sync committee contribution: %v", err)
+			log.WithError(err).Error("Could not get sync committee contribution")
 			return
 		}
 		if contribution.AggregationBits.Count() == 0 {
@@ -146,9 +158,9 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			Contribution:    contribution,
 			SelectionProof:  selectionProofs[i],
 		}
-		sig, err := v.signContributionAndProof(ctx, pubKey, contributionAndProof)
+		sig, err := v.signContributionAndProof(ctx, pubKey, contributionAndProof, slot)
 		if err != nil {
-			log.Errorf("Could not sign contribution and proof: %v", err)
+			log.WithError(err).Error("Could not sign contribution and proof")
 			return
 		}
 
@@ -156,22 +168,26 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			Message:   contributionAndProof,
 			Signature: sig,
 		}); err != nil {
-			log.Errorf("Could not submit signed contribution and proof: %v", err)
+			log.WithError(err).Error("Could not submit signed contribution and proof")
 			return
 		}
 
+		contributionSlot := contributionAndProof.Contribution.Slot
+		slotTime := time.Unix(int64(v.genesisTime+uint64(contributionSlot)*params.BeaconConfig().SecondsPerSlot), 0)
 		log.WithFields(logrus.Fields{
-			"slot":              contributionAndProof.Contribution.Slot,
-			"blockRoot":         fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
-			"subcommitteeIndex": contributionAndProof.Contribution.SubcommitteeIndex,
-			"aggregatorIndex":   contributionAndProof.AggregatorIndex,
-			"bitsCount":         contributionAndProof.Contribution.AggregationBits.Count(),
+			"slot":               contributionAndProof.Contribution.Slot,
+			"slotStartTime":      slotTime,
+			"timeSinceSlotStart": time.Since(slotTime),
+			"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
+			"subcommitteeIndex":  contributionAndProof.Contribution.SubcommitteeIndex,
+			"aggregatorIndex":    contributionAndProof.AggregatorIndex,
+			"bitsCount":          contributionAndProof.Contribution.AggregationBits.Count(),
 		}).Info("Submitted new sync contribution and proof")
 	}
 }
 
 // Signs and returns selection proofs per validator for slot and pub key.
-func (v *validator) selectionProofs(ctx context.Context, slot types.Slot, pubKey [48]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse) ([][]byte, error) {
+func (v *validator) selectionProofs(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse) ([][]byte, error) {
 	selectionProofs := make([][]byte, len(indexRes.Indices))
 	cfg := params.BeaconConfig()
 	size := cfg.SyncCommitteeSize
@@ -189,7 +205,7 @@ func (v *validator) selectionProofs(ctx context.Context, slot types.Slot, pubKey
 }
 
 // Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
-func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) (signature []byte, err error) {
+func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, index uint64, slot primitives.Slot) (signature []byte, err error) {
 	domain, err := v.domainData(ctx, slots.ToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
 	if err != nil {
 		return nil, err
@@ -207,6 +223,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_SyncAggregatorSelectionData{SyncAggregatorSelectionData: data},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err
@@ -215,7 +232,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 }
 
 // This returns the signature of validator signing over sync committee contribution and proof object.
-func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof) ([]byte, error) {
+func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, c *ethpb.ContributionAndProof, slot primitives.Slot) ([]byte, error) {
 	d, err := v.domainData(ctx, slots.ToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
 	if err != nil {
 		return nil, err
@@ -229,6 +246,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byt
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_ContributionAndProof{ContributionAndProof: c},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err

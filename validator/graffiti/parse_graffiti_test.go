@@ -1,15 +1,14 @@
 package graffiti
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestParseGraffitiFile_Default(t *testing.T) {
@@ -19,7 +18,7 @@ func TestParseGraffitiFile_Default(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
@@ -41,7 +40,7 @@ func TestParseGraffitiFile_Random(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
@@ -67,7 +66,7 @@ func TestParseGraffitiFile_Ordered(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
@@ -94,14 +93,14 @@ specific:
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
 
 	wanted := &Graffiti{
 		Hash: hash.Hash(input),
-		Specific: map[types.ValidatorIndex]string{
+		Specific: map[primitives.ValidatorIndex]string{
 			1234:   "Yolo",
 			555:    "What's up",
 			703727: "Meow",
@@ -132,7 +131,7 @@ specific:
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
@@ -150,7 +149,7 @@ specific:
 			"Mr E was here",
 			"Mr F was here",
 		},
-		Specific: map[types.ValidatorIndex]string{
+		Specific: map[primitives.ValidatorIndex]string{
 			1234:   "Yolo",
 			555:    "What's up",
 			703727: "Meow",

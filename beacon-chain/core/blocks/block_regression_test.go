@@ -4,23 +4,23 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 
 	beaconState, privKeys := util.DeterministicGenesisState(t, 5500)
 	for _, vv := range beaconState.Validators() {
-		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
+		vv.WithdrawableEpoch = primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)
 	}
 	// This set of indices is very similar to the one from our sapphire testnet
 	// when close to 100 validators were incorrectly slashed. The set is from 0 -5500,
@@ -44,7 +44,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		AttestingIndices: setA,
 		Signature:        make([]byte, 96),
 	}
-	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err, "Could not get signing root of beacon block header")

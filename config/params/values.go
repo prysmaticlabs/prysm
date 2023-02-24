@@ -1,21 +1,15 @@
 package params
 
 const (
-	Mainnet ConfigName = iota
-	Minimal
-	EndToEnd
-	Pyrmont
-	Prater
+	DevnetName          = "devnet"
+	EndToEndName        = "end-to-end"
+	EndToEndMainnetName = "end-to-end-mainnet"
+	InteropName         = "interop"
+	MainnetName         = "mainnet"
+	MainnetTestName     = "mainnet-test"
+	MinimalName         = "minimal"
+	PraterName          = "prater"
+	GoerliName          = "goerli"
+	RopstenName         = "ropsten"
+	SepoliaName         = "sepolia"
 )
-
-// ConfigNames provides network configuration names.
-var ConfigNames = map[ConfigName]string{
-	Mainnet:  "mainnet",
-	Minimal:  "minimal",
-	EndToEnd: "end-to-end",
-	Pyrmont:  "pyrmont",
-	Prater:   "prater",
-}
-
-// ConfigName enum describes the type of known network in use.
-type ConfigName = int

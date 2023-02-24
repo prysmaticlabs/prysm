@@ -2,22 +2,22 @@ package prometheus
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/runtime"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 }
 
 func TestLifecycle(t *testing.T) {
@@ -45,10 +45,10 @@ type mockService struct {
 	status error
 }
 
-func (m *mockService) Start() {
+func (_ *mockService) Start() {
 }
 
-func (m *mockService) Stop() error {
+func (_ *mockService) Stop() error {
 	return nil
 }
 

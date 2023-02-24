@@ -5,45 +5,61 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/gateway"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/monitoring/backup"
-	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
-	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/runtime"
-	"github.com/prysmaticlabs/prysm/runtime/debug"
-	"github.com/prysmaticlabs/prysm/runtime/prereqs"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	g "github.com/prysmaticlabs/prysm/validator/graffiti"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	"github.com/prysmaticlabs/prysm/validator/rpc"
-	"github.com/prysmaticlabs/prysm/validator/web"
+	fastssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	validatorServiceConfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/backup"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
+	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v3/runtime/prereqs"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	g "github.com/prysmaticlabs/prysm/v3/validator/graffiti"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v3/validator/rpc"
+	validatormiddleware "github.com/prysmaticlabs/prysm/v3/validator/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v2"
 )
 
 // ValidatorClient defines an instance of an Ethereum validator that manages
@@ -62,6 +78,7 @@ type ValidatorClient struct {
 
 // NewValidatorClient creates a new instance of the Prysm validator client.
 func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
+	// TODO(#9883) - Maybe we can pass in a new validator client config instead of the cliCTX to abstract away the use of flags here .
 	if err := tracing2.Setup(
 		"validator", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
@@ -93,31 +110,35 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		stop:              make(chan struct{}),
 	}
 
-	features.ConfigureValidator(cliCtx)
-	cmd.ConfigureValidator(cliCtx)
+	if err := features.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := cmd.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		if err := params.LoadChainConfigFile(chainConfigFileName, nil); err != nil {
+			return nil, err
+		}
 	}
+
+	configureFastSSZHashingAlgorithm()
 
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
+	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
+		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+			log.Warn("Remote Keymanager API enabled. Prysm web does not properly support web3signer at this time")
+		}
 		log.Info("Enabling web portal to manage the validator client")
 		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
 			return nil, err
 		}
 		return validatorClient, nil
 	}
-
-	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
-	}
-
-	// Initializes any forks here.
-	params.BeaconConfig().InitializeForkSchedule()
 
 	if err := validatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
@@ -172,36 +193,27 @@ func (c *ValidatorClient) Close() {
 }
 
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
-	var keyManager keymanager.IKeymanager
 	var err error
-	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
-		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-		keyManager, err = imported.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
-		if err != nil {
-			return errors.Wrap(err, "could not generate interop keys")
-		}
-	} else {
-		// Read the wallet from the specified path.
-		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-			return nil, wallet.ErrNoWalletFound
-		})
-		if err != nil {
-			return errors.Wrap(err, "could not open wallet")
-		}
-		c.wallet = w
-		log.WithFields(logrus.Fields{
-			"wallet":          w.AccountsDir(),
-			"keymanager-kind": w.KeymanagerKind().String(),
-		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
-		if err != nil {
-			return errors.Wrap(err, "could not read keymanager for wallet")
-		}
-	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if c.wallet != nil {
-		dataDir = c.wallet.AccountsDir()
+	if !cliCtx.IsSet(flags.InteropNumValidators.Name) {
+		// Custom Check For Web3Signer
+		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+			c.wallet = wallet.NewWalletForWeb3Signer()
+		} else {
+			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+				return nil, wallet.ErrNoWalletFound
+			})
+			if err != nil {
+				return errors.Wrap(err, "could not open wallet")
+			}
+			c.wallet = w
+			// TODO(#9883) - Remove this when we have a better way to handle this.
+			log.WithFields(logrus.Fields{
+				"wallet":          w.AccountsDir(),
+				"keymanager-kind": w.KeymanagerKind().String(),
+			}).Info("Opened validator wallet")
+			dataDir = c.wallet.AccountsDir()
+		}
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
@@ -233,8 +245,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys:         nil,
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		PubKeys: nil,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
@@ -249,11 +260,11 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := c.registerValidatorService(keyManager); err != nil {
+	if err := c.registerValidatorService(cliCtx); err != nil {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
-		if err := c.registerRPCService(cliCtx, keyManager); err != nil {
+		if err := c.registerRPCService(cliCtx); err != nil {
 			return err
 		}
 		if err := c.registerRPCGatewayService(cliCtx); err != nil {
@@ -264,36 +275,29 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
-	var keyManager keymanager.IKeymanager
 	var err error
+	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+		c.wallet = wallet.NewWalletForWeb3Signer()
+	} else {
+		// Read the wallet password file from the cli context.
+		if err = setWalletPasswordFilePath(cliCtx); err != nil {
+			return errors.Wrap(err, "could not read wallet password file")
+		}
 
-	// Read the wallet password file from the cli context.
-	if err = setWalletPasswordFilePath(cliCtx); err != nil {
-		return errors.Wrap(err, "could not read wallet password file")
-	}
-
-	// Read the wallet from the specified path.
-	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, nil
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-	if w != nil {
-		c.wallet = w
-		log.WithFields(logrus.Fields{
-			"wallet":          w.AccountsDir(),
-			"keymanager-kind": w.KeymanagerKind().String(),
-		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
+		// Read the wallet from the specified path.
+		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+			return nil, nil
+		})
 		if err != nil {
-			return errors.Wrap(err, "could not read keymanager for wallet")
+			return errors.Wrap(err, "could not open wallet")
+		}
+		c.wallet = w
+		if c.wallet != nil {
+			dataDir = c.wallet.AccountsDir()
 		}
 	}
-	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if c.wallet != nil {
-		dataDir = c.wallet.AccountsDir()
-	}
+
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
 	}
@@ -317,8 +321,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys:         nil,
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		PubKeys: nil,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
@@ -333,10 +336,10 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := c.registerValidatorService(keyManager); err != nil {
+	if err := c.registerValidatorService(cliCtx); err != nil {
 		return err
 	}
-	if err := c.registerRPCService(cliCtx, keyManager); err != nil {
+	if err := c.registerRPCService(cliCtx); err != nil {
 		return err
 	}
 	if err := c.registerRPCGatewayService(cliCtx); err != nil {
@@ -371,9 +374,8 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(service)
 }
 
-func (c *ValidatorClient) registerValidatorService(
-	keyManager keymanager.IKeymanager,
-) error {
+func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
+
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -383,6 +385,14 @@ func (c *ValidatorClient) registerValidatorService(
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	var interopKeysConfig *local.InteropKeymanagerConfig
+	if c.cliCtx.IsSet(flags.InteropNumValidators.Name) {
+		interopKeysConfig = &local.InteropKeymanagerConfig{
+			Offset:           cliCtx.Uint64(flags.InteropStartIndex.Name),
+			NumValidatorKeys: cliCtx.Uint64(flags.InteropNumValidators.Name),
+		}
+	}
+
 	gStruct := &g.Graffiti{}
 	var err error
 	if c.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
@@ -393,10 +403,19 @@ func (c *ValidatorClient) registerValidatorService(
 		}
 	}
 
+	wsc, err := Web3SignerConfig(c.cliCtx)
+	if err != nil {
+		return err
+	}
+
+	bpc, err := proposerSettings(c.cliCtx)
+	if err != nil {
+		return err
+	}
+
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
-		KeyManager:                 keyManager,
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
@@ -407,9 +426,14 @@ func (c *ValidatorClient) registerValidatorService(
 		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		ValDB:                      c.db,
 		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
+		InteropKeysConfig:          interopKeysConfig,
+		Wallet:                     c.wallet,
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
-		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
+		Web3SignerConfig:           wsc,
+		ProposerSettings:           bpc,
+		BeaconApiTimeout:           time.Second * 30,
+		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -418,7 +442,210 @@ func (c *ValidatorClient) registerValidatorService(
 	return c.services.RegisterService(v)
 }
 
-func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
+func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
+	var web3signerConfig *remoteweb3signer.SetupConfig
+	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
+		u, err := url.ParseRequestURI(urlStr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "web3signer url %s is invalid", urlStr)
+		}
+		if u.Scheme == "" || u.Host == "" {
+			return nil, fmt.Errorf("web3signer url must be in the format of http(s)://host:port url used: %v", urlStr)
+		}
+		web3signerConfig = &remoteweb3signer.SetupConfig{
+			BaseEndpoint:          u.String(),
+			GenesisValidatorsRoot: nil,
+		}
+		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
+			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
+		}
+
+		if publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name); len(publicKeysSlice) > 0 {
+			pks := make([]string, 0)
+			if len(publicKeysSlice) == 1 {
+				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
+				if err == nil && pURL.Scheme != "" && pURL.Host != "" {
+					web3signerConfig.PublicKeysURL = publicKeysSlice[0]
+				} else {
+					pks = strings.Split(publicKeysSlice[0], ",")
+				}
+			} else if len(publicKeysSlice) > 1 {
+				pks = publicKeysSlice
+			}
+			if len(pks) > 0 {
+				pks = slice.Unique[string](pks)
+				var validatorKeys [][48]byte
+				for _, key := range pks {
+					decodedKey, decodeErr := hexutil.Decode(key)
+					if decodeErr != nil {
+						return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
+					}
+					validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
+				}
+				web3signerConfig.ProvidedPublicKeys = validatorKeys
+			}
+		}
+	}
+	return web3signerConfig, nil
+}
+
+func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSettings, error) {
+	var fileConfig *validatorServiceConfig.ProposerSettingsPayload
+
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
+	}
+
+	// is overridden by file and URL flags
+	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) &&
+		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
+		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
+		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+		if err != nil {
+			return nil, err
+		}
+		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
+			ProposerConfig: nil,
+			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
+				FeeRecipient:  suggestedFee,
+				BuilderConfig: builderConfig,
+			},
+		}
+	}
+
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
+		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ProposerSettingsFlag.Name), &fileConfig); err != nil {
+			return nil, err
+		}
+	}
+	if cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ProposerSettingsURLFlag.Name), &fileConfig); err != nil {
+			return nil, err
+		}
+	}
+
+	// nothing is set, so just return nil
+	if fileConfig == nil {
+		return nil, nil
+	}
+	// convert file config to proposer config for internal use
+	vpSettings := &validatorServiceConfig.ProposerSettings{}
+
+	// default fileConfig is mandatory
+	if fileConfig.DefaultConfig == nil {
+		return nil, errors.New("default fileConfig is required, proposer settings file is either empty or an incorrect format")
+	}
+	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
+		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
+	}
+	if err := warnNonChecksummedAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
+		return nil, err
+	}
+	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
+		FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+			FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		},
+		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
+	}
+	if vpSettings.DefaultConfig.BuilderConfig == nil {
+		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+		if err != nil {
+			return nil, err
+		}
+		vpSettings.DefaultConfig.BuilderConfig = builderConfig
+	}
+
+	if vpSettings.DefaultConfig.BuilderConfig != nil {
+		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
+	}
+
+	if fileConfig.ProposerConfig != nil {
+		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
+		for key, option := range fileConfig.ProposerConfig {
+			decodedKey, err := hexutil.Decode(key)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode public key %s", key)
+			}
+			if len(decodedKey) != fieldparams.BLSPubkeyLength {
+				return nil, fmt.Errorf("%v  is not a bls public key", key)
+			}
+			if option == nil {
+				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
+			}
+			if !common.IsHexAddress(option.FeeRecipient) {
+				return nil, errors.New("fee recipient is not a valid eth1 address")
+			}
+			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
+				return nil, err
+			}
+			if option.BuilderConfig != nil {
+				option.BuilderConfig.GasLimit = reviewGasLimit(option.BuilderConfig.GasLimit)
+			} else {
+				builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+				if err != nil {
+					return nil, err
+				}
+				option.BuilderConfig = builderConfig
+			}
+			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
+				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipient: common.HexToAddress(option.FeeRecipient),
+				},
+				BuilderConfig: option.BuilderConfig,
+			}
+
+		}
+	}
+
+	return vpSettings, nil
+}
+
+func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.BuilderConfig, error) {
+	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+		gasLimit := validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+		sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
+
+		if sgl != "" {
+			gl, err := strconv.ParseUint(sgl, 10, 64)
+			if err != nil {
+				return nil, errors.New("Gas Limit is not a uint64")
+			}
+			gasLimit = reviewGasLimit(validatorServiceConfig.Uint64(gl))
+		}
+		return &validatorServiceConfig.BuilderConfig{
+			Enabled:  true,
+			GasLimit: gasLimit,
+		}, nil
+	}
+	return nil, nil
+}
+
+func warnNonChecksummedAddress(feeRecipient string) error {
+	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(feeRecipient)
+	if err != nil {
+		return errors.Wrapf(err, "could not decode fee recipient %s", feeRecipient)
+	}
+	if !mixedcaseAddress.ValidChecksum() {
+		log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+			"The checksummed address is %s and will be used as the fee recipient. "+
+			"We recommend using a mixed-case address (checksum) "+
+			"to prevent spelling mistakes in your fee recipient Ethereum address", feeRecipient, mixedcaseAddress.Address().Hex())
+	}
+	return nil
+}
+
+func reviewGasLimit(gasLimit validatorServiceConfig.Uint64) validatorServiceConfig.Uint64 {
+	// sets gas limit to default if not defined or set to 0
+	if gasLimit == 0 {
+		return validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+	}
+	// TODO(10810): add in warning for ranges
+	return gasLimit
+}
+
+func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	var vs *client.ValidatorService
 	if err := c.services.FetchService(&vs); err != nil {
 		return err
@@ -448,7 +675,6 @@ func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 		NodeGatewayEndpoint:      nodeGatewayEndpoint,
 		WalletDir:                walletDir,
 		Wallet:                   c.wallet,
-		Keymanager:               km,
 		ValidatorGatewayHost:     validatorGatewayHost,
 		ValidatorGatewayPort:     validatorGatewayPort,
 		ValidatorMonitoringHost:  validatorMonitoringHost,
@@ -474,9 +700,15 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
-	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
-	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	rpcAddr := net.JoinHostPort(rpcHost, fmt.Sprintf("%d", rpcPort))
+	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
+	timeout := cliCtx.Int(cmd.ApiTimeoutFlag.Name)
+	var allowedOrigins []string
+	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	} else {
+		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+	}
 	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
 	registrations := []gateway.PbHandlerRegistration{
@@ -487,12 +719,14 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,
+		ethpbservice.RegisterKeyManagementHandler,
 	}
-	mux := gwruntime.NewServeMux(
+	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
 					EmitUnpopulated: true,
+					UseProtoNames:   true,
 				},
 				UnmarshalOptions: protojson.UnmarshalOptions{
 					DiscardUnknown: true,
@@ -502,29 +736,47 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gwruntime.WithMarshalerOption(
 			"text/event-stream", &gwruntime.EventSourceJSONPb{},
 		),
+		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)
-	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
-		if strings.HasPrefix(req.URL.Path, "/api") {
-			http.StripPrefix("/api", h).ServeHTTP(w, req)
+	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
+		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
+		// the standard validator keymanager API under the /eth namespace, and the Prysm internal
+		// validator API under the /api namespace. Finally, it also serves requests to host the validator web UI.
+		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			// If the prefix has /eth/, we handle it with the standard API gateway middleware.
+			apiMware.ServeHTTP(w, req)
+		} else if strings.HasPrefix(req.URL.Path, "/api") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			// Else, we handle with the Prysm API gateway without a middleware.
+			h(w, req)
 		} else {
+			// Finally, we handle with the web server.
+			// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 			web.Handler(w, req)
 		}
 	}
 
+	// remove "/accounts/", "/v2/" after WebUI DEPRECATED
 	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
-		Patterns:      []string{"/accounts/", "/v2/"},
-		Mux:           mux,
+		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},
+		Mux:           gwmux,
 	}
-
-	gw := gateway.New(
-		cliCtx.Context,
-		[]*gateway.PbMux{pbHandler},
-		muxHandler,
-		rpcAddr,
-		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).WithMaxCallRecvMsgSize(maxCallSize)
-
+	opts := []gateway.Option{
+		gateway.WithRemoteAddr(rpcAddr),
+		gateway.WithGatewayAddr(gatewayAddress),
+		gateway.WithMaxCallRecvMsgSize(maxCallSize),
+		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
+		gateway.WithAllowedOrigins(allowedOrigins),
+		gateway.WithApiMiddleware(&validatormiddleware.ValidatorEndpointFactory{}),
+		gateway.WithMuxHandler(muxHandler),
+		gateway.WithTimeout(uint64(timeout)),
+	}
+	gw, err := gateway.New(cliCtx.Context, opts...)
+	if err != nil {
+		return err
+	}
 	return c.services.RegisterService(gw)
 }
 
@@ -582,4 +834,59 @@ func clearDB(ctx context.Context, dataDir string, force bool) error {
 	}
 
 	return nil
+}
+
+func unmarshalFromURL(ctx context.Context, from string, to interface{}) error {
+	u, err := url.ParseRequestURI(from)
+	if err != nil {
+		return err
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("invalid URL: %s", from)
+	}
+	req, reqerr := http.NewRequestWithContext(ctx, http.MethodGet, from, nil)
+	if reqerr != nil {
+		return errors.Wrap(reqerr, "failed to create http request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, resperr := http.DefaultClient.Do(req)
+	if resperr != nil {
+		return errors.Wrap(resperr, "failed to send http request")
+	}
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			log.WithError(err).Error("failed to close response body")
+		}
+	}(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("http request to %v failed with status code %d", from, resp.StatusCode)
+	}
+	if decodeerr := json.NewDecoder(resp.Body).Decode(&to); decodeerr != nil {
+		return errors.Wrap(decodeerr, "failed to decode http response")
+	}
+	return nil
+}
+
+func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
+	if ctx == nil {
+		return errors.New("node: nil context passed to unmarshalFromFile")
+	}
+	cleanpath := filepath.Clean(from)
+	b, err := os.ReadFile(cleanpath)
+	if err != nil {
+		return errors.Wrap(err, "failed to open file")
+	}
+
+	if err := yaml.Unmarshal(b, to); err != nil {
+		return errors.Wrap(err, "failed to unmarshal yaml file")
+	}
+
+	return nil
+}
+
+func configureFastSSZHashingAlgorithm() {
+	if features.Get().EnableVectorizedHTR {
+		fastssz.EnableVectorizedHTR = true
+	}
 }

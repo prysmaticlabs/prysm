@@ -7,39 +7,53 @@ on:
     branches: [ '*' ]
 
 jobs:
-
-  check:
-    name: Check
+  formatting:
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Go mod tidy checker
         id: gomodtidy
         uses: ./.github/actions/gomodtidy
 
-      - name: Gofmt checker
-        id: gofmt
-        uses: ./.github/actions/gofmt
+  gosec:
+    name: Gosec scan
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v3
         with:
-          path: ./
+          go-version: 1.19
+      - name: Run Gosec Security Scanner
+        run: | # https://github.com/securego/gosec/issues/469
+          export PATH=$PATH:$(go env GOPATH)/bin
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.12.0
+          gosec -exclude=G307 -exclude-dir=crypto/bls/herumi ./...
 
-      - name: GoImports checker
-        id: goimports
-        uses: Jerome1337/goimports-action@v1.0.2
-        with:
-          goimports-path: ./
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Gosec security scanner
-        uses: securego/gosec@master
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v3
         with:
-          args: '-exclude=G307 -exclude-dir=crypto/bls/herumi ./...'
+          go-version: 1.19
+          id: go
 
       - name: Golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          args: --print-issued-lines --sort-results --no-config --timeout=10m --disable-all -E deadcode  -E errcheck -E gosimple --skip-files=validator/web/site_data.go
+          version: v1.50.1
+          args: --config=.golangci.yml --out-${NO_FUTURE}format colored-line-number
 
   build:
     name: Build
@@ -48,7 +62,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.14
+          go-version: 1.19
         id: go
 
       - name: Check out code into the Go module directory
@@ -61,6 +75,14 @@ jobs:
       - name: Build
         # Use blst tag to allow go and bazel builds for blst.
         run: go build -v ./...
+        env: 
+           CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+        # fuzz leverage go tag based stubs at compile time.
+        # Building and testing with these tags should be checked and enforced at pre-submit.
+      - name: Test for fuzzing
+        run: go test  -tags=fuzz,develop ./...  -test.run=^Fuzz
+        env: 
+           CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
 
 # Tests run via Bazel for now...
 #      - name: Test

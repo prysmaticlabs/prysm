@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/sirupsen/logrus"
 )
 

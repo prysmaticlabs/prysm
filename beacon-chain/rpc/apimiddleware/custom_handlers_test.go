@@ -4,58 +4,129 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/api/grpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/api/grpc"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/r3labs/sse"
 )
 
 type testSSZResponseJson struct {
-	Version string `json:"version"`
-	Data    string `json:"data"`
+	Version             string `json:"version"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
+	Finalized           bool   `json:"finalized"`
+	Data                string `json:"data"`
 }
 
 func (t testSSZResponseJson) SSZVersion() string {
 	return t.Version
 }
 
+func (t testSSZResponseJson) SSZOptimistic() bool {
+	return t.ExecutionOptimistic
+}
+
 func (t testSSZResponseJson) SSZData() string {
 	return t.Data
+}
+
+func (t testSSZResponseJson) SSZFinalized() bool {
+	return t.Finalized
 }
 
 func TestSSZRequested(t *testing.T) {
 	t.Run("ssz_requested", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{"application/octet-stream"}
-		result := sszRequested(request)
+		request.Header["Accept"] = []string{octetStreamMediaType}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
 		assert.Equal(t, true, result)
 	})
 
-	t.Run("multiple_content_types", func(t *testing.T) {
+	t.Run("ssz_content_type_first", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{"application/json", "application/octet-stream"}
-		result := sszRequested(request)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s", octetStreamMediaType, jsonMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
 		assert.Equal(t, true, result)
+	})
+
+	t.Run("ssz_content_type_preferred_1", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.9,%s", jsonMediaType, octetStreamMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+	})
+
+	t.Run("ssz_content_type_preferred_2", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.95,%s;q=0.9", octetStreamMediaType, jsonMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+	})
+
+	t.Run("other_content_type_preferred", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9", jsonMediaType, octetStreamMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
+	t.Run("other_params", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9,otherparam=xyz", jsonMediaType, octetStreamMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
 	})
 
 	t.Run("no_header", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		result := sszRequested(request)
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
+	t.Run("empty_header", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
+	t.Run("empty_header_value", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{""}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
 		assert.Equal(t, false, result)
 	})
 
 	t.Run("other_content_type", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{"application/json"}
-		result := sszRequested(request)
+		request.Header["Accept"] = []string{"application/other"}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
+	t.Run("garbage", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{"This is Sparta!!!"}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
 		assert.Equal(t, false, result)
 	})
 }
@@ -70,9 +141,19 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 	var body bytes.Buffer
 	request := httptest.NewRequest("GET", "http://foo.example", &body)
 
-	errJson := prepareSSZRequestForProxying(middleware, endpoint, request, "/ssz")
+	errJson := prepareSSZRequestForProxying(middleware, endpoint, request)
 	require.Equal(t, true, errJson == nil)
 	assert.Equal(t, "/internal/ssz", request.URL.Path)
+}
+
+func TestPreparePostedSszData(t *testing.T) {
+	var body bytes.Buffer
+	body.Write([]byte("body"))
+	request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+	preparePostedSSZData(request)
+	assert.Equal(t, int64(19), request.ContentLength)
+	assert.Equal(t, jsonMediaType, request.Header.Get("Content-Type"))
 }
 
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
@@ -128,12 +209,12 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		v, ok = writer.Header()["Content-Type"]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
-		assert.Equal(t, "application/octet-stream", v[0])
+		assert.Equal(t, octetStreamMediaType, v[0])
 		v, ok = writer.Header()["Content-Disposition"]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "attachment; filename=test.ssz", v[0])
-		v, ok = writer.Header()["Eth-Consensus-Version"]
+		v, ok = writer.Header()[versionHeader]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "version", v[0])
@@ -181,7 +262,7 @@ func TestReceiveEvents(t *testing.T) {
 
 	go func() {
 		base64Val := "Zm9v"
-		data := &eventFinalizedCheckpointJson{
+		data := &EventFinalizedCheckpointJson{
 			Block: base64Val,
 			State: base64Val,
 			Epoch: "1",
@@ -199,6 +280,98 @@ func TestReceiveEvents(t *testing.T) {
 
 	errJson := receiveEvents(ch, w, req)
 	assert.Equal(t, true, errJson == nil)
+
+	expectedEvent := `event: finalized_checkpoint
+data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1","execution_optimistic":false}
+
+`
+	assert.DeepEqual(t, expectedEvent, w.Body.String())
+}
+
+func TestReceiveEvents_AggregatedAtt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *sse.Event)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	req := httptest.NewRequest("GET", "http://foo.example", &bytes.Buffer{})
+	req = req.WithContext(ctx)
+
+	go func() {
+		base64Val := "Zm9v"
+		data := AggregatedAttReceivedDataJson{
+			Aggregate: &AttestationJson{
+				AggregationBits: base64Val,
+				Data: &AttestationDataJson{
+					Slot:            "1",
+					CommitteeIndex:  "1",
+					BeaconBlockRoot: base64Val,
+					Source:          nil,
+					Target:          nil,
+				},
+				Signature: base64Val,
+			},
+		}
+		bData, err := json.Marshal(data)
+		require.NoError(t, err)
+		msg := &sse.Event{
+			Data:  bData,
+			Event: []byte(events.AttestationTopic),
+		}
+		ch <- msg
+		time.Sleep(time.Second)
+		cancel()
+	}()
+
+	errJson := receiveEvents(ch, w, req)
+	assert.Equal(t, true, errJson == nil)
+
+	expectedEvent := `event: attestation
+data: {"aggregation_bits":"0x666f6f","data":{"slot":"1","index":"1","beacon_block_root":"0x666f6f","source":null,"target":null},"signature":"0x666f6f"}
+
+`
+	assert.DeepEqual(t, expectedEvent, w.Body.String())
+}
+
+func TestReceiveEvents_UnaggregatedAtt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *sse.Event)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	req := httptest.NewRequest("GET", "http://foo.example", &bytes.Buffer{})
+	req = req.WithContext(ctx)
+
+	go func() {
+		base64Val := "Zm9v"
+		data := UnaggregatedAttReceivedDataJson{
+			AggregationBits: base64Val,
+			Data: &AttestationDataJson{
+				Slot:            "1",
+				CommitteeIndex:  "1",
+				BeaconBlockRoot: base64Val,
+				Source:          nil,
+				Target:          nil,
+			},
+			Signature: base64Val,
+		}
+		bData, err := json.Marshal(data)
+		require.NoError(t, err)
+		msg := &sse.Event{
+			Data:  bData,
+			Event: []byte(events.AttestationTopic),
+		}
+		ch <- msg
+		time.Sleep(time.Second)
+		cancel()
+	}()
+
+	errJson := receiveEvents(ch, w, req)
+	assert.Equal(t, true, errJson == nil)
+
+	expectedEvent := `event: attestation
+data: {"aggregation_bits":"0x666f6f","data":{"slot":"1","index":"1","beacon_block_root":"0x666f6f","source":null,"target":null},"signature":"0x666f6f"}
+
+`
+	assert.DeepEqual(t, expectedEvent, w.Body.String())
 }
 
 func TestReceiveEvents_EventNotSupported(t *testing.T) {
@@ -230,7 +403,7 @@ func TestReceiveEvents_TrailingSpace(t *testing.T) {
 
 	go func() {
 		base64Val := "Zm9v"
-		data := &eventFinalizedCheckpointJson{
+		data := &EventFinalizedCheckpointJson{
 			Block: base64Val,
 			State: base64Val,
 			Epoch: "1",
@@ -249,14 +422,14 @@ func TestReceiveEvents_TrailingSpace(t *testing.T) {
 	errJson := receiveEvents(ch, w, req)
 	assert.Equal(t, true, errJson == nil)
 	assert.Equal(t, `event: finalized_checkpoint
-data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1"}
+data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1","execution_optimistic":false}
 
 `, w.Body.String())
 }
 
 func TestWriteEvent(t *testing.T) {
 	base64Val := "Zm9v"
-	data := &eventFinalizedCheckpointJson{
+	data := &EventFinalizedCheckpointJson{
 		Block: base64Val,
 		State: base64Val,
 		Epoch: "1",
@@ -270,8 +443,8 @@ func TestWriteEvent(t *testing.T) {
 	w := httptest.NewRecorder()
 	w.Body = &bytes.Buffer{}
 
-	errJson := writeEvent(msg, w, &eventFinalizedCheckpointJson{})
+	errJson := writeEvent(msg, w, &EventFinalizedCheckpointJson{})
 	require.Equal(t, true, errJson == nil)
 	written := w.Body.String()
-	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\"}\n\n", written)
+	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\",\"execution_optimistic\":false}\n\n", written)
 }

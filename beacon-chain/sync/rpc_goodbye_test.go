@@ -6,20 +6,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/protocol"
-	types "github.com/prysmaticlabs/eth2-types"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/protocol"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	db "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -38,7 +44,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	// Setup streams
 	pcl := protocol.ID("/testing")
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -83,7 +89,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 	// Setup streams
 	pcl := protocol.ID("/testing")
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -160,12 +166,12 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(types.SSZUint64)
+		out := new(primitives.SSZUint64)
 		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
@@ -205,12 +211,12 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(types.SSZUint64)
+		out := new(primitives.SSZUint64)
 		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())

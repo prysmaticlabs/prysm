@@ -3,12 +3,14 @@ package sync
 import (
 	"context"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/peer"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -17,16 +19,16 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.chain, s.cfg.p2p, id, blockRoots, func(blk block.SignedBeaconBlock) error {
+	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.chain, s.cfg.p2p, id, blockRoots, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
 		s.pendingQueueLock.Lock()
+		defer s.pendingQueueLock.Unlock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blkRoot); err != nil {
 			return err
 		}
-		s.pendingQueueLock.Unlock()
 		return nil
 	})
 	return err
@@ -56,6 +58,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	}
 
 	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, "requested more than the max block limit", stream)
 		return errors.New("requested more than the max block limit")
 	}
@@ -68,13 +71,28 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
-		if blk == nil || blk.IsNil() {
+		if err := blocks.BeaconBlockIsNil(blk); err != nil {
 			continue
 		}
+
+		if blk.Block().IsBlinded() {
+			blk, err = s.cfg.executionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
+			if err != nil {
+				if errors.Is(err, execution.EmptyBlockHash) {
+					log.WithError(err).Warn("Could not reconstruct block from header with syncing execution client. Waiting to complete syncing")
+				} else {
+					log.WithError(err).Error("Could not get reconstruct full block from blinded body")
+				}
+				s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
+				return err
+			}
+		}
+
 		if err := s.chunkBlockWriter(stream, blk); err != nil {
 			return err
 		}
 	}
+
 	closeStream(stream, log)
 	return nil
 }

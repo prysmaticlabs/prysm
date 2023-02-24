@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestValidateWithBatchVerifier(t *testing.T) {
@@ -15,21 +16,23 @@ func TestValidateWithBatchVerifier(t *testing.T) {
 	assert.NoError(t, err)
 	sig := keys[0].Sign(make([]byte, 32))
 	badSig := keys[1].Sign(make([]byte, 32))
-	validSet := &bls.SignatureSet{
-		Messages:   [][32]byte{{}},
-		PublicKeys: []bls.PublicKey{keys[0].PublicKey()},
-		Signatures: [][]byte{sig.Marshal()},
+	validSet := &bls.SignatureBatch{
+		Messages:     [][32]byte{{}},
+		PublicKeys:   []bls.PublicKey{keys[0].PublicKey()},
+		Signatures:   [][]byte{sig.Marshal()},
+		Descriptions: []string{signing.UnknownSignature},
 	}
-	invalidSet := &bls.SignatureSet{
-		Messages:   [][32]byte{{}},
-		PublicKeys: []bls.PublicKey{keys[0].PublicKey()},
-		Signatures: [][]byte{badSig.Marshal()},
+	invalidSet := &bls.SignatureBatch{
+		Messages:     [][32]byte{{}},
+		PublicKeys:   []bls.PublicKey{keys[0].PublicKey()},
+		Signatures:   [][]byte{badSig.Marshal()},
+		Descriptions: []string{signing.UnknownSignature},
 	}
 	tests := []struct {
 		name          string
 		message       string
-		set           *bls.SignatureSet
-		preFilledSets []*bls.SignatureSet
+		set           *bls.SignatureBatch
+		preFilledSets []*bls.SignatureBatch
 		want          pubsub.ValidationResult
 	}{
 		{
@@ -48,14 +51,14 @@ func TestValidateWithBatchVerifier(t *testing.T) {
 			name:          "invalid set in routine with valid set",
 			message:       "random",
 			set:           validSet,
-			preFilledSets: []*bls.SignatureSet{invalidSet},
+			preFilledSets: []*bls.SignatureBatch{invalidSet},
 			want:          pubsub.ValidationAccept,
 		},
 		{
 			name:          "valid set in routine with invalid set",
 			message:       "random",
 			set:           invalidSet,
-			preFilledSets: []*bls.SignatureSet{validSet},
+			preFilledSets: []*bls.SignatureBatch{validSet},
 			want:          pubsub.ValidationReject,
 		},
 	}

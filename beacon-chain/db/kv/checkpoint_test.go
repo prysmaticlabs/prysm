@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -28,6 +28,25 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 
+	retrieved, err := db.JustifiedCheckpoint(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
+}
+
+func TestStore_JustifiedCheckpoint_Recover(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	r, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Epoch: 2,
+		Root:  r[:],
+	}
+	wb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wb))
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	retrieved, err := db.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
@@ -53,7 +72,9 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	}
 
 	// a valid chain is required to save finalized checkpoint.
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))
@@ -62,6 +83,26 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 
+	retrieved, err := db.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
+}
+
+func TestStore_FinalizedCheckpoint_Recover(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	r, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Epoch: 2,
+		Root:  r[:],
+	}
+	wb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
+	require.NoError(t, db.SaveBlock(ctx, wb))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 	retrieved, err := db.FinalizedCheckpoint(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)

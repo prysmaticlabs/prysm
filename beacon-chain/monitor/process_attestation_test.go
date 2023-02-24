@@ -5,59 +5,15 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-func setupService(t *testing.T) *Service {
-	beaconDB := testDB.SetupDB(t)
-
-	trackedVals := map[types.ValidatorIndex]interface{}{
-		1:  nil,
-		2:  nil,
-		12: nil,
-		15: nil,
-	}
-	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
-		1: {
-			balance: 32000000000,
-		},
-		2: {
-			balance: 32000000000,
-		},
-		12: {
-			balance: 31900000000,
-		},
-		15: {
-			balance: 31900000000,
-		},
-	}
-
-	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
-		1:  {},
-		2:  {},
-		12: {},
-		15: {},
-	}
-
-	return &Service{
-		config: &ValidatorMonitorConfig{
-			StateGen:          stategen.New(beaconDB),
-			TrackedValidators: trackedVals,
-		},
-		latestPerformance:     latestPerformance,
-		aggregatedPerformance: aggregatedPerformance,
-	}
-}
 
 func TestGetAttestingIndices(t *testing.T) {
 	ctx := context.Background()
@@ -147,7 +103,7 @@ func TestProcessUnaggregatedAttestationStateCached(t *testing.T) {
 	participation := []byte{0xff, 0xff, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	require.NoError(t, state.SetCurrentParticipationBits(participation))
 
-	root := [32]byte{}
+	var root [32]byte
 	copy(root[:], "hello-world")
 
 	att := &ethpb.Attestation{
@@ -206,8 +162,8 @@ func TestProcessAggregatedAttestationStateNotCached(t *testing.T) {
 		},
 	}
 	s.processAggregatedAttestation(ctx, att)
-	require.LogsContain(t, hook, "\"Processed attestation aggregation\" ValidatorIndex=2 prefix=monitor")
-	require.LogsContain(t, hook, "Skipping agregated attestation due to state not found in cache")
+	require.LogsContain(t, hook, "\"Processed attestation aggregation\" AggregatorIndex=2 BeaconBlockRoot=0x000000000000 Slot=1 SourceRoot=0x68656c6c6f2d TargetRoot=0x68656c6c6f2d prefix=monitor")
+	require.LogsContain(t, hook, "Skipping aggregated attestation due to state not found in cache")
 	logrus.SetLevel(logrus.InfoLevel)
 }
 
@@ -219,7 +175,7 @@ func TestProcessAggregatedAttestationStateCached(t *testing.T) {
 	participation := []byte{0xff, 0xff, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	require.NoError(t, state.SetCurrentParticipationBits(participation))
 
-	root := [32]byte{}
+	var root [32]byte
 	copy(root[:], "hello-world")
 
 	att := &ethpb.AggregateAttestationAndProof{
@@ -244,7 +200,7 @@ func TestProcessAggregatedAttestationStateCached(t *testing.T) {
 
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, state))
 	s.processAggregatedAttestation(ctx, att)
-	require.LogsContain(t, hook, "\"Processed attestation aggregation\" ValidatorIndex=2 prefix=monitor")
+	require.LogsContain(t, hook, "\"Processed attestation aggregation\" AggregatorIndex=2 BeaconBlockRoot=0x68656c6c6f2d Slot=1 SourceRoot=0x68656c6c6f2d TargetRoot=0x68656c6c6f2d prefix=monitor")
 	require.LogsContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=2 prefix=monitor")
 	require.LogsDoNotContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=12 prefix=monitor")
 }
@@ -281,7 +237,7 @@ func TestProcessAttestations(t *testing.T) {
 		},
 	}
 
-	wrappedBlock, err := wrapper.WrappedAltairBeaconBlock(block)
+	wrappedBlock, err := blocks.NewBeaconBlock(block)
 	require.NoError(t, err)
 	s.processAttestations(ctx, state, wrappedBlock)
 	wanted1 := "\"Attestation included\" BalanceChange=0 CorrectHead=true CorrectSource=true CorrectTarget=true Head=0x68656c6c6f2d InclusionSlot=2 NewBalance=32000000000 Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=2 prefix=monitor"

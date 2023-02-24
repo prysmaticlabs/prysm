@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -27,7 +28,12 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	st, err := vs.HeadFetcher.HeadState(ctx)
+	// An optimistic validator MUST NOT participate in attestation. (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
+	if err := vs.optimisticStatus(ctx); err != nil {
+		return nil, err
+	}
+
+	st, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
@@ -117,7 +123,7 @@ func (vs *Server) SubmitSignedAggregateSelectionProof(
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
 	}
-	emptySig := make([]byte, params.BeaconConfig().BLSSignatureLength)
+	emptySig := make([]byte, fieldparams.BLSSignatureLength)
 	if bytes.Equal(req.SignedAggregateAndProof.Signature, emptySig) ||
 		bytes.Equal(req.SignedAggregateAndProof.Message.SelectionProof, emptySig) {
 		return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")

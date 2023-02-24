@@ -3,9 +3,9 @@ package stateutil_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func BenchmarkMerkleize_Buffered(b *testing.B) {

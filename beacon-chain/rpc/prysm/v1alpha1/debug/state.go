@@ -2,9 +2,10 @@ package debug
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,10 +29,11 @@ func (ds *Server) GetBeaconState(
 			)
 		}
 
-		st, err := ds.StateGen.StateBySlot(ctx, q.Slot)
+		st, err := ds.ReplayerBuilder.ReplayerForSlot(q.Slot).ReplayBlocks(ctx)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not compute state by slot: %v", err)
+			return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", q.Slot, err))
 		}
+
 		encoded, err := st.MarshalSSZ()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not ssz encode beacon state: %v", err)

@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 )
 
 func TestPruneExpired_Ticker(t *testing.T) {
@@ -30,14 +31,14 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	ad2 := util.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
 
 	atts := []*ethpb.Attestation{
-		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)},
-		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)},
+		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
+		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
 	}
 	require.NoError(t, s.cfg.Pool.SaveUnaggregatedAttestations(atts))
 	require.Equal(t, 2, s.cfg.Pool.UnaggregatedAttestationCount(), "Unexpected number of attestations")
 	atts = []*ethpb.Attestation{
-		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)},
-		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)},
+		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
+		{Data: ad2, AggregationBits: bitfield.Bitlist{0b1101, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
 	}
 	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(atts))
 	assert.Equal(t, 2, s.cfg.Pool.AggregatedAttestationCount())

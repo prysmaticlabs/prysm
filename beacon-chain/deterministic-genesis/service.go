@@ -5,25 +5,25 @@ package interopcoldstart
 
 import (
 	"context"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime"
-	"github.com/prysmaticlabs/prysm/runtime/interop"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 var _ runtime.Service = (*Service)(nil)
 var _ depositcache.DepositFetcher = (*Service)(nil)
-var _ powchain.ChainStartFetcher = (*Service)(nil)
+var _ execution.ChainStartFetcher = (*Service)(nil)
 
 // Service spins up an client interoperability service that handles responsibilities such
 // as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.
@@ -47,42 +47,46 @@ type Config struct {
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
 func NewService(ctx context.Context, cfg *Config) *Service {
-	log.Warn("Saving generated genesis state in database for interop testing")
 	ctx, cancel := context.WithCancel(ctx)
 
-	s := &Service{
+	return &Service{
 		cfg:    cfg,
 		ctx:    ctx,
 		cancel: cancel,
 	}
+}
+
+// Start initializes the genesis state from configured flags.
+func (s *Service) Start() {
+	log.Warn("Saving generated genesis state in database for interop testing")
 
 	if s.cfg.GenesisPath != "" {
-		data, err := ioutil.ReadFile(s.cfg.GenesisPath)
+		data, err := os.ReadFile(s.cfg.GenesisPath)
 		if err != nil {
-			log.Fatalf("Could not read pre-loaded state: %v", err)
+			log.WithError(err).Fatal("Could not read pre-loaded state")
 		}
 		genesisState := &ethpb.BeaconState{}
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
-			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
+			log.WithError(err).Fatal("Could not unmarshal pre-loaded state")
 		}
-		genesisTrie, err := v1.InitializeFromProto(genesisState)
+		genesisTrie, err := state_native.InitializeFromProtoPhase0(genesisState)
 		if err != nil {
-			log.Fatalf("Could not get state trie: %v", err)
+			log.WithError(err).Fatal("Could not get state trie")
 		}
-		if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
-			log.Fatalf("Could not save interop genesis state %v", err)
+		if err := s.saveGenesisState(s.ctx, genesisTrie); err != nil {
+			log.WithError(err).Fatal("Could not save interop genesis state")
 		}
-		return s
+		return
 	}
 
 	// Save genesis state in db
-	genesisState, _, err := interop.GenerateGenesisState(ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
+	genesisState, _, err := interop.GenerateGenesisState(s.ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
 	if err != nil {
-		log.Fatalf("Could not generate interop genesis state: %v", err)
+		log.WithError(err).Fatal("Could not generate interop genesis state")
 	}
-	genesisTrie, err := v1.InitializeFromProto(genesisState)
+	genesisTrie, err := state_native.InitializeFromProtoPhase0(genesisState)
 	if err != nil {
-		log.Fatalf("Could not get state trie: %v", err)
+		log.WithError(err).Fatal("Could not get state trie")
 	}
 	if s.cfg.GenesisTime == 0 {
 		// Generated genesis time; fetch it
@@ -90,73 +94,66 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 	gRoot, err := genesisTrie.HashTreeRoot(s.ctx)
 	if err != nil {
-		log.Fatalf("Could not hash tree root genesis state: %v", err)
+		log.WithError(err).Fatal("Could not hash tree root genesis state")
 	}
-	go slots.CountdownToGenesis(ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
+	go slots.CountdownToGenesis(s.ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
 
-	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
-		log.Fatalf("Could not save interop genesis state %v", err)
+	if err := s.saveGenesisState(s.ctx, genesisTrie); err != nil {
+		log.WithError(err).Fatal("Could not save interop genesis state")
 	}
-
-	return s
-}
-
-// Start initializes the genesis state from configured flags.
-func (s *Service) Start() {
 }
 
 // Stop does nothing.
-func (s *Service) Stop() error {
+func (_ *Service) Stop() error {
 	return nil
 }
 
 // Status always returns nil.
-func (s *Service) Status() error {
+func (_ *Service) Status() error {
 	return nil
 }
 
 // AllDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) AllDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
+func (_ *Service) AllDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDeposits mocks out the powchain functionality for interop.
-func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
-	return s.chainStartDeposits
-}
-
 // ChainStartEth1Data mocks out the powchain functionality for interop.
-func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
+func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
 // PreGenesisState returns an empty beacon state.
-func (s *Service) PreGenesisState() state.BeaconState {
-	return &v1.BeaconState{}
+func (_ *Service) PreGenesisState() state.BeaconState {
+	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
+	if err != nil {
+		panic("could not initialize state")
+	}
+	return s
 }
 
 // ClearPreGenesisData --
-func (s *Service) ClearPreGenesisData() {
+func (_ *Service) ClearPreGenesisData() {
 	// no-op
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.
-func (s *Service) DepositByPubkey(_ context.Context, _ []byte) (*ethpb.Deposit, *big.Int) {
+func (_ *Service) DepositByPubkey(_ context.Context, _ []byte) (*ethpb.Deposit, *big.Int) {
 	return &ethpb.Deposit{}, nil
 }
 
 // DepositsNumberAndRootAtHeight mocks out the deposit cache functionality for interop.
-func (s *Service) DepositsNumberAndRootAtHeight(_ context.Context, _ *big.Int) (uint64, [32]byte) {
+func (_ *Service) DepositsNumberAndRootAtHeight(_ context.Context, _ *big.Int) (uint64, [32]byte) {
 	return 0, [32]byte{}
 }
 
 // FinalizedDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDeposits {
+func (_ *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDeposits {
 	return nil
 }
 
 // NonFinalizedDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
+func (_ *Service) NonFinalizedDeposits(_ context.Context, _ int64, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
@@ -167,7 +164,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState state.Beaco
 
 	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumValidators())
 
-	for i := types.ValidatorIndex(0); uint64(i) < uint64(genesisState.NumValidators()); i++ {
+	for i := primitives.ValidatorIndex(0); uint64(i) < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
 		s.chainStartDeposits[i] = &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{

@@ -4,48 +4,49 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
 func TestInitFeatureConfig(t *testing.T) {
 	defer Init(&Flags{})
 	cfg := &Flags{
-		PyrmontTestnet: true,
+		EnableSlasher: true,
 	}
 	Init(cfg)
 	c := Get()
-	assert.Equal(t, true, c.PyrmontTestnet)
+	assert.Equal(t, true, c.EnableSlasher)
 
 	// Reset back to false for the follow up tests.
-	cfg = &Flags{PyrmontTestnet: false}
+	cfg = &Flags{RemoteSlasherProtection: false}
 	Init(cfg)
 }
 
 func TestInitWithReset(t *testing.T) {
 	defer Init(&Flags{})
 	Init(&Flags{
-		PyrmontTestnet: true,
+		EnableSlasher: true,
 	})
-	assert.Equal(t, true, Get().PyrmontTestnet)
+	assert.Equal(t, true, Get().EnableSlasher)
 
 	// Overwrite previously set value (value that didn't come by default).
 	resetCfg := InitWithReset(&Flags{
-		PyrmontTestnet: false,
+		EnableSlasher: false,
 	})
-	assert.Equal(t, false, Get().PyrmontTestnet)
+	assert.Equal(t, false, Get().EnableSlasher)
 
 	// Reset must get to previously set configuration (not to default config values).
 	resetCfg()
-	assert.Equal(t, true, Get().PyrmontTestnet)
+	assert.Equal(t, true, Get().EnableSlasher)
 }
 
 func TestConfigureBeaconConfig(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.Bool(PyrmontTestnet.Name, true, "test")
+	set.Bool(enableSlasherFlag.Name, true, "test")
 	context := cli.NewContext(&app, set, nil)
-	ConfigureBeaconChain(context)
+	require.NoError(t, ConfigureBeaconChain(context))
 	c := Get()
-	assert.Equal(t, true, c.PyrmontTestnet)
+	assert.Equal(t, true, c.EnableSlasher)
 }

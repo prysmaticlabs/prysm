@@ -30,9 +30,14 @@ password.txt
 # Dist files
 dist
 
-# libfuzzer
-oom-*
-crash-*
-
 # deepsource cli
 bin
+
+# p2p metaData
+metaData
+
+# execution API authentication
+jwt.hex
+
+# manual testing
+tmp

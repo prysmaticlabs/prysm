@@ -3,7 +3,7 @@ package evaluators
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/network/forks"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -85,7 +85,7 @@ var metricComparisonTests = []comparisonTest{
 	},
 }
 
-func metricsTest(conns ...*grpc.ClientConn) error {
+func metricsTest(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	genesis, err := eth.NewNodeClient(conns[0]).GetGenesis(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err
@@ -95,12 +95,12 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		return err
 	}
 	for i := 0; i < len(conns); i++ {
-		response, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", e2e.TestParams.BeaconNodeMetricsPort+i))
+		response, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", e2e.TestParams.Ports.PrysmBeaconNodeMetricsPort+i))
 		if err != nil {
 			// Continue if the connection fails, regular flake.
 			continue
 		}
-		dataInBytes, err := ioutil.ReadAll(response.Body)
+		dataInBytes, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}

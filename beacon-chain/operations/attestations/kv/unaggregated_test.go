@@ -6,14 +6,14 @@ import (
 	"sort"
 	"testing"
 
-	fssz "github.com/ferranbt/fastssz"
 	c "github.com/patrickmn/go-cache"
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
@@ -67,7 +67,7 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 			assert.Equal(t, 0, len(cache.unAggregatedAtt), "Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
 
 			if tt.att != nil && tt.att.Signature == nil {
-				tt.att.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+				tt.att.Signature = make([]byte, fieldparams.BLSSignatureLength)
 			}
 
 			err := cache.SaveUnaggregatedAttestation(tt.att)

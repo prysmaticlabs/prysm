@@ -3,5 +3,4 @@
 // verifying and aggregating BLS signatures used by Ethereum.
 //
 // This implementation uses the library written by Supranational, blst.
-//
 package blst

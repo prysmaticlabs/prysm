@@ -10,20 +10,23 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	// This test needs to be entirely rewritten and should be done in a follow up PR from #7885.
 	t.Skip("This test is now failing after PR 7885 due to false positive")
 	gFlags := new(flags.GlobalFlags)
@@ -146,6 +149,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 }
 
 func Test_AttSubnets(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name        string
 		record      func(t *testing.T) *enr.Record
@@ -160,7 +164,7 @@ func Test_AttSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				localNode = initializeAttSubnets(localNode)
@@ -176,7 +180,7 @@ func Test_AttSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				entry := enr.WithEntry(attSubnetEnrKey, []byte{})
@@ -194,7 +198,7 @@ func Test_AttSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, 4))
@@ -212,7 +216,7 @@ func Test_AttSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, byteCount(int(attestationSubnetCount))+1))
@@ -230,7 +234,7 @@ func Test_AttSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				entry := enr.WithEntry(attSubnetEnrKey, make([]byte, byteCount(int(attestationSubnetCount))+100))
@@ -248,7 +252,7 @@ func Test_AttSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				bitV := bitfield.NewBitvector64()
@@ -267,7 +271,7 @@ func Test_AttSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				bitV := bitfield.NewBitvector64()
@@ -295,7 +299,7 @@ func Test_AttSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				bitV := bitfield.NewBitvector64()
@@ -330,6 +334,7 @@ func Test_AttSubnets(t *testing.T) {
 }
 
 func Test_SyncSubnets(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name        string
 		record      func(t *testing.T) *enr.Record
@@ -344,7 +349,7 @@ func Test_SyncSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				localNode = initializeSyncCommSubnets(localNode)
@@ -360,7 +365,7 @@ func Test_SyncSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				entry := enr.WithEntry(syncCommsSubnetEnrKey, []byte{})
@@ -378,7 +383,7 @@ func Test_SyncSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				entry := enr.WithEntry(syncCommsSubnetEnrKey, make([]byte, byteCount(int(syncCommsSubnetCount))+1))
@@ -396,7 +401,7 @@ func Test_SyncSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				entry := enr.WithEntry(syncCommsSubnetEnrKey, make([]byte, byteCount(int(syncCommsSubnetCount))+100))
@@ -414,7 +419,7 @@ func Test_SyncSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				bitV := bitfield.Bitvector4{byte(0x00)}
@@ -433,7 +438,7 @@ func Test_SyncSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				bitV := bitfield.Bitvector4{byte(0x00)}
@@ -459,7 +464,7 @@ func Test_SyncSubnets(t *testing.T) {
 				assert.NoError(t, err)
 				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 				assert.NoError(t, err)
-				convertedKey := convertFromInterfacePrivKey(priv)
+				convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := enode.NewLocalNode(db, convertedKey)
 				bitV := bitfield.Bitvector4{byte(0x00)}

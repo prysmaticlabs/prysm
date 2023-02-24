@@ -5,28 +5,29 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	bolt "go.etcd.io/bbolt"
 )
 
 func TestPruneAttestations_NoPruning(t *testing.T) {
-	pubKey := [48]byte{1}
-	validatorDB := setupDB(t, [][48]byte{pubKey})
+	pubKey := [fieldparams.BLSPubkeyLength]byte{1}
+	validatorDB := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 
 	// Write attesting history for every single epoch
 	// since genesis to a specified number of epochs.
 	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs - 1
-	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
+	err := setupAttestationsForEveryEpoch(validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
 	// Next, attempt to prune and realize that we still have all epochs intact
 	err = validatorDB.PruneAttestations(context.Background())
 	require.NoError(t, err)
 
-	startEpoch := types.Epoch(0)
+	startEpoch := primitives.Epoch(0)
 	err = checkAttestingHistoryAfterPruning(
 		t,
 		validatorDB,
@@ -40,7 +41,7 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 
 func TestPruneAttestations_OK(t *testing.T) {
 	numKeys := uint64(64)
-	pks := make([][48]byte, 0, numKeys)
+	pks := make([][fieldparams.BLSPubkeyLength]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
 		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
 	}
@@ -50,14 +51,14 @@ func TestPruneAttestations_OK(t *testing.T) {
 	// since genesis to SLASHING_PROTECTION_PRUNING_EPOCHS * 2.
 	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs * 2
 	for _, pk := range pks {
-		require.NoError(t, setupAttestationsForEveryEpoch(t, validatorDB, pk, numEpochs))
+		require.NoError(t, setupAttestationsForEveryEpoch(validatorDB, pk, numEpochs))
 	}
 
 	require.NoError(t, validatorDB.PruneAttestations(context.Background()))
 
 	// Next, verify that we pruned every epoch
 	// from genesis to SLASHING_PROTECTION_PRUNING_EPOCHS - 1.
-	startEpoch := types.Epoch(0)
+	startEpoch := primitives.Epoch(0)
 	for _, pk := range pks {
 		err := checkAttestingHistoryAfterPruning(
 			t,
@@ -89,7 +90,7 @@ func TestPruneAttestations_OK(t *testing.T) {
 
 func BenchmarkPruneAttestations(b *testing.B) {
 	numKeys := uint64(8)
-	pks := make([][48]byte, 0, numKeys)
+	pks := make([][fieldparams.BLSPubkeyLength]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
 		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
 	}
@@ -103,7 +104,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		for _, pk := range pks {
-			require.NoError(b, setupAttestationsForEveryEpoch(b, validatorDB, pk, numEpochs))
+			require.NoError(b, setupAttestationsForEveryEpoch(validatorDB, pk, numEpochs))
 		}
 		b.StartTimer()
 
@@ -113,7 +114,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 
 // Saves attesting history for every (source, target = source + 1) pairs since genesis
 // up to a given number of epochs for a validator public key.
-func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs types.Epoch) error {
+func setupAttestationsForEveryEpoch(validatorDB *Store, pubKey [48]byte, numEpochs primitives.Epoch) error {
 	return validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
@@ -128,7 +129,7 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 		if err != nil {
 			return err
 		}
-		for sourceEpoch := types.Epoch(0); sourceEpoch < numEpochs; sourceEpoch++ {
+		for sourceEpoch := primitives.Epoch(0); sourceEpoch < numEpochs; sourceEpoch++ {
 			targetEpoch := sourceEpoch + 1
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
 			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
@@ -152,9 +153,9 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 func checkAttestingHistoryAfterPruning(
 	t testing.TB,
 	validatorDB *Store,
-	pubKey [48]byte,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
 	startEpoch,
-	numEpochs types.Epoch,
+	numEpochs primitives.Epoch,
 	shouldBePruned bool,
 ) error {
 	return validatorDB.view(func(tx *bolt.Tx) error {

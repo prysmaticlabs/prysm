@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 )
 
 // This is a subscription topic handler that is used to handle basic

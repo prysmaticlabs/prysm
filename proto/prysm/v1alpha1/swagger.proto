@@ -20,7 +20,7 @@ package ethereum.eth.v1alpha1;
 
 import "protoc-gen-openapiv2/options/annotations.proto";
 
-option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     info: {

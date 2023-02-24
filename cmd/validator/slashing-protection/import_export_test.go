@@ -3,19 +3,18 @@ package historycmd
 import (
 	"encoding/json"
 	"flag"
-	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
-	mocks "github.com/prysmaticlabs/prysm/validator/testing"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	dbTest "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
+	mocks "github.com/prysmaticlabs/prysm/v3/validator/testing"
 	"github.com/urfave/cli/v2"
 )
 
@@ -38,7 +37,7 @@ func setupCliCtx(
 
 func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	numValidators := 10
-	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
+	outputPath := filepath.Join(t.TempDir(), "slashing-exports")
 	err := file.MkdirAll(outputPath)
 	require.NoError(t, err)
 	protectionFileName := "slashing_history_import.json"
@@ -111,7 +110,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 
 func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	numValidators := 10
-	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
+	outputPath := filepath.Join(t.TempDir(), "slashing-exports")
 	err := file.MkdirAll(outputPath)
 	require.NoError(t, err)
 	protectionFileName := "slashing_history_import.json"

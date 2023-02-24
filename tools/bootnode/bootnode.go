@@ -27,35 +27,36 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/io/logs"
-	"github.com/prysmaticlabs/prysm/network"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/logs"
+	"github.com/prysmaticlabs/prysm/v3/network"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	_ "github.com/prysmaticlabs/prysm/v3/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	debug                = flag.Bool("debug", false, "Enable debug logging")
-	logFileName          = flag.String("log-file", "", "Specify log filename, relative or absolute")
-	privateKey           = flag.String("private", "", "Private key to use for peer ID")
-	discv5port           = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
-	metricsPort          = flag.Int("metrics-port", 5000, "Port to listen for connections")
-	externalIP           = flag.String("external-ip", "", "External IP for the bootnode")
-	forkVersion          = flag.String("fork-version", "", "Fork Version that the bootnode uses")
-	genesisValidatorRoot = flag.String("genesis-root", "", "Genesis Validator Root the beacon node uses")
-	seedNode             = flag.String("seed-node", "", "External node to connect to")
-	log                  = logrus.WithField("prefix", "bootnode")
-	discv5PeersCount     = promauto.NewGauge(prometheus.GaugeOpts{
+	debug                 = flag.Bool("debug", false, "Enable debug logging")
+	logFileName           = flag.String("log-file", "", "Specify log filename, relative or absolute")
+	privateKey            = flag.String("private", "", "Private key to use for peer ID")
+	discv5port            = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
+	metricsPort           = flag.Int("metrics-port", 5000, "Port to listen for connections")
+	externalIP            = flag.String("external-ip", "", "External IP for the bootnode")
+	forkVersion           = flag.String("fork-version", "", "Fork Version that the bootnode uses")
+	genesisValidatorsRoot = flag.String("genesis-root", "", "Genesis Validators Root the beacon node uses")
+	seedNode              = flag.String("seed-node", "", "External node to connect to")
+	log                   = logrus.WithField("prefix", "bootnode")
+	discv5PeersCount      = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bootstrap_node_discv5_peers",
 		Help: "The current number of discv5 peers of the bootstrap node",
 	})
@@ -114,7 +115,7 @@ func main() {
 	mux.HandleFunc("/p2p", handler.httpHandler)
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), mux); err != nil {
-		log.Fatalf("Failed to start server %v", err)
+		log.WithError(err).Fatal("Failed to start server")
 	}
 
 	// Update metrics once per slot.
@@ -156,11 +157,11 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 		log.Fatal(err)
 	}
 
-	network, err := discover.ListenV5(conn, localNode, cfg)
+	net, err := discover.ListenV5(conn, localNode, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return network
+	return net
 }
 
 func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {
@@ -202,10 +203,10 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		}
 	}
 	genRoot := params.BeaconConfig().ZeroHash
-	if *genesisValidatorRoot != "" {
-		retRoot, err := hex.DecodeString(*genesisValidatorRoot)
+	if *genesisValidatorsRoot != "" {
+		retRoot, err := hex.DecodeString(*genesisValidatorsRoot)
 		if err != nil {
-			return nil, errors.Wrap(err, "Could not retrieve genesis validator root")
+			return nil, errors.Wrap(err, "Could not retrieve genesis validators root")
 		}
 		if len(retRoot) != 32 {
 			return nil, errors.Errorf("Invalid root size, expected 32 but got %d", len(retRoot))
@@ -247,14 +248,21 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
-		privKey = (*ecdsa.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey))
+
+		privKey, err = ecdsaprysm.ConvertFromInterfacePrivKey(unmarshalledKey)
+		if err != nil {
+			panic(err)
+		}
 
 	} else {
 		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {
 			panic(err)
 		}
-		privKey = (*ecdsa.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey))
+		privKey, err = ecdsaprysm.ConvertFromInterfacePrivKey(privInterfaceKey)
+		if err != nil {
+			panic(err)
+		}
 		log.Warning("No private key was provided. Using default/random private key")
 		b, err := privInterfaceKey.Raw()
 		if err != nil {

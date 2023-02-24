@@ -3,31 +3,33 @@ package blockchain
 import (
 	"context"
 	"testing"
+	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
-		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fc),
+		WithStateGen(stategen.New(beaconDB, fc)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -35,16 +37,16 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	_, err = blockTree1(t, beaconDB, []byte{'g'})
 	require.NoError(t, err)
 
-	BlkWithOutState := util.NewBeaconBlock()
-	BlkWithOutState.Block.Slot = 0
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithOutState)))
-	BlkWithOutStateRoot, err := BlkWithOutState.Block.HashTreeRoot()
+	blkWithoutState := util.NewBeaconBlock()
+	blkWithoutState.Block.Slot = 0
+	util.SaveBlock(t, ctx, beaconDB, blkWithoutState)
+	BlkWithOutStateRoot, err := blkWithoutState.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	BlkWithStateBadAtt := util.NewBeaconBlock()
-	BlkWithStateBadAtt.Block.Slot = 1
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithStateBadAtt)))
-	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
+	blkWithStateBadAtt := util.NewBeaconBlock()
+	blkWithStateBadAtt.Block.Slot = 1
+	util.SaveBlock(t, ctx, beaconDB, blkWithStateBadAtt)
+	BlkWithStateBadAttRoot, err := blkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s, err := util.NewBeaconState()
@@ -52,11 +54,11 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
-	BlkWithValidState := util.NewBeaconBlock()
-	BlkWithValidState.Block.Slot = 2
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithValidState)))
+	blkWithValidState := util.NewBeaconBlock()
+	blkWithValidState.Block.Slot = 2
+	util.SaveBlock(t, ctx, beaconDB, blkWithValidState)
 
-	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
+	blkWithValidStateRoot, err := blkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err = util.NewBeaconState()
 	require.NoError(t, err)
@@ -66,7 +68,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 	})
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, blkWithValidStateRoot))
 
 	tests := []struct {
 		name      string
@@ -103,9 +105,9 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 			name: "process nil field (a.Target) in attestation",
 			a: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 					Target:          nil,
-					Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+					Source:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 				},
 				AggregationBits: make([]byte, 1),
 				Signature:       make([]byte, 96),
@@ -116,7 +118,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.onAttestation(ctx, tt.a)
+			err := service.OnAttestation(ctx, tt.a)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -126,20 +128,20 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	}
 }
 
-func TestStore_OnAttestation_Ok(t *testing.T) {
+func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
-	require.NoError(t, genesisState.SetGenesisTime(uint64(time.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
+	service.SetGenesisTime(time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
 	att, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
@@ -148,8 +150,12 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
-	require.NoError(t, service.onAttestation(ctx, att[0]))
+	ojc := &ethpb.Checkpoint{Epoch: 0, Root: tRoot[:]}
+	ofc := &ethpb.Checkpoint{Epoch: 0, Root: tRoot[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.OnAttestation(ctx, att[0]))
 }
 
 func TestStore_SaveCheckpointState(t *testing.T) {
@@ -158,18 +164,18 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
-	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)})
+	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)})
 	require.NoError(t, err)
 	val := &ethpb.Validator{
 		PublicKey:             bytesutil.PadTo([]byte("foo"), 48),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("bar"), 32),
+		WithdrawalCredentials: bytesutil.PadTo([]byte("bar"), fieldparams.RootLength),
 	}
 	err = s.SetValidators([]*ethpb.Validator{val})
 	require.NoError(t, err)
@@ -178,23 +184,17 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	r := [32]byte{'g'}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, r))
 
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-
-	r = bytesutil.ToBytes32([]byte{'A'})
-	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)}))
 
 	s1, err := service.getAttPreState(ctx, cp1)
 	require.NoError(t, err)
 	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
 
-	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, 32)}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}))
 	s2, err := service.getAttPreState(ctx, cp2)
 	require.NoError(t, err)
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
@@ -212,13 +212,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
 
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}
+	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, 32)}))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}))
 	s3, err := service.getAttPreState(ctx, cp3)
 	require.NoError(t, err)
 	assert.Equal(t, s.Slot(), s3.Slot(), "Unexpected state slot")
@@ -230,14 +226,14 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	epoch := types.Epoch(1)
+	epoch := primitives.Epoch(1)
 	baseState, _ := util.DeterministicGenesisState(t, 1)
-	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), 32)}
+	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	require.NoError(t, err)
@@ -248,7 +244,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	assert.Equal(t, returned.Slot(), cached.Slot(), "State should have been cached")
 
 	epoch = 2
-	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("bye"), 32)}
+	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("bye"), fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	require.NoError(t, err)
@@ -260,40 +256,28 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	cached, err = service.checkpointStateCache.StateByCheckpoint(newCheckpoint)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, returned.InnerStateUnsafe(), cached.InnerStateUnsafe())
+	require.DeepSSZEqual(t, returned.ToProtoUnsafe(), cached.ToProtoUnsafe())
 }
 
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
 	nowTime := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
-	require.NoError(t, service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Root: make([]byte, 32)}))
+	require.NoError(t, verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)}))
 }
 
 func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
 	nowTime := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
-	require.NoError(t, service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Epoch: 1}))
+	require.NoError(t, verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Epoch: 1}))
 }
 
 func TestAttEpoch_NotMatch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
 	nowTime := 2 * uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
-	err = service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Root: make([]byte, 32)})
+	err := verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)})
 	assert.ErrorContains(t, "target epoch 0 does not match current epoch 2 or prev epoch 1", err)
 }
 
@@ -304,7 +288,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	d := util.HydrateAttestationData(&ethpb.AttestationData{})
-	assert.ErrorContains(t, "signed beacon block can't be nil", service.verifyBeaconBlock(ctx, d))
+	require.Equal(t, errBlockNotFoundInCacheOrDB, service.verifyBeaconBlock(ctx, d))
 }
 
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
@@ -316,7 +300,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
@@ -333,7 +317,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
@@ -341,14 +325,14 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	assert.NoError(t, service.verifyBeaconBlock(ctx, d), "Did not receive the wanted error")
 }
 
-func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
+func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -356,20 +340,19 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1}
-
+	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	err = service.VerifyFinalizedConsistency(r33[:])
 	require.ErrorContains(t, "Root and finalized store are not consistent", err)
 }
 
@@ -379,23 +362,12 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-
-	b32 := util.NewBeaconBlock()
-	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
-	r32, err := b32.Block.HashTreeRoot()
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 33, [32]byte{'a'}, [32]byte{}, [32]byte{}, ojc, ojc)
 	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
-	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: r32[:]}
-
-	b33 := util.NewBeaconBlock()
-	b33.Block.Slot = 33
-	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
-	r33, err := b33.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	err = service.VerifyFinalizedConsistency(blkRoot[:])
 	require.NoError(t, err)
 }
 
@@ -411,19 +383,27 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: r32[:]}
-
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, b32.Block.Slot, r32, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, b33.Block.Slot, r33, r32, [32]byte{}, 0, 0))
-
-	_, err = service.cfg.ForkChoiceStore.Head(ctx, 0, r32, []uint64{}, 0)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, b32.Block.Slot, r32, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, b33.Block.Slot, r33, r32, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+
+	jc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r32}
+	bState, _ := util.DeterministicGenesisState(t, 10)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, bState, r32))
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(ctx, jc))
+	_, err = service.cfg.ForkChoiceStore.Head(ctx)
+	require.NoError(t, err)
+	err = service.VerifyFinalizedConsistency(r33[:])
 	require.NoError(t, err)
 }

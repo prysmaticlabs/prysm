@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -43,7 +45,7 @@ func TestProcessSlashings(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: "\"Proposer slashing was included\" ProposerIndex=2",
+			wantedErr: "\"Proposer slashing was included\" BodyRoot1= BodyRoot2= ProposerIndex=2",
 		},
 		{
 			name: "Proposer slashing an untracked index",
@@ -88,7 +90,8 @@ func TestProcessSlashings(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: "\"Attester slashing was included\" AttesterIndex=1",
+			wantedErr: "\"Attester slashing was included\" AttestationSlot1=0 AttestationSlot2=0 AttesterIndex=1 " +
+				"BeaconBlockRoot1=0x000000000000 BeaconBlockRoot2=0x000000000000 BlockInclusionSlot=0 SourceEpoch1=1 SourceEpoch2=0 TargetEpoch1=0 TargetEpoch2=0",
 		},
 		{
 			name: "Attester slashing untracked index",
@@ -116,14 +119,14 @@ func TestProcessSlashings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := &Service{
-				config: &ValidatorMonitorConfig{
-					TrackedValidators: map[types.ValidatorIndex]interface{}{
-						1: nil,
-						2: nil,
-					},
+				TrackedValidators: map[primitives.ValidatorIndex]bool{
+					1: true,
+					2: true,
 				},
 			}
-			s.processSlashings(wrapper.WrappedPhase0BeaconBlock(tt.block))
+			wb, err := blocks.NewBeaconBlock(tt.block)
+			require.NoError(t, err)
+			s.processSlashings(wb)
 			if tt.wantedErr != "" {
 				require.LogsContain(t, hook, tt.wantedErr)
 			} else {
@@ -146,8 +149,9 @@ func TestProcessProposedBlock(t *testing.T) {
 				ProposerIndex: 12,
 				ParentRoot:    bytesutil.PadTo([]byte("hello-world"), 32),
 				StateRoot:     bytesutil.PadTo([]byte("state-world"), 32),
+				Body:          &ethpb.BeaconBlockBody{},
 			},
-			wantedErr: "\"Proposed block was included\" BalanceChange=100000000 BlockRoot=0x68656c6c6f2d NewBalance=32000000000 ParentRoot=0x68656c6c6f2d ProposerIndex=12 Slot=6 Version=0 prefix=monitor",
+			wantedErr: "\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=0x68656c6c6f2d NewBalance=32000000000 ParentRoot=0x68656c6c6f2d ProposerIndex=12 Slot=6 Version=0 prefix=monitor",
 		},
 		{
 			name: "Block proposed by untracked validator",
@@ -156,6 +160,7 @@ func TestProcessProposedBlock(t *testing.T) {
 				ProposerIndex: 13,
 				ParentRoot:    bytesutil.PadTo([]byte("hello-world"), 32),
 				StateRoot:     bytesutil.PadTo([]byte("state-world"), 32),
+				Body:          &ethpb.BeaconBlockBody{},
 			},
 		},
 	}
@@ -165,9 +170,11 @@ func TestProcessProposedBlock(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := setupService(t)
 			beaconState, _ := util.DeterministicGenesisState(t, 256)
-			root := [32]byte{}
+			var root [32]byte
 			copy(root[:], "hello-world")
-			s.processProposedBlock(beaconState, root, wrapper.WrappedPhase0BeaconBlock(tt.block))
+			wb, err := blocks.NewBeaconBlock(tt.block)
+			require.NoError(t, err)
+			s.processProposedBlock(beaconState, root, wb)
 			if tt.wantedErr != "" {
 				require.LogsContain(t, hook, tt.wantedErr)
 			} else {
@@ -178,31 +185,70 @@ func TestProcessProposedBlock(t *testing.T) {
 
 }
 
-func TestProcessBlock_ProposerAndSlashedTrackedVals(t *testing.T) {
+func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	s := setupService(t)
-	genesis, keys := util.DeterministicGenesisState(t, 64)
+
+	genesis, keys := util.DeterministicGenesisStateAltair(t, 64)
+	c, err := altair.NextSyncCommittee(ctx, genesis)
+	require.NoError(t, err)
+	require.NoError(t, genesis.SetCurrentSyncCommittee(c))
+
 	genConfig := util.DefaultBlockGenConfig()
 	genConfig.NumProposerSlashings = 1
-	b, err := util.GenerateFullBlock(genesis, keys, genConfig, 1)
+	genConfig.FullSyncAggregate = true
+	b, err := util.GenerateFullBlockAltair(genesis, keys, genConfig, 1)
+	require.NoError(t, err)
+	s := setupService(t)
+
+	pubKeys := make([][]byte, 3)
+	pubKeys[0] = genesis.Validators()[0].PublicKey
+	pubKeys[1] = genesis.Validators()[1].PublicKey
+	pubKeys[2] = genesis.Validators()[2].PublicKey
+
+	currentSyncCommittee := util.ConvertToCommittee([][]byte{
+		pubKeys[0], pubKeys[1], pubKeys[2], pubKeys[1], pubKeys[1],
+	})
+	require.NoError(t, genesis.SetCurrentSyncCommittee(currentSyncCommittee))
+
 	idx := b.Block.Body.ProposerSlashings[0].Header_1.Header.ProposerIndex
-	if !s.TrackedIndex(idx) {
-		s.config.TrackedValidators[idx] = nil
+	s.RLock()
+	if !s.trackedIndex(idx) {
+		s.TrackedValidators[idx] = true
 		s.latestPerformance[idx] = ValidatorLatestPerformance{
 			balance: 31900000000,
 		}
 		s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{}
 	}
+	s.RUnlock()
+	s.updateSyncCommitteeTrackedVals(genesis)
 
-	require.NoError(t, err)
 	root, err := b.GetBlock().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
-	wanted1 := fmt.Sprintf("\"Proposed block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0x67a9fe4d0d8d ProposerIndex=15 Slot=1 Version=0 prefix=monitor", bytesutil.Trunc(root[:]))
-	wanted2 := fmt.Sprintf("\"Proposer slashing was included\" ProposerIndex=%d Root1=0x000100000000 Root2=0x000200000000 SlashingSlot=0 Slot:=1 prefix=monitor", idx)
-	wrapped := wrapper.WrappedPhase0SignedBeaconBlock(b)
+	wanted1 := fmt.Sprintf("\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0xf732eaeb7fae ProposerIndex=15 Slot=1 Version=1 prefix=monitor", bytesutil.Trunc(root[:]))
+	wanted2 := fmt.Sprintf("\"Proposer slashing was included\" BodyRoot1=0x000100000000 BodyRoot2=0x000200000000 ProposerIndex=%d SlashingSlot=0 Slot=1 prefix=monitor", idx)
+	wanted3 := "\"Sync committee contribution included\" BalanceChange=0 ContribCount=3 ExpectedContribCount=3 NewBalance=32000000000 ValidatorIndex=1 prefix=monitor"
+	wanted4 := "\"Sync committee contribution included\" BalanceChange=0 ContribCount=1 ExpectedContribCount=1 NewBalance=32000000000 ValidatorIndex=2 prefix=monitor"
+	wrapped, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
 	s.processBlock(ctx, wrapped)
 	require.LogsContain(t, hook, wanted1)
 	require.LogsContain(t, hook, wanted2)
+	require.LogsContain(t, hook, wanted3)
+	require.LogsContain(t, hook, wanted4)
+}
+
+func TestLogAggregatedPerformance(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s := setupService(t)
+
+	s.logAggregatedPerformance()
+	time.Sleep(3000 * time.Millisecond)
+	wanted := "\"Aggregated performance since launch\" AttestationInclusion=\"80.00%\"" +
+		" AverageInclusionDistance=1.2 BalanceChangePct=\"0.95%\" CorrectlyVotedHeadPct=\"66.67%\" " +
+		"CorrectlyVotedSourcePct=\"91.67%\" CorrectlyVotedTargetPct=\"100.00%\" StartBalance=31700000000 " +
+		"StartEpoch=0 TotalAggregations=0 TotalProposedBlocks=1 TotalRequested=15 TotalSyncContributions=0 " +
+		"ValidatorIndex=1 prefix=monitor"
+	require.LogsContain(t, hook, wanted)
 }

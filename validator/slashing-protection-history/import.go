@@ -6,16 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
-	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/v3/validator/db"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -23,7 +23,7 @@ import (
 // protection in the validator client's database. For more information, see the EIP document here:
 // https://eips.ethereum.org/EIPS/eip-3076.
 func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, r io.Reader) error {
-	encodedJSON, err := ioutil.ReadAll(r)
+	encodedJSON, err := io.ReadAll(r)
 	if err != nil {
 		return errors.Wrap(err, "could not read slashing protection JSON file")
 	}
@@ -52,8 +52,8 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
-	attestingHistoryByPubKey := make(map[[48]byte][]*kv.AttestationRecord)
-	proposalHistoryByPubKey := make(map[[48]byte]kv.ProposalHistoryForPubkey)
+	attestingHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord)
+	proposalHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey)
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
 		// Transform the processed signed blocks data from the JSON
 		// file into the internal Prysm representation of proposal history.
@@ -84,7 +84,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		return errors.Wrap(err, "could not filter slashable attester public keys from JSON data")
 	}
 
-	slashablePublicKeys := make([][48]byte, 0, len(slashableAttesterKeys)+len(slashableProposerKeys))
+	slashablePublicKeys := make([][fieldparams.BLSPubkeyLength]byte, 0, len(slashableAttesterKeys)+len(slashableProposerKeys))
 	for _, pubKey := range slashableProposerKeys {
 		delete(proposalHistoryByPubKey, pubKey)
 		slashablePublicKeys = append(slashablePublicKeys, pubKey)
@@ -156,16 +156,16 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 	}
 	dbGvr, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not retrieve genesis validator root to db")
+		return errors.Wrap(err, "could not retrieve genesis validators root to db")
 	}
 	if dbGvr == nil {
 		if err = validatorDB.SaveGenesisValidatorsRoot(ctx, gvr[:]); err != nil {
-			return errors.Wrap(err, "could not save genesis validator root to db")
+			return errors.Wrap(err, "could not save genesis validators root to db")
 		}
 		return nil
 	}
 	if !bytes.Equal(dbGvr, gvr[:]) {
-		return errors.New("genesis validator root doesnt match the one that is stored in slashing protection db. " +
+		return errors.New("genesis validators root doesn't match the one that is stored in slashing protection db. " +
 			"Please make sure you import the protection data that is relevant to the chain you are on")
 	}
 	return nil
@@ -174,20 +174,21 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 // We create a map of pubKey -> []*SignedBlock. Then, for each public key we observe,
 // we append to this map. This allows us to handle valid input JSON data such as:
 //
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
-//  },
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
-//  }
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
+//	 },
+//
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
+//	 }
 //
 // Which should be properly parsed as:
 //
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
-//  }
-func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[48]byte][]*format.SignedBlock, error) {
-	signedBlocksByPubKey := make(map[[48]byte][]*format.SignedBlock)
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
+//	 }
+func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock, error) {
+	signedBlocksByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock)
 	for _, validatorData := range data {
 		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
@@ -206,20 +207,21 @@ func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[48]byte
 // We create a map of pubKey -> []*SignedAttestation. Then, for each public key we observe,
 // we append to this map. This allows us to handle valid input JSON data such as:
 //
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}, {Source: 6, Target: 7}],
-//  },
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}],
-//  }
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}, {Source: 6, Target: 7}],
+//	 },
+//
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}],
+//	 }
 //
 // Which should be properly parsed as:
 //
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
-//  }
-func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[48]byte][]*format.SignedAttestation, error) {
-	signedAttestationsByPubKey := make(map[[48]byte][]*format.SignedAttestation)
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
+//	 }
+func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation, error) {
+	signedAttestationsByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation)
 	for _, validatorData := range data {
 		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
@@ -235,16 +237,16 @@ func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[4
 	return signedAttestationsByPubKey, nil
 }
 
-func filterSlashablePubKeysFromBlocks(ctx context.Context, historyByPubKey map[[48]byte]kv.ProposalHistoryForPubkey) [][48]byte {
+func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey) [][fieldparams.BLSPubkeyLength]byte {
 	// Given signing roots are optional in the EIP standard, we behave as follows:
 	// For a given block:
 	//   If we have a previous block with the same slot in our history:
 	//     If signing root is nil, we consider that proposer public key as slashable
 	//     If signing root is not nil , then we compare signing roots. If they are different,
 	//     then we consider that proposer public key as slashable.
-	slashablePubKeys := make([][48]byte, 0)
+	slashablePubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	for pubKey, proposals := range historyByPubKey {
-		seenSigningRootsBySlot := make(map[types.Slot][]byte)
+		seenSigningRootsBySlot := make(map[primitives.Slot][]byte)
 		for _, blk := range proposals.Proposals {
 			if signingRoot, ok := seenSigningRootsBySlot[blk.Slot]; ok {
 				if signingRoot == nil || !bytes.Equal(signingRoot, blk.SigningRoot) {
@@ -261,14 +263,14 @@ func filterSlashablePubKeysFromBlocks(ctx context.Context, historyByPubKey map[[
 func filterSlashablePubKeysFromAttestations(
 	ctx context.Context,
 	validatorDB db.Database,
-	signedAttsByPubKey map[[48]byte][]*kv.AttestationRecord,
-) ([][48]byte, error) {
-	slashablePubKeys := make([][48]byte, 0)
+	signedAttsByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord,
+) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	slashablePubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	// First we need to find attestations that are slashable with respect to other
 	// attestations within the same JSON import.
 	for pubKey, signedAtts := range signedAttsByPubKey {
-		signingRootsByTarget := make(map[types.Epoch][32]byte)
-		targetEpochsBySource := make(map[types.Epoch][]types.Epoch)
+		signingRootsByTarget := make(map[primitives.Epoch][32]byte)
+		targetEpochsBySource := make(map[primitives.Epoch][]primitives.Epoch)
 	Loop:
 		for _, att := range signedAtts {
 			// Check for double votes.
@@ -311,19 +313,19 @@ func filterSlashablePubKeysFromAttestations(
 	return slashablePubKeys, nil
 }
 
-func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
+func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
 	proposals := make([]kv.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
 		slot, err := SlotFromString(proposal.Slot)
 		if err != nil {
-			return nil, fmt.Errorf("%d is not a valid slot: %w", slot, err)
+			return nil, fmt.Errorf("%s is not a valid slot: %w", proposal.Slot, err)
 		}
 		var signingRoot [32]byte
 		// Signing roots are optional in the standard JSON file.
 		if proposal.SigningRoot != "" {
 			signingRoot, err = RootFromHex(proposal.SigningRoot)
 			if err != nil {
-				return nil, fmt.Errorf("%#x is not a valid root: %w", signingRoot, err)
+				return nil, fmt.Errorf("%s is not a valid root: %w", proposal.SigningRoot, err)
 			}
 		}
 		proposals[i] = kv.Proposal{
@@ -336,23 +338,23 @@ func transformSignedBlocks(ctx context.Context, signedBlocks []*format.SignedBlo
 	}, nil
 }
 
-func transformSignedAttestations(pubKey [48]byte, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
+func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
 	historicalAtts := make([]*kv.AttestationRecord, 0)
 	for _, attestation := range atts {
 		target, err := EpochFromString(attestation.TargetEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("%d is not a valid epoch: %w", target, err)
+			return nil, fmt.Errorf("%s is not a valid epoch: %w", attestation.TargetEpoch, err)
 		}
 		source, err := EpochFromString(attestation.SourceEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("%d is not a valid epoch: %w", source, err)
+			return nil, fmt.Errorf("%s is not a valid epoch: %w", attestation.SourceEpoch, err)
 		}
 		var signingRoot [32]byte
 		// Signing roots are optional in the standard JSON file.
 		if attestation.SigningRoot != "" {
 			signingRoot, err = RootFromHex(attestation.SigningRoot)
 			if err != nil {
-				return nil, fmt.Errorf("%#x is not a valid root: %w", signingRoot, err)
+				return nil, fmt.Errorf("%s is not a valid root: %w", attestation.SigningRoot, err)
 			}
 		}
 		historicalAtts = append(historicalAtts, &kv.AttestationRecord{
@@ -365,7 +367,7 @@ func transformSignedAttestations(pubKey [48]byte, atts []*format.SignedAttestati
 	return historicalAtts, nil
 }
 
-func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
+func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{

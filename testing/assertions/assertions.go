@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/d4l3k/messagediff"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -61,7 +61,7 @@ func DeepNotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg 
 
 // DeepSSZEqual compares values using ssz.DeepEqual.
 func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if !ssz.DeepEqual(expected, actual) {
+	if !equality.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		diff, _ := messagediff.PrettyDiff(expected, actual)
@@ -71,10 +71,27 @@ func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg 
 
 // DeepNotSSZEqual compares values using ssz.DeepEqual.
 func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if ssz.DeepEqual(expected, actual) {
+	if equality.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
+	}
+}
+
+// StringContains checks whether a string contains specified substring. If flag is false, inverse is checked.
+func StringContains(loggerFn assertionLoggerFn, expected, actual string, flag bool, msg ...interface{}) {
+	if flag {
+		if !strings.Contains(actual, expected) {
+			errMsg := parseMsg("Expected substring is not found", msg...)
+			_, file, line, _ := runtime.Caller(2)
+			loggerFn("%s:%d %s, got: %v, want: %s", filepath.Base(file), line, errMsg, actual, expected)
+		}
+	} else {
+		if strings.Contains(actual, expected) {
+			errMsg := parseMsg("Unexpected substring is found", msg...)
+			_, file, line, _ := runtime.Caller(2)
+			loggerFn("%s:%d %s, got: %v, not want: %s", filepath.Base(file), line, errMsg, actual, expected)
+		}
 	}
 }
 
@@ -91,7 +108,7 @@ func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
 // If any error in the chain matches target, the assertion will pass.
 func ErrorIs(loggerFn assertionLoggerFn, err, target error, msg ...interface{}) {
 	if !errors.Is(err, target) {
-		errMsg := parseMsg(fmt.Sprintf("error %s not in chain", target), msg...)
+		errMsg := parseMsg(fmt.Sprintf("error %s", target), msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, err)
 	}
@@ -99,6 +116,9 @@ func ErrorIs(loggerFn assertionLoggerFn, err, target error, msg ...interface{}) 
 
 // ErrorContains asserts that actual error contains wanted message.
 func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...interface{}) {
+	if want == "" {
+		loggerFn("Want string can't be empty")
+	}
 	if err == nil || !strings.Contains(err.Error(), want) {
 		errMsg := parseMsg("Expected error not returned", msg...)
 		_, file, line, _ := runtime.Caller(2)
@@ -132,7 +152,7 @@ func isNil(obj interface{}) bool {
 func LogsContain(loggerFn assertionLoggerFn, hook *test.Hook, want string, flag bool, msg ...interface{}) {
 	_, file, line, _ := runtime.Caller(2)
 	entries := hook.AllEntries()
-	var logs []string
+	logs := make([]string, 0, len(entries))
 	match := false
 	for _, e := range entries {
 		msg, err := e.String()

@@ -3,11 +3,10 @@ package accounts
 import (
 	"os"
 
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/runtime/tos"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -28,20 +27,23 @@ var Commands = &cli.Command{
 				flags.WalletPasswordFileFlag,
 				flags.DeletePublicKeysFlag,
 				features.Mainnet,
-				features.PyrmontTestnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
-				if err := accounts.DeleteAccountCli(cliCtx); err != nil {
-					log.Fatalf("Could not delete account: %v", err)
+				if err := accountsDelete(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not delete account")
 				}
 				return nil
 			},
@@ -62,20 +64,23 @@ var Commands = &cli.Command{
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
 				features.Mainnet,
-				features.PyrmontTestnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
-				if err := accounts.ListAccountsCli(cliCtx); err != nil {
-					log.Fatalf("Could not list accounts: %v", err)
+				if err := accountsList(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not list accounts")
 				}
 				return nil
 			},
@@ -93,20 +98,23 @@ var Commands = &cli.Command{
 				flags.BackupPublicKeysFlag,
 				flags.BackupPasswordFile,
 				features.Mainnet,
-				features.PyrmontTestnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
-				if err := accounts.BackupAccountsCli(cliCtx); err != nil {
-					log.Fatalf("Could not backup accounts: %v", err)
+				if err := accountsBackup(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not backup accounts")
 				}
 				return nil
 			},
@@ -121,20 +129,23 @@ var Commands = &cli.Command{
 				flags.AccountPasswordFileFlag,
 				flags.ImportPrivateKeyFileFlag,
 				features.Mainnet,
-				features.PyrmontTestnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
-				if err := accounts.ImportAccountsCli(cliCtx); err != nil {
-					log.Fatalf("Could not import accounts: %v", err)
+				if err := accountsImport(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not import accounts")
 				}
 				return nil
 			},
@@ -148,27 +159,36 @@ var Commands = &cli.Command{
 				flags.AccountPasswordFileFlag,
 				flags.VoluntaryExitPublicKeysFlag,
 				flags.BeaconRPCProviderFlag,
+				flags.Web3SignerURLFlag,
+				flags.Web3SignerPublicValidatorKeysFlag,
+				flags.InteropNumValidators,
+				flags.InteropStartIndex,
 				cmd.GrpcMaxCallRecvMsgSizeFlag,
 				flags.CertFlag,
 				flags.GrpcHeadersFlag,
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
 				flags.ExitAllFlag,
+				flags.ForceExitFlag,
 				features.Mainnet,
-				features.PyrmontTestnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
-				if err := accounts.ExitAccountsCli(cliCtx, os.Stdin); err != nil {
-					log.Fatalf("Could not perform voluntary exit: %v", err)
+				log.Info("This command will be deprecated in the future in favor of `prysmctl validator exit`")
+				if err := AccountsExit(cliCtx, os.Stdin); err != nil {
+					log.WithError(err).Fatal("Could not perform voluntary exit")
 				}
 				return nil
 			},

@@ -11,14 +11,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/eth/service"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
-	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
+	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"google.golang.org/grpc"
 )
 
@@ -51,7 +51,7 @@ const (
 	v1MiddlewarePathTemplate = "http://localhost:%d/eth/v1"
 )
 
-func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
+func apiMiddlewareVerify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
@@ -208,7 +208,7 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	validatorClient := service.NewBeaconValidatorClient(conn)
 	resp, err := validatorClient.GetAttesterDuties(ctx, &ethpbv1.AttesterDutiesRequest{
 		Epoch: helpers.AltairE2EForkEpoch,
-		Index: []types.ValidatorIndex{0},
+		Index: []primitives.ValidatorIndex{0},
 	})
 	if err != nil {
 		return err
@@ -238,7 +238,7 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 }
 
 func doMiddlewareJSONGetRequestV1(requestPath string, beaconNodeIdx int, dst interface{}) error {
-	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.BeaconNodeRPCPort+beaconNodeIdx+40)
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
 	httpResp, err := http.Get(
 		basePath + requestPath,
 	)
@@ -248,12 +248,12 @@ func doMiddlewareJSONGetRequestV1(requestPath string, beaconNodeIdx int, dst int
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
-func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData interface{}, dst interface{}) error {
+func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData, dst interface{}) error {
 	b, err := json.Marshal(postData)
 	if err != nil {
 		return err
 	}
-	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.BeaconNodeRPCPort+beaconNodeIdx+40)
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
 	httpResp, err := http.Post(
 		basePath+requestPath,
 		"application/json",

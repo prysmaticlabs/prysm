@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/mock"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestServer_HighestAttestations(t *testing.T) {
-	highestAtts := map[types.ValidatorIndex]*ethpb.HighestAttestation{
+	highestAtts := map[primitives.ValidatorIndex]*ethpb.HighestAttestation{
 		0: {
 			ValidatorIndex:     0,
 			HighestSourceEpoch: 1,
@@ -23,7 +23,7 @@ func TestServer_HighestAttestations(t *testing.T) {
 			HighestTargetEpoch: 3,
 		},
 	}
-	mockSlasher := &slasher.MockSlashingChecker{
+	mockSlasher := &mock.MockSlashingChecker{
 		HighestAtts: highestAtts,
 	}
 	s := Server{SlashingChecker: mockSlasher}

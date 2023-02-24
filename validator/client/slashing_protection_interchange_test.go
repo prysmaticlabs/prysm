@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	history "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	history "github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history"
 )
 
 type eip3076TestCase struct {
@@ -124,7 +124,9 @@ func TestEIP3076SpecTests(t *testing.T) {
 						copy(signingRoot[:], signingRootBytes)
 					}
 
-					err = validator.slashableProposalCheck(context.Background(), pk, wrapper.WrappedPhase0SignedBeaconBlock(b), signingRoot)
+					wsb, err := blocks.NewSignedBeaconBlock(b)
+					require.NoError(t, err)
+					err = validator.slashableProposalCheck(context.Background(), pk, wsb, signingRoot)
 					if sb.ShouldSucceed {
 						require.NoError(t, err)
 					} else {
@@ -146,7 +148,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 							Target:          &ethpb.Checkpoint{Epoch: target, Root: make([]byte, 32)},
 							Source:          &ethpb.Checkpoint{Epoch: source, Root: make([]byte, 32)},
 						},
-						Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
 					}
 
 					var signingRoot [32]byte

@@ -11,7 +11,7 @@
 # docker build -t gcr.io/prysmaticlabs/rbe-worker:latest .
 # gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest 
 
-FROM debian:buster-slim as build
+FROM debian:bullseye-slim as build
 
 # install gnu/gcc cross-build toolchain (gcc 8.3)
 ENV DOCKER_CLI_EXPERIMENTAL=enabled
@@ -25,8 +25,8 @@ RUN apt-get update && \
         pkg-config make docker.io gnupg2 libgmp-dev python
 
 # install llvm/clang cross-build toolchains
-ENV INSTALL_LLVM_VERSION=10.0.0
-ADD install_clang_cross10.sh /tmp/install_clang_cross.sh
+ENV INSTALL_LLVM_VERSION=12.0.0
+ADD install_clang_cross.sh /tmp/install_clang_cross.sh
 RUN /tmp/install_clang_cross.sh
 
 # install osxcross

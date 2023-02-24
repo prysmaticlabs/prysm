@@ -4,17 +4,18 @@ import (
 	"context"
 	"testing"
 
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -44,8 +45,8 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
-			SlashingPoolInserter:    &slashings.PoolMock{},
+			StateGen:                stategen.New(beaconDB, doublylinkedtree.New()),
+			SlashingPoolInserter:    &slashingsmock.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},
 	}
@@ -61,7 +62,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconAttester,
-		beaconState.GenesisValidatorRoot(),
+		beaconState.GenesisValidatorsRoot(),
 	)
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(firstAtt.Data, domain)
@@ -151,8 +152,8 @@ func TestService_processProposerSlashings(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
-			SlashingPoolInserter:    &slashings.PoolMock{},
+			StateGen:                stategen.New(beaconDB, doublylinkedtree.New()),
+			SlashingPoolInserter:    &slashingsmock.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},
 	}
@@ -180,7 +181,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
-		beaconState.GenesisValidatorRoot(),
+		beaconState.GenesisValidatorsRoot(),
 	)
 	require.NoError(t, err)
 	htr, err := firstBlockHeader.Header.HashTreeRoot()

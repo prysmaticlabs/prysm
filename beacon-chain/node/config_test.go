@@ -3,16 +3,18 @@ package node
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -26,7 +28,7 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 	set.Bool(flags.HistoricalSlasherNode.Name, true, "")
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	configureHistoricalSlasher(cliCtx)
+	require.NoError(t, configureHistoricalSlasher(cliCtx))
 
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch*4, params.BeaconConfig().SlotsPerArchivedPoint)
 	assert.LogsContain(t, hook,
@@ -46,9 +48,9 @@ func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 	require.NoError(t, set.Set(flags.SlotsPerArchivedPoint.Name, strconv.Itoa(100)))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	configureSlotsPerArchivedPoint(cliCtx)
+	require.NoError(t, configureSlotsPerArchivedPoint(cliCtx))
 
-	assert.Equal(t, types.Slot(100), params.BeaconConfig().SlotsPerArchivedPoint)
+	assert.Equal(t, primitives.Slot(100), params.BeaconConfig().SlotsPerArchivedPoint)
 }
 
 func TestConfigureProofOfWork(t *testing.T) {
@@ -64,7 +66,7 @@ func TestConfigureProofOfWork(t *testing.T) {
 	require.NoError(t, set.Set(flags.DepositContractFlag.Name, "deposit-contract"))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	configureEth1Config(cliCtx)
+	require.NoError(t, configureEth1Config(cliCtx))
 
 	assert.Equal(t, uint64(100), params.BeaconConfig().DepositChainID)
 	assert.Equal(t, uint64(200), params.BeaconConfig().DepositNetworkID)
@@ -73,25 +75,43 @@ func TestConfigureProofOfWork(t *testing.T) {
 
 func TestConfigureExecutionSetting(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
+	hook := logTest.NewGlobal()
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
+	set.String(flags.SuggestedFeeRecipient.Name, "", "")
 	set.Uint64(flags.TerminalTotalDifficultyOverride.Name, 0, "")
 	set.String(flags.TerminalBlockHashOverride.Name, "", "")
 	set.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name, 0, "")
-	set.String(flags.Coinbase.Name, "", "")
+
 	require.NoError(t, set.Set(flags.TerminalTotalDifficultyOverride.Name, strconv.Itoa(100)))
 	require.NoError(t, set.Set(flags.TerminalBlockHashOverride.Name, "0xA"))
 	require.NoError(t, set.Set(flags.TerminalBlockHashActivationEpochOverride.Name, strconv.Itoa(200)))
-	require.NoError(t, set.Set(flags.Coinbase.Name, "0xB"))
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
+	err := configureExecutionSetting(cliCtx)
+	assert.LogsContain(t, hook, "0xB is not a valid fee recipient address")
+	require.NoError(t, err)
 
-	configureExecutionSetting(cliCtx)
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	cliCtx = cli.NewContext(&app, set, nil)
+	err = configureExecutionSetting(cliCtx)
+	require.NoError(t, err)
+	assert.Equal(t, common.HexToAddress("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), params.BeaconConfig().DefaultFeeRecipient)
 
-	assert.Equal(t, uint64(100), params.BeaconConfig().TerminalTotalDifficulty)
+	assert.LogsContain(t, hook,
+		"is not a checksum Ethereum address",
+	)
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"))
+	cliCtx = cli.NewContext(&app, set, nil)
+	err = configureExecutionSetting(cliCtx)
+	require.NoError(t, err)
+	assert.Equal(t, common.HexToAddress("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"), params.BeaconConfig().DefaultFeeRecipient)
+
+	assert.Equal(t, "100", params.BeaconConfig().TerminalTotalDifficulty)
 	assert.Equal(t, common.HexToHash("0xA"), params.BeaconConfig().TerminalBlockHash)
-	assert.Equal(t, types.Epoch(200), params.BeaconConfig().TerminalBlockHashActivationEpoch)
-	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().Coinbase)
+	assert.Equal(t, primitives.Epoch(200), params.BeaconConfig().TerminalBlockHashActivationEpoch)
+
 }
 
 func TestConfigureNetwork(t *testing.T) {
@@ -111,6 +131,42 @@ func TestConfigureNetwork(t *testing.T) {
 
 	assert.DeepEqual(t, []string{"node1", "node2"}, params.BeaconNetworkConfig().BootstrapNodes)
 	assert.Equal(t, uint64(100), params.BeaconNetworkConfig().ContractDeploymentBlock)
+}
+
+func TestConfigureNetwork_ConfigFile(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	context := cli.NewContext(&app, set, nil)
+
+	require.NoError(t, os.WriteFile("flags_test.yaml", []byte(fmt.Sprintf("%s:\n - %s\n - %s\n", cmd.BootstrapNode.Name,
+		"node1",
+		"node2")), 0666))
+
+	require.NoError(t, set.Parse([]string{"test-command", "--" + cmd.ConfigFileFlag.Name, "flags_test.yaml"}))
+	command := &cli.Command{
+		Name: "test-command",
+		Flags: cmd.WrapFlags([]cli.Flag{
+			&cli.StringFlag{
+				Name: cmd.ConfigFileFlag.Name,
+			},
+			&cli.StringSliceFlag{
+				Name: cmd.BootstrapNode.Name,
+			},
+		}),
+		Before: func(cliCtx *cli.Context) error {
+			return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+		},
+		Action: func(cliCtx *cli.Context) error {
+			//TODO: https://github.com/urfave/cli/issues/1197 right now does not set flag
+			require.Equal(t, false, cliCtx.IsSet(cmd.BootstrapNode.Name))
+
+			require.Equal(t, strings.Join([]string{"node1", "node2"}, ","),
+				strings.Join(cliCtx.StringSlice(cmd.BootstrapNode.Name), ","))
+			return nil
+		},
+	}
+	require.NoError(t, command.Run(context))
+	require.NoError(t, os.Remove("flags_test.yaml"))
 }
 
 func TestConfigureInterop(t *testing.T) {
@@ -178,7 +234,7 @@ func TestConfigureInterop(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			configureInteropConfig(tt.flagSetter())
+			require.NoError(t, configureInteropConfig(tt.flagSetter()))
 			assert.DeepEqual(t, tt.configName, params.BeaconConfig().ConfigName)
 		})
 	}

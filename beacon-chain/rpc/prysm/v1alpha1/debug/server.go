@@ -10,11 +10,11 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/golang/protobuf/ptypes/empty"
 	golog "github.com/ipfs/go-log/v2"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,11 +30,12 @@ type Server struct {
 	HeadFetcher        blockchain.HeadFetcher
 	PeerManager        p2p.PeerManager
 	PeersFetcher       p2p.PeersProvider
+	ReplayerBuilder    stategen.ReplayerBuilder
 }
 
 // SetLoggingLevel of a beacon node according to a request type,
 // either INFO, DEBUG, or TRACE.
-func (ds *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequest) (*empty.Empty, error) {
+func (_ *Server) SetLoggingLevel(_ context.Context, req *pbrpc.LoggingLevelRequest) (*empty.Empty, error) {
 	var verbosity string
 	switch req.Level {
 	case pbrpc.LoggingLevelRequest_INFO:

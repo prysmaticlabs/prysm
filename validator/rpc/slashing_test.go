@@ -6,14 +6,13 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
-	mocks "github.com/prysmaticlabs/prysm/validator/testing"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
+	mocks "github.com/prysmaticlabs/prysm/v3/validator/testing"
 )
 
 func TestImportSlashingProtection_Preconditions(t *testing.T) {
@@ -34,14 +33,15 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	require.ErrorContains(t, "err finding validator database at path", err)
 
 	// Create Wallet and add to server for more realistic testing.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(defaultWalletPath),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(strongPass),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(ctx)
 	require.NoError(t, err)
 	s.wallet = w
 

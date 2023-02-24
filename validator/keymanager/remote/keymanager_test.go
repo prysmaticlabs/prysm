@@ -6,21 +6,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strconv"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/mock"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -170,19 +171,19 @@ func TestNewRemoteKeymanager(t *testing.T) {
 				require.NoError(t, os.MkdirAll(dir, 0777))
 				if test.caCert != "" {
 					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
-					err := ioutil.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions)
+					err := os.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions)
 					require.NoError(t, err, "Failed to write CA certificate")
 					test.opts.RemoteCertificate.CACertPath = caCertPath
 				}
 				if test.clientCert != "" {
 					clientCertPath := fmt.Sprintf("%s/client.crt", dir)
-					err := ioutil.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().ReadWritePermissions)
+					err := os.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().ReadWritePermissions)
 					require.NoError(t, err, "Failed to write client certificate")
 					test.opts.RemoteCertificate.ClientCertPath = clientCertPath
 				}
 				if test.clientKey != "" {
 					clientKeyPath := fmt.Sprintf("%s/client.key", dir)
-					err := ioutil.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().ReadWritePermissions)
+					err := os.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().ReadWritePermissions)
 					require.NoError(t, err, "Failed to write client key")
 					test.opts.RemoteCertificate.ClientKeyPath = clientKeyPath
 				}
@@ -329,7 +330,7 @@ func TestUnmarshalOptionsFile_DefaultRequireTls(t *testing.T) {
 	require.NoError(t, err)
 	_, err = buffer.Write(b)
 	require.NoError(t, err)
-	r := ioutil.NopCloser(&buffer)
+	r := io.NopCloser(&buffer)
 
 	opts, err := UnmarshalOptionsFile(r)
 	assert.NoError(t, err)
@@ -345,7 +346,7 @@ func TestReloadPublicKeys(t *testing.T) {
 	k := &Keymanager{
 		client:              m,
 		accountsChangedFeed: new(event.Feed),
-		orderedPubKeys:      [][48]byte{bytesutil.ToBytes48([]byte("100"))},
+		orderedPubKeys:      [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("100"))},
 	}
 
 	// Add key
@@ -359,7 +360,7 @@ func TestReloadPublicKeys(t *testing.T) {
 
 	keys, err := k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("100")), bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("100")), bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
 	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
@@ -375,7 +376,7 @@ func TestReloadPublicKeys(t *testing.T) {
 
 	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
 	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
@@ -391,7 +392,7 @@ func TestReloadPublicKeys(t *testing.T) {
 
 	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
 	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
@@ -407,7 +408,7 @@ func TestReloadPublicKeys(t *testing.T) {
 
 	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
 	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsDoNotContain(t, hook, keymanager.KeysReloaded)
 }

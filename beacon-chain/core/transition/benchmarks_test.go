@@ -4,23 +4,25 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/benchmark"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/benchmark"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"google.golang.org/protobuf/proto"
 )
 
 var runAmount = 25
 
 func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
 	cleanStates := clonedStates(beaconState)
@@ -29,13 +31,17 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], wrapper.WrappedPhase0SignedBeaconBlock(block))
+		wsb, err := blocks.NewSignedBeaconBlock(block)
+		require.NoError(b, err)
+		_, err = coreState.ExecuteStateTransition(context.Background(), cleanStates[i], wsb)
 		require.NoError(b, err)
 	}
 }
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 
 	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
@@ -47,21 +53,27 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
 	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
+	require.NoError(b, helpers.UpdateCommitteeCache(context.Background(), beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 	// Run the state transition once to populate the cache.
-	_, err = coreState.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := blocks.NewSignedBeaconBlock(block)
+	require.NoError(b, err)
+	_, err = coreState.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(b, err, "Failed to process block, benchmarks will fail")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := coreState.ExecuteStateTransition(context.Background(), cleanStates[i], wrapper.WrappedPhase0SignedBeaconBlock(block))
+		wsb, err := blocks.NewSignedBeaconBlock(block)
+		require.NoError(b, err)
+		_, err = coreState.ExecuteStateTransition(context.Background(), cleanStates[i], wsb)
 		require.NoError(b, err, "Failed to process block, benchmarks will fail")
 	}
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
@@ -69,7 +81,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
 	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
+	require.NoError(b, helpers.UpdateCommitteeCache(context.Background(), beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 
 	b.ResetTimer()
@@ -112,7 +124,7 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 func BenchmarkMarshalState_FullState(b *testing.B) {
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
-	natState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+	natState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 	require.NoError(b, err)
 	b.Run("Proto_Marshal", func(b *testing.B) {
 		b.ResetTimer()
@@ -136,7 +148,7 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 func BenchmarkUnmarshalState_FullState(b *testing.B) {
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
-	natState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+	natState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 	require.NoError(b, err)
 	protoObject, err := proto.Marshal(natState)
 	require.NoError(b, err)

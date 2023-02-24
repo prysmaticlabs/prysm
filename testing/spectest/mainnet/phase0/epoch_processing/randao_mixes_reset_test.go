@@ -3,7 +3,7 @@ package epoch_processing
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/spectest/shared/phase0/epoch_processing"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/phase0/epoch_processing"
 )
 
 func TestMainnet_Phase0_EpochProcessing_RandaoMixesReset(t *testing.T) {

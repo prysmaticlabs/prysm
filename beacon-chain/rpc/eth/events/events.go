@@ -1,15 +1,17 @@
 package events
 
 import (
+	"strings"
+
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/migration"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -31,6 +33,8 @@ const (
 	ChainReorgTopic = "chain_reorg"
 	// SyncCommitteeContributionTopic represents a new sync committee contribution event topic.
 	SyncCommitteeContributionTopic = "contribution_and_proof"
+	// BLSToExecutionChangeTopic represents a new received BLS to execution change event topic.
+	BLSToExecutionChangeTopic = "bls_to_execution_change"
 )
 
 var casesHandled = map[string]bool{
@@ -41,6 +45,7 @@ var casesHandled = map[string]bool{
 	FinalizedCheckpointTopic:       true,
 	ChainReorgTopic:                true,
 	SyncCommitteeContributionTopic: true,
+	BLSToExecutionChangeTopic:      true,
 }
 
 // StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
@@ -54,11 +59,14 @@ func (s *Server) StreamEvents(
 	}
 	// Check if the topics in the request are valid.
 	requestedTopics := make(map[string]bool)
-	for _, topic := range req.Topics {
-		if _, ok := casesHandled[topic]; !ok {
-			return status.Errorf(codes.InvalidArgument, "Topic %s not allowed for event subscriptions", topic)
+	for _, rawTopic := range req.Topics {
+		splitTopic := strings.Split(rawTopic, ",")
+		for _, topic := range splitTopic {
+			if _, ok := casesHandled[topic]; !ok {
+				return status.Errorf(codes.InvalidArgument, "Topic %s not allowed for event subscriptions", topic)
+			}
+			requestedTopics[topic] = true
 		}
-		requestedTopics[topic] = true
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
@@ -114,13 +122,14 @@ func handleBlockEvents(
 		if err != nil {
 			return err
 		}
-		item, err := v1Data.HashTreeRoot()
+		item, err := v1Data.Message.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not hash tree root block")
 		}
 		eventBlock := &ethpb.EventBlock{
-			Slot:  v1Data.Message.Slot,
-			Block: item[:],
+			Slot:                v1Data.Message.Slot,
+			Block:               item[:],
+			ExecutionOptimistic: blkData.IsOptimistic,
 		}
 		return streamData(stream, BlockTopic, eventBlock)
 	default:
@@ -172,6 +181,16 @@ func handleBlockOperationEvents(
 		}
 		v2Data := migration.V1Alpha1SignedContributionAndProofToV2(contributionData.Contribution)
 		return streamData(stream, SyncCommitteeContributionTopic, v2Data)
+	case operation.BLSToExecutionChangeReceived:
+		if _, ok := requestedTopics[BLSToExecutionChangeTopic]; !ok {
+			return nil
+		}
+		changeData, ok := event.Data.(*operation.BLSToExecutionChangeReceivedData)
+		if !ok {
+			return nil
+		}
+		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(changeData.Change)
+		return streamData(stream, BLSToExecutionChangeTopic, v2Change)
 	default:
 		return nil
 	}

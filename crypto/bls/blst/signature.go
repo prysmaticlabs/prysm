@@ -1,5 +1,4 @@
-// +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
-// +build !blst_disabled
+//go:build ((linux && amd64) || (linux && arm64) || (darwin && amd64) || (darwin && arm64) || (windows && amd64)) && !blst_disabled
 
 package blst
 
@@ -9,10 +8,9 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	blst "github.com/supranational/blst/bindings/go"
 )
 
@@ -28,11 +26,8 @@ type Signature struct {
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (common.Signature, error) {
-	if features.Get().SkipBLSVerify {
-		return &Signature{}, nil
-	}
-	if len(sig) != params.BeaconConfig().BLSSignatureLength {
-		return nil, fmt.Errorf("signature must be %d bytes", params.BeaconConfig().BLSSignatureLength)
+	if len(sig) != fieldparams.BLSSignatureLength {
+		return nil, fmt.Errorf("signature must be %d bytes", fieldparams.BLSSignatureLength)
 	}
 	signature := new(blstSignature).Uncompress(sig)
 	if signature == nil {
@@ -46,19 +41,57 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 	return &Signature{s: signature}, nil
 }
 
+// AggregateCompressedSignatures converts a list of compressed signatures into a single, aggregated sig.
+func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
+	signature := new(blstAggregateSignature)
+	valid := signature.AggregateCompressed(multiSigs, true)
+	if !valid {
+		return nil, errors.New("provided signatures fail the group check and cannot be compressed")
+	}
+	return &Signature{s: signature.ToAffine()}, nil
+}
+
+// MultipleSignaturesFromBytes creates a group of BLS signatures from a LittleEndian 2d-byte slice.
+func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error) {
+	if len(multiSigs) == 0 {
+		return nil, fmt.Errorf("0 signatures provided to the method")
+	}
+	for _, s := range multiSigs {
+		if len(s) != fieldparams.BLSSignatureLength {
+			return nil, fmt.Errorf("signature must be %d bytes", fieldparams.BLSSignatureLength)
+		}
+	}
+	multiSignatures := new(blstSignature).BatchUncompress(multiSigs)
+	if len(multiSignatures) == 0 {
+		return nil, errors.New("could not unmarshal bytes into signature")
+	}
+	if len(multiSignatures) != len(multiSigs) {
+		return nil, errors.Errorf("wanted %d decompressed signatures but got %d", len(multiSigs), len(multiSignatures))
+	}
+	wrappedSigs := make([]common.Signature, len(multiSignatures))
+	for i, signature := range multiSignatures {
+		// Group check signature. Do not check for infinity since an aggregated signature
+		// could be infinite.
+		if !signature.SigValidate(false) {
+			return nil, errors.New("signature not in group")
+		}
+		copiedSig := signature
+		wrappedSigs[i] = &Signature{s: copiedSig}
+	}
+	return wrappedSigs, nil
+}
+
 // Verify a bls signature given a public key, a message.
 //
 // In IETF draft BLS specification:
 // Verify(PK, message, signature) -> VALID or INVALID: a verification
-//      algorithm that outputs VALID if signature is a valid signature of
-//      message under public key PK, and INVALID otherwise.
+//
+//	algorithm that outputs VALID if signature is a valid signature of
+//	message under public key PK, and INVALID otherwise.
 //
 // In the Ethereum proof of stake specification:
 // def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
-	if features.Get().SkipBLSVerify {
-		return true
-	}
 	// Signature and PKs are assumed to have been validated upon decompression!
 	return s.s.Verify(false, pubKey.(*PublicKey).p, false, msg, dst)
 }
@@ -71,19 +104,17 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 //
 // In IETF draft BLS specification:
 // AggregateVerify((PK_1, message_1), ..., (PK_n, message_n),
-//      signature) -> VALID or INVALID: an aggregate verification
-//      algorithm that outputs VALID if signature is a valid aggregated
-//      signature for a collection of public keys and messages, and
-//      outputs INVALID otherwise.
+//
+//	signature) -> VALID or INVALID: an aggregate verification
+//	algorithm that outputs VALID if signature is a valid aggregated
+//	signature for a collection of public keys and messages, and
+//	outputs INVALID otherwise.
 //
 // In the Ethereum proof of stake specification:
 // def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> bool
 //
 // Deprecated: Use FastAggregateVerify or use this method in spectests only.
 func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte) bool {
-	if features.Get().SkipBLSVerify {
-		return true
-	}
 	size := len(pubKeys)
 	if size == 0 {
 		return false
@@ -105,16 +136,14 @@ func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 //
 // In IETF draft BLS specification:
 // FastAggregateVerify(PK_1, ..., PK_n, message, signature) -> VALID
-//      or INVALID: a verification algorithm for the aggregate of multiple
-//      signatures on the same message.  This function is faster than
-//      AggregateVerify.
+//
+//	or INVALID: a verification algorithm for the aggregate of multiple
+//	signatures on the same message.  This function is faster than
+//	AggregateVerify.
 //
 // In the Ethereum proof of stake specification:
 // def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
-	if features.Get().SkipBLSVerify {
-		return true
-	}
 	if len(pubKeys) == 0 {
 		return false
 	}
@@ -130,16 +159,14 @@ func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 //
 // Spec code:
 // def eth2_fast_aggregate_verify(pubkeys: Sequence[BLSPubkey], message: Bytes32, signature: BLSSignature) -> bool:
-//    """
-//    Wrapper to ``bls.FastAggregateVerify`` accepting the ``G2_POINT_AT_INFINITY`` signature when ``pubkeys`` is empty.
-//    """
-//    if len(pubkeys) == 0 and signature == G2_POINT_AT_INFINITY:
-//        return True
-//    return bls.FastAggregateVerify(pubkeys, message, signature)
+//
+//	"""
+//	Wrapper to ``bls.FastAggregateVerify`` accepting the ``G2_POINT_AT_INFINITY`` signature when ``pubkeys`` is empty.
+//	"""
+//	if len(pubkeys) == 0 and signature == G2_POINT_AT_INFINITY:
+//	    return True
+//	return bls.FastAggregateVerify(pubkeys, message, signature)
 func (s *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
-	if features.Get().SkipBLSVerify {
-		return true
-	}
 	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), common.InfiniteSignature[:]) {
 		return true
 	}
@@ -157,9 +184,6 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	if len(sigs) == 0 {
 		return nil
 	}
-	if features.Get().SkipBLSVerify {
-		return sigs[0]
-	}
 
 	rawSigs := make([]*blstSignature, len(sigs))
 	for i := 0; i < len(sigs); i++ {
@@ -172,6 +196,15 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	return &Signature{s: signature.ToAffine()}
 }
 
+// VerifySignature verifies a single signature using public key and message.
+func VerifySignature(sig []byte, msg [32]byte, pubKey common.PublicKey) (bool, error) {
+	rSig, err := SignatureFromBytes(sig)
+	if err != nil {
+		return false, err
+	}
+	return rSig.Verify(pubKey, msg[:]), nil
+}
+
 // VerifyMultipleSignatures verifies a non-singular set of signatures and its respective pubkeys and messages.
 // This method provides a safe way to verify multiple signatures at once. We pick a number randomly from 1 to max
 // uint64 and then multiply the signature by it. We continue doing this for all signatures and its respective pubkeys.
@@ -180,9 +213,6 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 // e(S*, G) = \prod_{i=1}^n \prod_{j=1}^{m_i} e(P'_{i,j}, M_{i,j})
 // Using this we can verify multiple signatures safely.
 func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.PublicKey) (bool, error) {
-	if features.Get().SkipBLSVerify {
-		return true, nil
-	}
 	if len(sigs) == 0 || len(pubKeys) == 0 {
 		return false, nil
 	}
@@ -207,8 +237,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 	randFunc := func(scalar *blst.Scalar) {
 		var rbytes [scalarBytes]byte
 		randLock.Lock()
-		// Ignore error as the error will always be nil in `read` in math/rand.
-		randGen.Read(rbytes[:]) /* #nosec G104 */
+		randGen.Read(rbytes[:]) // #nosec G104 -- Error will always be nil in `read` in math/rand
 		randLock.Unlock()
 		// Protect against the generator returning 0. Since the scalar value is
 		// derived from a big endian byte slice, we take the last byte.
@@ -223,10 +252,6 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
-	if features.Get().SkipBLSVerify {
-		return make([]byte, params.BeaconConfig().BLSSignatureLength)
-	}
-
 	return s.s.Compress()
 }
 

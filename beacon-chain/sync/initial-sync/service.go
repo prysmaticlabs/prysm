@@ -9,18 +9,18 @@ import (
 
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/abool"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/runtime"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async/abool"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -65,7 +65,12 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 		genesisChan:  make(chan time.Time),
 	}
+
+	// The reason why we have this goroutine in the constructor is to avoid a race condition
+	// between services' Start method and the initialization event.
+	// See https://github.com/prysmaticlabs/prysm/issues/10602 for details.
 	go s.waitForStateInitialization()
+
 	return s
 }
 
@@ -75,11 +80,6 @@ func (s *Service) Start() {
 	genesis := <-s.genesisChan
 	if genesis.IsZero() {
 		log.Debug("Exiting Initial Sync Service")
-		return
-	}
-	if flags.Get().DisableSync {
-		s.markSynced(genesis)
-		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
 		return
 	}
 	if genesis.After(prysmTime.Now()) {
@@ -151,8 +151,8 @@ func (s *Service) Resync() error {
 
 	// Set it to false since we are syncing again.
 	s.synced.UnSet()
-	defer func() { s.synced.Set() }() // Reset it at the end of the method.
-	genesis := time.Unix(int64(headState.GenesisTime()), 0)
+	defer func() { s.synced.Set() }()                       // Reset it at the end of the method.
+	genesis := time.Unix(int64(headState.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
 
 	s.waitForMinimumPeers()
 	if err = s.roundRobinSync(genesis); err != nil {
@@ -168,7 +168,8 @@ func (s *Service) waitForMinimumPeers() {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
-		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.cfg.Chain.FinalizedCheckpt().Epoch)
+		cp := s.cfg.Chain.FinalizedCheckpt()
+		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, cp.Epoch)
 		if len(peers) >= required {
 			break
 		}

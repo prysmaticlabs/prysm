@@ -1,5 +1,4 @@
-//go:build libfuzzer
-// +build libfuzzer
+//go:build fuzz
 
 package sync
 
@@ -7,10 +6,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 	gcache "github.com/patrickmn/go-cache"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 

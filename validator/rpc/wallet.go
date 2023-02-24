@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -10,15 +9,13 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/io/prompt"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -35,6 +32,7 @@ const (
 
 // CreateWallet via an API request, allowing a user to save a new
 // imported wallet via RPC.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) (*pb.CreateWalletResponse, error) {
 	walletDir := s.walletDir
 	exists, err := wallet.Exists(walletDir)
@@ -54,6 +52,8 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			keymanagerKind = pb.KeymanagerKind_DERIVED
 		case keymanager.Remote:
 			keymanagerKind = pb.KeymanagerKind_REMOTE
+		case keymanager.Web3Signer:
+			keymanagerKind = pb.KeymanagerKind_WEB3SIGNER
 		}
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
@@ -66,20 +66,23 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, "Password too weak: %v", err)
 	}
 	if req.Keymanager == pb.KeymanagerKind_IMPORTED {
-		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-			WalletCfg: &wallet.Config{
-				WalletDir:      walletDir,
-				KeymanagerKind: keymanager.Imported,
-				WalletPassword: req.WalletPassword,
-			},
-			SkipMnemonicConfirm: true,
-		})
+		opts := []accounts.Option{
+			accounts.WithWalletDir(walletDir),
+			accounts.WithKeymanagerType(keymanager.Local),
+			accounts.WithWalletPassword(req.WalletPassword),
+			accounts.WithSkipMnemonicConfirm(true),
+		}
+		acc, err := accounts.NewCLIManager(opts...)
+		if err != nil {
+			return nil, err
+		}
+		_, err = acc.WalletCreate(ctx)
 		if err != nil {
 			return nil, err
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -98,6 +101,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 }
 
 // WalletConfig returns the wallet's configuration. If no wallet exists, we return an empty response.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResponse, error) {
 	exists, err := wallet.Exists(s.walletDir)
 	if err != nil {
@@ -118,7 +122,7 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 
-	if s.wallet == nil || s.keymanager == nil {
+	if s.wallet == nil || s.validatorService == nil {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}
@@ -126,11 +130,14 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 	switch s.wallet.KeymanagerKind() {
 	case keymanager.Derived:
 		keymanagerKind = pb.KeymanagerKind_DERIVED
-	case keymanager.Imported:
+	case keymanager.Local:
 		keymanagerKind = pb.KeymanagerKind_IMPORTED
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
+	case keymanager.Web3Signer:
+		keymanagerKind = pb.KeymanagerKind_WEB3SIGNER
 	}
+
 	return &pb.WalletResponse{
 		WalletPath:     s.walletDir,
 		KeymanagerKind: keymanagerKind,
@@ -142,6 +149,7 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 // Create N validator keystores from the seed specified by req.NumAccounts.
 // Set the wallet password to req.WalletPassword, then create the wallet from
 // the provided Mnemonic and return CreateWalletResponse.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest) (*pb.CreateWalletResponse, error) {
 	numAccounts := int(req.NumAccounts)
 	if numAccounts == 0 {
@@ -185,13 +193,18 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
 	}
 
-	if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
-		WalletDir:        walletDir,
-		WalletPassword:   walletPassword,
-		Mnemonic:         mnemonic,
-		NumAccounts:      numAccounts,
-		Mnemonic25thWord: req.Mnemonic25ThWord,
-	}); err != nil {
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithWalletPassword(walletPassword),
+		accounts.WithMnemonic(mnemonic),
+		accounts.WithMnemonic25thWord(req.Mnemonic25ThWord),
+		accounts.WithNumAccounts(numAccounts),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := acc.WalletRecover(ctx); err != nil {
 		return nil, err
 	}
 	if err := s.initializeWallet(ctx, &wallet.Config{
@@ -216,8 +229,9 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 // can indeed be decrypted using a password in the request. If there is no issue,
 // we return an empty response with no error. If the password is incorrect for a single keystore,
 // we return an appropriate error.
-func (s *Server) ValidateKeystores(
-	ctx context.Context, req *pb.ValidateKeystoresRequest,
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
+func (*Server) ValidateKeystores(
+	_ context.Context, req *pb.ValidateKeystoresRequest,
 ) (*emptypb.Empty, error) {
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
@@ -251,55 +265,8 @@ func (s *Server) ValidateKeystores(
 	return &emptypb.Empty{}, nil
 }
 
-// ImportKeystores allows importing new keystores via RPC into the wallet
-// which will be decrypted using the specified password .
-func (s *Server) ImportKeystores(
-	ctx context.Context, req *pb.ImportKeystoresRequest,
-) (*pb.ImportKeystoresResponse, error) {
-	if s.wallet == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
-	}
-	km, ok := s.keymanager.(*imported.Keymanager)
-	if !ok {
-		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import more keystores")
-	}
-	if req.KeystoresPassword == "" {
-		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
-	}
-	// Needs to unmarshal the keystores from the requests.
-	if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
-		return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
-	}
-	keystores := make([]*keymanager.Keystore, len(req.KeystoresImported))
-	importedPubKeys := make([][]byte, len(req.KeystoresImported))
-	for i := 0; i < len(req.KeystoresImported); i++ {
-		encoded := req.KeystoresImported[i]
-		keystore := &keymanager.Keystore{}
-		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
-		}
-		keystores[i] = keystore
-		pubKey, err := hex.DecodeString(keystore.Pubkey)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Not a valid BLS public key in keystore file: %v", err)
-		}
-		importedPubKeys[i] = pubKey
-	}
-	// Import the uploaded accounts.
-	if err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
-		Keymanager:      km,
-		Keystores:       keystores,
-		AccountPassword: req.KeystoresPassword,
-	}); err != nil {
-		return nil, err
-	}
-	s.walletInitializedFeed.Send(s.wallet)
-	return &pb.ImportKeystoresResponse{
-		ImportedPublicKeys: importedPubKeys,
-	}, nil
-}
-
 // Initialize a wallet and send it over a global feed.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error {
 	// We first ensure the user has a wallet.
 	exists, err := wallet.Exists(cfg.WalletDir)
@@ -331,22 +298,11 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 
 	s.walletInitialized = true
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: true})
-	if err != nil {
-		return errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
-	}
-	s.keymanager = km
 	s.wallet = w
 	s.walletDir = cfg.WalletDir
 
-	// Only send over feed if we have validating keys.
-	validatingPublicKeys, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not check for validating public keys")
-	}
-	if len(validatingPublicKeys) > 0 {
-		s.walletInitializedFeed.Send(w)
-	}
+	s.walletInitializedFeed.Send(w)
+
 	return nil
 }
 

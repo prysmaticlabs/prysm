@@ -3,9 +3,9 @@ package gateway
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/api/gateway"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestDefaultConfig(t *testing.T) {

@@ -7,29 +7,31 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	ctx := context.Background()
 
-	s := &v1.BeaconState{}
+	s, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
+	require.NoError(t, err)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -38,14 +40,14 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1}
 	wanted := "Syncing to latest head, not ready to respond"
-	_, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 	assert.ErrorContains(t, wanted, err)
 }
 
 func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	ctx := context.Background()
 
-	s, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
@@ -53,6 +55,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -67,7 +70,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	ctx := context.Background()
 
-	s, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators: []*ethpb.Validator{
 			{PublicKey: pubKey(0)},
@@ -80,6 +83,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -96,7 +100,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 
 func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -113,6 +117,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -130,7 +135,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 
 func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -150,6 +155,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -175,7 +181,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -189,6 +195,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -224,7 +231,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	}
 
 	sigs := make([]bls.Signature, len(attestingIndices))
-	zeroSig := [96]byte{}
+	var zeroSig [96]byte
 	att.Signature = zeroSig[:]
 
 	for i, indice := range attestingIndices {
@@ -267,7 +274,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 	}
 
 	sigs := make([]bls.Signature, len(attestingIndices))
-	zeroSig := [96]byte{}
+	var zeroSig [96]byte
 	att.Signature = zeroSig[:]
 
 	for i, indice := range attestingIndices {
@@ -286,7 +293,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 
 func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -298,15 +305,15 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att0.AggregationBits = bitfield.Bitlist{0b11100}
 	att1, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)
 	att1.AggregationBits = bitfield.Bitlist{0b11001}
 	att2, err := generateAtt(beaconState, 2, privKeys)
 	require.NoError(t, err)
-	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att2.AggregationBits = bitfield.Bitlist{0b11110}
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -317,6 +324,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -341,7 +349,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 
 func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -349,14 +357,14 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 
 	// This test creates two distinct attestations, neither of which contain the validator's index,
 	// index 0. This test should choose the most bits attestation, att1.
-	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := util.DeterministicGenesisState(t, fieldparams.RootLength)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att0.AggregationBits = bitfield.Bitlist{0b11100}
 	att1, err := generateAtt(beaconState, 2, privKeys)
 	require.NoError(t, err)
-	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)
 	att1.AggregationBits = bitfield.Bitlist{0b11110}
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -367,6 +375,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -392,7 +401,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 	aggregatorServer := &Server{}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
-			Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+			Signature: make([]byte, fieldparams.BLSSignatureLength),
 			Message: &ethpb.AggregateAttestationAndProof{
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{},
@@ -410,7 +419,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{},
 				},
-				SelectionProof: make([]byte, params.BeaconConfig().BLSSignatureLength),
+				SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 			},
 		},
 	}

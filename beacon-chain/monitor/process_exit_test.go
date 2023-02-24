@@ -3,21 +3,19 @@ package monitor
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestProcessExitsFromBlockTrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
-		config: &ValidatorMonitorConfig{
-			TrackedValidators: map[types.ValidatorIndex]interface{}{
-				1: nil,
-				2: nil,
-			},
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
+			1: true,
+			2: true,
 		},
 	}
 
@@ -42,18 +40,18 @@ func TestProcessExitsFromBlockTrackedIndices(t *testing.T) {
 		},
 	}
 
-	s.processExitsFromBlock(wrapper.WrappedPhase0BeaconBlock(block))
+	wb, err := blocks.NewBeaconBlock(block)
+	require.NoError(t, err)
+	s.processExitsFromBlock(wb)
 	require.LogsContain(t, hook, "\"Voluntary exit was included\" Slot=0 ValidatorIndex=2")
 }
 
 func TestProcessExitsFromBlockUntrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
-		config: &ValidatorMonitorConfig{
-			TrackedValidators: map[types.ValidatorIndex]interface{}{
-				1: nil,
-				2: nil,
-			},
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
+			1: true,
+			2: true,
 		},
 	}
 
@@ -78,18 +76,18 @@ func TestProcessExitsFromBlockUntrackedIndices(t *testing.T) {
 		},
 	}
 
-	s.processExitsFromBlock(wrapper.WrappedPhase0BeaconBlock(block))
+	wb, err := blocks.NewBeaconBlock(block)
+	require.NoError(t, err)
+	s.processExitsFromBlock(wb)
 	require.LogsDoNotContain(t, hook, "\"Voluntary exit was included\"")
 }
 
 func TestProcessExitP2PTrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
-		config: &ValidatorMonitorConfig{
-			TrackedValidators: map[types.ValidatorIndex]interface{}{
-				1: nil,
-				2: nil,
-			},
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
+			1: true,
+			2: true,
 		},
 	}
 
@@ -107,11 +105,9 @@ func TestProcessExitP2PTrackedIndices(t *testing.T) {
 func TestProcessExitP2PUntrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
-		config: &ValidatorMonitorConfig{
-			TrackedValidators: map[types.ValidatorIndex]interface{}{
-				1: nil,
-				2: nil,
-			},
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
+			1: true,
+			2: true,
 		},
 	}
 

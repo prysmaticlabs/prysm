@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -37,22 +38,21 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 		{
 			name: "populates optimized schema buckets",
 			setup: func(t *testing.T, validatorDB *Store) {
-				ctx := context.Background()
-				pubKey := [48]byte{1}
+				pubKey := [fieldparams.BLSPubkeyLength]byte{1}
 				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
-				numEpochs := types.Epoch(50)
-				for i := types.Epoch(1); i <= numEpochs; i++ {
+				numEpochs := primitives.Epoch(50)
+				for i := primitives.Epoch(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
-					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
+					newHist, err := history.setTargetData(i, &deprecatedHistoryData{
 						Source:      i - 1,
 						SigningRoot: sr[:],
 					})
 					require.NoError(t, err)
 					history = newHist
 				}
-				newHist, err := history.setLatestEpochWritten(ctx, numEpochs)
+				newHist, err := history.setLatestEpochWritten(numEpochs)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
@@ -65,7 +65,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				// Verify we indeed have the data for all epochs
 				// since genesis to epoch 50 under the new schema.
 				err := validatorDB.view(func(tx *bolt.Tx) error {
-					pubKey := [48]byte{1}
+					pubKey := [fieldparams.BLSPubkeyLength]byte{1}
 					bucket := tx.Bucket(pubKeysBucket)
 					pkBucket := bucket.Bucket(pubKey[:])
 					signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
@@ -97,21 +97,21 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 			name: "partial data saved for both types still completes the migration successfully",
 			setup: func(t *testing.T, validatorDB *Store) {
 				ctx := context.Background()
-				pubKey := [48]byte{1}
+				pubKey := [fieldparams.BLSPubkeyLength]byte{1}
 				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
-				numEpochs := types.Epoch(50)
-				for i := types.Epoch(1); i <= numEpochs; i++ {
+				numEpochs := primitives.Epoch(50)
+				for i := primitives.Epoch(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
-					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
+					newHist, err := history.setTargetData(i, &deprecatedHistoryData{
 						Source:      i - 1,
 						SigningRoot: sr[:],
 					})
 					require.NoError(t, err)
 					history = newHist
 				}
-				newHist, err := history.setLatestEpochWritten(ctx, numEpochs)
+				newHist, err := history.setLatestEpochWritten(numEpochs)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
@@ -133,12 +133,12 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				// Write one more entry to the DB with the old format.
 				var sr [32]byte
 				copy(sr[:], fmt.Sprintf("%d", numEpochs+1))
-				newHist, err = newHist.setTargetData(ctx, numEpochs+1, &deprecatedHistoryData{
+				newHist, err = newHist.setTargetData(numEpochs+1, &deprecatedHistoryData{
 					Source:      numEpochs,
 					SigningRoot: sr[:],
 				})
 				require.NoError(t, err)
-				newHist, err = newHist.setLatestEpochWritten(ctx, numEpochs+1)
+				newHist, err = newHist.setLatestEpochWritten(numEpochs + 1)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
@@ -151,7 +151,7 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				// Verify we indeed have the data for all epochs
 				// since genesis to epoch 50+1 under the new schema.
 				err := validatorDB.view(func(tx *bolt.Tx) error {
-					pubKey := [48]byte{1}
+					pubKey := [fieldparams.BLSPubkeyLength]byte{1}
 					bucket := tx.Bucket(pubKeysBucket)
 					pkBucket := bucket.Bucket(pubKey[:])
 					signingRootsBucket := pkBucket.Bucket(attestationSigningRootsBucket)
@@ -229,7 +229,7 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 		{
 			name: "populates old format from data using the new schema",
 			setup: func(t *testing.T, validatorDB *Store) {
-				pubKeys := [][48]byte{{1}, {2}}
+				pubKeys := [][fieldparams.BLSPubkeyLength]byte{{1}, {2}}
 				// Create attesting history for two public keys
 				err := validatorDB.update(func(tx *bolt.Tx) error {
 					bkt := tx.Bucket(pubKeysBucket)
@@ -269,8 +269,7 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 				require.NoError(t, err)
 			},
 			eval: func(t *testing.T, validatorDB *Store) {
-				ctx := context.Background()
-				pubKeys := [][48]byte{{1}, {2}}
+				pubKeys := [][fieldparams.BLSPubkeyLength]byte{{1}, {2}}
 				// Next up, we validate that we have indeed rolled back our data
 				// into the old format for attesting history.
 				err := validatorDB.view(func(tx *bolt.Tx) error {
@@ -279,10 +278,10 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 						encodedHistoryBytes := bkt.Get(pubKey[:])
 						require.NotNil(t, encodedHistoryBytes)
 						attestingHistory := deprecatedEncodedAttestingHistory(encodedHistoryBytes)
-						highestEpoch, err := attestingHistory.getLatestEpochWritten(ctx)
+						highestEpoch, err := attestingHistory.getLatestEpochWritten()
 						require.NoError(t, err)
 						// Verify the highest epoch written is 50 from the setup stage.
-						require.Equal(t, types.Epoch(50), highestEpoch)
+						require.Equal(t, primitives.Epoch(50), highestEpoch)
 					}
 					return nil
 				})

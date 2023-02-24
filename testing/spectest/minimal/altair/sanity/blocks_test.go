@@ -3,7 +3,7 @@ package sanity
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/spectest/shared/altair/sanity"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/altair/sanity"
 )
 
 func TestMinimal_Altair_Sanity_Blocks(t *testing.T) {

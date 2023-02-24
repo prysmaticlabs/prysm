@@ -4,12 +4,11 @@ package deposit
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // DepositInput for a given key. This input data can be used to when making a
@@ -17,13 +16,14 @@ import (
 // signed by the deposit key.
 //
 // Spec details about general deposit workflow:
-//   To submit a deposit:
 //
-//   - Pack the validator's initialization parameters into deposit_data, a Deposit_Data SSZ object.
-//   - Let amount be the amount in Gwei to be deposited by the validator where MIN_DEPOSIT_AMOUNT <= amount <= MAX_EFFECTIVE_BALANCE.
-//   - Set deposit_data.amount = amount.
-//   - Let signature be the result of bls_sign of the signing_root(deposit_data) with domain=compute_domain(DOMAIN_DEPOSIT). (Deposits are valid regardless of fork version, compute_domain will default to zeroes there).
-//   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing `deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96])` along with a deposit of amount Gwei.
+//	To submit a deposit:
+//
+//	- Pack the validator's initialization parameters into deposit_data, a Deposit_Data SSZ object.
+//	- Let amount be the amount in Gwei to be deposited by the validator where MIN_DEPOSIT_AMOUNT <= amount <= MAX_EFFECTIVE_BALANCE.
+//	- Set deposit_data.amount = amount.
+//	- Let signature be the result of bls_sign of the signing_root(deposit_data) with domain=compute_domain(DOMAIN_DEPOSIT). (Deposits are valid regardless of fork version, compute_domain will default to zeroes there).
+//	- Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing `deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96])` along with a deposit of amount Gwei.
 //
 // See: https://github.com/ethereum/consensus-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
@@ -69,8 +69,10 @@ func DepositInput(depositKey, withdrawalKey bls.SecretKey, amountInGwei uint64) 
 // address.
 //
 // The specification is as follows:
-//   withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX_BYTE
-//   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
+//
+//	withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX_BYTE
+//	withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
+//
 // where withdrawal_credentials is of type bytes32.
 func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	h := hash.Hash(withdrawalKey.PublicKey().Marshal())
@@ -79,9 +81,6 @@ func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 
 // VerifyDepositSignature verifies the correctness of Eth1 deposit BLS signature
 func VerifyDepositSignature(dd *ethpb.Deposit_Data, domain []byte) error {
-	if features.Get().SkipBLSVerify {
-		return nil
-	}
 	ddCopy := ethpb.CopyDepositData(dd)
 	publicKey, err := bls.PublicKeyFromBytes(ddCopy.PublicKey)
 	if err != nil {

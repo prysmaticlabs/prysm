@@ -5,23 +5,25 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
-	e2eTypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
+	e2eTypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // InjectDoubleVoteOnEpoch broadcasts a double vote into the beacon node pool for the slasher to detect.
-var InjectDoubleVoteOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+var InjectDoubleVoteOnEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
 		Name:       "inject_double_vote_%d",
 		Policy:     policies.OnEpoch(n),
@@ -30,7 +32,7 @@ var InjectDoubleVoteOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
 }
 
 // InjectDoubleBlockOnEpoch proposes a double block to the beacon node for the slasher to detect.
-var InjectDoubleBlockOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+var InjectDoubleBlockOnEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
 		Name:       "inject_double_block_%d",
 		Policy:     policies.OnEpoch(n),
@@ -39,7 +41,7 @@ var InjectDoubleBlockOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
 }
 
 // ValidatorsSlashedAfterEpoch ensures the expected amount of validators are slashed.
-var ValidatorsSlashedAfterEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+var ValidatorsSlashedAfterEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
 		Name:       "validators_slashed_epoch_%d",
 		Policy:     policies.AfterNthEpoch(n),
@@ -48,7 +50,7 @@ var ValidatorsSlashedAfterEpoch = func(n types.Epoch) e2eTypes.Evaluator {
 }
 
 // SlashedValidatorsLoseBalanceAfterEpoch checks if the validators slashed lose the right balance.
-var SlashedValidatorsLoseBalanceAfterEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+var SlashedValidatorsLoseBalanceAfterEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
 		Name:       "slashed_validators_lose_valance_epoch_%d",
 		Policy:     policies.AfterNthEpoch(n),
@@ -58,7 +60,7 @@ var SlashedValidatorsLoseBalanceAfterEpoch = func(n types.Epoch) e2eTypes.Evalua
 
 var slashedIndices []uint64
 
-func validatorsSlashed(conns ...*grpc.ClientConn) error {
+func validatorsSlashed(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
@@ -73,7 +75,7 @@ func validatorsSlashed(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
+func validatorsLoseBalance(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
@@ -81,7 +83,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	for i, slashedIndex := range slashedIndices {
 		req := &eth.GetValidatorRequest{
 			QueryFilter: &eth.GetValidatorRequest_Index{
-				Index: types.ValidatorIndex(slashedIndex),
+				Index: primitives.ValidatorIndex(slashedIndex),
 			},
 		}
 		valResp, err := client.GetValidator(ctx, req)
@@ -104,7 +106,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
+func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	valClient := eth.NewBeaconNodeValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)
@@ -131,8 +133,8 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get duties")
 	}
 
-	var committeeIndex types.CommitteeIndex
-	var committee []types.ValidatorIndex
+	var committeeIndex primitives.CommitteeIndex
+	var committee []primitives.ValidatorIndex
 	for _, duty := range duties.Duties {
 		if duty.AttesterSlot == chainHead.HeadSlot-1 {
 			committeeIndex = duty.CommitteeIndex
@@ -192,7 +194,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
+func proposeDoubleBlock(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	valClient := eth.NewBeaconNodeValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)
@@ -218,10 +220,10 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get duties")
 	}
 
-	var proposerIndex types.ValidatorIndex
+	var proposerIndex primitives.ValidatorIndex
 	for i, duty := range duties.CurrentEpochDuties {
 		if slice.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
-			proposerIndex = types.ValidatorIndex(i)
+			proposerIndex = primitives.ValidatorIndex(i)
 			break
 		}
 	}
@@ -235,7 +237,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	// If the proposer index is in the second validator client, we connect to
 	// the corresponding beacon node instead.
-	if proposerIndex >= types.ValidatorIndex(uint64(validatorsPerNode)) {
+	if proposerIndex >= primitives.ValidatorIndex(uint64(validatorsPerNode)) {
 		valClient = eth.NewBeaconNodeValidatorClient(conns[1])
 	}
 
@@ -251,7 +253,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 				DepositRoot:  bytesutil.PadTo([]byte("bad deposit root"), hashLen),
 				DepositCount: 1,
 			},
-			RandaoReveal:      bytesutil.PadTo([]byte("bad randao"), params.BeaconConfig().BLSSignatureLength),
+			RandaoReveal:      bytesutil.PadTo([]byte("bad randao"), fieldparams.BLSSignatureLength),
 			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
 			ProposerSlashings: []*eth.ProposerSlashing{},
 			AttesterSlashings: []*eth.AttesterSlashing{},
@@ -281,7 +283,15 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
 	// Only broadcasting the attestation to one node also helps test slashing propagation.
-	if _, err = valClient.ProposeBlock(ctx, signedBlk); err == nil {
+	wb, err := blocks.NewSignedBeaconBlock(signedBlk)
+	if err != nil {
+		return err
+	}
+	b, err := wb.PbGenericBlock()
+	if err != nil {
+		return err
+	}
+	if _, err = valClient.ProposeBeaconBlock(ctx, b); err == nil {
 		return errors.New("expected block to fail processing")
 	}
 	slashedIndices = append(slashedIndices, uint64(proposerIndex))

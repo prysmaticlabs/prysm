@@ -4,32 +4,32 @@ import (
 	"context"
 	"math/big"
 
-	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	fastssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // eth1DataMajorityVote determines the appropriate eth1data for a block proposal using
 // an algorithm called Voting with the Majority. The algorithm works as follows:
-//  - Determine the timestamp for the start slot for the eth1 voting period.
-//  - Determine the earliest and latest timestamps that a valid block can have.
-//  - Determine the first block not before the earliest timestamp. This block is the lower bound.
-//  - Determine the last block not after the latest timestamp. This block is the upper bound.
-//  - If the last block is too early, use current eth1data from the beacon state.
-//  - Filter out votes on unknown blocks and blocks which are outside of the range determined by the lower and upper bounds.
-//  - If no blocks are left after filtering votes, use eth1data from the latest valid block.
-//  - Otherwise:
-//    - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
-//    - This vote's block is the eth1 block to use for the block proposal.
+//   - Determine the timestamp for the start slot for the eth1 voting period.
+//   - Determine the earliest and latest timestamps that a valid block can have.
+//   - Determine the first block not before the earliest timestamp. This block is the lower bound.
+//   - Determine the last block not after the latest timestamp. This block is the upper bound.
+//   - If the last block is too early, use current eth1data from the beacon state.
+//   - Filter out votes on unknown blocks and blocks which are outside of the range determined by the lower and upper bounds.
+//   - If no blocks are left after filtering votes, use eth1data from the latest valid block.
+//   - Otherwise:
+//   - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
+//   - This vote's block is the eth1 block to use for the block proposal.
 func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.BeaconState) (*ethpb.Eth1Data, error) {
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
 	defer cancel()
@@ -40,21 +40,22 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
 	}
-	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
 		return vs.randomETH1DataVote(ctx)
 	}
 	eth1DataNotification = false
 
-	eth1FollowDistance := params.BeaconConfig().Eth1FollowDistance
-	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
-	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
+	genesisTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
+	followDistanceSeconds := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
+	latestValidTime := votingPeriodStartTime - followDistanceSeconds
+	earliestValidTime := votingPeriodStartTime - 2*followDistanceSeconds
 
-	if !features.Get().EnableGetBlockOptimizations {
-		_, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
-		if err != nil {
-			log.WithError(err).Error("Could not get last block by earliest valid time")
-			return vs.randomETH1DataVote(ctx)
-		}
+	// Special case for starting from a pre-mined genesis: the eth1 vote should be genesis until the chain has advanced
+	// by ETH1_FOLLOW_DISTANCE. The head state should maintain the same ETH1Data until this condition has passed, so
+	// trust the existing head for the right eth1 vote until we can get a meaningful value from the deposit contract.
+	if latestValidTime < genesisTime+followDistanceSeconds {
+		log.WithField("genesisTime", genesisTime).WithField("latestValidTime", latestValidTime).Warn("voting period before genesis + follow distance, using eth1data from head")
+		return vs.HeadFetcher.HeadETH1Data(), nil
 	}
 
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
@@ -72,13 +73,13 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	}
 
 	if lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount {
-		hash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
+		h, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
 		if err != nil {
 			log.WithError(err).Error("Could not get hash of last block by latest valid time")
 			return vs.randomETH1DataVote(ctx)
 		}
 		return &ethpb.Eth1Data{
-			BlockHash:    hash.Bytes(),
+			BlockHash:    h.Bytes(),
 			DepositCount: lastBlockDepositCount,
 			DepositRoot:  lastBlockDepositRoot[:],
 		}, nil
@@ -86,8 +87,8 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	return vs.HeadFetcher.HeadETH1Data(), nil
 }
 
-func (vs *Server) slotStartTime(slot types.Slot) uint64 {
-	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
+func (vs *Server) slotStartTime(slot primitives.Slot) uint64 {
+	startTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	return slots.VotingPeriodStartTime(startTime, slot)
 }
 
@@ -115,6 +116,9 @@ func (vs *Server) canonicalEth1Data(
 		canonicalEth1Data = beaconState.Eth1Data()
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data().BlockHash)
 	}
+	if features.Get().DisableStakinContractCheck && eth1BlockHash == [32]byte{} {
+		return canonicalEth1Data, new(big.Int).SetInt64(0), nil
+	}
 	_, canonicalEth1DataHeight, err := vs.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
@@ -122,7 +126,7 @@ func (vs *Server) canonicalEth1Data(
 	return canonicalEth1Data, canonicalEth1DataHeight, nil
 }
 
-func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb.Eth1Data, error) {
+func (vs *Server) mockETH1DataVote(ctx context.Context, slot primitives.Slot) (*ethpb.Eth1Data, error) {
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now mocked.")
 		eth1DataNotification = true
@@ -137,7 +141,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
 	slotInVotingPeriod := slot.ModSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +161,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now random.")
 		eth1DataNotification = true
 	}
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, err
 	}

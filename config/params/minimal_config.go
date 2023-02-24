@@ -3,14 +3,8 @@ package params
 import (
 	"math"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
-
-// UseMinimalConfig for beacon chain services.
-func UseMinimalConfig() {
-	beaconConfig = MinimalSpecConfig()
-}
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
 func MinimalSpecConfig() *BeaconChainConfig {
@@ -35,6 +29,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 
 	// Initial values
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
+	minimalConfig.ETH1AddressWithdrawalPrefixByte = byte(1)
 
 	// Time parameters
 	minimalConfig.SecondsPerSlot = 6
@@ -72,6 +67,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxAttestations = 128
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
+	minimalConfig.MaxWithdrawalsPerPayload = 4
+	minimalConfig.MaxValidatorsPerWithdrawalsSweep = 16
 
 	// Signature domains
 	minimalConfig.DomainBeaconProposer = bytesutil.ToBytes4(bytesutil.Bytes4(0))
@@ -88,15 +85,11 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// New Altair params
 	minimalConfig.AltairForkVersion = []byte{1, 0, 0, 1} // Highest byte set to 0x01 to avoid collisions with mainnet versioning
 	minimalConfig.AltairForkEpoch = math.MaxUint64
-	minimalConfig.MergeForkVersion = []byte{2, 0, 0, 1}
-	minimalConfig.MergeForkEpoch = math.MaxUint64
-	minimalConfig.ShardingForkVersion = []byte{3, 0, 0, 1}
-	minimalConfig.ShardingForkEpoch = math.MaxUint64
-	// Manually set fork version schedule here.
-	minimalConfig.ForkVersionSchedule = map[[4]byte]types.Epoch{
-		{0, 0, 0, 1}: 0,
-		{1, 0, 0, 1}: math.MaxUint64,
-	}
+	minimalConfig.BellatrixForkVersion = []byte{2, 0, 0, 1}
+	minimalConfig.BellatrixForkEpoch = math.MaxUint64
+	minimalConfig.CapellaForkVersion = []byte{3, 0, 0, 1}
+	minimalConfig.CapellaForkEpoch = math.MaxUint64
+
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
@@ -105,9 +98,12 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.
 	minimalConfig.DepositNetworkID = 5 // Network ID of eth1 goerli.
 	minimalConfig.DepositContractAddress = "0x1234567890123456789012345678901234567890"
+	// 2**256-2**10 for fake minimal network
+	minimalConfig.TerminalTotalDifficulty = "115792089237316195423570985008687907853269984665640564039457584007913129638912"
 
-	minimalConfig.ConfigName = ConfigNames[Minimal]
+	minimalConfig.ConfigName = MinimalName
 	minimalConfig.PresetBase = "minimal"
 
+	minimalConfig.InitializeForkSchedule()
 	return minimalConfig
 }

@@ -1,9 +1,9 @@
-// +build libfuzzer
+//go:build fuzz
 
 // This file is used in fuzzer builds to bypass proposer indices caches.
 package cache
 
-import types "github.com/prysmaticlabs/eth2-types"
+import "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 // FakeProposerIndicesCache is a struct with 1 queue for looking up proposer indices by root.
 type FakeProposerIndicesCache struct {
@@ -21,11 +21,15 @@ func (c *FakeProposerIndicesCache) AddProposerIndices(p *ProposerIndices) error 
 }
 
 // ProposerIndices returns the proposer indices of a block root seed.
-func (c *FakeProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.ValidatorIndex, error) {
+func (c *FakeProposerIndicesCache) ProposerIndices(r [32]byte) ([]primitives.ValidatorIndex, error) {
 	return nil, nil
 }
 
 // HasProposerIndices returns the proposer indices of a block root seed.
 func (c *FakeProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
 	return false, nil
+}
+
+func (c *FakeProposerIndicesCache) Len() int {
+	return 0
 }

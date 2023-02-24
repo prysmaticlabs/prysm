@@ -3,7 +3,6 @@ package testdata
 import (
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -23,5 +22,5 @@ func UseOsMkdirAllAndWriteFile() {
 	p := filepath.Join(tempDir(), fmt.Sprintf("/%d", randPath))
 	_ = os.MkdirAll(p, os.ModePerm) // want "os and ioutil dir and file writing functions are not permissions-safe, use shared/file"
 	someFile := filepath.Join(p, "some.txt")
-	_ = ioutil.WriteFile(someFile, []byte("hello"), os.ModePerm) // want "os and ioutil dir and file writing functions are not permissions-safe, use shared/file"
+	_ = os.WriteFile(someFile, []byte("hello"), os.ModePerm) // want "os and ioutil dir and file writing functions are not permissions-safe, use shared/file"
 }

@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 )
 
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
@@ -38,6 +37,10 @@ func ProcessRequestContainerFields(requestContainer interface{}) ErrorJson {
 			tag: "hex",
 			f:   hexToBase64Processor,
 		},
+		{
+			tag: "uint256",
+			f:   uint256ToBase64Processor,
+		},
 	}); err != nil {
 		return InternalServerErrorWithMessage(err, "could not process request data")
 	}
@@ -52,7 +55,7 @@ func SetRequestBodyToRequestContainer(requestContainer interface{}, req *http.Re
 		return InternalServerErrorWithMessage(err, "could not marshal request")
 	}
 	// Set the body to the new JSON.
-	req.Body = ioutil.NopCloser(bytes.NewReader(j))
+	req.Body = io.NopCloser(bytes.NewReader(j))
 	req.Header.Set("Content-Length", strconv.Itoa(len(j)))
 	req.ContentLength = int64(len(j))
 	return nil
@@ -75,11 +78,14 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 }
 
 // ProxyRequest proxies the request to grpc-gateway.
-func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
+func (m *ApiProxyMiddleware) ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
 	// We do not use http.DefaultClient because it does not have any timeout.
-	netClient := &http.Client{Timeout: time.Minute * 2}
+	netClient := &http.Client{Timeout: m.Timeout}
 	grpcResp, err := netClient.Do(req)
 	if err != nil {
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			return nil, TimeoutError()
+		}
 		return nil, InternalServerErrorWithMessage(err, "could not proxy request")
 	}
 	if grpcResp == nil {
@@ -90,7 +96,7 @@ func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
 
 // ReadGrpcResponseBody reads the body from the grpc-gateway's response.
 func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
-	body, err := ioutil.ReadAll(r)
+	body, err := io.ReadAll(r)
 	if err != nil {
 		return nil, InternalServerErrorWithMessage(err, "could not read response body")
 	}
@@ -98,6 +104,8 @@ func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
 }
 
 // HandleGrpcResponseError acts on an error that resulted from a grpc-gateway's response.
+// Whether there was an error is indicated by the bool return value. In case of an error,
+// there is no need to write to the response because it's taken care of by the function.
 func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []byte, w http.ResponseWriter) (bool, ErrorJson) {
 	responseHasError := false
 	if err := json.Unmarshal(respBody, errJson); err != nil {
@@ -111,9 +119,14 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []
 				w.Header().Set(h, v)
 			}
 		}
-		// Set code to HTTP code because unmarshalled body contained gRPC code.
-		errJson.SetCode(resp.StatusCode)
-		WriteError(w, errJson, resp.Header)
+		// Handle gRPC timeout.
+		if resp.StatusCode == http.StatusGatewayTimeout {
+			WriteError(w, TimeoutError(), resp.Header)
+		} else {
+			// Set code to HTTP code because unmarshalled body contained gRPC code.
+			errJson.SetCode(resp.StatusCode)
+			WriteError(w, errJson, resp.Header)
+		}
 	}
 	return responseHasError, nil
 }
@@ -139,12 +152,20 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 			f:   base64ToHexProcessor,
 		},
 		{
+			tag: "address",
+			f:   base64ToChecksumAddressProcessor,
+		},
+		{
 			tag: "enum",
 			f:   enumToLowercaseProcessor,
 		},
 		{
 			tag: "time",
 			f:   timeToUnixProcessor,
+		},
+		{
+			tag: "uint256",
+			f:   base64ToUint256Processor,
 		},
 	}); err != nil {
 		return InternalServerErrorWithMessage(err, "could not process response data")
@@ -187,7 +208,7 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 		} else {
 			w.WriteHeader(grpcResp.StatusCode)
 		}
-		if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
+		if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(responseJson))); err != nil {
 			return InternalServerErrorWithMessage(err, "could not write response message")
 		}
 	} else {
@@ -241,7 +262,7 @@ func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.He
 	w.Header().Set("Content-Length", strconv.Itoa(len(j)))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(errJson.StatusCode())
-	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(j))); err != nil {
+	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(j))); err != nil {
 		log.WithError(err).Error("Could not write error message")
 	}
 }

@@ -4,14 +4,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestExtractBlockDataType(t *testing.T) {
@@ -19,6 +19,8 @@ func TestExtractBlockDataType(t *testing.T) {
 	genDigest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
 	altairDigest, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
+	require.NoError(t, err)
+	bellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
 
 	type args struct {
@@ -28,7 +30,7 @@ func TestExtractBlockDataType(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    block.SignedBeaconBlock
+		want    interfaces.ReadOnlySignedBeaconBlock
 		wantErr bool
 	}{
 		{
@@ -37,7 +39,12 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: []byte{},
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{}),
+
+			want: func() interfaces.ReadOnlySignedBeaconBlock {
+				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}})
+				require.NoError(t, err)
+				return wsb
+			}(),
 			wantErr: false,
 		},
 		{
@@ -64,7 +71,11 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: genDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{}),
+			want: func() interfaces.ReadOnlySignedBeaconBlock {
+				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}})
+				require.NoError(t, err)
+				return wsb
+			}(),
 			wantErr: false,
 		},
 		{
@@ -73,8 +84,21 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: altairDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want: func() block.SignedBeaconBlock {
-				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+			want: func() interfaces.ReadOnlySignedBeaconBlock {
+				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}}})
+				require.NoError(t, err)
+				return wsb
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "bellatrix fork version",
+			args: args{
+				digest: bellatrixDigest[:],
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want: func() interfaces.ReadOnlySignedBeaconBlock {
+				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}}})
 				require.NoError(t, err)
 				return wsb
 			}(),

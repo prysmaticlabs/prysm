@@ -6,15 +6,15 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
@@ -42,11 +42,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if err != nil {
 		return nil, err
 	}
-	if epochStartSlot > baseState.Slot() {
-		baseState, err = transition.ProcessSlots(ctx, baseState, epochStartSlot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
-		}
+	baseState, err = transition.ProcessSlotsIfPossible(ctx, baseState, epochStartSlot)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 	}
 
 	// Sharing the same state across caches is perfectly fine here, the fetching
@@ -61,10 +59,10 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
-func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
-	currentSlot := types.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
+func verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
+	currentSlot := primitives.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := slots.ToEpoch(currentSlot)
-	var prevEpoch types.Epoch
+	var prevEpoch primitives.Epoch
 	// Prevents previous epoch under flow
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
@@ -78,16 +76,11 @@ func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime u
 // verifyBeaconBlock verifies beacon head block is known and not from the future.
 func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.AttestationData) error {
 	r := bytesutil.ToBytes32(data.BeaconBlockRoot)
-	b, err := s.cfg.BeaconDB.Block(ctx, r)
+	b, err := s.getBlock(ctx, r)
 	if err != nil {
 		return err
 	}
-	// If the block does not exist in db, check again if block exists in initial sync block cache.
-	// This could happen as the node first syncs to head.
-	if (b == nil || b.IsNil()) && s.hasInitSyncBlock(r) {
-		b = s.getInitSyncBlock(r)
-	}
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	if b.Block().Slot() > data.Slot {

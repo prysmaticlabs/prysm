@@ -7,7 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 )
 
 type nextSlotCache struct {
@@ -35,7 +35,7 @@ var (
 func NextSlotState(_ context.Context, root []byte) (state.BeaconState, error) {
 	nsc.RLock()
 	defer nsc.RUnlock()
-	if !bytes.Equal(root, nsc.root) {
+	if !bytes.Equal(root, nsc.root) || bytes.Equal(root, []byte{}) {
 		nextSlotCacheMiss.Inc()
 		return nil, nil
 	}

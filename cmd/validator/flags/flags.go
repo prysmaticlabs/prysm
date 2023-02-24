@@ -3,11 +3,13 @@
 package flags
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,6 +39,12 @@ var (
 		Name:  "beacon-rpc-gateway-provider",
 		Usage: "Beacon node RPC gateway provider endpoint",
 		Value: "127.0.0.1:3500",
+	}
+	// BeaconRESTApiProviderFlag defines a beacon node REST API endpoint.
+	BeaconRESTApiProviderFlag = &cli.StringFlag{
+		Name:  "beacon-rest-api-provider",
+		Usage: "Beacon node REST API provider endpoint",
+		Value: "http://127.0.0.1:3500",
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = &cli.StringFlag{
@@ -117,7 +125,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200,http://0.0.0.0:4242,http://0.0.0.0:4200"}
+		Value: "http://localhost:7500,http://127.0.0.1:7500,http://0.0.0.0:7500,http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200,http://0.0.0.0:4242,http://127.0.0.1:4200,http://0.0.0.0:4200,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000"}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
@@ -159,6 +167,11 @@ var (
 	MnemonicFileFlag = &cli.StringFlag{
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
+	}
+	// MnemonicLanguageFlag is used to specify the language of the mnemonic.
+	MnemonicLanguageFlag = &cli.StringFlag{
+		Name:  "mnemonic-language",
+		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish",
 	}
 	// ShowDepositDataFlag for accounts.
 	ShowDepositDataFlag = &cli.BoolFlag{
@@ -211,6 +224,11 @@ var (
 	ExitAllFlag = &cli.BoolFlag{
 		Name:  "exit-all",
 		Usage: "Exit all validators. This will still require the staker to confirm a userprompt for the action",
+	}
+	// ForceExitFlag to exit without displaying the confirmation prompt.
+	ForceExitFlag = &cli.BoolFlag{
+		Name:  "force-exit",
+		Usage: "Exit without displaying the confirmation prompt",
 	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
@@ -267,6 +285,24 @@ var (
 		Usage: "/path/to/ca.crt for establishing a secure, TLS gRPC connection to a remote signer server",
 		Value: "",
 	}
+	// Web3SignerURLFlag defines the URL for a web3signer to connect to.
+	// example:--validators-external-signer-url=http://localhost:9000
+	// web3signer documentation can be found in Consensys' web3signer project docs
+	Web3SignerURLFlag = &cli.StringFlag{
+		Name:  "validators-external-signer-url",
+		Usage: "URL for consensys' web3signer software to use with the Prysm validator client",
+		Value: "",
+	}
+
+	// Web3SignerPublicValidatorKeysFlag defines a comma-separated list of hex string public keys or external url for web3signer to use for validator signing.
+	// example with external url: --validators-external-signer-public-keys= https://web3signer.com/api/v1/eth2/publicKeys
+	// example with public key: --validators-external-signer-public-keys=0xa99a...e44c,0xb89b...4a0b
+	// web3signer documentation can be found in Consensys' web3signer project docs```
+	Web3SignerPublicValidatorKeysFlag = &cli.StringSliceFlag{
+		Name:  "validators-external-signer-public-keys",
+		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
+	}
+
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",
@@ -297,11 +333,41 @@ var (
 		Name:  "graffiti-file",
 		Usage: "The path to a YAML file with graffiti values",
 	}
-	// EnableDutyCountDown enables more verbose logging for counting down to duty.
-	EnableDutyCountDown = &cli.BoolFlag{
-		Name:  "enable-duty-count-down",
-		Usage: "Enables more verbose logging for counting down to duty",
-		Value: false,
+	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
+	ProposerSettingsFlag = &cli.StringFlag{
+		Name:  "proposer-settings-file",
+		Usage: "Set path to a YAML or JSON file containing validator settings used when proposing blocks such as (fee recipient and gas limit) (i.e. --proposer-settings-file=/path/to/proposer.json). File format found in docs",
+		Value: "",
+	}
+	// ProposerSettingsURLFlag defines the path or URL to a file with proposer config.
+	ProposerSettingsURLFlag = &cli.StringFlag{
+		Name:  "proposer-settings-url",
+		Usage: "Set URL to a REST endpoint containing validator settings used when proposing blocks such as (fee recipient) (i.e. --proposer-settings-url=https://example.com/api/getConfig). File format found in docs",
+		Value: "",
+	}
+
+	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
+	SuggestedFeeRecipientFlag = &cli.StringFlag{
+		Name: "suggested-fee-recipient",
+		Usage: "Sets ALL validators' mapping to a suggested eth address to receive gas fees when proposing a block." +
+			" note that this is only a suggestion when integrating with a Builder API, which may choose to specify a different fee recipient as payment for the blocks it builds." +
+			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
+		Value: params.BeaconConfig().EthBurnAddressHex,
+	}
+
+	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
+	EnableBuilderFlag = &cli.BoolFlag{
+		Name:    "enable-builder",
+		Usage:   "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
+		Value:   false,
+		Aliases: []string{"enable-validator-registration"},
+	}
+
+	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
+	BuilderGasLimitFlag = &cli.StringFlag{
+		Name:  "suggested-gas-limit",
+		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
+		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 )
 

@@ -7,9 +7,13 @@ go_library(
         "error.go",
         "interface.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/crypto/bls/common",
+    importpath = "github.com/prysmaticlabs/prysm/v3/crypto/bls/common",
     visibility = [
+        "//beacon-chain/core/blocks:__subpackages__",
+        "//beacon-chain/operations/blstoexec:__pkg__",
+        "//beacon-chain/rpc/eth/beacon:__subpackages__",
         "//crypto/bls:__subpackages__",
         "//testing:__subpackages__",
     ],
+    deps = ["//config/fieldparams:go_default_library"],
 )

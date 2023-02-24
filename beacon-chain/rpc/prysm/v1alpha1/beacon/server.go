@@ -7,19 +7,19 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
@@ -27,12 +27,12 @@ import (
 type Server struct {
 	BeaconDB                    db.ReadOnlyDatabase
 	Ctx                         context.Context
-	ChainStartFetcher           powchain.ChainStartFetcher
+	ChainStartFetcher           execution.ChainStartFetcher
 	HeadFetcher                 blockchain.HeadFetcher
 	CanonicalFetcher            blockchain.CanonicalFetcher
 	FinalizationFetcher         blockchain.FinalizationFetcher
 	DepositFetcher              depositcache.DepositFetcher
-	BlockFetcher                powchain.POWBlockFetcher
+	BlockFetcher                execution.POWBlockFetcher
 	GenesisTimeFetcher          blockchain.TimeFetcher
 	StateNotifier               statefeed.Notifier
 	BlockNotifier               blockfeed.Notifier
@@ -40,10 +40,12 @@ type Server struct {
 	Broadcaster                 p2p.Broadcaster
 	AttestationsPool            attestations.Pool
 	SlashingsPool               slashings.PoolManager
-	CanonicalStateChan          chan *ethpb.BeaconState
 	ChainStartChan              chan time.Time
 	ReceivedAttestationsBuffer  chan *ethpb.Attestation
 	CollectedAttestationsBuffer chan []*ethpb.Attestation
 	StateGen                    stategen.StateManager
 	SyncChecker                 sync.Checker
+	ReplayerBuilder             stategen.ReplayerBuilder
+	HeadUpdater                 blockchain.HeadUpdater
+	OptimisticModeFetcher       blockchain.OptimisticModeFetcher
 }

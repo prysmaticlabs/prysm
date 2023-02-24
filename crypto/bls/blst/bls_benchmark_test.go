@@ -1,14 +1,13 @@
-// +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
-// +build !blst_disabled
+//go:build ((linux && amd64) || (linux && arm64) || (darwin && amd64) || (darwin && arm64) || (windows && amd64)) && !blst_disabled
 
 package blst_test
 
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
-	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func BenchmarkSignature_Verify(b *testing.B) {

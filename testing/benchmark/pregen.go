@@ -4,13 +4,13 @@ package benchmark
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ValidatorCount is for declaring how many validators the benchmarks will be
@@ -45,7 +45,7 @@ func PreGenState1Epoch() (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBytes, err := ioutil.ReadFile(path) // #nosec G304
+	beaconBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func PreGenState1Epoch() (state.BeaconState, error) {
 	if err := beaconState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, err
 	}
-	return v1.InitializeFromProto(beaconState)
+	return state_native.InitializeFromProtoPhase0(beaconState)
 }
 
 // PreGenstateFullEpochs unmarshals the pre-generated beacon state after 2 epoch of full block processing and returns it.
@@ -62,7 +62,7 @@ func PreGenstateFullEpochs() (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBytes, err := ioutil.ReadFile(path) // #nosec G304
+	beaconBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func PreGenstateFullEpochs() (state.BeaconState, error) {
 	if err := beaconState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, err
 	}
-	return v1.InitializeFromProto(beaconState)
+	return state_native.InitializeFromProtoPhase0(beaconState)
 }
 
 // PreGenFullBlock unmarshals the pre-generated signed beacon block containing an epochs worth of attestations and returns it.
@@ -79,7 +79,7 @@ func PreGenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockBytes, err := ioutil.ReadFile(path) // #nosec G304
+	blockBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -92,14 +92,19 @@ func PreGenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 
 // SetBenchmarkConfig changes the beacon config to match the requested amount of
 // attestations set to AttestationsPerEpoch.
-func SetBenchmarkConfig() {
+func SetBenchmarkConfig() (func(), error) {
 	maxAtts := AttestationsPerEpoch
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	committeeSize := (ValidatorCount / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	c.ShardCommitteePeriod = 0
 	c.MinValidatorWithdrawabilityDelay = 0
 	c.TargetCommitteeSize = committeeSize
 	c.MaxAttestations = maxAtts
-	params.OverrideBeaconConfig(c)
+	undo, err := params.SetActiveWithUndo(c)
+	return func() {
+		if err := undo(); err != nil {
+			panic(err)
+		}
+	}, err
 }

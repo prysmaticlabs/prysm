@@ -1,4 +1,4 @@
-// +build !develop
+//go:build !develop
 
 package params_test
 

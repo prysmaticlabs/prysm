@@ -6,15 +6,15 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -32,6 +32,9 @@ func RunFinalityTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "finality/finality/pyspec_tests")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "phase0", "finality/finality/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -41,7 +44,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &ethpb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := v1.InitializeFromProto(beaconStateBase)
+			beaconState, err := state_native.InitializeFromProtoPhase0(beaconStateBase)
 			require.NoError(t, err)
 
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
@@ -60,9 +63,11 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlock{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				processedState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+				wsb, err := blocks.NewSignedBeaconBlock(block)
 				require.NoError(t, err)
-				beaconState, ok = processedState.(*v1.BeaconState)
+				processedState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
+				require.NoError(t, err)
+				beaconState, ok = processedState.(*state_native.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -72,10 +77,10 @@ func RunFinalityTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			postBeaconState := &ethpb.BeaconState{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-			pbState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+			pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
-				diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
+				diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
 				t.Log(diff)
 				t.Fatal("Post state does not match expected")
 			}

@@ -16,9 +16,9 @@ import (
 	"reflect"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -28,7 +28,7 @@ var log = logrus.WithField("prefix", "forkchoice_checker")
 
 type endpoint []string
 
-func (e *endpoint) String() string {
+func (_ *endpoint) String() string {
 	return "gRPC endpoints"
 }
 
@@ -49,7 +49,7 @@ func main() {
 	for _, endpt := range endpts {
 		conn, err := grpc.Dial(endpt, grpc.WithInsecure())
 		if err != nil {
-			log.Fatalf("fail to dial: %v", err)
+			log.WithError(err).Fatal("fail to dial")
 		}
 		clients[endpt] = pb.NewBeaconChainClient(conn)
 	}
@@ -108,7 +108,7 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 			if (head1.HeadSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
 				p, err := clients[endpt2].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
 					QueryFilter: &pb.GetValidatorParticipationRequest_Epoch{
-						Epoch: types.Epoch(head2.HeadSlot / params.BeaconConfig().SlotsPerEpoch),
+						Epoch: primitives.Epoch(head2.HeadSlot / params.BeaconConfig().SlotsPerEpoch),
 					},
 				})
 				if err != nil {

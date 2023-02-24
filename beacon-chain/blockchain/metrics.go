@@ -6,15 +6,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 var (
@@ -130,18 +130,85 @@ var (
 		Name: "sync_head_state_hit",
 		Help: "The number of sync head state requests that are present in the cache.",
 	})
-	stateBalanceCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "state_balance_cache_hit",
-		Help: "Count the number of state balance cache hits.",
+	newPayloadValidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_valid_node_count",
+		Help: "Count the number of valid nodes after newPayload EE call",
 	})
-	stateBalanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "state_balance_cache_miss",
-		Help: "Count the number of state balance cache hits.",
+	newPayloadOptimisticNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_optimistic_node_count",
+		Help: "Count the number of optimistic nodes after newPayload EE call",
 	})
+	newPayloadInvalidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_invalid_node_count",
+		Help: "Count the number of invalid nodes after newPayload EE call",
+	})
+	forkchoiceUpdatedValidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "forkchoice_updated_valid_node_count",
+		Help: "Count the number of valid nodes after forkchoiceUpdated EE call",
+	})
+	forkchoiceUpdatedOptimisticNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "forkchoice_updated_optimistic_node_count",
+		Help: "Count the number of optimistic nodes after forkchoiceUpdated EE call",
+	})
+	forkchoiceUpdatedInvalidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "forkchoice_updated_invalid_node_count",
+		Help: "Count the number of invalid nodes after forkchoiceUpdated EE call",
+	})
+	txsPerSlotCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "txs_per_slot_count",
+		Help: "Count the number of txs per slot",
+	})
+	missedPayloadIDFilledCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "missed_payload_id_filled_count",
+		Help: "",
+	})
+	onBlockProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "on_block_processing_milliseconds",
+		Help: "Total time in milliseconds to complete a call to onBlock()",
+	})
+	stateTransitionProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "state_transition_processing_milliseconds",
+		Help: "Total time to call a state transition in onBlock()",
+	})
+	processAttsElapsedTime = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "process_attestations_milliseconds",
+			Help:    "Captures latency for process attestations (forkchoice) in milliseconds",
+			Buckets: []float64{1, 5, 20, 100, 500, 1000},
+		},
+	)
+	newAttHeadElapsedTime = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "new_att_head_milliseconds",
+			Help:    "Captures latency for new attestation head in milliseconds",
+			Buckets: []float64{1, 5, 20, 100, 500, 1000},
+		},
+	)
+	newBlockHeadElapsedTime = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "new_block_head_milliseconds",
+			Help:    "Captures latency for new block head in milliseconds",
+			Buckets: []float64{1, 5, 20, 100, 500, 1000},
+		},
+	)
+	reorgDistance = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "reorg_distance",
+			Help:    "Captures distance of reorgs. Distance is defined as the number of blocks between the old head and the new head",
+			Buckets: []float64{1, 2, 4, 8, 16, 32, 64},
+		},
+	)
+	reorgDepth = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "reorg_depth",
+			Help:    "Captures depth of reorgs. Depth is defined as the number of blocks between the head and the common ancestor",
+			Buckets: []float64{1, 2, 4, 8, 16, 32},
+		},
+	)
 )
 
 // reportSlotMetrics reports slot related metrics.
-func reportSlotMetrics(stateSlot, headSlot, clockSlot types.Slot, finalizedCheckpoint *ethpb.Checkpoint) {
+func reportSlotMetrics(stateSlot, headSlot, clockSlot primitives.Slot, finalizedCheckpoint *ethpb.Checkpoint) {
 	clockTimeSlot.Set(float64(clockSlot))
 	beaconSlot.Set(float64(stateSlot))
 	beaconHeadSlot.Set(float64(headSlot))
@@ -153,7 +220,7 @@ func reportSlotMetrics(stateSlot, headSlot, clockSlot types.Slot, finalizedCheck
 
 // reportEpochMetrics reports epoch related metrics.
 func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconState) error {
-	currentEpoch := types.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
+	currentEpoch := primitives.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
 
 	// Validator instances
 	pendingInstances := 0
@@ -172,9 +239,9 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	slashingEffectiveBalance := uint64(0)
 
 	for i, validator := range postState.Validators() {
-		bal, err := postState.BalanceAtIndex(types.ValidatorIndex(i))
+		bal, err := postState.BalanceAtIndex(primitives.ValidatorIndex(i))
 		if err != nil {
-			log.Errorf("Could not load validator balance: %v", err)
+			log.WithError(err).Error("Could not load validator balance")
 			continue
 		}
 		if validator.Slashed {
@@ -242,9 +309,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	var b *precompute.Balance
 	var v []*precompute.Validator
 	var err error
-	switch headState.Version() {
-	case version.Phase0:
-		// Validator participation should be viewed on the canonical chain.
+
+	if headState.Version() == version.Phase0 {
 		v, b, err = precompute.New(ctx, headState)
 		if err != nil {
 			return err
@@ -253,7 +319,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	case version.Altair:
+	} else if headState.Version() >= version.Altair {
 		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return err
@@ -262,9 +328,10 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	default:
-		return errors.Errorf("invalid state type provided: %T", headState.InnerStateUnsafe())
+	} else {
+		return errors.Errorf("invalid state type provided: %T", headState.ToProtoUnsafe())
 	}
+
 	prevEpochActiveBalances.Set(float64(b.ActivePrevEpoch))
 	prevEpochSourceBalances.Set(float64(b.PrevEpochAttested))
 	prevEpochTargetBalances.Set(float64(b.PrevEpochTargetAttested))
@@ -278,7 +345,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	return nil
 }
 
-func reportAttestationInclusion(blk block.BeaconBlock) {
+func reportAttestationInclusion(blk interfaces.ReadOnlyBeaconBlock) {
 	for _, att := range blk.Body().Attestations() {
 		attestationInclusionDelay.Observe(float64(blk.Slot() - att.Data.Slot))
 	}

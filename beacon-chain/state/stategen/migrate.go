@@ -5,18 +5,24 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // MigrateToCold advances the finalized info in between the cold and hot state sections.
 // It moves the recent finalized states from the hot section to the cold section and
-// only preserve the ones that's on archived point.
+// only preserves the ones that are on archived point.
 func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
+
+	// When migrating states we choose to acquire the migration lock before
+	// proceeding. This is to prevent multiple migration routines from overwriting each
+	// other.
+	s.migrationLock.Lock()
+	defer s.migrationLock.Unlock()
 
 	s.finalizedInfo.lock.RLock()
 	oldFSlot := s.finalizedInfo.slot
@@ -31,7 +37,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 		return nil
 	}
 
-	// Start at previous finalized slot, stop at current finalized slot.
+	// Start at previous finalized slot, stop at current finalized slot (it will be handled in the next migration).
 	// If the slot is on archived point, save the state of that slot to the DB.
 	for slot := oldFSlot; slot < fSlot; slot++ {
 		if ctx.Err() != nil {
@@ -55,24 +61,20 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				aRoot = cached.root
 				aState = cached.state
 			} else {
-				blks, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot)
+				_, roots, err := s.beaconDB.HighestRootsBelowSlot(ctx, slot)
 				if err != nil {
 					return err
 				}
 				// Given the block has been finalized, the db should not have more than one block in a given slot.
 				// We should error out when this happens.
-				if len(blks) != 1 {
+				if len(roots) != 1 {
 					return errUnknownBlock
 				}
-				missingRoot, err := blks[0].Block().HashTreeRoot()
-				if err != nil {
-					return err
-				}
-				aRoot = missingRoot
-				// There's no need to generate the state if the state already exists on the DB.
+				aRoot = roots[0]
+				// There's no need to generate the state if the state already exists in the DB.
 				// We can skip saving the state.
 				if !s.beaconDB.HasState(ctx, aRoot) {
-					aState, err = s.StateByRoot(ctx, missingRoot)
+					aState, err = s.StateByRoot(ctx, aRoot)
 					if err != nil {
 						return err
 					}
@@ -80,13 +82,14 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			}
 
 			if s.beaconDB.HasState(ctx, aRoot) {
-				// Remove hot state DB root to prevent it gets deleted later when we turn hot state save DB mode off.
+				// If you are migrating a state and its already part of the hot state cache saved to the db,
+				// you can just remove it from the hot state cache as it becomes redundant.
 				s.saveHotStateDB.lock.Lock()
-				roots := s.saveHotStateDB.savedStateRoots
+				roots := s.saveHotStateDB.blockRootsOfSavedStates
 				for i := 0; i < len(roots); i++ {
 					if aRoot == roots[i] {
-						s.saveHotStateDB.savedStateRoots = append(roots[:i], roots[i+1:]...)
-						// There shouldn't be duplicated roots in `savedStateRoots`.
+						s.saveHotStateDB.blockRootsOfSavedStates = append(roots[:i], roots[i+1:]...)
+						// There shouldn't be duplicated roots in `blockRootsOfSavedStates`.
 						// Break here is ok.
 						break
 					}
@@ -107,7 +110,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	}
 
 	// Update finalized info in memory.
-	fInfo, ok, err := s.epochBoundaryStateCache.getByRoot(fRoot)
+	fInfo, ok, err := s.epochBoundaryStateCache.getByBlockRoot(fRoot)
 	if err != nil {
 		return err
 	}

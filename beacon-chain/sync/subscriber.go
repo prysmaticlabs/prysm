@@ -8,22 +8,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/messagehandler"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/messagehandler"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -49,7 +50,7 @@ func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Messag
 }
 
 // Register PubSub subscribers
-func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
+func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 	s.subscribe(
 		p2p.BlockSubnetTopicFormat,
 		s.validateBeaconBlockPubSub,
@@ -119,12 +120,22 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 			)
 		}
 	}
+
+	// New Gossip Topic in Capella
+	if epoch >= params.BeaconConfig().CapellaForkEpoch {
+		s.subscribe(
+			p2p.BlsToExecutionChangeSubnetTopicFormat,
+			s.validateBlsToExecutionChange,
+			s.blsToExecutionChangeSubscriber,
+			digest,
+		)
+	}
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribe(topic string, validator wrappedVal, handle subHandler, digest [4]byte) *pubsub.Subscription {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -258,13 +269,17 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 		}
 		b, err := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
-			log.WithError(err).WithFields(logrus.Fields{
+			fields := logrus.Fields{
 				"topic":        topic,
 				"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
 				"peer id":      pid.String(),
 				"agent":        agentString(pid, s.cfg.p2p.Host()),
 				"gossip score": s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
-			}).Debugf("Gossip message was rejected")
+			}
+			if features.Get().EnableFullSSZDataLogging {
+				fields["message"] = hexutil.Encode(msg.Data)
+			}
+			log.WithError(err).WithFields(fields).Debugf("Gossip message was rejected")
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}
 		if b == pubsub.ValidationIgnore {
@@ -286,7 +301,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -359,7 +374,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	handle subHandler,
 	digest [4]byte,
 ) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -443,7 +458,7 @@ func (s *Service) subscribeAggregatorSubnet(
 ) {
 	// do not subscribe if we have no peers in the same
 	// subnet
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
 	// check if subscription exists and if not subscribe the relevant subnet.
 	if _, exists := subscriptions[idx]; !exists {
@@ -488,7 +503,7 @@ func (s *Service) subscribeSyncSubnet(
 // subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		panic(err)
@@ -559,7 +574,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 	handle subHandler,
 	digest [4]byte,
 ) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		panic(err)
@@ -610,7 +625,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 
 // lookup peers for attester specific subnets.
 func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
 	if !s.validPeersExist(subnetTopic) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
@@ -644,7 +659,7 @@ func (s *Service) validPeersExist(subnetTopic string) bool {
 	return len(numOfPeers) >= flags.Get().MinimumPeersPerSubnet
 }
 
-func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
+func (s *Service) retrievePersistentSubs(currSlot primitives.Slot) []uint64 {
 	// Persistent subscriptions from validators
 	persistentSubs := s.persistentSubnetIndices()
 	// Update desired topic indices for aggregator
@@ -654,7 +669,7 @@ func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
 	return slice.SetUint64(append(persistentSubs, wantedSubs...))
 }
 
-func (s *Service) retrieveActiveSyncSubnets(currEpoch types.Epoch) []uint64 {
+func (_ *Service) retrieveActiveSyncSubnets(currEpoch primitives.Epoch) []uint64 {
 	subs := cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
 	return slice.SetUint64(subs)
 }
@@ -674,21 +689,21 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 	currSlot := s.cfg.chain.CurrentSlot()
 	wantedSubs := s.retrievePersistentSubs(currSlot)
 	wantedSubs = slice.SetUint64(append(wantedSubs, s.attesterSubnetIndices(currSlot)...))
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
 
 	// Map of peers in subnets
 	peerMap := make(map[peer.ID]bool)
 
 	for _, sub := range wantedSubs {
 		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.cfg.p2p.Encoding().ProtocolSuffix()
-		peers := s.cfg.p2p.PubSub().ListPeers(subnetTopic)
-		if len(peers) > flags.Get().MinimumPeersPerSubnet {
+		ps := s.cfg.p2p.PubSub().ListPeers(subnetTopic)
+		if len(ps) > flags.Get().MinimumPeersPerSubnet {
 			// In the event we have more than the minimum, we can
 			// mark the remaining as viable for pruning.
-			peers = peers[:flags.Get().MinimumPeersPerSubnet]
+			ps = ps[:flags.Get().MinimumPeersPerSubnet]
 		}
 		// Add peer to peer map.
-		for _, p := range peers {
+		for _, p := range ps {
 			// Even if the peer id has
 			// already been seen we still set
 			// it, as the outcome is the same.
@@ -709,7 +724,7 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 }
 
 // Add fork digest to topic.
-func (s *Service) addDigestToTopic(topic string, digest [4]byte) string {
+func (_ *Service) addDigestToTopic(topic string, digest [4]byte) string {
 	if !strings.Contains(topic, "%x") {
 		log.Fatal("Topic does not have appropriate formatter for digest")
 	}
@@ -717,7 +732,7 @@ func (s *Service) addDigestToTopic(topic string, digest [4]byte) string {
 }
 
 // Add the digest and index to subnet topic.
-func (s *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
+func (_ *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint64) string {
 	if !strings.Contains(topic, "%x") {
 		log.Fatal("Topic does not have appropriate formatter for digest")
 	}
@@ -725,7 +740,7 @@ func (s *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uin
 }
 
 func (s *Service) currentForkDigest() ([4]byte, error) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	return forks.CreateForkDigest(s.cfg.chain.GenesisTime(), genRoot[:])
 }
 

@@ -4,23 +4,24 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/prysmaticlabs/prysm/network"
-	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v3/network"
+	_ "github.com/prysmaticlabs/prysm/v3/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/sirupsen/logrus"
 )
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	m.Run()
 }
@@ -67,7 +68,8 @@ func TestPrivateKey_ParsesCorrectly(t *testing.T) {
 
 	extractedKey := extractPrivateKey()
 
-	rawKey := (*ecdsa.PrivateKey)(privKey.(*crypto.Secp256k1PrivateKey))
+	rawKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(privKey)
+	require.NoError(t, err)
 
 	r, s, err := ecdsa.Sign(rand.Reader, extractedKey, []byte{'t', 'e', 's', 't'})
 	require.NoError(t, err)

@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -77,7 +77,7 @@ func TestDecrypt(t *testing.T) {
 	encodedKeystore, err := json.MarshalIndent(keystore, "", "\t")
 	require.NoError(t, err)
 	keystoreFilePath := filepath.Join(keystoresDir, "keystore.json")
-	require.NoError(t, ioutil.WriteFile(
+	require.NoError(t, os.WriteFile(
 		keystoreFilePath, encodedKeystore, params.BeaconIoConfig().ReadWritePermissions),
 	)
 
@@ -95,7 +95,7 @@ func TestDecrypt(t *testing.T) {
 	require.NoError(t, decrypt(cliCtx))
 
 	require.NoError(t, w.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 
 	// We capture output from stdout.
@@ -129,7 +129,7 @@ func TestEncrypt(t *testing.T) {
 	require.NoError(t, encrypt(cliCtx))
 
 	require.NoError(t, w.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 
 	// We capture output from stdout.

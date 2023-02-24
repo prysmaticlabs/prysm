@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -21,12 +21,9 @@ const (
 	// DatabaseFileName is the name of the beacon node database.
 	DatabaseFileName = "slasher.db"
 	boltAllocSize    = 8 * 1024 * 1024
+	// Specifies the initial mmap size of bolt.
+	mmapSize = 536870912
 )
-
-// Config for the bolt db kv store.
-type Config struct {
-	InitialMMapSize int
-}
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for Ethereum consensus.
@@ -39,7 +36,7 @@ type Store struct {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, error) {
+func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 	hasDir, err := file.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -55,7 +52,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		params.BeaconIoConfig().ReadWritePermissions,
 		&bolt.Options{
 			Timeout:         1 * time.Second,
-			InitialMmapSize: config.InitialMMapSize,
+			InitialMmapSize: mmapSize,
 		},
 	)
 	if err != nil {

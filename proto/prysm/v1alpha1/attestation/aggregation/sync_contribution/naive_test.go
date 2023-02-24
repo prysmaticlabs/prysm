@@ -6,13 +6,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
-	aggtesting "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/testing"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation"
+	aggtesting "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/testing"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestAggregateAttestations_aggregate(t *testing.T) {
@@ -163,10 +162,6 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 			}
 		}
 		t.Run(fmt.Sprintf("%s/%s", tt.name, NaiveAggregation), func(t *testing.T) {
-			resetCfg := features.InitWithReset(&features.Flags{
-				AttestationAggregationStrategy: string(NaiveAggregation),
-			})
-			defer resetCfg()
 			runner()
 		})
 	}

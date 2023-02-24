@@ -3,11 +3,11 @@ package web
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/runtime/tos"
-	"github.com/prysmaticlabs/prysm/validator/rpc"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v3/validator/rpc"
 	"github.com/urfave/cli/v2"
 )
 
@@ -33,7 +33,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				walletDirPath := cliCtx.String(flags.WalletDirFlag.Name)
 				if walletDirPath == "" {
 					log.Fatal("--wallet-dir not specified")
@@ -42,7 +44,7 @@ var Commands = &cli.Command{
 				gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 				validatorWebAddr := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 				if err := rpc.CreateAuthToken(walletDirPath, validatorWebAddr); err != nil {
-					log.Fatalf("Could not create web auth token: %v", err)
+					log.WithError(err).Fatal("Could not create web auth token")
 				}
 				return nil
 			},

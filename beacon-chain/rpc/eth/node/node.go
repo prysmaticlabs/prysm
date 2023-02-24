@@ -8,16 +8,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -138,7 +138,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
-	emptyStateFilter, emptyDirectionFilter := ns.handleEmptyFilters(req)
+	emptyStateFilter, emptyDirectionFilter := handleEmptyFilters(req)
 
 	if emptyStateFilter && emptyDirectionFilter {
 		allIds := peerStatus.All()
@@ -247,7 +247,7 @@ func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerC
 
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
-func (ns *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
+func (_ *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "node.GetVersion")
 	defer span.End()
 
@@ -265,24 +265,32 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 	ctx, span := trace.StartSpan(ctx, "node.GetSyncStatus")
 	defer span.End()
 
+	isOptimistic, err := ns.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
+	}
+
 	headSlot := ns.HeadFetcher.HeadSlot()
 	return &ethpb.SyncingResponse{
 		Data: &ethpb.SyncInfo{
 			HeadSlot:     headSlot,
 			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
 			IsSyncing:    ns.SyncChecker.Syncing(),
+			IsOptimistic: isOptimistic,
+			ElOffline:    !ns.ExecutionChainInfoFetcher.ExecutionClientConnected(),
 		},
 	}, nil
 }
 
 // GetHealth returns node health status in http status codes. Useful for load balancers.
 // Response Usage:
-//    "200":
-//      description: Node is ready
-//    "206":
-//      description: Node is syncing but can serve incomplete data
-//    "503":
-//      description: Node not initialized or having issues
+//
+//	"200":
+//	  description: Node is ready
+//	"206":
+//	  description: Node is syncing but can serve incomplete data
+//	"503":
+//	  description: Node not initialized or having issues
 func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "node.GetHealth")
 	defer span.End()
@@ -300,7 +308,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 	return &emptypb.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
-func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection bool) {
+func handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
 		normalized := strings.ToUpper(stateFilter.String())

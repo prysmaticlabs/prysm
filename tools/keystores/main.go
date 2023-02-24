@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,10 +16,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/io/prompt"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -110,7 +109,7 @@ func decrypt(cliCtx *cli.Context) error {
 		return errors.Wrapf(err, "could not check if path exists: %s", fullPath)
 	}
 	if isDir {
-		files, err := ioutil.ReadDir(fullPath)
+		files, err := os.ReadDir(fullPath)
 		if err != nil {
 			return errors.Wrapf(err, "could not read directory: %s", fullPath)
 		}
@@ -224,14 +223,14 @@ func encrypt(cliCtx *cli.Context) error {
 // Reads the keystore file at the provided path and attempts
 // to decrypt it with the specified passwords.
 func readAndDecryptKeystore(fullPath, password string) error {
-	file, err := ioutil.ReadFile(fullPath) // #nosec G304
+	f, err := os.ReadFile(fullPath) // #nosec G304
 	if err != nil {
 		return errors.Wrapf(err, "could not read file at path: %s", fullPath)
 	}
 	decryptor := keystorev4.New()
 	keystoreFile := &keymanager.Keystore{}
 
-	if err := json.Unmarshal(file, keystoreFile); err != nil {
+	if err := json.Unmarshal(f, keystoreFile); err != nil {
 		return errors.Wrap(err, "could not JSON unmarshal keystore file")
 	}
 	// We extract the validator signing private key from the keystore

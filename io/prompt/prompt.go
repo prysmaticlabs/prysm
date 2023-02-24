@@ -4,13 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh/terminal"
@@ -132,7 +131,7 @@ func InputPassword(
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
-		data, err := ioutil.ReadFile(passwordFilePath) // #nosec G304
+		data, err := os.ReadFile(passwordFilePath) // #nosec G304
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
 		}

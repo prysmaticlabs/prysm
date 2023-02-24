@@ -3,19 +3,20 @@ package testing
 import (
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
 )
 
 // MockSlashingProtectionJSON creates a mock, full slashing protection JSON struct
 // using attesting and proposing histories provided.
 func MockSlashingProtectionJSON(
-	publicKeys [][48]byte,
+	publicKeys [][fieldparams.BLSPubkeyLength]byte,
 	attestingHistories [][]*kv.AttestationRecord,
 	proposalHistories []kv.ProposalHistoryForPubkey,
 ) (*format.EIPSlashingProtectionFormat, error) {
@@ -51,14 +52,14 @@ func MockSlashingProtectionJSON(
 
 // MockAttestingAndProposalHistories given a number of validators, creates mock attesting
 // and proposing histories within WEAK_SUBJECTIVITY_PERIOD bounds.
-func MockAttestingAndProposalHistories(pubkeys [][48]byte) ([][]*kv.AttestationRecord, []kv.ProposalHistoryForPubkey) {
+func MockAttestingAndProposalHistories(pubkeys [][fieldparams.BLSPubkeyLength]byte) ([][]*kv.AttestationRecord, []kv.ProposalHistoryForPubkey) {
 	// deduplicate and transform them into our internal format.
 	numValidators := len(pubkeys)
 	attData := make([][]*kv.AttestationRecord, numValidators)
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
 	for v := 0; v < numValidators; v++ {
-		latestTarget := types.Epoch(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000))
+		latestTarget := primitives.Epoch(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000))
 		// If 0, we change the value to 1 as the we compute source by doing (target-1)
 		// to prevent any underflows in this setup helper.
 		if latestTarget == 0 {
@@ -66,8 +67,8 @@ func MockAttestingAndProposalHistories(pubkeys [][48]byte) ([][]*kv.AttestationR
 		}
 		historicalAtts := make([]*kv.AttestationRecord, 0)
 		proposals := make([]kv.Proposal, 0)
-		for i := types.Epoch(1); i < latestTarget; i++ {
-			signingRoot := [32]byte{}
+		for i := primitives.Epoch(1); i < latestTarget; i++ {
+			var signingRoot [32]byte
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			historicalAtts = append(historicalAtts, &kv.AttestationRecord{
@@ -77,12 +78,12 @@ func MockAttestingAndProposalHistories(pubkeys [][48]byte) ([][]*kv.AttestationR
 				PubKey:      pubkeys[v],
 			})
 		}
-		for i := types.Epoch(1); i <= latestTarget; i++ {
-			signingRoot := [32]byte{}
+		for i := primitives.Epoch(1); i <= latestTarget; i++ {
+			var signingRoot [32]byte
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			proposals = append(proposals, kv.Proposal{
-				Slot:        types.Slot(i),
+				Slot:        primitives.Slot(i),
 				SigningRoot: signingRoot[:],
 			})
 		}
@@ -93,8 +94,8 @@ func MockAttestingAndProposalHistories(pubkeys [][48]byte) ([][]*kv.AttestationR
 }
 
 // CreateRandomPubKeys --
-func CreateRandomPubKeys(numValidators int) ([][48]byte, error) {
-	pubKeys := make([][48]byte, numValidators)
+func CreateRandomPubKeys(numValidators int) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	for i := 0; i < numValidators; i++ {
 		randKey, err := bls.RandKey()
 		if err != nil {

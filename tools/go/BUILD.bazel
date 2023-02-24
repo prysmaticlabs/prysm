@@ -1,6 +1,0 @@
-config_setting(
-    name = "libfuzz_enabled",
-    define_values = {
-        "FUZZING_ENGINE": "libfuzzer",
-    },
-)

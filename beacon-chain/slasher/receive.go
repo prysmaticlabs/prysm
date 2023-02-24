@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -72,11 +72,11 @@ func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan
 	}
 }
 
-// Process queued attestations every time an epoch ticker fires. We retrieve
+// Process queued attestations every time a slot ticker fires. We retrieve
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
-func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan primitives.Slot) {
 	for {
 		select {
 		case currentSlot := <-slotTicker:
@@ -98,9 +98,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				"numValidAtts":    len(validAtts),
 				"numDeferredAtts": len(validInFuture),
 				"numDroppedAtts":  numDropped,
-			}).Info("New slot, processing queued atts for slashing detection")
+			}).Info("Processing queued attestations for slashing detection")
 
-			start := time.Now()
 			// Save the attestation records to our database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, validAtts,
@@ -110,7 +109,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			}
 
 			// Check for slashings.
-			slashings, err := s.checkSlashableAttestations(ctx, validAtts)
+			slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAtts)
 			if err != nil {
 				log.WithError(err).Error("Could not check slashable attestations")
 				continue
@@ -123,8 +122,6 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				continue
 			}
 
-			log.WithField("elapsed", time.Since(start)).Debug("Done checking slashable attestations")
-
 			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
 			return
@@ -134,7 +131,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
-func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan primitives.Slot) {
 	for {
 		select {
 		case currentSlot := <-slotTicker:
@@ -147,7 +144,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 				"currentSlot":  currentSlot,
 				"currentEpoch": currentEpoch,
 				"numBlocks":    len(blocks),
-			}).Info("New slot, processing queued blocks for slashing detection")
+			}).Info("Processing queued blocks for slashing detection")
 
 			start := time.Now()
 			// Check for slashings.
@@ -174,7 +171,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 }
 
 // Prunes slasher data on each slot tick to prevent unnecessary build-up of disk space usage.
-func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan primitives.Slot) {
 	for {
 		select {
 		case <-slotTicker:
@@ -193,8 +190,8 @@ func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.
 // All data before that window is unnecessary for slasher, so can be periodically deleted.
 // Say HISTORY_LENGTH is 4 and we have data for epochs 0, 1, 2, 3. Once we hit epoch 4, the sliding window
 // we care about is 1, 2, 3, 4, so we can delete data for epoch 0.
-func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, currentEpoch types.Epoch) error {
-	var maxPruningEpoch types.Epoch
+func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, currentEpoch primitives.Epoch) error {
+	var maxPruningEpoch primitives.Epoch
 	if currentEpoch >= s.params.historyLength {
 		maxPruningEpoch = currentEpoch - s.params.historyLength
 	} else {
@@ -202,6 +199,7 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 		// attempt to prune at all.
 		return nil
 	}
+	start := time.Now()
 	log.WithFields(logrus.Fields{
 		"currentEpoch":          currentEpoch,
 		"pruningAllBeforeEpoch": maxPruningEpoch,
@@ -218,9 +216,14 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 	if err != nil {
 		return errors.Wrap(err, "Could not prune proposals")
 	}
-	log.WithFields(logrus.Fields{
-		"prunedAttestationRecords": numPrunedAtts,
-		"prunedProposalRecords":    numPrunedProposals,
-	}).Info("Successfully pruned slasher data")
+	fields := logrus.Fields{}
+	if numPrunedAtts > 0 {
+		fields["numPrunedAtts"] = numPrunedAtts
+	}
+	if numPrunedProposals > 0 {
+		fields["numPrunedProposals"] = numPrunedProposals
+	}
+	fields["elapsed"] = time.Since(start)
+	log.WithFields(fields).Info("Done pruning old attestations and proposals for slasher")
 	return nil
 }

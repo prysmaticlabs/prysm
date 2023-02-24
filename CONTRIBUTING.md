@@ -190,7 +190,7 @@ Anyone can become a part-time contributor and help out on implementing Ethereum 
 
 Core contributors are remote contractors of Prysmatic Labs, LLC. and are considered critical team members of our organization. Core devs have all of the responsibilities of part-time contributors plus the majority of the following:
 
--   Stay up to date on the latest beacon chain sepcification
+-   Stay up to date on the latest beacon chain specification
 -   Monitor github issues and PR’s to make sure owner, labels, descriptions are correct
 -   Formulate independent ideas, suggest new work to do, point out improvements to existing approaches
 -   Participate in code review, ensure code quality is excellent, and have ensure high code coverage

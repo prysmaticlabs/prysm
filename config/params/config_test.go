@@ -1,9 +1,10 @@
 package params_test
 
 import (
+	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
 // Test cases can be executed in an arbitrary order. TestOverrideBeaconConfigTestTeardown checks
@@ -34,13 +35,19 @@ func TestConfig_OverrideBeaconConfigTestTeardown(t *testing.T) {
 }
 
 func TestConfig_DataRace(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	wg := new(sync.WaitGroup)
 	for i := 0; i < 10; i++ {
+		wg.Add(2)
 		go func() {
+			defer wg.Done()
 			cfg := params.BeaconConfig()
 			params.OverrideBeaconConfig(cfg)
 		}()
 		go func() uint64 {
+			defer wg.Done()
 			return params.BeaconConfig().MaxDeposits
 		}()
 	}
+	wg.Wait()
 }

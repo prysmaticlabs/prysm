@@ -3,24 +3,37 @@ package cache
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestSyncCommitteeHeadState(t *testing.T) {
-	beaconState, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	})
 	require.NoError(t, err)
-	phase0State, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	phase0State, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	})
+	require.NoError(t, err)
+	bellatrixState, err := state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	})
+	require.NoError(t, err)
+	capellaState, err := state_native.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -28,12 +41,12 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	})
 	require.NoError(t, err)
 	type put struct {
-		slot  types.Slot
+		slot  primitives.Slot
 		state state.BeaconState
 	}
 	tests := []struct {
 		name       string
-		key        types.Slot
+		key        primitives.Slot
 		put        *put
 		want       state.BeaconState
 		wantErr    bool
@@ -41,9 +54,9 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	}{
 		{
 			name: "putting error in",
-			key:  types.Slot(1),
+			key:  primitives.Slot(1),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: nil,
 			},
 			wantPutErr: true,
@@ -51,9 +64,9 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 		{
 			name: "putting invalid state in",
-			key:  types.Slot(1),
+			key:  primitives.Slot(1),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: phase0State,
 			},
 			wantPutErr: true,
@@ -61,26 +74,53 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 		{
 			name:    "not found when empty cache",
-			key:     types.Slot(1),
+			key:     primitives.Slot(1),
 			wantErr: true,
 		},
 		{
 			name: "not found when non-existent key in non-empty cache",
-			key:  types.Slot(2),
+			key:  primitives.Slot(2),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: beaconState,
 			},
 			wantErr: true,
 		},
 		{
 			name: "found with key",
-			key:  types.Slot(1),
+			key:  primitives.Slot(1),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: beaconState,
 			},
 			want: beaconState,
+		},
+		{
+			name: "not found when non-existent key in non-empty cache (bellatrix state)",
+			key:  primitives.Slot(2),
+			put: &put{
+				slot:  primitives.Slot(1),
+				state: bellatrixState,
+			},
+			wantErr: true,
+		},
+		{
+			name: "found with key (bellatrix state)",
+			key:  primitives.Slot(100),
+			put: &put{
+				slot:  primitives.Slot(100),
+				state: bellatrixState,
+			},
+			want: bellatrixState,
+		},
+		{
+			name: "found with key (capella state)",
+			key:  primitives.Slot(200),
+			put: &put{
+				slot:  primitives.Slot(200),
+				state: capellaState,
+			},
+			want: capellaState,
 		},
 	}
 	for _, tt := range tests {

@@ -3,12 +3,14 @@ package rpc
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -16,9 +18,6 @@ import (
 func setupWalletDir(t testing.TB) string {
 	walletDir := filepath.Join(t.TempDir(), "wallet")
 	require.NoError(t, os.MkdirAll(walletDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir))
-	})
 	return walletDir
 }
 
@@ -71,6 +70,9 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	defer cancel()
 	go srv.refreshAuthTokenFromFileChanges(ctx, authTokenPath)
 
+	// Wait for service to be ready.
+	time.Sleep(time.Millisecond * 250)
+
 	// Update the auth token file with a new secret.
 	require.NoError(t, CreateAuthToken(walletDir, "localhost:7500"))
 
@@ -79,6 +81,8 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	newSecret := srv.jwtSecret
 	require.Equal(t, true, len(newSecret) > 0)
 	require.Equal(t, true, !bytes.Equal(currentSecret, newSecret))
+	err = os.Remove(authTokenFileName)
+	require.NoError(t, err)
 }
 
 func Test_initializeAuthToken(t *testing.T) {
@@ -99,11 +103,27 @@ func Test_initializeAuthToken(t *testing.T) {
 
 	// Deleting the auth token and re-initializing means we create a jwt token
 	// and secret from scratch again.
-	require.NoError(t, os.RemoveAll(walletDir))
 	srv3 := &Server{}
 	walletDir = setupWalletDir(t)
 	token3, err := srv3.initializeAuthToken(walletDir)
 	require.NoError(t, err)
 	require.Equal(t, true, len(srv.jwtSecret) > 0)
 	require.NotEqual(t, token, token3)
+}
+
+// "createTokenString" now uses jwt.RegisteredClaims instead of jwt.StandardClaims (deprecated),
+// make sure emtpy jwt.RegisteredClaims and empty jwt.StandardClaims generates the same token.
+func Test_UseRegisteredClaimInsteadOfStandClaims(t *testing.T) {
+	jwtsecret, err := hex.DecodeString("12345678900123456789abcdeffedcba")
+	require.NoError(t, err)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{}) // jwt.StandardClaims is deprecated
+	wantedTokenString, err := token.SignedString(jwtsecret)
+	require.NoError(t, err)
+
+	gotTokenString, err := createTokenString(jwtsecret)
+	require.NoError(t, err)
+
+	if wantedTokenString != gotTokenString {
+		t.Errorf("%s != %s", wantedTokenString, gotTokenString)
+	}
 }

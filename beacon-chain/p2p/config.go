@@ -1,8 +1,8 @@
 package p2p
 
 import (
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 )
 
 // Config for the p2p service. These parameters are set from application level flags
@@ -10,7 +10,6 @@ import (
 type Config struct {
 	NoDiscovery         bool
 	EnableUPnP          bool
-	DisableDiscv5       bool
 	StaticPeers         []string
 	BootstrapNodeAddr   []string
 	Discv5BootStrapAddr []string

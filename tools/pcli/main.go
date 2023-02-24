@@ -4,22 +4,21 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 
-	fssz "github.com/ferranbt/fastssz"
 	"github.com/kr/pretty"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	fssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	prefixed "github.com/prysmaticlabs/prysm/v3/runtime/logging/logrus-prefixed-formatter"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -54,6 +53,7 @@ func main() {
 					Name: "data-type",
 					Usage: "ssz file data type: " +
 						"block|" +
+						"blinded_block|" +
 						"signed_block|" +
 						"attestation|" +
 						"block_header|" +
@@ -74,6 +74,8 @@ func main() {
 					data = &ethpb.BeaconBlock{}
 				case "signed_block":
 					data = &ethpb.SignedBeaconBlock{}
+				case "blinded_block":
+					data = &ethpb.BlindedBeaconBlockBellatrix{}
 				case "attestation":
 					data = &ethpb.Attestation{}
 				case "block_header":
@@ -159,7 +161,7 @@ func main() {
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
-				stateObj, err := v1.InitializeFromProto(preState)
+				stateObj, err := state_native.InitializeFromProtoPhase0(preState)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -175,7 +177,11 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, wrapper.WrappedPhase0SignedBeaconBlock(block))
+				wsb, err := blocks.NewSignedBeaconBlock(block)
+				if err != nil {
+					log.Fatal(err)
+				}
+				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, wsb)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -191,8 +197,8 @@ func main() {
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
-					if !ssz.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
-						diff, _ := messagediff.PrettyDiff(expectedState, postState.InnerStateUnsafe())
+					if !equality.DeepEqual(expectedState, postState.ToProtoUnsafe()) {
+						diff, _ := messagediff.PrettyDiff(expectedState, postState.ToProtoUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}
 				}
@@ -208,7 +214,7 @@ func main() {
 
 // dataFetcher fetches and unmarshals data from file to provided data structure.
 func dataFetcher(fPath string, data fssz.Unmarshaler) error {
-	rawFile, err := ioutil.ReadFile(fPath) // #nosec G304
+	rawFile, err := os.ReadFile(fPath) // #nosec G304
 	if err != nil {
 		return err
 	}

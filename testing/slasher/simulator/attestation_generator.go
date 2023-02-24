@@ -4,21 +4,21 @@ import (
 	"context"
 	"math"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
 func (s *Simulator) generateAttestationsForSlot(
-	ctx context.Context, slot types.Slot,
+	ctx context.Context, slot primitives.Slot,
 ) ([]*ethpb.IndexedAttestation, []*ethpb.AttesterSlashing, error) {
 	attestations := make([]*ethpb.IndexedAttestation, 0)
 	slashings := make([]*ethpb.AttesterSlashing, 0)
@@ -29,15 +29,15 @@ func (s *Simulator) generateAttestationsForSlot(
 		(committeesPerSlot * uint64(s.srvConfig.Params.SlotsPerEpoch))
 	valsPerSlot := committeesPerSlot * valsPerCommittee
 
-	var sourceEpoch types.Epoch = 0
-	if currentEpoch != 0 {
-		sourceEpoch = currentEpoch - 1
+	if currentEpoch < 2 {
+		return nil, nil, nil
 	}
+	sourceEpoch := currentEpoch - 1
 
 	var slashedIndices []uint64
 	startIdx := valsPerSlot * uint64(slot%s.srvConfig.Params.SlotsPerEpoch)
 	endIdx := startIdx + valsPerCommittee
-	for c := types.CommitteeIndex(0); uint64(c) < committeesPerSlot; c++ {
+	for c := primitives.CommitteeIndex(0); uint64(c) < committeesPerSlot; c++ {
 		attData := &ethpb.AttestationData{
 			Slot:            slot,
 			CommitteeIndex:  c,
@@ -114,7 +114,7 @@ func (s *Simulator) aggregateSigForAttestation(
 		beaconState.Fork(),
 		att.Data.Target.Epoch,
 		params.BeaconConfig().DomainBeaconAttester,
-		beaconState.GenesisValidatorRoot(),
+		beaconState.GenesisValidatorsRoot(),
 	)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (s *Simulator) aggregateSigForAttestation(
 	}
 	sigs := make([]bls.Signature, len(att.AttestingIndices))
 	for i, validatorIndex := range att.AttestingIndices {
-		privKey := s.srvConfig.PrivateKeysByValidatorIndex[types.ValidatorIndex(validatorIndex)]
+		privKey := s.srvConfig.PrivateKeysByValidatorIndex[primitives.ValidatorIndex(validatorIndex)]
 		sigs[i] = privKey.Sign(signingRoot[:])
 	}
 	return bls.AggregateSignatures(sigs), nil

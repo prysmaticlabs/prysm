@@ -7,14 +7,15 @@ go_library(
         "constants.go",
         "error.go",
         "interface.go",
-        "signature_set.go",
+        "signature_batch.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/crypto/bls",
+    importpath = "github.com/prysmaticlabs/prysm/v3/crypto/bls",
     visibility = ["//visibility:public"],
     deps = [
         "//crypto/bls/blst:go_default_library",
         "//crypto/bls/common:go_default_library",
         "//crypto/bls/herumi:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
     ],
 )
 
@@ -22,7 +23,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "bls_test.go",
-        "signature_set_test.go",
+        "signature_batch_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

@@ -4,9 +4,9 @@
 package bls
 
 import (
-	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
-	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/crypto/bls/herumi"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/herumi"
 )
 
 // Initialize herumi temporarily while we transition to blst for ethdo.
@@ -29,14 +29,34 @@ func SignatureFromBytes(sig []byte) (Signature, error) {
 	return blst.SignatureFromBytes(sig)
 }
 
+// MultipleSignaturesFromBytes creates a slice of BLS signatures from a LittleEndian 2d-byte slice.
+func MultipleSignaturesFromBytes(sigs [][]byte) ([]Signature, error) {
+	return blst.MultipleSignaturesFromBytes(sigs)
+}
+
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.
 func AggregatePublicKeys(pubs [][]byte) (PublicKey, error) {
 	return blst.AggregatePublicKeys(pubs)
 }
 
+// AggregateMultiplePubkeys aggregates the provided decompressed keys into a single key.
+func AggregateMultiplePubkeys(pubs []PublicKey) PublicKey {
+	return blst.AggregateMultiplePubkeys(pubs)
+}
+
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []common.Signature) common.Signature {
 	return blst.AggregateSignatures(sigs)
+}
+
+// AggregateCompressedSignatures converts a list of compressed signatures into a single, aggregated sig.
+func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
+	return blst.AggregateCompressedSignatures(multiSigs)
+}
+
+// VerifySignature verifies a single signature. For performance reason, always use VerifyMultipleSignatures if possible.
+func VerifySignature(sig []byte, msg [32]byte, pubKey common.PublicKey) (bool, error) {
+	return blst.VerifySignature(sig, msg, pubKey)
 }
 
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.

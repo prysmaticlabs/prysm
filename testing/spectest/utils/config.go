@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
 // SetConfig sets the global params for spec tests depending on the option chosen.
@@ -15,10 +15,10 @@ func SetConfig(t testing.TB, config string) error {
 	params.SetupTestConfigCleanup(t)
 	switch config {
 	case "minimal":
-		params.OverrideBeaconConfig(params.MinimalSpecConfig())
+		params.OverrideBeaconConfig(params.MinimalSpecConfig().Copy())
 		return nil
 	case "mainnet":
-		params.OverrideBeaconConfig(params.MainnetConfig())
+		params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 		return nil
 	case "":
 		return errors.New("no config provided")

@@ -2,13 +2,13 @@ package kv
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestStore_Backup(t *testing.T) {
@@ -19,7 +19,7 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, db.Backup(ctx, "", true))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
-	files, err := ioutil.ReadDir(backupsPath)
+	files, err := os.ReadDir(backupsPath)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, len(files), "No backups created")
 	require.NoError(t, db.Close(), "Failed to close database")
@@ -41,7 +41,7 @@ func TestStore_Backup(t *testing.T) {
 }
 
 func TestStore_NestedBackup(t *testing.T) {
-	keys := [][48]byte{{'A'}, {'B'}}
+	keys := [][fieldparams.BLSPubkeyLength]byte{{'A'}, {'B'}}
 	db := setupDB(t, keys)
 	ctx := context.Background()
 	root := [32]byte{1}
@@ -68,7 +68,7 @@ func TestStore_NestedBackup(t *testing.T) {
 	require.NoError(t, db.Backup(ctx, "", true))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
-	files, err := ioutil.ReadDir(backupsPath)
+	files, err := os.ReadDir(backupsPath)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, len(files), "No backups created")
 	require.NoError(t, db.Close(), "Failed to close database")

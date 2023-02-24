@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestDeprecatedFlags(t *testing.T) {

@@ -3,42 +3,43 @@ package util
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestHydrateAttestation(t *testing.T) {
 	a := HydrateAttestation(&ethpb.Attestation{})
 	_, err := a.HashTreeRoot()
 	require.NoError(t, err)
-	require.DeepEqual(t, a.Signature, make([]byte, params.BeaconConfig().BLSSignatureLength))
+	require.DeepEqual(t, a.Signature, make([]byte, fieldparams.BLSSignatureLength))
 }
 
 func TestHydrateAttestationData(t *testing.T) {
 	d := HydrateAttestationData(&ethpb.AttestationData{})
 	_, err := d.HashTreeRoot()
 	require.NoError(t, err)
-	require.DeepEqual(t, d.BeaconBlockRoot, make([]byte, 32))
-	require.DeepEqual(t, d.Target.Root, make([]byte, 32))
-	require.DeepEqual(t, d.Source.Root, make([]byte, 32))
+	require.DeepEqual(t, d.BeaconBlockRoot, make([]byte, fieldparams.RootLength))
+	require.DeepEqual(t, d.Target.Root, make([]byte, fieldparams.RootLength))
+	require.DeepEqual(t, d.Source.Root, make([]byte, fieldparams.RootLength))
 }
 
 func TestHydrateV1Attestation(t *testing.T) {
 	a := HydrateV1Attestation(&v1.Attestation{})
 	_, err := a.HashTreeRoot()
 	require.NoError(t, err)
-	require.DeepEqual(t, a.Signature, make([]byte, params.BeaconConfig().BLSSignatureLength))
+	require.DeepEqual(t, a.Signature, make([]byte, fieldparams.BLSSignatureLength))
 }
 
 func TestHydrateV1AttestationData(t *testing.T) {
 	d := HydrateV1AttestationData(&v1.AttestationData{})
 	_, err := d.HashTreeRoot()
 	require.NoError(t, err)
-	require.DeepEqual(t, d.BeaconBlockRoot, make([]byte, 32))
-	require.DeepEqual(t, d.Target.Root, make([]byte, 32))
-	require.DeepEqual(t, d.Source.Root, make([]byte, 32))
+	require.DeepEqual(t, d.BeaconBlockRoot, make([]byte, fieldparams.RootLength))
+	require.DeepEqual(t, d.Target.Root, make([]byte, fieldparams.RootLength))
+	require.DeepEqual(t, d.Source.Root, make([]byte, fieldparams.RootLength))
 }
 
 func TestHydrateIndexedAttestation(t *testing.T) {
