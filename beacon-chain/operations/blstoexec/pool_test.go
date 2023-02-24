@@ -157,6 +157,16 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
 		assert.Equal(t, primitives.ValidatorIndex(30), changes[1].Message.ValidatorIndex)
 	})
+	t.Run("invalid change not returned", func(t *testing.T) {
+		pool := NewPool()
+		saveByte := signedChanges[1].Message.FromBlsPubkey[5]
+		signedChanges[1].Message.FromBlsPubkey[5] = 0xff
+		pool.InsertBLSToExecChange(signedChanges[1])
+		changes, err := pool.BLSToExecChangesForInclusion(st)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(changes))
+		signedChanges[1].Message.FromBlsPubkey[5] = saveByte
+	})
 }
 
 func TestInsertBLSToExecChange(t *testing.T) {
