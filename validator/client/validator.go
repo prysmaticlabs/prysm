@@ -989,9 +989,12 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
-
-	deadline := v.SlotDeadline(slots.RoundUpToNearestEpoch(slots.CurrentSlot(v.genesisTime)))
-	ctx, cancel := context.WithDeadline(ctx, deadline)
+	deadline, deadlineSet := ctx.Deadline()
+	if !deadlineSet {
+		deadline = v.SlotDeadline(slots.RoundUpToNearestEpoch(slots.CurrentSlot(v.genesisTime)))
+	}
+	nctx, cancel := context.WithDeadline(ctx, deadline)
+	ctx = nctx
 	defer cancel()
 
 	pubkeys, err := km.FetchValidatingPublicKeys(ctx)

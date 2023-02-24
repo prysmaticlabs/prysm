@@ -59,7 +59,9 @@ func run(ctx context.Context, v iface.Validator) {
 	if v.ProposerSettings() != nil {
 		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
 			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
-		if err := v.PushProposerSettings(ctx, km); err != nil {
+		deadline := 12 * time.Second
+		nctx, _ := context.WithTimeout(ctx, deadline)
+		if err := v.PushProposerSettings(nctx, km); err != nil {
 			if errors.Is(err, ErrBuilderValidatorRegistration) {
 				log.WithError(err).Warn("Push proposer settings error")
 			} else {
