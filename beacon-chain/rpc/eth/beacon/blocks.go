@@ -56,6 +56,7 @@ func (e *blockIdParseError) Error() string {
 
 // GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
 // determines the best block root and state root to use for a Checkpoint Sync starting from that point.
+// DEPRECATED: GetWeakSubjectivity endpoint will no longer be supported
 func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
 	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// This is already a grpc error, so we can't wrap it any further
@@ -284,6 +285,7 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 }
 
 // GetBlock retrieves block details for given block ID.
+// DEPRECATED: please use GetBlockV2 instead
 func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlock")
 	defer span.End()
@@ -307,6 +309,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 }
 
 // GetBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
+// DEPRECATED: please use GetBlockV2SSZ instead
 func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockSSZResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZ")
 	defer span.End()
