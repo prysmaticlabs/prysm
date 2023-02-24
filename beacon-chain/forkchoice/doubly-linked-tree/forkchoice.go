@@ -647,23 +647,3 @@ func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte)
 	f.store.committeeWeight /= uint64(params.BeaconConfig().SlotsPerEpoch)
 	return nil
 }
-
-// Lock() acquires the global write lock
-func (f *ForkChoice) Lock() {
-	f.lock.Lock()
-}
-
-// Unlock() acquires the global write lock
-func (f *ForkChoice) Unlock() {
-	f.lock.Unlock()
-}
-
-// RLock() acquires the global read lock
-func (f *ForkChoice) RLock() {
-	f.lock.RLock()
-}
-
-// RUnlock() releases the global read lock
-func (f *ForkChoice) RUnlock() {
-	f.lock.RUnlock()
-}

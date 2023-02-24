@@ -11,7 +11,7 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	lock                sync.RWMutex // global forkchoice lock
+	sync.RWMutex
 	store               *Store
 	votes               []Vote                      // tracks individual validator's last vote.
 	balances            []uint64                    // tracks individual validator's balances last accounted in votes.
