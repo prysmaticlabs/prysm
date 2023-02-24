@@ -271,20 +271,23 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 	}, nil
 }
 
-// GetBlockBellatrixSignRequest maps the request for signing type BLOCK_V2_BELLATRIX.
-func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockBellatrixSignRequest, error) {
+// GetBlockV2BlindedSignRequest maps the request for signing types
+// Supports Bellatrix and Capella
+func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2BlindedSignRequest, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
 	var b interfaces.ReadOnlyBeaconBlock
+	var version string
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_BlindedBlockBellatrix:
+		version = "BELLATRIX"
 		blindedBlockBellatrix, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockBellatrix)
 		if !ok {
 			return nil, errors.New("failed to cast request object to blinded block bellatrix")
 		}
 		if blindedBlockBellatrix == nil {
-			return nil, errors.New("invalid sign request - blindedBlockBellatrix is nil")
+			return nil, errors.New("invalid sign request - blinded bellatrix block is nil")
 		}
 		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockBellatrix.BlindedBlockBellatrix)
 		if err != nil {
@@ -292,15 +295,44 @@ func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValid
 		}
 		b = beaconBlock
 	case *validatorpb.SignRequest_BlockBellatrix:
+		version = "BELLATRIX"
 		blockBellatrix, ok := request.Object.(*validatorpb.SignRequest_BlockBellatrix)
 		if !ok {
-			return nil, errors.New("failed to cast request object to block v3 bellatrix")
+			return nil, errors.New("failed to cast request object to bellatrix block")
 		}
 
 		if blockBellatrix == nil {
-			return nil, errors.New("invalid sign request: blockBellatrix is nil")
+			return nil, errors.New("invalid sign request: bellatrix block is nil")
 		}
 		beaconBlock, err := blocks.NewBeaconBlock(blockBellatrix.BlockBellatrix)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlockCapella:
+		version = "CAPELLA"
+		blockCapella, ok := request.Object.(*validatorpb.SignRequest_BlockCapella)
+		if !ok {
+			return nil, errors.New("failed to cast request object to capella block")
+		}
+		if blockCapella == nil {
+			return nil, errors.New("invalid sign request: capella block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blockCapella.BlockCapella)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlindedBlockCapella:
+		version = "CAPELLA"
+		blindedBlockCapella, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockCapella)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blinded capella block")
+		}
+		if blindedBlockCapella == nil {
+			return nil, errors.New("invalid sign request: blinded capella block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockCapella.BlindedBlockCapella)
 		if err != nil {
 			return nil, err
 		}
@@ -316,12 +348,12 @@ func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValid
 	if err != nil {
 		return nil, err
 	}
-	return &BlockBellatrixSignRequest{
+	return &BlockV2BlindedSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    fork,
 		SigningRoot: request.SigningRoot,
-		BeaconBlock: &BeaconBlockBellatrixBlockV2{
-			Version: "BELLATRIX",
+		BeaconBlock: &BeaconBlockV2Blinded{
+			Version: version,
 			BlockHeader: &BeaconBlockHeader{
 				Slot:          fmt.Sprint(beaconBlockHeader.Slot),
 				ProposerIndex: fmt.Sprint(beaconBlockHeader.ProposerIndex),
