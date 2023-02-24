@@ -68,13 +68,8 @@ func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb
 	return c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
 }
 
-func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(ctx context.Context, in *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetFeeRecipientByPubKey(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetFeeRecipientByPubKey is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(_ context.Context, _ *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
+	return nil, nil
 }
 
 func (c *beaconApiValidatorClient) GetSyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
