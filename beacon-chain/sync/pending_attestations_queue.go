@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/async"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -115,7 +115,7 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 			// This is an important validation before retrieving attestation pre state to defend against
 			// attestation's target intentionally reference checkpoint that's long ago.
 			// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-			if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
+			if err := s.cfg.chain.VerifyFinalizedConsistency(att.Aggregate.Data.BeaconBlockRoot); err != nil {
 				log.WithError(err).Debug("Could not verify finalized consistency")
 				continue
 			}
@@ -183,7 +183,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 // If not valid, a node will remove it in the queue in place. The validity
 // check specifies the pending attestation could not fall one epoch behind
 // of the current slot.
-func (s *Service) validatePendingAtts(ctx context.Context, slot types.Slot) {
+func (s *Service) validatePendingAtts(ctx context.Context, slot primitives.Slot) {
 	ctx, span := trace.StartSpan(ctx, "validatePendingAtts")
 	defer span.End()
 

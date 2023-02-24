@@ -54,7 +54,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
 		"/eth/v2/debug/beacon/heads",
-		"/eth/v1/debug/forkchoice",
+		"/eth/v1/debug/fork_choice",
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
@@ -166,6 +166,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/pool/bls_to_execution_changes":
 		endpoint.PostRequest = &SubmitBLSToExecutionChangesRequest{}
 		endpoint.GetResponse = &BLSToExecutionChangesPoolResponseJson{}
+		endpoint.Err = &IndexedVerificationFailureErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapBLSChangesArray,
 		}
@@ -206,7 +207,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &ForkChoiceHeadsResponseJson{}
 	case "/eth/v2/debug/beacon/heads":
 		endpoint.GetResponse = &V2ForkChoiceHeadsResponseJson{}
-	case "/eth/v1/debug/forkchoice":
+	case "/eth/v1/debug/fork_choice":
 		endpoint.GetResponse = &ForkChoiceDumpJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: prepareForkChoiceResponse,

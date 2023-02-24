@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
-	prysmType "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -64,10 +64,10 @@ type ForkchoiceUpdatedResponse struct {
 // to an execution client's engine API.
 type ExecutionPayloadReconstructor interface {
 	ReconstructFullBlock(
-		ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
+		ctx context.Context, blindedBlock interfaces.ReadOnlySignedBeaconBlock,
 	) (interfaces.SignedBeaconBlock, error)
 	ReconstructFullBellatrixBlockBatch(
-		ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
+		ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
 	) ([]interfaces.SignedBeaconBlock, error)
 }
 
@@ -78,7 +78,7 @@ type EngineCaller interface {
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte, slot prysmType.Slot) (interfaces.ExecutionData, error)
+	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -198,7 +198,7 @@ func (s *Service) ForkchoiceUpdated(
 }
 
 // GetPayload calls the engine_getPayloadVX method via JSON-RPC.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot prysmType.Slot) (interfaces.ExecutionData, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -211,12 +211,13 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot prysmT
 	defer cancel()
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
-		result := &pb.ExecutionPayloadCapella{}
+		result := &pb.ExecutionPayloadCapellaWithValue{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-		return blocks.WrappedExecutionPayloadCapella(result)
+
+		return blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value)))
 	}
 
 	result := &pb.ExecutionPayload{}
@@ -390,30 +391,27 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 	numOfHashes := len(hashes)
 	elems := make([]gethRPC.BatchElem, 0, numOfHashes)
 	execBlks := make([]*pb.ExecutionBlock, 0, numOfHashes)
-	errs := make([]error, 0, numOfHashes)
 	if numOfHashes == 0 {
 		return execBlks, nil
 	}
 	for _, h := range hashes {
 		blk := &pb.ExecutionBlock{}
-		err := error(nil)
 		newH := h
 		elems = append(elems, gethRPC.BatchElem{
 			Method: ExecutionBlockByHashMethod,
 			Args:   []interface{}{newH, withTxs},
 			Result: blk,
-			Error:  err,
+			Error:  error(nil),
 		})
 		execBlks = append(execBlks, blk)
-		errs = append(errs, err)
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {
 		return nil, ioErr
 	}
-	for _, e := range errs {
-		if e != nil {
-			return nil, handleRPCError(e)
+	for _, e := range elems {
+		if e.Error != nil {
+			return nil, handleRPCError(e.Error)
 		}
 	}
 	return execBlks, nil
@@ -442,7 +440,7 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 // ReconstructFullBlock takes in a blinded beacon block and reconstructs
 // a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBlock(
-	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
+	ctx context.Context, blindedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
 	if err := blocks.BeaconBlockIsNil(blindedBlock); err != nil {
 		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
@@ -493,7 +491,7 @@ func (s *Service) ReconstructFullBlock(
 // ReconstructFullBellatrixBlockBatch takes in a batch of blinded beacon blocks and reconstructs
 // them with a full execution payload for each block via the engine API.
 func (s *Service) ReconstructFullBellatrixBlockBatch(
-	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
+	ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
 ) ([]interfaces.SignedBeaconBlock, error) {
 	if len(blindedBlocks) == 0 {
 		return []interfaces.SignedBeaconBlock{}, nil
@@ -532,6 +530,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 
 	// For each valid payload, we reconstruct the full block from it with the
 	// blinded block.
+	fullBlocks := make([]interfaces.SignedBeaconBlock, len(blindedBlocks))
 	for sliceIdx, realIdx := range validExecPayloads {
 		b := execBlocks[sliceIdx]
 		if b == nil {
@@ -549,7 +548,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if err != nil {
 			return nil, err
 		}
-		blindedBlocks[realIdx] = fullBlock
+		fullBlocks[realIdx] = fullBlock
 	}
 	// For blocks that are pre-merge we simply reconstruct them via an empty
 	// execution payload.
@@ -559,10 +558,10 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if err != nil {
 			return nil, err
 		}
-		blindedBlocks[realIdx] = fullBlock
+		fullBlocks[realIdx] = fullBlock
 	}
 	reconstructedExecutionPayloadCount.Add(float64(len(blindedBlocks)))
-	return blindedBlocks, nil
+	return fullBlocks, nil
 }
 
 func fullPayloadFromExecutionBlock(
@@ -623,7 +622,7 @@ func fullPayloadFromExecutionBlock(
 		BlockHash:     blockHash[:],
 		Transactions:  txs,
 		Withdrawals:   block.Withdrawals,
-	})
+	}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 }
 
 // Handles errors received from the RPC server according to the specification.

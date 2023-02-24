@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v3/async/event"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
@@ -69,6 +70,9 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 func (mb *mockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
 	mb.broadcastCalled = true
 	return nil
+}
+
+func (mb *mockBroadcaster) BroadcastBLSChanges(_ context.Context, _ []*ethpb.SignedBLSToExecutionChange) {
 }
 
 var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
@@ -132,6 +136,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithForkChoiceStore(fc),
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
 
 	chainService, err := NewService(ctx, opts...)
@@ -438,7 +443,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cfg:            &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB, doublylinkedtree.New())},
 		ctx:            ctx,
 		cancel:         cancel,
-		initSyncBlocks: make(map[[32]byte]interfaces.SignedBeaconBlock),
+		initSyncBlocks: make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
 	}
 	bb := util.NewBeaconBlock()
 	r, err := bb.Block.HashTreeRoot()

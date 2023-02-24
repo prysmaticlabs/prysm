@@ -5,9 +5,9 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	iface "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"google.golang.org/grpc"
 )
 
@@ -75,10 +75,6 @@ func (c *grpcValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.
 	return c.beaconNodeValidatorClient.StreamBlocksAltair(ctx, in)
 }
 
-func (c *grpcValidatorClient) StreamDuties(ctx context.Context, in *ethpb.DutiesRequest) (ethpb.BeaconNodeValidator_StreamDutiesClient, error) {
-	return c.beaconNodeValidatorClient.StreamDuties(ctx, in)
-}
-
 func (c *grpcValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
 	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProof(ctx, in)
 }
@@ -99,7 +95,7 @@ func (c *grpcValidatorClient) SubmitValidatorRegistrations(ctx context.Context, 
 	return c.beaconNodeValidatorClient.SubmitValidatorRegistrations(ctx, in)
 }
 
-func (c *grpcValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, _ []types.ValidatorIndex) (*empty.Empty, error) {
+func (c *grpcValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*empty.Empty, error) {
 	return c.beaconNodeValidatorClient.SubscribeCommitteeSubnets(ctx, in)
 }
 

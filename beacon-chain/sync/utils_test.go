@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -15,14 +15,14 @@ import (
 func TestSortedObj_SortBlocksRoots(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []interfaces.SignedBeaconBlock
+	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
 	}
 
 	for i := 0; i < 10; i++ {
-		slot := types.Slot(randFunc())
+		slot := primitives.Slot(randFunc())
 		newBlk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot, Body: &ethpb.BeaconBlockBody{}}})
 		require.NoError(t, err)
 		blks = append(blks, newBlk)
@@ -34,7 +34,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 
 	newBlks, newRoots := r.sortBlocksAndRoots(blks, roots)
 
-	previousSlot := types.Slot(0)
+	previousSlot := primitives.Slot(0)
 	for i, b := range newBlks {
 		if b.Block().Slot() < previousSlot {
 			t.Errorf("Block list is not sorted as %d is smaller than previousSlot %d", b.Block().Slot(), previousSlot)
@@ -49,14 +49,14 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 func TestSortedObj_NoDuplicates(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []interfaces.SignedBeaconBlock
+	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
 	}
 
 	for i := 0; i < 10; i++ {
-		slot := types.Slot(randFunc())
+		slot := primitives.Slot(randFunc())
 		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot, Body: &ethpb.BeaconBlockBody{}}}
 		// append twice
 		wsb, err := blocks.NewSignedBeaconBlock(newBlk)

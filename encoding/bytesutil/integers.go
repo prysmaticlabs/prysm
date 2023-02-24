@@ -115,6 +115,14 @@ func Uint64ToBytesLittleEndian(i uint64) []byte {
 	return buf
 }
 
+// Uint64ToBytesLittleEndian32 conversion of a uint64 to a fix
+// sized 32 byte array in little endian order. Returns 32 byte array.
+func Uint64ToBytesLittleEndian32(i uint64) []byte {
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, i)
+	return buf
+}
+
 // Uint64ToBytesBigEndian conversion.
 func Uint64ToBytesBigEndian(i uint64) []byte {
 	buf := make([]byte, 8)

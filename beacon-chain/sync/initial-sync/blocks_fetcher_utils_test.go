@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -48,7 +48,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		peers: peersGen(5),
 	}
 
-	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, chainConfig.peers)
+	mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -60,7 +60,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		},
 	)
 	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
-	seekSlots := map[types.Slot]types.Slot{
+	seekSlots := map[primitives.Slot]primitives.Slot{
 		0:     1,
 		10:    11,
 		31:    32,
@@ -85,8 +85,8 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 	}
 
 	t.Run("test isolated non-skipped slot", func(t *testing.T) {
-		seekSlot := types.Slot(51264)
-		expectedSlot := types.Slot(55000)
+		seekSlot := primitives.Slot(51264)
+		expectedSlot := primitives.Slot(55000)
 
 		var wg sync.WaitGroup
 		wg.Add(1)
@@ -137,13 +137,13 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 		fetcher.mode = modeStopOnFinalizedEpoch
 		slot, err := fetcher.nonSkippedSlotAfter(ctx, 160)
 		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
-		assert.Equal(t, types.Slot(0), slot)
+		assert.Equal(t, primitives.Slot(0), slot)
 
 		fetcher.mode = modeNonConstrained
 		require.NoError(t, mc.State.SetSlot(20*params.BeaconConfig().SlotsPerEpoch))
 		slot, err = fetcher.nonSkippedSlotAfter(ctx, 160)
 		assert.ErrorContains(t, errSlotIsTooHigh.Error(), err)
-		assert.Equal(t, types.Slot(0), slot)
+		assert.Equal(t, primitives.Slot(0), slot)
 	})
 }
 
@@ -159,7 +159,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 
 	// Chain contains blocks from 8 epochs (from 0 to 7, 256 is the start slot of epoch8).
 	chain1 := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 250)
-	finalizedSlot := types.Slot(63)
+	finalizedSlot := primitives.Slot(63)
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
@@ -204,7 +204,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	pidInd := 0
 	for i := uint64(1); i < uint64(len(chain1)); i += blockBatchLimit {
 		req := &ethpb.BeaconBlocksByRangeRequest{
-			StartSlot: types.Slot(i),
+			StartSlot: primitives.Slot(i),
 			Step:      1,
 			Count:     blockBatchLimit,
 		}
@@ -223,7 +223,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasBlock(ctx, blkRoot))
 	}
-	assert.Equal(t, types.Slot(250), mc.HeadSlot())
+	assert.Equal(t, primitives.Slot(250), mc.HeadSlot())
 
 	// Assert no blocks on further requests, disallowing to progress.
 	req := &ethpb.BeaconBlocksByRangeRequest{
@@ -262,7 +262,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 		require.NoError(t, st.SetSlot(blk.Block.Slot))
 	}
-	forkSlot := types.Slot(129)
+	forkSlot := primitives.Slot(129)
 	chain2 := extendBlockSequence(t, chain1[:forkSlot], 165)
 	// Assert that forked blocks from chain2 are unknown.
 	assert.Equal(t, 294, len(chain2))
@@ -290,7 +290,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, st.SetSlot(blk.Block().Slot()))
 	}
 	assert.Equal(t, forkSlot.Add(uint64(len(fork.blocks)-1)), mc.HeadSlot())
-	for i := forkSlot.Add(uint64(len(fork.blocks))); i < types.Slot(len(chain2)); i++ {
+	for i := forkSlot.Add(uint64(len(fork.blocks))); i < primitives.Slot(len(chain2)); i++ {
 		blk := chain2[i]
 		require.Equal(t, blk.Block.Slot, i, "incorrect block selected for slot %d", i)
 		// Only save is parent block exists.
@@ -383,7 +383,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	})
 
 	t.Run("first block is diverging - backtrack successfully", func(t *testing.T) {
-		forkedSlot := types.Slot(24)
+		forkedSlot := primitives.Slot(24)
 		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
 		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
 		time.Sleep(100 * time.Millisecond)
@@ -408,7 +408,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	})
 
 	t.Run("mid block is diverging - no backtrack is necessary", func(t *testing.T) {
-		forkedSlot := types.Slot(60)
+		forkedSlot := primitives.Slot(60)
 		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
 		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
 		time.Sleep(100 * time.Millisecond)
@@ -418,7 +418,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
 		require.NoError(t, err)
 		require.Equal(t, 64, len(fork.blocks))
-		assert.Equal(t, types.Slot(33), fork.blocks[0].Block().Slot())
+		assert.Equal(t, primitives.Slot(33), fork.blocks[0].Block().Slot())
 	})
 }
 
@@ -427,7 +427,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 	p2p := p2pt.NewTestP2P(t)
 
 	knownBlocks := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 128)
-	finalizedSlot := types.Slot(63)
+	finalizedSlot := primitives.Slot(63)
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := knownBlocks[0]
@@ -494,10 +494,10 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 		name               string
 		syncMode           syncMode
 		peers              []*peerData
-		ourFinalizedEpoch  types.Epoch
-		ourHeadSlot        types.Slot
-		expectedHeadEpoch  types.Epoch
-		targetEpoch        types.Epoch
+		ourFinalizedEpoch  primitives.Epoch
+		ourHeadSlot        primitives.Slot
+		expectedHeadEpoch  primitives.Epoch
+		targetEpoch        primitives.Epoch
 		targetEpochSupport int
 	}{
 		{
@@ -569,7 +569,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc, p2p, _ := initializeTestServices(t, []types.Slot{}, tt.peers)
+			mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, tt.peers)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			fetcher := newBlocksFetcher(

@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -137,7 +137,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 103, len(resp.Data))
+	assert.Equal(t, 105, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -358,6 +358,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "75", v)
 		case "MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP":
 			assert.Equal(t, "76", v)
+		case "REORG_MAX_EPOCHS_SINCE_FINALIZATION":
+			assert.Equal(t, "2", v)
+		case "REORG_WEIGHT_THRESHOLD":
+			assert.Equal(t, "20", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
 		default:
 			t.Errorf("Incorrect key: %s", k)
@@ -383,15 +387,15 @@ func TestGetDepositContract(t *testing.T) {
 
 func TestForkSchedule_Ok(t *testing.T) {
 	genesisForkVersion := []byte("Genesis")
-	firstForkVersion, firstForkEpoch := []byte("Firs"), types.Epoch(100)
-	secondForkVersion, secondForkEpoch := []byte("Seco"), types.Epoch(200)
-	thirdForkVersion, thirdForkEpoch := []byte("Thir"), types.Epoch(300)
+	firstForkVersion, firstForkEpoch := []byte("Firs"), primitives.Epoch(100)
+	secondForkVersion, secondForkEpoch := []byte("Seco"), primitives.Epoch(200)
+	thirdForkVersion, thirdForkEpoch := []byte("Thir"), primitives.Epoch(300)
 
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig().Copy()
 	config.GenesisForkVersion = genesisForkVersion
 	// Create fork schedule adding keys in non-sorted order.
-	schedule := make(map[[4]byte]types.Epoch, 3)
+	schedule := make(map[[4]byte]primitives.Epoch, 3)
 	schedule[bytesutil.ToBytes4(secondForkVersion)] = secondForkEpoch
 	schedule[bytesutil.ToBytes4(firstForkVersion)] = firstForkEpoch
 	schedule[bytesutil.ToBytes4(thirdForkVersion)] = thirdForkEpoch

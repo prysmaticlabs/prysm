@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/math"
@@ -97,7 +97,7 @@ type peerLock struct {
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
 type fetchRequestParams struct {
 	ctx   context.Context // if provided, it is used instead of global fetcher's context
-	start types.Slot      // starting slot
+	start primitives.Slot // starting slot
 	count uint64          // how many slots to receive (fetcher may return fewer slots)
 }
 
@@ -105,9 +105,9 @@ type fetchRequestParams struct {
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
 	pid    peer.ID
-	start  types.Slot
+	start  primitives.Slot
 	count  uint64
-	blocks []interfaces.SignedBeaconBlock
+	blocks []interfaces.ReadOnlySignedBeaconBlock
 	err    error
 }
 
@@ -222,7 +222,7 @@ func (f *blocksFetcher) loop() {
 }
 
 // scheduleRequest adds request to incoming queue.
-func (f *blocksFetcher) scheduleRequest(ctx context.Context, start types.Slot, count uint64) error {
+func (f *blocksFetcher) scheduleRequest(ctx context.Context, start primitives.Slot, count uint64) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -241,14 +241,14 @@ func (f *blocksFetcher) scheduleRequest(ctx context.Context, start types.Slot, c
 }
 
 // handleRequest parses fetch request and forwards it to response builder.
-func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, count uint64) *fetchRequestResponse {
+func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot, count uint64) *fetchRequestResponse {
 	ctx, span := trace.StartSpan(ctx, "initialsync.handleRequest")
 	defer span.End()
 
 	response := &fetchRequestResponse{
 		start:  start,
 		count:  count,
-		blocks: []interfaces.SignedBeaconBlock{},
+		blocks: []interfaces.ReadOnlySignedBeaconBlock{},
 		err:    nil,
 	}
 
@@ -280,9 +280,9 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 // fetchBlocksFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
-	start types.Slot, count uint64,
+	start primitives.Slot, count uint64,
 	peers []peer.ID,
-) ([]interfaces.SignedBeaconBlock, peer.ID, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
@@ -309,7 +309,7 @@ func (f *blocksFetcher) requestBlocks(
 	ctx context.Context,
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -339,7 +339,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	ctx context.Context,
 	req *p2pTypes.BeaconBlockByRootsReq,
 	pid peer.ID,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -394,6 +394,12 @@ func timeToWait(wanted, rem, capacity int64, timeTillEmpty time.Duration) time.D
 	// Defensive check if we have more than enough blocks
 	// to request from the peer.
 	if rem >= wanted {
+		return 0
+	}
+	// Handle edge case where capacity is equal to the remaining amount
+	// of blocks. This also handles the impossible case in where remaining blocks
+	// exceed the limiter's capacity.
+	if capacity <= rem {
 		return 0
 	}
 	blocksNeeded := wanted - rem

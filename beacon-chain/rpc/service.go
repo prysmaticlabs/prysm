@@ -261,15 +261,16 @@ func (s *Service) Start() {
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
 	nodeServerV1 := &node.Server{
-		BeaconDB:              s.cfg.BeaconDB,
-		Server:                s.grpcServer,
-		SyncChecker:           s.cfg.SyncService,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
-		PeersFetcher:          s.cfg.PeersFetcher,
-		PeerManager:           s.cfg.PeerManager,
-		MetadataProvider:      s.cfg.MetadataProvider,
-		HeadFetcher:           s.cfg.HeadFetcher,
+		BeaconDB:                  s.cfg.BeaconDB,
+		Server:                    s.grpcServer,
+		SyncChecker:               s.cfg.SyncService,
+		OptimisticModeFetcher:     s.cfg.OptimisticModeFetcher,
+		GenesisTimeFetcher:        s.cfg.GenesisTimeFetcher,
+		PeersFetcher:              s.cfg.PeersFetcher,
+		PeerManager:               s.cfg.PeerManager,
+		MetadataProvider:          s.cfg.MetadataProvider,
+		HeadFetcher:               s.cfg.HeadFetcher,
+		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	}
 
 	beaconChainServer := &beaconv1alpha1.Server{
@@ -358,6 +359,7 @@ func (s *Service) Start() {
 			},
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 			ForkFetcher:           s.cfg.ForkFetcher,
+			FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)

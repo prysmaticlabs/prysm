@@ -9,21 +9,17 @@ import (
 	"strconv"
 	"strings"
 
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
-
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-
-	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 )
 
@@ -39,7 +35,7 @@ type metadata struct {
 var beaconPathsAndObjects = map[string]metadata{
 	"/beacon/genesis": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, _ types.Epoch) []string {
+		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{}
 		},
 		prysmResps: map[string]interface{}{
@@ -51,7 +47,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/beacon/states/{param1}/root": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, _ types.Epoch) []string {
+		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{"head"}
 		},
 		prysmResps: map[string]interface{}{
@@ -63,7 +59,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/beacon/states/{param1}/finality_checkpoints": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, _ types.Epoch) []string {
+		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{"head"}
 		},
 		prysmResps: map[string]interface{}{
@@ -75,7 +71,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/beacon/blocks/{param1}": {
 		basepath: v2MiddlewarePathTemplate,
-		params: func(t string, e types.Epoch) []string {
+		params: func(t string, e primitives.Epoch) []string {
 			if t == "ssz" {
 				if e < 4 {
 					return []string{"genesis"}
@@ -96,7 +92,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/beacon/states/{param1}/fork": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, _ types.Epoch) []string {
+		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{"finalized"}
 		},
 		prysmResps: map[string]interface{}{
@@ -108,7 +104,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/debug/beacon/states/{param1}": {
 		basepath: v2MiddlewarePathTemplate,
-		params: func(_ string, e types.Epoch) []string {
+		params: func(_ string, e primitives.Epoch) []string {
 			return []string{"head"}
 		},
 		prysmResps: map[string]interface{}{
@@ -120,7 +116,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/validator/duties/proposer/{param1}": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, e types.Epoch) []string {
+		params: func(_ string, e primitives.Epoch) []string {
 			return []string{fmt.Sprintf("%v", e)}
 		},
 		prysmResps: map[string]interface{}{
@@ -158,7 +154,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/beacon/headers/{param1}": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, e types.Epoch) []string {
+		params: func(_ string, e primitives.Epoch) []string {
 			slot := uint64(0)
 			if e > 0 {
 				slot = (uint64(e) * uint64(params.BeaconConfig().SlotsPerEpoch)) - 1
@@ -174,7 +170,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/node/identity": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, _ types.Epoch) []string {
+		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{}
 		},
 		prysmResps: map[string]interface{}{
@@ -203,7 +199,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/node/peers": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, _ types.Epoch) []string {
+		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{}
 		},
 		prysmResps: map[string]interface{}{

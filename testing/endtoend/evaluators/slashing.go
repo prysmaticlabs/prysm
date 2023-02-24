@@ -10,7 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -23,7 +23,7 @@ import (
 )
 
 // InjectDoubleVoteOnEpoch broadcasts a double vote into the beacon node pool for the slasher to detect.
-var InjectDoubleVoteOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+var InjectDoubleVoteOnEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
 		Name:       "inject_double_vote_%d",
 		Policy:     policies.OnEpoch(n),
@@ -32,7 +32,7 @@ var InjectDoubleVoteOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
 }
 
 // InjectDoubleBlockOnEpoch proposes a double block to the beacon node for the slasher to detect.
-var InjectDoubleBlockOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+var InjectDoubleBlockOnEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
 		Name:       "inject_double_block_%d",
 		Policy:     policies.OnEpoch(n),
@@ -41,7 +41,7 @@ var InjectDoubleBlockOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
 }
 
 // ValidatorsSlashedAfterEpoch ensures the expected amount of validators are slashed.
-var ValidatorsSlashedAfterEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+var ValidatorsSlashedAfterEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
 		Name:       "validators_slashed_epoch_%d",
 		Policy:     policies.AfterNthEpoch(n),
@@ -50,7 +50,7 @@ var ValidatorsSlashedAfterEpoch = func(n types.Epoch) e2eTypes.Evaluator {
 }
 
 // SlashedValidatorsLoseBalanceAfterEpoch checks if the validators slashed lose the right balance.
-var SlashedValidatorsLoseBalanceAfterEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+var SlashedValidatorsLoseBalanceAfterEpoch = func(n primitives.Epoch) e2eTypes.Evaluator {
 	return e2eTypes.Evaluator{
 		Name:       "slashed_validators_lose_valance_epoch_%d",
 		Policy:     policies.AfterNthEpoch(n),
@@ -83,7 +83,7 @@ func validatorsLoseBalance(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientC
 	for i, slashedIndex := range slashedIndices {
 		req := &eth.GetValidatorRequest{
 			QueryFilter: &eth.GetValidatorRequest_Index{
-				Index: types.ValidatorIndex(slashedIndex),
+				Index: primitives.ValidatorIndex(slashedIndex),
 			},
 		}
 		valResp, err := client.GetValidator(ctx, req)
@@ -133,8 +133,8 @@ func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*gr
 		return errors.Wrap(err, "could not get duties")
 	}
 
-	var committeeIndex types.CommitteeIndex
-	var committee []types.ValidatorIndex
+	var committeeIndex primitives.CommitteeIndex
+	var committee []primitives.ValidatorIndex
 	for _, duty := range duties.Duties {
 		if duty.AttesterSlot == chainHead.HeadSlot-1 {
 			committeeIndex = duty.CommitteeIndex
@@ -220,10 +220,10 @@ func proposeDoubleBlock(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn
 		return errors.Wrap(err, "could not get duties")
 	}
 
-	var proposerIndex types.ValidatorIndex
+	var proposerIndex primitives.ValidatorIndex
 	for i, duty := range duties.CurrentEpochDuties {
 		if slice.IsInSlots(chainHead.HeadSlot-1, duty.ProposerSlots) {
-			proposerIndex = types.ValidatorIndex(i)
+			proposerIndex = primitives.ValidatorIndex(i)
 			break
 		}
 	}
@@ -237,7 +237,7 @@ func proposeDoubleBlock(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn
 
 	// If the proposer index is in the second validator client, we connect to
 	// the corresponding beacon node instead.
-	if proposerIndex >= types.ValidatorIndex(uint64(validatorsPerNode)) {
+	if proposerIndex >= primitives.ValidatorIndex(uint64(validatorsPerNode)) {
 		valClient = eth.NewBeaconNodeValidatorClient(conns[1])
 	}
 

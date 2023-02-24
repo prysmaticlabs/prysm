@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -18,13 +18,13 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// OriginData represents the BeaconState and SignedBeaconBlock necessary to start an empty Beacon Node
+// OriginData represents the BeaconState and ReadOnlySignedBeaconBlock necessary to start an empty Beacon Node
 // using Checkpoint Sync.
 type OriginData struct {
 	sb []byte
 	bb []byte
 	st state.BeaconState
-	b  interfaces.SignedBeaconBlock
+	b  interfaces.ReadOnlySignedBeaconBlock
 	vu *detect.VersionedUnmarshaler
 	br [32]byte
 	sr [32]byte
@@ -49,12 +49,12 @@ func (o *OriginData) StateBytes() []byte {
 	return o.sb
 }
 
-// BlockBytes returns the ssz-encoded bytes of the downloaded SignedBeaconBlock value.
+// BlockBytes returns the ssz-encoded bytes of the downloaded ReadOnlySignedBeaconBlock value.
 func (o *OriginData) BlockBytes() []byte {
 	return o.bb
 }
 
-func fname(prefix string, vu *detect.VersionedUnmarshaler, slot types.Slot, root [32]byte) string {
+func fname(prefix string, vu *detect.VersionedUnmarshaler, slot primitives.Slot, root [32]byte) string {
 	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, vu.Config.ConfigName, version.String(vu.Fork), slot, root)
 }
 
@@ -116,13 +116,13 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	}, nil
 }
 
-// WeakSubjectivityData represents the state root, block root and epoch of the BeaconState + SignedBeaconBlock
+// WeakSubjectivityData represents the state root, block root and epoch of the BeaconState + ReadOnlySignedBeaconBlock
 // that falls at the beginning of the current weak subjectivity period. These values can be used to construct
 // a weak subjectivity checkpoint beacon node flag to be used for validation.
 type WeakSubjectivityData struct {
 	BlockRoot [32]byte
 	StateRoot [32]byte
-	Epoch     types.Epoch
+	Epoch     primitives.Epoch
 }
 
 // CheckpointString returns the standard string representation of a Checkpoint.
@@ -238,7 +238,7 @@ func computeBackwardsCompatible(ctx context.Context, client *Client) (*WeakSubje
 
 // this method downloads the head state, which can be used to find the correct chain config
 // and use prysm's helper methods to compute the latest weak subjectivity epoch.
-func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (types.Epoch, error) {
+func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (primitives.Epoch, error) {
 	headBytes, err := client.GetState(ctx, IdHead)
 	if err != nil {
 		return 0, err

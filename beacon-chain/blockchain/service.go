@@ -33,7 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -51,12 +51,11 @@ type Service struct {
 	head                    *head
 	headLock                sync.RWMutex
 	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot   types.Slot
+	nextEpochBoundarySlot   primitives.Slot
 	boundaryRoots           [][32]byte
 	checkpointStateCache    *cache.CheckpointStateCache
-	initSyncBlocks          map[[32]byte]interfaces.SignedBeaconBlock
+	initSyncBlocks          map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
 	initSyncBlocksLock      sync.RWMutex
-	justifiedBalances       *stateBalanceCache
 	wsVerifier              *WeakSubjectivityVerifier
 	processAttestationsLock sync.Mutex
 }
@@ -94,8 +93,8 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
-		initSyncBlocks:       make(map[[32]byte]interfaces.SignedBeaconBlock),
-		cfg:                  &config{},
+		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
+		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
@@ -103,12 +102,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 	var err error
-	if srv.justifiedBalances == nil {
-		srv.justifiedBalances, err = newStateBalanceCache(srv.cfg.StateGen)
-		if err != nil {
-			return nil, err
-		}
-	}
 	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
 	if err != nil {
 		return nil, err
@@ -207,7 +200,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
+	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(s.ctx, &forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
 		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
 	}

@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -189,12 +189,12 @@ func TestServer_GetChainHead(t *testing.T) {
 
 	head, err := bs.GetChainHead(context.Background(), nil)
 	require.NoError(t, err)
-	assert.Equal(t, types.Epoch(3), head.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
-	assert.Equal(t, types.Epoch(2), head.JustifiedEpoch, "Unexpected JustifiedEpoch")
-	assert.Equal(t, types.Epoch(1), head.FinalizedEpoch, "Unexpected FinalizedEpoch")
-	assert.Equal(t, types.Slot(24), head.PreviousJustifiedSlot, "Unexpected PreviousJustifiedSlot")
-	assert.Equal(t, types.Slot(16), head.JustifiedSlot, "Unexpected JustifiedSlot")
-	assert.Equal(t, types.Slot(8), head.FinalizedSlot, "Unexpected FinalizedSlot")
+	assert.Equal(t, primitives.Epoch(3), head.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
+	assert.Equal(t, primitives.Epoch(2), head.JustifiedEpoch, "Unexpected JustifiedEpoch")
+	assert.Equal(t, primitives.Epoch(1), head.FinalizedEpoch, "Unexpected FinalizedEpoch")
+	assert.Equal(t, primitives.Slot(24), head.PreviousJustifiedSlot, "Unexpected PreviousJustifiedSlot")
+	assert.Equal(t, primitives.Slot(16), head.JustifiedSlot, "Unexpected JustifiedSlot")
+	assert.Equal(t, primitives.Slot(8), head.FinalizedSlot, "Unexpected FinalizedSlot")
 	assert.DeepEqual(t, pjRoot[:], head.PreviousJustifiedBlockRoot, "Unexpected PreviousJustifiedBlockRoot")
 	assert.DeepEqual(t, jRoot[:], head.JustifiedBlockRoot, "Unexpected JustifiedBlockRoot")
 	assert.DeepEqual(t, fRoot[:], head.FinalizedBlockRoot, "Unexpected FinalizedBlockRoot")
@@ -557,7 +557,7 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 	})
 }
 
-func runListBlocksGenesis(t *testing.T, blk interfaces.SignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
+func runListBlocksGenesis(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
 	resetFn := features.InitWithReset(&features.Flags{
 		EnableOnlyBlindedBeaconBlocks: true,
 	})
@@ -605,7 +605,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -620,7 +620,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -635,7 +635,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -650,7 +650,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlockCapella()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockCapella()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -663,8 +663,8 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 	})
 }
 
-func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.SignedBeaconBlock,
-	blockCreator func(i types.Slot) interfaces.SignedBeaconBlock) {
+func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.ReadOnlySignedBeaconBlock,
+	blockCreator func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -677,9 +677,9 @@ func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.Sig
 	require.NoError(t, db.SaveBlock(ctx, genBlock))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
-	for i := types.Slot(0); i < count; i++ {
+	count := primitives.Slot(100)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
+	for i := primitives.Slot(0); i < count; i++ {
 		blks[i] = blockCreator(i)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
@@ -699,14 +699,14 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("phase 0 block", func(t *testing.T) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = 300
-		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		containerCreator := func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
+		containerCreator := func(i primitives.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
 			ctr := &ethpb.BeaconBlockContainer{
@@ -723,14 +723,14 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("altair block", func(t *testing.T) {
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.Slot = 300
-		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		containerCreator := func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
+		containerCreator := func(i primitives.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
 			ctr := &ethpb.BeaconBlockContainer{
@@ -747,14 +747,14 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("bellatrix block", func(t *testing.T) {
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.Slot = 300
-		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		containerCreator := func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
+		containerCreator := func(i primitives.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
 			ctr := &ethpb.BeaconBlockContainer{
@@ -771,14 +771,14 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("capella block", func(t *testing.T) {
 		blk := util.NewBeaconBlockCapella()
 		blk.Block.Slot = 300
-		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockCapella()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		containerCreator := func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
+		containerCreator := func(i primitives.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
 			b := util.NewBeaconBlockCapella()
 			b.Block.Slot = i
 			ctr := &ethpb.BeaconBlockContainer{
@@ -794,8 +794,8 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	})
 }
 
-func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.SignedBeaconBlock,
-	blockCreator func(i types.Slot) interfaces.SignedBeaconBlock, containerCreator func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer) {
+func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.ReadOnlySignedBeaconBlock,
+	blockCreator func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock, containerCreator func(i primitives.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer) {
 
 	db := dbTest.SetupDB(t)
 	chain := &chainMock.ChainService{
@@ -803,10 +803,10 @@ func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.SignedBe
 	}
 	ctx := context.Background()
 
-	count := types.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	count := primitives.Slot(100)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := blockCreator(i)
 		root, err := b.Block().HashTreeRoot()
 		require.NoError(t, err)

@@ -63,7 +63,7 @@ func (bs *Server) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
-	var blocks []interfaces.SignedBeaconBlock
+	var blocks []interfaces.ReadOnlySignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_GenesisEpoch:
@@ -117,7 +117,7 @@ func (bs *Server) ListAttestations(
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
-	var blocks []interfaces.SignedBeaconBlock
+	var blocks []interfaces.ReadOnlySignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
@@ -201,6 +201,7 @@ func (bs *Server) ListIndexedAttestations(
 // StreamAttestations to clients at the end of every slot. This method retrieves the
 // aggregated attestations currently in the pool at the start of a slot and sends
 // them over a gRPC stream.
+// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
 func (bs *Server) StreamAttestations(
 	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
@@ -235,6 +236,7 @@ func (bs *Server) StreamAttestations(
 // StreamIndexedAttestations to clients at the end of every slot. This method retrieves the
 // aggregated attestations currently in the pool, converts them into indexed form, and
 // sends them over a gRPC stream.
+// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
 func (bs *Server) StreamIndexedAttestations(
 	_ *emptypb.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
 ) error {

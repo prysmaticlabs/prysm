@@ -16,7 +16,7 @@ import (
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -31,7 +31,7 @@ var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 type notifyForkchoiceUpdateArg struct {
 	headState state.BeaconState
 	headRoot  [32]byte
-	headBlock interfaces.BeaconBlock
+	headBlock interfaces.ReadOnlyBeaconBlock
 }
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
@@ -98,7 +98,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				return nil, nil
 			}
 
-			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
+			r, err := s.cfg.ForkChoiceStore.Head(ctx)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"slot":                 headBlk.Slot(),
@@ -182,7 +182,7 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 // notifyNewPayload signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
 func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
-	postStateHeader interfaces.ExecutionData, blk interfaces.SignedBeaconBlock) (bool, error) {
+	postStateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 
@@ -250,7 +250,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
-func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot types.Slot) (bool, payloadattribute.Attributer, types.ValidatorIndex) {
+func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot) (bool, payloadattribute.Attributer, primitives.ValidatorIndex) {
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)

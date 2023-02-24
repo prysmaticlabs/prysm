@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -18,7 +18,7 @@ import (
 //
 // Spec pseudocode definition:
 //
-//	def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+//	def process_block_header(state: BeaconState, block: ReadOnlyBeaconBlock) -> None:
 //	  # Verify that the slots match
 //	  assert block.slot == state.slot
 //	  # Verify that the block is newer than latest block header
@@ -42,7 +42,7 @@ import (
 func ProcessBlockHeader(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	block interfaces.SignedBeaconBlock,
+	block interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(block); err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func ProcessBlockHeader(
 //
 // Spec pseudocode definition:
 //
-//	def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+//	def process_block_header(state: BeaconState, block: ReadOnlyBeaconBlock) -> None:
 //	  # Verify that the slots match
 //	  assert block.slot == state.slot
 //	  # Verify that the block is newer than latest block header
@@ -98,7 +98,7 @@ func ProcessBlockHeader(
 func ProcessBlockHeaderNoVerify(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	slot types.Slot, proposerIndex types.ValidatorIndex,
+	slot primitives.Slot, proposerIndex primitives.ValidatorIndex,
 	parentRoot, bodyRoot []byte,
 ) (state.BeaconState, error) {
 	if beaconState.Slot() != slot {

@@ -1,4 +1,4 @@
-package types_test
+package primitives_test
 
 import (
 	"fmt"
@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	mathprysm "github.com/prysmaticlabs/prysm/v3/math"
 )
 
 func TestSlot_Casting(t *testing.T) {
-	slot := types.Slot(42)
+	slot := primitives.Slot(42)
 
 	t.Run("time.Duration", func(t *testing.T) {
 		if uint64(time.Duration(slot)) != uint64(slot) {
@@ -21,20 +21,20 @@ func TestSlot_Casting(t *testing.T) {
 
 	t.Run("floats", func(t *testing.T) {
 		var x1 float32 = 42.2
-		if types.Slot(x1) != slot {
-			t.Errorf("Unequal: %v = %v", types.Slot(x1), slot)
+		if primitives.Slot(x1) != slot {
+			t.Errorf("Unequal: %v = %v", primitives.Slot(x1), slot)
 		}
 
 		var x2 = 42.2
-		if types.Slot(x2) != slot {
-			t.Errorf("Unequal: %v = %v", types.Slot(x2), slot)
+		if primitives.Slot(x2) != slot {
+			t.Errorf("Unequal: %v = %v", primitives.Slot(x2), slot)
 		}
 	})
 
 	t.Run("int", func(t *testing.T) {
 		var x = 42
-		if types.Slot(x) != slot {
-			t.Errorf("Unequal: %v = %v", types.Slot(x), slot)
+		if primitives.Slot(x) != slot {
+			t.Errorf("Unequal: %v = %v", primitives.Slot(x), slot)
 		}
 	})
 }
@@ -42,7 +42,7 @@ func TestSlot_Casting(t *testing.T) {
 func TestSlot_Mul(t *testing.T) {
 	tests := []struct {
 		a, b     uint64
-		res      types.Slot
+		res      primitives.Slot
 		panicMsg string
 	}{
 		{a: 0, b: 1, res: 0},
@@ -58,33 +58,33 @@ func TestSlot_Mul(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("Slot(%v).Mul(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).Mul(tt.b)
+					res = primitives.Slot(tt.a).Mul(tt.b)
 				})
 			} else {
-				res = types.Slot(tt.a).Mul(tt.b)
+				res = primitives.Slot(tt.a).Mul(tt.b)
 			}
 			if tt.res != res {
 				t.Errorf("Slot.Mul() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).MulSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).MulSlot(types.Slot(tt.b))
+					res = primitives.Slot(tt.a).MulSlot(primitives.Slot(tt.b))
 				})
 			} else {
-				res = types.Slot(tt.a).MulSlot(types.Slot(tt.b))
+				res = primitives.Slot(tt.a).MulSlot(primitives.Slot(tt.b))
 			}
 			if tt.res != res {
 				t.Errorf("Slot.MulSlot() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).SafeMulSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			res, err := types.Slot(tt.a).SafeMulSlot(types.Slot(tt.b))
+			res, err := primitives.Slot(tt.a).SafeMulSlot(primitives.Slot(tt.b))
 			if tt.panicMsg != "" && (err == nil || err.Error() != tt.panicMsg) {
 				t.Errorf("Expected error not thrown, wanted: %v, got: %v", tt.panicMsg, err)
 				return
@@ -99,7 +99,7 @@ func TestSlot_Mul(t *testing.T) {
 func TestSlot_Div(t *testing.T) {
 	tests := []struct {
 		a, b     uint64
-		res      types.Slot
+		res      primitives.Slot
 		panicMsg string
 	}{
 		{a: 0, b: 1, res: 0},
@@ -114,33 +114,33 @@ func TestSlot_Div(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("Slot(%v).Div(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).Div(tt.b)
+					res = primitives.Slot(tt.a).Div(tt.b)
 				})
 			} else {
-				res = types.Slot(tt.a).Div(tt.b)
+				res = primitives.Slot(tt.a).Div(tt.b)
 			}
 			if tt.res != res {
 				t.Errorf("Slot.Div() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).DivSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).DivSlot(types.Slot(tt.b))
+					res = primitives.Slot(tt.a).DivSlot(primitives.Slot(tt.b))
 				})
 			} else {
-				res = types.Slot(tt.a).DivSlot(types.Slot(tt.b))
+				res = primitives.Slot(tt.a).DivSlot(primitives.Slot(tt.b))
 			}
 			if tt.res != res {
 				t.Errorf("Slot.DivSlot() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).SafeDivSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			res, err := types.Slot(tt.a).SafeDivSlot(types.Slot(tt.b))
+			res, err := primitives.Slot(tt.a).SafeDivSlot(primitives.Slot(tt.b))
 			if tt.panicMsg != "" && (err == nil || err.Error() != tt.panicMsg) {
 				t.Errorf("Expected error not thrown, wanted: %v, got: %v", tt.panicMsg, err)
 				return
@@ -155,7 +155,7 @@ func TestSlot_Div(t *testing.T) {
 func TestSlot_Add(t *testing.T) {
 	tests := []struct {
 		a, b     uint64
-		res      types.Slot
+		res      primitives.Slot
 		panicMsg string
 	}{
 		{a: 0, b: 1, res: 1},
@@ -171,33 +171,33 @@ func TestSlot_Add(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("Slot(%v).Add(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).Add(tt.b)
+					res = primitives.Slot(tt.a).Add(tt.b)
 				})
 			} else {
-				res = types.Slot(tt.a).Add(tt.b)
+				res = primitives.Slot(tt.a).Add(tt.b)
 			}
 			if tt.res != res {
 				t.Errorf("Slot.Add() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).AddSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).AddSlot(types.Slot(tt.b))
+					res = primitives.Slot(tt.a).AddSlot(primitives.Slot(tt.b))
 				})
 			} else {
-				res = types.Slot(tt.a).AddSlot(types.Slot(tt.b))
+				res = primitives.Slot(tt.a).AddSlot(primitives.Slot(tt.b))
 			}
 			if tt.res != res {
 				t.Errorf("Slot.AddSlot() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).SafeAddSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			res, err := types.Slot(tt.a).SafeAddSlot(types.Slot(tt.b))
+			res, err := primitives.Slot(tt.a).SafeAddSlot(primitives.Slot(tt.b))
 			if tt.panicMsg != "" && (err == nil || err.Error() != tt.panicMsg) {
 				t.Errorf("Expected error not thrown, wanted: %v, got: %v", tt.panicMsg, err)
 				return
@@ -212,7 +212,7 @@ func TestSlot_Add(t *testing.T) {
 func TestSlot_Sub(t *testing.T) {
 	tests := []struct {
 		a, b     uint64
-		res      types.Slot
+		res      primitives.Slot
 		panicMsg string
 	}{
 		{a: 1, b: 0, res: 1},
@@ -230,33 +230,33 @@ func TestSlot_Sub(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("Slot(%v).Sub(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).Sub(tt.b)
+					res = primitives.Slot(tt.a).Sub(tt.b)
 				})
 			} else {
-				res = types.Slot(tt.a).Sub(tt.b)
+				res = primitives.Slot(tt.a).Sub(tt.b)
 			}
 			if tt.res != res {
 				t.Errorf("Slot.Sub() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).SubSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).SubSlot(types.Slot(tt.b))
+					res = primitives.Slot(tt.a).SubSlot(primitives.Slot(tt.b))
 				})
 			} else {
-				res = types.Slot(tt.a).SubSlot(types.Slot(tt.b))
+				res = primitives.Slot(tt.a).SubSlot(primitives.Slot(tt.b))
 			}
 			if tt.res != res {
 				t.Errorf("Slot.SubSlot() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).SafeSubSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			res, err := types.Slot(tt.a).SafeSubSlot(types.Slot(tt.b))
+			res, err := primitives.Slot(tt.a).SafeSubSlot(primitives.Slot(tt.b))
 			if tt.panicMsg != "" && (err == nil || err.Error() != tt.panicMsg) {
 				t.Errorf("Expected error not thrown, wanted: %v, got: %v", tt.panicMsg, err)
 				return
@@ -271,7 +271,7 @@ func TestSlot_Sub(t *testing.T) {
 func TestSlot_Mod(t *testing.T) {
 	tests := []struct {
 		a, b     uint64
-		res      types.Slot
+		res      primitives.Slot
 		panicMsg string
 	}{
 		{a: 1, b: 0, res: 0, panicMsg: mathprysm.ErrDivByZero.Error()},
@@ -291,33 +291,33 @@ func TestSlot_Mod(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("Slot(%v).Mod(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).Mod(tt.b)
+					res = primitives.Slot(tt.a).Mod(tt.b)
 				})
 			} else {
-				res = types.Slot(tt.a).Mod(tt.b)
+				res = primitives.Slot(tt.a).Mod(tt.b)
 			}
 			if tt.res != res {
 				t.Errorf("Slot.Mod() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).ModSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			var res types.Slot
+			var res primitives.Slot
 			if tt.panicMsg != "" {
 				assertPanic(t, tt.panicMsg, func() {
-					res = types.Slot(tt.a).ModSlot(types.Slot(tt.b))
+					res = primitives.Slot(tt.a).ModSlot(primitives.Slot(tt.b))
 				})
 			} else {
-				res = types.Slot(tt.a).ModSlot(types.Slot(tt.b))
+				res = primitives.Slot(tt.a).ModSlot(primitives.Slot(tt.b))
 			}
 			if tt.res != res {
 				t.Errorf("Slot.Mod() = %v, want %v", res, tt.res)
 			}
 		})
 		t.Run(fmt.Sprintf("Slot(%v).SafeModSlot(%v) = %v", tt.a, tt.b, tt.res), func(t *testing.T) {
-			res, err := types.Slot(tt.a).SafeModSlot(types.Slot(tt.b))
+			res, err := primitives.Slot(tt.a).SafeModSlot(primitives.Slot(tt.b))
 			if tt.panicMsg != "" && (err == nil || err.Error() != tt.panicMsg) {
 				t.Errorf("Expected error not thrown, wanted: %v, got: %v", tt.panicMsg, err)
 				return

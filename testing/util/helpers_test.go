@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -51,7 +51,7 @@ func TestRandaoReveal(t *testing.T) {
 	buf := make([]byte, fieldparams.RootLength)
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	// We make the previous validator's index sign the message instead of the proposer.
-	sszUint := types.SSZUint64(epoch)
+	sszUint := primitives.SSZUint64(epoch)
 	epochSignature, err := signing.ComputeDomainAndSign(beaconState, epoch, &sszUint, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 	require.NoError(t, err)
 

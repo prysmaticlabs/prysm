@@ -1,11 +1,13 @@
 package signing
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -16,6 +18,11 @@ const ForkVersionByteLength = 4
 
 // DomainByteLength length of domain byte array.
 const DomainByteLength = 4
+
+// digestMap maps the fork version and genesis validator root to the
+// resultant fork digest.
+var digestMapLock sync.RWMutex
+var digestMap = make(map[string][32]byte)
 
 // ErrSigFailedToVerify returns when a signature of a block object(ie attestation, slashing, exit... etc)
 // failed to verify.
@@ -48,7 +55,7 @@ const (
 )
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
-func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
+func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
 	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
@@ -76,7 +83,7 @@ func ComputeSigningRoot(object fssz.HashRoot, domain []byte) ([32]byte, error) {
 	return SigningData(object.HashTreeRoot, domain)
 }
 
-// Computes the signing data by utilising the provided root function and then
+// SigningData computes the signing data by utilising the provided root function and then
 // returning the signing data of the container object.
 func SigningData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	objRoot, err := rootFunc()
@@ -91,7 +98,7 @@ func SigningData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, er
 }
 
 // ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
-func ComputeDomainVerifySigningRoot(st state.ReadOnlyBeaconState, index types.ValidatorIndex, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
+func ComputeDomainVerifySigningRoot(st state.ReadOnlyBeaconState, index primitives.ValidatorIndex, epoch primitives.Epoch, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
 	v, err := st.ValidatorAtIndex(index)
 	if err != nil {
 		return err
@@ -240,6 +247,12 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //	       genesis_validators_root=genesis_validators_root,
 //	   ))
 func computeForkDataRoot(version, root []byte) ([32]byte, error) {
+	digestMapLock.RLock()
+	if val, ok := digestMap[string(version)+string(root)]; ok {
+		digestMapLock.RUnlock()
+		return val, nil
+	}
+	digestMapLock.RUnlock()
 	r, err := (&ethpb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root,
@@ -247,6 +260,12 @@ func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
+	// Cache result of digest computation
+	// as this is a hot path and doesn't need
+	// to be constantly computed.
+	digestMapLock.Lock()
+	digestMap[string(version)+string(root)] = r
+	digestMapLock.Unlock()
 	return r, nil
 }
 

@@ -28,7 +28,7 @@ import (
 // blockContainer represents an instance of
 // block along with its relevant metadata.
 type blockContainer struct {
-	blk         interfaces.SignedBeaconBlock
+	blk         interfaces.ReadOnlySignedBeaconBlock
 	root        [32]byte
 	isCanonical bool
 }
@@ -89,7 +89,7 @@ func convertFromV1Containers(ctrs []blockContainer) ([]*ethpb.BeaconBlockContain
 	return protoCtrs, nil
 }
 
-func convertToBlockContainer(blk interfaces.SignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainer, error) {
+func convertToBlockContainer(blk interfaces.ReadOnlySignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainer, error) {
 	ctr := &ethpb.BeaconBlockContainer{
 		BlockRoot: root[:],
 		Canonical: isCanonical,
@@ -271,6 +271,7 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ch
 }
 
 // StreamBlocks to clients every single time a block is received by the beacon node.
+// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
 func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconChain_StreamBlocksServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
 	var blockSub event.Subscription
@@ -310,7 +311,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 						// One nil block shouldn't stop the stream.
 						continue
 					}
-					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+					headState, err := bs.HeadFetcher.HeadStateReadOnly(bs.Ctx)
 					if err != nil {
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not get head state")
 						continue
@@ -342,6 +343,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 }
 
 // StreamChainHead to clients every single time the head block and state of the chain change.
+// DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
 func (bs *Server) StreamChainHead(_ *emptypb.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)

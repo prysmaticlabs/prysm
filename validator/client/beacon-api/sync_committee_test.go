@@ -12,10 +12,11 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
@@ -55,9 +56,9 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 	).Times(1)
 
 	protoSyncCommiteeMessage := ethpb.SyncCommitteeMessage{
-		Slot:           types.Slot(42),
+		Slot:           primitives.Slot(42),
 		BlockRoot:      decodedBeaconBlockRoot,
-		ValidatorIndex: types.ValidatorIndex(12345),
+		ValidatorIndex: primitives.ValidatorIndex(12345),
 		Signature:      decodedSignature,
 	}
 
@@ -176,7 +177,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 	const blockRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 
 	request := &ethpb.SyncCommitteeContributionRequest{
-		Slot:      types.Slot(1),
+		Slot:      primitives.Slot(1),
 		PublicKey: nil,
 		SubnetId:  1,
 	}
@@ -228,8 +229,8 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
-				fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?slot=%d&subcommittee_index=%d&beacon_block_root=%s",
-					uint64(request.Slot), request.SubnetId, blockRoot),
+				fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?beacon_block_root=%s&slot=%d&subcommittee_index=%d",
+					blockRoot, uint64(request.Slot), request.SubnetId),
 				&apimiddleware.ProduceSyncCommitteeContributionResponseJson{},
 			).SetArg(
 				2,
@@ -250,6 +251,137 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 			expectedResponse, err := convertSyncContributionJsonToProto(test.contribution.Data)
 			require.NoError(t, err)
 			assert.DeepEqual(t, expectedResponse, actualResponse)
+		})
+	}
+}
+
+func TestGetSyncSubCommitteeIndex(t *testing.T) {
+	const (
+		pubkeyStr          = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
+		syncDutiesEndpoint = "/eth/v1/validator/duties/sync"
+		validatorsEndpoint = "/eth/v1/beacon/states/head/validators"
+		validatorIndex     = "55293"
+		slot               = primitives.Slot(123)
+	)
+
+	expectedResponse := &ethpb.SyncSubcommitteeIndexResponse{
+		Indices: []primitives.CommitteeIndex{123, 456},
+	}
+
+	syncDuties := []*apimiddleware.SyncCommitteeDuty{
+		{
+			Pubkey:         hexutil.Encode([]byte{1}),
+			ValidatorIndex: validatorIndex,
+			ValidatorSyncCommitteeIndices: []string{
+				"123",
+				"456",
+			},
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name             string
+		duties           []*apimiddleware.SyncCommitteeDuty
+		validatorsErr    error
+		dutiesErr        error
+		expectedErrorMsg string
+	}{
+		{
+			name:   "success",
+			duties: syncDuties,
+		},
+		{
+			name:             "no sync duties",
+			duties:           []*apimiddleware.SyncCommitteeDuty{},
+			expectedErrorMsg: fmt.Sprintf("no sync committee duty for the given slot %d", slot),
+		},
+		{
+			name:             "duties endpoint error",
+			dutiesErr:        errors.New("bad request"),
+			expectedErrorMsg: "bad request",
+		},
+		{
+			name:             "validator index endpoint error",
+			validatorsErr:    errors.New("bad request"),
+			expectedErrorMsg: "bad request",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				fmt.Sprintf("%s?id=%s", validatorsEndpoint, pubkeyStr),
+				&apimiddleware.StateValidatorsResponseJson{},
+			).SetArg(
+				2,
+				apimiddleware.StateValidatorsResponseJson{
+					Data: []*apimiddleware.ValidatorContainerJson{
+						{
+							Index:  validatorIndex,
+							Status: "active_ongoing",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey: stringPubKey,
+							},
+						},
+					},
+				},
+			).Return(
+				nil,
+				test.validatorsErr,
+			).Times(1)
+
+			validatorIndicesBytes, err := json.Marshal([]string{validatorIndex})
+			require.NoError(t, err)
+
+			var syncDutiesCalled int
+			if test.validatorsErr == nil {
+				syncDutiesCalled = 1
+			}
+
+			jsonRestHandler.EXPECT().PostRestJson(
+				ctx,
+				fmt.Sprintf("%s/%d", syncDutiesEndpoint, slots.ToEpoch(slot)),
+				nil,
+				bytes.NewBuffer(validatorIndicesBytes),
+				&apimiddleware.SyncCommitteeDutiesResponseJson{},
+			).SetArg(
+				4,
+				apimiddleware.SyncCommitteeDutiesResponseJson{
+					Data: test.duties,
+				},
+			).Return(
+				nil,
+				test.dutiesErr,
+			).Times(syncDutiesCalled)
+
+			pubkey, err := hexutil.Decode(pubkeyStr)
+			require.NoError(t, err)
+
+			validatorClient := &beaconApiValidatorClient{
+				jsonRestHandler: jsonRestHandler,
+				stateValidatorsProvider: beaconApiStateValidatorsProvider{
+					jsonRestHandler: jsonRestHandler,
+				},
+				dutiesProvider: beaconApiDutiesProvider{
+					jsonRestHandler: jsonRestHandler,
+				},
+			}
+			actualResponse, err := validatorClient.getSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+				PublicKey: pubkey,
+				Slot:      slot,
+			})
+			if test.expectedErrorMsg == "" {
+				require.NoError(t, err)
+				assert.DeepEqual(t, expectedResponse, actualResponse)
+			} else {
+				require.ErrorContains(t, test.expectedErrorMsg, err)
+			}
 		})
 	}
 }

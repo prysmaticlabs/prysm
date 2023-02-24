@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
@@ -29,7 +29,7 @@ const (
 // LastEpochWrittenForValidators given a list of validator indices returns the latest
 // epoch we have recorded the validators writing data for.
 func (s *Store) LastEpochWrittenForValidators(
-	ctx context.Context, validatorIndices []types.ValidatorIndex,
+	ctx context.Context, validatorIndices []primitives.ValidatorIndex,
 ) ([]*slashertypes.AttestedEpochForValidator, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastEpochWrittenForValidators")
 	defer span.End()
@@ -41,7 +41,7 @@ func (s *Store) LastEpochWrittenForValidators(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
 		for i, encodedIndex := range encodedIndices {
-			var epoch types.Epoch
+			var epoch primitives.Epoch
 			epochBytes := bkt.Get(encodedIndex)
 			if epochBytes != nil {
 				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
@@ -61,7 +61,7 @@ func (s *Store) LastEpochWrittenForValidators(
 // SaveLastEpochsWrittenForValidators updates the latest epoch a slice
 // of validator indices has attested to.
 func (s *Store) SaveLastEpochsWrittenForValidators(
-	ctx context.Context, epochByValidator map[types.ValidatorIndex]types.Epoch,
+	ctx context.Context, epochByValidator map[primitives.ValidatorIndex]primitives.Epoch,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
 	defer span.End()
@@ -132,7 +132,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
 				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
 				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
-					encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
+					encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
 					validatorEpochKey := append(encEpoch, encIdx...)
 					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
 					// An attestation record key is comprised of a signing root (32 bytes).
@@ -150,7 +150,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 							return err
 						}
 						slashAtt := &slashertypes.AttesterDoubleVote{
-							ValidatorIndex:         types.ValidatorIndex(valIdx),
+							ValidatorIndex:         primitives.ValidatorIndex(valIdx),
 							Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
 							PrevAttestationWrapper: existingAttRecord,
 							AttestationWrapper:     attToProcess,
@@ -181,7 +181,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 // AttestationRecordForValidator given a validator index and a target epoch,
 // retrieves an existing attestation record we have stored in the database.
 func (s *Store) AttestationRecordForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+	ctx context.Context, validatorIdx primitives.ValidatorIndex, targetEpoch primitives.Epoch,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
@@ -228,7 +228,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		}
 		indicesBytes := make([]byte, len(att.IndexedAttestation.AttestingIndices)*8)
 		for _, idx := range att.IndexedAttestation.AttestingIndices {
-			encodedIdx := encodeValidatorIndex(types.ValidatorIndex(idx))
+			encodedIdx := encodeValidatorIndex(primitives.ValidatorIndex(idx))
 			indicesBytes = append(indicesBytes, encodedIdx...)
 		}
 		encodedIndices[i] = indicesBytes
@@ -243,7 +243,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 				return err
 			}
 			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := encodeValidatorIndex(types.ValidatorIndex(valIdx))
+				encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
 				key := append(encodedTargetEpoch[i], encIdx...)
 				if err := signingRootsBkt.Put(key, att.SigningRoot[:]); err != nil {
 					return err
@@ -357,7 +357,7 @@ func (s *Store) CheckDoubleBlockProposals(
 // BlockProposalForValidator given a validator index and a slot
 // retrieves an existing proposal record we have stored in the database.
 func (s *Store) BlockProposalForValidator(
-	ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
+	ctx context.Context, validatorIdx primitives.ValidatorIndex, slot primitives.Slot,
 ) (*slashertypes.SignedBlockHeaderWrapper, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
 	defer span.End()
@@ -420,7 +420,7 @@ func (s *Store) SaveBlockProposals(
 // HighestAttestations retrieves the last attestation data from the database for all indices.
 func (s *Store) HighestAttestations(
 	_ context.Context,
-	indices []types.ValidatorIndex,
+	indices []primitives.ValidatorIndex,
 ) ([]*ethpb.HighestAttestation, error) {
 	if len(indices) == 0 {
 		return nil, nil
@@ -473,7 +473,7 @@ func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
-func keyForValidatorProposal(slot types.Slot, proposerIndex types.ValidatorIndex) ([]byte, error) {
+func keyForValidatorProposal(slot primitives.Slot, proposerIndex primitives.ValidatorIndex) ([]byte, error) {
 	encSlot, err := slot.MarshalSSZ()
 	if err != nil {
 		return nil, err
@@ -579,7 +579,7 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 }
 
 // Encodes an epoch into little-endian bytes.
-func encodeTargetEpoch(epoch types.Epoch) []byte {
+func encodeTargetEpoch(epoch primitives.Epoch) []byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 	return buf
@@ -588,7 +588,7 @@ func encodeTargetEpoch(epoch types.Epoch) []byte {
 // Encodes a validator index using 5 bytes instead of 8 as a
 // client optimization to save space in the database. Because the max validator
 // registry size is 2**40, this is a safe optimization.
-func encodeValidatorIndex(index types.ValidatorIndex) []byte {
+func encodeValidatorIndex(index primitives.ValidatorIndex) []byte {
 	buf := make([]byte, 5)
 	v := uint64(index)
 	buf[0] = byte(v)

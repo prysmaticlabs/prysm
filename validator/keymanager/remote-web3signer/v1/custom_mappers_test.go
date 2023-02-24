@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	v1 "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1/mock"
@@ -528,7 +528,7 @@ func TestMapContributionAndProof(t *testing.T) {
 
 func TestMapForkInfo(t *testing.T) {
 	type args struct {
-		slot                  types.Slot
+		slot                  primitives.Slot
 		genesisValidatorsRoot []byte
 	}
 

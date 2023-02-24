@@ -29,7 +29,7 @@ type AttestationStateFetcher interface {
 type AttestationReceiver interface {
 	AttestationStateFetcher
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
-	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
+	VerifyFinalizedConsistency(root []byte) error
 }
 
 // AttestationTargetState returns the pre state of attestation.
@@ -63,27 +63,13 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 // VerifyFinalizedConsistency verifies input root is consistent with finalized store.
 // When the input root is not be consistent with finalized store then we know it is not
 // on the finalized check point that leads to current canonical chain and should be rejected accordingly.
-func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
+func (s *Service) VerifyFinalizedConsistency(root []byte) error {
 	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
 	// In this case, we could exit early to save on additional computation.
 	blockRoot := bytesutil.ToBytes32(root)
-	if s.cfg.ForkChoiceStore.HasNode(blockRoot) && s.cfg.ForkChoiceStore.IsCanonical(blockRoot) {
-		return nil
-	}
-
-	f := s.FinalizedCheckpt()
-	ss, err := slots.EpochStart(f.Epoch)
-	if err != nil {
-		return err
-	}
-	r, err := s.ancestor(ctx, root, ss)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(f.Root, r) {
+	if !s.cfg.ForkChoiceStore.HasNode(blockRoot) {
 		return errors.New("Root and finalized store are not consistent")
 	}
-
 	return nil
 }
 
@@ -143,13 +129,8 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	s.processAttestations(ctx)
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	justified := s.ForkChoicer().JustifiedCheckpoint()
-	balances, err := s.justifiedBalances.get(ctx, justified.Root)
-	if err != nil {
-		return err
-	}
 	start = time.Now()
-	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
+	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not compute head from new attestations")
 	}
@@ -163,47 +144,8 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	if err := s.notifyEngineIfChangedHead(ctx, newHeadRoot); err != nil {
+	if err := s.forkchoiceUpdateWithExecution(ctx, newHeadRoot); err != nil {
 		return err
-	}
-	return nil
-}
-
-// This calls notify Forkchoice Update in the event that the head has changed
-func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) error {
-	s.headLock.RLock()
-	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
-		s.headLock.RUnlock()
-		return nil
-	}
-	s.headLock.RUnlock()
-
-	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
-		log.Debug("New head does not exist in DB. Do nothing")
-		return nil // We don't have the block, don't notify the engine and update head.
-	}
-
-	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get new head block")
-		return nil
-	}
-	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get state from db")
-		return nil
-	}
-	arg := &notifyForkchoiceUpdateArg{
-		headState: headState,
-		headRoot:  newHeadRoot,
-		headBlock: newHeadBlock.Block(),
-	}
-	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
-	if err != nil {
-		return err
-	}
-	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
-		log.WithError(err).Error("could not save head")
 	}
 	return nil
 }

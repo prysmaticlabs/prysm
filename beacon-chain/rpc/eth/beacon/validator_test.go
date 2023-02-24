@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -39,6 +39,7 @@ func TestGetValidator(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -47,7 +48,7 @@ func TestGetValidator(t *testing.T) {
 			ValidatorId: []byte("15"),
 		})
 		require.NoError(t, err)
-		assert.Equal(t, types.ValidatorIndex(15), resp.Data.Index)
+		assert.Equal(t, primitives.ValidatorIndex(15), resp.Data.Index)
 	})
 
 	t.Run("Head Get Validator by pubkey", func(t *testing.T) {
@@ -58,16 +59,17 @@ func TestGetValidator(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
-		pubKey := st.PubkeyAtIndex(types.ValidatorIndex(20))
+		pubKey := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
 		resp, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
 			StateId:     []byte("head"),
 			ValidatorId: pubKey[:],
 		})
 		require.NoError(t, err)
-		assert.Equal(t, types.ValidatorIndex(20), resp.Data.Index)
+		assert.Equal(t, primitives.ValidatorIndex(20), resp.Data.Index)
 		assert.Equal(t, true, bytes.Equal(pubKey[:], resp.Data.Validator.Pubkey))
 	})
 
@@ -101,6 +103,7 @@ func TestGetValidator(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
@@ -109,6 +112,39 @@ func TestGetValidator(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s := Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
+			StateId:     []byte("head"),
+			ValidatorId: []byte("15"),
+		})
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.Finalized)
 	})
 }
 
@@ -126,6 +162,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -147,11 +184,12 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
 		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
-		idNums := []types.ValidatorIndex{15, 26, 400}
+		idNums := []primitives.ValidatorIndex{15, 26, 400}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
 			StateId: []byte("head"),
 			Id:      ids,
@@ -171,13 +209,14 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
-		idNums := []types.ValidatorIndex{20, 66, 90, 100}
-		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
-		pubkey2 := st.PubkeyAtIndex(types.ValidatorIndex(66))
-		pubkey3 := st.PubkeyAtIndex(types.ValidatorIndex(90))
-		pubkey4 := st.PubkeyAtIndex(types.ValidatorIndex(100))
+		idNums := []primitives.ValidatorIndex{20, 66, 90, 100}
+		pubkey1 := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
+		pubkey2 := st.PubkeyAtIndex(primitives.ValidatorIndex(66))
+		pubkey3 := st.PubkeyAtIndex(primitives.ValidatorIndex(90))
+		pubkey4 := st.PubkeyAtIndex(primitives.ValidatorIndex(100))
 		pubKeys := [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
 			StateId: []byte("head"),
@@ -199,14 +238,15 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
-		idNums := []types.ValidatorIndex{20, 90, 170, 129}
-		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
-		pubkey2 := st.PubkeyAtIndex(types.ValidatorIndex(90))
-		pubkey3 := st.PubkeyAtIndex(types.ValidatorIndex(170))
-		pubkey4 := st.PubkeyAtIndex(types.ValidatorIndex(129))
+		idNums := []primitives.ValidatorIndex{20, 90, 170, 129}
+		pubkey1 := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
+		pubkey2 := st.PubkeyAtIndex(primitives.ValidatorIndex(90))
+		pubkey3 := st.PubkeyAtIndex(primitives.ValidatorIndex(170))
+		pubkey4 := st.PubkeyAtIndex(primitives.ValidatorIndex(129))
 		pubkeys := [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]}
 		ids := [][]byte{pubkey1[:], []byte("90"), pubkey3[:], []byte("129")}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -229,10 +269,11 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
-		existingKey := st.PubkeyAtIndex(types.ValidatorIndex(1))
+		existingKey := st.PubkeyAtIndex(primitives.ValidatorIndex(1))
 		pubkeys := [][]byte{existingKey[:], []byte(strings.Repeat("f", 48))}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
 			StateId: []byte("head"),
@@ -240,7 +281,7 @@ func TestListValidators(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Data))
-		assert.Equal(t, types.ValidatorIndex(1), resp.Data[0].Index)
+		assert.Equal(t, primitives.ValidatorIndex(1), resp.Data[0].Index)
 	})
 
 	t.Run("Unknown index is ignored", func(t *testing.T) {
@@ -251,6 +292,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -261,7 +303,7 @@ func TestListValidators(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Data))
-		assert.Equal(t, types.ValidatorIndex(1), resp.Data[0].Index)
+		assert.Equal(t, primitives.ValidatorIndex(1), resp.Data[0].Index)
 	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
@@ -280,6 +322,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -287,6 +330,38 @@ func TestListValidators(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s := Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
+			StateId: []byte("head"),
+		})
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.Finalized)
 	})
 }
 
@@ -370,6 +445,7 @@ func TestListValidators_Status(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -407,6 +483,7 @@ func TestListValidators_Status(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -443,6 +520,7 @@ func TestListValidators_Status(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -478,6 +556,7 @@ func TestListValidators_Status(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -513,6 +592,7 @@ func TestListValidators_Status(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -563,11 +643,12 @@ func TestListValidatorBalances(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
 		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
-		idNums := []types.ValidatorIndex{15, 26, 400}
+		idNums := []primitives.ValidatorIndex{15, 26, 400}
 		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
 			StateId: []byte("head"),
 			Id:      ids,
@@ -587,13 +668,14 @@ func TestListValidatorBalances(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
-		idNums := []types.ValidatorIndex{20, 66, 90, 100}
-		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
-		pubkey2 := st.PubkeyAtIndex(types.ValidatorIndex(66))
-		pubkey3 := st.PubkeyAtIndex(types.ValidatorIndex(90))
-		pubkey4 := st.PubkeyAtIndex(types.ValidatorIndex(100))
+		idNums := []primitives.ValidatorIndex{20, 66, 90, 100}
+		pubkey1 := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
+		pubkey2 := st.PubkeyAtIndex(primitives.ValidatorIndex(66))
+		pubkey3 := st.PubkeyAtIndex(primitives.ValidatorIndex(90))
+		pubkey4 := st.PubkeyAtIndex(primitives.ValidatorIndex(100))
 		pubKeys := [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]}
 		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
 			StateId: []byte("head"),
@@ -614,12 +696,13 @@ func TestListValidatorBalances(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
-		idNums := []types.ValidatorIndex{20, 90, 170, 129}
-		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
-		pubkey3 := st.PubkeyAtIndex(types.ValidatorIndex(170))
+		idNums := []primitives.ValidatorIndex{20, 90, 170, 129}
+		pubkey1 := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
+		pubkey3 := st.PubkeyAtIndex(primitives.ValidatorIndex(170))
 		ids := [][]byte{pubkey1[:], []byte("90"), pubkey3[:], []byte("129")}
 		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
 			StateId: []byte("head"),
@@ -648,6 +731,7 @@ func TestListValidatorBalances(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -658,6 +742,41 @@ func TestListValidatorBalances(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s := Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
+		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
+			StateId: []byte("head"),
+			Id:      ids,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.Finalized)
 	})
 }
 
@@ -677,6 +796,7 @@ func TestListCommittees(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -686,7 +806,7 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
 		for _, datum := range resp.Data {
-			assert.Equal(t, true, datum.Index == types.CommitteeIndex(0) || datum.Index == types.CommitteeIndex(1))
+			assert.Equal(t, true, datum.Index == primitives.CommitteeIndex(0) || datum.Index == primitives.CommitteeIndex(1))
 			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 		}
 	})
@@ -699,9 +819,10 @@ func TestListCommittees(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
-		epoch := types.Epoch(10)
+		epoch := primitives.Epoch(10)
 		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
 			StateId: []byte("head"),
 			Epoch:   &epoch,
@@ -720,17 +841,18 @@ func TestListCommittees(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
-		slot := types.Slot(4)
+		slot := primitives.Slot(4)
 		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
 			StateId: []byte("head"),
 			Slot:    &slot,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(resp.Data))
-		index := types.CommitteeIndex(0)
+		index := primitives.CommitteeIndex(0)
 		for _, datum := range resp.Data {
 			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 			assert.Equal(t, slot, datum.Slot)
@@ -747,17 +869,18 @@ func TestListCommittees(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
-		index := types.CommitteeIndex(1)
+		index := primitives.CommitteeIndex(1)
 		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
 			StateId: []byte("head"),
 			Index:   &index,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch), len(resp.Data))
-		slot := types.Slot(0)
+		slot := primitives.Slot(0)
 		for _, datum := range resp.Data {
 			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 			assert.Equal(t, slot, datum.Slot)
@@ -774,11 +897,12 @@ func TestListCommittees(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
-		index := types.CommitteeIndex(1)
-		slot := types.Slot(2)
+		index := primitives.CommitteeIndex(1)
+		slot := primitives.Slot(2)
 		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
 			StateId: []byte("head"),
 			Slot:    &slot,
@@ -809,6 +933,7 @@ func TestListCommittees(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -817,5 +942,38 @@ func TestListCommittees(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s := Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
+			StateId: []byte("head"),
+		})
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.Finalized)
 	})
 }

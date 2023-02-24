@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -35,7 +35,7 @@ import (
 //
 // Spec pseudocode definition:
 //
-//	def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
+//	def state_transition(state: BeaconState, signed_block: ReadOnlySignedBeaconBlock, validate_result: bool=True) -> None:
 //	  block = signed_block.message
 //	  # Process slots (including those with no blocks) since block
 //	  process_slots(state, block.slot)
@@ -50,7 +50,7 @@ import (
 func ExecuteStateTransition(
 	ctx context.Context,
 	state state.BeaconState,
-	signed interfaces.SignedBeaconBlock,
+	signed interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -143,7 +143,7 @@ func ProcessSlotsUsingNextSlotCache(
 	ctx context.Context,
 	parentState state.BeaconState,
 	parentRoot []byte,
-	slot types.Slot) (state.BeaconState, error) {
+	slot primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
 	defer span.End()
 
@@ -175,7 +175,7 @@ func ProcessSlotsUsingNextSlotCache(
 
 // ProcessSlotsIfPossible executes ProcessSlots on the input state when target slot is above the state's slot.
 // Otherwise, it returns the input state unchanged.
-func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, targetSlot types.Slot) (state.BeaconState, error) {
+func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, targetSlot primitives.Slot) (state.BeaconState, error) {
 	if targetSlot > state.Slot() {
 		return ProcessSlots(ctx, state, targetSlot)
 	}
@@ -194,7 +194,7 @@ func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, target
 //	      if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //	          process_epoch(state)
 //	      state.slot = Slot(state.slot + 1)
-func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
 	if state == nil || state.IsNil() {
@@ -312,7 +312,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}

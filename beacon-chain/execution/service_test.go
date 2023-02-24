@@ -736,6 +736,9 @@ func TestService_CacheBlockHeaders(t *testing.T) {
 	assert.Equal(t, 1, rClient.numOfCalls)
 	// Reset Num of Calls
 	rClient.numOfCalls = 0
+	// Increase header request limit to trigger the batch limiting
+	// code path.
+	s.cfg.eth1HeaderReqLimit = 1001
 
 	assert.NoError(t, s.cacheBlockHeaders(1000, 3000))
 	// 1000 - 2000 would be 1001 headers which is higher than our request limit, it

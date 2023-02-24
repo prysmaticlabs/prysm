@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"net/url"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMessage *ethpb.SyncCommitteeMessage) error {
@@ -77,8 +78,13 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	}
 
 	blockRoot := hexutil.Encode(blockRootResponse.Root)
-	url := fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?slot=%d&subcommittee_index=%d&beacon_block_root=%s",
-		uint64(req.Slot), req.SubnetId, blockRoot)
+
+	params := url.Values{}
+	params.Add("slot", strconv.FormatUint(uint64(req.Slot), 10))
+	params.Add("subcommittee_index", strconv.FormatUint(req.SubnetId, 10))
+	params.Add("beacon_block_root", blockRoot)
+
+	url := buildURL("/eth/v1/validator/sync_committee_contribution", params)
 
 	var resp apimiddleware.ProduceSyncCommitteeContributionResponseJson
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, url, &resp); err != nil {
@@ -86,6 +92,37 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	}
 
 	return convertSyncContributionJsonToProto(resp.Data)
+}
+
+func (c *beaconApiValidatorClient) getSyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
+	validatorIndexResponse, err := c.validatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: in.PublicKey})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get validator index")
+	}
+
+	syncDuties, err := c.dutiesProvider.GetSyncDuties(ctx, slots.ToEpoch(in.Slot), []primitives.ValidatorIndex{validatorIndexResponse.Index})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get sync committee duties")
+	}
+
+	if len(syncDuties) == 0 {
+		return nil, errors.Errorf("no sync committee duty for the given slot %d", in.Slot)
+	}
+
+	// First sync duty is required since we requested sync duties for one validator index.
+	syncDuty := syncDuties[0]
+
+	var indices []primitives.CommitteeIndex
+	for _, idx := range syncDuty.ValidatorSyncCommitteeIndices {
+		syncCommIdx, err := strconv.ParseUint(idx, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator sync committee index %s", idx)
+		}
+
+		indices = append(indices, primitives.CommitteeIndex(syncCommIdx))
+	}
+
+	return &ethpb.SyncSubcommitteeIndexResponse{Indices: indices}, nil
 }
 
 func convertSyncContributionJsonToProto(contribution *apimiddleware.SyncCommitteeContributionJson) (*ethpb.SyncCommitteeContribution, error) {
@@ -119,7 +156,7 @@ func convertSyncContributionJsonToProto(contribution *apimiddleware.SyncCommitte
 	}
 
 	return &ethpb.SyncCommitteeContribution{
-		Slot:              types.Slot(slot),
+		Slot:              primitives.Slot(slot),
 		BlockRoot:         blockRoot,
 		SubcommitteeIndex: subcommitteeIdx,
 		AggregationBits:   aggregationBits,

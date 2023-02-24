@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
@@ -57,7 +57,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
-	startSlot := types.Slot(5000)
+	startSlot := primitives.Slot(5000)
 
 	for i := startSlot; i < 5200; i++ {
 		head := util.NewBeaconBlock()

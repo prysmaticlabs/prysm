@@ -10,7 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -418,7 +418,7 @@ func TestFuzzVerifyExit_10000(_ *testing.T) {
 	ve := &ethpb.SignedVoluntaryExit{}
 	rawVal := &ethpb.Validator{}
 	fork := &ethpb.Fork{}
-	var slot types.Slot
+	var slot primitives.Slot
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(ve)

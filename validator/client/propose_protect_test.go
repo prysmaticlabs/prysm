@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -20,7 +20,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 	ctx := context.Background()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
-	lowestSignedSlot := types.Slot(10)
+	lowestSignedSlot := primitives.Slot(10)
 	var pubKeyBytes [fieldparams.BLSPubkeyLength]byte
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	bolt "go.etcd.io/bbolt"
@@ -41,8 +41,8 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				pubKey := [fieldparams.BLSPubkeyLength]byte{1}
 				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
-				numEpochs := types.Epoch(50)
-				for i := types.Epoch(1); i <= numEpochs; i++ {
+				numEpochs := primitives.Epoch(50)
+				for i := primitives.Epoch(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
 					newHist, err := history.setTargetData(i, &deprecatedHistoryData{
@@ -100,8 +100,8 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				pubKey := [fieldparams.BLSPubkeyLength]byte{1}
 				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
-				numEpochs := types.Epoch(50)
-				for i := types.Epoch(1); i <= numEpochs; i++ {
+				numEpochs := primitives.Epoch(50)
+				for i := primitives.Epoch(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
 					newHist, err := history.setTargetData(i, &deprecatedHistoryData{
@@ -281,7 +281,7 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 						highestEpoch, err := attestingHistory.getLatestEpochWritten()
 						require.NoError(t, err)
 						// Verify the highest epoch written is 50 from the setup stage.
-						require.Equal(t, types.Epoch(50), highestEpoch)
+						require.Equal(t, primitives.Epoch(50), highestEpoch)
 					}
 					return nil
 				})

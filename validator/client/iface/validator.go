@@ -7,7 +7,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
@@ -41,20 +41,20 @@ type Validator interface {
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
 	WaitForActivation(ctx context.Context, accountsChangedChan chan [][fieldparams.BLSPubkeyLength]byte) error
-	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
-	NextSlot() <-chan types.Slot
-	SlotDeadline(slot types.Slot) time.Time
-	LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error
-	UpdateDuties(ctx context.Context, slot types.Slot) error
-	RolesAt(ctx context.Context, slot types.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]ValidatorRole, error) // validator pubKey -> roles
-	SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	ProposeBlock(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	CanonicalHeadSlot(ctx context.Context) (primitives.Slot, error)
+	NextSlot() <-chan primitives.Slot
+	SlotDeadline(slot primitives.Slot) time.Time
+	LogValidatorGainsAndLosses(ctx context.Context, slot primitives.Slot) error
+	UpdateDuties(ctx context.Context, slot primitives.Slot) error
+	RolesAt(ctx context.Context, slot primitives.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]ValidatorRole, error) // validator pubKey -> roles
+	SubmitAttestation(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	ProposeBlock(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitAggregateAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitSyncCommitteeMessage(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitSignedContributionAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 	LogAttestationsSubmitted()
 	LogSyncCommitteeMessagesSubmitted()
-	UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
+	UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot)
 	WaitForKeymanagerInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	Keymanager() (keymanager.IKeymanager, error)

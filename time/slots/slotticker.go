@@ -4,14 +4,14 @@ package slots
 import (
 	"time"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 )
 
 // The Ticker interface defines a type which can expose a
 // receive-only channel firing slot events.
 type Ticker interface {
-	C() <-chan types.Slot
+	C() <-chan primitives.Slot
 	Done()
 }
 
@@ -22,13 +22,13 @@ type Ticker interface {
 // multiple of the slot duration.
 // In addition, the channel returns the new slot number.
 type SlotTicker struct {
-	c    chan types.Slot
+	c    chan primitives.Slot
 	done chan struct{}
 }
 
 // C returns the ticker channel. Call Cancel afterwards to ensure
 // that the goroutine exits cleanly.
-func (s *SlotTicker) C() <-chan types.Slot {
+func (s *SlotTicker) C() <-chan primitives.Slot {
 	return s.c
 }
 
@@ -45,7 +45,7 @@ func NewSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 		panic("zero genesis time")
 	}
 	ticker := &SlotTicker{
-		c:    make(chan types.Slot),
+		c:    make(chan primitives.Slot),
 		done: make(chan struct{}),
 	}
 	ticker.start(genesisTime, secondsPerSlot, prysmTime.Since, prysmTime.Until, time.After)
@@ -62,7 +62,7 @@ func NewSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, second
 		panic("invalid ticker offset")
 	}
 	ticker := &SlotTicker{
-		c:    make(chan types.Slot),
+		c:    make(chan primitives.Slot),
 		done: make(chan struct{}),
 	}
 	ticker.start(genesisTime.Add(offset), secondsPerSlot, prysmTime.Since, prysmTime.Until, time.After)
@@ -81,7 +81,7 @@ func (s *SlotTicker) start(
 		sinceGenesis := since(genesisTime)
 
 		var nextTickTime time.Time
-		var slot types.Slot
+		var slot primitives.Slot
 		if sinceGenesis < d {
 			// Handle when the current time is before the genesis time.
 			nextTickTime = genesisTime
@@ -89,7 +89,7 @@ func (s *SlotTicker) start(
 		} else {
 			nextTick := sinceGenesis.Truncate(d) + d
 			nextTickTime = genesisTime.Add(nextTick)
-			slot = types.Slot(nextTick / d)
+			slot = primitives.Slot(nextTick / d)
 		}
 
 		for {

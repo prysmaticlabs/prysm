@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -116,7 +116,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 				Source: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-				Slot:   types.Slot(i),
+				Slot:   primitives.Slot(i),
 			},
 			AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
@@ -383,7 +383,7 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 }
 
 func TestProcessRegistryUpdates_CanExits(t *testing.T) {
-	e := types.Epoch(5)
+	e := primitives.Epoch(5)
 	exitEpoch := helpers.ActivationExitEpoch(e)
 	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	base := &ethpb.BeaconState{
@@ -407,7 +407,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	}
 }
 
-func buildState(t testing.TB, slot types.Slot, validatorCount uint64) state.BeaconState {
+func buildState(t testing.TB, slot primitives.Slot, validatorCount uint64) state.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
