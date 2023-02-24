@@ -49,9 +49,9 @@ const (
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
-	// GetPayloadBodiesByHash
+	// GetPayloadBodiesByHashV1 v1 request string for JSON-RPC.
 	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
-	// GetPayloadBodiesByRange
+	// GetPayloadBodiesByRangeV1 v1 request string for JSON-RPC.
 	GetPayloadBodiesByRangeV1 = "engine_getPayloadBodiesByRangeV1"
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
 	defaultEngineTimeout = time.Second
@@ -443,7 +443,7 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 }
 
 // GetPayloadBodiesByHash --
-func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHashes []common.Hash) ([]*pb.ExecutionPayload, error) {
+func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHashes []common.Hash) ([]*pb.ExecutionPayloadBodyV1, error) {
 	if !features.Get().EnableCapellaEngineMethods {
 		return nil, errors.New("capella engine methods not enabled")
 	}
@@ -465,7 +465,19 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 	// request: [a, b ,c]
 	// response: [abody, null, cbody]
 
-	err := s.rpcClient.CallContext(ctx, result, GetPayloadBodiesByHashV1, hashes)
+	err := s.rpcClient.CallContext(ctx, result, GetPayloadBodiesByHashV1, executionBlockHashes)
+	return result, handleRPCError(err)
+}
+
+// GetPayloadBodiesByRange --
+func (s *Service) GetPayloadBodiesByRange(ctx context.Context, start, count uint64) ([]*pb.ExecutionPayloadBodyV1, error) {
+	if !features.Get().EnableCapellaEngineMethods {
+		return nil, errors.New("capella engine methods not enabled")
+	}
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByRangeV1")
+	defer span.End()
+	result := make([]*pb.ExecutionPayloadBodyV1, 0)
+	err := s.rpcClient.CallContext(ctx, result, GetPayloadBodiesByRangeV1, start, count)
 	return result, handleRPCError(err)
 }
 
