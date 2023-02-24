@@ -203,9 +203,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.3.0-rc.2"
-
-consensus_spec_test_version = "v1.3.0-rc.2-hotfix"
+consensus_spec_version = "v1.3.0-rc.3"
 
 bls_test_version = "v0.1.1"
 
