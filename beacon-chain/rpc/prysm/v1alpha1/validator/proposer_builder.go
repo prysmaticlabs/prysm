@@ -45,6 +45,9 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 		return true, errors.New("no fork choicer configured")
 	}
 
+	vs.ForkFetcher.ForkChoicer().RLock()
+	defer vs.ForkFetcher.ForkChoicer().RUnlock()
+
 	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
 	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
 	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
