@@ -215,7 +215,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if !s.cfg.chain.InForkchoice(blockRoot) {
+	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
 		s.setBadBlock(ctx, blockRoot)
 		return blockchain.ErrNotDescendantOfFinalized
 	}
