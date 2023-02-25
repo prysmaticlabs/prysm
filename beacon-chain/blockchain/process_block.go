@@ -107,6 +107,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		return err
 	}
 
+	// Verify that the parent block is in forkchoice
+	if !s.ForkChoicer().HasNode(b.ParentRoot()) {
+		return ErrNotDescendantOfFinalized
+	}
+
 	// Save current justified and finalized epochs for future use.
 	currStoreJustifiedEpoch := s.ForkChoicer().JustifiedCheckpoint().Epoch
 	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch

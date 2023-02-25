@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
@@ -71,10 +69,6 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyFinalizedBlkDescendant(ctx, parentRoot); err != nil {
-		return err
-	}
-
 	has, err := s.cfg.StateGen.HasState(ctx, parentRoot)
 	if err != nil {
 		return err
@@ -84,35 +78,6 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 			return errors.Wrap(err, "could not save initial sync blocks")
 		}
 		s.clearInitSyncBlocks()
-	}
-	return nil
-}
-
-// VerifyFinalizedBlkDescendant validates if input block root is a descendant of the
-// current finalized block root.
-func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
-	defer span.End()
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
-	fRoot := s.ensureRootNotZeros(finalized.Root)
-	fSlot, err := slots.EpochStart(finalized.Epoch)
-	if err != nil {
-		return err
-	}
-	bFinalizedRoot, err := s.ancestor(ctx, root[:], fSlot)
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized block root")
-	}
-	if bFinalizedRoot == nil {
-		return fmt.Errorf("no finalized block known for block %#x", bytesutil.Trunc(root[:]))
-	}
-
-	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
-		err := fmt.Errorf("block %#x is not a descendant of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), fSlot, bytesutil.Trunc(bFinalizedRoot),
-			bytesutil.Trunc(fRoot[:]))
-		tracing.AnnotateError(span, err)
-		return invalidBlock{error: err}
 	}
 	return nil
 }
@@ -272,7 +237,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		return nil
 	}
 	if root != s.ensureRootNotZeros(finalized.Root) && !s.ForkChoicer().HasNode(root) {
-		return errNotDescendantOfFinalized
+		return ErrNotDescendantOfFinalized
 	}
 	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)
 }
