@@ -376,6 +376,8 @@ func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
 // This in particular means that the blockroot is a descendant of the
 // finalized checkpoint
 func (s *Service) InForkchoice(root [32]byte) bool {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	return s.ForkChoicer().HasNode(root)
 }
 
