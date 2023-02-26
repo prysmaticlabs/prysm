@@ -33,15 +33,18 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	blobIdents := *ref
 	for i := range blobIdents {
 		root, idx := bytesutil.ToBytes32(blobIdents[i].BlockRoot), blobIdents[i].Index
-		sc, err := s.blobs.BlobsSidecar(root, idx)
-		if err != nil && !errors.Is(err, db.ErrNotFound) {
-			log.WithError(err).Debugf("error retrieving BlobsSidecar, root=%x, idnex=%d", root, idx)
+		sc, err := s.blobs.BlobSidecar(root, idx)
+		if err != nil {
+			if errors.Is(err, db.ErrNotFound) {
+				continue
+			}
+			log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, idnex=%d", root, idx)
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
 
 		SetStreamWriteDeadline(stream, defaultWriteDuration)
-		if chunkErr := WriteBlobsSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
+		if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			tracing.AnnotateError(span, chunkErr)

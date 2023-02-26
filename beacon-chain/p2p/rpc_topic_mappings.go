@@ -118,6 +118,7 @@ var messageMapping = map[string]bool{
 	MetadataMessageName:                  true,
 	BlobsSidecarsByRangeMessageName:      true,
 	BeaconBlockAndBlobsSidecarByRootName: true,
+	BlobsSidecarByRootName:               true,
 }
 
 // Maps all the RPC messages which are to updated in altair.
@@ -141,6 +142,7 @@ var PreAltairV1SchemaMapping = map[string]bool{
 	MetadataMessageName:                  true,
 	BlobsSidecarsByRangeMessageName:      false,
 	BeaconBlockAndBlobsSidecarByRootName: false,
+	BlobsSidecarByRootName:               false,
 }
 
 // VerifyTopicMapping verifies that the topic and its accompanying

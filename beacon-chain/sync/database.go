@@ -2,15 +2,15 @@ package sync
 
 import eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 
-type BlobsSidecarGetter interface {
-	BlobsSidecar(blockRoot [32]byte, index uint64) (*eth.BlobsSidecar, error)
+type BlobSidecarGetter interface {
+	BlobSidecar(blockRoot [32]byte, index uint64) (*eth.BlobSidecar, error)
 }
 
-type BlobsSidecarWriter interface {
-	WriteBlobsSidecar(blockRoot [32]byte, index uint64, sidecar *eth.BlobsSidecar) error
+type BlobSidecarWriter interface {
+	WriteBlobSidecar(blockRoot [32]byte, index uint64, sidecar *eth.BlobSidecar) error
 }
 
-type BlobsDB interface {
-	BlobsSidecarGetter
-	BlobsSidecarWriter
+type BlobDB interface {
+	BlobSidecarGetter
+	BlobSidecarWriter
 }

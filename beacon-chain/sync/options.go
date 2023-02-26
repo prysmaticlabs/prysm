@@ -18,7 +18,7 @@ import (
 
 type Option func(s *Service) error
 
-func WithBlobsDB(bdb BlobsDB) Option {
+func WithBlobDB(bdb BlobDB) Option {
 	return func(s *Service) error {
 		s.blobs = bdb
 		return nil
