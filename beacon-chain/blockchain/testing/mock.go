@@ -32,6 +32,7 @@ var ErrNilState = errors.New("nil state")
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
+	NotFinalized                bool
 	Optimistic                  bool
 	ValidAttestation            bool
 	ValidatorsRoot              [32]byte
@@ -389,23 +390,10 @@ func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
 	return [32]byte{}
 }
 
-// VerifyFinalizedBlkDescendant mocks VerifyBlkDescendant and always returns nil.
-func (s *ChainService) VerifyFinalizedBlkDescendant(_ context.Context, _ [32]byte) error {
-	return s.VerifyBlkDescendantErr
-}
-
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
 func (_ *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
 	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
 		return errors.New("LMD and FFG miss matched")
-	}
-	return nil
-}
-
-// VerifyFinalizedConsistency mocks VerifyFinalizedConsistency and always returns nil.
-func (s *ChainService) VerifyFinalizedConsistency(r []byte) error {
-	if !bytes.Equal(r, s.FinalizedCheckPoint.Root) {
-		return errors.New("Root and finalized store are not consistent")
 	}
 	return nil
 }
@@ -457,6 +445,11 @@ func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ prim
 // IsOptimistic mocks the same method in the chain service.
 func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 	return s.Optimistic, nil
+}
+
+// InForkchoice mocks the same method in the chain service
+func (s *ChainService) InForkchoice(_ [32]byte) bool {
+	return !s.NotFinalized
 }
 
 // IsOptimisticForRoot mocks the same method in the chain service.
