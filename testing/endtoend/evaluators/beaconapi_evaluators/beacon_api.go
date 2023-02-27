@@ -25,7 +25,7 @@ import (
 
 type metadata struct {
 	basepath         string
-	params           func(encoding string, currentEpoch types.Epoch) []string
+	params           func(encoding string, currentEpoch primitives.Epoch) []string
 	requestObject    interface{}
 	prysmResps       map[string]interface{}
 	lighthouseResps  map[string]interface{}
@@ -140,7 +140,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 	"/validator/duties/attester/{param1}": {
 		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, e types.Epoch) []string {
+		params: func(_ string, e primitives.Epoch) []string {
 			//ask for a future epoch to test this case
 			return []string{fmt.Sprintf("%v", e+1)}
 		},
