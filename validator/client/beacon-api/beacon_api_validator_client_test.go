@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
@@ -93,6 +94,16 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 
 	assert.ErrorContains(t, expectedErr.Error(), err)
 	assert.DeepEqual(t, expectedResp, resp)
+}
+
+func TestBeaconApiValidatorClient_GetFeeRecipientByPubKey(t *testing.T) {
+	ctx := context.Background()
+	validatorClient := beaconApiValidatorClient{}
+	var expected *ethpb.FeeRecipientByPubKeyResponse = nil
+
+	resp, err := validatorClient.GetFeeRecipientByPubKey(ctx, nil)
+	require.NoError(t, err)
+	require.Equal(t, expected, resp)
 }
 
 func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
