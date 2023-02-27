@@ -29,7 +29,7 @@ type AttestationStateFetcher interface {
 type AttestationReceiver interface {
 	AttestationStateFetcher
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
-	VerifyFinalizedConsistency(root []byte) error
+	InForkchoice([32]byte) bool
 }
 
 // AttestationTargetState returns the pre state of attestation.
@@ -56,19 +56,6 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 	}
 	if !bytes.Equal(a.Data.Target.Root, r) {
 		return errors.New("FFG and LMD votes are not consistent")
-	}
-	return nil
-}
-
-// VerifyFinalizedConsistency verifies input root is consistent with finalized store.
-// When the input root is not be consistent with finalized store then we know it is not
-// on the finalized check point that leads to current canonical chain and should be rejected accordingly.
-func (s *Service) VerifyFinalizedConsistency(root []byte) error {
-	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
-	// In this case, we could exit early to save on additional computation.
-	blockRoot := bytesutil.ToBytes32(root)
-	if !s.cfg.ForkChoiceStore.HasNode(blockRoot) {
-		return errors.New("Root and finalized store are not consistent")
 	}
 	return nil
 }
