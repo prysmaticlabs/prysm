@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
 
 // ValidatorIndexOutOfRangeError represents an error scenario where a validator does not exist
@@ -196,6 +197,7 @@ func (b *BeaconState) balancesVal() []uint64 {
 	}
 
 	res := make([]uint64, len(b.balances))
+	log.Warnf("Copy size in bytes: %d", len(b.balances)*8)
 	copy(res, b.balances)
 	return res
 }

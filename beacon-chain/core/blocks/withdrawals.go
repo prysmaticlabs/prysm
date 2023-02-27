@@ -178,7 +178,9 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 	}
 
 	for _, withdrawal := range expectedWithdrawals {
+		log.Warn("Before withdrawal balance decrease")
 		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
+		log.Warn("After withdrawal balance decrease")
 		if err != nil {
 			return nil, errors.Wrap(err, "could not decrease balance")
 		}
