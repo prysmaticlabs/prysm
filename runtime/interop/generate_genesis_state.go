@@ -206,5 +206,5 @@ func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey, withExecCred
 // where withdrawal_credentials is of type bytes32.
 func withdrawalCredentialsHash(pubKey []byte) []byte {
 	h := hash.Hash(pubKey)
-	return append([]byte{blsWithdrawalPrefixByte}, h[1:]...)[:32]
+	return append([]byte{1}, h[1:]...)[:32]
 }
