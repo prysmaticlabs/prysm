@@ -44,49 +44,51 @@ import (
 //	        increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //	    else:
 //	        decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (state.BeaconState, error) {
-	s, votedKeys, err := processSyncAggregate(ctx, s, sync)
+func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (state.BeaconState, uint64, error) {
+	s, votedKeys, reward, err := processSyncAggregate(ctx, s, sync)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not filter sync committee votes")
+		return nil, 0, errors.Wrap(err, "could not filter sync committee votes")
 	}
 
 	if err := VerifySyncCommitteeSig(s, votedKeys, sync.SyncCommitteeSignature); err != nil {
-		return nil, errors.Wrap(err, "could not verify sync committee signature")
+		return nil, 0, errors.Wrap(err, "could not verify sync committee signature")
 	}
-	return s, nil
+	return s, reward, nil
 }
 
 // processSyncAggregate applies all the logic in the spec function `process_sync_aggregate` except
-// verifying the BLS signatures. It returns the modified beacons state and the list of validators'
-// public keys that voted, for future signature verification.
+// verifying the BLS signatures. It returns the modified beacons state, the list of validators'
+// public keys that voted (for future signature verification) and the proposer reward for including
+// sync aggregate messages.
 func processSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (
 	state.BeaconState,
 	[]bls.PublicKey,
+	uint64,
 	error) {
 	currentSyncCommittee, err := s.CurrentSyncCommittee()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 	if currentSyncCommittee == nil {
-		return nil, nil, errors.New("nil current sync committee in state")
+		return nil, nil, 0, errors.New("nil current sync committee in state")
 	}
 	committeeKeys := currentSyncCommittee.Pubkeys
 	if sync.SyncCommitteeBits.Len() > uint64(len(committeeKeys)) {
-		return nil, nil, errors.New("bits length exceeds committee length")
+		return nil, nil, 0, errors.New("bits length exceeds committee length")
 	}
 	votedKeys := make([]bls.PublicKey, 0, len(committeeKeys))
 
 	activeBalance, err := helpers.TotalActiveBalance(s)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 	proposerReward, participantReward, err := SyncRewards(activeBalance)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 	proposerIndex, err := helpers.BeaconProposerIndex(ctx, s)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	earnedProposerReward := uint64(0)
@@ -94,29 +96,29 @@ func processSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.
 		vIdx, exists := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[i]))
 		// Impossible scenario.
 		if !exists {
-			return nil, nil, errors.New("validator public key does not exist in state")
+			return nil, nil, 0, errors.New("validator public key does not exist in state")
 		}
 
 		if sync.SyncCommitteeBits.BitAt(i) {
 			pubKey, err := bls.PublicKeyFromBytes(committeeKeys[i])
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, 0, err
 			}
 			votedKeys = append(votedKeys, pubKey)
 			if err := helpers.IncreaseBalance(s, vIdx, participantReward); err != nil {
-				return nil, nil, err
+				return nil, nil, 0, err
 			}
 			earnedProposerReward += proposerReward
 		} else {
 			if err := helpers.DecreaseBalance(s, vIdx, participantReward); err != nil {
-				return nil, nil, err
+				return nil, nil, 0, err
 			}
 		}
 	}
 	if err := helpers.IncreaseBalance(s, proposerIndex, earnedProposerReward); err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
-	return s, votedKeys, err
+	return s, votedKeys, earnedProposerReward, err
 }
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
