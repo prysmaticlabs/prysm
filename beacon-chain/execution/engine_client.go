@@ -453,7 +453,7 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 	// TODO: Might need to check if execution client is syncing.
 	// What's the consequence if we do not?
 
-	result := make([]*pb.ExecutionPayloadBodyV1, 0)
+	result := &[]pb.ExecutionPayloadBodyV1{}
 
 	// TODO: Does our code handle this response well?
 	// {
@@ -470,13 +470,13 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 }
 
 // GetPayloadBodiesByRange --
-func (s *Service) GetPayloadBodiesByRange(ctx context.Context, start, count uint64) ([]*pb.ExecutionPayloadBodyV1, error) {
+func (s *Service) GetPayloadBodiesByRange(ctx context.Context, start, count uint64) (*[]pb.ExecutionPayloadBodyV1, error) {
 	if !features.Get().EnableCapellaEngineMethods {
 		return nil, errors.New("capella engine methods not enabled")
 	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByRangeV1")
 	defer span.End()
-	result := make([]*pb.ExecutionPayloadBodyV1, 0)
+	result := &[]pb.ExecutionPayloadBodyV1{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadBodiesByRangeV1, start, count)
 	return result, handleRPCError(err)
 }

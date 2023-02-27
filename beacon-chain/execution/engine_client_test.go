@@ -34,25 +34,23 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-
 func TestCapella_PayloadBodiesByHash(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {
 			require.NoError(t, r.Body.Close())
 		}()
-
 		// [A, B, C] but no B in the server means
 		// we get [Abody, null, Cbody].
-		executionPayloadBodies := make([]*pb.ExecutionPayloadBody, 3)
-		executionPayloadBodies[0] = {
-		Withdrawals: ...,
-			Transactions: ...
+		executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 3)
+		executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+			Transactions: [][]byte{},
+			Withdrawals:  []*pb.Withdrawal{},
 		}
 		executionPayloadBodies[1] = nil
-		executionPayloadBodies[2] = {
-		Withdrawals: ...,
-			Transactions: ...
+		executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
+			Transactions: [][]byte{},
+			Withdrawals:  []*pb.Withdrawal{},
 		}
 
 		results, err := json.Marshal(executionPayloadBodies)
@@ -66,6 +64,7 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		err = json.NewEncoder(w).Encode(resp)
 		require.NoError(t, err)
 	}))
+	ctx := context.Background()
 
 	rpcClient, err := rpc.DialHTTP(srv.URL)
 	require.NoError(t, err)
@@ -73,76 +72,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 	service := &Service{}
 	service.rpcClient = rpcClient
 
-	service.GetPayloadBodiesByHash(ctx, []common.Hash{1, 2, 3})
+	_, err = service.GetPayloadBodiesByHash(ctx, []common.Hash{common.BytesToHash([]byte("16719578"))})
+	require.NoError(t, err)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		defer func() {
-			require.NoError(t, r.Body.Close())
-		}()
-		enc, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
-		jsonRequestString := string(enc)
-
-		reqArg, err := json.Marshal(payload)
-		require.NoError(t, err)
-
-		// We expect the JSON string RPC request contains the right arguments.
-		require.Equal(t, true, strings.Contains(
-			jsonRequestString, string(reqArg),
-		))
-		resp := map[string]interface{}{
-			"jsonrpc": "2.0",
-			"id":      1,
-			"result":  status,
-		}
-		err = json.NewEncoder(w).Encode(resp)
-		require.NoError(t, err)
-	}))
-
-	rpcClient, err := rpc.DialHTTP(srv.URL)
-	require.NoError(t, err)
-
-	service := &Service{}
-	service.rpcClient = rpcClient
-	return service
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 var (
 	_ = ExecutionPayloadReconstructor(&Service{})
