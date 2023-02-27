@@ -57,7 +57,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 	var reward uint64
 	beaconState, reward, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(141), reward)
+	assert.Equal(t, uint64(72192), reward)
 
 	// Use a non-sync committee index to compare profitability.
 	syncCommittee := make(map[primitives.ValidatorIndex]bool)
