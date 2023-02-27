@@ -84,7 +84,7 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
-	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
+	InForkchoice([32]byte) bool
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
 
@@ -354,6 +354,13 @@ func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
 		return false
 	}
 	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)
+}
+
+// InForkchoice returns true if the given root is found in forkchoice
+// This in particular means that the blockroot is a descendant of the
+// finalized checkpoint
+func (s *Service) InForkchoice(root [32]byte) bool {
+	return s.ForkChoicer().HasNode(root)
 }
 
 // IsOptimisticForRoot takes the root as argument instead of the current head
