@@ -19,11 +19,10 @@ type beaconApiValidatorClient struct {
 	dutiesProvider          dutiesProvider
 	stateValidatorsProvider stateValidatorsProvider
 	jsonRestHandler         jsonRestHandler
-	fallbackClient          iface.ValidatorClient
 	beaconBlockConverter    beaconBlockConverter
 }
 
-func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
+func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
 		host:       host,
@@ -35,7 +34,6 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
 		beaconBlockConverter:    beaconApiBeaconBlockConverter{},
-		fallbackClient:          fallbackClient,
 	}
 }
 
