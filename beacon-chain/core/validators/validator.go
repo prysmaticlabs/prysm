@@ -178,7 +178,6 @@ func SlashValidator(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get proposer idx")
 	}
-	// In phase 0, the proposer is the whistleblower.
 	whistleBlowerIdx := proposerIdx
 	whistleblowerReward := validator.EffectiveBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
 	proposerReward := whistleblowerReward / proposerRewardQuotient

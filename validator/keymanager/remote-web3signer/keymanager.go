@@ -163,7 +163,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		blockAltairSignRequestsTotal.Inc()
 		return json.Marshal(blockv2AltairSignRequest)
 	case *validatorpb.SignRequest_BlockBellatrix:
-		blockv2BellatrixSignRequest, err := web3signerv1.GetBlockBellatrixSignRequest(request, genesisValidatorsRoot)
+		blockv2BellatrixSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -173,15 +173,35 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		blockBellatrixSignRequestsTotal.Inc()
 		return json.Marshal(blockv2BellatrixSignRequest)
 	case *validatorpb.SignRequest_BlindedBlockBellatrix:
-		blindedBlockv2SignRequest, err := web3signerv1.GetBlockBellatrixSignRequest(request, genesisValidatorsRoot)
+		blindedBlockv2SignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		if err = validator.StructCtx(ctx, blindedBlockv2SignRequest); err != nil {
 			return nil, err
 		}
-		blindedblockBellatrixSignRequestsTotal.Inc()
+		blindedBlockBellatrixSignRequestsTotal.Inc()
 		return json.Marshal(blindedBlockv2SignRequest)
+	case *validatorpb.SignRequest_BlockCapella:
+		blockv2CapellaSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, blockv2CapellaSignRequest); err != nil {
+			return nil, err
+		}
+		blockCapellaSignRequestsTotal.Inc()
+		return json.Marshal(blockv2CapellaSignRequest)
+	case *validatorpb.SignRequest_BlindedBlockCapella:
+		blindedBlockv2CapellaSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, blindedBlockv2CapellaSignRequest); err != nil {
+			return nil, err
+		}
+		blindedBlockCapellaSignRequestsTotal.Inc()
+		return json.Marshal(blindedBlockv2CapellaSignRequest)
 	// We do not support "DEPOSIT" type.
 	/*
 		case *validatorpb.:

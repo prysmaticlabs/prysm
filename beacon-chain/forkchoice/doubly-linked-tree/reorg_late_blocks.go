@@ -1,9 +1,15 @@
 package doublylinkedtree
 
 import (
+	"time"
+
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
+
+// orphanLateBlockProposingEarly determines the maximum threshold that we
+// consider the node is proposing early and sure to receive proposer boost
+const orphanLateBlockProposingEarly = 2
 
 // ShouldOverrideFCU returns whether the current forkchoice head is weak
 // and thus may be reorged when proposing the next block.
@@ -79,4 +85,70 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 		return
 	}
 	return true
+}
+
+// GetProposerHead returns the block root that has to be used as ParentRoot by a
+// proposer. It may not be the actual head of the canonical chain, in certain
+// cases it may be its parent, when the last head block has arrived early and is
+// considered safe to be orphaned.
+//
+// This function needs to be called only when proposing a block and all
+// attestation processing has already happened.
+func (f *ForkChoice) GetProposerHead() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
+	head := f.store.headNode
+	if head == nil {
+		return [32]byte{}
+	}
+
+	// Only reorg blocks from the previous slot.
+	if head.slot+1 != slots.CurrentSlot(f.store.genesisTime) {
+		return head.root
+	}
+	// Do not reorg on epoch boundaries
+	if (head.slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+		return head.root
+	}
+	// Only reorg blocks that arrive late
+	early, err := head.arrivedEarly(f.store.genesisTime)
+	if err != nil {
+		log.WithError(err).Error("could not check if block arrived early")
+		return head.root
+	}
+	if early {
+		return head.root
+	}
+	// Only reorg if we have been finalizing
+	f.store.checkpointsLock.RLock()
+	finalizedEpoch := f.store.finalizedCheckpoint.Epoch
+	f.store.checkpointsLock.RUnlock()
+	if slots.ToEpoch(head.slot+1) > finalizedEpoch+params.BeaconConfig().ReorgMaxEpochsSinceFinalization {
+		return head.root
+	}
+	// Only orphan a single block
+	parent := head.parent
+	if parent == nil {
+		return head.root
+	}
+	if head.slot > parent.slot+1 {
+		return head.root
+	}
+
+	// Only orphan a block if the head LMD vote is weak
+	if head.weight*100 > f.store.committeeWeight*params.BeaconConfig().ReorgWeightThreshold {
+		return head.root
+	}
+
+	// Only reorg if we are proposing early
+	secs, err := slots.SecondsSinceSlotStart(head.slot+1, f.store.genesisTime, uint64(time.Now().Unix()))
+	if err != nil {
+		log.WithError(err).Error("could not check if proposing early")
+		return head.root
+	}
+	if secs >= orphanLateBlockProposingEarly {
+		return head.root
+	}
+	return parent.root
 }

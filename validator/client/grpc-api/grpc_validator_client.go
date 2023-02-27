@@ -75,10 +75,6 @@ func (c *grpcValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.
 	return c.beaconNodeValidatorClient.StreamBlocksAltair(ctx, in)
 }
 
-func (c *grpcValidatorClient) StreamDuties(ctx context.Context, in *ethpb.DutiesRequest) (ethpb.BeaconNodeValidator_StreamDutiesClient, error) {
-	return c.beaconNodeValidatorClient.StreamDuties(ctx, in)
-}
-
 func (c *grpcValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
 	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProof(ctx, in)
 }
