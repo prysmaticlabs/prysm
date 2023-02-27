@@ -65,6 +65,58 @@ func Test_setupBlockStorageType(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, wantedBlk, retrievedBlk)
 	})
+	t.Run("existing database with blinded blocks but no key in metadata bucket should continue storing blinded blocks", func(t *testing.T) {
+		store := setupDB(t)
+		require.NoError(t, store.db.Update(func(tx *bolt.Tx) error {
+			return tx.Bucket(chainMetadataBucket).Put(saveBlindedBeaconBlocksKey, []byte{1})
+		}))
+
+		blk := util.NewBlindedBeaconBlockBellatrix()
+		blk.Block.Body.ExecutionPayloadHeader.BlockNumber = 1
+		wrappedBlock, err := blocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		root, err := wrappedBlock.Block().HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, store.SaveBlock(ctx, wrappedBlock))
+		retrievedBlk, err := store.Block(ctx, root)
+		require.NoError(t, err)
+		require.Equal(t, true, retrievedBlk.IsBlinded())
+		require.DeepEqual(t, wrappedBlock, retrievedBlk)
+
+		// We then delete the key from the bucket.
+		require.NoError(t, store.db.Update(func(tx *bolt.Tx) error {
+			return tx.Bucket(chainMetadataBucket).Delete(saveBlindedBeaconBlocksKey)
+		}))
+
+		// Not a fresh database, has blinded blocks already and should continue being that way.
+		err = store.setupBlockStorageType(ctx, false /* not a fresh database */)
+		require.NoError(t, err)
+
+		var shouldSaveBlinded bool
+		require.NoError(t, store.db.Update(func(tx *bolt.Tx) error {
+			bkt := tx.Bucket(chainMetadataBucket)
+			shouldSaveBlinded = len(bkt.Get(saveBlindedBeaconBlocksKey)) > 0
+			return nil
+		}))
+
+		// Should have set the chain metadata bucket to save blinded
+		require.Equal(t, true, shouldSaveBlinded)
+
+		blkFull := util.NewBeaconBlockBellatrix()
+		blkFull.Block.Body.ExecutionPayload.BlockNumber = 2
+		wrappedBlock, err = blocks.NewSignedBeaconBlock(blkFull)
+		require.NoError(t, err)
+		root, err = wrappedBlock.Block().HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, store.SaveBlock(ctx, wrappedBlock))
+		retrievedBlk, err = store.Block(ctx, root)
+		require.NoError(t, err)
+
+		require.Equal(t, true, retrievedBlk.IsBlinded())
+		wrappedBlinded, err := wrappedBlock.ToBlinded()
+		require.NoError(t, err)
+		require.DeepEqual(t, wrappedBlinded, retrievedBlk)
+	})
 	t.Run("existing database with full blocks type should continue storing full blocks", func(t *testing.T) {
 		store := setupDB(t)
 		require.NoError(t, store.db.Update(func(tx *bolt.Tx) error {
@@ -84,7 +136,7 @@ func Test_setupBlockStorageType(t *testing.T) {
 		require.DeepEqual(t, wrappedBlock, retrievedBlk)
 
 		// Not a fresh database, has full blocks already and should continue being that way.
-		err = store.setupBlockStorageType(false /* not a fresh database */)
+		err = store.setupBlockStorageType(ctx, false /* not a fresh database */)
 		require.NoError(t, err)
 
 		blk = util.NewBeaconBlockBellatrix()
@@ -121,7 +173,7 @@ func Test_setupBlockStorageType(t *testing.T) {
 			SaveFullExecutionPayloads: true,
 		})
 		defer resetFn()
-		err = store.setupBlockStorageType(false /* not a fresh database */)
+		err = store.setupBlockStorageType(ctx, false /* not a fresh database */)
 		errMsg := "cannot use the %s flag with this existing database, as it has already been initialized"
 		require.ErrorContains(t, fmt.Sprintf(errMsg, features.SaveFullExecutionPayloads.Name), err)
 	})

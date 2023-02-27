@@ -271,11 +271,15 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	return s.SaveBlocks(ctx, []interfaces.ReadOnlySignedBeaconBlock{signed})
 }
 
-func (s *Store) shouldSaveBlinded() (bool, error) {
+// This function determines if we should save beacon blocks in the DB in blinded format by checking
+// if a `saveBlindedBeaconBlocks` key exists in the database. Otherwise, we check if the last
+// blocked stored to check if it is blinded, and then write that `saveBlindedBeaconBlocks` key
+// to the DB for future checks.
+func (s *Store) shouldSaveBlinded(ctx context.Context) (bool, error) {
 	var saveBlinded bool
-	if err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(chainMetadataBucket)
-		saveBlinded = len(bkt.Get(saveBlindedBeaconBlocksKey)) > 0
+	if err := s.db.Update(func(tx *bolt.Tx) error {
+		metadataBkt := tx.Bucket(chainMetadataBucket)
+		saveBlinded = len(metadataBkt.Get(saveBlindedBeaconBlocksKey)) > 0
 		return nil
 	}); err != nil {
 		return false, err
@@ -307,7 +311,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 		indicesForBlocks[i] = indicesByBucket
 	}
-	saveBlinded, err := s.shouldSaveBlinded()
+	saveBlinded, err := s.shouldSaveBlinded(ctx)
 	if err != nil {
 		return err
 	}
@@ -828,7 +832,7 @@ func (s *Store) marshalBlock(
 	ctx context.Context,
 	blk interfaces.ReadOnlySignedBeaconBlock,
 ) ([]byte, error) {
-	shouldBlind, err := s.shouldSaveBlinded()
+	shouldBlind, err := s.shouldSaveBlinded(ctx)
 	if err != nil {
 		return nil, err
 	}

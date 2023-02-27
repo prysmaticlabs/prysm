@@ -196,7 +196,7 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		return nil, err
 	}
 	// Setup the type of block storage used depending on whether or not this is a fresh database.
-	if err := kv.setupBlockStorageType(isFreshDatabase); err != nil {
+	if err := kv.setupBlockStorageType(ctx, isFreshDatabase); err != nil {
 		return nil, err
 	}
 	return kv, nil
@@ -231,7 +231,7 @@ func (s *Store) DatabasePath() string {
 	return s.databasePath
 }
 
-func (s *Store) setupBlockStorageType(isFreshDatabase bool) error {
+func (s *Store) setupBlockStorageType(ctx context.Context, isFreshDatabase bool) error {
 	// If we are starting from a fresh database, we store a save blinded beacon blocks key
 	// in the chain metadata bucket unless the user wants to store full execution payloads.
 	if isFreshDatabase {
@@ -243,10 +243,38 @@ func (s *Store) setupBlockStorageType(isFreshDatabase bool) error {
 			return bkt.Put(saveBlindedBeaconBlocksKey, []byte{1})
 		})
 	}
-	saveBlinded, err := s.shouldSaveBlinded()
-	if err != nil {
+
+	// We check if we want to save blinded beacon blocks by checking a key in the db
+	// otherwise, we check the last stored block and set that key in the DB if it is blinded.
+	var saveBlinded bool
+	if err := s.db.Update(func(tx *bolt.Tx) error {
+		metadataBkt := tx.Bucket(chainMetadataBucket)
+		keyExists := len(metadataBkt.Get(saveBlindedBeaconBlocksKey)) > 0
+		if keyExists {
+			saveBlinded = true
+			return nil
+		}
+		bkt := tx.Bucket(blocksBucket)
+		c := bkt.Cursor()
+		_, lastBlock := c.Last()
+		if len(lastBlock) == 0 {
+			return nil
+		}
+		blk, err := unmarshalBlock(ctx, lastBlock)
+		if err != nil {
+			return err
+		}
+		if blk.IsBlinded() {
+			if err := metadataBkt.Put(saveBlindedBeaconBlocksKey, []byte{1}); err != nil {
+				return err
+			}
+			saveBlinded = true
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
+
 	// If the user wants to save full execution payloads but their database is saving blinded blocks only,
 	// we then throw an error as the node should not start.
 	if features.Get().SaveFullExecutionPayloads && saveBlinded {
