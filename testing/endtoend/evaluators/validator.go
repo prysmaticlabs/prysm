@@ -148,6 +148,11 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 			if err != nil {
 				return errors.Wrap(err, "failed to get missing validators")
 			}
+		case *eth.BeaconStateContainer_CapellaState:
+			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.CapellaState.PreviousEpochParticipation)
+			if err != nil {
+				return errors.Wrap(err, "failed to get missing validators")
+			}
 		default:
 			return fmt.Errorf("unrecognized version: %v", st.Version)
 		}
