@@ -37,6 +37,8 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			headSlot = uint64(hb.AltairBlock.Slot)
 		case *v2.SignedBeaconBlockContainer_BellatrixBlock:
 			headSlot = uint64(hb.BellatrixBlock.Slot)
+		case *v2.SignedBeaconBlockContainer_CapellaBlock:
+			headSlot = uint64(hb.CapellaBlock.Slot)
 		default:
 			return errors.New("no valid block type retrieved")
 		}

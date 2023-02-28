@@ -619,15 +619,15 @@ func (r *testRunner) multiScenarioMulticlient(ec *e2etypes.EvaluationContext, ep
 		PayloadId *enginev1.PayloadIDBytes `json:"payloadId"`
 	}
 	switch epoch {
-	case 9:
+	case 11:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
 		return true
-	case 10:
+	case 12:
 		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
 		return true
-	case 14:
+	case 16:
 		// Set it for prysm beacon node.
 		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
 		require.NoError(r.t, err)
@@ -663,7 +663,7 @@ func (r *testRunner) multiScenarioMulticlient(ec *e2etypes.EvaluationContext, ep
 			return true
 		})
 		return true
-	case 15:
+	case 17:
 		evs := []e2etypes.Evaluator{ev.OptimisticSyncEnabled}
 		r.executeProvidedEvaluators(ec, epoch, []*grpc.ClientConn{conns[0]}, evs)
 		// Disable Interceptor
@@ -684,7 +684,7 @@ func (r *testRunner) multiScenarioMulticlient(ec *e2etypes.EvaluationContext, ep
 		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
 
 		return true
-	case 11, 12, 16, 17:
+	case 13, 14, 18, 19:
 		// Allow 2 epochs for the network to finalize again.
 		return true
 	}
@@ -719,23 +719,23 @@ func (r *testRunner) eeOffline(_ *e2etypes.EvaluationContext, epoch uint64, _ []
 // as expected.
 func (r *testRunner) multiScenario(ec *e2etypes.EvaluationContext, epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
-	case 9:
+	case 11:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
 		return true
-	case 10:
+	case 12:
 		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
 		return true
-	case 14:
+	case 16:
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(1))
 		return true
-	case 15:
+	case 17:
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(1))
 		return true
-	case 19:
+	case 21:
 		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
 		require.NoError(r.t, err)
 		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
@@ -747,7 +747,7 @@ func (r *testRunner) multiScenario(ec *e2etypes.EvaluationContext, epoch uint64,
 			return true
 		})
 		return true
-	case 20:
+	case 22:
 		evs := []e2etypes.Evaluator{ev.OptimisticSyncEnabled}
 		r.executeProvidedEvaluators(ec, epoch, []*grpc.ClientConn{conns[0]}, evs)
 		// Disable Interceptor
@@ -759,7 +759,7 @@ func (r *testRunner) multiScenario(ec *e2etypes.EvaluationContext, epoch uint64,
 		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
 
 		return true
-	case 11, 12, 16, 17, 21, 22:
+	case 13, 14, 18, 19, 23, 24:
 		// Allow 2 epochs for the network to finalize again.
 		return true
 	}
