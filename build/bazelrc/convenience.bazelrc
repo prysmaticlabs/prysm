@@ -27,3 +27,7 @@ common --enable_platform_specific_config
 # You may need to configure CI to capture this artifact and upload for later use.
 # Docs: https://bazel.build/reference/command-line-reference#flag--heap_dump_on_oom
 build --heap_dump_on_oom
+
+# Change the behavior of bazel test to not bother building targets which aren't dependencies of the
+# tests. Matches some developer expectations.
+test --build_tests_only
