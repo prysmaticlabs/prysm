@@ -146,7 +146,7 @@ var beaconPathsAndObjects = map[string]metadata{
 		},
 		requestObject: func() []string {
 			validatorIndices := make([]string, 64)
-			for key, _ := range validatorIndices {
+			for key := range validatorIndices {
 				validatorIndices[key] = fmt.Sprintf("%d", key)
 			}
 			return validatorIndices
