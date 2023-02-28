@@ -5,12 +5,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	log "github.com/sirupsen/logrus"
 )
 
 // ValidatorIndexOutOfRangeError represents an error scenario where a validator does not exist
@@ -178,15 +178,8 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 }
 
 // Balances of validators participating in consensus on the beacon chain.
-func (b *BeaconState) Balances() []uint64 {
-	if b.balances == nil {
-		return nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	return b.balancesVal()
+func (b *BeaconState) Balances() *customtypes.Balances {
+	return b.balances
 }
 
 // balancesVal of validators participating in consensus on the beacon chain.
@@ -196,37 +189,7 @@ func (b *BeaconState) balancesVal() []uint64 {
 		return nil
 	}
 
-	res := make([]uint64, len(b.balances))
-	log.Warnf("Copy size in bytes: %d", len(b.balances)*8)
-	copy(res, b.balances)
-	return res
-}
-
-// BalanceAtIndex of validator with the provided index.
-func (b *BeaconState) BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error) {
-	if b.balances == nil {
-		return 0, nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	if uint64(len(b.balances)) <= uint64(idx) {
-		return 0, fmt.Errorf("index of %d does not exist", idx)
-	}
-	return b.balances[idx], nil
-}
-
-// BalancesLength returns the length of the balances slice.
-func (b *BeaconState) BalancesLength() int {
-	if b.balances == nil {
-		return 0
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	return b.balancesLength()
+	return b.balances.Value()
 }
 
 // Slashings of validators on the beacon chain.

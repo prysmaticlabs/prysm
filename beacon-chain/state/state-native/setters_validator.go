@@ -2,6 +2,7 @@ package state_native
 
 import (
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -84,7 +85,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx primitives.ValidatorIndex, val 
 
 // SetBalances for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBalances(val []uint64) error {
+func (b *BeaconState) SetBalances(val *customtypes.Balances) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -100,20 +101,19 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx primitives.ValidatorIndex, val uint64) error {
-	if uint64(len(b.balances)) <= uint64(idx) {
-		return errors.Errorf("invalid index provided %d", idx)
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	bals := b.balances
 	if b.sharedFieldReferences[types.Balances].Refs() > 1 {
-		bals = b.balancesVal()
+		bals = b.balances.Copy()
 		b.sharedFieldReferences[types.Balances].MinusRef()
 		b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
 	}
 
-	bals[idx] = val
+	if err := bals.UpdateAt(idx, val); err != nil {
+		return errors.Wrapf(err, "could not update balance at index %d", idx)
+	}
 	b.balances = bals
 	b.markFieldAsDirty(types.Balances)
 	b.addDirtyIndices(types.Balances, []uint64{uint64(idx)})
@@ -190,13 +190,14 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 
 	bals := b.balances
 	if b.sharedFieldReferences[types.Balances].Refs() > 1 {
-		bals = b.balancesVal()
+		bals = b.balances.Copy()
 		b.sharedFieldReferences[types.Balances].MinusRef()
 		b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
 	}
 
-	b.balances = append(bals, bal)
-	balIdx := len(b.balances) - 1
+	bals.Append(bal)
+	b.balances = bals
+	balIdx := b.balances.Len() - 1
 	b.markFieldAsDirty(types.Balances)
 	b.addDirtyIndices(types.Balances, []uint64{uint64(balIdx)})
 	return nil

@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -126,9 +127,7 @@ type ReadOnlyValidators interface {
 
 // ReadOnlyBalances defines a struct which only has read access to balances methods.
 type ReadOnlyBalances interface {
-	Balances() []uint64
-	BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error)
-	BalancesLength() int
+	Balances() *customtypes.Balances
 }
 
 // ReadOnlyCheckpoint defines a struct which only has read access to checkpoint methods.

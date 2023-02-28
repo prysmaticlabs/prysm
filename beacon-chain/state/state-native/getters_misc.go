@@ -79,16 +79,6 @@ func (b *BeaconState) HistoricalRoots() ([][]byte, error) {
 	return b.historicalRoots.Slice(), nil
 }
 
-// balancesLength returns the length of the balances slice.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) balancesLength() int {
-	if b.balances == nil {
-		return 0
-	}
-
-	return len(b.balances)
-}
-
 // HistoricalSummaries of the beacon state.
 func (b *BeaconState) HistoricalSummaries() ([]*ethpb.HistoricalSummary, error) {
 	if b.version < version.Capella {
