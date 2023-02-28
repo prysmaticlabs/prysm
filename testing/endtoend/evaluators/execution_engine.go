@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
@@ -53,7 +54,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			if err != nil {
 				return err
 			}
-			block, err := client.GetBlockV2(context.Background(), &v2.BlockRequestV2{BlockId: []byte(strconv.Itoa(castI))})
+			block, err := client.GetBlindedBlock(context.Background(), &v1.BlockRequest{BlockId: []byte(strconv.Itoa(castI))})
 			if err != nil {
 				// Continue in the event of non-existent blocks.
 				continue
