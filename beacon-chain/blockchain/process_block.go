@@ -107,6 +107,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		return err
 	}
 
+	// Verify that the parent block is in forkchoice
+	if !s.ForkChoicer().HasNode(b.ParentRoot()) {
+		return ErrNotDescendantOfFinalized
+	}
+
 	// Save current justified and finalized epochs for future use.
 	currStoreJustifiedEpoch := s.ForkChoicer().JustifiedCheckpoint().Epoch
 	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch
@@ -443,7 +448,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 		}
 	}
 	// Insert all nodes but the last one to forkchoice
-	if err := s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes); err != nil {
+	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
 	}
 	// Insert the last block to forkchoice

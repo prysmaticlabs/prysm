@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
@@ -71,10 +69,6 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyFinalizedBlkDescendant(ctx, parentRoot); err != nil {
-		return err
-	}
-
 	has, err := s.cfg.StateGen.HasState(ctx, parentRoot)
 	if err != nil {
 		return err
@@ -84,35 +78,6 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 			return errors.Wrap(err, "could not save initial sync blocks")
 		}
 		s.clearInitSyncBlocks()
-	}
-	return nil
-}
-
-// VerifyFinalizedBlkDescendant validates if input block root is a descendant of the
-// current finalized block root.
-func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
-	defer span.End()
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
-	fRoot := s.ensureRootNotZeros(finalized.Root)
-	fSlot, err := slots.EpochStart(finalized.Epoch)
-	if err != nil {
-		return err
-	}
-	bFinalizedRoot, err := s.ancestor(ctx, root[:], fSlot)
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized block root")
-	}
-	if bFinalizedRoot == nil {
-		return fmt.Errorf("no finalized block known for block %#x", bytesutil.Trunc(root[:]))
-	}
-
-	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
-		err := fmt.Errorf("block %#x is not a descendant of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), fSlot, bytesutil.Trunc(bFinalizedRoot),
-			bytesutil.Trunc(fRoot[:]))
-		tracing.AnnotateError(span, err)
-		return invalidBlock{error: err}
 	}
 	return nil
 }
@@ -201,7 +166,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot primitives.Slo
 	r := bytesutil.ToBytes32(root)
 	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
 	// This is most optimal outcome.
-	ar, err := s.ancestorByForkChoiceStore(ctx, r, slot)
+	ar, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
 	if err != nil {
 		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
 		// This is the second line of defense for retrieving ancestor root.
@@ -211,38 +176,28 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot primitives.Slo
 		}
 	}
 
-	return ar, nil
-}
-
-// This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
-func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot primitives.Slot) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByForkChoiceStore")
-	defer span.End()
-
-	if !s.cfg.ForkChoiceStore.HasParent(r) {
-		return nil, errors.New("could not find root in fork choice store")
-	}
-	root, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
-	return root[:], err
+	return ar[:], nil
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
-func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot primitives.Slot) ([]byte, error) {
+func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot primitives.Slot) (root [32]byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
 	defer span.End()
 
+	root = [32]byte{}
 	// Stop recursive ancestry lookup if context is cancelled.
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		err = ctx.Err()
+		return
 	}
 
 	signed, err := s.getBlock(ctx, r)
 	if err != nil {
-		return nil, err
+		return root, err
 	}
 	b := signed.Block()
 	if b.Slot() == slot || b.Slot() < slot {
-		return r[:], nil
+		return r, nil
 	}
 
 	return s.ancestorByDB(ctx, b.ParentRoot(), slot)
@@ -282,9 +237,9 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		return nil
 	}
 	if root != s.ensureRootNotZeros(finalized.Root) && !s.ForkChoicer().HasNode(root) {
-		return errNotDescendantOfFinalized
+		return ErrNotDescendantOfFinalized
 	}
-	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
+	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)
 }
 
 // inserts finalized deposits into our finalized deposit trie.
