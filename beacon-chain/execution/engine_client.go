@@ -444,16 +444,16 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 
 // GetPayloadBodiesByHash --
 func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHashes []common.Hash) ([]*pb.ExecutionPayloadBodyV1, error) {
-	if !features.Get().EnableCapellaEngineMethods {
-		return nil, errors.New("capella engine methods not enabled")
-	}
+	// if !features.Get().EnableCapellaEngineMethods {
+	// 	return nil, errors.New("capella engine methods not enabled")
+	// }
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByHashV1")
 	defer span.End()
 
 	// TODO: Might need to check if execution client is syncing.
 	// What's the consequence if we do not?
 
-	result := &[]pb.ExecutionPayloadBodyV1{}
+	result := make([]*pb.ExecutionPayloadBodyV1, 0)
 
 	// TODO: Does our code handle this response well?
 	// {
@@ -465,7 +465,16 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 	// request: [a, b ,c]
 	// response: [abody, null, cbody]
 
-	err := s.rpcClient.CallContext(ctx, result, GetPayloadBodiesByHashV1, executionBlockHashes)
+	err := s.rpcClient.CallContext(ctx, &result, GetPayloadBodiesByHashV1, executionBlockHashes)
+
+	for i, item := range result {
+		if item == nil {
+			result[i] = &pb.ExecutionPayloadBodyV1{
+				Transactions: make([][]byte, 0),
+				Withdrawals:  make([]*pb.Withdrawal, 0),
+			}
+		}
+	}
 	return result, handleRPCError(err)
 }
 

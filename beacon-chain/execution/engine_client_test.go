@@ -35,45 +35,64 @@ import (
 )
 
 func TestCapella_PayloadBodiesByHash(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		defer func() {
-			require.NoError(t, r.Body.Close())
-		}()
-		// [A, B, C] but no B in the server means
-		// we get [Abody, null, Cbody].
-		executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 3)
-		executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
-			Transactions: [][]byte{},
-			Withdrawals:  []*pb.Withdrawal{},
-		}
-		executionPayloadBodies[1] = nil
-		executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
-			Transactions: [][]byte{},
-			Withdrawals:  []*pb.Withdrawal{},
-		}
+	t.Run("empty response works", f func(t *testing.T) {
+		
+	})
+	t.Run("single element response null works", f func(t *testing.T) {
+		
+	})
+	t.Run("empty, null, full works", f func(t *testing.T) {
+		
+	})
+	t.Run("full works, single item", f func(t *testing.T) {
+		
+	})
+	t.Run("full works, multiple items", f func(t *testing.T) {
+		
+	})
+	t.Run("returning empty, null, empty should work properly", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			// [A, B, C] but no B in the server means
+			// we get [Abody, null, Cbody].
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 3)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{},
+				Withdrawals:  []*pb.Withdrawal{},
+			}
+			executionPayloadBodies[1] = nil
+			executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{},
+				Withdrawals:  []*pb.Withdrawal{},
+			}
 
-		results, err := json.Marshal(executionPayloadBodies)
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
 		require.NoError(t, err)
 
-		resp := map[string]interface{}{
-			"jsonrpc": "2.0",
-			"id":      1,
-			"result":  results,
-		}
-		err = json.NewEncoder(w).Encode(resp)
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{common.BytesToHash([]byte("16719578"))})
 		require.NoError(t, err)
-	}))
-	ctx := context.Background()
+		require.Equal(t, 3, len(results))
 
-	rpcClient, err := rpc.DialHTTP(srv.URL)
-	require.NoError(t, err)
-
-	service := &Service{}
-	service.rpcClient = rpcClient
-
-	_, err = service.GetPayloadBodiesByHash(ctx, []common.Hash{common.BytesToHash([]byte("16719578"))})
-	require.NoError(t, err)
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
 }
 
 var (

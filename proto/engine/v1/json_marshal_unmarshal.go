@@ -655,23 +655,35 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type executionPayloadBodyV1JSON struct {
-	Transactions []*gethtypes.Transaction `json:"transactions"`
-	Withdrawals  []*Withdrawal            `json:"withdrawals"`
+	Transactions []hexutil.Bytes   `json:"transactions"`
+	Withdrawals  []*withdrawalJSON `json:"withdrawals"`
 }
 
 func (b *ExecutionPayloadBodyV1) UnmarshalJSON(enc []byte) error {
-	decoded := make(map[string]interface{})
+	var decoded *executionPayloadBodyV1JSON
 	err := json.Unmarshal(enc, &decoded)
 	if err != nil {
 		return err
 	}
-	b.Transactions, err = unmarshalTransactions(decoded, enc)
-	if err != nil {
-		return err
+	if len(decoded.Transactions) == 0 {
+		b.Transactions = make([][]byte, 0)
 	}
-	b.Withdrawals, err = unmarshalWithdrawals(decoded, enc)
-	if err != nil {
-		return err
+	if len(decoded.Withdrawals) == 0 {
+		b.Withdrawals = make([]*Withdrawal, 0)
 	}
+
+	transactions := make([][]byte, len(decoded.Transactions))
+	for i, tx := range decoded.Transactions {
+		transactions[i] = tx
+	}
+	b.Transactions = transactions
+	ws := make([]*Withdrawal, len(decoded.Withdrawals))
+	for i, wj := range decoded.Withdrawals {
+		ws[i], err = wj.ToWithdrawal()
+		if err != nil {
+			return err
+		}
+	}
+	b.Withdrawals = ws
 	return nil
 }
