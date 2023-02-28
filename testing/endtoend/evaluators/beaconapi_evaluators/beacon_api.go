@@ -144,12 +144,34 @@ var beaconPathsAndObjects = map[string]metadata{
 			//ask for a future epoch to test this case
 			return []string{fmt.Sprintf("%v", e+1)}
 		},
-		requestObject: []string{"1", "2", "3"},
+		requestObject: func() []string {
+			validatorIndices := make([]string, 64)
+			for key, _ := range validatorIndices {
+				validatorIndices[key] = fmt.Sprintf("%d", key)
+			}
+			return validatorIndices
+		}(),
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.AttesterDutiesResponseJson{},
 		},
 		lighthouseResps: map[string]interface{}{
 			"json": &apimiddleware.AttesterDutiesResponseJson{},
+		},
+		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
+			castedp, ok := lhouseResp.(*apimiddleware.AttesterDutiesResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			castedl, ok := lhouseResp.(*apimiddleware.AttesterDutiesResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			if len(castedp.Data) == 0 ||
+				len(castedl.Data) == 0 ||
+				len(castedp.Data) != len(castedl.Data) {
+				return fmt.Errorf("attester data does not match, prysm: %d lighthouse: %d", len(castedp.Data), len(castedl.Data))
+			}
+			return compareJSONResponseObjects(prysmResp, castedl)
 		},
 	},
 	"/beacon/headers/{param1}": {
