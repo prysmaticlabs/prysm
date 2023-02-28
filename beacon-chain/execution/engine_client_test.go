@@ -35,20 +35,20 @@ import (
 )
 
 func TestCapella_PayloadBodiesByHash(t *testing.T) {
-	t.Run("empty response works", f func(t *testing.T) {
-		
+	t.Run("empty response works", func(t *testing.T) {
+
 	})
-	t.Run("single element response null works", f func(t *testing.T) {
-		
+	t.Run("single element response null works", func(t *testing.T) {
+
 	})
-	t.Run("empty, null, full works", f func(t *testing.T) {
-		
+	t.Run("empty, null, full works", func(t *testing.T) {
+
 	})
-	t.Run("full works, single item", f func(t *testing.T) {
-		
+	t.Run("full works, single item", func(t *testing.T) {
+
 	})
-	t.Run("full works, multiple items", f func(t *testing.T) {
-		
+	t.Run("full works, multiple items", func(t *testing.T) {
+
 	})
 	t.Run("returning empty, null, empty should work properly", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
