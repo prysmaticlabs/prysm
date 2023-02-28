@@ -272,13 +272,17 @@ func (s *Store) setupBlockStorageType(ctx context.Context) error {
 
 	// If the user wants to save full execution payloads but their database is saving blinded blocks only,
 	// we then throw an error as the node should not start.
-	if features.Get().SaveFullExecutionPayloads && saveBlinded {
+	if saveFull && saveBlinded {
 		return fmt.Errorf(
 			"cannot use the %s flag with this existing database, as it has already been initialized to only store "+
 				"execution payload headers (aka blinded beacon blocks). If you want to use this flag, you must re-sync your node with a fresh "+
 				"database. We recommend using checkpoint sync https://docs.prylabs.network/docs/prysm-usage/checkpoint-sync/",
 			features.SaveFullExecutionPayloads.Name,
 		)
+	}
+	if saveFull {
+		log.Warn("Saving full beacon blocks to the database. For greater disk space savings, we recommend resyncing from an empty database with " +
+			"checkpoint sync to save only blinded beacon blocks by default")
 	}
 	return nil
 }
