@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
@@ -25,18 +26,20 @@ var OptimisticSyncEnabled = types.Evaluator{
 func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	for _, conn := range conns {
 		client := service.NewBeaconChainClient(conn)
-		head, err := client.GetBlockV2(context.Background(), &v2.BlockRequestV2{BlockId: []byte("head")})
+		head, err := client.GetBlindedBlock(context.Background(), &v1.BlockRequest{BlockId: []byte("head")})
 		if err != nil {
 			return err
 		}
 		headSlot := uint64(0)
 		switch hb := head.Data.Message.(type) {
-		case *v2.SignedBeaconBlockContainer_Phase0Block:
+		case *v2.SignedBlindedBeaconBlockContainer_Phase0Block:
 			headSlot = uint64(hb.Phase0Block.Slot)
-		case *v2.SignedBeaconBlockContainer_AltairBlock:
+		case *v2.SignedBlindedBeaconBlockContainer_AltairBlock:
 			headSlot = uint64(hb.AltairBlock.Slot)
-		case *v2.SignedBeaconBlockContainer_BellatrixBlock:
+		case *v2.SignedBlindedBeaconBlockContainer_BellatrixBlock:
 			headSlot = uint64(hb.BellatrixBlock.Slot)
+		case *v2.SignedBlindedBeaconBlockContainer_CapellaBlock:
+			headSlot = uint64(hb.CapellaBlock.Slot)
 		default:
 			return errors.New("no valid block type retrieved")
 		}
@@ -51,7 +54,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			if err != nil {
 				return err
 			}
-			block, err := client.GetBlockV2(context.Background(), &v2.BlockRequestV2{BlockId: []byte(strconv.Itoa(castI))})
+			block, err := client.GetBlindedBlock(context.Background(), &v1.BlockRequest{BlockId: []byte(strconv.Itoa(castI))})
 			if err != nil {
 				// Continue in the event of non-existent blocks.
 				continue
