@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -126,14 +125,8 @@ func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 	// Iterate through all the connected peers and through any of their
 	// relevant topics.
 	for pid, snap := range peerMap {
-		topicScores := convertTopicScores(snap.Topics)
 		s.peers.Scorers().GossipScorer().SetGossipData(pid, snap.Score,
-			snap.BehaviourPenalty, topicScores)
-
-		log.WithFields(logrus.Fields{
-			"peer":         pid,
-			"topic_scores": topicScores,
-		}).Info("topic scores")
+			snap.BehaviourPenalty, convertTopicScores(snap.Topics))
 	}
 }
 

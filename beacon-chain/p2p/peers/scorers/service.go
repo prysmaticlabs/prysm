@@ -8,7 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/sirupsen/logrus"
 )
 
 var _ Scorer = (*Service)(nil)
@@ -117,22 +116,10 @@ func (s *Service) ScoreNoLock(pid peer.ID) float64 {
 	if _, ok := s.store.PeerData(pid); !ok {
 		return 0
 	}
-	badResponse := s.scorers.badResponsesScorer.score(pid) * s.scorerWeight(s.scorers.badResponsesScorer)
-	blockProvider := s.scorers.blockProviderScorer.score(pid) * s.scorerWeight(s.scorers.blockProviderScorer)
-	peerStatus := s.scorers.peerStatusScorer.score(pid) * s.scorerWeight(s.scorers.peerStatusScorer)
-	gossipScorer := s.scorers.gossipScorer.score(pid) * s.scorerWeight(s.scorers.gossipScorer)
-
-	score = badResponse + blockProvider + peerStatus + gossipScorer
-
-	logrus.WithFields(logrus.Fields{
-		"peer_id":        pid,
-		"bad response":   badResponse,
-		"block provider": blockProvider,
-		"peer status":    peerStatus,
-		"gossip scorer":  gossipScorer,
-		"total":          score,
-	}).Info("score")
-
+	score += s.scorers.badResponsesScorer.score(pid) * s.scorerWeight(s.scorers.badResponsesScorer)
+	score += s.scorers.blockProviderScorer.score(pid) * s.scorerWeight(s.scorers.blockProviderScorer)
+	score += s.scorers.peerStatusScorer.score(pid) * s.scorerWeight(s.scorers.peerStatusScorer)
+	score += s.scorers.gossipScorer.score(pid) * s.scorerWeight(s.scorers.gossipScorer)
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
 
