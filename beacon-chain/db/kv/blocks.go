@@ -277,7 +277,7 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 // to the DB for future checks.
 func (s *Store) shouldSaveBlinded(ctx context.Context) (bool, error) {
 	var saveBlinded bool
-	if err := s.db.Update(func(tx *bolt.Tx) error {
+	if err := s.db.View(func(tx *bolt.Tx) error {
 		metadataBkt := tx.Bucket(chainMetadataBucket)
 		saveBlinded = len(metadataBkt.Get(saveBlindedBeaconBlocksKey)) > 0
 		return nil

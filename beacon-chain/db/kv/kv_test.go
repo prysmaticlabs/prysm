@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	bolt "go.etcd.io/bbolt"
@@ -38,6 +39,8 @@ func Test_setupBlockStorageType(t *testing.T) {
 		root, err := wrappedBlock.Block().HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, store.SaveBlock(ctx, wrappedBlock))
+		require.NoError(t, store.SaveStateSummary(ctx, &ethpb.StateSummary{Root: root[:]}))
+		require.NoError(t, store.SaveHeadBlockRoot(ctx, root))
 		retrievedBlk, err := store.Block(ctx, root)
 		require.NoError(t, err)
 		require.Equal(t, false, retrievedBlk.IsBlinded())
@@ -57,6 +60,8 @@ func Test_setupBlockStorageType(t *testing.T) {
 		root, err := wrappedBlock.Block().HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, store.SaveBlock(ctx, wrappedBlock))
+		require.NoError(t, store.SaveStateSummary(ctx, &ethpb.StateSummary{Root: root[:]}))
+		require.NoError(t, store.SaveHeadBlockRoot(ctx, root))
 		retrievedBlk, err := store.Block(ctx, root)
 		require.NoError(t, err)
 		require.Equal(t, true, retrievedBlk.IsBlinded())
@@ -78,6 +83,8 @@ func Test_setupBlockStorageType(t *testing.T) {
 		root, err := wrappedBlock.Block().HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, store.SaveBlock(ctx, wrappedBlock))
+		require.NoError(t, store.SaveStateSummary(ctx, &ethpb.StateSummary{Root: root[:]}))
+		require.NoError(t, store.SaveHeadBlockRoot(ctx, root))
 		retrievedBlk, err := store.Block(ctx, root)
 		require.NoError(t, err)
 		require.Equal(t, true, retrievedBlk.IsBlinded())
@@ -89,7 +96,7 @@ func Test_setupBlockStorageType(t *testing.T) {
 		}))
 
 		// Not a fresh database, has blinded blocks already and should continue being that way.
-		err = store.setupBlockStorageType(ctx, false /* not a fresh database */)
+		err = store.setupBlockStorageType(ctx)
 		require.NoError(t, err)
 
 		var shouldSaveBlinded bool
@@ -130,13 +137,15 @@ func Test_setupBlockStorageType(t *testing.T) {
 		root, err := wrappedBlock.Block().HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, store.SaveBlock(ctx, wrappedBlock))
+		require.NoError(t, store.SaveStateSummary(ctx, &ethpb.StateSummary{Root: root[:]}))
+		require.NoError(t, store.SaveHeadBlockRoot(ctx, root))
 		retrievedBlk, err := store.Block(ctx, root)
 		require.NoError(t, err)
 		require.Equal(t, false, retrievedBlk.IsBlinded())
 		require.DeepEqual(t, wrappedBlock, retrievedBlk)
 
 		// Not a fresh database, has full blocks already and should continue being that way.
-		err = store.setupBlockStorageType(ctx, false /* not a fresh database */)
+		err = store.setupBlockStorageType(ctx)
 		require.NoError(t, err)
 
 		blk = util.NewBeaconBlockBellatrix()
@@ -161,6 +170,8 @@ func Test_setupBlockStorageType(t *testing.T) {
 		root, err := wrappedBlock.Block().HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, store.SaveBlock(ctx, wrappedBlock))
+		require.NoError(t, store.SaveStateSummary(ctx, &ethpb.StateSummary{Root: root[:]}))
+		require.NoError(t, store.SaveHeadBlockRoot(ctx, root))
 		retrievedBlk, err := store.Block(ctx, root)
 		require.NoError(t, err)
 		require.Equal(t, true, retrievedBlk.IsBlinded())
@@ -173,7 +184,7 @@ func Test_setupBlockStorageType(t *testing.T) {
 			SaveFullExecutionPayloads: true,
 		})
 		defer resetFn()
-		err = store.setupBlockStorageType(ctx, false /* not a fresh database */)
+		err = store.setupBlockStorageType(ctx)
 		errMsg := "cannot use the %s flag with this existing database, as it has already been initialized"
 		require.ErrorContains(t, fmt.Sprintf(errMsg, features.SaveFullExecutionPayloads.Name), err)
 	})

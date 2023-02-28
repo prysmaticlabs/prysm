@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	bolt "go.etcd.io/bbolt"
 )
@@ -144,7 +145,6 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		}
 	}
 	datafile := KVStoreDatafilePath(dirPath)
-	isFreshDatabase := !file.FileExists(datafile)
 	log.Infof("Opening Bolt DB at %s", datafile)
 	boltDB, err := bolt.Open(
 		datafile,
@@ -196,7 +196,7 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		return nil, err
 	}
 	// Setup the type of block storage used depending on whether or not this is a fresh database.
-	if err := kv.setupBlockStorageType(ctx, isFreshDatabase); err != nil {
+	if err := kv.setupBlockStorageType(ctx); err != nil {
 		return nil, err
 	}
 	return kv, nil
@@ -231,40 +231,35 @@ func (s *Store) DatabasePath() string {
 	return s.databasePath
 }
 
-func (s *Store) setupBlockStorageType(ctx context.Context, isFreshDatabase bool) error {
-	// If we are starting from a fresh database, we store a save blinded beacon blocks key
-	// in the chain metadata bucket unless the user wants to store full execution payloads.
-	if isFreshDatabase {
-		if features.Get().SaveFullExecutionPayloads {
-			return nil
-		}
-		return s.db.Update(func(tx *bolt.Tx) error {
-			bkt := tx.Bucket(chainMetadataBucket)
-			return bkt.Put(saveBlindedBeaconBlocksKey, []byte{1})
-		})
-	}
-
+func (s *Store) setupBlockStorageType(ctx context.Context) error {
 	// We check if we want to save blinded beacon blocks by checking a key in the db
 	// otherwise, we check the last stored block and set that key in the DB if it is blinded.
+	headBlock, err := s.HeadBlock(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head block when setting up block storage type")
+	}
+	err = blocks.BeaconBlockIsNil(headBlock)
+	isNilBlk := err != nil
+	saveFull := features.Get().SaveFullExecutionPayloads
+
 	var saveBlinded bool
 	if err := s.db.Update(func(tx *bolt.Tx) error {
+		// If we have a key stating we wish to save blinded beacon blocks, then we set saveBlinded to true.
 		metadataBkt := tx.Bucket(chainMetadataBucket)
 		keyExists := len(metadataBkt.Get(saveBlindedBeaconBlocksKey)) > 0
 		if keyExists {
 			saveBlinded = true
 			return nil
 		}
-		bkt := tx.Bucket(blocksBucket)
-		c := bkt.Cursor()
-		_, lastBlock := c.Last()
-		if len(lastBlock) == 0 {
-			return nil
+		// If the head block exists and is blinded, we update the key in the DB to
+		// say we wish to save all blocks as blinded.
+		if !isNilBlk && headBlock.IsBlinded() {
+			if err := metadataBkt.Put(saveBlindedBeaconBlocksKey, []byte{1}); err != nil {
+				return err
+			}
+			saveBlinded = true
 		}
-		blk, err := unmarshalBlock(ctx, lastBlock)
-		if err != nil {
-			return err
-		}
-		if blk.IsBlinded() {
+		if isNilBlk && !saveFull {
 			if err := metadataBkt.Put(saveBlindedBeaconBlocksKey, []byte{1}); err != nil {
 				return err
 			}
