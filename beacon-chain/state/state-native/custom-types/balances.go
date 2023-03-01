@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
+	log "github.com/sirupsen/logrus"
 )
 
 // TODO:
@@ -73,18 +74,20 @@ func (b *Balances) Value() []uint64 {
 }
 
 func (b *Balances) At(i primitives.ValidatorIndex) (uint64, error) {
-	chunk := uint64(i) / 256
-	indexInChunk := uint64(i) % 256
-	if chunk >= uint64(len(b.chunks)) || indexInChunk >= uint64(len(b.chunks[chunk])) {
+	chunkIndex := uint64(i) / b.fullChunkSize
+	elemIndex := uint64(i) % b.fullChunkSize
+	if chunkIndex >= uint64(len(b.chunks)) || elemIndex >= uint64(len(b.chunks[chunkIndex])) {
+		log.Warnf("chunkIndex: %d, len(chunks): %d, ememIndex: %d, len(chunks[chunkIndex]): %d", chunkIndex, len(b.chunks), elemIndex, len(b.chunks[chunkIndex]))
 		return 0, fmt.Errorf("validator index %d is too large", i)
 	}
-	return b.chunks[chunk][indexInChunk], nil
+	return b.chunks[chunkIndex][elemIndex], nil
 }
 
 func (b *Balances) UpdateAt(i primitives.ValidatorIndex, val uint64) error {
-	chunkIndex := uint64(i) / 256
-	elemIndex := uint64(i) % 256
+	chunkIndex := uint64(i) / b.fullChunkSize
+	elemIndex := uint64(i) % b.fullChunkSize
 	if chunkIndex >= uint64(len(b.chunks)) || elemIndex >= uint64(len(b.chunks[chunkIndex])) {
+		log.Warnf("chunkIndex: %d, len(chunks): %d, ememIndex: %d, len(chunks[chunkIndex]): %d", chunkIndex, len(b.chunks), elemIndex, len(b.chunks[chunkIndex]))
 		return fmt.Errorf("validator index %d is too large", i)
 	}
 
@@ -110,9 +113,9 @@ func (b *Balances) UpdateAt(i primitives.ValidatorIndex, val uint64) error {
 }
 
 func (b *Balances) Append(val uint64) {
-	chunksAreFull := len(b.chunks[len(b.chunks)-1]) == len(b.chunks[0])
+	chunksAreFull := uint64(len(b.chunks[len(b.chunks)-1])) == b.fullChunkSize
 	if chunksAreFull {
-		index := 0
+		index := uint64(0)
 		balances := make([]uint64, b.len+1)
 		for i, ch := range b.chunks {
 			ref, ok := b.sharedChunkReferences[uint64(i)]
@@ -120,23 +123,20 @@ func (b *Balances) Append(val uint64) {
 				ref.MinusRef()
 				delete(b.sharedChunkReferences, uint64(i))
 			}
-			if len(ch) > 0 {
-				copy(balances[index:], ch)
-				index += len(ch)
-			}
+			copy(balances[index:], ch)
+			index += b.fullChunkSize
 		}
 		balances[len(balances)-1] = val
 		b.chunks, b.fullChunkSize = buildChunks(balances)
 	} else {
-		fullChunkLen := len(b.chunks[0])
-		chunkIndex := b.len / fullChunkLen
+		chunkIndex := uint64(b.len) / b.fullChunkSize
 		chunkCopy := make([]uint64, len(b.chunks[chunkIndex]))
 		copy(chunkCopy, b.chunks[chunkIndex])
 		b.chunks[chunkIndex] = append(chunkCopy, val)
-		ref, ok := b.sharedChunkReferences[uint64(chunkIndex)]
+		ref, ok := b.sharedChunkReferences[chunkIndex]
 		if ok {
 			ref.MinusRef()
-			delete(b.sharedChunkReferences, uint64(chunkIndex))
+			delete(b.sharedChunkReferences, chunkIndex)
 		}
 	}
 
@@ -156,7 +156,7 @@ func buildChunks(balances []uint64) ([256][]uint64, uint64) {
 		chunkIndex++
 	}
 	for i := chunkIndex; i < 256; i++ {
-		chunks[chunkIndex] = make([]uint64, 0)
+		chunks[i] = make([]uint64, 0)
 	}
 
 	return chunks, fullChunkSize
