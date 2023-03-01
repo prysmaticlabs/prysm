@@ -1,6 +1,7 @@
 package beaconapi_evaluators
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,7 +31,9 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 	if err != nil {
 		return err
 	}
-
+	if httpResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with response code: %d", httpResp.StatusCode)
+	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
@@ -69,6 +72,37 @@ func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeId
 	}
 
 	return body, nil
+}
+
+func doMiddlewareJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
+	var port int
+	if len(bnType) > 0 {
+		switch bnType[0] {
+		case "lighthouse":
+			port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+		default:
+			port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+		}
+	} else {
+		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+	}
+	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
+	b, err := json.Marshal(postData)
+	if err != nil {
+		return err
+	}
+	httpResp, err := http.Post(
+		basePath+requestPath,
+		"application/json",
+		bytes.NewBuffer(b),
+	)
+	if err != nil {
+		return err
+	}
+	if httpResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with response code: %d", httpResp.StatusCode)
+	}
+	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
 func closeBody(body io.Closer) {
