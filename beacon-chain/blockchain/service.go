@@ -449,6 +449,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 // 1.) Check fork choice store.
 // 2.) Check DB.
 // Checking 1.) is ten times faster than checking 2.)
+// this function requires a lock in forkchoice
 func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
 	if s.cfg.ForkChoiceStore.HasNode(root) {
 		return true
