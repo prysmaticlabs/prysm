@@ -694,10 +694,11 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) e
 		return nil
 	}
 	s.ForkChoicer().RLock()
-	if s.CurrentSlot() == s.cfg.ForkChoiceStore.HighestReceivedBlockSlot() {
+	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
+	s.ForkChoicer().RUnlock()
+	if s.CurrentSlot() == highestReceivedSlot {
 		return nil
 	}
-	s.ForkChoicer().RUnlock()
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
