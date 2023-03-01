@@ -114,7 +114,7 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	genesisBytes, err := genesisState.MarshalSSZ()
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile("genesis_ssz.json", genesisBytes, 0666))
-	set.String(flags.InteropGenesisStateFlag.Name, "genesis_ssz.json", "")
+	set.String("genesis-state", "genesis_ssz.json", "")
 	ctx := cli.NewContext(&app, set, nil)
 	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),

@@ -94,7 +94,6 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
 			flags.InteropMockEth1DataVotesFlag,
-			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
 			flags.ContractDeploymentBlock,
 			flags.RPCHost,
@@ -173,7 +172,7 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "interop",
 		Flags: []cli.Flag{
-			flags.InteropGenesisStateFlag,
+			genesis.StatePath,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
 		},
