@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -30,9 +31,12 @@ import (
 )
 
 type sidecarsTestCase struct {
-	name    string
-	blocks  int
-	indices map[int][]int // allow test to specify indices that are present/missing
+	name          string
+	blocks        int
+	indices       map[int][]int // allow test to specify indices that are present/missing
+	slotOverride  map[int]types.Slot
+	expectMissing map[int][]int
+	chain         *mock.ChainService
 }
 
 func includeIndices(idxs ...int) []bool {
@@ -104,14 +108,65 @@ func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, ind
 	}
 }
 
+func allIndices() []int {
+	idxs := make([]int, params.BeaconConfig().MaxBlobsPerBlock)
+	for i := 0; uint64(i) < params.BeaconConfig().MaxBlobsPerBlock; i++ {
+		idxs[i] = i
+	}
+	return idxs
+}
+
+func TestSidecarByRootValidation(t *testing.T) {
+	cfg := params.BeaconConfig()
+	repositionFutureEpochs(cfg)
+	undo, err := params.SetActiveWithUndo(cfg)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	capellaSlot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+	require.NoError(t, err)
+	dmc := defaultMockChain(t)
+	dmc.Slot = &capellaSlot
+	dmc.FinalizedCheckPoint = &ethpb.Checkpoint{Epoch: params.BeaconConfig().CapellaForkEpoch}
+	cases := []sidecarsTestCase{
+		{
+			name:          "before minimum_request_epoch",
+			blocks:        1,
+			slotOverride:  map[int]types.Slot{0: capellaSlot},
+			expectMissing: map[int][]int{0: allIndices()},
+			chain:         dmc,
+		},
+		{
+			name:          "some before minimum_request_epoch",
+			blocks:        2,
+			slotOverride:  map[int]types.Slot{0: capellaSlot},
+			expectMissing: map[int][]int{0: allIndices()},
+			chain:         dmc,
+		},
+	}
+	runN(t, cases)
+}
+
 func TestSidecarsByRootOK(t *testing.T) {
 	cases := []sidecarsTestCase{
+		{
+			name:   "0 blob",
+			blocks: 0,
+		},
 		{
 			name:   "1 blob",
 			blocks: 1,
 		},
+		{
+			name:   "2 blob",
+			blocks: 2,
+		},
 	}
+	runN(t, cases)
+}
 
+func runN(t *testing.T, cases []sidecarsTestCase) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			c.run(t)
@@ -119,22 +174,61 @@ func TestSidecarsByRootOK(t *testing.T) {
 	}
 }
 
+// we use max uints for future forks, but this causes overflows when computing slots
+// so it is helpful in tests to temporarily reposition the epochs to give room for some math.
+func repositionFutureEpochs(cfg *params.BeaconChainConfig) {
+	if cfg.CapellaForkEpoch == math.MaxUint64 {
+		cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch + 100
+	}
+	if cfg.DenebForkEpoch == math.MaxUint64 {
+		cfg.DenebForkEpoch = cfg.CapellaForkEpoch + 100
+	}
+}
+
+func defaultMockChain(t *testing.T) *mock.ChainService {
+	// TODO: set slot and FinalizedCheckpoint to satisfy conditions
+	df, err := forks.Fork(params.BeaconConfig().DenebForkEpoch)
+	require.NoError(t, err)
+	return &mock.ChainService{ValidatorsRoot: [32]byte{}, Fork: df}
+}
+
+func (c sidecarsTestCase) expectedInResponse(num, idx int) bool {
+	if missingIdx, ok := c.expectMissing[num]; ok {
+		for x := range missingIdx {
+			if x == idx {
+				return false
+			}
+		}
+		return true
+	}
+	return true
+}
+
 func (c sidecarsTestCase) run(t *testing.T) {
 	cfg := params.BeaconConfig()
-	cfg.DenebForkEpoch = cfg.CapellaForkEpoch + 100
+	repositionFutureEpochs(cfg)
 	undo, err := params.SetActiveWithUndo(cfg)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo())
 	}()
 	maxBlobs := int(params.BeaconConfig().MaxBlobsPerBlock)
+	if c.chain == nil {
+		c.chain = defaultMockChain(t)
+	}
 
 	db := &MockBlobDB{}
-	var blobr p2pTypes.BlobSidecarsByRootReq
+	var req, expect p2pTypes.BlobSidecarsByRootReq
 	de, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 	require.NoError(t, err)
 	for i := 0; i < c.blocks; i++ {
-		block := generateTestBlock(t, de+types.Slot(i))
+		// check if there is a slot override for this index
+		// ie to create a block outside the minimum_request_epoch
+		bs := de
+		if _, ovr := c.slotOverride[i]; ovr {
+			bs = c.slotOverride[i]
+		}
+		block := generateTestBlock(t, bs+types.Slot(i))
 		root, err := block.HashTreeRoot()
 		require.NoError(t, err)
 		binary.LittleEndian.PutUint64(root[:], uint64(i))
@@ -142,34 +236,36 @@ func (c sidecarsTestCase) run(t *testing.T) {
 		// if specific indices aren't requested, generate them for all
 		// an empty list would mean to generate them for none
 		if !ok {
-			indices = make([]int, maxBlobs)
-			for dx := 0; dx < maxBlobs; dx++ {
-				indices[dx] = dx
-			}
+			indices = allIndices()
 		}
 		idxMask := includeIndices(indices...)
 		for bi := 0; bi < maxBlobs; bi++ {
 			ubi := uint64(bi)
+			sc := generateTestSidecar(root, block, bi)
 			if idxMask[bi] {
-				sc := generateTestSidecar(root, block, bi)
 				require.NoError(t, db.WriteBlobSidecar(root, ubi, sc))
+				if c.expectedInResponse(i, bi) {
+					expect = append(expect, &ethpb.BlobIdentifier{BlockRoot: root[:], Index: ubi})
+				}
 			}
-			blobr = append(blobr, &ethpb.BlobIdentifier{BlockRoot: root[:], Index: ubi})
+			req = append(req, &ethpb.BlobIdentifier{BlockRoot: root[:], Index: ubi})
 		}
 	}
 	rate := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
-	df, err := forks.Fork(params.BeaconConfig().DenebForkEpoch)
-	require.NoError(t, err)
 	client := p2ptest.NewTestP2P(t)
 	s := &Service{
-		cfg:         &config{p2p: client, chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Fork: df}},
+		cfg:         &config{p2p: client, chain: c.chain},
 		blobs:       db,
 		rateLimiter: newRateLimiter(client)}
 	s.setRateCollector(p2p.RPCBlobSidecarsByRootTopicV1, leakybucket.NewCollector(0.000001, int64(rate), time.Second, false))
 
 	rsc := make([]*ethpb.BlobSidecar, 0)
 	nh := func(stream network.Stream) {
-		for _, sid := range blobr {
+		if len(expect) == 0 {
+			expectFailure(t, responseCodeResourceUnavailable, "", stream)
+			return
+		}
+		for _, sid := range expect {
 			expectSuccess(t, stream)
 			sc := &ethpb.BlobSidecar{}
 			require.NoError(t, s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, sc))
@@ -179,8 +275,14 @@ func (c sidecarsTestCase) run(t *testing.T) {
 		}
 	}
 	rht := &rpcHandlerTest{t: t, client: client, topic: p2p.RPCBlocksByRootTopicV1, timeout: time.Second * 10}
-	rht.testHandler(nh, s.blobSidecarByRootRPCHandler, &blobr)
-	require.Equal(t, len(blobr), len(rsc))
+	rht.testHandler(nh, s.blobSidecarByRootRPCHandler, &req)
+	// The response is a list of BlobSidecar whose length is less than or equal to the number of requests.
+	// It may be less in the case that the responding peer is missing blocks or sidecars.
+	require.Equal(t, true, len(rsc) <= len(expect))
+	for i := range rsc {
+		require.Equal(t, bytesutil.ToBytes32(expect[i].BlockRoot), bytesutil.ToBytes32(rsc[i].BlockRoot))
+		require.Equal(t, expect[i].Index, rsc[i].Index)
+	}
 }
 
 type rpcHandlerTest struct {

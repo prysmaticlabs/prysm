@@ -11,11 +11,26 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
+
+func minimumRequestEpoch(finalized, current primitives.Epoch) primitives.Epoch {
+	// max(finalized_epoch, current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH)
+	denebFork := params.BeaconConfig().DenebForkEpoch
+	reqWindow := current - params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	if finalized >= reqWindow && finalized >= denebFork {
+		return finalized
+	}
+	if reqWindow >= finalized && reqWindow >= denebFork {
+		return reqWindow
+	}
+	return denebFork
+}
 
 // blobSidecarByRootRPCHandler handles the /eth2/beacon_chain/req/blob_sidecars_by_root/1/ RPC request.
 // spec: https://github.com/ethereum/consensus-specs/blob/a7e45db9ac2b60a33e144444969ad3ac0aae3d4c/specs/deneb/p2p-interface.md#blobsidecarsbyroot-v1
@@ -30,7 +45,9 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	if !ok {
 		return errors.New("message is not type BeaconBlockByRootsReq")
 	}
+	minReqEpoch := minimumRequestEpoch(s.cfg.chain.FinalizedCheckpt().Epoch, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
 	blobIdents := *ref
+	blobsWritten := 0
 	for i := range blobIdents {
 		root, idx := bytesutil.ToBytes32(blobIdents[i].BlockRoot), blobIdents[i].Index
 		sc, err := s.blobs.BlobSidecar(root, idx)
@@ -43,6 +60,12 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 			return err
 		}
 
+		//  If any root in the request content references a block earlier than minimum_request_epoch,
+		// peers MAY respond with error code 3: ResourceUnavailable or not include the blob in the response.
+		// (we're choosing to just not include the block in the response).
+		if slots.ToEpoch(sc.Slot) < minReqEpoch {
+			continue
+		}
 		SetStreamWriteDeadline(stream, defaultWriteDuration)
 		if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
@@ -51,6 +74,11 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 			return chunkErr
 		}
 		s.rateLimiter.add(stream, 1)
+		blobsWritten += 1
+	}
+	if blobsWritten == 0 {
+		s.writeErrorResponseToStream(responseCodeResourceUnavailable, "", stream)
+		return nil
 	}
 	return nil
 }
@@ -81,7 +109,7 @@ func (s *Service) beaconBlockAndBlobsSidecarByRootRPCHandler(ctx context.Context
 		return errors.New("no block roots provided")
 	}
 
-	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
+	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlobsSidecars {
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, "requested more than the max block limit", stream)
 		return errors.New("requested more than the max block limit")
