@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -272,6 +271,22 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	return s.SaveBlocks(ctx, []interfaces.ReadOnlySignedBeaconBlock{signed})
 }
 
+// This function determines if we should save beacon blocks in the DB in blinded format by checking
+// if a `saveBlindedBeaconBlocks` key exists in the database. Otherwise, we check if the last
+// blocked stored to check if it is blinded, and then write that `saveBlindedBeaconBlocks` key
+// to the DB for future checks.
+func (s *Store) shouldSaveBlinded(ctx context.Context) (bool, error) {
+	var saveBlinded bool
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		metadataBkt := tx.Bucket(chainMetadataBucket)
+		saveBlinded = len(metadataBkt.Get(saveBlindedBeaconBlocksKey)) > 0
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	return saveBlinded, nil
+}
+
 // SaveBlocks via bulk updates to the db.
 func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
@@ -287,7 +302,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 		if err != nil {
 			return err
 		}
-		enc, err := marshalBlock(ctx, blk)
+		enc, err := s.marshalBlock(ctx, blk)
 		if err != nil {
 			return err
 		}
@@ -295,6 +310,10 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 		encodedBlocks[i] = enc
 		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 		indicesForBlocks[i] = indicesByBucket
+	}
+	saveBlinded, err := s.shouldSaveBlinded(ctx)
+	if err != nil {
+		return err
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -305,7 +324,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			if features.Get().EnableOnlyBlindedBeaconBlocks {
+			if saveBlinded {
 				blindedBlock, err := blk.ToBlinded()
 				if err != nil {
 					if !errors.Is(err, blocks.ErrUnsupportedVersion) {
@@ -809,50 +828,71 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.ReadOnlySignedBea
 	return blocks.NewSignedBeaconBlock(rawBlock)
 }
 
-// marshal versioned beacon block from struct type down to bytes.
-func marshalBlock(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
+func (s *Store) marshalBlock(
+	ctx context.Context,
+	blk interfaces.ReadOnlySignedBeaconBlock,
+) ([]byte, error) {
+	shouldBlind, err := s.shouldSaveBlinded(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldBlind {
+		return marshalBlockBlinded(ctx, blk)
+	}
+	return marshalBlockFull(ctx, blk)
+}
+
+// Encodes a full beacon block to the DB with its associated key.
+func marshalBlockFull(
+	_ context.Context,
+	blk interfaces.ReadOnlySignedBeaconBlock,
+) ([]byte, error) {
 	var encodedBlock []byte
 	var err error
-	blockToSave := blk
-	if features.Get().EnableOnlyBlindedBeaconBlocks {
-		blindedBlock, err := blk.ToBlinded()
-		switch {
-		case errors.Is(err, blocks.ErrUnsupportedVersion):
-			encodedBlock, err = blk.MarshalSSZ()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not marshal non-blinded block")
-			}
-		case err != nil:
-			return nil, errors.Wrap(err, "could not convert block to blinded format")
-		default:
-			encodedBlock, err = blindedBlock.MarshalSSZ()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not marshal blinded block")
-			}
-			blockToSave = blindedBlock
-		}
-	} else {
-		encodedBlock, err = blk.MarshalSSZ()
-		if err != nil {
-			return nil, err
-		}
+	encodedBlock, err = blk.MarshalSSZ()
+	if err != nil {
+		return nil, err
 	}
-	switch blockToSave.Version() {
+	switch blk.Version() {
 	case version.Capella:
-		if blockToSave.IsBlinded() {
-			return snappy.Encode(nil, append(capellaBlindKey, encodedBlock...)), nil
-		}
 		return snappy.Encode(nil, append(capellaKey, encodedBlock...)), nil
 	case version.Bellatrix:
-		if blockToSave.IsBlinded() {
-			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
-		}
 		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
 	case version.Phase0:
 		return snappy.Encode(nil, encodedBlock), nil
 	default:
-		return nil, errors.New("Unknown block version")
+		return nil, errors.New("unknown block version")
+	}
+}
+
+// Encodes a blinded beacon block with its associated key.
+// If the block does not support blinding, we then encode it as a full
+// block with its associated key by calling marshalBlockFull.
+func marshalBlockBlinded(
+	ctx context.Context,
+	blk interfaces.ReadOnlySignedBeaconBlock,
+) ([]byte, error) {
+	blindedBlock, err := blk.ToBlinded()
+	if err != nil {
+		switch {
+		case errors.Is(err, blocks.ErrUnsupportedVersion):
+			return marshalBlockFull(ctx, blk)
+		default:
+			return nil, errors.Wrap(err, "could not convert block to blinded format")
+		}
+	}
+	encodedBlock, err := blindedBlock.MarshalSSZ()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal blinded block")
+	}
+	switch blk.Version() {
+	case version.Capella:
+		return snappy.Encode(nil, append(capellaBlindKey, encodedBlock...)), nil
+	case version.Bellatrix:
+		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
+	default:
+		return nil, fmt.Errorf("unsupported block version: %v", blk.Version())
 	}
 }
