@@ -698,20 +698,22 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) e
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-	if has && id == [8]byte{} {
-		missedPayloadIDFilledCount.Inc()
-		headBlock, err := s.headBlock()
-		if err != nil {
-			return err
-		} else {
-			if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-				headState: s.headState(ctx),
-				headRoot:  s.headRoot(),
-				headBlock: headBlock.Block(),
-			}); err != nil {
-				return err
-			}
-		}
+	if !has || id != [8]byte{} {
+		return nil
 	}
-	return nil
+	missedPayloadIDFilledCount.Inc()
+	s.headLock.RLock()
+	headBlock, err := s.headBlock()
+	if err != nil {
+		return err
+	}
+	headState := s.headState(ctx)
+	headRoot := s.headRoot()
+	s.headLock.RUnlock()
+	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+		headState: headState,
+		headRoot:  headRoot,
+		headBlock: headBlock.Block(),
+	})
+	return err
 }
