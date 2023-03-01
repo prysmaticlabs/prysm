@@ -43,14 +43,10 @@ build:docker-sandbox --spawn_strategy=docker --strategy=Javac=docker --genrule_s
 build:docker-sandbox --define=EXECUTOR=remote
 build:docker-sandbox --experimental_docker_verbose
 build:docker-sandbox --experimental_enable_docker_sandbox
-build:docker-sandbox --crosstool_top=@rbe_ubuntu_clang//cc:toolchain 
-build:docker-sandbox --host_javabase=@rbe_ubuntu_clang//java:jdk 
-build:docker-sandbox --javabase=@rbe_ubuntu_clang//java:jdk 
-build:docker-sandbox --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8 
-build:docker-sandbox --java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8 
-build:docker-sandbox --extra_execution_platforms=@rbe_ubuntu_clang//config:platform 
-build:docker-sandbox --host_platform=@rbe_ubuntu_clang//config:platform 
-build:docker-sandbox --platforms=@rbe_ubuntu_clang//config:platform
+build:docker-sandbox --crosstool_top=@//tools/cross-toolchain/configs/cc:toolchain 
+build:docker-sandbox --extra_execution_platforms=@//tools/cross-toolchain/configs/config:platform 
+build:docker-sandbox --host_platform=@//tools/cross-toolchain/configs/config:platform 
+build:docker-sandbox --platforms=@//tools/cross-toolchain/configs/config:platform
 build:docker-sandbox --extra_toolchains=@prysm_toolchains//:cc-toolchain-multiarch
 
 # windows_amd64 docker sandbox build config
