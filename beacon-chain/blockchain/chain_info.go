@@ -386,10 +386,10 @@ func (s *Service) InForkchoice(root [32]byte) bool {
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
 	s.ForkChoicer().RLock()
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(root)
+	s.ForkChoicer().RUnlock()
 	if err == nil {
 		return optimistic, nil
 	}
-	s.ForkChoicer().RUnlock()
 	if !errors.Is(err, doublylinkedtree.ErrNilNode) {
 		return false, err
 	}
