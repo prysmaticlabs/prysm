@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -130,13 +129,9 @@ func TestGetBlock(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-
-			expected, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
-			require.NoError(t, err)
-
 			pbBlock, err := result.PbPhase0Block()
 			require.NoError(t, err)
-			if !reflect.DeepEqual(pbBlock.Block, expected.Block) {
+			if !reflect.DeepEqual(pbBlock, tt.want) {
 				t.Error("Expected blocks to equal")
 			}
 		})
