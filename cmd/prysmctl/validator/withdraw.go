@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -86,6 +88,13 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimid
 	client, err := beacon.NewClient(host)
 	if err != nil {
 		return err
+	}
+	fork, err := client.GetFork(ctx, "head")
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve current fork information")
+	}
+	if !(params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(fork.CurrentVersion)] >= params.BeaconConfig().CapellaForkEpoch) {
+		return errors.New("setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork.")
 	}
 	err = client.SubmitChangeBLStoExecution(ctx, request)
 	if err != nil && strings.Contains(err.Error(), "POST error") {

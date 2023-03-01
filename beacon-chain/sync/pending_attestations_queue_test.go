@@ -116,7 +116,8 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 				FinalizedCheckPoint: &ethpb.Checkpoint{
 					Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
 					Epoch: 0,
-				}},
+				},
+			},
 			attPool: attestations.NewPool(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
@@ -150,8 +151,10 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain:    &mock.ChainService{State: s, Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
-			attPool:  attestations.NewPool(),
+			chain: &mock.ChainService{
+				State:   s,
+				Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
+			attPool: attestations.NewPool(),
 		},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}

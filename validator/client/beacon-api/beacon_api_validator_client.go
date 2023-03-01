@@ -19,11 +19,10 @@ type beaconApiValidatorClient struct {
 	dutiesProvider          dutiesProvider
 	stateValidatorsProvider stateValidatorsProvider
 	jsonRestHandler         jsonRestHandler
-	fallbackClient          iface.ValidatorClient
 	beaconBlockConverter    beaconBlockConverter
 }
 
-func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
+func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
 		host:       host,
@@ -35,7 +34,6 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
 		beaconBlockConverter:    beaconApiBeaconBlockConverter{},
-		fallbackClient:          fallbackClient,
 	}
 }
 
@@ -68,13 +66,8 @@ func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb
 	return c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
 }
 
-func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(ctx context.Context, in *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetFeeRecipientByPubKey(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetFeeRecipientByPubKey is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(_ context.Context, _ *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
+	return nil, nil
 }
 
 func (c *beaconApiValidatorClient) GetSyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
@@ -111,15 +104,6 @@ func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.Si
 
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
 	return c.streamBlocks(ctx, in, time.Second), nil
-}
-
-func (c *beaconApiValidatorClient) StreamDuties(ctx context.Context, in *ethpb.DutiesRequest) (ethpb.BeaconNodeValidator_StreamDutiesClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.StreamDuties(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.StreamDuties is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
