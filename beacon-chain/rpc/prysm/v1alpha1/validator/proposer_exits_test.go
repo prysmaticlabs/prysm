@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -28,7 +27,7 @@ func TestServer_getExits(t *testing.T) {
 	for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxVoluntaryExits; i++ {
 		exit, err := util.GenerateVoluntaryExits(beaconState, privKeys[i], i)
 		require.NoError(t, err)
-		proposerServer.ExitPool.InsertVoluntaryExit(context.Background(), beaconState, exit)
+		proposerServer.ExitPool.InsertVoluntaryExit(exit)
 		exits[i] = exit
 	}
 

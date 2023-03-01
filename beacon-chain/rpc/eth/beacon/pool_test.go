@@ -770,7 +770,8 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 
 	_, err = s.SubmitVoluntaryExit(ctx, exit)
 	require.NoError(t, err)
-	pendingExits := s.VoluntaryExitsPool.PendingExits(bs, bs.Slot(), true)
+	pendingExits, err := s.VoluntaryExitsPool.PendingExits()
+	require.NoError(t, err)
 	require.Equal(t, 1, len(pendingExits))
 	assert.DeepEqual(t, migration.V1ExitToV1Alpha1(exit), pendingExits[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
