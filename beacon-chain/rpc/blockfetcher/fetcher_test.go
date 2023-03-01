@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
@@ -83,7 +84,7 @@ func TestGetBlock(t *testing.T) {
 		{
 			name:    "non canonical",
 			blockID: []byte(fmt.Sprintf("%d", nextSlot)),
-			wantErr: true,
+			want:    nil,
 		},
 		{
 			name:    "head",
@@ -113,19 +114,23 @@ func TestGetBlock(t *testing.T) {
 		{
 			name:    "non-existent root",
 			blockID: bytesutil.PadTo([]byte("hi there"), 32),
-			wantErr: true,
+			want:    nil,
 		},
 		{
 			name:    "no block",
 			blockID: []byte("105"),
-			wantErr: true,
+			want:    nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := fetcher.Block(ctx, tt.blockID)
 			if tt.wantErr {
-				require.NotEqual(t, err, nil, "no error has been returned")
+				assert.NotEqual(t, err, nil, "no error has been returned")
+				return
+			}
+			if tt.want == nil {
+				assert.Equal(t, nil, result)
 				return
 			}
 			require.NoError(t, err)
