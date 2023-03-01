@@ -82,6 +82,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
+		Name:   "enable-only-blinded-beacon-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedRopstenTestnet = &cli.StringFlag{
 		Name:   "ropsten",
 		Usage:  deprecatedUsage,
@@ -112,4 +117,5 @@ var deprecatedFlags = []cli.Flag{
 // and therefore cannot be added to deprecatedFlags
 var deprecatedBeaconFlags = []cli.Flag{
 	deprecatedBackupWebHookFlag,
+	deprecatedEnableOnlyBlindedBeaconBlocks,
 }
