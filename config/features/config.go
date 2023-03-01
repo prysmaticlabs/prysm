@@ -125,13 +125,6 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(RopstenTestnet.Name) {
-		log.Warn("Running on the Ropsten Beacon Chain Testnet")
-		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
-			return err
-		}
-		applyRopstenFeatureFlags(ctx)
-		params.UseRopstenNetworkConfig()
 	} else if ctx.Bool(SepoliaTestnet.Name) {
 		log.Warn("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
@@ -157,10 +150,6 @@ func applyPraterFeatureFlags(ctx *cli.Context) {
 	if err := ctx.Set(SaveFullExecutionPayloads.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling save full execution payloads flag")
 	}
-}
-
-// Insert feature flags within the function to be enabled for Ropsten testnet.
-func applyRopstenFeatureFlags(ctx *cli.Context) {
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.

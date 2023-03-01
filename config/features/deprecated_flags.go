@@ -87,6 +87,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedRopstenTestnet = &cli.StringFlag{
+		Name:   "ropsten",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -105,6 +110,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedFallbackProvider,
 	deprecatedEnableDefensivePull,
 	deprecatedDisableNativeState,
+	deprecatedRopstenTestnet,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
