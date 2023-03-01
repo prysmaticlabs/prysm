@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
@@ -29,7 +30,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 	numOfVals := state.NumValidators()
 	// Guard against an out-of-bounds using validator balance precompute.
-	if len(vp) != numOfVals || len(vp) != state.BalancesLength() {
+	if len(vp) != numOfVals || len(vp) != state.Balances().Len() {
 		return state, errors.New("precomputed registries not the same length as state registries")
 	}
 
@@ -41,7 +42,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get proposer attestation delta")
 	}
-	validatorBals := state.Balances()
+	validatorBals := state.Balances().Value()
 	for i := 0; i < numOfVals; i++ {
 		vp[i].BeforeEpochTransitionBalance = validatorBals[i]
 
@@ -56,7 +57,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		vp[i].AfterEpochTransitionBalance = validatorBals[i]
 	}
 
-	if err := state.SetBalances(validatorBals); err != nil {
+	if err := state.SetBalances(customtypes.NewBalances(validatorBals)); err != nil {
 		return nil, errors.Wrap(err, "could not set validator balances")
 	}
 

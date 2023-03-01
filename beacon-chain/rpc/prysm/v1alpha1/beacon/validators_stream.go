@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/patrickmn/go-cache"
+	errors2 "github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/async/event"
@@ -325,7 +326,11 @@ func (is *infostream) generateValidatorInfo(
 	info.Status, info.TransitionTimestamp = is.calculateStatusAndTransition(validator, coreTime.CurrentEpoch(headState))
 
 	// Balance
-	info.Balance = headState.Balances()[info.Index]
+	var err error
+	info.Balance, err = headState.Balances().At(info.Index)
+	if err != nil {
+		return nil, errors2.Wrapf(err, "could not get balance at index %d", info.Index)
+	}
 
 	// Effective balance (for attesting states)
 	if info.Status == ethpb.ValidatorStatus_ACTIVE ||

@@ -165,7 +165,7 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 // and validatorAggregatedPerformance for each tracked validator.
 func (s *Service) initializePerformanceStructures(state state.BeaconState, epoch primitives.Epoch) {
 	for idx := range s.TrackedValidators {
-		balance, err := state.BalanceAtIndex(idx)
+		balance, err := state.Balances().At(idx)
 		if err != nil {
 			log.WithError(err).WithField("ValidatorIndex", idx).Error(
 				"Could not fetch starting balance, skipping aggregated logs.")

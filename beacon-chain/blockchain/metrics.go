@@ -239,7 +239,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	slashingEffectiveBalance := uint64(0)
 
 	for i, validator := range postState.Validators() {
-		bal, err := postState.BalanceAtIndex(primitives.ValidatorIndex(i))
+		bal, err := postState.Balances().At(primitives.ValidatorIndex(i))
 		if err != nil {
 			log.WithError(err).Error("Could not load validator balance")
 			continue

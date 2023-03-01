@@ -97,7 +97,7 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 //	  """
 //	  state.balances[index] += delta
 func IncreaseBalance(state state.BeaconState, idx primitives.ValidatorIndex, delta uint64) error {
-	balAtIdx, err := state.BalanceAtIndex(idx)
+	balAtIdx, err := state.Balances().At(idx)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func IncreaseBalanceWithVal(currBalance, delta uint64) (uint64, error) {
 //	  """
 //	  state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
 func DecreaseBalance(state state.BeaconState, idx primitives.ValidatorIndex, delta uint64) error {
-	balAtIdx, err := state.BalanceAtIndex(idx)
+	balAtIdx, err := state.Balances().At(idx)
 	if err != nil {
 		return err
 	}

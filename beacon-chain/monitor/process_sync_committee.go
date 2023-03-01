@@ -45,7 +45,7 @@ func (s *Service) processSyncAggregate(state state.BeaconState, blk interfaces.R
 				}
 			}
 
-			balance, err := state.BalanceAtIndex(validatorIdx)
+			balance, err := state.Balances().At(validatorIdx)
 			if err != nil {
 				log.Error("Could not get balance")
 				return

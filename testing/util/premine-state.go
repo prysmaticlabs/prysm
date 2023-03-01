@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -93,7 +94,7 @@ func (s *premineGenesisConfig) empty() (state.BeaconState, error) {
 	if err = e.SetValidators([]*ethpb.Validator{}); err != nil {
 		return nil, err
 	}
-	if err = e.SetBalances([]uint64{}); err != nil {
+	if err = e.SetBalances(customtypes.NewBalances([]uint64{})); err != nil {
 		return nil, err
 	}
 	if err = e.SetJustificationBits([]byte{0}); err != nil {

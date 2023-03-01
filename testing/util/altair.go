@@ -144,7 +144,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth
 
 		// Validator registry fields.
 		Validators:                 preState.Validators(),
-		Balances:                   preState.Balances(),
+		Balances:                   preState.Balances().Value(),
 		PreviousEpochParticipation: prevEpochParticipation,
 		CurrentEpochParticipation:  currEpochParticipation,
 		InactivityScores:           scores,

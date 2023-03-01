@@ -18,7 +18,7 @@ type Balances struct {
 	sharedChunkReferences map[uint64]*stateutil.Reference
 }
 
-func New(balances []uint64) *Balances {
+func NewBalances(balances []uint64) *Balances {
 	chunks, fullChunkSize := buildChunks(balances)
 	b := &Balances{
 		chunks:                chunks,

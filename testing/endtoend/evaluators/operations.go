@@ -650,7 +650,7 @@ func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.Clien
 		if !ok {
 			return errors.Errorf("pubkey %#x does not exist in our state", key)
 		}
-		bal, err := st.BalanceAtIndex(valIdx)
+		bal, err := st.Balances().At(valIdx)
 		if err != nil {
 			return err
 		}

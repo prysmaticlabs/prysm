@@ -74,7 +74,7 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 	for _, idx := range attestingIndices {
 		if s.canUpdateAttestedValidator(primitives.ValidatorIndex(idx), att.Data.Slot) {
 			logFields := logMessageTimelyFlagsForIndex(primitives.ValidatorIndex(idx), att.Data)
-			balance, err := state.BalanceAtIndex(primitives.ValidatorIndex(idx))
+			balance, err := state.Balances().At(primitives.ValidatorIndex(idx))
 			if err != nil {
 				log.WithError(err).Error("Could not get balance")
 				return

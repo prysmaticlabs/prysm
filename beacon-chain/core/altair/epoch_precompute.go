@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	"go.opencensus.io/trace"
@@ -222,7 +223,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 	numOfVals := beaconState.NumValidators()
 	// Guard against an out-of-bounds using validator balance precompute.
-	if len(vals) != numOfVals || len(vals) != beaconState.BalancesLength() {
+	if len(vals) != numOfVals || len(vals) != beaconState.Balances().Len() {
 		return beaconState, errors.New("validator registries not the same length as state's validator registries")
 	}
 
@@ -231,7 +232,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
 
-	balances := beaconState.Balances()
+	balances := beaconState.Balances().Value()
 	for i := 0; i < numOfVals; i++ {
 		vals[i].BeforeEpochTransitionBalance = balances[i]
 
@@ -246,7 +247,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		vals[i].AfterEpochTransitionBalance = balances[i]
 	}
 
-	if err := beaconState.SetBalances(balances); err != nil {
+	if err := beaconState.SetBalances(customtypes.NewBalances(balances)); err != nil {
 		return nil, errors.Wrap(err, "could not set validator balances")
 	}
 

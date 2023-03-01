@@ -72,7 +72,7 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 		proposedSlotsCounter.WithLabelValues(fmt.Sprintf("%d", blk.ProposerIndex())).Inc()
 
 		// update the performance map
-		balance, err := state.BalanceAtIndex(blk.ProposerIndex())
+		balance, err := state.Balances().At(blk.ProposerIndex())
 		if err != nil {
 			log.WithError(err).Error("Could not get balance")
 			return

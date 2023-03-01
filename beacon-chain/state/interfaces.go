@@ -228,7 +228,7 @@ type WriteOnlyValidators interface {
 
 // WriteOnlyBalances defines a struct which only has write access to balances methods.
 type WriteOnlyBalances interface {
-	SetBalances(val []uint64) error
+	SetBalances(val *customtypes.Balances) error
 	UpdateBalancesAtIndex(idx primitives.ValidatorIndex, val uint64) error
 	AppendBalance(bal uint64) error
 }

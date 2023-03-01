@@ -45,7 +45,7 @@ func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposi
 		if !ok {
 			continue
 		}
-		balance, err := beaconState.BalanceAtIndex(index)
+		balance, err := beaconState.Balances().At(index)
 		if err != nil {
 			return nil, err
 		}

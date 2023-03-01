@@ -252,9 +252,13 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
+			balance, err := allBalances.At(primitives.ValidatorIndex(i))
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get balance at index %d", i)
+			}
 			valContainers[i] = &ethpb.ValidatorContainer{
 				Index:     primitives.ValidatorIndex(i),
-				Balance:   allBalances[i],
+				Balance:   balance,
 				Status:    subStatus,
 				Validator: migration.V1Alpha1ValidatorToV1(validator),
 			}
@@ -295,9 +299,13 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
+			balance, err := allBalances.At(valIndex)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get balance at index %d", valIndex)
+			}
 			valContainers = append(valContainers, &ethpb.ValidatorContainer{
 				Index:     valIndex,
-				Balance:   allBalances[valIndex],
+				Balance:   balance,
 				Status:    subStatus,
 				Validator: v1Validator,
 			})

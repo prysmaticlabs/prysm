@@ -71,7 +71,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	vals := requestedState.Validators()
-	balances := requestedState.Balances()
+	balances := requestedState.Balances().Value()
 	balancesCount := len(balances)
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key.
