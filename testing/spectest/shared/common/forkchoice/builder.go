@@ -152,7 +152,9 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+		bb.service.ForkChoiceStore().RLock()
 		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
+		bb.service.ForkChoiceStore().RUnlock()
 		require.DeepEqual(t, want, got)
 	}
 
