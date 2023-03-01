@@ -714,7 +714,10 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_datadog_zstd",
+        build_file_generation = "off",
         importpath = "github.com/DataDog/zstd",
+        patch_args = ["-p1"],
+        patches = ["//third_party:com_github_datadog_zstd.patch"], # https://github.com/tals/bazel-rulesgo-broken-asm-repro
         sum = "h1:vUG4lAyuPCXO0TLbXvPv7EB7cNK1QV/luu55UHLrrn8=",
         version = "v1.5.2",
     )
