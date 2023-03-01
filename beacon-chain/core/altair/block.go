@@ -118,7 +118,7 @@ func processSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.
 	if err := helpers.IncreaseBalance(s, proposerIndex, earnedProposerReward); err != nil {
 		return nil, nil, 0, err
 	}
-	return s, votedKeys, proposerReward, err
+	return s, votedKeys, earnedProposerReward, err
 }
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
