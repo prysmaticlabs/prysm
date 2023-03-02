@@ -13,16 +13,16 @@ This toolchain suite describes cross compile configuration with a Dockerfile wit
 
 ### Updating the toolchain suite
 
-1 Build and push the worker docker image, if necessary.
+1) Build and push the worker docker image, if necessary.
 
 ```bash
 docker build -t gcr.io/prysmaticlabs/rbe-worker:latest tools/cross-toolchain/.
 gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest 
 ```
 
-2 Note the docker image sha256 digest from the recently pushed image or use the latest one available.
+2) Note the docker image sha256 digest from the recently pushed image or use the latest one available.
 
-3 Download and run [rbe_configs_gen](https://github.com/bazelbuild/bazel-toolchains#rbe_configs_gen---cli-tool-to-generate-configs) CLI tool.
+3) Download and run [rbe_configs_gen](https://github.com/bazelbuild/bazel-toolchains#rbe_configs_gen---cli-tool-to-generate-configs) CLI tool.
 
 ```bash
 # Run from the root of the Prysm repo.
@@ -37,7 +37,7 @@ rbe_configs_gen \
   --toolchain_container=gcr.io/prysmaticlabs/rbe-worker@sha256:9a30c5ff7dcd1fbc5cb5b5f320782dec755a31cd2f6811e238a8584d94b04e78 # The sha256 digest from step 2.
 ```
 
-4 Test the builds work locally for all supported platforms.
+4) Test the builds work locally for all supported platforms.
 
 ```bash
 bazel build --config=release --config=linux_amd64 --config=llvm //cmd/beacon-chain //cmd/validator //cmd/client-stats //cmd/prysmctl
@@ -47,15 +47,15 @@ bazel build --config=release --config=osx_arm64_docker //cmd/beacon-chain //cmd/
 bazel build --config=release --config=windows_amd64_docker //cmd/beacon-chain //cmd/validator //cmd/client-stats //cmd/prysmctl
 ```
 
-5 Run gazelle.
+5) Run gazelle.
 
 ```bash
 bazel run //:gazelle
 ```
 
-6 Add and commit the newly generated configs.
+6) Add and commit the newly generated configs.
 
-7 Done!
+7) Done!
 
 ### Cross compile target support
 
