@@ -96,24 +96,32 @@ type OptimisticModeFetcher interface {
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().FinalizedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // PreviousJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().PreviousJustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().JustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // BestJustifiedCheckpt returns the best justified checkpoint from store.
 func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().BestJustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
@@ -277,6 +285,8 @@ func (s *Service) CurrentFork() *ethpb.Fork {
 
 // IsCanonical returns true if the input block root is part of the canonical chain.
 func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	// If the block has not been finalized, check fork choice store to see if the block is canonical
 	if s.cfg.ForkChoiceStore.HasNode(blockRoot) {
 		return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
@@ -289,6 +299,8 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (s *Service) ChainHeads() ([][32]byte, []primitives.Slot) {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	return s.cfg.ForkChoiceStore.Tips()
 }
 
@@ -330,6 +342,8 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	headRoot := s.head.root
 	s.headLock.RUnlock()
 
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(headRoot)
 	if err == nil {
 		return optimistic, nil
@@ -345,6 +359,8 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 // IsFinalized returns true if the input root is finalized.
 // It first checks latest finalized root then checks finalized root index in DB.
 func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
 		return true
 	}
@@ -360,13 +376,17 @@ func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
 // This in particular means that the blockroot is a descendant of the
 // finalized checkpoint
 func (s *Service) InForkchoice(root [32]byte) bool {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	return s.ForkChoicer().HasNode(root)
 }
 
 // IsOptimisticForRoot takes the root as argument instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
+	s.ForkChoicer().RLock()
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(root)
+	s.ForkChoicer().RUnlock()
 	if err == nil {
 		return optimistic, nil
 	}

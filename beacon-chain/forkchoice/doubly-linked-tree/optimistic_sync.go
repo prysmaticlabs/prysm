@@ -8,34 +8,28 @@ import (
 )
 
 func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [32]byte) ([][32]byte, error) {
-	s.nodesLock.RLock()
 	invalidRoots := make([][32]byte, 0)
 	node, ok := s.nodeByRoot[root]
 	if !ok {
 		node, ok = s.nodeByRoot[parentRoot]
 		if !ok || node == nil {
-			s.nodesLock.RUnlock()
 			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		// return early if the parent is LVH
 		if node.payloadHash == payloadHash {
-			s.nodesLock.RUnlock()
 			return invalidRoots, nil
 		}
 	} else {
 		if node == nil {
-			s.nodesLock.RUnlock()
 			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		if node.parent.root != parentRoot {
-			s.nodesLock.RUnlock()
 			return invalidRoots, errInvalidParentRoot
 		}
 	}
 	firstInvalid := node
 	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payloadHash; firstInvalid = firstInvalid.parent {
 		if ctx.Err() != nil {
-			s.nodesLock.RUnlock()
 			return invalidRoots, ctx.Err()
 		}
 	}
@@ -44,20 +38,16 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, pa
 	if firstInvalid.parent == nil {
 		// return early if the invalid node was not imported
 		if node.root == parentRoot {
-			s.nodesLock.RUnlock()
 			return invalidRoots, nil
 		}
 		firstInvalid = node
 	}
-	s.nodesLock.RUnlock()
 	return s.removeNode(ctx, firstInvalid)
 }
 
 // removeNode removes the node with the given root and all of its children
 // from the Fork Choice Store.
 func (s *Store) removeNode(ctx context.Context, node *Node) ([][32]byte, error) {
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
 	invalidRoots := make([][32]byte, 0)
 
 	if node == nil {
@@ -96,7 +86,6 @@ func (s *Store) removeNodeAndChildren(ctx context.Context, node *Node, invalidRo
 		}
 	}
 	invalidRoots = append(invalidRoots, node.root)
-	s.proposerBoostLock.Lock()
 	if node.root == s.proposerBoostRoot {
 		s.proposerBoostRoot = [32]byte{}
 	}
@@ -104,7 +93,6 @@ func (s *Store) removeNodeAndChildren(ctx context.Context, node *Node, invalidRo
 		s.previousProposerBoostRoot = params.BeaconConfig().ZeroHash
 		s.previousProposerBoostScore = 0
 	}
-	s.proposerBoostLock.Unlock()
 	delete(s.nodeByRoot, node.root)
 	delete(s.nodeByPayload, node.payloadHash)
 	return invalidRoots, nil

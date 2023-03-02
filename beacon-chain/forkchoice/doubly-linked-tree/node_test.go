@@ -27,8 +27,6 @@ func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
 	// The updated balances of each node is 100
 	s := f.store
 
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
 	s.nodeByRoot[indexToHash(1)].balance = 100
 	s.nodeByRoot[indexToHash(2)].balance = 100
 	s.nodeByRoot[indexToHash(3)].balance = 100
@@ -55,8 +53,6 @@ func TestNode_ApplyWeightChanges_NegativeChange(t *testing.T) {
 
 	// The updated balances of each node is 100
 	s := f.store
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
 	s.nodeByRoot[indexToHash(1)].weight = 400
 	s.nodeByRoot[indexToHash(2)].weight = 400
 	s.nodeByRoot[indexToHash(3)].weight = 400

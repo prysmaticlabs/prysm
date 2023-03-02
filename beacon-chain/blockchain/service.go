@@ -44,20 +44,19 @@ import (
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                     *config
-	ctx                     context.Context
-	cancel                  context.CancelFunc
-	genesisTime             time.Time
-	head                    *head
-	headLock                sync.RWMutex
-	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot   primitives.Slot
-	boundaryRoots           [][32]byte
-	checkpointStateCache    *cache.CheckpointStateCache
-	initSyncBlocks          map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
-	initSyncBlocksLock      sync.RWMutex
-	wsVerifier              *WeakSubjectivityVerifier
-	processAttestationsLock sync.Mutex
+	cfg                   *config
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	genesisTime           time.Time
+	head                  *head
+	headLock              sync.RWMutex
+	originBlockRoot       [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	nextEpochBoundarySlot primitives.Slot
+	boundaryRoots         [][32]byte
+	checkpointStateCache  *cache.CheckpointStateCache
+	initSyncBlocks        map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+	initSyncBlocksLock    sync.RWMutex
+	wsVerifier            *WeakSubjectivityVerifier
 }
 
 // config options for the service.
@@ -200,6 +199,8 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(s.ctx, &forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
 		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
@@ -426,6 +427,8 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	s.originBlockRoot = genesisBlkRoot
 	s.cfg.StateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState)
 
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.WithError(err).Fatal("Could not process genesis block for fork choice")
 	}
@@ -446,6 +449,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 // 1.) Check fork choice store.
 // 2.) Check DB.
 // Checking 1.) is ten times faster than checking 2.)
+// this function requires a lock in forkchoice
 func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
 	if s.cfg.ForkChoiceStore.HasNode(root) {
 		return true
