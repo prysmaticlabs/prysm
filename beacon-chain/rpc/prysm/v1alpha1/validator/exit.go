@@ -45,7 +45,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		},
 	})
 
-	vs.ExitPool.InsertVoluntaryExit(ctx, s, req)
+	vs.ExitPool.InsertVoluntaryExit(req)
 
 	r, err := req.Exit.HashTreeRoot()
 	if err != nil {

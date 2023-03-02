@@ -31,6 +31,8 @@ import (
 //	    if ancestor_at_finalized_slot == store.finalized_checkpoint.root:
 //	        store.justified_checkpoint = store.best_justified_checkpoint
 func (f *ForkChoice) NewSlot(ctx context.Context, slot primitives.Slot) error {
+	f.Lock()
+	defer f.Unlock()
 	// Reset proposer boost root
 	if err := f.resetBoostedProposerRoot(ctx); err != nil {
 		return errors.Wrap(err, "could not reset boosted proposer root in fork choice")
@@ -42,11 +44,9 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot primitives.Slot) error {
 	}
 
 	// Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
-	f.store.checkpointsLock.RLock()
 	bjcp := f.store.bestJustifiedCheckpoint
 	jcp := f.store.justifiedCheckpoint
 	fcp := f.store.finalizedCheckpoint
-	f.store.checkpointsLock.RUnlock()
 	if bjcp.Epoch > jcp.Epoch {
 		finalizedSlot, err := slots.EpochStart(fcp.Epoch)
 		if err != nil {
@@ -62,13 +62,11 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot primitives.Slot) error {
 			return err
 		}
 		if r == fcp.Root {
-			f.store.checkpointsLock.Lock()
 			f.store.prevJustifiedCheckpoint = jcp
 			f.store.justifiedCheckpoint = bjcp
 			if err := f.updateJustifiedBalances(ctx, bjcp.Root); err != nil {
 				log.Error("could not update justified balances")
 			}
-			f.store.checkpointsLock.Unlock()
 		}
 	}
 	if !features.Get().DisablePullTips {
