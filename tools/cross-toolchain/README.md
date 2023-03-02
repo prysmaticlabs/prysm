@@ -20,6 +20,8 @@ docker build -t gcr.io/prysmaticlabs/rbe-worker:latest tools/cross-toolchain/.
 docker push gcr.io/prysmaticlabs/rbe-worker:latest 
 ```
 
+Note: You must configured your gcr access credentials to push to gcr.io/prysmaticlabs. Run `gcloud auth configure-docker` or contact SRE team for push access.
+
 2) Note the docker image sha256 digest from the recently pushed image or use the latest one available.
 
 3) Download and run [rbe_configs_gen](https://github.com/bazelbuild/bazel-toolchains#rbe_configs_gen---cli-tool-to-generate-configs) CLI tool.
