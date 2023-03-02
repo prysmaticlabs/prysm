@@ -8,7 +8,6 @@ func init() {
 		E2ETestConfig(),
 		E2EMainnetTestConfig(),
 		InteropConfig(),
-		RopstenConfig(),
 	}
 	configs = newConfigset(defaults...)
 	// ensure that main net is always present and active by default

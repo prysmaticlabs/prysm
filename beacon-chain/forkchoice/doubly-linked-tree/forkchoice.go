@@ -46,8 +46,6 @@ func New() *ForkChoice {
 
 // NodeCount returns the current number of nodes in the Store.
 func (f *ForkChoice) NodeCount() int {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
 	return len(f.store.nodeByRoot)
 }
 
@@ -58,15 +56,8 @@ func (f *ForkChoice) Head(
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Head")
 	defer span.End()
-	f.votesLock.Lock()
-	defer f.votesLock.Unlock()
 
 	calledHeadCount.Inc()
-
-	// Using the write lock here because subsequent calls to `updateBalances`, `applyProposerBoostScore`,
-	// `applyWeightChanges`, `updateBestDescendant`, and `head` require write operations on nodes.
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
 
 	if err := f.updateBalances(); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update balances")
@@ -94,8 +85,6 @@ func (f *ForkChoice) Head(
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch primitives.Epoch) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessAttestation")
 	defer span.End()
-	f.votesLock.Lock()
-	defer f.votesLock.Unlock()
 
 	for _, index := range validatorIndices {
 		// Validator indices will grow the vote cache.
@@ -161,7 +150,6 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 
 // updateCheckpoints update the checkpoints when inserting a new node.
 func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkpoint) error {
-	f.store.checkpointsLock.Lock()
 	if jc.Epoch > f.store.justifiedCheckpoint.Epoch {
 		if jc.Epoch > f.store.bestJustifiedCheckpoint.Epoch {
 			f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
@@ -175,7 +163,6 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 					Root: root}
 				if err := f.updateJustifiedBalances(ctx, root); err != nil {
-					f.store.checkpointsLock.Unlock()
 					return errors.Wrap(err, "could not update justified balances")
 				}
 			} else {
@@ -186,25 +173,18 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				}
 				jSlot, err := slots.EpochStart(currentJcp.Epoch)
 				if err != nil {
-					f.store.checkpointsLock.Unlock()
 					return err
 				}
 				jcRoot := bytesutil.ToBytes32(jc.Root)
-				// Releasing here the checkpoints lock because
-				// AncestorRoot acquires a lock on nodes and that can
-				// cause a double lock.
-				f.store.checkpointsLock.Unlock()
 				root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 				if err != nil {
 					return err
 				}
-				f.store.checkpointsLock.Lock()
 				if root == currentRoot {
 					f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 					f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 						Root: jcRoot}
 					if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
-						f.store.checkpointsLock.Unlock()
 						return errors.Wrap(err, "could not update justified balances")
 					}
 				}
@@ -214,14 +194,12 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 			jcRoot := bytesutil.ToBytes32(jc.Root)
 			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jcRoot}
 			if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
-				f.store.checkpointsLock.Unlock()
 				return errors.Wrap(err, "could not update justified balances")
 			}
 		}
 	}
 	// Update finalization
 	if fc.Epoch <= f.store.finalizedCheckpoint.Epoch {
-		f.store.checkpointsLock.Unlock()
 		return nil
 	}
 	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
@@ -231,29 +209,21 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 			Root: root}
 		if err := f.updateJustifiedBalances(ctx, root); err != nil {
-			f.store.checkpointsLock.Unlock()
 			return errors.Wrap(err, "could not update justified balances")
 		}
 	}
-	f.store.checkpointsLock.Unlock()
 	return f.store.prune(ctx)
 }
 
 // HasNode returns true if the node exists in fork choice store,
 // false else wise.
 func (f *ForkChoice) HasNode(root [32]byte) bool {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
 	_, ok := f.store.nodeByRoot[root]
 	return ok
 }
 
 // IsCanonical returns true if the given root is part of the canonical chain.
 func (f *ForkChoice) IsCanonical(root [32]byte) bool {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
 		return false
@@ -273,9 +243,6 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 
 // IsOptimistic returns true if the given root has been optimistically synced.
 func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
 	if f.store.allTipsAreInvalid {
 		return true, nil
 	}
@@ -292,9 +259,6 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primitives.Slot) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.AncestorRoot")
 	defer span.End()
-
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
@@ -317,12 +281,8 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primi
 }
 
 // updateBalances updates the balances that directly voted for each block taking into account the
-// validators' latest votes. This function requires a lock in Store.nodesLock
-// and votesLock
+// validators' latest votes.
 func (f *ForkChoice) updateBalances() error {
-	// lock checkpoints for the justified balances
-	f.store.checkpointsLock.RLock()
-	defer f.store.checkpointsLock.RUnlock()
 	newBalances := f.justifiedBalances
 
 	for index, vote := range f.votes {
@@ -367,7 +327,6 @@ func (f *ForkChoice) updateBalances() error {
 					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
 				if currentNode.balance < oldBalance {
-					f.store.proposerBoostLock.RLock()
 					log.WithFields(logrus.Fields{
 						"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
 						"oldBalance":                 oldBalance,
@@ -377,7 +336,6 @@ func (f *ForkChoice) updateBalances() error {
 						"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
 						"previousProposerBoostScore": f.store.previousProposerBoostScore,
 					}).Warning("node with invalid balance, setting it to zero")
-					f.store.proposerBoostLock.RUnlock()
 					currentNode.balance = 0
 				} else {
 					currentNode.balance -= oldBalance
@@ -405,8 +363,6 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 
 // SetOptimisticToValid sets the node with the given root as a fully validated node
 func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams.RootLength]byte) error {
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
 		return errors.Wrap(ErrNilNode, "could not set node to valid")
@@ -416,29 +372,21 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 
 // BestJustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
-	f.store.checkpointsLock.RLock()
-	defer f.store.checkpointsLock.RUnlock()
 	return f.store.bestJustifiedCheckpoint
 }
 
 // PreviousJustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
-	f.store.checkpointsLock.RLock()
-	defer f.store.checkpointsLock.RUnlock()
 	return f.store.prevJustifiedCheckpoint
 }
 
 // JustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
-	f.store.checkpointsLock.RLock()
-	defer f.store.checkpointsLock.RUnlock()
 	return f.store.justifiedCheckpoint
 }
 
 // FinalizedCheckpoint of fork choice store.
 func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
-	f.store.checkpointsLock.RLock()
-	defer f.store.checkpointsLock.RUnlock()
 	return f.store.finalizedCheckpoint
 }
 
@@ -451,11 +399,6 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
 func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index primitives.ValidatorIndex) {
-	f.votesLock.RLock()
-	defer f.votesLock.RUnlock()
-
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
 	// return early if the index was already included:
 	if f.store.slashedIndices[index] {
 		return
@@ -489,8 +432,6 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(ctx context.Context, jc *forkchoi
 	if jc == nil {
 		return errInvalidNilCheckpoint
 	}
-	f.store.checkpointsLock.Lock()
-	defer f.store.checkpointsLock.Unlock()
 	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = jc
 	f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jc.Root}
@@ -505,8 +446,6 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 	if fc == nil {
 		return errInvalidNilCheckpoint
 	}
-	f.store.checkpointsLock.Lock()
-	defer f.store.checkpointsLock.Unlock()
 	f.store.finalizedCheckpoint = fc
 	return nil
 }
@@ -515,9 +454,6 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, primitives.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.CommonAncestorRoot")
 	defer span.End()
-
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
 
 	n1, ok := f.store.nodeByRoot[r1]
 	if !ok || n1 == nil {
@@ -601,8 +537,6 @@ func (f *ForkChoice) SetOriginRoot(root [32]byte) {
 
 // CachedHeadRoot returns the last cached head root
 func (f *ForkChoice) CachedHeadRoot() [32]byte {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
 	node := f.store.headNode
 	if node == nil {
 		return [32]byte{}
@@ -612,8 +546,6 @@ func (f *ForkChoice) CachedHeadRoot() [32]byte {
 
 // FinalizedPayloadBlockHash returns the hash of the payload at the finalized checkpoint
 func (f *ForkChoice) FinalizedPayloadBlockHash() [32]byte {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
 	root := f.FinalizedCheckpoint().Root
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
@@ -625,8 +557,6 @@ func (f *ForkChoice) FinalizedPayloadBlockHash() [32]byte {
 
 // JustifiedPayloadBlockHash returns the hash of the payload at the justified checkpoint
 func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
 	root := f.JustifiedCheckpoint().Root
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
@@ -692,8 +622,6 @@ func (f *ForkChoice) SetBalancesByRooter(handler forkchoice.BalancesByRooter) {
 
 // Weight returns the weight of the given root if found on the store
 func (f *ForkChoice) Weight(root [32]byte) (uint64, error) {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
 	n, ok := f.store.nodeByRoot[root]
 	if !ok || n == nil {
 		return 0, ErrNilNode
@@ -702,7 +630,6 @@ func (f *ForkChoice) Weight(root [32]byte) (uint64, error) {
 }
 
 // updateJustifiedBalances updates the validators balances on the justified checkpoint pointed by root.
-// This function requires a lock on checkpointsLock being held by the caller.
 func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte) error {
 	balances, err := f.balancesByRoot(ctx, root)
 	if err != nil {

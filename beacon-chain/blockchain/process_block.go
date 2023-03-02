@@ -107,6 +107,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		return err
 	}
 
+	// Verify that the parent block is in forkchoice
+	if !s.ForkChoicer().HasNode(b.ParentRoot()) {
+		return ErrNotDescendantOfFinalized
+	}
+
 	// Save current justified and finalized epochs for future use.
 	currStoreJustifiedEpoch := s.ForkChoicer().JustifiedCheckpoint().Epoch
 	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch
@@ -567,6 +572,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
+// This function requires a write lock on forkchoice.
 func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
@@ -687,26 +693,31 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) e
 	if !atHalfSlot(ti) {
 		return nil
 	}
-	if s.CurrentSlot() == s.cfg.ForkChoiceStore.HighestReceivedBlockSlot() {
+	s.ForkChoicer().RLock()
+	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
+	s.ForkChoicer().RUnlock()
+	if s.CurrentSlot() == highestReceivedSlot {
 		return nil
 	}
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-	if has && id == [8]byte{} {
-		missedPayloadIDFilledCount.Inc()
-		headBlock, err := s.headBlock()
-		if err != nil {
-			return err
-		} else {
-			if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-				headState: s.headState(ctx),
-				headRoot:  s.headRoot(),
-				headBlock: headBlock.Block(),
-			}); err != nil {
-				return err
-			}
-		}
+	if !has || id != [8]byte{} {
+		return nil
 	}
-	return nil
+	missedPayloadIDFilledCount.Inc()
+	s.headLock.RLock()
+	headBlock, err := s.headBlock()
+	if err != nil {
+		return err
+	}
+	headState := s.headState(ctx)
+	headRoot := s.headRoot()
+	s.headLock.RUnlock()
+	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+		headState: headState,
+		headRoot:  headRoot,
+		headBlock: headBlock.Block(),
+	})
+	return err
 }

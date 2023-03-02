@@ -96,6 +96,8 @@ func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...St
 	for _, o := range opts {
 		o(s)
 	}
+	fc.Lock()
+	defer fc.Unlock()
 	fc.SetBalancesByRooter(s.ActiveNonSlashedBalancesByRoot)
 	return s
 }

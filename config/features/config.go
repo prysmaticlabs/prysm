@@ -68,7 +68,7 @@ type Flags struct {
 	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
-	EnableOnlyBlindedBeaconBlocks     bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
+	SaveFullExecutionPayloads         bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
@@ -126,13 +126,6 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(RopstenTestnet.Name) {
-		log.Warn("Running on the Ropsten Beacon Chain Testnet")
-		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
-			return err
-		}
-		applyRopstenFeatureFlags(ctx)
-		params.UseRopstenNetworkConfig()
 	} else if ctx.Bool(SepoliaTestnet.Name) {
 		log.Warn("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
@@ -155,13 +148,9 @@ func configureTestnet(ctx *cli.Context) error {
 
 // Insert feature flags within the function to be enabled for Prater testnet.
 func applyPraterFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(EnableOnlyBlindedBeaconBlocks.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling only saving blinded beacon blocks flag")
+	if err := ctx.Set(SaveFullExecutionPayloads.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling save full execution payloads flag")
 	}
-}
-
-// Insert feature flags within the function to be enabled for Ropsten testnet.
-func applyRopstenFeatureFlags(ctx *cli.Context) {
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
@@ -252,9 +241,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableGossipBatchAggregation)
 		cfg.EnableBatchGossipAggregation = false
 	}
-	if ctx.Bool(EnableOnlyBlindedBeaconBlocks.Name) {
-		logEnabled(EnableOnlyBlindedBeaconBlocks)
-		cfg.EnableOnlyBlindedBeaconBlocks = true
+	if ctx.Bool(SaveFullExecutionPayloads.Name) {
+		logEnabled(SaveFullExecutionPayloads)
+		cfg.SaveFullExecutionPayloads = true
 	}
 	if ctx.Bool(enableStartupOptimistic.Name) {
 		logEnabled(enableStartupOptimistic)

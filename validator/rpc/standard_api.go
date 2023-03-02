@@ -535,27 +535,15 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 
 	finalResp := &ethpbservice.GetFeeRecipientByPubkeyResponse{
 		Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
-			Pubkey:     validatorKey,
-			Ethaddress: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			Pubkey: validatorKey,
 		},
 	}
 
-	// If no proposer settings is set, use beacon node default (if possible)
-	if s.validatorService.ProposerSettings() == nil {
-		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
-			PublicKey: validatorKey,
-		})
-
-		if resp != nil && len(resp.FeeRecipient) != 0 && err == nil {
-			finalResp.Data.Ethaddress = resp.FeeRecipient
-		}
-
-		return finalResp, nil
-	}
+	proposerSettings := s.validatorService.ProposerSettings()
 
 	// If fee recipient is defined for this specific pubkey in proposer configuration, use it
-	if s.validatorService.ProposerSettings().ProposeConfig != nil {
-		proposerOption, found := s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+	if proposerSettings != nil && proposerSettings.ProposeConfig != nil {
+		proposerOption, found := proposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 
 		if found && proposerOption.FeeRecipientConfig != nil {
 			finalResp.Data.Ethaddress = proposerOption.FeeRecipientConfig.FeeRecipient.Bytes()
@@ -564,13 +552,26 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 	}
 
 	// If fee recipient is defined in default configuration, use it
-	if s.validatorService.ProposerSettings().DefaultConfig != nil && s.validatorService.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
+	if proposerSettings != nil && proposerSettings.DefaultConfig != nil && proposerSettings.DefaultConfig.FeeRecipientConfig != nil {
 		finalResp.Data.Ethaddress = s.validatorService.ProposerSettings().DefaultConfig.FeeRecipientConfig.FeeRecipient.Bytes()
 		return finalResp, nil
 	}
 
-	// Default case
-	return finalResp, nil
+	// Else, use the one defined in beacon node
+	resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
+		PublicKey: validatorKey,
+	})
+
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Failed to retrieve default fee recipient from beacon node")
+	}
+
+	if resp != nil && len(resp.FeeRecipient) != 0 {
+		finalResp.Data.Ethaddress = resp.FeeRecipient
+		return finalResp, nil
+	}
+
+	return nil, status.Error(codes.InvalidArgument, "No fee recipient set")
 }
 
 // SetFeeRecipientByPubkey updates the eth address mapped to the public key.

@@ -33,7 +33,7 @@ type AttestationStateFetcher interface {
 type AttestationReceiver interface {
 	AttestationStateFetcher
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
-	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
+	InForkchoice([32]byte) bool
 }
 
 // AttestationTargetState returns the pre state of attestation.
@@ -61,33 +61,6 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 	if !bytes.Equal(a.Data.Target.Root, r) {
 		return errors.New("FFG and LMD votes are not consistent")
 	}
-	return nil
-}
-
-// VerifyFinalizedConsistency verifies input root is consistent with finalized store.
-// When the input root is not be consistent with finalized store then we know it is not
-// on the finalized check point that leads to current canonical chain and should be rejected accordingly.
-func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
-	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
-	// In this case, we could exit early to save on additional computation.
-	blockRoot := bytesutil.ToBytes32(root)
-	if s.cfg.ForkChoiceStore.HasNode(blockRoot) && s.cfg.ForkChoiceStore.IsCanonical(blockRoot) {
-		return nil
-	}
-
-	f := s.FinalizedCheckpt()
-	ss, err := slots.EpochStart(f.Epoch)
-	if err != nil {
-		return err
-	}
-	r, err := s.ancestor(ctx, root, ss)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(f.Root, r) {
-		return errors.New("Root and finalized store are not consistent")
-	}
-
 	return nil
 }
 
@@ -125,10 +98,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-pat.C():
-				root, err := s.UpdateHead(s.ctx)
-				if err != nil {
-					log.WithError(err).Error("could not process attestations and update head")
-				}
+				root := s.UpdateHead(s.ctx)
 				if err := s.forkchoiceUpdateWithExecution(s.ctx, root, s.CurrentSlot()+1); err != nil {
 					log.WithError(err).Error("could not update forkchoice")
 				}
@@ -138,10 +108,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 					log.WithError(err).Error("could not process new slot")
 				}
 
-				root, err := s.UpdateHead(s.ctx)
-				if err != nil {
-					log.WithError(err).Error("could not process attestations and update head")
-				}
+				root := s.UpdateHead(s.ctx)
 				if err := s.forkchoiceUpdateWithExecution(s.ctx, root, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("could not update forkchoice")
 				}
@@ -152,15 +119,15 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
 // It returns the new head root
-func (s *Service) UpdateHead(ctx context.Context) ([32]byte, error) {
-	// Only one process can process attestations and update head at a time.
-	s.processAttestationsLock.Lock()
-	defer s.processAttestationsLock.Unlock()
-
+func (s *Service) UpdateHead(ctx context.Context) [32]byte {
 	start := time.Now()
+
+	s.ForkChoicer().Lock()
+	defer s.ForkChoicer().Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
 	disparity := reorgLateBlockCountAttestations + params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	s.processAttestations(ctx, disparity)
+
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	start = time.Now()
@@ -178,7 +145,7 @@ func (s *Service) UpdateHead(ctx context.Context) ([32]byte, error) {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	return newHeadRoot, nil
+	return newHeadRoot
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.

@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message) error {
+func (s *Service) voluntaryExitSubscriber(_ context.Context, msg proto.Message) error {
 	ve, ok := msg.(*ethpb.SignedVoluntaryExit)
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.SignedVoluntaryExit got: %T", msg)
@@ -20,11 +20,7 @@ func (s *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 	}
 	s.setExitIndexSeen(ve.Exit.ValidatorIndex)
 
-	headState, err := s.cfg.chain.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-	s.cfg.exitPool.InsertVoluntaryExit(ctx, headState, ve)
+	s.cfg.exitPool.InsertVoluntaryExit(ve)
 	return nil
 }
 
