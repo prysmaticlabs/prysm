@@ -47,9 +47,15 @@ bazel build --config=release --config=osx_arm64_docker //cmd/beacon-chain //cmd/
 bazel build --config=release --config=windows_amd64_docker //cmd/beacon-chain //cmd/validator //cmd/client-stats //cmd/prysmctl
 ```
 
-5 Add and commit the newly generated configs.
+5 Run gazelle.
 
-6 Done!
+```bash
+bazel run //:gazelle
+```
+
+6 Add and commit the newly generated configs.
+
+7 Done!
 
 ### Cross compile target support
 
