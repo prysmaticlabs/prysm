@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -47,7 +48,6 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	}
 	minReqEpoch := minimumRequestEpoch(s.cfg.chain.FinalizedCheckpt().Epoch, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
 	blobIdents := *ref
-	blobsWritten := 0
 	for i := range blobIdents {
 		root, idx := bytesutil.ToBytes32(blobIdents[i].BlockRoot), blobIdents[i].Index
 		sc, err := s.blobs.BlobSidecar(root, idx)
@@ -60,11 +60,13 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 			return err
 		}
 
-		//  If any root in the request content references a block earlier than minimum_request_epoch,
+		// If any root in the request content references a block earlier than minimum_request_epoch,
 		// peers MAY respond with error code 3: ResourceUnavailable or not include the blob in the response.
-		// (we're choosing to just not include the block in the response).
 		if slots.ToEpoch(sc.Slot) < minReqEpoch {
-			continue
+			s.writeErrorResponseToStream(responseCodeResourceUnavailable, types.ErrBlobLTMinRequest.Error(), stream)
+			log.WithError(types.ErrBlobLTMinRequest).
+				Debugf("requested blob for block %#x before minimum_request_epoch", blobIdents[i].BlockRoot)
+			return types.ErrBlobLTMinRequest
 		}
 		SetStreamWriteDeadline(stream, defaultWriteDuration)
 		if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
@@ -74,11 +76,6 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 			return chunkErr
 		}
 		s.rateLimiter.add(stream, 1)
-		blobsWritten += 1
-	}
-	if blobsWritten == 0 {
-		s.writeErrorResponseToStream(responseCodeResourceUnavailable, "", stream)
-		return nil
 	}
 	return nil
 }
