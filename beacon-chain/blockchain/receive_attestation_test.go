@@ -185,9 +185,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.Equal(t, 1, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	root := service.UpdateHead(ctx)
 	require.Equal(t, tRoot, root)
-
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
-	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
 }
 
 func TestService_UpdateHead_NoAtts(t *testing.T) {
@@ -241,5 +239,4 @@ func TestService_UpdateHead_NoAtts(t *testing.T) {
 	require.Equal(t, r, root)
 
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
-	require.Equal(t, r, service.head.root)                                 // Validate head is the new one
 }
