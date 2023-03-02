@@ -34,9 +34,6 @@ const orphanLateBlockProposingEarly = 2
 func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 	override = false
 
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
 	// We only need to override FCU if our current head is from the current
 	// slot. This differs from the spec implementation in that we assume
 	// that we will call this function in the previous slot to proposing.
@@ -61,9 +58,7 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 		return
 	}
 	// Only reorg if we have been finalizing
-	f.store.checkpointsLock.RLock()
 	finalizedEpoch := f.store.finalizedCheckpoint.Epoch
-	f.store.checkpointsLock.RUnlock()
 	if slots.ToEpoch(head.slot+1) > finalizedEpoch+params.BeaconConfig().ReorgMaxEpochsSinceFinalization {
 		return
 	}
@@ -95,9 +90,6 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 // This function needs to be called only when proposing a block and all
 // attestation processing has already happened.
 func (f *ForkChoice) GetProposerHead() [32]byte {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
 	head := f.store.headNode
 	if head == nil {
 		return [32]byte{}
@@ -121,9 +113,7 @@ func (f *ForkChoice) GetProposerHead() [32]byte {
 		return head.root
 	}
 	// Only reorg if we have been finalizing
-	f.store.checkpointsLock.RLock()
 	finalizedEpoch := f.store.finalizedCheckpoint.Epoch
-	f.store.checkpointsLock.RUnlock()
 	if slots.ToEpoch(head.slot+1) > finalizedEpoch+params.BeaconConfig().ReorgMaxEpochsSinceFinalization {
 		return head.root
 	}
