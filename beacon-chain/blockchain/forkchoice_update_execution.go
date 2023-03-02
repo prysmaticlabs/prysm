@@ -44,7 +44,8 @@ func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.Beaco
 
 func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) error {
 	isNewHead := s.isNewHead(newHeadRoot)
-	if !isNewHead && !s.isNewProposer(proposingSlot) {
+	isNewProposer := s.isNewProposer(proposingSlot)
+	if !isNewHead && !isNewProposer {
 		return nil
 	}
 
@@ -54,7 +55,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	var err error
 
 	shouldUpdate := isNewHead
-	if isNewHead && s.isNewProposer(proposingSlot) && !features.Get().DisableReorgLateBlocks {
+	if isNewHead && isNewProposer && !features.Get().DisableReorgLateBlocks {
 		if proposingSlot == s.CurrentSlot() {
 			proposerHead := s.ForkChoicer().GetProposerHead()
 			if proposerHead != newHeadRoot {

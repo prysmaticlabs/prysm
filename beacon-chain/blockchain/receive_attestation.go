@@ -100,10 +100,11 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 				return
 			case <-pat.C():
 				root := s.UpdateHead(s.ctx)
+				s.ForkChoicer().Lock()
 				if err := s.forkchoiceUpdateWithExecution(s.ctx, root, s.CurrentSlot()+1); err != nil {
 					log.WithError(err).Error("could not update forkchoice")
 				}
-
+				s.ForkChoicer().Unlock()
 			case <-st.C():
 				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("could not process new slot")
