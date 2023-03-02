@@ -459,8 +459,12 @@ func (s *ChainService) IsOptimisticForRoot(_ context.Context, root [32]byte) (bo
 }
 
 // UpdateHead mocks the same method in the chain service.
-func (s *ChainService) UpdateHead(_ context.Context) [32]byte {
-	return s.ForkChoiceStore.CachedHeadRoot()
+func (s *ChainService) UpdateHead(ctx context.Context) [32]byte {
+	headRoot := s.ForkChoiceStore.CachedHeadRoot()
+	if headRoot == [32]byte{} {
+		headRoot = bytesutil.ToBytes32(s.Root)
+	}
+	return headRoot
 }
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.
