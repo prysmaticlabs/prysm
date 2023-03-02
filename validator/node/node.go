@@ -765,6 +765,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		Mux:           gwmux,
 	}
 	opts := []gateway.Option{
+		gateway.WithRouter(mux.NewRouter()),
 		gateway.WithRemoteAddr(rpcAddr),
 		gateway.WithGatewayAddr(gatewayAddress),
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
@@ -774,7 +775,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gateway.WithMuxHandler(muxHandler),
 		gateway.WithTimeout(uint64(timeout)),
 	}
-	gw, err := gateway.New(cliCtx.Context, mux.NewRouter(), opts...)
+	gw, err := gateway.New(cliCtx.Context, opts...)
 	if err != nil {
 		return err
 	}

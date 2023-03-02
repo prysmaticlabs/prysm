@@ -10,11 +10,6 @@ import (
 
 type Option func(g *Gateway) error
 
-func (g *Gateway) SetRouter(r *mux.Router) *Gateway {
-	g.cfg.router = r
-	return g
-}
-
 func WithPbHandlers(handlers []*PbMux) Option {
 	return func(g *Gateway) error {
 		g.cfg.pbHandlers = handlers

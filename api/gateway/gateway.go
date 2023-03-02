@@ -67,17 +67,18 @@ type Gateway struct {
 }
 
 // New returns a new instance of the Gateway.
-func New(ctx context.Context, router *mux.Router, opts ...Option) (*Gateway, error) {
+func New(ctx context.Context, opts ...Option) (*Gateway, error) {
 	g := &Gateway{
 		ctx: ctx,
-		cfg: &config{
-			router: router,
-		},
+		cfg: &config{},
 	}
 	for _, opt := range opts {
 		if err := opt(g); err != nil {
 			return nil, err
 		}
+	}
+	if g.cfg.router == nil {
+		g.cfg.router = mux.NewRouter()
 	}
 	return g, nil
 }

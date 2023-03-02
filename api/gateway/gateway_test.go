@@ -55,7 +55,7 @@ func TestGateway_Customized(t *testing.T) {
 		}),
 	}
 
-	g, err := New(context.Background(), mux.NewRouter(), opts...)
+	g, err := New(context.Background(), opts...)
 	require.NoError(t, err)
 
 	assert.Equal(t, r, g.cfg.router)
@@ -91,7 +91,7 @@ func TestGateway_StartStop(t *testing.T) {
 		}),
 	}
 
-	g, err := New(context.Background(), mux.NewRouter(), opts...)
+	g, err := New(context.Background(), opts...)
 	require.NoError(t, err)
 
 	g.Start()
@@ -119,7 +119,7 @@ func TestGateway_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 		WithRemoteAddr(selfAddress),
 	}
 
-	g, err := New(context.Background(), mux.NewRouter(), opts...)
+	g, err := New(context.Background(), opts...)
 	require.NoError(t, err)
 
 	writer := httptest.NewRecorder()

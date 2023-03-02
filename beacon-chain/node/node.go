@@ -898,6 +898,7 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	}
 
 	opts := []apigateway.Option{
+		apigateway.WithRouter(router),
 		apigateway.WithGatewayAddr(gatewayAddress),
 		apigateway.WithRemoteAddr(selfAddress),
 		apigateway.WithPbHandlers(muxs),
@@ -910,7 +911,7 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	if flags.EnableHTTPEthAPI(httpModules) {
 		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
 	}
-	g, err := apigateway.New(b.ctx, router, opts...)
+	g, err := apigateway.New(b.ctx, opts...)
 	if err != nil {
 		return err
 	}

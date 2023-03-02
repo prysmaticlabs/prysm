@@ -44,6 +44,7 @@ func main() {
 		log.SetLevel(logrus.DebugLevel)
 	}
 
+	r := mux.NewRouter()
 	gatewayConfig := beaconGateway.DefaultConfig(*enableDebugRPCEndpoints, *httpModules)
 	muxs := make([]*gateway.PbMux, 0)
 	if gatewayConfig.V1AlphaPbMux != nil {
@@ -53,6 +54,7 @@ func main() {
 		muxs = append(muxs, gatewayConfig.EthPbMux)
 	}
 	opts := []gateway.Option{
+		gateway.WithRouter(r),
 		gateway.WithPbHandlers(muxs),
 		gateway.WithMuxHandler(gatewayConfig.Handler),
 		gateway.WithRemoteAddr(*beaconRPC),
@@ -65,16 +67,13 @@ func main() {
 		opts = append(opts, gateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
 	}
 
-	r := mux.NewRouter()
-
-	gw, err := gateway.New(context.Background(), r, opts...)
+	gw, err := gateway.New(context.Background(), opts...)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	r.HandleFunc("/swagger/", gateway.SwaggerServer())
 	r.HandleFunc("/healthz", healthzServer(gw))
-	gw.SetRouter(r)
 
 	gw.Start()
 
