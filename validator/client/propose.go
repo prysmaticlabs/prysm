@@ -124,7 +124,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	// Propose and broadcast block via beacon node
 	proposal, err := blk.PbGenericBlock()
 	if err != nil {
-		log.WithField("blockSlot", slot).WithError(err).Error("Failed to create proposal request")
+		log.WithError(err).Error("Failed to create proposal request")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
