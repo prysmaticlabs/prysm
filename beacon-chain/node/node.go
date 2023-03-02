@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
