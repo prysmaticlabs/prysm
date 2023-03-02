@@ -121,8 +121,7 @@ func convertRandaoMixes(indices []uint64, elements interface{}, convertAll bool)
 func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.Eth1Data)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Eth1Data{}, elements)
 	}
 	return handleEth1DataSlice(val, indices, convertAll)
 }
@@ -130,8 +129,7 @@ func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll boo
 func convertValidators(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.Validator)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Validator{}, elements)
 	}
 	return handleValidatorSlice(val, indices, convertAll)
 }
@@ -139,8 +137,7 @@ func convertValidators(indices []uint64, elements interface{}, convertAll bool) 
 func convertAttestations(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.PendingAttestation)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.PendingAttestation{}, elements)
 	}
 	return handlePendingAttestationSlice(val, indices, convertAll)
 }
@@ -148,8 +145,7 @@ func convertAttestations(indices []uint64, elements interface{}, convertAll bool
 func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]uint64)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]uint64{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []uint64{}, elements)
 	}
 	return handleBalanceSlice(val, indices, convertAll)
 }
