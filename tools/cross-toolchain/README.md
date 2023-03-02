@@ -17,7 +17,7 @@ This toolchain suite describes cross compile configuration with a Dockerfile wit
 
 ```bash
 docker build -t gcr.io/prysmaticlabs/rbe-worker:latest tools/cross-toolchain/.
-gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest 
+docker push gcr.io/prysmaticlabs/rbe-worker:latest 
 ```
 
 2) Note the docker image sha256 digest from the recently pushed image or use the latest one available.
