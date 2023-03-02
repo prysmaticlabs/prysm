@@ -558,10 +558,6 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 }
 
 func runListBlocksGenesis(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOnlyBlindedBeaconBlocks: true,
-	})
-	defer resetFn()
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -745,6 +741,10 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
 	t.Run("bellatrix block", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.Slot = 300
 		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
@@ -769,6 +769,10 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
 	t.Run("capella block", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		blk := util.NewBeaconBlockCapella()
 		blk.Block.Slot = 300
 		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {

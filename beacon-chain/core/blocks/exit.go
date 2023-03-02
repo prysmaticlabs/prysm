@@ -116,7 +116,7 @@ func VerifyExitAndSignature(
 	return nil
 }
 
-// verifyExitConditions implements the spec defined validation for voluntary exits(excluding signatures).
+// verifyExitConditions implements the spec defined validation for voluntary exits (excluding signatures).
 //
 // Spec pseudocode definition:
 //
