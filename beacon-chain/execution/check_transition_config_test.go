@@ -240,7 +240,7 @@ func TestService_logTtdStatus_NotSyncedClient(t *testing.T) {
 
 	ttd := new(uint256.Int)
 	reached, err := service.logTtdStatus(context.Background(), ttd.SetUint64(24343))
-	require.NoError(t, err)
+	require.ErrorContains(t, "missing required field 'parentHash' for Header", err)
 	require.Equal(t, false, reached)
 }
 
