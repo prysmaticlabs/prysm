@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -126,7 +127,13 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 
 	// Balances slice root.
 	// TODO: change this
-	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balances.Value())
+	v := state.balances.Value()
+	var s uint64
+	for _, b := range v {
+		s += b
+	}
+	log.Warnf("Balances sum: %d", s)
+	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(v)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}

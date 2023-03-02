@@ -2,6 +2,7 @@ package customtypes
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -17,6 +18,8 @@ type Balances struct {
 	len                   int
 	fullChunkSize         uint64
 	sharedChunkReferences map[uint64]*stateutil.Reference
+	// TODO: Is a lock needed?
+	lock sync.RWMutex
 }
 
 func NewBalances(balances []uint64) *Balances {
@@ -31,6 +34,10 @@ func NewBalances(balances []uint64) *Balances {
 }
 
 func (b *Balances) Copy() *Balances {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	log.Warnf("Copying balances")
 	var chunks [256][]uint64
 	refs := make(map[uint64]*stateutil.Reference)
 	// TODO: Can we simply do bCopy.chunks = b.chunks?
@@ -61,6 +68,9 @@ func (b *Balances) Len() int {
 }
 
 func (b *Balances) Value() []uint64 {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	// TODO: Log and see how many copies we make
 	index := 0
 	v := make([]uint64, b.len)
@@ -75,6 +85,9 @@ func (b *Balances) Value() []uint64 {
 }
 
 func (b *Balances) At(i primitives.ValidatorIndex) (uint64, error) {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	chunkIndex := uint64(i) / b.fullChunkSize
 	elemIndex := uint64(i) % b.fullChunkSize
 	if chunkIndex >= uint64(len(b.chunks)) || elemIndex >= uint64(len(b.chunks[chunkIndex])) {
@@ -85,6 +98,10 @@ func (b *Balances) At(i primitives.ValidatorIndex) (uint64, error) {
 }
 
 func (b *Balances) UpdateAt(i primitives.ValidatorIndex, val uint64) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	//log.Warnf("Updating at index %d", i)
 	chunkIndex := uint64(i) / b.fullChunkSize
 	elemIndex := uint64(i) % b.fullChunkSize
 	if chunkIndex >= uint64(len(b.chunks)) || elemIndex >= uint64(len(b.chunks[chunkIndex])) {
@@ -95,6 +112,7 @@ func (b *Balances) UpdateAt(i primitives.ValidatorIndex, val uint64) error {
 	ref, ok := b.sharedChunkReferences[chunkIndex]
 	if ok {
 		if ref.Refs() > 1 {
+			//log.Warnf("Copying chunk at index %d", chunkIndex)
 			newChunk := make([]uint64, len(b.chunks[chunkIndex]))
 			copy(newChunk, b.chunks[chunkIndex])
 			newChunk[elemIndex] = val
@@ -114,6 +132,9 @@ func (b *Balances) UpdateAt(i primitives.ValidatorIndex, val uint64) error {
 }
 
 func (b *Balances) Append(val uint64) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	chunksAreFull := uint64(len(b.chunks[len(b.chunks)-1])) == b.fullChunkSize
 	if chunksAreFull {
 		index := uint64(0)
