@@ -762,10 +762,9 @@ func (b *BeaconNode) registerRPCService() error {
 	}
 
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
-	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
 	var chainStartFetcher execution.ChainStartFetcher
-	if genesisValidators > 0 || genesisStatePath != "" {
+	if genesisValidators > 0 {
 		var interopService *interopcoldstart.Service
 		if err := b.services.FetchService(&interopService); err != nil {
 			return err
@@ -917,15 +916,13 @@ func (b *BeaconNode) registerGRPCGateway() error {
 func (b *BeaconNode) registerDeterminsticGenesisService() error {
 	genesisTime := b.cliCtx.Uint64(flags.InteropGenesisTimeFlag.Name)
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
-	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 
-	if genesisValidators > 0 || genesisStatePath != "" {
+	if genesisValidators > 0 {
 		svc := interopcoldstart.NewService(b.ctx, &interopcoldstart.Config{
 			GenesisTime:   genesisTime,
 			NumValidators: genesisValidators,
 			BeaconDB:      b.db,
 			DepositCache:  b.depositCache,
-			GenesisPath:   genesisStatePath,
 		})
 		svc.Start()
 
