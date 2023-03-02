@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -109,9 +110,11 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 				}
 
 				root := s.UpdateHead(s.ctx)
+				s.ForkChoicer().Lock()
 				if err := s.forkchoiceUpdateWithExecution(s.ctx, root, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("could not update forkchoice")
 				}
+				s.ForkChoicer().Unlock()
 			}
 		}
 	}()
@@ -125,7 +128,10 @@ func (s *Service) UpdateHead(ctx context.Context) [32]byte {
 	s.ForkChoicer().Lock()
 	defer s.ForkChoicer().Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
-	disparity := reorgLateBlockCountAttestations + params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	disparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	if !features.Get().DisableReorgLateBlocks {
+		disparity += reorgLateBlockCountAttestations
+	}
 	s.processAttestations(ctx, disparity)
 
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
