@@ -21,8 +21,7 @@ const orphanLateBlockFirstThreshold = 4
 const processAttestationsThreshold = 10
 
 // applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
-// using the current balance stored in each node. This function requires a lock
-// in Store.nodesLock
+// using the current balance stored in each node.
 func (n *Node) applyWeightChanges(ctx context.Context) error {
 	// Recursively calling the children to sum their weights.
 	childrenWeight := uint64(0)
@@ -43,7 +42,7 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 }
 
 // updateBestDescendant updates the best descendant of this node and its
-// children. This function assumes the caller has a lock on Store.nodesLock
+// children.
 func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) error {
 	if ctx.Err() != nil {
 		return ctx.Err()

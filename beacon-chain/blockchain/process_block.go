@@ -572,6 +572,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
+// This function requires a write lock on forkchoice.
 func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
@@ -692,7 +693,10 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) e
 	if !atHalfSlot(ti) {
 		return nil
 	}
-	if s.CurrentSlot() == s.cfg.ForkChoiceStore.HighestReceivedBlockSlot() {
+	s.ForkChoicer().RLock()
+	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
+	s.ForkChoicer().RUnlock()
+	if s.CurrentSlot() == highestReceivedSlot {
 		return nil
 	}
 	// Head root should be empty when retrieving proposer index for the next slot.
