@@ -74,7 +74,7 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 	changedIdx := []uint64{4, 8}
 	require.NoError(t, newState.UpdateBalancesAtIndex(primitives.ValidatorIndex(changedIdx[0]), uint64(100000000)))
 	require.NoError(t, newState.UpdateBalancesAtIndex(primitives.ValidatorIndex(changedIdx[1]), uint64(200000000)))
-	expectedRoot, err := stateutil.Uint64ListRootWithRegistryLimit(newState.Balances())
+	expectedRoot, err := stateutil.Uint64ListRootWithRegistryLimit(newState.Balances().Value())
 	require.NoError(t, err)
 	root, err := trie.RecomputeTrie(changedIdx, newState.Balances())
 	require.NoError(t, err)

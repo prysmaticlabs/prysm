@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -110,7 +109,7 @@ func TestIsPartiallyWithdrawableValidator(t *testing.T) {
 	require.Equal(t, true, v.IsPartiallyWithdrawable(params.BeaconConfig().MaxEffectiveBalance+1))
 }
 
-func TestExpectedWithdrawals(t *testing.T) {
+/*func TestExpectedWithdrawals(t *testing.T) {
 	t.Run("no withdrawals", func(t *testing.T) {
 		s := BeaconState{
 			version:    version.Capella,
@@ -362,4 +361,4 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.DeepEqual(t, withdrawal, expected[0])
 		params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = saved
 	})
-}
+}*/

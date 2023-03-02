@@ -61,6 +61,7 @@ func (b *Balances) Len() int {
 }
 
 func (b *Balances) Value() []uint64 {
+	// TODO: Log and see how many copies we make
 	index := 0
 	v := make([]uint64, b.len)
 	for _, ch := range b.chunks {

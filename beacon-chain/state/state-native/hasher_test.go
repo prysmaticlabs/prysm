@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -32,7 +33,7 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data()}))
 	require.NoError(t, beaconState.SetEth1DepositIndex(123))
 	require.NoError(t, beaconState.SetValidators([]*ethpb.Validator{validator()}))
-	require.NoError(t, beaconState.SetBalances([]uint64{1, 2, 3}))
+	require.NoError(t, beaconState.SetBalances(customtypes.NewBalances([]uint64{1, 2, 3})))
 	randaoMixes, err := util.PrepareRoots(int(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetRandaoMixes(randaoMixes))
@@ -96,7 +97,7 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data()}))
 	require.NoError(t, beaconState.SetEth1DepositIndex(123))
 	require.NoError(t, beaconState.SetValidators([]*ethpb.Validator{validator()}))
-	require.NoError(t, beaconState.SetBalances([]uint64{1, 2, 3}))
+	require.NoError(t, beaconState.SetBalances(customtypes.NewBalances([]uint64{1, 2, 3})))
 	randaoMixes, err := util.PrepareRoots(int(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetRandaoMixes(randaoMixes))
@@ -166,7 +167,7 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data()}))
 	require.NoError(t, beaconState.SetEth1DepositIndex(123))
 	require.NoError(t, beaconState.SetValidators([]*ethpb.Validator{validator()}))
-	require.NoError(t, beaconState.SetBalances([]uint64{1, 2, 3}))
+	require.NoError(t, beaconState.SetBalances(customtypes.NewBalances([]uint64{1, 2, 3})))
 	randaoMixes, err := util.PrepareRoots(int(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetRandaoMixes(randaoMixes))
@@ -240,7 +241,7 @@ func TestComputeFieldRootsWithHasher_Capella(t *testing.T) {
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data()}))
 	require.NoError(t, beaconState.SetEth1DepositIndex(123))
 	require.NoError(t, beaconState.SetValidators([]*ethpb.Validator{validator()}))
-	require.NoError(t, beaconState.SetBalances([]uint64{1, 2, 3}))
+	require.NoError(t, beaconState.SetBalances(customtypes.NewBalances([]uint64{1, 2, 3})))
 	randaoMixes, err := util.PrepareRoots(int(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetRandaoMixes(randaoMixes))

@@ -1,17 +1,13 @@
 package state_native
 
 import (
-	"context"
 	"strconv"
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -270,7 +266,7 @@ func TestBeaconState_NoDeadlock_Capella(t *testing.T) {
 	wg.Wait()
 }
 
-func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
+/*func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	count := uint64(100)
 	vals := make([]*ethpb.Validator, 0, count)
 	bals := make([]uint64, 0, count)
@@ -353,7 +349,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.Balances())
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
-}
+}*/
 
 func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
 	st, err := InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})

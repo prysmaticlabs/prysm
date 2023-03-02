@@ -37,6 +37,7 @@ type SlashingReceiver interface {
 //  2. Apply fork choice to the processed block
 //  3. Save latest head info
 func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
+	log.Warnf("Received block at slot %d", block.Block().Slot())
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()

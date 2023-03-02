@@ -762,14 +762,14 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return b.recomputeFieldTrie(11, b.validators)
 	case types.Balances:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.balances, stateutil.ValidatorLimitForBalancesChunks())
+			err := b.resetFieldTrie(field, b.balances.Value(), stateutil.ValidatorLimitForBalancesChunks())
 			if err != nil {
 				return [32]byte{}, err
 			}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(12, b.balances)
+		return b.recomputeFieldTrie(12, b.balances.Value())
 	case types.RandaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
