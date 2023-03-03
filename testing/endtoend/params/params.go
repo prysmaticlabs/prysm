@@ -158,7 +158,7 @@ const (
 
 	JaegerTracingPort = 9150
 
-	StartupBufferSecs = 30
+	StartupBufferSecs = 15
 )
 
 func logDir() string {
