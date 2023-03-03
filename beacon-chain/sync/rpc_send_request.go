@@ -136,7 +136,7 @@ func SendSidecarsByRoot(
 	ctx context.Context, ci blockchain.ChainInfoFetcher, p2pApi p2p.P2P, pid peer.ID,
 	req *p2ptypes.BlobSidecarsByRootReq, processor BlobsSidecarProcessor,
 ) ([]*pb.BlobsSidecar, error) {
-	topic, err := p2p.TopicFromMessage(p2p.BlobsSidecarByRootName, slots.ToEpoch(ci.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRootName, slots.ToEpoch(ci.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}

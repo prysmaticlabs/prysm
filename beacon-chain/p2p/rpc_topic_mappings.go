@@ -43,7 +43,7 @@ const BlobsSidecarsByRangeMessageName = "/blobs_sidecars_by_range"
 // BeaconBlockAndBlobsSidecarByRootName is a topic for fetching beacon blocks and sidecar blobs by root.
 const BeaconBlockAndBlobsSidecarByRootName = "/beacon_block_and_blobs_sidecar_by_root"
 
-const BlobsSidecarByRootName = "/blob_sidecars_by_root"
+const BlobSidecarsByRootName = "/blob_sidecars_by_root"
 
 const (
 	// V1 RPC Topics
@@ -63,7 +63,7 @@ const (
 	RPCBlobsSidecarsByRangeTopicV1 = protocolPrefix + BlobsSidecarsByRangeMessageName + SchemaVersionV1
 	// RPCBlobSidecarsByRootTopicV1 is a topic for requestion blob sidecars by their block root. New in deneb.
 	// /eth2/beacon_chain/req/blob_sidecars_by_root/1/
-	RPCBlobSidecarsByRootTopicV1 = protocolPrefix + BlobsSidecarByRootName + SchemaVersionV1
+	RPCBlobSidecarsByRootTopicV1 = protocolPrefix + BlobSidecarsByRootName + SchemaVersionV1
 
 	// V2 RPC Topics
 	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
@@ -118,7 +118,7 @@ var messageMapping = map[string]bool{
 	MetadataMessageName:                  true,
 	BlobsSidecarsByRangeMessageName:      true,
 	BeaconBlockAndBlobsSidecarByRootName: true,
-	BlobsSidecarByRootName:               true,
+	BlobSidecarsByRootName:               true,
 }
 
 // Maps all the RPC messages which are to updated in altair.
@@ -142,7 +142,7 @@ var PreAltairV1SchemaMapping = map[string]bool{
 	MetadataMessageName:                  true,
 	BlobsSidecarsByRangeMessageName:      false,
 	BeaconBlockAndBlobsSidecarByRootName: false,
-	BlobsSidecarByRootName:               false,
+	BlobSidecarsByRootName:               false,
 }
 
 // VerifyTopicMapping verifies that the topic and its accompanying
