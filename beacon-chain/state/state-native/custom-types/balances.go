@@ -2,6 +2,7 @@ package customtypes
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
@@ -38,6 +39,7 @@ func (b *Balances) Copy() *Balances {
 	defer b.lock.Unlock()
 
 	log.Warnf("Copying balances")
+	debug.PrintStack()
 	var chunks [256][]uint64
 	refs := make(map[uint64]*stateutil.Reference)
 	// TODO: Can we simply do bCopy.chunks = b.chunks?
@@ -45,9 +47,11 @@ func (b *Balances) Copy() *Balances {
 		chunks[i] = ch
 		r, ok := b.sharedChunkReferences[uint64(i)]
 		if ok {
+			//log.Warnf("Adding ref to chunk %d, count is now %d", i, r.Refs()+1)
 			refs[uint64(i)] = r
 			r.AddRef()
 		} else {
+			//log.Warnf("New ref of 2 for chunk %d", i)
 			newRef := stateutil.NewRef(2)
 			b.sharedChunkReferences[uint64(i)] = newRef
 			refs[uint64(i)] = newRef
@@ -112,11 +116,14 @@ func (b *Balances) UpdateAt(i primitives.ValidatorIndex, val uint64) error {
 	ref, ok := b.sharedChunkReferences[chunkIndex]
 	if ok {
 		if ref.Refs() > 1 {
-			//log.Warnf("Copying chunk at index %d", chunkIndex)
+			//log.Warnf("Copying chunk at index %d, copy size is %d bytes", chunkIndex, len(b.chunks[chunkIndex])*8)
+			//debug.PrintStack()
 			newChunk := make([]uint64, len(b.chunks[chunkIndex]))
 			copy(newChunk, b.chunks[chunkIndex])
 			newChunk[elemIndex] = val
-			b.sharedChunkReferences[chunkIndex].MinusRef()
+			b.chunks[chunkIndex] = newChunk
+			//log.Warnf("Removing ref from chunk %d, count is now %d", chunkIndex, ref.Refs()-1)
+			ref.MinusRef()
 			if ref.Refs() == 1 {
 				delete(b.sharedChunkReferences, chunkIndex)
 			}
