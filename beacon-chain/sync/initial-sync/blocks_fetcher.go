@@ -304,6 +304,35 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	return nil, "", errNoPeersAvailable
 }
 
+// TODO: need to fix the blobs by range rpc to bring this back
+/*
+// fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
+func (f *blocksFetcher) fetchBlobsFromPeer(
+	ctx context.Context,
+	start primitives.Slot, count uint64,
+	peers []peer.ID,
+) ([]*p2ppb.BlobSidecar, peer.ID, error) {
+	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
+	defer span.End()
+
+	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
+	req := &p2ppb.BlobSidecarsByRangeRequest{
+		StartSlot: start,
+		Count:     count,
+	}
+	for i := 0; i < len(peers); i++ {
+		blobs, err := f.requestBlobs(ctx, req, peers[i])
+		if err == nil {
+			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
+			return blobs, peers[i], err
+		} else {
+			log.WithError(err).Debug("Could not request blobs by range")
+		}
+	}
+	return nil, "", errNoPeersAvailable
+}
+*/
+
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
 func (f *blocksFetcher) requestBlocks(
 	ctx context.Context,
@@ -333,6 +362,32 @@ func (f *blocksFetcher) requestBlocks(
 	l.Unlock()
 	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
+
+/*
+func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecarsByRangeRequest, pid peer.ID) ([]*p2ppb.BlobSidecar, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	l := f.peerLock(pid)
+	l.Lock()
+	log.WithFields(logrus.Fields{
+		"peer":     pid,
+		"start":    req.StartSlot,
+		"count":    req.Count,
+		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
+	}).Debug("Requesting blobs")
+	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		if err := f.waitForBandwidth(pid, req.Count); err != nil {
+			l.Unlock()
+			return nil, err
+		}
+	}
+	f.rateLimiter.Add(pid.String(), int64(req.Count))
+	l.Unlock()
+	return prysmsync.SendBlobsSidecarsByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
+}
+*/
 
 // requestBlocksByRoot is a wrapper for handling BeaconBlockByRootsReq requests/streams.
 func (f *blocksFetcher) requestBlocksByRoot(

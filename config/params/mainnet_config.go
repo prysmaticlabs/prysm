@@ -36,6 +36,7 @@ var mainnetNetworkConfig = &NetworkConfig{
 	AttestationPropagationSlotRange: 32,
 	BlobSubnetCount:                 4,
 	MaxRequestBlocks:                1 << 10, // 1024
+	MaxRequestBlocksDeneb:           1 << 7,  // 1024
 	TtfbTimeout:                     5 * time.Second,
 	RespTimeout:                     10 * time.Second,
 	MaximumGossipClockDisparity:     500 * time.Millisecond,
