@@ -78,3 +78,44 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	}
 	return nil
 }
+
+func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+	ctx, span := trace.StartSpan(ctx, "sync.blobSidecarByRootRPCHandler")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
+	defer cancel()
+	SetRPCStreamDeadlines(stream)
+	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
+		return err
+	}
+
+	//	log := log.WithField("handler", p2p.BlobSidecarsByRangeName[1:]) // slice the leading slash off the name var
+	_, ok := msg.(*types.BlobSidecarsByRootReq)
+	if !ok {
+		return errors.New("message is not type BlobsSidecarsByRangeRequest")
+	}
+	return nil
+}
+
+func (s *Service) sendBlocksAndSidecarsRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
+	defer cancel()
+
+	_, err := SendBlocksAndSidecarsByRootRequest(ctx, s.cfg.chain, s.cfg.p2p, id, blockRoots, func(blkAndSidecar *ethpb.SignedBeaconBlockAndBlobsSidecar) error {
+		blk, err := blocks.NewSignedBeaconBlock(blkAndSidecar.BeaconBlock)
+		if err != nil {
+			return err
+		}
+		blkRoot, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		s.pendingQueueLock.Lock()
+		defer s.pendingQueueLock.Unlock()
+		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blkRoot, blkAndSidecar.BlobsSidecar); err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}

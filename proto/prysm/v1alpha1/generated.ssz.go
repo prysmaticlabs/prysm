@@ -15200,13 +15200,13 @@ func (m *MetaDataV1) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the BlobsSidecarsByRangeRequest object
-func (b *BlobsSidecarsByRangeRequest) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the BlobSidecarsByRangeRequest object
+func (b *BlobSidecarsByRangeRequest) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(b)
 }
 
-// MarshalSSZTo ssz marshals the BlobsSidecarsByRangeRequest object to a target array
-func (b *BlobsSidecarsByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the BlobSidecarsByRangeRequest object to a target array
+func (b *BlobSidecarsByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'StartSlot'
@@ -15218,8 +15218,8 @@ func (b *BlobsSidecarsByRangeRequest) MarshalSSZTo(buf []byte) (dst []byte, err 
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the BlobsSidecarsByRangeRequest object
-func (b *BlobsSidecarsByRangeRequest) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the BlobSidecarsByRangeRequest object
+func (b *BlobSidecarsByRangeRequest) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size != 16 {
@@ -15235,19 +15235,19 @@ func (b *BlobsSidecarsByRangeRequest) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BlobsSidecarsByRangeRequest object
-func (b *BlobsSidecarsByRangeRequest) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the BlobSidecarsByRangeRequest object
+func (b *BlobSidecarsByRangeRequest) SizeSSZ() (size int) {
 	size = 16
 	return
 }
 
-// HashTreeRoot ssz hashes the BlobsSidecarsByRangeRequest object
-func (b *BlobsSidecarsByRangeRequest) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the BlobSidecarsByRangeRequest object
+func (b *BlobSidecarsByRangeRequest) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
-// HashTreeRootWith ssz hashes the BlobsSidecarsByRangeRequest object with a hasher
-func (b *BlobsSidecarsByRangeRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the BlobSidecarsByRangeRequest object with a hasher
+func (b *BlobSidecarsByRangeRequest) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'StartSlot'

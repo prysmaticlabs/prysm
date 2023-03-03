@@ -99,6 +99,10 @@ func (s *Service) registerRPCHandlersAltair() {
 
 func (s *Service) registerRPCHandlersDeneb() {
 	s.registerRPC(
+		p2p.RPCBlobSidecarsByRangeTopicV1,
+		s.blobsSidecarsByRangeRPCHandler,
+	)
+	s.registerRPC(
 		p2p.RPCBlobSidecarsByRootTopicV1,
 		s.blobSidecarByRootRPCHandler,
 	)

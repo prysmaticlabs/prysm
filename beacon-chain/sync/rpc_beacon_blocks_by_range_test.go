@@ -660,9 +660,9 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.expectedError != nil {
-				assert.ErrorContains(t, tt.expectedError.Error(), r.validateRangeRequest(tt.req), tt.errorToLog)
+				assert.ErrorContains(t, tt.expectedError.Error(), validateRangeRequest(tt.req, r.cfg.chain.CurrentSlot()), tt.errorToLog)
 			} else {
-				assert.NoError(t, r.validateRangeRequest(tt.req), tt.errorToLog)
+				assert.NoError(t, validateRangeRequest(tt.req, r.cfg.chain.CurrentSlot()), tt.errorToLog)
 			}
 		})
 	}
@@ -1101,7 +1101,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 
 	var initialRoot [32]byte
 	ptrRt := &initialRoot
-	newBlks, err := r.filterBlocks(context.Background(), blks, roots, ptrRt, req.Step, req.StartSlot)
+	newBlks, err := r.filterCanonical(context.Background(), blks, roots, ptrRt)
 	require.NoError(t, err)
 	require.Equal(t, len(blks), len(newBlks))
 
