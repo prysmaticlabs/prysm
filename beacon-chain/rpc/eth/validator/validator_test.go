@@ -2470,6 +2470,11 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
 
+		ts := time.Now()
+		ti := ts.Add(-time.Duration(uint64(params.BeaconConfig().SlotsPerEpoch+1)*params.BeaconConfig().SecondsPerSlot) * time.Second)
+		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
+		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
+		require.NoError(t, err)
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
@@ -2477,9 +2482,6 @@ func TestProduceBlindedBlock(t *testing.T) {
 		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
-
-		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		fb := util.HydrateSignedBeaconBlockBellatrix(&ethpbalpha.SignedBeaconBlockBellatrix{})
 		fb.Block.Body.ExecutionPayload.GasLimit = 123
@@ -2491,12 +2493,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		ti := time.Unix(0, 0)
-		ts, err := slots.ToTime(uint64(ti.Unix()), params.BeaconConfig().SlotsPerEpoch+1)
-		require.NoError(t, err)
-		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
-		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
-		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
 		bid := &ethpbalpha.BuilderBid{
 			Header: &enginev1.ExecutionPayloadHeader{
 				ParentHash:       make([]byte, fieldparams.RootLength),
@@ -2524,7 +2524,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 
-		mockChainService := &mockChain.ChainService{Genesis: ti, State: beaconState, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New(), Block: wfb}
+		fcs := doublylinkedtree.New()
+		fcs.SetGenesisTime(uint64(ti.Unix()))
+		chainSlot := primitives.Slot(params.BeaconConfig().SlotsPerEpoch + 1)
+		mockChainService := &mockChain.ChainService{Slot: &chainSlot, Genesis: ti, State: beaconState, Root: parentRoot[:], ForkChoiceStore: fcs, Block: wfb}
 		v1Alpha1Server := &v1alpha1validator.Server{
 			BeaconDB:               db,
 			ForkFetcher:            mockChainService,
@@ -2534,7 +2537,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          mockChainService,
 			HeadUpdater:            mockChainService,
-			ChainStartFetcher:      &mockExecution.Chain{},
+			ChainStartFetcher:      &mockExecution.Chain{GenesisState: beaconState},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
@@ -2639,7 +2642,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		containerBlock, ok := resp.Data.Block.(*ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock)
 		require.Equal(t, true, ok)
 		blk := containerBlock.BellatrixBlock
-		assert.Equal(t, req.Slot, blk.Slot, "Expected block to have slot of 1")
+		assert.Equal(t, req.Slot, blk.Slot, "Expected block to have slot of 33")
 		assert.DeepEqual(t, parentRoot[:], blk.ParentRoot, "Expected block to have correct parent root")
 		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
 		assert.DeepEqual(t, req.Graffiti, blk.Body.Graffiti, "Expected block to have correct graffiti")
@@ -2683,6 +2686,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
 
+		ts := time.Now()
+		ti := ts.Add(-time.Duration(uint64(2*params.BeaconConfig().SlotsPerEpoch+1)*params.BeaconConfig().SecondsPerSlot) * time.Second)
+		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
+
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockCapella()
@@ -2704,10 +2711,6 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		ti := time.Unix(0, 0)
-		ts, err := slots.ToTime(uint64(ti.Unix()), params.BeaconConfig().SlotsPerEpoch*2+1)
-		require.NoError(t, err)
-		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
 		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
 		require.NoError(t, err)
 		wds, err := beaconState.ExpectedWithdrawals()
@@ -2742,18 +2745,21 @@ func TestProduceBlindedBlock(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		id := &enginev1.PayloadIDBytes{0x1}
+
+		chainSlot := primitives.Slot(2*params.BeaconConfig().SlotsPerEpoch + 1)
+		fcs := doublylinkedtree.New()
+		fcs.SetGenesisTime(uint64(ti.Unix()))
+		mockChainService := &mockChain.ChainService{Slot: &chainSlot, Genesis: ti, State: beaconState, Root: parentRoot[:], ForkChoiceStore: fcs, Block: wfb}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: big.NewInt(0)},
-			BeaconDB:              db,
-			ForkFetcher:           &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
-			TimeFetcher: &mockChain.ChainService{
-				Genesis: ti,
-			},
-			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:], Block: wfb},
-			OptimisticModeFetcher:  &mockChain.ChainService{},
+			ExecutionEngineCaller:  &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: big.NewInt(0)},
+			BeaconDB:               db,
+			ForkFetcher:            mockChainService,
+			TimeFetcher:            mockChainService,
+			HeadFetcher:            mockChainService,
+			OptimisticModeFetcher:  mockChainService,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:          &mockChain.ChainService{},
-			HeadUpdater:            &mockChain.ChainService{Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()},
+			BlockReceiver:          mockChainService,
+			HeadUpdater:            mockChainService,
 			ChainStartFetcher:      &mockExecution.Chain{},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
@@ -2762,7 +2768,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
 			BLSChangesPool:         blstoexec.NewPool(),
-			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			StateGen:               stategen.New(db, fcs),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			BlockBuilder: &builderTest.MockBuilderService{
