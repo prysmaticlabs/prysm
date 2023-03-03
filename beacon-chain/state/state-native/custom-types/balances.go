@@ -15,10 +15,10 @@ import (
 // - start dividing into chunks only after some threshold?
 
 type Balances struct {
-	chunks                [256][]uint64
-	len                   int
-	fullChunkSize         uint64
-	sharedChunkReferences map[uint64]*stateutil.Reference
+	chunks        [256][]uint64
+	len           int
+	fullChunkSize uint64
+	sharedRefs    map[uint64]*stateutil.Reference
 	// TODO: Is a lock needed?
 	lock sync.RWMutex
 }
@@ -26,10 +26,10 @@ type Balances struct {
 func NewBalances(balances []uint64) *Balances {
 	chunks, fullChunkSize := buildChunks(balances)
 	b := &Balances{
-		chunks:                chunks,
-		len:                   len(balances),
-		fullChunkSize:         fullChunkSize,
-		sharedChunkReferences: make(map[uint64]*stateutil.Reference),
+		chunks:        chunks,
+		len:           len(balances),
+		fullChunkSize: fullChunkSize,
+		sharedRefs:    make(map[uint64]*stateutil.Reference),
 	}
 	return b
 }
@@ -45,7 +45,7 @@ func (b *Balances) Copy() *Balances {
 	// TODO: Can we simply do bCopy.chunks = b.chunks?
 	for i, ch := range b.chunks {
 		chunks[i] = ch
-		r, ok := b.sharedChunkReferences[uint64(i)]
+		r, ok := b.sharedRefs[uint64(i)]
 		if ok {
 			//log.Warnf("Adding ref to chunk %d, count is now %d", i, r.Refs()+1)
 			refs[uint64(i)] = r
@@ -53,16 +53,16 @@ func (b *Balances) Copy() *Balances {
 		} else {
 			//log.Warnf("New ref of 2 for chunk %d", i)
 			newRef := stateutil.NewRef(2)
-			b.sharedChunkReferences[uint64(i)] = newRef
+			b.sharedRefs[uint64(i)] = newRef
 			refs[uint64(i)] = newRef
 		}
 	}
 
 	bCopy := &Balances{
-		chunks:                chunks,
-		len:                   b.len,
-		fullChunkSize:         b.fullChunkSize,
-		sharedChunkReferences: refs,
+		chunks:        chunks,
+		len:           b.len,
+		fullChunkSize: b.fullChunkSize,
+		sharedRefs:    refs,
 	}
 	return bCopy
 }
@@ -95,7 +95,7 @@ func (b *Balances) At(i primitives.ValidatorIndex) (uint64, error) {
 	chunkIndex := uint64(i) / b.fullChunkSize
 	elemIndex := uint64(i) % b.fullChunkSize
 	if chunkIndex >= uint64(len(b.chunks)) || elemIndex >= uint64(len(b.chunks[chunkIndex])) {
-		log.Warnf("chunkIndex: %d, len(chunks): %d, ememIndex: %d, len(chunks[chunkIndex]): %d", chunkIndex, len(b.chunks), elemIndex, len(b.chunks[chunkIndex]))
+		//log.Warnf("chunkIndex: %d, len(chunks): %d, ememIndex: %d, len(chunks[chunkIndex]): %d", chunkIndex, len(b.chunks), elemIndex, len(b.chunks[chunkIndex]))
 		return 0, fmt.Errorf("validator index %d is too large", i)
 	}
 	return b.chunks[chunkIndex][elemIndex], nil
@@ -109,11 +109,11 @@ func (b *Balances) UpdateAt(i primitives.ValidatorIndex, val uint64) error {
 	chunkIndex := uint64(i) / b.fullChunkSize
 	elemIndex := uint64(i) % b.fullChunkSize
 	if chunkIndex >= uint64(len(b.chunks)) || elemIndex >= uint64(len(b.chunks[chunkIndex])) {
-		log.Warnf("chunkIndex: %d, len(chunks): %d, ememIndex: %d, len(chunks[chunkIndex]): %d", chunkIndex, len(b.chunks), elemIndex, len(b.chunks[chunkIndex]))
+		//log.Warnf("chunkIndex: %d, len(chunks): %d, ememIndex: %d, len(chunks[chunkIndex]): %d", chunkIndex, len(b.chunks), elemIndex, len(b.chunks[chunkIndex]))
 		return fmt.Errorf("validator index %d is too large", i)
 	}
 
-	ref, ok := b.sharedChunkReferences[chunkIndex]
+	ref, ok := b.sharedRefs[chunkIndex]
 	if ok {
 		if ref.Refs() > 1 {
 			//log.Warnf("Copying chunk at index %d, copy size is %d bytes", chunkIndex, len(b.chunks[chunkIndex])*8)
@@ -124,13 +124,10 @@ func (b *Balances) UpdateAt(i primitives.ValidatorIndex, val uint64) error {
 			b.chunks[chunkIndex] = newChunk
 			//log.Warnf("Removing ref from chunk %d, count is now %d", chunkIndex, ref.Refs()-1)
 			ref.MinusRef()
-			if ref.Refs() == 1 {
-				delete(b.sharedChunkReferences, chunkIndex)
-			}
 		} else {
 			b.chunks[chunkIndex][elemIndex] = val
-			delete(b.sharedChunkReferences, chunkIndex)
 		}
+		delete(b.sharedRefs, chunkIndex)
 	} else {
 		b.chunks[chunkIndex][elemIndex] = val
 	}
@@ -147,10 +144,10 @@ func (b *Balances) Append(val uint64) {
 		index := uint64(0)
 		balances := make([]uint64, b.len+1)
 		for i, ch := range b.chunks {
-			ref, ok := b.sharedChunkReferences[uint64(i)]
+			ref, ok := b.sharedRefs[uint64(i)]
 			if ok {
 				ref.MinusRef()
-				delete(b.sharedChunkReferences, uint64(i))
+				delete(b.sharedRefs, uint64(i))
 			}
 			copy(balances[index:], ch)
 			index += b.fullChunkSize
@@ -159,13 +156,15 @@ func (b *Balances) Append(val uint64) {
 		b.chunks, b.fullChunkSize = buildChunks(balances)
 	} else {
 		chunkIndex := uint64(b.len) / b.fullChunkSize
-		chunkCopy := make([]uint64, len(b.chunks[chunkIndex]))
-		copy(chunkCopy, b.chunks[chunkIndex])
-		b.chunks[chunkIndex] = append(chunkCopy, val)
-		ref, ok := b.sharedChunkReferences[chunkIndex]
+		ref, ok := b.sharedRefs[chunkIndex]
 		if ok {
+			chunkCopy := make([]uint64, len(b.chunks[chunkIndex]))
+			copy(chunkCopy, b.chunks[chunkIndex])
+			b.chunks[chunkIndex] = append(chunkCopy, val)
 			ref.MinusRef()
-			delete(b.sharedChunkReferences, chunkIndex)
+			delete(b.sharedRefs, chunkIndex)
+		} else {
+			b.chunks[chunkIndex] = append(b.chunks[chunkIndex], val)
 		}
 	}
 
