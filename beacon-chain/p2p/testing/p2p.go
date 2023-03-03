@@ -170,6 +170,11 @@ func (p *TestP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Att
 	return nil
 }
 
+func (p *TestP2P) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
+	p.BroadcastCalled = true
+	return nil
+}
+
 // BroadcastSyncCommitteeMessage broadcasts a sync committee message.
 func (p *TestP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
 	p.BroadcastCalled = true
