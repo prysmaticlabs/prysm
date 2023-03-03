@@ -129,12 +129,11 @@ func configureInteropConfig(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		return nil
 	}
-	genStateIsSet := cliCtx.IsSet(flags.InteropGenesisStateFlag.Name)
 	genTimeIsSet := cliCtx.IsSet(flags.InteropGenesisTimeFlag.Name)
 	numValsIsSet := cliCtx.IsSet(flags.InteropNumValidatorsFlag.Name)
 	votesIsSet := cliCtx.IsSet(flags.InteropMockEth1DataVotesFlag.Name)
 
-	if genStateIsSet || genTimeIsSet || numValsIsSet || votesIsSet {
+	if genTimeIsSet || numValsIsSet || votesIsSet {
 		if err := params.SetActive(params.InteropConfig().Copy()); err != nil {
 			return err
 		}
