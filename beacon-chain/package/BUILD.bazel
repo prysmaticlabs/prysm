@@ -48,4 +48,5 @@ pkg_deb(
     preinst = "preinst.sh",
     version_file = "//runtime:version_file",
     visibility = ["//beacon-chain:__pkg__"],
+    tags = ["no-remote"],
 )

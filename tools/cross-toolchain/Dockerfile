@@ -13,7 +13,7 @@ RUN apt-get update && \
         gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
         cmake libssl-dev libxml2-dev vim apt-transport-https \
         zip unzip libtinfo5 patch zlib1g-dev autoconf libtool \
-        pkg-config make docker.io gnupg2 libgmp-dev python openjdk-17-jdk-headless
+        pkg-config make docker.io gnupg2 libgmp-dev python3 openjdk-17-jdk-headless
 
 # install llvm/clang cross-build toolchains
 ENV INSTALL_LLVM_VERSION=12.0.0

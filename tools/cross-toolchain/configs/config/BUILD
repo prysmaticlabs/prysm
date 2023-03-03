@@ -17,6 +17,7 @@
 
 package(default_visibility = ["//visibility:public"])
 
+
 toolchain(
     name = "cc-toolchain",
     exec_compatible_with = [
@@ -34,14 +35,14 @@ toolchain(
 
 platform(
     name = "platform",
+    parents = ["@local_config_platform//:host"],
     constraint_values = [
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
         "@bazel_tools//tools/cpp:clang",
     ],
     exec_properties = {
-        "container-image": "docker://gcr.io/prysmaticlabs/rbe-worker@sha256:9a30c5ff7dcd1fbc5cb5b5f320782dec755a31cd2f6811e238a8584d94b04e78",
+        "container-image": "docker://gcr.io/prysmaticlabs/rbe-worker@sha256:90d490709a0fb0c817569f37408823a0490e5502cbecc36415caabfc36a0c2e8",
         "OSFamily": "Linux",
     },
-    parents = ["@local_config_platform//:host"],
 )
