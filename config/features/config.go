@@ -183,9 +183,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disablePeerScorer)
 		cfg.EnablePeerScorer = false
 	}
-	if ctx.Bool(disableReorgLateBlocks.Name) {
-		logDisabled(disableReorgLateBlocks)
-		cfg.DisableReorgLateBlocks = true
+	cfg.DisableReorgLateBlocks = true
+	if ctx.Bool(enableReorgLateBlocks.Name) {
+		logEnabled(enableReorgLateBlocks)
+		cfg.DisableReorgLateBlocks = false
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
