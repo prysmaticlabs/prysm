@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -99,22 +100,16 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-pat.C():
-				root := s.UpdateHead(s.ctx)
 				s.ForkChoicer().Lock()
-				if err := s.forkchoiceUpdateWithExecution(s.ctx, root, s.CurrentSlot()+1); err != nil {
-					log.WithError(err).Error("could not update forkchoice")
-				}
+				s.UpdateHead(s.ctx, s.CurrentSlot()+1)
 				s.ForkChoicer().Unlock()
 			case <-st.C():
+				s.ForkChoicer().Lock()
 				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("could not process new slot")
 				}
 
-				root := s.UpdateHead(s.ctx)
-				s.ForkChoicer().Lock()
-				if err := s.forkchoiceUpdateWithExecution(s.ctx, root, s.CurrentSlot()); err != nil {
-					log.WithError(err).Error("could not update forkchoice")
-				}
+				s.UpdateHead(s.ctx, s.CurrentSlot())
 				s.ForkChoicer().Unlock()
 			}
 		}
@@ -122,12 +117,10 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 }
 
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
-// It returns the new head root
-func (s *Service) UpdateHead(ctx context.Context) [32]byte {
+// The caller of this function MUST hold a lock in forkchoice
+func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
 	start := time.Now()
 
-	s.ForkChoicer().Lock()
-	defer s.ForkChoicer().Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
 	disparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	if !features.Get().DisableReorgLateBlocks {
@@ -152,7 +145,9 @@ func (s *Service) UpdateHead(ctx context.Context) [32]byte {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	return newHeadRoot
+	if err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot); err != nil {
+		log.WithError(err).Error("could not update forkchoice")
+	}
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.

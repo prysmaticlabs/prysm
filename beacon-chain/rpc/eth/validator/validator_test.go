@@ -698,6 +698,7 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:         mockChainService,
 			HeadUpdater:           mockChainService,
+			ForkFetcher:           mockChainService,
 			ChainStartFetcher:     mockExecutionChain,
 			Eth1InfoFetcher:       mockExecutionChain,
 			Eth1BlockFetcher:      mockExecutionChain,
@@ -802,13 +803,14 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
-		mochChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
+		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
 		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:           mochChainService,
+			HeadFetcher:           mockChainService,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:         mochChainService,
-			HeadUpdater:           mochChainService,
+			BlockReceiver:         mockChainService,
+			HeadUpdater:           mockChainService,
+			ForkFetcher:           mockChainService,
 			ChainStartFetcher:     mockExecutionChain,
 			Eth1InfoFetcher:       mockExecutionChain,
 			Eth1BlockFetcher:      mockExecutionChain,
@@ -818,8 +820,8 @@ func TestProduceBlockV2(t *testing.T) {
 			ExitPool:              voluntaryexits.NewPool(),
 			StateGen:              stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool:     synccommittee.NewStore(),
-			TimeFetcher:           mochChainService,
-			OptimisticModeFetcher: mochChainService,
+			TimeFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -1008,6 +1010,7 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          mockChainService,
 			HeadUpdater:            mockChainService,
+			ForkFetcher:            mockChainService,
 			ChainStartFetcher:      mockExecutionChain,
 			Eth1InfoFetcher:        mockExecutionChain,
 			Eth1BlockFetcher:       mockExecutionChain,
@@ -1250,6 +1253,7 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          mockChainService,
 			HeadUpdater:            mockChainService,
+			ForkFetcher:            mockChainService,
 			ChainStartFetcher:      mockExecutionChain,
 			Eth1InfoFetcher:        mockExecutionChain,
 			Eth1BlockFetcher:       mockExecutionChain,
@@ -1387,6 +1391,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     mockChainService,
 			HeadUpdater:       mockChainService,
+			ForkFetcher:       mockChainService,
 			ChainStartFetcher: &mockExecution.Chain{},
 			Eth1InfoFetcher:   &mockExecution.Chain{},
 			Eth1BlockFetcher:  &mockExecution.Chain{},
@@ -1549,6 +1554,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     mockChainService,
 			HeadUpdater:       mockChainService,
+			ForkFetcher:       mockChainService,
 			ChainStartFetcher: &mockExecution.Chain{},
 			Eth1InfoFetcher:   &mockExecution.Chain{},
 			Eth1BlockFetcher:  &mockExecution.Chain{},
@@ -1754,6 +1760,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          mockChainService,
 			HeadUpdater:            mockChainService,
+			ForkFetcher:            mockChainService,
 			ChainStartFetcher:      &mockExecution.Chain{},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
@@ -1997,6 +2004,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          mockChainService,
 			HeadUpdater:            mockChainService,
+			ForkFetcher:            mockChainService,
 			ChainStartFetcher:      &mockExecution.Chain{},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
@@ -2221,11 +2229,13 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
+		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
+			HeadFetcher:       mockChainService,
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:     &mockChain.ChainService{},
-			HeadUpdater:       &mockChain.ChainService{Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()},
+			BlockReceiver:     mockChainService,
+			HeadUpdater:       mockChainService,
+			ForkFetcher:       mockChainService,
 			ChainStartFetcher: &mockExecution.Chain{},
 			Eth1InfoFetcher:   &mockExecution.Chain{},
 			Eth1BlockFetcher:  &mockExecution.Chain{},
@@ -2325,11 +2335,13 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
+		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
+			HeadFetcher:       mockChainService,
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:     &mockChain.ChainService{},
-			HeadUpdater:       &mockChain.ChainService{Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()},
+			BlockReceiver:     mockChainService,
+			HeadUpdater:       mockChainService,
+			ForkFetcher:       mockChainService,
 			ChainStartFetcher: &mockExecution.Chain{},
 			Eth1InfoFetcher:   &mockExecution.Chain{},
 			Eth1BlockFetcher:  &mockExecution.Chain{},
@@ -2512,17 +2524,16 @@ func TestProduceBlindedBlock(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 
+		mockChainService := &mockChain.ChainService{Genesis: ti, State: beaconState, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New(), Block: wfb}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			BeaconDB:    db,
-			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
-			TimeFetcher: &mockChain.ChainService{
-				Genesis: ti,
-			},
-			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:], Block: wfb},
-			OptimisticModeFetcher:  &mockChain.ChainService{},
+			BeaconDB:               db,
+			ForkFetcher:            mockChainService,
+			TimeFetcher:            mockChainService,
+			HeadFetcher:            mockChainService,
+			OptimisticModeFetcher:  mockChainService,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:          &mockChain.ChainService{},
-			HeadUpdater:            &mockChain.ChainService{Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()},
+			BlockReceiver:          mockChainService,
+			HeadUpdater:            mockChainService,
 			ChainStartFetcher:      &mockExecution.Chain{},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
@@ -2882,11 +2893,13 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 
 		bs, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 2)
 
+		mockChainService := &mockChain.ChainService{State: bs, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
+			HeadFetcher:       mockChainService,
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:     &mockChain.ChainService{},
-			HeadUpdater:       &mockChain.ChainService{Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()},
+			BlockReceiver:     mockChainService,
+			HeadUpdater:       mockChainService,
+			ForkFetcher:       mockChainService,
 			ChainStartFetcher: &mockExecution.Chain{},
 			Eth1InfoFetcher:   &mockExecution.Chain{},
 			Eth1BlockFetcher:  &mockExecution.Chain{},
@@ -3043,11 +3056,13 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
+		mockChainService := &mockChain.ChainService{State: bs, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
+			HeadFetcher:       mockChainService,
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
-			HeadUpdater:       &mockChain.ChainService{Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()},
+			HeadUpdater:       mockChainService,
+			ForkFetcher:       mockChainService,
 			ChainStartFetcher: &mockExecution.Chain{},
 			Eth1InfoFetcher:   &mockExecution.Chain{},
 			Eth1BlockFetcher:  &mockExecution.Chain{},
@@ -3240,18 +3255,20 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
+		mockChainService := &mockChain.ChainService{State: bs, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
 			},
-			TimeFetcher:            &mockChain.ChainService{},
-			HeadFetcher:            &mockChain.ChainService{State: bs, Root: parentRoot[:]},
-			OptimisticModeFetcher:  &mockChain.ChainService{},
+			TimeFetcher:            mockChainService,
+			HeadFetcher:            mockChainService,
+			OptimisticModeFetcher:  mockChainService,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:          &mockChain.ChainService{},
-			HeadUpdater:            &mockChain.ChainService{Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()},
+			BlockReceiver:          mockChainService,
+			HeadUpdater:            mockChainService,
+			ForkFetcher:            mockChainService,
 			ChainStartFetcher:      &mockExecution.Chain{},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
@@ -3462,6 +3479,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		prevRandao, err := helpers.RandaoMix(bs, 2)
 		require.NoError(t, err)
 
+		mockChainService := &mockChain.ChainService{State: bs, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
@@ -3483,11 +3501,12 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 				},
 			},
 			TimeFetcher:            &mockChain.ChainService{},
-			HeadFetcher:            &mockChain.ChainService{State: bs, Root: parentRoot[:]},
+			HeadFetcher:            mockChainService,
 			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:          &mockChain.ChainService{},
-			HeadUpdater:            &mockChain.ChainService{Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()},
+			BlockReceiver:          mockChainService,
+			HeadUpdater:            mockChainService,
+			ForkFetcher:            mockChainService,
 			ChainStartFetcher:      &mockExecution.Chain{},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
