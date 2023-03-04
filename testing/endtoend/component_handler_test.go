@@ -257,7 +257,6 @@ func PIDsFromMultiComponentRunner(runner e2etypes.MultipleComponentRunners) []in
 func appendDebugEndpoints(cfg *e2etypes.E2EConfig) {
 	debug := []string{
 		"--enable-debug-rpc-endpoints",
-		"--grpc-max-msg-size=65568081",
 	}
 	cfg.BeaconFlags = append(cfg.BeaconFlags, debug...)
 }
