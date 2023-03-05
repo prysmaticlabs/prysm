@@ -30,6 +30,7 @@ type ForkChoicer interface {
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
 	Head(context.Context) ([32]byte, error)
+	GetProposerHead() [32]byte
 	CachedHeadRoot() [32]byte
 	Tips() ([][32]byte, []primitives.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
@@ -66,6 +67,7 @@ type Getter interface {
 	ReceivedBlocksLastEpoch() (uint64, error)
 	ForkChoiceDump(context.Context) (*v1.ForkChoiceDump, error)
 	Weight(root [32]byte) (uint64, error)
+	ShouldOverrideFCU() bool
 }
 
 // Setter allows to set forkchoice information

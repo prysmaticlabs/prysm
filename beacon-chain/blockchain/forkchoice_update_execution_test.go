@@ -21,10 +21,10 @@ import (
 func TestService_isNewProposer(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
-	require.Equal(t, false, service.isNewProposer())
+	require.Equal(t, false, service.isNewProposer(service.CurrentSlot()+1))
 
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(service.CurrentSlot()+1, 0, [8]byte{}, [32]byte{} /* root */)
-	require.Equal(t, true, service.isNewProposer())
+	require.Equal(t, true, service.isNewProposer(service.CurrentSlot()+1))
 }
 
 func TestService_isNewHead(t *testing.T) {
@@ -75,7 +75,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, service.headRoot()))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, service.headRoot(), service.CurrentSlot()+1))
 	hookErr := "could not notify forkchoice update"
 	invalidStateErr := "could not get state summary: could not find block in DB"
 	require.LogsDoNotContain(t, hook, invalidStateErr)
@@ -83,7 +83,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 	gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, [32]byte{'a'}))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, [32]byte{'a'}, service.CurrentSlot()+1))
 	require.LogsContain(t, hook, invalidStateErr)
 
 	hook.Reset()
@@ -107,7 +107,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r1))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r1, service.CurrentSlot()))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 
@@ -124,7 +124,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r1))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r1, service.CurrentSlot()+1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{2})
@@ -134,7 +134,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 
 	// Test zero headRoot returns immediately.
 	headRoot := service.headRoot()
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, [32]byte{}))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, [32]byte{}, service.CurrentSlot()+1))
 	require.Equal(t, service.headRoot(), headRoot)
 }
 
@@ -184,7 +184,9 @@ func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testin
 
 	// Set head to be the same but proposing next slot
 	service.head.root = r
+	service.head.block = sb
+	service.head.state = st
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(service.CurrentSlot()+1, 0, [8]byte{}, [32]byte{} /* root */)
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r, service.CurrentSlot()+1))
 
 }
