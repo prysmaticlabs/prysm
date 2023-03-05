@@ -56,7 +56,7 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 		return true, err
 	}
 
-	if diff > maxConsecutiveSkipSlotsAllowed {
+	if diff >= maxConsecutiveSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
 			"currentSlot":                    s,
 			"highestReceivedSlot":            highestReceivedSlot,
@@ -80,7 +80,7 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	if diff > maxEpochSkipSlotsAllowed {
+	if diff >= maxEpochSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
 			"totalMissed":              diff,
 			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,
