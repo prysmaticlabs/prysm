@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
@@ -27,32 +28,17 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
 
-	// Ticker to stagger out large requests.
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
 	m, ok := msg.(*pb.BeaconBlocksByRangeRequest)
 	if !ok {
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
-	if err := validateRangeRequest(m, s.cfg.chain.CurrentSlot()); err != nil {
+	start, end, size, err := validateRangeRequest(m, s.cfg.chain.CurrentSlot())
+	if err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		tracing.AnnotateError(span, err)
 		return err
 	}
-	// The initial count for the first batch to be returned back.
-	count := m.Count
-	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
-	if count > allowedBlocksPerSecond {
-		count = allowedBlocksPerSecond
-	}
-	// initial batch start and end slots to be returned to remote peer.
-	startSlot := m.StartSlot
-	endSlot := startSlot.Add((count - 1))
-
-	// The final requested slot from remote peer.
-	endReqSlot := startSlot.Add((m.Count - 1))
 
 	blockLimiter, err := s.rateLimiter.topicCollector(string(stream.Protocol()))
 	if err != nil {
@@ -60,138 +46,86 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	remainingBucketCapacity := blockLimiter.Remaining(stream.Conn().RemotePeer().String())
 	span.AddAttributes(
-		trace.Int64Attribute("start", int64(startSlot)), // lint:ignore uintcast -- This conversion is OK for tracing.
-		trace.Int64Attribute("end", int64(endReqSlot)),  // lint:ignore uintcast -- This conversion is OK for tracing.
+		trace.Int64Attribute("start", int64(start)), // lint:ignore uintcast -- This conversion is OK for tracing.
+		trace.Int64Attribute("end", int64(end)),     // lint:ignore uintcast -- This conversion is OK for tracing.
 		trace.Int64Attribute("count", int64(m.Count)),
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
 		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
+
+	// Ticker to stagger out large requests.
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	batcher := &blockRangeBatcher{
+		start:       start,
+		end:         end,
+		size:        size,
+		db:          s.cfg.beaconDB,
+		limiter:     s.rateLimiter,
+		isCanonical: s.cfg.chain.IsCanonical,
+		ticker:      ticker,
+	}
+
 	// prevRoot is used to ensure that returned chains are strictly linear for singular steps
 	// by comparing the previous root of the block in the list with the current block's parent.
-	var prevRoot [32]byte
-	for startSlot <= endReqSlot {
-		if err := s.rateLimiter.validateRequest(stream, allowedBlocksPerSecond); err != nil {
-			tracing.AnnotateError(span, err)
+	var batch blockBatch
+	for batch, ok = batcher.Next(ctx, stream); ok; batch, ok = batcher.Next(ctx, stream) {
+		batchStart := time.Now()
+		rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
+		if err := s.writeBlockBatchToStream(ctx, batch, stream); err != nil {
 			return err
 		}
-
-		if endSlot-startSlot > rangeLimit {
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrInvalidRequest.Error(), stream)
-			err := p2ptypes.ErrInvalidRequest
-			tracing.AnnotateError(span, err)
-			return err
-		}
-
-		err := s.writeBlockRangeToStream(ctx, startSlot, endSlot, &prevRoot, stream)
-		if err != nil && !errors.Is(err, p2ptypes.ErrInvalidParent) {
-			return err
-		}
-		// Reduce capacity of peer in the rate limiter first.
-		// Decrease allowed blocks capacity by the number of streamed blocks.
-		if startSlot <= endSlot {
-			s.rateLimiter.add(stream, int64(1+endSlot.SubSlot(startSlot)))
-		}
-		// Exit in the event we have a disjoint chain to
-		// return.
-		if errors.Is(err, p2ptypes.ErrInvalidParent) {
-			break
-		}
-
-		// Recalculate start and end slots for the next batch to be returned to the remote peer.
-		startSlot = endSlot.Add(1)
-		endSlot = startSlot.Add((allowedBlocksPerSecond - 1))
-		if endSlot > endReqSlot {
-			endSlot = endReqSlot
-		}
-
-		// do not wait if all blocks have already been sent.
-		if startSlot > endReqSlot {
-			break
-		}
-
-		// wait for ticker before resuming streaming blocks to remote peer.
-		<-ticker.C
+	}
+	if err := batch.Err(); err != nil {
+		log.WithError(err).Debug("error in BlocksByRange batch")
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		tracing.AnnotateError(span, err)
+		return err
 	}
 	closeStream(stream, log)
 	return nil
 }
 
-func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.Slot) error {
-	startSlot := r.StartSlot
+func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.Slot) (primitives.Slot, primitives.Slot, uint64, error) {
+	start := r.StartSlot
 	count := r.Count
-	step := r.Step
-
-	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
-	// Add a buffer for possible large range requests from nodes syncing close to the
-	// head of the chain.
-	buffer := rangeLimit * 2
-	highestExpectedSlot := current.Add(uint64(buffer))
-
+	maxRequest := params.BeaconNetworkConfig().MaxRequestBlocks
 	// Ensure all request params are within appropriate bounds
-	if count == 0 || count > maxRequestBlocks {
-		return p2ptypes.ErrInvalidRequest
+	if count == 0 || count > maxRequest {
+		return 0, 0, 0, p2ptypes.ErrInvalidRequest
+	}
+	// Allow some wiggle room, up to double the MaxRequestBlocks past the current slot,
+	// to give nodes syncing close to the head of the chain some margin for error.
+	maxStart, err := current.SafeAdd(maxRequest * 2)
+	if err != nil {
+		return 0, 0, 0, p2ptypes.ErrInvalidRequest
+	}
+	if start > maxStart {
+		return 0, 0, 0, p2ptypes.ErrInvalidRequest
+	}
+	end, err := start.SafeAdd((count - 1))
+	if err != nil {
+		return 0, 0, 0, p2ptypes.ErrInvalidRequest
 	}
 
-	if step == 0 || step > rangeLimit {
-		return p2ptypes.ErrInvalidRequest
+	limit := uint64(flags.Get().BlockBatchLimit)
+	if limit > maxRequest {
+		limit = maxRequest
+	}
+	batchSize := count
+	if batchSize > limit {
+		batchSize = limit
 	}
 
-	if startSlot > highestExpectedSlot {
-		return p2ptypes.ErrInvalidRequest
-	}
-
-	endSlot := startSlot.Add(step * (count - 1))
-	if endSlot-startSlot > rangeLimit {
-		return p2ptypes.ErrInvalidRequest
-	}
-	return nil
+	return start, end, batchSize, nil
 }
 
-func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlot primitives.Slot,
-	prevRoot *[32]byte, stream libp2pcore.Stream) error {
+func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.WriteBlockRangeToStream")
 	defer span.End()
 
-	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
-	blks, roots, err := s.cfg.beaconDB.Blocks(ctx, filter)
-	if err != nil {
-		log.WithError(err).Debug("Could not retrieve blocks")
-		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-		tracing.AnnotateError(span, err)
-		return err
-	}
-	batcher := &blockRangeBatcher{
-		db: s.cfg.beaconDB,
-	}
-	// handle genesis case
-	if startSlot == 0 {
-		genBlock, genRoot, err := batcher.genesisBlock(ctx)
-		if err != nil {
-			log.WithError(err).Debug("Could not retrieve genesis block")
-			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			tracing.AnnotateError(span, err)
-			return err
-		}
-		blks = append([]interfaces.ReadOnlySignedBeaconBlock{genBlock}, blks...)
-		roots = append([][32]byte{genRoot}, roots...)
-	}
-	// Filter and sort our retrieved blocks, so that
-	// we only return valid sets of blocks.
-	blks, roots, err = s.dedupBlocksAndRoots(blks, roots)
-	if err != nil {
-		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-		tracing.AnnotateError(span, err)
-		return err
-	}
-	blks, roots = s.sortBlocksAndRoots(blks, roots)
-
-	blks, err = s.filterCanonical(ctx, blks, roots, prevRoot)
-	if err != nil && err != p2ptypes.ErrInvalidParent {
-		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-		tracing.AnnotateError(span, err)
-		return err
-	}
-	start := time.Now()
+	blks := batch.Sequence()
 	// If the blocks are blinded, we reconstruct the full block via the execution client.
 	blindedExists := false
 	blindedIndex := 0
@@ -205,16 +139,6 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		}
 	}
 
-	var reconstructedBlock []interfaces.SignedBeaconBlock
-	if blindedExists {
-		reconstructedBlock, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
-		if err != nil {
-			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
-			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			return err
-		}
-	}
-
 	for _, b := range blks {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
@@ -224,12 +148,24 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		}
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
-			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			tracing.AnnotateError(span, chunkErr)
 			return chunkErr
 		}
 	}
 
+	var err error
+	var reconstructedBlock []interfaces.SignedBeaconBlock
+	if blindedExists {
+		blinded := blks[blindedIndex:]
+		unwrapped := make([]interfaces.ReadOnlySignedBeaconBlock, len(blinded))
+		for i := range blinded {
+			unwrapped[i] = blks[i].ReadOnlySignedBeaconBlock
+		}
+		reconstructedBlock, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, unwrapped)
+		if err != nil {
+			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
+			return err
+		}
+	}
 	for _, b := range reconstructedBlock {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
@@ -239,28 +175,24 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		}
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
-			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			tracing.AnnotateError(span, chunkErr)
 			return chunkErr
 		}
 	}
-	rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(start).Milliseconds()))
-	// Return error in the event we have an invalid parent.
-	return err
+
+	return nil
 }
+
+type canonicalChecker func(context.Context, [32]byte) (bool, error)
 
 // filters all the provided blocks to ensure they are canonical
 // and are strictly linear.
-func (s *Service) filterCanonical(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
-	if len(blks) != len(roots) {
-		return nil, errors.New("input blks and roots are diff lengths")
-	}
-
-	canonical := make([]interfaces.ReadOnlySignedBeaconBlock, 0, len(blks))
+func filterCanonical(ctx context.Context, blks []blocks.ROBlock, prevRoot *[32]byte, canonical canonicalChecker) ([]blocks.ROBlock, []blocks.ROBlock, error) {
+	seq := make([]blocks.ROBlock, 0, len(blks))
+	nseq := make([]blocks.ROBlock, 0)
 	for i, b := range blks {
-		cb, err := s.cfg.chain.IsCanonical(ctx, roots[i])
+		cb, err := canonical(ctx, b.Root())
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if !cb {
 			continue
@@ -268,32 +200,154 @@ func (s *Service) filterCanonical(ctx context.Context, blks []interfaces.ReadOnl
 		// filterCanonical is called in batches, so prevRoot can be the last root from the previous batch.
 		// prevRoot will be the zero value until we find the first canonical block in a given request.
 		first := *prevRoot == [32]byte{}
-		// We assume blocks are processed in order, so the previous canonical root is the parent of the next.
-		// If the current block isn't descended from the last, something is wrong.
+		// We assume blocks are processed in order, so the previous canonical root should be the parent of the next.
+		// If the current block isn't descended from the last, something is wrong. Append everything remaining
+		// to the list of non-sequential blocks and stop building the canonical list.
 		if !first && *prevRoot != b.Block().ParentRoot() {
-			return nil, p2ptypes.ErrInvalidParent
+			nseq = append(nseq, blks[i:]...)
+			break
 		}
-		canonical = append(canonical, blks[i])
+		seq = append(seq, blks[i])
 		// Set the previous root as the
 		// newly added block's root
-		currRoot := roots[i]
+		currRoot := b.Root()
 		*prevRoot = currRoot
 	}
-	return canonical, nil
+	return seq, nseq, nil
+}
+
+// returns a copy of the []ROBlock list in sorted order with duplicates removed
+func sortedUniqueBlocks(blks []blocks.ROBlock) []blocks.ROBlock {
+	// Remove duplicate blocks received
+	sort.Sort(blocks.ROBlockSlice(blks))
+	u := 0
+	for i := 1; i < len(blks); i++ {
+		if blks[i].Root() != blks[u].Root() {
+			u += 1
+			if u != i {
+				blks[u] = blks[i]
+			}
+		}
+	}
+	return blks[:u+1]
+}
+
+type blockBatch struct {
+	start  primitives.Slot
+	end    primitives.Slot
+	seq    []blocks.ROBlock
+	nonseq []blocks.ROBlock
+	err    error
+}
+
+func (bb blockBatch) RateLimitCost() int {
+	return int(bb.end - bb.start)
+}
+
+func (bb blockBatch) Sequence() []blocks.ROBlock {
+	return bb.seq
+}
+
+func (bb blockBatch) SequenceBroken() bool {
+	return len(bb.nonseq) > 0
+}
+
+func (bb blockBatch) Err() error {
+	return bb.err
 }
 
 type blockRangeBatcher struct {
-	db db.NoHeadAccessDatabase
+	start       primitives.Slot
+	end         primitives.Slot
+	size        uint64
+	db          db.NoHeadAccessDatabase
+	limiter     *limiter
+	isCanonical canonicalChecker
+	ticker      *time.Ticker
+
+	lastSeq [32]byte
+	current *blockBatch
 }
 
-func (bb *blockRangeBatcher) genesisBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, [32]byte, error) {
+func (bb *blockRangeBatcher) genesisBlock(ctx context.Context) (blocks.ROBlock, error) {
 	b, err := bb.db.GenesisBlock(ctx)
 	if err != nil {
-		return nil, [32]byte{}, err
+		return blocks.ROBlock{}, err
 	}
-	root, err := b.Block().HashTreeRoot()
+	htr, err := b.Block().HashTreeRoot()
 	if err != nil {
-		return nil, [32]byte{}, err
+		return blocks.ROBlock{}, err
 	}
-	return b, root, nil
+	return blocks.NewROBlock(b, htr), nil
+}
+
+func newBlockBatch(start, reqEnd primitives.Slot, size uint64) (blockBatch, bool) {
+	if start > reqEnd {
+		return blockBatch{}, false
+	}
+	nb := blockBatch{start: start, end: start.Add(size - 1)}
+	if nb.end > reqEnd {
+		nb.end = reqEnd
+	}
+	return nb, true
+}
+
+func (bat blockBatch) Next(reqEnd primitives.Slot, size uint64) (blockBatch, bool) {
+	if bat.SequenceBroken() {
+		return blockBatch{}, false
+	}
+	return newBlockBatch(bat.end.Add(1), reqEnd, size)
+}
+
+func (bb *blockRangeBatcher) Next(ctx context.Context, stream libp2pcore.Stream) (blockBatch, bool) {
+	var nb blockBatch
+	var ok bool
+	if bb.current != nil {
+		current := *bb.current
+		nb, ok = current.Next(bb.end, bb.size)
+	} else {
+		nb, ok = newBlockBatch(bb.start, bb.end, bb.size)
+	}
+	if !ok {
+		return blockBatch{}, false
+	}
+	if err := bb.limiter.validateRequest(stream, bb.size); err != nil {
+		return blockBatch{err: errors.Wrap(err, "throttled by rate limiter")}, false
+	}
+
+	// block if there is work to do, unless this is the first batch
+	if bb.ticker != nil && bb.current != nil {
+		<-bb.ticker.C
+	}
+	filter := filters.NewFilter().SetStartSlot(nb.start).SetEndSlot(nb.end)
+	blks, roots, err := bb.db.Blocks(ctx, filter)
+	if err != nil {
+		return blockBatch{err: errors.Wrap(err, "Could not retrieve blocks")}, false
+	}
+
+	// make slice with extra +1 capacity in case we want to grow it to also hold the genesis block
+	rob := make([]blocks.ROBlock, len(blks), len(blks)+1)
+	goff := 0 // offset for genesis value
+	if nb.start == 0 {
+		gb, err := bb.genesisBlock(ctx)
+		if err != nil {
+			return blockBatch{err: errors.Wrap(err, "could not retrieve genesis block")}, false
+		}
+		rob = append(rob, blocks.ROBlock{}) // grow the slice to its capacity to hold the genesis block
+		rob[0] = gb
+		goff = 1
+	}
+	for i := 0; i < len(blks); i++ {
+		rob[goff+i] = blocks.NewROBlock(blks[i], roots[i])
+	}
+	// Filter and sort our retrieved blocks, so that
+	// we only return valid sets of blocks.
+	rob = sortedUniqueBlocks(rob)
+
+	nb.seq, nb.nonseq, nb.err = filterCanonical(ctx, rob, &bb.lastSeq, bb.isCanonical)
+
+	// Decrease allowed blocks capacity by the number of streamed blocks.
+	bb.limiter.add(stream, int64(1+nb.end.SubSlot(nb.start)))
+	bb.current = &nb
+	return *bb.current, true
 }

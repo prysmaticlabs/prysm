@@ -44,7 +44,7 @@ import (
 
 var _ runtime.Service = (*Service)(nil)
 
-const rangeLimit = 1024
+const rangeLimit uint64 = 1024
 const seenBlockSize = 1000
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024

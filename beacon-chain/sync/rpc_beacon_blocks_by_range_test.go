@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"math/big"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -24,7 +25,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -598,8 +598,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 				Step:  0,
 				Count: 1,
 			},
-			expectedError: p2ptypes.ErrInvalidRequest,
-			errorToLog:    "validation did not fail with bad step",
+			expectedError: nil, // The Step param is ignored in v2 RPC
 		},
 		{
 			name: "Over limit Step",
@@ -607,8 +606,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 				Step:  rangeLimit + 1,
 				Count: 1,
 			},
-			expectedError: p2ptypes.ErrInvalidRequest,
-			errorToLog:    "validation did not fail with bad step",
+			expectedError: nil, // The Step param is ignored in v2 RPC
 		},
 		{
 			name: "Correct Step",
@@ -643,8 +641,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 				Step:  3,
 				Count: uint64(slotsSinceGenesis / 2),
 			},
-			expectedError: p2ptypes.ErrInvalidRequest,
-			errorToLog:    "validation did not fail with bad range",
+			expectedError: nil, // this is fine with the deprecation of Step
 		},
 		{
 			name: "Valid Request",
@@ -659,10 +656,11 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			_, _, _, err := validateRangeRequest(tt.req, r.cfg.chain.CurrentSlot())
 			if tt.expectedError != nil {
-				assert.ErrorContains(t, tt.expectedError.Error(), validateRangeRequest(tt.req, r.cfg.chain.CurrentSlot()), tt.errorToLog)
+				assert.ErrorContains(t, tt.expectedError.Error(), err, tt.errorToLog)
 			} else {
-				assert.NoError(t, validateRangeRequest(tt.req, r.cfg.chain.CurrentSlot()), tt.errorToLog)
+				assert.NoError(t, err, tt.errorToLog)
 			}
 		})
 	}
@@ -1070,7 +1068,6 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	d := db.SetupDB(t)
 
 	req := &ethpb.BeaconBlocksByRangeRequest{
 		StartSlot: 100,
@@ -1081,8 +1078,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 	// Populate the database with blocks that would match the request.
 	var prevRoot [32]byte
 	var err error
-	blks := []interfaces.ReadOnlySignedBeaconBlock{}
-	var roots [][32]byte
+	var blks []blocks.ROBlock
 	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += primitives.Slot(1) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
@@ -1091,21 +1087,74 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 		require.NoError(t, err)
 		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		blks = append(blks, wsb)
 		copiedRt := prevRoot
-		roots = append(roots, copiedRt)
+		blks = append(blks, blocks.NewROBlock(wsb, copiedRt))
 	}
 
-	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
-	r := &Service{cfg: &config{p2p: p1, beaconDB: d, chain: &chainMock.ChainService{}}, rateLimiter: newRateLimiter(p1)}
-
+	chain := &chainMock.ChainService{}
 	var initialRoot [32]byte
 	ptrRt := &initialRoot
-	newBlks, err := r.filterCanonical(context.Background(), blks, roots, ptrRt)
+	seq, nseq, err := filterCanonical(context.Background(), blks, ptrRt, chain.IsCanonical)
 	require.NoError(t, err)
-	require.Equal(t, len(blks), len(newBlks))
+	require.Equal(t, len(blks), len(seq))
+	require.Equal(t, 0, len(nseq))
 
 	// pointer should reference a new root.
 	require.NotEqual(t, *ptrRt, [32]byte{})
+}
 
+func TestSortedObj_SortBlocksRoots(t *testing.T) {
+	source := rand.NewSource(33)
+	randGen := rand.New(source)
+	randFunc := func() int64 {
+		return randGen.Int63n(50)
+	}
+
+	var blks []blocks.ROBlock
+	for i := 0; i < 10; i++ {
+		slot := primitives.Slot(randFunc())
+		newBlk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot, Body: &ethpb.BeaconBlockBody{}}})
+		require.NoError(t, err)
+		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
+		blks = append(blks, blocks.NewROBlock(newBlk, root))
+	}
+
+	newBlks := sortedUniqueBlocks(blks)
+	previousSlot := primitives.Slot(0)
+	for _, b := range newBlks {
+		if b.Block().Slot() < previousSlot {
+			t.Errorf("Block list is not sorted as %d is smaller than previousSlot %d", b.Block().Slot(), previousSlot)
+		}
+		previousSlot = b.Block().Slot()
+	}
+}
+
+func TestSortedObj_NoDuplicates(t *testing.T) {
+	source := rand.NewSource(33)
+	randGen := rand.New(source)
+	var blks []blocks.ROBlock
+	randFunc := func() int64 {
+		return randGen.Int63n(50)
+	}
+
+	for i := 0; i < 10; i++ {
+		slot := primitives.Slot(randFunc())
+		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot, Body: &ethpb.BeaconBlockBody{}}}
+		// append twice
+		wsb, err := blocks.NewSignedBeaconBlock(newBlk)
+		require.NoError(t, err)
+		wsbCopy, err := wsb.Copy()
+		require.NoError(t, err)
+		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
+		blks = append(blks, blocks.NewROBlock(wsb, root), blocks.NewROBlock(wsbCopy, root))
+	}
+
+	dedup := sortedUniqueBlocks(blks)
+	roots := make(map[[32]byte]int)
+	for i, b := range dedup {
+		if di, dup := roots[b.Root()]; dup {
+			t.Errorf("Duplicated root %#x at index %d and %d", b.Root(), di, i)
+		}
+		roots[b.Root()] = i
+	}
 }
