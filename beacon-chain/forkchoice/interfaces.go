@@ -31,8 +31,6 @@ type ForkChoicer interface {
 type HeadRetriever interface {
 	Head(context.Context) ([32]byte, error)
 	CachedHeadRoot() [32]byte
-	Tips() ([][32]byte, []primitives.Slot)
-	IsOptimistic(root [32]byte) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
@@ -44,7 +42,6 @@ type BlockProcessor interface {
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
 type AttestationProcessor interface {
 	ProcessAttestation(context.Context, []uint64, [32]byte, primitives.Epoch)
-	InsertSlashedIndex(context.Context, primitives.ValidatorIndex)
 }
 
 // Getter returns fork choice related information.
@@ -62,10 +59,11 @@ type Getter interface {
 	BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	NodeCount() int
 	HighestReceivedBlockSlot() primitives.Slot
-	HighestReceivedBlockRoot() [32]byte
 	ReceivedBlocksLastEpoch() (uint64, error)
 	ForkChoiceDump(context.Context) (*v1.ForkChoiceDump, error)
 	Weight(root [32]byte) (uint64, error)
+	Tips() ([][32]byte, []primitives.Slot)
+	IsOptimistic(root [32]byte) (bool, error)
 }
 
 // Setter allows to set forkchoice information
@@ -78,4 +76,5 @@ type Setter interface {
 	SetOriginRoot([32]byte)
 	NewSlot(context.Context, primitives.Slot) error
 	SetBalancesByRooter(BalancesByRooter)
+	InsertSlashedIndex(context.Context, primitives.ValidatorIndex)
 }
