@@ -103,5 +103,8 @@ func funcReturnType(obj types.Type) (*types.Basic, bool) {
 	if !ok {
 		return nil, ok
 	}
+	if fnTyp.Results().Len() < 1 {
+		return nil, false
+	}
 	return basicType(fnTyp.Results().At(0).Type())
 }
