@@ -495,7 +495,7 @@ func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byt
 	}
 }
 
-// InsertOptimisticChain inserts all nodes corresponding to blocks in the slice
+// InsertChain inserts all nodes corresponding to blocks in the slice
 // `blocks`. This slice must be ordered from child to parent. It includes all
 // blocks **except** the first one (that is the one with the highest slot
 // number). All blocks are assumed to be a strict chain
