@@ -68,9 +68,18 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 // ActiveNonSlashedBalancesByRoot retrieves the effective balances of all active and non-slashed validators at the
 // state with a given root
 func (s *State) ActiveNonSlashedBalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint64, error) {
-	st, err := s.StateByRoot(ctx, blockRoot)
+	var st state.BeaconState
+	cachedInfo, ok, err := s.epochBoundaryStateCache.getByBlockRoot(blockRoot)
 	if err != nil {
 		return nil, err
+	}
+	if ok {
+		st = cachedInfo.state
+	} else {
+		st, err = s.StateByRoot(ctx, blockRoot)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if st == nil || st.IsNil() {
 		return nil, errNilState
