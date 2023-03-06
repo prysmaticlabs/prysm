@@ -47,9 +47,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	if err := vs.HeadUpdater.UpdateHead(ctx); err != nil {
-		log.WithError(err).Error("Could not process attestations and update head")
-	}
+	// process attestations and update head in forkchoice
+	vs.ForkFetcher.ForkChoicer().Lock()
+	vs.HeadUpdater.UpdateHead(ctx, vs.ForkFetcher.CurrentSlot())
+	parentRoot := vs.ForkFetcher.ForkChoicer().GetProposerHead()
+	vs.ForkFetcher.ForkChoicer().Unlock()
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
@@ -62,15 +64,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
-	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
-	}
 	head, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
+	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
@@ -79,7 +77,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	sBlk.SetSlot(req.Slot)
 	sBlk.SetGraffiti(req.Graffiti)
 	sBlk.SetRandaoReveal(req.RandaoReveal)
-	sBlk.SetParentRoot(parentRoot)
+	sBlk.SetParentRoot(parentRoot[:])
 
 	// Set eth1 data.
 	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)

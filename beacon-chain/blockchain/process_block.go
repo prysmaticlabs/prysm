@@ -214,7 +214,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot); err != nil {
+	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
 	}
 
@@ -667,15 +667,15 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 			break
 		}
 
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
+		attThreshold := params.BeaconConfig().SecondsPerSlot / 3
+		ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
 		for {
 			select {
-			case ti := <-ticker.C:
-				if err := s.fillMissingBlockPayloadId(ctx, ti); err != nil {
+			case <-ticker.C():
+				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
 					log.WithError(err).Error("Could not fill missing payload ID")
 				}
-			case <-s.ctx.Done():
+			case <-ctx.Done():
 				log.Debug("Context closed, exiting routine")
 				return
 			}
@@ -683,16 +683,7 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 	}()
 }
 
-// Returns true if time `t` is halfway through the slot in sec.
-func atHalfSlot(t time.Time) bool {
-	s := params.BeaconConfig().SecondsPerSlot
-	return uint64(t.Second())%s == s/2
-}
-
-func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) error {
-	if !atHalfSlot(ti) {
-		return nil
-	}
+func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
 	s.ForkChoicer().RLock()
 	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
 	s.ForkChoicer().RUnlock()

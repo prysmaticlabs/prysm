@@ -120,7 +120,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
-	service.processAttestations(ctx)
+	service.processAttestations(ctx, 0)
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
 }
@@ -183,10 +183,9 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	service.head.root = r // Old head
 
 	require.Equal(t, 1, len(service.cfg.AttPool.ForkchoiceAttestations()))
-	require.NoError(t, err, service.UpdateHead(ctx))
-
+	service.UpdateHead(ctx, 0)
+	require.Equal(t, tRoot, service.headRoot())
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
-	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
 }
 
 func TestService_UpdateHead_NoAtts(t *testing.T) {
@@ -236,9 +235,8 @@ func TestService_UpdateHead_NoAtts(t *testing.T) {
 	require.Equal(t, 3, fcs.NodeCount())
 
 	require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
-	require.NoError(t, err, service.UpdateHead(ctx))
+	service.UpdateHead(ctx, 0)
+	require.Equal(t, r, service.headRoot())
 
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
-	require.Equal(t, r, service.head.root)                                 // Validate head is the new one
-
 }
