@@ -164,7 +164,7 @@ func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) er
 	}
 
 	// Mark block BLS changes as seen so we don't include same ones in future blocks.
-	if err := s.handleBlockBLSToExecChanges(b); err != nil {
+	if err := s.markIncludedBlockBLSToExecChanges(b); err != nil {
 		return errors.Wrap(err, "could not process BLSToExecutionChanges")
 	}
 
@@ -175,7 +175,7 @@ func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) er
 	return nil
 }
 
-func (s *Service) handleBlockBLSToExecChanges(blk interfaces.ReadOnlyBeaconBlock) error {
+func (s *Service) markIncludedBlockBLSToExecChanges(blk interfaces.ReadOnlyBeaconBlock) error {
 	if blk.Version() < version.Capella {
 		return nil
 	}

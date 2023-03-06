@@ -152,9 +152,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
 		return errors.Wrap(err, "could not handle block's attestations")
 	}
-	if err := s.handleBlockBLSToExecChanges(signed.Block()); err != nil {
-		return errors.Wrap(err, "could not handle block's BLSToExecutionChanges")
-	}
 
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
