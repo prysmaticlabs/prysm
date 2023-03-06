@@ -447,12 +447,22 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			}
 		}
 	}
+	// Save boundary states that will be useful for forkchoice
+	for r, st := range boundaries {
+		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
+			return err
+		}
+	}
+	// Also saves the last post state which to be used as pre state for the next batch.
+	lastBR := blockRoots[len(blks)-1]
+	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
+		return err
+	}
 	// Insert all nodes but the last one to forkchoice
 	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
 	}
 	// Insert the last block to forkchoice
-	lastBR := blockRoots[len(blks)-1]
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, preState, lastBR); err != nil {
 		return errors.Wrap(err, "could not insert last block in batch to forkchoice")
 	}
@@ -462,17 +472,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
-
-	for r, st := range boundaries {
-		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
-			return err
-		}
-	}
-	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
-	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
-		return err
-	}
 	arg := &notifyForkchoiceUpdateArg{
 		headState: preState,
 		headRoot:  lastBR,
