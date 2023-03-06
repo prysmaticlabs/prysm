@@ -76,9 +76,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "1f4e59843b61981a96835dc4ac377ad4da9f8c334ebe5e0bb3f58f80c09735f4",
-    strip_prefix = "rules_docker-0.19.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.19.0/rules_docker-v0.19.0.tar.gz"],
+    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
 )
 
 http_archive(
@@ -122,32 +121,36 @@ load(
     "container_pull",
 )
 
+# Pulled gcr.io/distroless/cc-debian11:latest on 2022-02-23
 container_pull(
-    name = "cc_image_base",
-    digest = "sha256:41036fc7ed8df0f6addc18484cef0c94a85867508967789f947e11ffd5ff0cc8",
+    name = "cc_image_base_amd64",
+    digest = "sha256:2a0daf90a7deb78465bfca3ef2eee6e91ce0a5706059f05d79d799a51d339523",
     registry = "gcr.io",
-    repository = "distroless/cc",
+    repository = "distroless/cc-debian11",
 )
 
+# Pulled gcr.io/distroless/cc-debian11:debug on 2022-02-23
 container_pull(
-    name = "cc_debug_image_base",
-    digest = "sha256:6865ad48467c89c3c3524d4c426f52ad12d9ab7dec31fad31fae69da40eb6445",
+    name = "cc_debug_image_base_amd64",
+    digest = "sha256:7bd596f5f200588f13a69c268eea6ce428b222b67cd7428d6a7fef95e75c052a",
     registry = "gcr.io",
-    repository = "distroless/cc",
+    repository = "distroless/cc-debian11",
 )
 
+# Pulled from gcr.io/distroless/base-debian11:latest on 2022-02-23
 container_pull(
-    name = "go_image_base",
-    digest = "sha256:b9b124f955961599e72630654107a0cf04e08e6fa777fa250b8f840728abd770",
+    name = "go_image_base_amd64",
+    digest = "sha256:34e682800774ecbd0954b1663d90238505f1ba5543692dbc75feef7dd4839e90",
     registry = "gcr.io",
-    repository = "distroless/base",
+    repository = "distroless/base-debian11",
 )
 
+# Pulled from gcr.io/distroless/base-debian11:debug on 2022-02-23
 container_pull(
-    name = "go_debug_image_base",
-    digest = "sha256:65668d2b78d25df3d8ccf5a778d017fcaba513b52078c700083eaeef212b9979",
+    name = "go_debug_image_base_amd64",
+    digest = "sha256:0f503c6bfd207793bc416f20a35bf6b75d769a903c48f180ad73f60f7b60d7bd",
     registry = "gcr.io",
-    repository = "distroless/base",
+    repository = "distroless/base-debian11",
 )
 
 container_pull(
@@ -282,9 +285,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "82b01a48b143fe0f2fb7fb5f5dd385c1f934335a12d7954f08b1d45d77427b5e",
-    strip_prefix = "eth2-networks-674f7a1d01d9c18345456eab76e3871b3df2126b",
-    url = "https://github.com/eth-clients/eth2-networks/archive/674f7a1d01d9c18345456eab76e3871b3df2126b.tar.gz",
+    sha256 = "2701e1e1a3ec10c673fe7dbdbbe6f02c8ae8c922aebbf6e720d8c72d5458aafe",
+    strip_prefix = "eth2-networks-7b4897888cebef23801540236f73123e21774954",
+    url = "https://github.com/eth-clients/eth2-networks/archive/7b4897888cebef23801540236f73123e21774954.tar.gz",
 )
 
 http_archive(

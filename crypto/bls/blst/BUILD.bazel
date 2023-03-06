@@ -15,10 +15,7 @@ go_library(
         "stub.go",  # keep
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/crypto/bls/blst",
-    visibility = [
-        "//beacon-chain/operations/blstoexec:__pkg__",
-        "//crypto/bls:__pkg__",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         "//cache/lru:go_default_library",
         "//config/fieldparams:go_default_library",

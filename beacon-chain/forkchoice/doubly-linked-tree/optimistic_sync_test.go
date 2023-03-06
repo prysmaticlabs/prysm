@@ -237,19 +237,15 @@ func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
 	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	f.store.proposerBoostLock.Lock()
 	f.store.proposerBoostRoot = [32]byte{'c'}
 	f.store.previousProposerBoostScore = 10
 	f.store.previousProposerBoostRoot = [32]byte{'b'}
-	f.store.proposerBoostLock.Unlock()
 
 	_, err = f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'A'})
 	require.NoError(t, err)
-	f.store.proposerBoostLock.RLock()
 	require.Equal(t, uint64(0), f.store.previousProposerBoostScore)
 	require.DeepEqual(t, [32]byte{}, f.store.proposerBoostRoot)
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash, f.store.previousProposerBoostRoot)
-	f.store.proposerBoostLock.RUnlock()
 }
 
 // This is a regression test (10565)

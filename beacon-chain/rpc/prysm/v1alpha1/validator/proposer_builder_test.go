@@ -42,7 +42,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	st, blkRoot, err := createState(1, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
-	b, err = s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
+	b, err = s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots)
 	require.NoError(t, err)
 	require.Equal(t, false, b)
 
@@ -119,7 +119,7 @@ func TestServer_canUseBuilder(t *testing.T) {
 	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0},
 		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}}))
 
-	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots, 0)
+	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots-1, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, reg)
 }
