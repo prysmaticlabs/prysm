@@ -163,11 +163,6 @@ func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) er
 		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
-	// Mark block BLS changes as seen so we don't include same ones in future blocks.
-	if err := s.markIncludedBlockBLSToExecChanges(b); err != nil {
-		return errors.Wrap(err, "could not process BLSToExecutionChanges")
-	}
-
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
 	for _, as := range b.Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
