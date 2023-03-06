@@ -226,14 +226,6 @@ func (f *ForkChoice) HighestReceivedBlockSlot() primitives.Slot {
 	return f.store.highestReceivedNode.slot
 }
 
-// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
-func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
-	if f.store.highestReceivedNode == nil {
-		return [32]byte{}
-	}
-	return f.store.highestReceivedNode.root
-}
-
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch
 func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	count := uint64(0)
