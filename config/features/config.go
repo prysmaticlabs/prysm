@@ -148,9 +148,6 @@ func configureTestnet(ctx *cli.Context) error {
 
 // Insert feature flags within the function to be enabled for Prater testnet.
 func applyPraterFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(SaveFullExecutionPayloads.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling save full execution payloads flag")
-	}
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
