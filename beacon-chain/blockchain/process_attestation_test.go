@@ -117,7 +117,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.OnAttestation(ctx, tt.a)
+			err := service.OnAttestation(ctx, tt.a, 0)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -154,7 +154,7 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
-	require.NoError(t, service.OnAttestation(ctx, att[0]))
+	require.NoError(t, service.OnAttestation(ctx, att[0], 0))
 }
 
 func TestStore_SaveCheckpointState(t *testing.T) {
