@@ -1,12 +1,10 @@
 # multi-arch cross-compiling toolchain configs
 -----------------------------------------------
 
-#build:cross --crosstool_top=@//tools/cross-toolchain/configs/cc:toolchain
 build:cross --crosstool_top=@prysm_toolchains//:multiarch_toolchain
 build:cross --extra_execution_platforms=@//tools/cross-toolchain/configs/config:platform
 build:cross --extra_toolchains=@prysm_toolchains//:cc-toolchain-multiarch
 build:cross --host_crosstool_top=@prysm_toolchains//:hostonly_toolchain
-#build:cross --host_platform=@//tools/cross-toolchain/configs/config:platform
 build:cross --platforms=@//tools/cross-toolchain/configs/config:platform
 
 # linux_amd64 config for cross compiler toolchain, not strictly necessary since host/exec env is amd64
