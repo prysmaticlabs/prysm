@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 const rootLength = 32
@@ -31,6 +32,7 @@ func (b *SSZBytes) HashTreeRootWith(hh *ssz.Hasher) error {
 
 // BeaconBlockByRootsReq specifies the block by roots request type.
 type BeaconBlockByRootsReq [][rootLength]byte
+type BlobSidecarsByRootReq []*eth.BlobIdentifier
 
 // MarshalSSZTo marshals the block by roots request with the provided byte slice.
 func (r *BeaconBlockByRootsReq) MarshalSSZTo(dst []byte) ([]byte, error) {

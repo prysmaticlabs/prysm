@@ -555,6 +555,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 func TestService_sortedPendingSlots(t *testing.T) {
 	r := &Service{
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
@@ -794,6 +795,7 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 	r.initCaches()

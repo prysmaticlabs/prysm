@@ -103,8 +103,8 @@ func (s *Service) registerRPCHandlersDeneb() {
 		s.blobsSidecarsByRangeRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCBeaconBlockAndBlobsSidecarByRootTopicV1,
-		s.beaconBlockAndBlobsSidecarByRootRPCHandler,
+		p2p.RPCBlobSidecarsByRootTopicV1,
+		s.blobSidecarByRootRPCHandler,
 	)
 }
 

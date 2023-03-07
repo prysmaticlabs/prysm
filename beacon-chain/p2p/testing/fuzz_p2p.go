@@ -138,6 +138,11 @@ func (_ *FakeP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Att
 	return nil
 }
 
+// BroadcastBlob -- fake.
+func (p *FakeP2P) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
+	return nil
+}
+
 // BroadcastSyncCommitteeMessage -- fake.
 func (_ *FakeP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
 	return nil

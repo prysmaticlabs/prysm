@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // chunkBlockWriter writes the given message as a chunked response to the given network
@@ -104,6 +105,25 @@ func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfo
 		return err
 	}
 	_, err = encoding.EncodeWithMaxLength(stream, blobs)
+	return err
+}
+
+// WriteBlobSidecarChunk writes blob chunk object to stream.
+// response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
+func WriteBlobSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, sidecar *ethpb.BlobSidecar) error {
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
+	}
+	valRoot := chain.GenesisValidatorsRoot()
+	ctxBytes, err := forks.ForkDigestFromEpoch(slots.ToEpoch(sidecar.GetSlot()), valRoot[:])
+	if err != nil {
+		return err
+	}
+
+	if err := writeContextToStream(ctxBytes[:], stream, chain); err != nil {
+		return err
+	}
+	_, err = encoding.EncodeWithMaxLength(stream, sidecar)
 	return err
 }
 

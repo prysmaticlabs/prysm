@@ -213,6 +213,9 @@ type BeaconChainConfig struct {
 
 	// Execution engine timeout value
 	ExecutionEngineTimeoutValue uint64 // ExecutionEngineTimeoutValue defines the seconds to wait before timing out engine endpoints with execution payload execution semantics (newPayload, forkchoiceUpdated).
+
+	// Deneb presets
+	MaxBlobsPerBlock uint64
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
