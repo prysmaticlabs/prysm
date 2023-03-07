@@ -42,6 +42,7 @@ func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.Beaco
 	return headState, newHeadBlock, nil
 }
 
+// fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
 func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) error {
 	isNewHead := s.isNewHead(newHeadRoot)
 	isNewProposer := s.isNewProposer(proposingSlot)
@@ -49,39 +50,24 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 		return nil
 	}
 
-	var headState state.BeaconState
-	var headBlock interfaces.ReadOnlySignedBeaconBlock
-	var headRoot [32]byte
-	var err error
-
-	shouldUpdate := isNewHead
 	if isNewHead && isNewProposer && !features.Get().DisableReorgLateBlocks {
 		if proposingSlot == s.CurrentSlot() {
 			proposerHead := s.ForkChoicer().GetProposerHead()
 			if proposerHead != newHeadRoot {
-				shouldUpdate = false
+				isNewHead = false
 			}
 		} else if s.ForkChoicer().ShouldOverrideFCU() {
-			shouldUpdate = false
+			isNewHead = false
 		}
 	}
-	if shouldUpdate {
-		headRoot = newHeadRoot
-		headState, headBlock, err = s.getStateAndBlock(ctx, newHeadRoot)
-		if err != nil {
-			log.WithError(err).Error("Could not get forkchoice update argument")
-			return nil
-		}
-	} else {
-		// We are guaranteed that the head block is the parent
-		// of the incoming block. We do not process the slot
-		// because it will be processed anyway in notifyForkchoiceUpdate
-		headState = s.headState(ctx)
-		headRoot = s.headRoot()
-		headBlock, err = s.headBlock()
-		if err != nil {
-			return errors.Wrap(err, "could not get head block")
-		}
+	if !isNewHead {
+		return nil
+	}
+	headRoot := newHeadRoot
+	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("Could not get forkchoice update argument")
+		return nil
 	}
 
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
@@ -93,16 +79,10 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 		return errors.Wrap(err, "could not notify forkchoice update")
 	}
 
-	if shouldUpdate {
-		if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
-			log.WithError(err).Error("could not save head")
-		}
-
-		// Only need to prune attestations from pool if the head has changed.
-		if err := s.pruneAttsFromPool(headBlock); err != nil {
-			return err
-		}
+	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
+		log.WithError(err).Error("could not save head")
 	}
 
-	return nil
+	// Only need to prune attestations from pool if the head has changed.
+	return s.pruneAttsFromPool(headBlock)
 }

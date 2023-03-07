@@ -683,6 +683,8 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 	}()
 }
 
+// fillMissingBlockPayloadId is called 4 seconds into the slot and calls FCU if we are proposing next slot
+// and the cache has been missed
 func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
 	s.ForkChoicer().RLock()
 	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
@@ -700,6 +702,7 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
+		s.headLock.RUnlock()
 		return err
 	}
 	headState := s.headState(ctx)
