@@ -44,6 +44,7 @@ type Flags struct {
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -125,13 +126,6 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(RopstenTestnet.Name) {
-		log.Warn("Running on the Ropsten Beacon Chain Testnet")
-		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
-			return err
-		}
-		applyRopstenFeatureFlags(ctx)
-		params.UseRopstenNetworkConfig()
 	} else if ctx.Bool(SepoliaTestnet.Name) {
 		log.Warn("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
@@ -154,13 +148,6 @@ func configureTestnet(ctx *cli.Context) error {
 
 // Insert feature flags within the function to be enabled for Prater testnet.
 func applyPraterFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(SaveFullExecutionPayloads.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling save full execution payloads flag")
-	}
-}
-
-// Insert feature flags within the function to be enabled for Ropsten testnet.
-func applyRopstenFeatureFlags(ctx *cli.Context) {
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
@@ -192,6 +179,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disablePeerScorer.Name) {
 		logDisabled(disablePeerScorer)
 		cfg.EnablePeerScorer = false
+	}
+	cfg.DisableReorgLateBlocks = true
+	if ctx.Bool(enableReorgLateBlocks.Name) {
+		logEnabled(enableReorgLateBlocks)
+		cfg.DisableReorgLateBlocks = false
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)

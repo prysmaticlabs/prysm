@@ -97,7 +97,8 @@ func TestService_ReceiveBlock(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, s *Service) {
-				pending := s.cfg.ExitPool.PendingExits(genesis, 1, true /* no limit */)
+				pending, err := s.cfg.ExitPool.PendingExits()
+				require.NoError(t, err)
 				if len(pending) != 0 {
 					t.Errorf(
 						"Did not mark the correct number of exits. Got %d pending but wanted %d",

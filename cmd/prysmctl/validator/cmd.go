@@ -112,7 +112,6 @@ var Commands = []*cli.Command{
 					flags.ForceExitFlag,
 					features.Mainnet,
 					features.PraterTestnet,
-					features.RopstenTestnet,
 					features.SepoliaTestnet,
 					cmd.AcceptTosFlag,
 				}),

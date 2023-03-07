@@ -205,7 +205,6 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
 
-	f.store.nodesLock.Lock()
 	f.store.nodeByRoot[[32]byte{'3'}].balance = 10
 	require.NoError(t, f.store.treeRootNode.applyWeightChanges(ctx))
 	require.Equal(t, uint64(10), f.store.nodeByRoot[[32]byte{'1'}].weight)
@@ -213,7 +212,6 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 
 	require.NoError(t, f.store.treeRootNode.updateBestDescendant(ctx, 1, 1, 1))
 	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRootNode.bestDescendant.root)
-	f.store.nodesLock.Unlock()
 
 	r1 := [32]byte{'1'}
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: r1}
