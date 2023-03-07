@@ -45,7 +45,7 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
-	github.com/minio/highwayhash v1.0.1
+	github.com/minio/highwayhash v1.0.2
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.8.0
@@ -79,7 +79,7 @@ require (
 	github.com/wealdtech/go-eth2-util v1.6.3
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
-	go.etcd.io/bbolt v1.3.5
+	go.etcd.io/bbolt v1.3.6
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.3.0
 	golang.org/x/crypto v0.5.0
@@ -97,8 +97,8 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
-	github.com/VictoriaMetrics/fastcache v1.12.0 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
+	github.com/VictoriaMetrics/fastcache v1.12.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
@@ -108,9 +108,12 @@ require (
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v0.0.0-20230209160836-829675f94811 // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
+	github.com/consensys/bavard v0.1.13 // indirect
+	github.com/consensys/gnark-crypto v0.9.1-0.20230105202408-1a7a29904a7c // indirect
 	github.com/containerd/cgroups v1.0.4 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/crate-crypto/go-proto-danksharding-crypto v0.0.0-20230213123031-bc4b91aed74e // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
@@ -184,6 +187,7 @@ require (
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mitchellh/pointerstructure v1.2.0 // indirect
+	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
@@ -203,13 +207,11 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/prometheus/common v0.39.0 // indirect
+	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/protolambda/ztyp v0.2.1 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
-	github.com/prometheus/common v0.39.0 // indirect
-	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/raulk/go-watchdog v1.3.0 // indirect
-	github.com/rivo/uniseg v0.3.4 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
@@ -241,6 +243,7 @@ require (
 	k8s.io/apimachinery v0.18.3 // indirect
 	k8s.io/klog v1.0.0 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
+	rsc.io/tmplfunc v0.0.3 // indirect
 	sigs.k8s.io/structured-merge-diff/v3 v3.0.0 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
@@ -257,7 +260,7 @@ require (
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.2-alpha
 	golang.org/x/sys v0.5.0 // indirect
-	google.golang.org/api v0.34.0 // indirect
+	google.golang.org/api v0.44.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	k8s.io/klog/v2 v2.80.0 // indirect
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
@@ -270,4 +273,4 @@ replace github.com/MariusVanDerWijden/tx-fuzz => github.com/marcopolo/tx-fuzz v0
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20220721162526-0d1c40b5f064
 
-replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20230108160323-2b556dbb6624
+replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20230216205250-5ee27387530f

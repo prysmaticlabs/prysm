@@ -688,9 +688,9 @@ func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
 	}
 	blobs := make([]gethTypes.Blob, len(b.Blobs))
 	for i, b1 := range b.Blobs {
-		var blob [params.FieldElementsPerBlob]gethTypes.BLSFieldElement
-		for j := 0; j < params.FieldElementsPerBlob; j++ {
-			blob[j] = bytesutil.ToBytes32(b1.Data[j*32 : j*32+31])
+		var blob [params.FieldElementsPerBlob * 32]byte
+		for i2, b2 := range b1.Data {
+			blob[i2] = b2
 		}
 		blobs[i] = blob
 	}
@@ -717,12 +717,12 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 	}
 	e.KzgCommitments = kzgs
 	blobs := make([]*Blob, len(dec.Blobs))
-	for i, blob := range dec.Blobs {
-		b := make([]byte, 0, params.FieldElementsPerBlob*32)
-		for _, fe := range blob {
-			b = append(b, fe[:]...)
+	for i1, b1 := range dec.Blobs {
+		b := make([]byte, params.FieldElementsPerBlob*32)
+		for i2, b2 := range b1 {
+			b[i2] = b2
 		}
-		blobs[i] = &Blob{Data: bytesutil.SafeCopyBytes(b)}
+		blobs[i1] = &Blob{Data: bytesutil.SafeCopyBytes(b)}
 	}
 	e.Blobs = blobs
 	return nil
