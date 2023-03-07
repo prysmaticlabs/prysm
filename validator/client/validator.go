@@ -985,13 +985,20 @@ func (v *validator) SetProposerSettings(settings *validatorserviceconfig.Propose
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, overrideDeadline ...time.Duration) error {
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
-	deadline, deadlineSet := ctx.Deadline()
-	if !deadlineSet {
-		deadline = v.SlotDeadline(slots.RoundUpToNearestEpoch(slots.CurrentSlot(v.genesisTime)))
+	var deadline time.Time
+	if len(overrideDeadline) > 0 && overrideDeadline[0] > 0*time.Second {
+		deadline = time.Now().Add(overrideDeadline[0])
+	} else {
+		d, deadlineSet := ctx.Deadline()
+		if deadlineSet {
+			deadline = d
+		} else {
+			deadline = v.SlotDeadline(slots.RoundUpToNearestEpoch(slots.CurrentSlot(v.genesisTime)))
+		}
 	}
 	nctx, cancel := context.WithDeadline(ctx, deadline)
 	ctx = nctx
