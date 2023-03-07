@@ -19,14 +19,17 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func minimumRequestEpoch(finalized, current primitives.Epoch) primitives.Epoch {
+func blobMinReqEpoch(finalized, current primitives.Epoch) primitives.Epoch {
 	// max(finalized_epoch, current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH)
 	denebFork := params.BeaconConfig().DenebForkEpoch
-	reqWindow := current - params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	if finalized >= reqWindow && finalized >= denebFork {
+	var reqWindow primitives.Epoch
+	if current > params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest {
+		reqWindow = current - params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	}
+	if finalized >= reqWindow && finalized > denebFork {
 		return finalized
 	}
-	if reqWindow >= finalized && reqWindow >= denebFork {
+	if reqWindow >= finalized && reqWindow > denebFork {
 		return reqWindow
 	}
 	return denebFork
@@ -45,7 +48,7 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	if !ok {
 		return errors.New("message is not type BeaconBlockByRootsReq")
 	}
-	minReqEpoch := minimumRequestEpoch(s.cfg.chain.FinalizedCheckpt().Epoch, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	minReqEpoch := blobMinReqEpoch(s.cfg.chain.FinalizedCheckpt().Epoch, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
 	blobIdents := *ref
 	for i := range blobIdents {
 		root, idx := bytesutil.ToBytes32(blobIdents[i].BlockRoot), blobIdents[i].Index
