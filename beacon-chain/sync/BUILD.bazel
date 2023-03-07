@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "batch_verifier.go",
+        "block_and_blob_queue.go",
         "broadcast_bls_changes.go",
         "context.go",
         "deadlines.go",
@@ -137,6 +138,7 @@ go_test(
     size = "small",
     srcs = [
         "batch_verifier_test.go",
+        "block_and_blob_queue_test.go",
         "broadcast_bls_changes_test.go",
         "context_test.go",
         "decode_pubsub_test.go",
