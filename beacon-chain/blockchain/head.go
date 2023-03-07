@@ -45,9 +45,10 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 
 // This defines the current chain service's view of head.
 type head struct {
-	root  [32]byte                             // current head root.
-	block interfaces.ReadOnlySignedBeaconBlock // current head block.
-	state state.BeaconState                    // current head state.
+	root     [32]byte                             // current head root.
+	block    interfaces.ReadOnlySignedBeaconBlock // current head block.
+	state    state.BeaconState                    // current head state.
+	lastTick primitives.Slot
 }
 
 // This saves head info to the local service cache, it also saves the
@@ -249,6 +250,12 @@ func (s *Service) headRoot() [32]byte {
 	}
 
 	return s.head.root
+}
+
+// This returns the last slot where we have processed attestations
+// This is a lock free version
+func (s *Service) lastTick() primitives.Slot {
+	return s.head.lastTick
 }
 
 // This returns the head block.

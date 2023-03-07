@@ -120,6 +120,13 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 // The caller of this function MUST hold a lock in forkchoice
 func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
 	start := time.Now()
+	// Only update head once per slot at the beginning of the slot
+	s.headLock.RLock()
+	lastTick := s.lastTick()
+	s.headLock.RUnlock()
+	if lastTick >= proposingSlot && proposingSlot == s.CurrentSlot() {
+		return
+	}
 
 	// This function is only called at 10 seconds or 0 seconds into the slot
 	disparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
@@ -127,8 +134,11 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		disparity += reorgLateBlockCountAttestations
 	}
 	s.processAttestations(ctx, disparity)
-
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
+	s.headLock.Lock()
+	s.head.lastTick = proposingSlot
+	s.headLock.Unlock()
 
 	start = time.Now()
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
