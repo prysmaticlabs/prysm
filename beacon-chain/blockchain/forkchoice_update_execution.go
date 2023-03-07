@@ -45,25 +45,20 @@ func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.Beaco
 // fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
 func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) error {
 	isNewHead := s.isNewHead(newHeadRoot)
-	isNewProposer := s.isNewProposer(proposingSlot)
-	if !isNewHead && !isNewProposer {
-		return nil
-	}
-
-	if isNewHead && isNewProposer && !features.Get().DisableReorgLateBlocks {
-		if proposingSlot == s.CurrentSlot() {
-			proposerHead := s.ForkChoicer().GetProposerHead()
-			if proposerHead != newHeadRoot {
-				isNewHead = false
-			}
-		} else if s.ForkChoicer().ShouldOverrideFCU() {
-			isNewHead = false
-		}
-	}
 	if !isNewHead {
 		return nil
 	}
-	headRoot := newHeadRoot
+	isNewProposer := s.isNewProposer(proposingSlot)
+	if isNewProposer && !features.Get().DisableReorgLateBlocks {
+		if proposingSlot == s.CurrentSlot() {
+			proposerHead := s.ForkChoicer().GetProposerHead()
+			if proposerHead != newHeadRoot {
+				return nil
+			}
+		} else if s.ForkChoicer().ShouldOverrideFCU() {
+			return nil
+		}
+	}
 	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get forkchoice update argument")
@@ -72,7 +67,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
-		headRoot:  headRoot,
+		headRoot:  newHeadRoot,
 		headBlock: headBlock.Block(),
 	})
 	if err != nil {
