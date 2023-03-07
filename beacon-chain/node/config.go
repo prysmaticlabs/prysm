@@ -4,13 +4,12 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
@@ -57,14 +56,14 @@ func configureHistoricalSlasher(cliCtx *cli.Context) error {
 func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.MaxBuilderConsecutiveMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
-		c.MaxBuilderConsecutiveMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderConsecutiveMissedSlots.Name))
+		c.MaxBuilderConsecutiveMissedSlots = primitives.Slot(cliCtx.Int(flags.MaxBuilderConsecutiveMissedSlots.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
 	}
 	if cliCtx.IsSet(flags.MaxBuilderEpochMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
-		c.MaxBuilderEpochMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
+		c.MaxBuilderEpochMissedSlots = primitives.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -75,7 +74,7 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 func configureSlotsPerArchivedPoint(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig().Copy()
-		c.SlotsPerArchivedPoint = types.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
+		c.SlotsPerArchivedPoint = primitives.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -93,6 +92,12 @@ func configureEth1Config(cliCtx *cli.Context) error {
 	}
 	if cliCtx.IsSet(flags.NetworkID.Name) {
 		c.DepositNetworkID = cliCtx.Uint64(flags.NetworkID.Name)
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	if cliCtx.IsSet(flags.EngineEndpointTimeoutSeconds.Name) {
+		c.ExecutionEngineTimeoutValue = cliCtx.Uint64(flags.EngineEndpointTimeoutSeconds.Name)
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -124,12 +129,11 @@ func configureInteropConfig(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		return nil
 	}
-	genStateIsSet := cliCtx.IsSet(flags.InteropGenesisStateFlag.Name)
 	genTimeIsSet := cliCtx.IsSet(flags.InteropGenesisTimeFlag.Name)
 	numValsIsSet := cliCtx.IsSet(flags.InteropNumValidatorsFlag.Name)
 	votesIsSet := cliCtx.IsSet(flags.InteropMockEth1DataVotesFlag.Name)
 
-	if genStateIsSet || genTimeIsSet || numValsIsSet || votesIsSet {
+	if genTimeIsSet || numValsIsSet || votesIsSet {
 		if err := params.SetActive(params.InteropConfig().Copy()); err != nil {
 			return err
 		}
@@ -152,23 +156,28 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 	if cliCtx.IsSet(flags.TerminalBlockHashActivationEpochOverride.Name) {
 		c := params.BeaconConfig()
-		c.TerminalBlockHashActivationEpoch = types.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
+		c.TerminalBlockHashActivationEpoch = primitives.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
 		log.WithField("terminal block hash activation epoch", c.TerminalBlockHashActivationEpoch).Warn("Terminal block hash activation epoch overridden")
 		params.OverrideBeaconConfig(c)
 	}
 
 	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
+		log.Warnf("In order to receive transaction fees from proposing blocks, " +
+			"you must provide flag --" + flags.SuggestedFeeRecipient.Name + " with a valid ethereum address when starting your beacon node. " +
+			"Please see our documentation for more information on this requirement (https://docs.prylabs.network/docs/execution-node/fee-recipient).")
 		return nil
 	}
 
 	c := params.BeaconConfig().Copy()
 	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
 	if !common.IsHexAddress(ha) {
-		return fmt.Errorf("%s is not a valid fee recipient address", ha)
+		log.Warnf("%s is not a valid fee recipient address, setting suggested-fee-recipient failed", ha)
+		return nil
 	}
 	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
 	if err != nil {
-		return errors.Wrapf(err, "could not decode fee recipient %s", ha)
+		log.WithError(err).Error(fmt.Sprintf("Could not decode fee recipient %s, setting suggested-fee-recipient failed", ha))
+		return nil
 	}
 	checksumAddress := common.HexToAddress(ha)
 	if !mixedcaseAddress.ValidChecksum() {
@@ -178,6 +187,8 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 			"to prevent spelling mistakes in your fee recipient Ethereum address", ha, checksumAddress.Hex())
 	}
 	c.DefaultFeeRecipient = checksumAddress
+	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+
+		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
 	return params.SetActive(c)
 }
 

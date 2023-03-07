@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -21,6 +21,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -36,7 +37,7 @@ const signExitErr = "could not sign voluntary exit proposal"
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
+func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -53,7 +54,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	// Sign randao reveal, it's used to request block from beacon node
-	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+	epoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
@@ -131,7 +132,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	}
 	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, proposal)
 	if err != nil {
-		log.WithError(err).Error("Failed to propose block")
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -144,7 +145,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		trace.Int64Attribute("numAttestations", int64(len(blk.Block().Body().Attestations()))),
 	)
 
-	if blk.Version() == version.Bellatrix {
+	if blk.Version() >= version.Bellatrix {
 		p, err := blk.Block().Body().Execution()
 		if err != nil {
 			log.WithError(err).Error("Failed to get execution payload")
@@ -165,6 +166,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		}
 		if p.GasLimit() != 0 {
 			log = log.WithField("gasUtilized", float64(p.GasUsed())/float64(p.GasLimit()))
+		}
+		if blk.Version() >= version.Capella && !blk.IsBlinded() {
+			withdrawals, err := p.Withdrawals()
+			if err != nil {
+				log.WithError(err).Error("Failed to get execution payload withdrawals")
+				return
+			}
+			log = log.WithField("withdrawalCount", len(withdrawals))
 		}
 	}
 
@@ -188,7 +197,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 // The exit is signed by the validator before being sent to the beacon node for broadcasting.
 func ProposeExit(
 	ctx context.Context,
-	validatorClient ethpb.BeaconNodeValidatorClient,
+	validatorClient iface.ValidatorClient,
 	nodeClient ethpb.NodeClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
@@ -205,10 +214,10 @@ func ProposeExit(
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
 	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
-	currentEpoch := types.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
-
+	currentEpoch := primitives.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
+	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
-	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, currentSlot)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign voluntary exit")
 	}
@@ -227,7 +236,7 @@ func ProposeExit(
 }
 
 // Sign randao reveal with randao domain and private key.
-func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, slot types.Slot) ([]byte, error) {
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch, slot primitives.Slot) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
@@ -237,7 +246,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 	}
 
 	var randaoReveal bls.Signature
-	sszUint := types.SSZUint64(epoch)
+	sszUint := primitives.SSZUint64(epoch)
 	root, err := signing.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
@@ -257,7 +266,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 
 // Sign block with proposer domain and private key.
 // Returns the signature, block signing root, and any error.
-func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, slot types.Slot, b interfaces.BeaconBlock) ([]byte, [32]byte, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch, slot primitives.Slot, b interfaces.ReadOnlyBeaconBlock) ([]byte, [32]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, [32]byte{}, errors.Wrap(err, domainDataErr)
@@ -290,10 +299,11 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 // Sign voluntary exit with proposer domain and private key.
 func signVoluntaryExit(
 	ctx context.Context,
-	validatorClient ethpb.BeaconNodeValidatorClient,
+	validatorClient iface.ValidatorClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
+	slot primitives.Slot,
 ) ([]byte, error) {
 	req := &ethpb.DomainRequest{
 		Epoch:  exit.Epoch,
@@ -318,6 +328,7 @@ func signVoluntaryExit(
 		SigningRoot:     exitRoot[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Exit{Exit: exit},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, signExitErr)

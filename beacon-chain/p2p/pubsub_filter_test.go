@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/libp2p/go-libp2p/core/peer"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
@@ -26,7 +26,7 @@ func TestService_CanSubscribe(t *testing.T) {
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
-	valRoot := [32]byte{}
+	var valRoot [32]byte
 	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type test struct {
@@ -216,7 +216,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
-	valRoot := [32]byte{}
+	var valRoot [32]byte
 	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type args struct {

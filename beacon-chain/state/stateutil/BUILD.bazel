@@ -9,10 +9,10 @@ go_library(
         "field_root_eth1.go",
         "field_root_validator.go",
         "field_root_vector.go",
+        "historical_summaries_root.go",
         "participation_bit_root.go",
         "pending_attestation_root.go",
         "reference.go",
-        "state_hasher.go",
         "sync_committee.root.go",
         "trie_helpers.go",
         "unrealized_justification.go",
@@ -45,7 +45,6 @@ go_library(
         "//math:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@io_opencensus_go//trace:go_default_library",
     ],
 )
 

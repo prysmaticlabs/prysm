@@ -19,6 +19,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
@@ -27,7 +28,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -64,7 +65,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[badPrivKeyIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -167,7 +168,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -231,7 +232,7 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -297,7 +298,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -365,7 +366,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
 		DB:    db,
@@ -433,7 +434,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
 		DB:    db,
@@ -540,7 +541,7 @@ func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Now(),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -829,9 +830,11 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
-	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
-		State: beaconState,
+	stateGen := stategen.New(db, doublylinkedtree.New())
+	chainService := &mock.ChainService{
+		Genesis:      time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		NotFinalized: true,
+		State:        beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
@@ -868,7 +871,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
 	assert.Equal(t, pubsub.ValidationReject, res, "Wrong validation result returned")
-	require.ErrorContains(t, "not part of finalized chain", err)
+	require.ErrorContains(t, "not descendant of finalized checkpoint", err)
 }
 
 func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
@@ -898,7 +901,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	currBlockRoot, err := msg.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -994,7 +997,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 
 	perSlot := params.BeaconConfig().SecondsPerSlot
 	// current slot time
-	slotsSinceGenesis := types.Slot(1000)
+	slotsSinceGenesis := primitives.Slot(1000)
 	// max uint, divided by slot time. But avoid losing precision too much.
 	overflowBase := (1 << 63) / (perSlot >> 1)
 	msg.Block.Slot = slotsSinceGenesis.Add(overflowBase)
@@ -1006,7 +1009,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 
 	genesisTime := time.Now()
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{
 		Genesis: time.Unix(genesisTime.Unix()-int64(slotsSinceGenesis.Mul(perSlot)), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -1063,7 +1066,7 @@ func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
 func TestService_isBlockQueueable(t *testing.T) {
 	currentTime := time.Now().Round(time.Second)
 	genesisTime := uint64(currentTime.Unix() - int64(params.BeaconConfig().SecondsPerSlot))
-	blockSlot := types.Slot(1)
+	blockSlot := primitives.Slot(1)
 
 	// slot time within MAXIMUM_GOSSIP_CLOCK_DISPARITY, so don't queue the block.
 	receivedTime := currentTime.Add(-400 * time.Millisecond)
@@ -1108,7 +1111,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		DB: db,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -1180,7 +1183,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		DB: db,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -1224,7 +1227,7 @@ func Test_validateBellatrixBeaconBlock(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 	presentTime := time.Now().Unix()
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -1255,7 +1258,7 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.NewBeaconBlockBellatrix()
@@ -1311,7 +1314,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, doublylinkedtree.New())
 
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.NewBeaconBlockBellatrix()

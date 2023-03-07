@@ -8,29 +8,25 @@ var (
 	// ErrInvalidBlockHashPayloadStatus is returned when the payload has invalid block hash.
 	ErrInvalidBlockHashPayloadStatus = invalidBlock{error: errors.New("received an INVALID_BLOCK_HASH payload from execution engine")}
 	// ErrUndefinedExecutionEngineError is returned when the execution engine returns an error that is not defined
-	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
+	ErrUndefinedExecutionEngineError = errors.New("received an undefined execution engine error")
 	// errNilFinalizedInStore is returned when a nil finalized checkpt is returned from store.
 	errNilFinalizedInStore = errors.New("nil finalized checkpoint returned from store")
 	// errNilFinalizedCheckpoint is returned when a nil finalized checkpt is returned from a state.
 	errNilFinalizedCheckpoint = errors.New("nil finalized checkpoint returned from state")
 	// errNilJustifiedCheckpoint is returned when a nil justified checkpt is returned from a state.
-	errNilJustifiedCheckpoint = errors.New("nil finalized checkpoint returned from state")
+	errNilJustifiedCheckpoint = errors.New("nil justified checkpoint returned from state")
 	// errInvalidNilSummary is returned when a nil summary is returned from the DB.
 	errInvalidNilSummary = errors.New("nil summary returned from the DB")
 	// errWrongBlockCount is returned when the wrong number of blocks or block roots is used
 	errWrongBlockCount = errors.New("wrong number of blocks or block roots")
-	// block is not a valid optimistic candidate block
-	errNotOptimisticCandidate = errors.New("block is not suitable for optimistic sync")
 	// errBlockNotFoundInCacheOrDB is returned when a block is not found in the cache or DB.
 	errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
-	// errNilStateFromStategen is returned when a nil state is returned from the state generator.
-	errNilStateFromStategen = errors.New("justified state can't be nil")
 	// errWSBlockNotFound is returned when a block is not found in the WS cache or DB.
 	errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
 	// errWSBlockNotFoundInEpoch is returned when a block is not found in the WS cache or DB within epoch.
 	errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
 	// errNotDescendantOfFinalized is returned when a block is not a descendant of the finalized checkpoint
-	errNotDescendantOfFinalized = invalidBlock{error: errors.New("not descendant of finalized checkpoint")}
+	ErrNotDescendantOfFinalized = invalidBlock{error: errors.New("not descendant of finalized checkpoint")}
 )
 
 // An invalid block is the block that fails state transition based on the core protocol rules.

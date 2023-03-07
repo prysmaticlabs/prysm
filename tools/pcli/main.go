@@ -197,8 +197,8 @@ func main() {
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
-					if !equality.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
-						diff, _ := messagediff.PrettyDiff(expectedState, postState.InnerStateUnsafe())
+					if !equality.DeepEqual(expectedState, postState.ToProtoUnsafe()) {
+						diff, _ := messagediff.PrettyDiff(expectedState, postState.ToProtoUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}
 				}

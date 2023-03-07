@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -13,17 +13,17 @@ import (
 func TestStateMachineManager_String(t *testing.T) {
 	tests := []struct {
 		name     string
-		machines map[types.Slot]*stateMachine
+		machines map[primitives.Slot]*stateMachine
 		want     string
 	}{
 		{
 			"empty epoch state list",
-			map[types.Slot]*stateMachine{},
+			map[primitives.Slot]*stateMachine{},
 			"map[]",
 		},
 		{
 			"newly created state machine",
-			map[types.Slot]*stateMachine{
+			map[primitives.Slot]*stateMachine{
 				0:   {start: 64 * 0, state: stateNew},
 				64:  {start: 64 * 1, state: stateScheduled},
 				128: {start: 64 * 2, state: stateDataParsed},
@@ -96,20 +96,20 @@ func TestStateMachine_trigger(t *testing.T) {
 	type args struct {
 		name        eventID
 		returnState stateID
-		epoch       types.Epoch
+		epoch       primitives.Epoch
 		data        interface{}
 	}
 	tests := []struct {
 		name   string
 		events []event
-		epochs []types.Epoch
+		epochs []primitives.Epoch
 		args   args
 		err    error
 	}{
 		{
 			name:   "event not found",
 			events: []event{},
-			epochs: []types.Epoch{12, 13},
+			epochs: []primitives.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateNew},
 			err:    errors.New("no event handlers registered for event: tick, state: new"),
 		},
@@ -118,7 +118,7 @@ func TestStateMachine_trigger(t *testing.T) {
 			events: []event{
 				{stateNew, eventTick, stateScheduled, false},
 			},
-			epochs: []types.Epoch{12, 13},
+			epochs: []primitives.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
@@ -129,7 +129,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateScheduled, eventTick, stateSent, true},
 				{stateSent, eventTick, stateSkipped, false},
 			},
-			epochs: []types.Epoch{12, 13},
+			epochs: []primitives.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
@@ -140,7 +140,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateScheduled, eventTick, stateSent, false},
 				{stateSent, eventTick, stateSkipped, false},
 			},
-			epochs: []types.Epoch{12, 13},
+			epochs: []primitives.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
@@ -151,7 +151,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateScheduled, eventTick, stateSent, false},
 				{stateNew, eventTick, stateSkipped, false},
 			},
-			epochs: []types.Epoch{12, 13},
+			epochs: []primitives.Epoch{12, 13},
 			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
@@ -175,9 +175,9 @@ func TestStateMachine_trigger(t *testing.T) {
 				}
 			}
 			for _, epoch := range tt.epochs {
-				smm.addStateMachine(types.Slot(epoch * 32))
+				smm.addStateMachine(primitives.Slot(epoch * 32))
 			}
-			state := smm.machines[types.Slot(tt.args.epoch*32)]
+			state := smm.machines[primitives.Slot(tt.args.epoch*32)]
 			err := state.trigger(tt.args.name, tt.args.data)
 			if tt.err != nil && (err == nil || tt.err.Error() != err.Error()) {
 				t.Errorf("unexpected error = '%v', want '%v'", err, tt.err)
@@ -186,7 +186,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				if err != nil && !expectHandlerError {
 					t.Error(err)
 				}
-				ind := types.Slot(tt.args.epoch * 32)
+				ind := primitives.Slot(tt.args.epoch * 32)
 				if smm.machines[ind].state != tt.args.returnState {
 					t.Errorf("unexpected final state: %v, want: %v (%v)",
 						smm.machines[ind].state, tt.args.returnState, smm.machines)
@@ -225,7 +225,7 @@ func TestStateMachineManager_QueueLoop(t *testing.T) {
 	smm.addStateMachine(64)
 	smm.addStateMachine(512)
 
-	assertState := func(startSlot types.Slot, state stateID) {
+	assertState := func(startSlot primitives.Slot, state stateID) {
 		fsm, ok := smm.findStateMachine(startSlot)
 		require.Equal(t, true, ok, "State machine not found")
 		assert.Equal(t, state, fsm.state, "Unexpected state machine state")
@@ -276,12 +276,12 @@ func TestStateMachineManager_removeAllStateMachines(t *testing.T) {
 	smm.addStateMachine(64)
 	smm.addStateMachine(128)
 	smm.addStateMachine(196)
-	keys := []types.Slot{64, 128, 196}
+	keys := []primitives.Slot{64, 128, 196}
 	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 	assert.Equal(t, 3, len(smm.machines), "Unexpected list size")
 	assert.NoError(t, smm.removeAllStateMachines())
 
-	keys = []types.Slot{}
+	keys = []primitives.Slot{}
 	assert.DeepEqual(t, smm.keys, keys, "Unexpected keys")
 	assert.Equal(t, 0, len(smm.machines), "Expected empty list")
 }
@@ -305,7 +305,7 @@ func TestStateMachineManager_findStateMachine(t *testing.T) {
 	if fsm, ok := smm.findStateMachine(512); !ok || fsm.start != 512 {
 		t.Errorf("unexpected start slot: %v, want: %v", fsm.start, 512)
 	}
-	keys := []types.Slot{64, 128, 196, 256, 512}
+	keys := []primitives.Slot{64, 128, 196, 256, 512}
 	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 }
 
@@ -318,11 +318,11 @@ func TestStateMachineManager_highestStartSlot(t *testing.T) {
 	smm.addStateMachine(196)
 	start, err := smm.highestStartSlot()
 	assert.NoError(t, err)
-	assert.Equal(t, types.Slot(196), start, "Incorrect highest start slot")
+	assert.Equal(t, primitives.Slot(196), start, "Incorrect highest start slot")
 	assert.NoError(t, smm.removeStateMachine(196))
 	start, err = smm.highestStartSlot()
 	assert.NoError(t, err)
-	assert.Equal(t, types.Slot(128), start, "Incorrect highest start slot")
+	assert.Equal(t, primitives.Slot(128), start, "Incorrect highest start slot")
 }
 
 func TestStateMachineManager_allMachinesInState(t *testing.T) {
@@ -458,6 +458,6 @@ func TestStateMachine_isFirstLast(t *testing.T) {
 	checkFirst(m5, true)
 	checkLast(m5, false)
 
-	keys := []types.Slot{32, 64, 128, 196, 512}
+	keys := []primitives.Slot{32, 64, 128, 196, 512}
 	assert.DeepEqual(t, smm.keys, keys, "Keys not sorted")
 }

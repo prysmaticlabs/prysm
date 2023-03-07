@@ -32,6 +32,9 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", folderPath)
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "phase0", folderPath)
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -92,10 +95,10 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 
 				postBeaconState := &ethpb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
+				pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
+					diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}

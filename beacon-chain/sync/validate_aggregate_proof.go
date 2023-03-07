@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
@@ -15,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -140,9 +141,9 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	}
 
 	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-	if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
-		tracing.AnnotateError(span, err)
-		return pubsub.ValidationIgnore, err
+	if !s.cfg.chain.InForkchoice(bytesutil.ToBytes32(signed.Message.Aggregate.Data.BeaconBlockRoot)) {
+		tracing.AnnotateError(span, blockchain.ErrNotDescendantOfFinalized)
+		return pubsub.ValidationIgnore, blockchain.ErrNotDescendantOfFinalized
 	}
 
 	bs, err := s.cfg.chain.AttestationTargetState(ctx, signed.Message.Aggregate.Data.Target)
@@ -214,7 +215,7 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 }
 
 // Returns true if the node has received aggregate for the aggregator with index and target epoch.
-func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) bool {
+func (s *Service) hasSeenAggregatorIndexEpoch(epoch primitives.Epoch, aggregatorIndex primitives.ValidatorIndex) bool {
 	s.seenAggregatedAttestationLock.RLock()
 	defer s.seenAggregatedAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
@@ -223,7 +224,7 @@ func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex
 }
 
 // Set aggregate's aggregator index target epoch as seen.
-func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) {
+func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregatorIndex primitives.ValidatorIndex) {
 	s.seenAggregatedAttestationLock.Lock()
 	defer s.seenAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
@@ -231,7 +232,7 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex
 }
 
 // This validates the aggregator's index in state is within the beacon committee.
-func validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex types.ValidatorIndex) error {
+func validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex primitives.ValidatorIndex) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
@@ -259,7 +260,7 @@ func validateSelectionIndex(
 	ctx context.Context,
 	bs state.ReadOnlyBeaconState,
 	data *ethpb.AttestationData,
-	validatorIndex types.ValidatorIndex,
+	validatorIndex primitives.ValidatorIndex,
 	proof []byte,
 ) (*bls.SignatureBatch, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
@@ -293,15 +294,16 @@ func validateSelectionIndex(
 	if err != nil {
 		return nil, err
 	}
-	sszUint := types.SSZUint64(data.Slot)
+	sszUint := primitives.SSZUint64(data.Slot)
 	root, err := signing.ComputeSigningRoot(&sszUint, d)
 	if err != nil {
 		return nil, err
 	}
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{proof},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{proof},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{signing.SelectionProof},
 	}, nil
 }
 
@@ -326,8 +328,9 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 		return nil, err
 	}
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{a.Signature},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{a.Signature},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{signing.AggregatorSignature},
 	}, nil
 }

@@ -12,12 +12,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -40,7 +42,7 @@ var (
 
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte) (*enginev1.ExecutionPayload, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot, vIdx primitives.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -67,7 +69,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid)
+		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
@@ -76,15 +78,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		default:
 			return nil, errors.Wrap(err, "could not get cached payload from execution client")
 		}
-	}
-
-	st, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	st, err = transition.ProcessSlotsIfPossible(ctx, st, slot)
-	if err != nil {
-		return nil, err
 	}
 
 	var parentHash []byte
@@ -103,17 +96,17 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		if err != nil {
 			return nil, err
 		}
-		parentHash = header.BlockHash
+		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			return emptyPayload(), nil
+			return consensusblocks.WrappedExecutionPayload(emptyPayload())
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, err
 		}
 		if !hasTerminalBlock {
-			return emptyPayload(), nil
+			return consensusblocks.WrappedExecutionPayload(emptyPayload())
 		}
 	}
 	payloadIDCacheMiss.Inc()
@@ -145,23 +138,46 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 
 	f := &enginev1.ForkchoiceState{
 		HeadBlockHash:      parentHash,
-		SafeBlockHash:      parentHash,
+		SafeBlockHash:      finalizedBlockHash,
 		FinalizedBlockHash: finalizedBlockHash,
 	}
-
-	p := &enginev1.PayloadAttributes{
-		Timestamp:             uint64(t.Unix()),
-		PrevRandao:            random,
-		SuggestedFeeRecipient: feeRecipient.Bytes(),
+	var attr payloadattribute.Attributer
+	switch st.Version() {
+	case version.Capella:
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			return nil, err
+		}
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			Withdrawals:           withdrawals,
+		})
+		if err != nil {
+			return nil, err
+		}
+	case version.Bellatrix:
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+		})
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.New("unknown beacon state version")
 	}
-	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
+
+	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
 		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, err
 	}
@@ -171,12 +187,12 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
 // match the requested one.
-func warnIfFeeRecipientDiffers(payload *enginev1.ExecutionPayload, feeRecipient common.Address) {
+func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient common.Address) {
 	// Warn if the fee recipient is not the value we expect.
-	if payload != nil && !bytes.Equal(payload.FeeRecipient, feeRecipient[:]) {
+	if payload != nil && !bytes.Equal(payload.FeeRecipient(), feeRecipient[:]) {
 		logrus.WithFields(logrus.Fields{
 			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
-			"received":           fmt.Sprintf("%#x", payload.FeeRecipient),
+			"received":           fmt.Sprintf("%#x", payload.FeeRecipient()),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}
@@ -186,14 +202,15 @@ func warnIfFeeRecipientDiffers(payload *enginev1.ExecutionPayload, feeRecipient 
 //
 // Spec code:
 // def get_terminal_pow_block(pow_chain: Dict[Hash32, PowBlock]) -> Optional[PowBlock]:
-//    if TERMINAL_BLOCK_HASH != Hash32():
-//        # Terminal block hash override takes precedence over terminal total difficulty
-//        if TERMINAL_BLOCK_HASH in pow_chain:
-//            return pow_chain[TERMINAL_BLOCK_HASH]
-//        else:
-//            return None
 //
-//    return get_pow_block_at_terminal_total_difficulty(pow_chain)
+//	if TERMINAL_BLOCK_HASH != Hash32():
+//	    # Terminal block hash override takes precedence over terminal total difficulty
+//	    if TERMINAL_BLOCK_HASH in pow_chain:
+//	        return pow_chain[TERMINAL_BLOCK_HASH]
+//	    else:
+//	        return None
+//
+//	return get_pow_block_at_terminal_total_difficulty(pow_chain)
 func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
 	terminalBlockHash := params.BeaconConfig().TerminalBlockHash
 	// Terminal block hash override takes precedence over terminal total difficulty.
@@ -214,11 +231,12 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 
 // activationEpochNotReached returns true if activation epoch has not been reach.
 // Which satisfy the following conditions in spec:
-//        is_terminal_block_hash_set = TERMINAL_BLOCK_HASH != Hash32()
-//        is_activation_epoch_reached = get_current_epoch(state) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-//        if is_terminal_block_hash_set and not is_activation_epoch_reached:
-//      	return True
-func activationEpochNotReached(slot types.Slot) bool {
+//
+//	  is_terminal_block_hash_set = TERMINAL_BLOCK_HASH != Hash32()
+//	  is_activation_epoch_reached = get_current_epoch(state) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+//	  if is_terminal_block_hash_set and not is_activation_epoch_reached:
+//		return True
+func activationEpochNotReached(slot primitives.Slot) bool {
 	terminalBlockHashSet := bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) != [32]byte{}
 	if terminalBlockHashSet {
 		return params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(slot)
@@ -236,5 +254,21 @@ func emptyPayload() *enginev1.ExecutionPayload {
 		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+	}
+}
+
+func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
+	return &enginev1.ExecutionPayloadCapella{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 	}
 }

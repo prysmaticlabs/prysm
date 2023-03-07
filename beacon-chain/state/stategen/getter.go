@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -54,9 +56,40 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
-		return s.beaconDB.GenesisState(ctx)
+		root, err := s.beaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get genesis block root")
+		}
+		blockRoot = root
 	}
 	return s.loadStateByRoot(ctx, blockRoot)
+}
+
+// ActiveNonSlashedBalancesByRoot retrieves the effective balances of all active and non-slashed validators at the
+// state with a given root
+func (s *State) ActiveNonSlashedBalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint64, error) {
+	st, err := s.StateByRoot(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if st == nil || st.IsNil() {
+		return nil, errNilState
+	}
+	epoch := time.CurrentEpoch(st)
+
+	balances := make([]uint64, st.NumValidators())
+	var balanceAccretor = func(idx int, val state.ReadOnlyValidator) error {
+		if helpers.IsActiveNonSlashedValidatorUsingTrie(val, epoch) {
+			balances[idx] = val.EffectiveBalance()
+		} else {
+			balances[idx] = 0
+		}
+		return nil
+	}
+	if err := st.ReadFromEveryValidator(balanceAccretor); err != nil {
+		return nil, err
+	}
+	return balances, nil
 }
 
 // StateByRootInitialSync retrieves the state from the DB for the initial syncing phase.
@@ -294,7 +327,7 @@ func (s *State) CombinedCache() *CombinedCache {
 	return &CombinedCache{getters: getters}
 }
 
-func (s *State) slotAvailable(slot types.Slot) bool {
+func (s *State) slotAvailable(slot primitives.Slot) bool {
 	// default to assuming node was initialized from genesis - backfill only needs to be specified for checkpoint sync
 	if s.backfillStatus == nil {
 		return true

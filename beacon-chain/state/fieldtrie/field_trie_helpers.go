@@ -7,9 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v3/math"
@@ -49,7 +48,7 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	return nil
 }
 
-func validateElements(field types.BeaconStateField, dataType types.DataType, elements interface{}, length uint64) error {
+func validateElements(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) error {
 	if dataType == types.CompressedArray {
 		comLength, err := field.ElemsInChunk()
 		if err != nil {
@@ -65,7 +64,7 @@ func validateElements(field types.BeaconStateField, dataType types.DataType, ele
 }
 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConverters(field types.BeaconStateField, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
 		return convertBlockRoots(indices, elements, convertAll)
@@ -80,28 +79,6 @@ func fieldConverters(field types.BeaconStateField, indices []uint64, elements in
 	case types.PreviousEpochAttestations, types.CurrentEpochAttestations:
 		return convertAttestations(indices, elements, convertAll)
 	case types.Balances:
-		return convertBalances(indices, elements, convertAll)
-	default:
-		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
-	}
-}
-
-// fieldConvertersNative converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConvertersNative(field types.BeaconStateField, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	switch field {
-	case nativetypes.BlockRoots:
-		return convertBlockRoots(indices, elements, convertAll)
-	case nativetypes.StateRoots:
-		return convertStateRoots(indices, elements, convertAll)
-	case nativetypes.RandaoMixes:
-		return convertRandaoMixes(indices, elements, convertAll)
-	case nativetypes.Eth1DataVotes:
-		return convertEth1DataVotes(indices, elements, convertAll)
-	case nativetypes.Validators:
-		return convertValidators(indices, elements, convertAll)
-	case nativetypes.PreviousEpochAttestations, nativetypes.CurrentEpochAttestations:
-		return convertAttestations(indices, elements, convertAll)
-	case nativetypes.Balances:
 		return convertBalances(indices, elements, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
@@ -144,8 +121,7 @@ func convertRandaoMixes(indices []uint64, elements interface{}, convertAll bool)
 func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.Eth1Data)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Eth1Data{}, elements)
 	}
 	return handleEth1DataSlice(val, indices, convertAll)
 }
@@ -153,8 +129,7 @@ func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll boo
 func convertValidators(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.Validator)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Validator{}, elements)
 	}
 	return handleValidatorSlice(val, indices, convertAll)
 }
@@ -162,8 +137,7 @@ func convertValidators(indices []uint64, elements interface{}, convertAll bool) 
 func convertAttestations(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.PendingAttestation)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.PendingAttestation{}, elements)
 	}
 	return handlePendingAttestationSlice(val, indices, convertAll)
 }
@@ -171,8 +145,7 @@ func convertAttestations(indices []uint64, elements interface{}, convertAll bool
 func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]uint64)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]uint64{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []uint64{}, elements)
 	}
 	return handleBalanceSlice(val, indices, convertAll)
 }
@@ -369,7 +342,7 @@ func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, err
 			// are compressed according to 4 values -> 1 chunk.
 			startIdx := idx / numOfElems
 			startGroup := startIdx * numOfElems
-			chunk := [32]byte{}
+			var chunk [32]byte
 			sizeOfElem := len(chunk) / iNumOfElems
 			for i, j := 0, startGroup; j < startGroup+numOfElems; i, j = i+sizeOfElem, j+1 {
 				wantedVal := uint64(0)

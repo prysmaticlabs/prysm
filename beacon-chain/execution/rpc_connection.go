@@ -26,7 +26,6 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	fetcher := ethclient.NewClient(client)
 	s.rpcClient = client
 	s.httpLogger = fetcher
-	s.eth1DataFetcher = fetcher
 
 	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, fetcher)
 	if err != nil {
@@ -89,13 +88,13 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 
 // Forces to retry an execution client connection.
 func (s *Service) retryExecutionClientConnection(ctx context.Context, err error) {
-	s.runError = err
+	s.runError = errors.Wrap(err, "retryExecutionClientConnection")
 	s.updateConnectedETH1(false)
 	// Back off for a while before redialing.
 	time.Sleep(backOffPeriod)
 	currClient := s.rpcClient
 	if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
-		s.runError = err
+		s.runError = errors.Wrap(err, "setupExecutionClientConnections")
 		return
 	}
 	// Close previous client, if connection was successful.
@@ -116,7 +115,7 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 	}
 	switch u.Scheme {
 	case "http", "https":
-		client, err = gethRPC.DialHTTPWithClient(endpoint.Url, endpoint.HttpClient())
+		client, err = gethRPC.DialOptions(ctx, endpoint.Url, gethRPC.WithHTTPClient(endpoint.HttpClient()))
 		if err != nil {
 			return nil, err
 		}

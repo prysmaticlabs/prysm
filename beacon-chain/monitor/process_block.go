@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -23,7 +23,7 @@ const AggregateReportingPeriod = 5
 // - An Exit by one of our validators was included
 // - A Slashing by one of our tracked validators was included
 // - A Sync Committee Contribution by one of our tracked validators was included
-func (s *Service) processBlock(ctx context.Context, b interfaces.SignedBeaconBlock) {
+func (s *Service) processBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) {
 	if b == nil || b.Block() == nil {
 		return
 	}
@@ -64,7 +64,7 @@ func (s *Service) processBlock(ctx context.Context, b interfaces.SignedBeaconBlo
 }
 
 // processProposedBlock logs when the beacon node observes a beacon block from a tracked validator.
-func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk interfaces.BeaconBlock) {
+func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk interfaces.ReadOnlyBeaconBlock) {
 	s.Lock()
 	defer s.Unlock()
 	if s.trackedIndex(blk.ProposerIndex()) {
@@ -102,7 +102,7 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 }
 
 // processSlashings logs the event when tracked validators was slashed
-func (s *Service) processSlashings(blk interfaces.BeaconBlock) {
+func (s *Service) processSlashings(blk interfaces.ReadOnlyBeaconBlock) {
 	s.RLock()
 	defer s.RUnlock()
 	for _, slashing := range blk.Body().ProposerSlashings() {
@@ -120,7 +120,7 @@ func (s *Service) processSlashings(blk interfaces.BeaconBlock) {
 
 	for _, slashing := range blk.Body().AttesterSlashings() {
 		for _, idx := range blocks.SlashableAttesterIndices(slashing) {
-			if s.trackedIndex(types.ValidatorIndex(idx)) {
+			if s.trackedIndex(primitives.ValidatorIndex(idx)) {
 				log.WithFields(logrus.Fields{
 					"AttesterIndex":      idx,
 					"BlockInclusionSlot": blk.Slot(),

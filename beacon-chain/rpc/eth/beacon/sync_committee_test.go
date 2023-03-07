@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -35,9 +35,9 @@ func Test_currentCommitteeIndicesFromState(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
-	wantedIndices := make([]types.ValidatorIndex, len(wantedCommittee))
+	wantedIndices := make([]primitives.ValidatorIndex, len(wantedCommittee))
 	for i := 0; i < len(wantedCommittee); i++ {
-		wantedIndices[i] = types.ValidatorIndex(i)
+		wantedIndices[i] = primitives.ValidatorIndex(i)
 		wantedCommittee[i] = vals[i].PublicKey
 	}
 	require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
@@ -66,9 +66,9 @@ func Test_nextCommitteeIndicesFromState(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
-	wantedIndices := make([]types.ValidatorIndex, len(wantedCommittee))
+	wantedIndices := make([]primitives.ValidatorIndex, len(wantedCommittee))
 	for i := 0; i < len(wantedCommittee); i++ {
-		wantedIndices[i] = types.ValidatorIndex(i)
+		wantedIndices[i] = primitives.ValidatorIndex(i)
 		wantedCommittee[i] = vals[i].PublicKey
 	}
 	require.NoError(t, st.SetNextSyncCommittee(&ethpbalpha.SyncCommittee{
@@ -107,17 +107,17 @@ func Test_extractSyncSubcommittees(t *testing.T) {
 
 	commSize := params.BeaconConfig().SyncCommitteeSize
 	subCommSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-	wantedSubcommitteeValidators := make([][]types.ValidatorIndex, 0)
+	wantedSubcommitteeValidators := make([][]primitives.ValidatorIndex, 0)
 
 	for i := uint64(0); i < commSize; i += subCommSize {
-		sub := make([]types.ValidatorIndex, 0)
+		sub := make([]primitives.ValidatorIndex, 0)
 		start := i
 		end := i + subCommSize
 		if end > commSize {
 			end = commSize
 		}
 		for j := start; j < end; j++ {
-			sub = append(sub, types.ValidatorIndex(j))
+			sub = append(sub, primitives.ValidatorIndex(j))
 		}
 		wantedSubcommitteeValidators = append(wantedSubcommitteeValidators, sub)
 	}
@@ -171,6 +171,7 @@ func TestListSyncCommittees(t *testing.T) {
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{StateId: stRoot[:]}
@@ -181,13 +182,13 @@ func TestListSyncCommittees(t *testing.T) {
 	require.NotNil(t, committeeVals)
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(committeeVals)), "incorrect committee size")
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
-		assert.Equal(t, types.ValidatorIndex(i), committeeVals[i])
+		assert.Equal(t, primitives.ValidatorIndex(i), committeeVals[i])
 	}
 	require.NotNil(t, resp.Data.ValidatorAggregates)
 	assert.Equal(t, params.BeaconConfig().SyncCommitteeSubnetCount, uint64(len(resp.Data.ValidatorAggregates)))
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
-		vStartIndex := types.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount * i)
-		vEndIndex := types.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount*(i+1) - 1)
+		vStartIndex := primitives.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount * i)
+		vEndIndex := primitives.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount*(i+1) - 1)
 		j := 0
 		for vIndex := vStartIndex; vIndex <= vEndIndex; vIndex++ {
 			assert.Equal(t, vIndex, resp.Data.ValidatorAggregates[i].Validators[j])
@@ -214,11 +215,45 @@ func TestListSyncCommittees(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &mock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s := &Server{
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := s.ListSyncCommittees(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.Finalized)
 	})
 }
 
@@ -244,7 +279,7 @@ func (m *futureSyncMockFetcher) StateRoot(context.Context, []byte) ([]byte, erro
 	return m.BeaconStateRoot, nil
 }
 
-func (m *futureSyncMockFetcher) StateBySlot(context.Context, types.Slot) (state.BeaconState, error) {
+func (m *futureSyncMockFetcher) StateBySlot(context.Context, primitives.Slot) (state.BeaconState, error) {
 	return m.BeaconState, nil
 }
 
@@ -272,6 +307,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{}
@@ -289,13 +325,13 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 	require.NotNil(t, committeeVals)
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(committeeVals)), "incorrect committee size")
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
-		assert.Equal(t, types.ValidatorIndex(i), committeeVals[i])
+		assert.Equal(t, primitives.ValidatorIndex(i), committeeVals[i])
 	}
 	require.NotNil(t, resp.Data.ValidatorAggregates)
 	assert.Equal(t, params.BeaconConfig().SyncCommitteeSubnetCount, uint64(len(resp.Data.ValidatorAggregates)))
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
-		vStartIndex := types.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount * i)
-		vEndIndex := types.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount*(i+1) - 1)
+		vStartIndex := primitives.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount * i)
+		vEndIndex := primitives.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount*(i+1) - 1)
 		j := 0
 		for vIndex := vStartIndex; vIndex <= vEndIndex; vIndex++ {
 			assert.Equal(t, vIndex, resp.Data.ValidatorAggregates[i].Validators[j])

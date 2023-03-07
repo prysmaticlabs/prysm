@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
@@ -24,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -116,9 +117,9 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	count := types.Slot(8)
+	count := primitives.Slot(8)
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		blockExample := util.NewBeaconBlock()
 		blockExample.Block.Body.Attestations = []*ethpb.Attestation{
 			{
@@ -155,9 +156,9 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 
 	someRoot := [32]byte{1, 2, 3}
 	sourceRoot := [32]byte{4, 5, 6}
-	sourceEpoch := types.Epoch(5)
+	sourceEpoch := primitives.Epoch(5)
 	targetRoot := [32]byte{7, 8, 9}
-	targetEpoch := types.Epoch(7)
+	targetEpoch := primitives.Epoch(7)
 
 	unwrappedBlocks := []*ethpb.SignedBeaconBlock{
 		util.HydrateSignedBeaconBlock(
@@ -239,7 +240,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 			}),
 	}
 
-	var blocks []interfaces.SignedBeaconBlock
+	var blocks []interfaces.ReadOnlySignedBeaconBlock
 	for _, b := range unwrappedBlocks {
 		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -270,8 +271,8 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 
 	count := params.BeaconConfig().SlotsPerEpoch * 4
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		for s := types.CommitteeIndex(0); s < 4; s++ {
+	for i := primitives.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		for s := primitives.CommitteeIndex(0); s < 4; s++ {
 			blockExample := util.NewBeaconBlock()
 			blockExample.Block.Slot = i
 			blockExample.Block.Body.Attestations = []*ethpb.Attestation{
@@ -371,9 +372,9 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	util.NewBeaconBlock()
-	count := types.Slot(1)
+	count := primitives.Slot(1)
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		blockExample := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
 				Body: &ethpb.BeaconBlockBody{
@@ -427,9 +428,9 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	count := types.Slot(params.BeaconConfig().DefaultPageSize)
+	count := primitives.Slot(params.BeaconConfig().DefaultPageSize)
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		blockExample := util.NewBeaconBlock()
 		blockExample.Block.Body.Attestations = []*ethpb.Attestation{
 			{
@@ -465,12 +466,12 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 }
 
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	atts := make([]*ethpb.Attestation, count)
 	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
 	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
 
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		var targetRoot [32]byte
 		if i%2 == 0 {
 			targetRoot = targetRoot1
@@ -508,7 +509,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 0, count)
 	atts2 := make([]*ethpb.Attestation, 0, count)
 
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		var targetRoot [32]byte
 		if i%2 == 0 {
 			targetRoot = targetRoot1
@@ -569,7 +570,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		BeaconDB:           db,
 		GenesisTimeFetcher: &chainMock.ChainService{State: state},
 		HeadFetcher:        &chainMock.ChainService{State: state},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, doublylinkedtree.New()),
 	}
 	err := db.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Root: targetRoot1[:],
@@ -613,7 +614,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	blockRoot := bytesutil.ToBytes32([]byte("root"))
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
-	epoch := types.Epoch(50)
+	epoch := primitives.Epoch(50)
 	startSlot, err := slots.EpochStart(epoch)
 	require.NoError(t, err)
 
@@ -669,7 +670,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		GenesisTimeFetcher: &chainMock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db),
+		StateGen: stategen.New(db, doublylinkedtree.New()),
 	}
 	err = db.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Root: blockRoot[:],
@@ -755,7 +756,7 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 	atts := make([]*ethpb.Attestation, params.BeaconConfig().DefaultPageSize+1)
 	for i := 0; i < len(atts); i++ {
 		att := util.NewAttestation()
-		att.Data.Slot = types.Slot(i)
+		att.Data.Slot = primitives.Slot(i)
 		atts[i] = att
 	}
 	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
@@ -777,7 +778,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	atts := make([]*ethpb.Attestation, numAtts)
 	for i := 0; i < len(atts); i++ {
 		att := util.NewAttestation()
-		att.Data.Slot = types.Slot(i)
+		att.Data.Slot = primitives.Slot(i)
 		atts[i] = att
 	}
 	require.NoError(t, bs.AttestationsPool.SaveAggregatedAttestations(atts))
@@ -870,7 +871,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
-	epoch := types.Epoch(0)
+	epoch := primitives.Epoch(0)
 	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
 	committees, err := computeCommittees(context.Background(), params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)), activeIndices, attesterSeed)
@@ -879,18 +880,18 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch
 	// We generate attestations for each validator per slot per epoch.
 	atts := make(map[[32]byte][]*ethpb.Attestation)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		comms := committees[i].Committees
 		for j := 0; j < numValidators; j++ {
 			var indexInCommittee uint64
-			var committeeIndex types.CommitteeIndex
+			var committeeIndex primitives.CommitteeIndex
 			var committeeLength int
 			var found bool
 			for comIndex, item := range comms {
 				for n, idx := range item.ValidatorIndices {
-					if types.ValidatorIndex(j) == idx {
+					if primitives.ValidatorIndex(j) == idx {
 						indexInCommittee = uint64(n)
-						committeeIndex = types.CommitteeIndex(comIndex)
+						committeeIndex = primitives.CommitteeIndex(comIndex)
 						committeeLength = len(item.ValidatorIndices)
 						found = true
 						break
@@ -940,7 +941,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		},
 		AttestationNotifier:         chainService.OperationNotifier(),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
-		StateGen:                    stategen.New(db),
+		StateGen:                    stategen.New(db, doublylinkedtree.New()),
 	}
 
 	for dataRoot, sameDataAtts := range atts {

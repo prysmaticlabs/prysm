@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -13,12 +14,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -34,32 +36,120 @@ var eth1DataNotification bool
 const eth1dataTimeout = 2 * time.Second
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
-// by passing in the slot and the signed randao reveal of the slot. Returns phase0 beacon blocks
-// before the Altair fork epoch and Altair blocks post-fork epoch.
+// by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
-		blk, err := vs.getPhase0BeaconBlock(ctx, req)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: blk}}, nil
-	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().BellatrixForkEpoch {
-		blk, err := vs.getAltairBeaconBlock(ctx, req)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
+
+	// A syncing validator should not produce a block.
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+
+	// process attestations and update head in forkchoice
+	vs.ForkFetcher.ForkChoicer().Lock()
+	vs.HeadUpdater.UpdateHead(ctx, vs.ForkFetcher.CurrentSlot())
+	parentRoot := vs.ForkFetcher.ForkChoicer().GetProposerHead()
+	vs.ForkFetcher.ForkChoicer().Unlock()
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
-	if err := vs.optimisticStatus(ctx); err != nil {
-		return nil, err
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
+		if err := vs.optimisticStatus(ctx); err != nil {
+			return nil, status.Errorf(codes.Unavailable, "Validator is not ready to propose: %v", err)
+		}
 	}
 
-	return vs.getBellatrixBeaconBlock(ctx, req)
+	sBlk, err := getEmptyBlock(req.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
+	}
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+	}
+
+	// Set slot, graffiti, randao reveal, and parent root.
+	sBlk.SetSlot(req.Slot)
+	sBlk.SetGraffiti(req.Graffiti)
+	sBlk.SetRandaoReveal(req.RandaoReveal)
+	sBlk.SetParentRoot(parentRoot[:])
+
+	// Set eth1 data.
+	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
+	if err != nil {
+		eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
+		log.WithError(err).Error("Could not get eth1data")
+	}
+	sBlk.SetEth1Data(eth1Data)
+
+	// Set deposit and attestation.
+	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
+	if err != nil {
+		sBlk.SetDeposits([]*ethpb.Deposit{})
+		sBlk.SetAttestations([]*ethpb.Attestation{})
+		log.WithError(err).Error("Could not pack deposits and attestations")
+	} else {
+		sBlk.SetDeposits(deposits)
+		sBlk.SetAttestations(atts)
+	}
+
+	// Set proposer index.
+	idx, err := helpers.BeaconProposerIndex(ctx, head)
+	if err != nil {
+		return nil, fmt.Errorf("could not calculate proposer index %v", err)
+	}
+	sBlk.SetProposerIndex(idx)
+
+	// Set slashings.
+	validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
+	sBlk.SetProposerSlashings(validProposerSlashings)
+	sBlk.SetAttesterSlashings(validAttSlashings)
+
+	// Set exits.
+	sBlk.SetVoluntaryExits(vs.getExits(head, req.Slot))
+
+	// Set sync aggregate. New in Altair.
+	vs.setSyncAggregate(ctx, sBlk)
+
+	// Set execution data. New in Bellatrix.
+	if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
+	}
+
+	// Set bls to execution change. New in Capella.
+	vs.setBlsToExecData(sBlk, head)
+
+	sr, err := vs.computeStateRoot(ctx, sBlk)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
+	}
+	sBlk.SetStateRoot(sr)
+
+	pb, err := sBlk.Block().Proto()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
+	}
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
+		if sBlk.IsBlinded() {
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb.(*ethpb.BlindedBeaconBlockCapella)}}, nil
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
+	}
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
+		if sBlk.IsBlinded() {
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}}, nil
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil
+	}
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb.(*ethpb.BeaconBlockAltair)}}, nil
+	}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -81,7 +171,7 @@ func (vs *Server) PrepareBeaconProposer(
 	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
 	defer span.End()
 	var feeRecipients []common.Address
-	var validatorIndices []types.ValidatorIndex
+	var validatorIndices []primitives.ValidatorIndex
 
 	newRecipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
@@ -92,9 +182,9 @@ func (vs *Server) PrepareBeaconProposer(
 		case err != nil:
 			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
 		default:
-		}
-		if common.BytesToAddress(r.FeeRecipient) != f {
-			newRecipients = append(newRecipients, r)
+			if common.BytesToAddress(r.FeeRecipient) != f {
+				newRecipients = append(newRecipients, r)
+			}
 		}
 	}
 	if len(newRecipients) == 0 {
@@ -118,7 +208,43 @@ func (vs *Server) PrepareBeaconProposer(
 	return &emptypb.Empty{}, nil
 }
 
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+// GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or db based on a given public key
+func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.GetFeeRecipientByPublicKey")
+	defer span.End()
+	if request == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "request was empty")
+	}
+
+	resp, err := vs.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: request.PublicKey})
+	if err != nil {
+		if strings.Contains(err.Error(), "Could not find validator index") {
+			return &ethpb.FeeRecipientByPubKeyResponse{
+				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			}, nil
+		} else {
+			log.WithError(err).Error("An error occurred while retrieving validator index")
+			return nil, err
+		}
+
+	}
+	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFoundFeeRecipient) {
+			return &ethpb.FeeRecipientByPubKeyResponse{
+				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			}, nil
+		} else {
+			log.WithError(err).Error("An error occurred while retrieving fee recipient from db")
+			return nil, status.Errorf(codes.Internal, err.Error())
+		}
+	}
+	return &ethpb.FeeRecipientByPubKeyResponse{
+		FeeRecipient: address.Bytes(),
+	}, nil
+}
+
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
@@ -126,9 +252,16 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
-	blk, err = vs.unblindBuilderBlock(ctx, blk)
-	if err != nil {
-		return nil, err
+	if slots.ToEpoch(blk.Block().Slot()) >= params.BeaconConfig().CapellaForkEpoch {
+		blk, err = vs.unblindBuilderBlockCapella(ctx, blk)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		blk, err = vs.unblindBuilderBlock(ctx, blk)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.
@@ -164,7 +297,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
-func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedBeaconBlock) ([]byte, error) {
+func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 	beaconState, err := vs.StateGen.StateByRoot(ctx, block.Block().ParentRoot())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")

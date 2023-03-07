@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -66,7 +66,7 @@ type modifiedState struct {
 
 // used to parallelize state summary bucket processing
 type modifiedStateSummary struct {
-	slot      types.Slot
+	slot      primitives.Slot
 	root      []byte
 	key       []byte
 	valueSize uint64
@@ -336,8 +336,13 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("block_roots                   : size = %s, count =  %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfByteList(st.StateRoots())
 		log.Infof("state_roots                   : size = %s, count = %d", humanize.Bytes(size), count)
-		size, count = sizeAndCountOfByteList(st.HistoricalRoots())
-		log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
+		roots, err := st.HistoricalRoots()
+		if err != nil {
+			log.WithError(err).Error("could not get historical roots")
+		} else {
+			size, count = sizeAndCountOfByteList(roots)
+			log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
+		}
 		log.Infof("eth1_data                     : sizeSSZ = %s", humanize.Bytes(uint64(st.Eth1Data().SizeSSZ())))
 		size, count = sizeAndCountGeneric(st.Eth1DataVotes(), nil)
 		log.Infof("eth1_data_votes               : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)

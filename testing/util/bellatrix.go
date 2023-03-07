@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -30,7 +30,7 @@ func GenerateFullBlockBellatrix(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
-	slot types.Slot,
+	slot primitives.Slot,
 ) (*ethpb.SignedBeaconBlockBellatrix, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
@@ -117,7 +117,7 @@ func GenerateFullBlockBellatrix(
 	}
 	blockHash := indexToHash(uint64(slot))
 	newExecutionPayload := &enginev1.ExecutionPayload{
-		ParentHash:    parentExecution.BlockHash,
+		ParentHash:    parentExecution.BlockHash(),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
 		ReceiptsRoot:  params.BeaconConfig().ZeroHash[:],

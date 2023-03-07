@@ -10,13 +10,14 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -208,7 +209,7 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
-	slot := types.Slot(2)
+	slot := primitives.Slot(2)
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	server := &Server{
 		HeadFetcher:      &mock.ChainService{State: state},
@@ -334,7 +335,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
 		TimeFetcher:         &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
-		StateGen:            stategen.New(db),
+		StateGen:            stategen.New(db, doublylinkedtree.New()),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
 	util.SaveBlock(t, ctx, db, block)
@@ -366,7 +367,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 }
 
 func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
-	slot := types.Slot(5)
+	slot := primitives.Slot(5)
 	block := util.NewBeaconBlock()
 	block.Block.Slot = slot
 	targetBlock := util.NewBeaconBlock()
@@ -466,13 +467,13 @@ func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	var ss []types.Slot
-	var comIdxs []types.CommitteeIndex
+	var ss []primitives.Slot
+	var comIdxs []primitives.CommitteeIndex
 	var isAggregator []bool
 
-	for i := types.Slot(100); i < 200; i++ {
+	for i := primitives.Slot(100); i < 200; i++ {
 		ss = append(ss, i)
-		comIdxs = append(comIdxs, types.CommitteeIndex(randGen.Int63n(64)))
+		comIdxs = append(comIdxs, primitives.CommitteeIndex(randGen.Int63n(64)))
 		boolVal := randGen.Uint64()%2 == 0
 		isAggregator = append(isAggregator, boolVal)
 	}
@@ -512,13 +513,13 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	var ss []types.Slot
-	var comIdxs []types.CommitteeIndex
+	var ss []primitives.Slot
+	var comIdxs []primitives.CommitteeIndex
 	var isAggregator []bool
 
-	for i := types.Slot(100); i < 200; i++ {
+	for i := primitives.Slot(100); i < 200; i++ {
 		ss = append(ss, i)
-		comIdxs = append(comIdxs, types.CommitteeIndex(randGen.Int63n(64)))
+		comIdxs = append(comIdxs, primitives.CommitteeIndex(randGen.Int63n(64)))
 		boolVal := randGen.Uint64()%2 == 0
 		isAggregator = append(isAggregator, boolVal)
 	}
@@ -529,7 +530,7 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 		IsAggregator: isAggregator,
 	})
 	require.NoError(t, err)
-	for i := types.Slot(100); i < 200; i++ {
+	for i := primitives.Slot(100); i < 200; i++ {
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(i)
 		assert.Equal(t, 1, len(subnets))
 		if isAggregator[i-100] {

@@ -21,7 +21,7 @@ import (
 var log = logrus.WithField("prefix", "blockchain")
 
 // logs state transition related data every slot.
-func logStateTransitionData(b interfaces.BeaconBlock) error {
+func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 	log := log.WithField("slot", b.Slot())
 	if len(b.Body().Attestations()) > 0 {
 		log = log.WithField("attestations", len(b.Body().Attestations()))
@@ -38,14 +38,14 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 	if len(b.Body().VoluntaryExits()) > 0 {
 		log = log.WithField("voluntaryExits", len(b.Body().VoluntaryExits()))
 	}
-	if b.Version() == version.Altair || b.Version() == version.Bellatrix {
+	if b.Version() >= version.Altair {
 		agg, err := b.Body().SyncAggregate()
 		if err != nil {
 			return err
 		}
 		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
 	}
-	if b.Version() == version.Bellatrix {
+	if b.Version() >= version.Bellatrix {
 		p, err := b.Body().Execution()
 		if err != nil {
 			return err
@@ -66,7 +66,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 	return nil
 }
 
-func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justified, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
+func logBlockSyncStatus(block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte, justified, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
 	startTime, err := slots.ToTime(genesisTime, block.Slot())
 	if err != nil {
 		return err
@@ -87,6 +87,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 			"version":                   version.String(block.Version()),
 			"sinceSlotStartTime":        prysmTime.Now().Sub(startTime),
 			"chainServiceProcessedTime": prysmTime.Now().Sub(receivedTime),
+			"deposits":                  len(block.Body().Deposits()),
 		}).Debug("Synced new block")
 	} else {
 		log.WithFields(logrus.Fields{
@@ -101,7 +102,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 }
 
 // logs payload related data every slot.
-func logPayload(block interfaces.BeaconBlock) error {
+func logPayload(block interfaces.ReadOnlyBeaconBlock) error {
 	isExecutionBlk, err := blocks.IsExecutionBlock(block.Body())
 	if err != nil {
 		return errors.Wrap(err, "could not determine if block is execution block")
@@ -117,12 +118,24 @@ func logPayload(block interfaces.BeaconBlock) error {
 		return errors.New("gas limit should not be 0")
 	}
 	gasUtilized := float64(payload.GasUsed()) / float64(payload.GasLimit())
-
-	log.WithFields(logrus.Fields{
+	fields := logrus.Fields{
 		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
 		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash())),
 		"blockNumber": payload.BlockNumber,
 		"gasUtilized": fmt.Sprintf("%.2f", gasUtilized),
-	}).Debug("Synced new payload")
+	}
+	if block.Version() >= version.Capella {
+		withdrawals, err := payload.Withdrawals()
+		if err != nil {
+			return errors.Wrap(err, "could not get withdrawals")
+		}
+		fields["withdrawals"] = len(withdrawals)
+		changes, err := block.Body().BLSToExecutionChanges()
+		if err != nil {
+			return errors.Wrap(err, "could not get BLSToExecutionChanges")
+		}
+		fields["blsToExecutionChanges"] = len(changes)
+	}
+	log.WithFields(fields).Debug("Synced new payload")
 	return nil
 }

@@ -1,36 +1,32 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
 // CurrentSlot returns the current slot based on time.
-func (s *Service) CurrentSlot() types.Slot {
+func (s *Service) CurrentSlot() primitives.Slot {
 	return slots.CurrentSlot(uint64(s.genesisTime.Unix()))
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
-func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock) (state.BeaconState, error) {
+func (s *Service) getBlockPreState(ctx context.Context, b interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
 
@@ -61,7 +57,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
-func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBlock) error {
+func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
@@ -71,10 +67,6 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 	// a subset of the block object.
 	if !s.cfg.BeaconDB.HasStateSummary(ctx, parentRoot) && !s.cfg.BeaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
-	}
-
-	if err := s.VerifyFinalizedBlkDescendant(ctx, parentRoot); err != nil {
-		return err
 	}
 
 	has, err := s.cfg.StateGen.HasState(ctx, parentRoot)
@@ -90,38 +82,9 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 	return nil
 }
 
-// VerifyFinalizedBlkDescendant validates if input block root is a descendant of the
-// current finalized block root.
-func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
-	defer span.End()
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
-	fRoot := s.ensureRootNotZeros(finalized.Root)
-	fSlot, err := slots.EpochStart(finalized.Epoch)
-	if err != nil {
-		return err
-	}
-	bFinalizedRoot, err := s.ancestor(ctx, root[:], fSlot)
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized block root")
-	}
-	if bFinalizedRoot == nil {
-		return fmt.Errorf("no finalized block known for block %#x", bytesutil.Trunc(root[:]))
-	}
-
-	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
-		err := fmt.Errorf("block %#x is not a descendant of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), fSlot, bytesutil.Trunc(bFinalizedRoot),
-			bytesutil.Trunc(fRoot[:]))
-		tracing.AnnotateError(span, err)
-		return invalidBlock{error: err}
-	}
-	return nil
-}
-
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
-func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
+func (s *Service) verifyBlkFinalizedSlot(b interfaces.ReadOnlyBeaconBlock) error {
 	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
@@ -163,7 +126,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
-	if err != nil && err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+	if err != nil && !errors.Is(err, doublylinkedtree.ErrNilNode) {
 		return err
 	}
 	if !optimistic {
@@ -172,32 +135,38 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 			return err
 		}
 	}
-	if err := s.cfg.StateGen.MigrateToCold(ctx, fRoot); err != nil {
-		return errors.Wrap(err, "could not migrate to cold")
-	}
+	go func() {
+		// We do not pass in the parent context from the method as this method call
+		// is meant to be asynchronous and run in the background rather than being
+		// tied to the execution of a block.
+		if err := s.cfg.StateGen.MigrateToCold(s.ctx, fRoot); err != nil {
+			log.WithError(err).Error("could not migrate to cold")
+		}
+	}()
 	return nil
 }
 
 // ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
-//   def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
-//    block = store.blocks[root]
-//    if block.slot > slot:
-//        return get_ancestor(store, block.parent_root, slot)
-//    elif block.slot == slot:
-//        return root
-//    else:
-//        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
-//        return root
-func (s *Service) ancestor(ctx context.Context, root []byte, slot types.Slot) ([]byte, error) {
+//
+//	def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
+//	 block = store.blocks[root]
+//	 if block.slot > slot:
+//	     return get_ancestor(store, block.parent_root, slot)
+//	 elif block.slot == slot:
+//	     return root
+//	 else:
+//	     # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
+//	     return root
+func (s *Service) ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
 	defer span.End()
 
 	r := bytesutil.ToBytes32(root)
 	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
 	// This is most optimal outcome.
-	ar, err := s.ancestorByForkChoiceStore(ctx, r, slot)
+	ar, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
 	if err != nil {
 		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
 		// This is the second line of defense for retrieving ancestor root.
@@ -207,38 +176,28 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot types.Slot) ([
 		}
 	}
 
-	return ar, nil
-}
-
-// This retrieves an ancestor root using fork choice store. The look up is looping through the a flat array structure.
-func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slot types.Slot) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByForkChoiceStore")
-	defer span.End()
-
-	if !s.cfg.ForkChoiceStore.HasParent(r) {
-		return nil, errors.New("could not find root in fork choice store")
-	}
-	root, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
-	return root[:], err
+	return ar[:], nil
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
-func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot) ([]byte, error) {
+func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot primitives.Slot) (root [32]byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
 	defer span.End()
 
+	root = [32]byte{}
 	// Stop recursive ancestry lookup if context is cancelled.
 	if ctx.Err() != nil {
-		return nil, ctx.Err()
+		err = ctx.Err()
+		return
 	}
 
 	signed, err := s.getBlock(ctx, r)
 	if err != nil {
-		return nil, err
+		return root, err
 	}
 	b := signed.Block()
 	if b.Slot() == slot || b.Slot() < slot {
-		return r[:], nil
+		return r, nil
 	}
 
 	return s.ancestorByDB(ctx, b.ParentRoot(), slot)
@@ -246,7 +205,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
-func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
@@ -278,9 +237,9 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		return nil
 	}
 	if root != s.ensureRootNotZeros(finalized.Root) && !s.ForkChoicer().HasNode(root) {
-		return errNotDescendantOfFinalized
+		return ErrNotDescendantOfFinalized
 	}
-	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
+	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)
 }
 
 // inserts finalized deposits into our finalized deposit trie.
@@ -309,23 +268,6 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
 		return errors.Wrap(err, "could not prune deposit proofs")
 	}
-	return nil
-}
-
-// The deletes input attestations from the attestation pool, so proposers don't include them in a block for the future.
-func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
-	for _, att := range atts {
-		if helpers.IsAggregated(att) {
-			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
-				return err
-			}
-		} else {
-			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }
 

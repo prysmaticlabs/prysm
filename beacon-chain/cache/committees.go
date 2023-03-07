@@ -3,7 +3,7 @@ package cache
 import (
 	"errors"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // ErrNotCommittee will be returned when a cache object is not a pointer to
@@ -14,6 +14,6 @@ var ErrNotCommittee = errors.New("object is not a committee struct")
 type Committees struct {
 	CommitteeCount  uint64
 	Seed            [32]byte
-	ShuffledIndices []types.ValidatorIndex
-	SortedIndices   []types.ValidatorIndex
+	ShuffledIndices []primitives.ValidatorIndex
+	SortedIndices   []primitives.ValidatorIndex
 }

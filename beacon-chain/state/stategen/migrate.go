@@ -18,6 +18,12 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
 
+	// When migrating states we choose to acquire the migration lock before
+	// proceeding. This is to prevent multiple migration routines from overwriting each
+	// other.
+	s.migrationLock.Lock()
+	defer s.migrationLock.Unlock()
+
 	s.finalizedInfo.lock.RLock()
 	oldFSlot := s.finalizedInfo.slot
 	s.finalizedInfo.lock.RUnlock()

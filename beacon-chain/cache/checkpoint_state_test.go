@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -33,9 +33,9 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 
-	pbState1, err := state_native.ProtobufBeaconStatePhase0(s.InnerStateUnsafe())
+	pbState1, err := state_native.ProtobufBeaconStatePhase0(s.ToProtoUnsafe())
 	require.NoError(t, err)
-	pbstate, err := state_native.ProtobufBeaconStatePhase0(st.InnerStateUnsafe())
+	pbstate, err := state_native.ProtobufBeaconStatePhase0(st.ToProtoUnsafe())
 	require.NoError(t, err)
 	if !proto.Equal(pbState1, pbstate) {
 		t.Error("incorrectly cached state")
@@ -50,11 +50,11 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 	s, err = cache.StateByCheckpoint(cp2)
 	require.NoError(t, err)
-	assert.DeepEqual(t, st2.CloneInnerState(), s.CloneInnerState(), "incorrectly cached state")
+	assert.DeepEqual(t, st2.ToProto(), s.ToProto(), "incorrectly cached state")
 
 	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
-	assert.DeepEqual(t, st.CloneInnerState(), s.CloneInnerState(), "incorrectly cached state")
+	assert.DeepEqual(t, st.ToProto(), s.ToProto(), "incorrectly cached state")
 }
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {
@@ -65,8 +65,8 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := uint64(0); i < uint64(maxCheckpointStateSize+100); i++ {
-		require.NoError(t, st.SetSlot(types.Slot(i)))
-		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: types.Epoch(i), Root: make([]byte, 32)}, st))
+		require.NoError(t, st.SetSlot(primitives.Slot(i)))
+		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: primitives.Epoch(i), Root: make([]byte, 32)}, st))
 	}
 
 	assert.Equal(t, maxCheckpointStateSize, len(c.cache.Keys()))

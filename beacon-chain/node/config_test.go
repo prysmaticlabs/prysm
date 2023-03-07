@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -50,7 +50,7 @@ func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 
 	require.NoError(t, configureSlotsPerArchivedPoint(cliCtx))
 
-	assert.Equal(t, types.Slot(100), params.BeaconConfig().SlotsPerArchivedPoint)
+	assert.Equal(t, primitives.Slot(100), params.BeaconConfig().SlotsPerArchivedPoint)
 }
 
 func TestConfigureProofOfWork(t *testing.T) {
@@ -90,7 +90,8 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
 	err := configureExecutionSetting(cliCtx)
-	require.ErrorContains(t, "0xB is not a valid fee recipient address", err)
+	assert.LogsContain(t, hook, "0xB is not a valid fee recipient address")
+	require.NoError(t, err)
 
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
 	cliCtx = cli.NewContext(&app, set, nil)
@@ -109,7 +110,7 @@ func TestConfigureExecutionSetting(t *testing.T) {
 
 	assert.Equal(t, "100", params.BeaconConfig().TerminalTotalDifficulty)
 	assert.Equal(t, common.HexToHash("0xA"), params.BeaconConfig().TerminalBlockHash)
-	assert.Equal(t, types.Epoch(200), params.BeaconConfig().TerminalBlockHashActivationEpoch)
+	assert.Equal(t, primitives.Epoch(200), params.BeaconConfig().TerminalBlockHashActivationEpoch)
 
 }
 
@@ -214,17 +215,6 @@ func TestConfigureInterop(t *testing.T) {
 				set := flag.NewFlagSet("test", 0)
 				set.Uint64(flags.InteropGenesisTimeFlag.Name, 0, "")
 				assert.NoError(t, set.Set(flags.InteropGenesisTimeFlag.Name, "200"))
-				return cli.NewContext(&app, set, nil)
-			},
-			"interop",
-		},
-		{
-			"genesis state set",
-			func() *cli.Context {
-				app := cli.App{}
-				set := flag.NewFlagSet("test", 0)
-				set.String(flags.InteropGenesisStateFlag.Name, "", "")
-				assert.NoError(t, set.Set(flags.InteropGenesisStateFlag.Name, "/path/"))
 				return cli.NewContext(&app, set, nil)
 			},
 			"interop",

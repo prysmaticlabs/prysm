@@ -6,10 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -32,7 +32,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 		disabled       bool
 		wantErr        error
 		checkpt        *ethpb.Checkpoint
-		finalizedEpoch types.Epoch
+		finalizedEpoch primitives.Epoch
 		name           string
 	}{
 		{
@@ -72,7 +72,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 			wv, err := NewWeakSubjectivityVerifier(tt.checkpt, beaconDB)
 			require.Equal(t, !tt.disabled, wv.enabled)
 			require.NoError(t, err)
-			fcs := protoarray.New()
+			fcs := doublylinkedtree.New()
 			s := &Service{
 				cfg:        &config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt, ForkChoiceStore: fcs},
 				wsVerifier: wv,

@@ -11,7 +11,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
@@ -21,7 +21,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 	tests := []struct {
 		name         string
 		svcCreator   func(t *testing.T) *Service
-		currEpoch    types.Epoch
+		currEpoch    primitives.Epoch
 		wantErr      bool
 		postSvcCheck func(t *testing.T, s *Service)
 	}{
@@ -155,7 +155,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 	tests := []struct {
 		name         string
 		svcCreator   func(t *testing.T) *Service
-		currEpoch    types.Epoch
+		currEpoch    primitives.Epoch
 		wantErr      bool
 		postSvcCheck func(t *testing.T, s *Service)
 	}{

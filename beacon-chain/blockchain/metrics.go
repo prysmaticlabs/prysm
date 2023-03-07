@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -130,14 +130,6 @@ var (
 		Name: "sync_head_state_hit",
 		Help: "The number of sync head state requests that are present in the cache.",
 	})
-	stateBalanceCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "state_balance_cache_hit",
-		Help: "Count the number of state balance cache hits.",
-	})
-	stateBalanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "state_balance_cache_miss",
-		Help: "Count the number of state balance cache hits.",
-	})
 	newPayloadValidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "new_payload_valid_node_count",
 		Help: "Count the number of valid nodes after newPayload EE call",
@@ -216,7 +208,7 @@ var (
 )
 
 // reportSlotMetrics reports slot related metrics.
-func reportSlotMetrics(stateSlot, headSlot, clockSlot types.Slot, finalizedCheckpoint *ethpb.Checkpoint) {
+func reportSlotMetrics(stateSlot, headSlot, clockSlot primitives.Slot, finalizedCheckpoint *ethpb.Checkpoint) {
 	clockTimeSlot.Set(float64(clockSlot))
 	beaconSlot.Set(float64(stateSlot))
 	beaconHeadSlot.Set(float64(headSlot))
@@ -228,7 +220,7 @@ func reportSlotMetrics(stateSlot, headSlot, clockSlot types.Slot, finalizedCheck
 
 // reportEpochMetrics reports epoch related metrics.
 func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconState) error {
-	currentEpoch := types.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
+	currentEpoch := primitives.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
 
 	// Validator instances
 	pendingInstances := 0
@@ -247,7 +239,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	slashingEffectiveBalance := uint64(0)
 
 	for i, validator := range postState.Validators() {
-		bal, err := postState.BalanceAtIndex(types.ValidatorIndex(i))
+		bal, err := postState.BalanceAtIndex(primitives.ValidatorIndex(i))
 		if err != nil {
 			log.WithError(err).Error("Could not load validator balance")
 			continue
@@ -317,9 +309,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	var b *precompute.Balance
 	var v []*precompute.Validator
 	var err error
-	switch headState.Version() {
-	case version.Phase0:
-		// Validator participation should be viewed on the canonical chain.
+
+	if headState.Version() == version.Phase0 {
 		v, b, err = precompute.New(ctx, headState)
 		if err != nil {
 			return err
@@ -328,7 +319,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	case version.Altair, version.Bellatrix:
+	} else if headState.Version() >= version.Altair {
 		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return err
@@ -337,9 +328,10 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	default:
-		return errors.Errorf("invalid state type provided: %T", headState.InnerStateUnsafe())
+	} else {
+		return errors.Errorf("invalid state type provided: %T", headState.ToProtoUnsafe())
 	}
+
 	prevEpochActiveBalances.Set(float64(b.ActivePrevEpoch))
 	prevEpochSourceBalances.Set(float64(b.PrevEpochAttested))
 	prevEpochTargetBalances.Set(float64(b.PrevEpochTargetAttested))
@@ -353,7 +345,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	return nil
 }
 
-func reportAttestationInclusion(blk interfaces.BeaconBlock) {
+func reportAttestationInclusion(blk interfaces.ReadOnlyBeaconBlock) {
 	for _, att := range blk.Body().Attestations() {
 		attestationInclusionDelay.Observe(float64(blk.Slot() - att.Data.Slot))
 	}

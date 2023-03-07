@@ -51,6 +51,26 @@ func TestStore_LastValidatedCheckpoint_Recover(t *testing.T) {
 	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
 }
 
+func BenchmarkStore_SaveLastValidatedCheckpoint(b *testing.B) {
+	db := setupDB(b)
+	ctx := context.Background()
+	root := bytesutil.ToBytes32([]byte{'A'})
+	cp := &ethpb.Checkpoint{
+		Epoch: 10,
+		Root:  root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(b, err)
+	require.NoError(b, st.SetSlot(1))
+	require.NoError(b, db.SaveState(ctx, st, root))
+	db.stateSummaryCache.clear()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		require.NoError(b, db.SaveLastValidatedCheckpoint(ctx, cp))
+	}
+}
+
 func TestStore_LastValidatedCheckpoint_DefaultIsFinalized(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()

@@ -21,6 +21,9 @@ func RunUpgradeToBellatrix(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "bellatrix", "fork/fork/pyspec_tests")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "bellatrix", "fork/fork/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -38,7 +41,7 @@ func RunUpgradeToBellatrix(t *testing.T, config string) {
 			require.NoError(t, err)
 			postState, err := execution.UpgradeToBellatrix(preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := state_native.ProtobufBeaconStateBellatrix(postState.InnerStateUnsafe())
+			postStateFromFunction, err := state_native.ProtobufBeaconStateBellatrix(postState.ToProtoUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))

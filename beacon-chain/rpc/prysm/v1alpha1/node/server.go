@@ -11,8 +11,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
@@ -236,6 +236,7 @@ func (ns *Server) GetETH1ConnectionStatus(_ context.Context, _ *empty.Empty) (*e
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
+// DEPRECATED: This endpoint doesn't appear to be used and have been marked for deprecation.
 func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream ethpb.Health_StreamBeaconLogsServer) error {
 	ch := make(chan []byte, ns.StreamLogsBufferSize)
 	sub := ns.LogsStreamer.LogsFeed().Subscribe(ch)

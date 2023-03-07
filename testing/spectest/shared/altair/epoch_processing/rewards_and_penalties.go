@@ -18,6 +18,9 @@ func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
 
 	testPath := "epoch_processing/rewards_and_penalties/pyspec_tests"
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", testPath)
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "altair", testPath)
+	}
 	for _, folder := range testFolders {
 		helpers.ClearCache()
 		t.Run(folder.Name(), func(t *testing.T) {

@@ -27,11 +27,11 @@ var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 // Aggregation occurs in-place i.e. contents of input array will be modified. Should you need to
 // preserve input attestations, clone them before aggregating:
 //
-//   clonedAtts := make([]*ethpb.Attestation, len(atts))
-//   for i, a := range atts {
-//       clonedAtts[i] = stateTrie.CopyAttestation(a)
-//   }
-//   aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
+//	clonedAtts := make([]*ethpb.Attestation, len(atts))
+//	for i, a := range atts {
+//	    clonedAtts[i] = stateTrie.CopyAttestation(a)
+//	}
+//	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	return MaxCoverAttestationAggregation(atts)
 }

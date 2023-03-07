@@ -9,7 +9,7 @@ import (
 
 // NewSignedBeaconBlockFromGeneric creates a signed beacon block
 // from a protobuf generic signed beacon block.
-func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if gb == nil {
 		return nil, blocks.ErrNilObject
 	}
@@ -22,6 +22,10 @@ func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfac
 		return blocks.NewSignedBeaconBlock(bb.Bellatrix)
 	case *eth.GenericSignedBeaconBlock_BlindedBellatrix:
 		return blocks.NewSignedBeaconBlock(bb.BlindedBellatrix)
+	case *eth.GenericSignedBeaconBlock_Capella:
+		return blocks.NewSignedBeaconBlock(bb.Capella)
+	case *eth.GenericSignedBeaconBlock_BlindedCapella:
+		return blocks.NewSignedBeaconBlock(bb.BlindedCapella)
 	default:
 		return nil, errors.Wrapf(blocks.ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", gb)
 	}

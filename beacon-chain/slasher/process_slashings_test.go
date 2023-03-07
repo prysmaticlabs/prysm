@@ -7,6 +7,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -44,7 +45,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
+			StateGen:                stategen.New(beaconDB, doublylinkedtree.New()),
 			SlashingPoolInserter:    &slashingsmock.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},
@@ -151,7 +152,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
+			StateGen:                stategen.New(beaconDB, doublylinkedtree.New()),
 			SlashingPoolInserter:    &slashingsmock.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},

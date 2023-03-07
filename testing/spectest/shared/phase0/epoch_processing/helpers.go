@@ -58,7 +58,7 @@ func RunEpochOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
+		pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			t.Fatal("Post state does not match expected")

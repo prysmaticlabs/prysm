@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -34,7 +34,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 		stateVotes         []*ethpb.Eth1Data
 		data               *ethpb.Eth1Data
 		hasSupport         bool
-		votingPeriodLength types.Epoch
+		votingPeriodLength primitives.Epoch
 	}{
 		{
 			stateVotes: FakeDeposits(uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))),

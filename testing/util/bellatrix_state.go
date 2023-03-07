@@ -62,8 +62,8 @@ func emptyGenesisStateBellatrix() (state.BeaconState, error) {
 		// Misc fields.
 		Slot: 0,
 		Fork: &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+			PreviousVersion: params.BeaconConfig().AltairForkVersion,
+			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
 			Epoch:           0,
 		},
 		// Validator registry fields.
@@ -133,6 +133,12 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 	scores, err := preState.InactivityScores()
 	if err != nil {
 		return nil, err
+	}
+	scoresMissing := len(preState.Validators()) - len(scores)
+	if scoresMissing > 0 {
+		for i := 0; i < scoresMissing; i++ {
+			scores = append(scores, 0)
+		}
 	}
 	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
@@ -240,5 +246,16 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		TransactionsRoot: make([]byte, 32),
 	}
 
-	return state_native.InitializeFromProtoBellatrix(st)
+	bs, err := state_native.InitializeFromProtoBellatrix(st)
+	if err != nil {
+		return nil, err
+	}
+	is, err := bs.InactivityScores()
+	if err != nil {
+		return nil, err
+	}
+	if bs.NumValidators() != len(is) {
+		return nil, errors.New("inactivity score mismatch with num vals")
+	}
+	return bs, nil
 }

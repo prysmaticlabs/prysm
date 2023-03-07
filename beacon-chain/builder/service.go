@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -22,8 +22,8 @@ var ErrNoBuilder = errors.New("builder endpoint not configured")
 
 // BlockBuilder defines the interface for interacting with the block builder
 type BlockBuilder interface {
-	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
-	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
+	SubmitBlindedBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error)
+	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error)
 	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
 	Configured() bool
 }
@@ -72,7 +72,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 }
 
 // Start initializes the service.
-func (*Service) Start() {}
+func (s *Service) Start() {
+	go s.pollRelayerStatus(s.ctx)
+}
 
 // Stop halts the service.
 func (*Service) Stop() error {
@@ -80,7 +82,7 @@ func (*Service) Stop() error {
 }
 
 // SubmitBlindedBlock submits a blinded block to the builder relay network.
-func (s *Service) SubmitBlindedBlock(ctx context.Context, b *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
+func (s *Service) SubmitBlindedBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error) {
 	ctx, span := trace.StartSpan(ctx, "builder.SubmitBlindedBlock")
 	defer span.End()
 	start := time.Now()
@@ -92,7 +94,7 @@ func (s *Service) SubmitBlindedBlock(ctx context.Context, b *ethpb.SignedBlinded
 }
 
 // GetHeader retrieves the header for a given slot and parent hash from the builder relay network.
-func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error) {
+func (s *Service) GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error) {
 	ctx, span := trace.StartSpan(ctx, "builder.GetHeader")
 	defer span.End()
 	start := time.Now()
@@ -105,19 +107,12 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 
 // Status retrieves the status of the builder relay network.
 func (s *Service) Status() error {
-	ctx, span := trace.StartSpan(context.Background(), "builder.Status")
-	defer span.End()
-	start := time.Now()
-	defer func() {
-		getStatusLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
-
 	// Return early if builder isn't initialized in service.
 	if s.c == nil {
 		return nil
 	}
 
-	return s.c.Status(ctx)
+	return nil
 }
 
 // RegisterValidator registers a validator with the builder relay network.
@@ -130,7 +125,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		registerValidatorLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	idxs := make([]types.ValidatorIndex, 0)
+	idxs := make([]primitives.ValidatorIndex, 0)
 	msgs := make([]*ethpb.ValidatorRegistrationV1, 0)
 	valid := make([]*ethpb.SignedValidatorRegistrationV1, 0)
 	for i := 0; i < len(reg); i++ {
@@ -156,4 +151,21 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 // Configured returns true if the user has configured a builder client.
 func (s *Service) Configured() bool {
 	return s.c != nil && !reflect.ValueOf(s.c).IsNil()
+}
+
+func (s *Service) pollRelayerStatus(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if s.c != nil {
+				if err := s.c.Status(ctx); err != nil {
+					log.WithError(err).Error("Failed to call relayer status endpoint, perhaps mev-boost or relayers are down")
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }

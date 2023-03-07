@@ -9,9 +9,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
@@ -23,7 +22,8 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -41,7 +41,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
-	for i := types.Slot(1); i < 11; i++ {
+	for i := primitives.Slot(1); i < 11; i++ {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
 		root, err := blk.Block.HashTreeRoot()
@@ -54,7 +54,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	r.cfg.chain = &mock.ChainService{ValidatorsRoot: [32]byte{}}
 	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -127,7 +127,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
-	for i := types.Slot(1); i < 11; i++ {
+	for i := primitives.Slot(1); i < 11; i++ {
 		blk := util.NewBlindedBeaconBlockBellatrix()
 		blk.Block.Body.ExecutionPayloadHeader = header
 		blk.Block.Slot = i
@@ -152,7 +152,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 	r.cfg.chain = &mock.ChainService{ValidatorsRoot: [32]byte{}}
 	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -224,7 +224,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy")
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -261,7 +261,7 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 	r := &Service{cfg: &config{p2p: p1, beaconDB: d}, rateLimiter: newRateLimiter(p1)}
 	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

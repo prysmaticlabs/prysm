@@ -39,6 +39,7 @@ func supportedPlatforms() []platform {
 		{os: "linux", arch: "amd64"},
 		{os: "linux", arch: "arm64"},
 		{os: "darwin", arch: "amd64", majorVersion: 10, minorVersion: 14},
+		{os: "darwin", arch: "arm64", majorVersion: 12, minorVersion: 5},
 		{os: "windows", arch: "amd64"},
 	}
 }

@@ -2,7 +2,6 @@ package forkchoice
 
 import (
 	"context"
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -19,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -27,7 +28,7 @@ import (
 
 func startChainService(t testing.TB,
 	st state.BeaconState,
-	block interfaces.SignedBeaconBlock,
+	block interfaces.ReadOnlySignedBeaconBlock,
 	engineMock *engineMock,
 ) *blockchain.Service {
 	db := testDB.SetupDB(t)
@@ -52,13 +53,14 @@ func startChainService(t testing.TB,
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
+	fc := doublylinkedtree.New()
 	opts := append([]blockchain.Option{},
 		blockchain.WithExecutionEngineCaller(engineMock),
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
-		blockchain.WithForkChoiceStore(doublylinkedtree.New()),
-		blockchain.WithStateGen(stategen.New(db)),
+		blockchain.WithForkChoiceStore(fc),
+		blockchain.WithStateGen(stategen.New(db, fc)),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
@@ -76,17 +78,18 @@ type engineMock struct {
 	payloadStatus   error
 }
 
-func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload, error) {
+func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, error) {
 	return nil, nil
 }
-func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributes) (*pb.PayloadIDBytes, []byte, error) {
-	return nil, nil, nil
+
+func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
+	return nil, m.latestValidHash, m.payloadStatus
 }
 func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
 	return m.latestValidHash, m.payloadStatus
 }
 
-func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
+func (m *engineMock) LatestExecutionBlock() (*pb.ExecutionBlock, error) {
 	return nil, nil
 }
 
@@ -100,7 +103,7 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _
 		return nil, nil
 	}
 
-	td := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(b.TotalDifficulty))
+	td := bytesutil.LittleEndianBytesToBigInt(b.TotalDifficulty)
 	tdHex := hexutil.EncodeBig(td)
 	return &pb.ExecutionBlock{
 		Header: gethtypes.Header{

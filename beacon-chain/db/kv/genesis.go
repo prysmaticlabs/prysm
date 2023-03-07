@@ -1,34 +1,25 @@
 package kv
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
 func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
-	stateRoot, err := genesisState.HashTreeRoot(ctx)
-	if err != nil {
-		return err
-	}
-	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	wsb, err := blocks.NewGenesisBlockForState(ctx, genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	wsb, err := consensusblocks.NewSignedBeaconBlock(genesisBlk)
+	genesisBlkRoot, err := wsb.Block().HashTreeRoot()
 	if err != nil {
-		return errors.Wrap(err, "could not wrap genesis block")
+		return errors.Wrap(err, "could not get genesis block root")
 	}
 	if err := s.SaveBlock(ctx, wsb); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
@@ -54,11 +45,11 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 
 // LoadGenesis loads a genesis state from a ssz-serialized byte slice, if no genesis exists already.
 func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
-	st := &ethpb.BeaconState{}
-	if err := st.UnmarshalSSZ(sb); err != nil {
+	vu, err := detect.FromState(sb)
+	if err != nil {
 		return err
 	}
-	gs, err := state_native.InitializeFromProtoUnsafePhase0(st)
+	gs, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return err
 	}
@@ -83,10 +74,6 @@ func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
 		return dbIface.ErrExistingGenesisState
 	}
 
-	if !bytes.Equal(gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion) {
-		return fmt.Errorf("loaded genesis fork version (%#x) does not match config genesis "+
-			"fork version (%#x)", gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion)
-	}
 	return s.SaveGenesisData(ctx, gs)
 }
 

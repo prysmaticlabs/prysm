@@ -10,6 +10,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//config/validator/service:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//validator/accounts/iface:go_default_library",

@@ -94,7 +94,6 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
 			flags.InteropMockEth1DataVotesFlag,
-			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
 			flags.ContractDeploymentBlock,
 			flags.RPCHost,
@@ -125,6 +124,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.MevRelayEndpoint,
 			flags.MaxBuilderEpochMissedSlots,
 			flags.MaxBuilderConsecutiveMissedSlots,
+			flags.EngineEndpointTimeoutSeconds,
+			flags.SlasherDirFlag,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,
@@ -171,7 +172,7 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "interop",
 		Flags: []cli.Flag{
-			flags.InteropGenesisStateFlag,
+			genesis.StatePath,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
 		},

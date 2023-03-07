@@ -11,13 +11,19 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// reorgLateBlockCountAttestations is the time until the end of the slot in which we count
+// attestations to see if we will reorg the incoming block
+const reorgLateBlockCountAttestations = 2 * time.Second
 
 // AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
 // root of an attestation's target checkpoint.
@@ -29,7 +35,7 @@ type AttestationStateFetcher interface {
 type AttestationReceiver interface {
 	AttestationStateFetcher
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
-	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
+	InForkchoice([32]byte) bool
 }
 
 // AttestationTargetState returns the pre state of attestation.
@@ -57,33 +63,6 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 	if !bytes.Equal(a.Data.Target.Root, r) {
 		return errors.New("FFG and LMD votes are not consistent")
 	}
-	return nil
-}
-
-// VerifyFinalizedConsistency verifies input root is consistent with finalized store.
-// When the input root is not be consistent with finalized store then we know it is not
-// on the finalized check point that leads to current canonical chain and should be rejected accordingly.
-func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
-	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
-	// In this case, we could exit early to save on additional computation.
-	blockRoot := bytesutil.ToBytes32(root)
-	if s.cfg.ForkChoiceStore.HasNode(blockRoot) && s.cfg.ForkChoiceStore.IsCanonical(blockRoot) {
-		return nil
-	}
-
-	f := s.FinalizedCheckpt()
-	ss, err := slots.EpochStart(f.Epoch)
-	if err != nil {
-		return err
-	}
-	r, err := s.ancestor(ctx, root, ss)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(f.Root, r) {
-		return errors.New("Root and finalized store are not consistent")
-	}
-
 	return nil
 }
 
@@ -115,49 +94,46 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 		}
 
 		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+		pat := slots.NewSlotTickerWithOffset(s.genesisTime, -reorgLateBlockCountAttestations, params.BeaconConfig().SecondsPerSlot)
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
+			case <-pat.C():
+				s.ForkChoicer().Lock()
+				s.UpdateHead(s.ctx, s.CurrentSlot()+1)
+				s.ForkChoicer().Unlock()
 			case <-st.C():
+				s.ForkChoicer().Lock()
 				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
-					log.WithError(err).Error("Could not process new slot")
+					log.WithError(err).Error("could not process new slot")
 				}
 
-				if err := s.UpdateHead(s.ctx); err != nil {
-					log.WithError(err).Error("Could not process attestations and update head")
-				}
+				s.UpdateHead(s.ctx, s.CurrentSlot())
+				s.ForkChoicer().Unlock()
 			}
 		}
 	}()
 }
 
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
-// It requires no external inputs.
-func (s *Service) UpdateHead(ctx context.Context) error {
-	// Continue when there's no fork choice attestation, there's nothing to process and update head.
-	// This covers the condition when the node is still initial syncing to the head of the chain.
-	if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
-		return nil
-	}
-
-	// Only one process can process attestations and update head at a time.
-	s.processAttestationsLock.Lock()
-	defer s.processAttestationsLock.Unlock()
-
+// The caller of this function MUST hold a lock in forkchoice
+func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
 	start := time.Now()
-	s.processAttestations(ctx)
+
+	// This function is only called at 10 seconds or 0 seconds into the slot
+	disparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	if !features.Get().DisableReorgLateBlocks {
+		disparity += reorgLateBlockCountAttestations
+	}
+	s.processAttestations(ctx, disparity)
+
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	justified := s.ForkChoicer().JustifiedCheckpoint()
-	balances, err := s.justifiedBalances.get(ctx, justified.Root)
-	if err != nil {
-		return err
-	}
 	start = time.Now()
-	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
+	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
-		log.WithError(err).Warn("Resolving fork due to new attestation")
+		log.WithError(err).Error("Could not compute head from new attestations")
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
@@ -169,60 +145,20 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	if err := s.notifyEngineIfChangedHead(ctx, newHeadRoot); err != nil {
-		return err
+	if err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot); err != nil {
+		log.WithError(err).Error("could not update forkchoice")
 	}
-	return nil
-}
-
-// This calls notify Forkchoice Update in the event that the head has changed
-func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) error {
-	s.headLock.RLock()
-	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
-		s.headLock.RUnlock()
-		return nil
-	}
-	s.headLock.RUnlock()
-
-	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
-		log.Debug("New head does not exist in DB. Do nothing")
-		return nil // We don't have the block, don't notify the engine and update head.
-	}
-
-	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get new head block")
-		return nil
-	}
-	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get state from db")
-		return nil
-	}
-	arg := &notifyForkchoiceUpdateArg{
-		headState: headState,
-		headRoot:  newHeadRoot,
-		headBlock: newHeadBlock.Block(),
-	}
-	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
-	if err != nil {
-		return err
-	}
-	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
-		log.WithError(err).Error("could not save head")
-	}
-	return nil
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
-func (s *Service) processAttestations(ctx context.Context) {
+func (s *Service) processAttestations(ctx context.Context, disparity time.Duration) {
 	atts := s.cfg.AttPool.ForkchoiceAttestations()
 	for _, a := range atts {
 		// Based on the spec, don't process the attestation until the subsequent slot.
 		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, disparity); err != nil {
 			continue
 		}
 
@@ -240,7 +176,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 			continue
 		}
 
-		if err := s.receiveAttestationNoPubsub(ctx, a); err != nil {
+		if err := s.receiveAttestationNoPubsub(ctx, a, disparity); err != nil {
 			log.WithFields(logrus.Fields{
 				"slot":             a.Data.Slot,
 				"committeeIndex":   a.Data.CommitteeIndex,
@@ -257,11 +193,11 @@ func (s *Service) processAttestations(ctx context.Context) {
 //  1. Validate attestation, update validator's latest vote
 //  2. Apply fork choice to the processed attestation
 //  3. Save latest head info
-func (s *Service) receiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error {
+func (s *Service) receiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation, disparity time.Duration) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.receiveAttestationNoPubsub")
 	defer span.End()
 
-	if err := s.OnAttestation(ctx, att); err != nil {
+	if err := s.OnAttestation(ctx, att, disparity); err != nil {
 		return errors.Wrap(err, "could not process attestation")
 	}
 

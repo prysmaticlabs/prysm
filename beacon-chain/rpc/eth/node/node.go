@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
@@ -277,18 +277,20 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
 			IsSyncing:    ns.SyncChecker.Syncing(),
 			IsOptimistic: isOptimistic,
+			ElOffline:    !ns.ExecutionChainInfoFetcher.ExecutionClientConnected(),
 		},
 	}, nil
 }
 
 // GetHealth returns node health status in http status codes. Useful for load balancers.
 // Response Usage:
-//    "200":
-//      description: Node is ready
-//    "206":
-//      description: Node is syncing but can serve incomplete data
-//    "503":
-//      description: Node not initialized or having issues
+//
+//	"200":
+//	  description: Node is ready
+//	"206":
+//	  description: Node is syncing but can serve incomplete data
+//	"503":
+//	  description: Node not initialized or having issues
 func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "node.GetHealth")
 	defer span.End()

@@ -17,7 +17,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "nil request")
 	}
-	s, err := vs.HeadFetcher.HeadState(ctx)
+	s, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
@@ -45,7 +45,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		},
 	})
 
-	vs.ExitPool.InsertVoluntaryExit(ctx, s, req)
+	vs.ExitPool.InsertVoluntaryExit(req)
 
 	r, err := req.Exit.HashTreeRoot()
 	if err != nil {

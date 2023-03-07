@@ -11,7 +11,7 @@ import (
 )
 
 // BlockIfaceToV1BlockHeader converts a signed beacon block interface into a signed beacon block header.
-func BlockIfaceToV1BlockHeader(block interfaces.SignedBeaconBlock) (*ethpbv1.SignedBeaconBlockHeader, error) {
+func BlockIfaceToV1BlockHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv1.SignedBeaconBlockHeader, error) {
 	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
@@ -57,7 +57,7 @@ func V1ToV1Alpha1SignedBlock(v1Blk *ethpbv1.SignedBeaconBlock) (*ethpbalpha.Sign
 	return v1alpha1Block, nil
 }
 
-// V1Alpha1ToV1Block converts a v1alpha1 BeaconBlock proto to a v1 proto.
+// V1Alpha1ToV1Block converts a v1alpha1 ReadOnlyBeaconBlock proto to a v1 proto.
 func V1Alpha1ToV1Block(alphaBlk *ethpbalpha.BeaconBlock) (*ethpbv1.BeaconBlock, error) {
 	marshaledBlk, err := proto.Marshal(alphaBlk)
 	if err != nil {
@@ -338,7 +338,7 @@ func V1ValidatorToV1Alpha1(v1Validator *ethpbv1.Validator) *ethpbalpha.Validator
 }
 
 // SignedBeaconBlock converts a signed beacon block interface to a v1alpha1 block.
-func SignedBeaconBlock(block interfaces.SignedBeaconBlock) (*ethpbv1.SignedBeaconBlock, error) {
+func SignedBeaconBlock(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv1.SignedBeaconBlock, error) {
 	if block == nil || block.IsNil() {
 		return nil, errors.New("could not find requested block")
 	}
@@ -441,6 +441,10 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 		}
 	}
 
+	hRoot, err := state.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get historical roots from state")
+	}
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorsRoot()),
@@ -459,7 +463,7 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(state.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(state.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(state.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hRoot),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,

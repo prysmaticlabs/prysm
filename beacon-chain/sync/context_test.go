@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	core "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/protocol"
+	core "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"

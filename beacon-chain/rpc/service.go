@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -99,6 +100,7 @@ type Config struct {
 	SlashingsPool                 slashings.PoolManager
 	SlashingChecker               slasherservice.SlashingChecker
 	SyncCommitteeObjectPool       synccommittee.Pool
+	BLSChangesPool                blstoexec.PoolManager
 	SyncService                   chainSync.Checker
 	Broadcaster                   p2p.Broadcaster
 	PeersFetcher                  p2p.PeersProvider
@@ -221,6 +223,7 @@ func (s *Service) Start() {
 		BeaconDB:               s.cfg.BeaconDB,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 		BlockBuilder:           s.cfg.BlockBuilder,
+		BLSChangesPool:         s.cfg.BLSChangesPool,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:           s.cfg.HeadFetcher,
@@ -239,7 +242,8 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
 		},
-		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -257,15 +261,16 @@ func (s *Service) Start() {
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
 	nodeServerV1 := &node.Server{
-		BeaconDB:              s.cfg.BeaconDB,
-		Server:                s.grpcServer,
-		SyncChecker:           s.cfg.SyncService,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
-		PeersFetcher:          s.cfg.PeersFetcher,
-		PeerManager:           s.cfg.PeerManager,
-		MetadataProvider:      s.cfg.MetadataProvider,
-		HeadFetcher:           s.cfg.HeadFetcher,
+		BeaconDB:                  s.cfg.BeaconDB,
+		Server:                    s.grpcServer,
+		SyncChecker:               s.cfg.SyncService,
+		OptimisticModeFetcher:     s.cfg.OptimisticModeFetcher,
+		GenesisTimeFetcher:        s.cfg.GenesisTimeFetcher,
+		PeersFetcher:              s.cfg.PeersFetcher,
+		PeerManager:               s.cfg.PeerManager,
+		MetadataProvider:          s.cfg.MetadataProvider,
+		HeadFetcher:               s.cfg.HeadFetcher,
+		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	}
 
 	beaconChainServer := &beaconv1alpha1.Server{
@@ -317,6 +322,8 @@ func (s *Service) Start() {
 		V1Alpha1ValidatorServer:       validatorServer,
 		SyncChecker:                   s.cfg.SyncService,
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
+		BLSChangesPool:                s.cfg.BLSChangesPool,
+		FinalizationFetcher:           s.cfg.FinalizationFetcher,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
@@ -352,6 +359,7 @@ func (s *Service) Start() {
 			},
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 			ForkFetcher:           s.cfg.ForkFetcher,
+			FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)

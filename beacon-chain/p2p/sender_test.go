@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p/core/network"
 	testp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"

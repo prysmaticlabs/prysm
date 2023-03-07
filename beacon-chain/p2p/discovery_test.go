@@ -16,10 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
@@ -31,6 +30,7 @@ import (
 	testp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	prysmNetwork "github.com/prysmaticlabs/prysm/v3/network"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -246,7 +246,7 @@ func TestInboundPeerLimit(t *testing.T) {
 	fakePeer := testp2p.NewTestP2P(t)
 	s := &Service{
 		cfg:       &Config{MaxPeers: 30},
-		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
+		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, 1*time.Second, false),
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
 			PeerLimit:    30,
 			ScorerParams: &scorers.Config{},

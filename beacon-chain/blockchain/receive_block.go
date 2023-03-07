@@ -7,21 +7,23 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
 // This defines how many epochs since finality the run time will begin to save hot state on to the DB.
-var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
+var epochsSinceFinalitySaveHotStateDB = primitives.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
-	ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error
+	ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blkRoots [][32]byte) error
 	HasBlock(ctx context.Context, root [32]byte) bool
 }
 
@@ -32,10 +34,10 @@ type SlashingReceiver interface {
 
 // ReceiveBlock is a function that defines the operations (minus pubsub)
 // that are performed on a received block. The operations consist of:
-//   1. Validate block, apply state transition and update checkpoints
-//   2. Apply fork choice to the processed block
-//   3. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+//  1. Validate block, apply state transition and update checkpoints
+//  2. Apply fork choice to the processed block
+//  3. Save latest head info
+func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
@@ -43,6 +45,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	if err != nil {
 		return err
 	}
+
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
@@ -62,11 +67,13 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
-	finalized := s.FinalizedCheckpt()
+	cp := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
-	justified := s.CurrentJustifiedCheckpt()
+	cp = s.ForkChoicer().JustifiedCheckpoint()
+	justified := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		log.WithError(err).Error("Unable to log block sync status")
 	}
@@ -85,9 +92,12 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
 // the state, performing batch verification of all collected signatures and then performing the appropriate
 // actions for a block post-transition.
-func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error {
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blkRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
+
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 
 	// Apply state transition on the incoming newly received block batches, one by one.
 	if err := s.onBlockBatch(ctx, blocks, blkRoots); err != nil {
@@ -113,14 +123,15 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		finalized := s.FinalizedCheckpt()
+		cp := s.ForkChoicer().FinalizedCheckpoint()
+		finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
 
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	finalized := s.FinalizedCheckpt()
+	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -141,18 +152,20 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
 func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
+	s.ForkChoicer().Lock()
+	defer s.ForkChoicer().Unlock()
 	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
-func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
-	// Delete the processed block attestations from attestation pool.
-	if err := s.deletePoolAtts(b.Body().Attestations()); err != nil {
-		return err
-	}
-
+func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) error {
 	// Mark block exits as seen so we don't include same ones in future blocks.
 	for _, e := range b.Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
+	}
+
+	// Mark block BLS changes as seen so we don't include same ones in future blocks.
+	if err := s.handleBlockBLSToExecChanges(b); err != nil {
+		return errors.Wrap(err, "could not process BLSToExecutionChanges")
 	}
 
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
@@ -162,13 +175,28 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 	return nil
 }
 
+func (s *Service) handleBlockBLSToExecChanges(blk interfaces.ReadOnlyBeaconBlock) error {
+	if blk.Version() < version.Capella {
+		return nil
+	}
+	changes, err := blk.Body().BLSToExecutionChanges()
+	if err != nil {
+		return errors.Wrap(err, "could not get BLSToExecutionChanges")
+	}
+	for _, change := range changes {
+		s.cfg.BLSToExecPool.MarkIncluded(change)
+	}
+	return nil
+}
+
 // This checks whether it's time to start saving hot state to DB.
 // It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
+// Requires a read lock on forkchoice
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
-	var sinceFinality types.Epoch
-	finalized := s.FinalizedCheckpt()
+	var sinceFinality primitives.Epoch
+	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}

@@ -11,8 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // EngineClient --
@@ -21,6 +24,7 @@ type EngineClient struct {
 	PayloadIDBytes              *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp       []byte
 	ExecutionPayload            *pb.ExecutionPayload
+	ExecutionPayloadCapella     *pb.ExecutionPayloadCapella
 	ExecutionBlock              *pb.ExecutionBlock
 	Err                         error
 	ErrLatestExecBlock          error
@@ -34,6 +38,7 @@ type EngineClient struct {
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
+	BlockValue                  *big.Int
 }
 
 // NewPayload --
@@ -43,7 +48,7 @@ func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData)
 
 // ForkchoiceUpdated --
 func (e *EngineClient) ForkchoiceUpdated(
-	_ context.Context, fcs *pb.ForkchoiceState, _ *pb.PayloadAttributes,
+	_ context.Context, fcs *pb.ForkchoiceState, _ payloadattribute.Attributer,
 ) (*pb.PayloadIDBytes, []byte, error) {
 	if e.OverrideValidHash != [32]byte{} && bytesutil.ToBytes32(fcs.HeadBlockHash) == e.OverrideValidHash {
 		return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, nil
@@ -52,8 +57,15 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return e.ExecutionPayload, e.ErrGetPayload
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, error) {
+	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
+		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
+	}
+	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+	return p, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --
@@ -75,8 +87,9 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ 
 	return b, e.ErrExecBlockByHash
 }
 
-func (e *EngineClient) ReconstructFullBellatrixBlock(
-	_ context.Context, blindedBlock interfaces.SignedBeaconBlock,
+// ReconstructFullBlock --
+func (e *EngineClient) ReconstructFullBlock(
+	_ context.Context, blindedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("block must be blinded")
@@ -93,12 +106,13 @@ func (e *EngineClient) ReconstructFullBellatrixBlock(
 	return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 }
 
+// ReconstructFullBellatrixBlockBatch --
 func (e *EngineClient) ReconstructFullBellatrixBlockBatch(
-	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
+	ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
 ) ([]interfaces.SignedBeaconBlock, error) {
 	fullBlocks := make([]interfaces.SignedBeaconBlock, 0, len(blindedBlocks))
 	for _, b := range blindedBlocks {
-		newBlock, err := e.ReconstructFullBellatrixBlock(ctx, b)
+		newBlock, err := e.ReconstructFullBlock(ctx, b)
 		if err != nil {
 			return nil, err
 		}

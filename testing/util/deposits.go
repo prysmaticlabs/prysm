@@ -275,22 +275,19 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (state.Beacon
 // DepositTrieFromDeposits takes an array of deposits and returns the deposit trie.
 func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trie.SparseMerkleTrie, [][32]byte, error) {
 	encodedDeposits := make([][]byte, len(deposits))
+	roots := make([][32]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
 		hashedDeposit, err := deposits[i].Data.HashTreeRoot()
 		if err != nil {
 			return nil, [][32]byte{}, errors.Wrap(err, "could not tree hash deposit data")
 		}
 		encodedDeposits[i] = hashedDeposit[:]
+		roots[i] = hashedDeposit
 	}
 
 	depositTrie, err := trie.GenerateTrieFromItems(encodedDeposits, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, [][32]byte{}, errors.Wrap(err, "Could not generate deposit trie")
-	}
-
-	roots := make([][32]byte, len(deposits))
-	for i, dep := range encodedDeposits {
-		roots[i] = bytesutil.ToBytes32(dep)
 	}
 
 	return depositTrie, roots, nil

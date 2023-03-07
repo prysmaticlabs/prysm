@@ -10,7 +10,6 @@ import (
 type Flags struct {
 	// Configuration related flags.
 	MinimalConfig  bool // MinimalConfig as defined in the spec.
-	E2EConfig      bool // E2EConfig made specifically for testing, do not use except in E2E.
 	MaxRPCPageSize int  // MaxRPCPageSize is used for a cap of page sizes in RPC requests.
 }
 

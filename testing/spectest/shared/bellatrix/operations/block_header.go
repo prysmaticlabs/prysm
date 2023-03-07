@@ -10,6 +10,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -22,8 +23,13 @@ import (
 func RunBlockHeaderTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "bellatrix", "operations/block_header/pyspec_tests")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "bellatrix", "operations/block_header/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
+			helpers.ClearCache()
+
 			blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz_snappy")
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
@@ -63,10 +69,10 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 
 				postBeaconState := &ethpb.BeaconStateBellatrix{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := state_native.ProtobufBeaconStateBellatrix(beaconState.CloneInnerState())
+				pbState, err := state_native.ProtobufBeaconStateBellatrix(beaconState.ToProto())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(beaconState.CloneInnerState(), postBeaconState)
+					diff, _ := messagediff.PrettyDiff(beaconState.ToProto(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}

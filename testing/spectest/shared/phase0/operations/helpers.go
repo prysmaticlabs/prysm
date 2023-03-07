@@ -21,7 +21,7 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, state.BeaconState, interfaces.SignedBeaconBlock) (state.BeaconState, error)
+type blockOperation func(context.Context, state.BeaconState, interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error)
 
 // RunBlockOperationTest takes in the prestate and the beacon block body, processes it through the
 // passed in block operation function and checks the post state with the expected post state.
@@ -69,10 +69,10 @@ func RunBlockOperationTest(
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateSSZ); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-		pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
+		pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
+			diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
 			t.Log(diff)
 			t.Fatal("Post state does not match expected")
 		}

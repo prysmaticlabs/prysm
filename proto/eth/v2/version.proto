@@ -27,4 +27,5 @@ enum Version {
   PHASE0 = 0;
   ALTAIR = 1;
   BELLATRIX = 2;
+  CAPELLA = 3;
 }

@@ -1,7 +1,7 @@
 package types
 
 import (
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -24,16 +24,16 @@ type IndexedAttestationWrapper struct {
 // AttesterDoubleVote represents a double vote instance
 // which is a slashable event for attesters.
 type AttesterDoubleVote struct {
-	Target                 types.Epoch
-	ValidatorIndex         types.ValidatorIndex
+	Target                 primitives.Epoch
+	ValidatorIndex         primitives.ValidatorIndex
 	PrevAttestationWrapper *IndexedAttestationWrapper
 	AttestationWrapper     *IndexedAttestationWrapper
 }
 
 // DoubleBlockProposal containing an incoming and an existing proposal's signing root.
 type DoubleBlockProposal struct {
-	Slot                   types.Slot
-	ValidatorIndex         types.ValidatorIndex
+	Slot                   primitives.Slot
+	ValidatorIndex         primitives.ValidatorIndex
 	PrevBeaconBlockWrapper *SignedBlockHeaderWrapper
 	BeaconBlockWrapper     *SignedBlockHeaderWrapper
 }
@@ -48,6 +48,6 @@ type SignedBlockHeaderWrapper struct {
 // AttestedEpochForValidator encapsulates a previously attested epoch
 // for a validator index.
 type AttestedEpochForValidator struct {
-	ValidatorIndex types.ValidatorIndex
-	Epoch          types.Epoch
+	ValidatorIndex primitives.ValidatorIndex
+	Epoch          primitives.Epoch
 }

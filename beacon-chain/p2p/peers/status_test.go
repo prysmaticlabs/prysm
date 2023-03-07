@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -289,7 +289,7 @@ func TestPeerChainState(t *testing.T) {
 	oldChainStartLastUpdated, err := p.ChainStateLastUpdated(id)
 	require.NoError(t, err)
 
-	finalizedEpoch := types.Epoch(123)
+	finalizedEpoch := primitives.Epoch(123)
 	p.SetChainState(id, &pb.Status{FinalizedEpoch: finalizedEpoch})
 
 	resChainState, err := p.ChainState(id)
@@ -601,12 +601,12 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 		},
 	})
 
-	expectedTarget := types.Epoch(2)
+	expectedTarget := primitives.Epoch(2)
 	maxPeers := 3
-	mockroot2 := [32]byte{}
-	mockroot3 := [32]byte{}
-	mockroot4 := [32]byte{}
-	mockroot5 := [32]byte{}
+	var mockroot2 [32]byte
+	var mockroot3 [32]byte
+	var mockroot4 [32]byte
+	var mockroot5 [32]byte
 	copy(mockroot2[:], "two")
 	copy(mockroot3[:], "three")
 	copy(mockroot4[:], "four")
@@ -757,15 +757,15 @@ func TestPrunePeers(t *testing.T) {
 
 func TestStatus_BestPeer(t *testing.T) {
 	type peerConfig struct {
-		headSlot       types.Slot
-		finalizedEpoch types.Epoch
+		headSlot       primitives.Slot
+		finalizedEpoch primitives.Epoch
 	}
 	tests := []struct {
 		name              string
 		peers             []*peerConfig
 		limitPeers        int
-		ourFinalizedEpoch types.Epoch
-		targetEpoch       types.Epoch
+		ourFinalizedEpoch primitives.Epoch
+		targetEpoch       primitives.Epoch
 		// targetEpochSupport denotes how many peers support returned epoch.
 		targetEpochSupport int
 	}{
@@ -943,7 +943,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		},
 	})
 
-	peerSlots := []types.Slot{32, 32, 32, 32, 235, 233, 258, 268, 270}
+	peerSlots := []primitives.Slot{32, 32, 32, 32, 235, 233, 258, 268, 270}
 	for i, headSlot := range peerSlots {
 		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
 		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)
@@ -952,7 +952,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		})
 	}
 
-	expectedEpoch := types.Epoch(8)
+	expectedEpoch := primitives.Epoch(8)
 	retEpoch, pids := p.BestNonFinalized(3, 5)
 	assert.Equal(t, expectedEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
 	assert.Equal(t, 3, len(pids), "Unexpected number of peers")
@@ -984,7 +984,7 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 		HeadSlot: params.BeaconConfig().SlotsPerEpoch * 4,
 	})
 
-	assert.Equal(t, types.Epoch(5), p.HighestEpoch(), "Expected current epoch to be 5")
+	assert.Equal(t, primitives.Epoch(5), p.HighestEpoch(), "Expected current epoch to be 5")
 }
 
 func TestInbound(t *testing.T) {

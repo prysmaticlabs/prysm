@@ -7,7 +7,7 @@ import (
 )
 
 // processExitsFromBlock logs the event when a tracked validators' exit was included in a block
-func (s *Service) processExitsFromBlock(blk interfaces.BeaconBlock) {
+func (s *Service) processExitsFromBlock(blk interfaces.ReadOnlyBeaconBlock) {
 	s.RLock()
 	defer s.RUnlock()
 	for _, exit := range blk.Body().VoluntaryExits() {

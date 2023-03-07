@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
