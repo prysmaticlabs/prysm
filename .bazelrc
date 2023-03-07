@@ -1,9 +1,9 @@
-# Print warnings for tests with inappropriate test size or timeout.
-test --test_verbose_timeout_warnings
-
-# Only build test targets when running bazel test //...
-test --build_tests_only
-test --test_output=errors
+# Import bazelrc presets
+import %workspace%/build/bazelrc/convenience.bazelrc
+import %workspace%/build/bazelrc/correctness.bazelrc
+import %workspace%/build/bazelrc/cross.bazelrc
+import %workspace%/build/bazelrc/debug.bazelrc
+import %workspace%/build/bazelrc/performance.bazelrc
 
 # E2E run with debug gotag
 test:e2e --define gotags=debug
@@ -11,20 +11,8 @@ test:e2e --define gotags=debug
 # Clearly indicate that coverage is enabled to disable certain nogo checks.
 coverage --define=coverage_enabled=1
 
-# Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
-build --host_force_python=PY2
-run --host_force_python=PY2
-
-# Networking is blocked for tests by default, add "requires-network" tag to your test if networking
-# is required within the sandbox. Network sandboxing only works on linux.
-build --sandbox_default_allow_network=false
-
 # Stamp binaries with git information
 build --workspace_status_command=./hack/workspace_status.sh
-
-# Prevent PATH changes from rebuilding when switching from IDE to command line.
-build --incompatible_strict_action_env
-run --incompatible_strict_action_env
 
 build --define blst_disabled=false
 run --define blst_disabled=false
@@ -68,166 +56,12 @@ build:cgo_symbolizer --define=USE_CGO_SYMBOLIZER=true
 build:cgo_symbolizer -c dbg
 build:cgo_symbolizer --define=gotags=cgosymbolizer_enabled
 
-# multi-arch cross-compiling toolchain configs:
------------------------------------------------
-build:cross --crosstool_top=@prysm_toolchains//:multiarch_toolchain
-build:cross --host_platform=@io_bazel_rules_go//go/toolchain:linux_amd64
-build:cross --host_crosstool_top=@prysm_toolchains//:hostonly_toolchain
-
-# linux_amd64 config for cross compiler toolchain, not strictly necessary since host/exec env is amd64
-build:linux_amd64 --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64_cgo
-
-# osx_amd64 config for cross compiler toolchain
-build:osx_amd64 --config=cross
-build:osx_amd64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo
-build:osx_amd64 --compiler=osxcross
-
-# osx_arm64 config for cross compiler toolchain
-build:osx_arm64 --config=cross
-build:osx_arm64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_arm64_cgo
-build:osx_arm64 --compiler=osxcross
-build:osx_arm64 --cpu=aarch64
-
-# windows
-build:windows_amd64 --config=cross
-build:windows_amd64  --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
-build:windows_amd64 --compiler=mingw-w64
-
-# linux_arm64 conifg for cross compiler toolchain
-build:linux_arm64 --config=cross
-build:linux_arm64 --platforms=@io_bazel_rules_go//go/toolchain:linux_arm64_cgo
-build:linux_arm64 --copt=-funsafe-math-optimizations
-build:linux_arm64 --copt=-ftree-vectorize
-build:linux_arm64 --copt=-fomit-frame-pointer
-build:linux_arm64 --cpu=aarch64
-build:linux_arm64 --compiler=clang
-build:linux_arm64 --copt=-march=armv8-a
-
-
 # toolchain build debug configs
 #------------------------------
 build:debug --sandbox_debug
 build:debug --toolchain_resolution_debug
 build:debug --verbose_failures
 build:debug -s
-
-# windows debug
-build:windows_amd64_debug --config=windows_amd64
-build:windows_amd64_debug --config=debug
-
-# osx_amd64 debug config
-build:osx_amd64_debug --config=debug
-build:osx_amd64_debug --config=osx_amd64
-
-# osx_arm64 debug config
-build:osx_arm64_debug --config=debug
-build:osx_arm64_debug --config=osx_arm64
-
-# linux_arm64_debug
-build:linux_arm64_debug --config=linux_arm64
-build:linux_arm64_debug --config=debug
-
-# linux_amd64_debug
-build:linux_amd64_debug --config=linux_amd64
-build:linux_amd64_debug --config=debug
-
-
-# Docker Sandbox Configs
-#-----------------------
-# Note all docker sandbox configs must run from a linux x86_64 host
-# build:docker-sandbox --experimental_docker_image=gcr.io/prysmaticlabs/rbe-worker:latest
-build:docker-sandbox --spawn_strategy=docker --strategy=Javac=docker --genrule_strategy=docker
-build:docker-sandbox --define=EXECUTOR=remote
-build:docker-sandbox --experimental_docker_verbose
-build:docker-sandbox --experimental_enable_docker_sandbox
-build:docker-sandbox --crosstool_top=@rbe_ubuntu_clang//cc:toolchain 
-build:docker-sandbox --host_javabase=@rbe_ubuntu_clang//java:jdk 
-build:docker-sandbox --javabase=@rbe_ubuntu_clang//java:jdk 
-build:docker-sandbox --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8 
-build:docker-sandbox --java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8 
-build:docker-sandbox --extra_execution_platforms=@rbe_ubuntu_clang//config:platform 
-build:docker-sandbox --host_platform=@rbe_ubuntu_clang//config:platform 
-build:docker-sandbox --platforms=@rbe_ubuntu_clang//config:platform
-build:docker-sandbox --extra_toolchains=@prysm_toolchains//:cc-toolchain-multiarch
-
-# windows_amd64 docker sandbox build config
-build:windows_amd64_docker --config=docker-sandbox --config=windows_amd64
-build:windows_amd64_docker_debug --config=windows_amd64_docker --config=debug
-
-# osx_amd64 docker sandbox build config
-build:osx_amd64_docker --config=docker-sandbox --config=osx_amd64
-build:osx_amd64_docker_debug --config=osx_amd64_docker --config=debug
-
-# osx_arm64 docker sandbox build config
-build:osx_arm64_docker --config=docker-sandbox --config=osx_arm64
-build:osx_arm64_docker_debug --config=osx_arm64_docker --config=debug
-
-# linux_arm64 docker sandbox build config
-build:linux_arm64_docker --config=docker-sandbox --config=linux_arm64
-build:linux_arm64_docker_debug --config=linux_arm64_docker --config=debug
-
-# linux_amd64 docker sandbox build config
-build:linux_amd64_docker --config=docker-sandbox --config=linux_amd64
-build:linux_amd64_docker_debug --config=linux_amd64_docker --config=debug
-
-
-# Remote Build Execution
-#-----------------------
-# Originally from https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/bazel-2.0.0.bazelrc
-#
-# Depending on how many machines are in the remote execution instance, setting
-# this higher can make builds faster by allowing more jobs to run in parallel.
-# Setting it too high can result in jobs that timeout, however, while waiting
-# for a remote machine to execute them.
-build:remote --jobs=50
-
-# Set several flags related to specifying the platform, toolchain and java
-# properties.
-# These flags should only be used as is for the rbe-ubuntu16-04 container
-# and need to be adapted to work with other toolchain containers.
-build:remote --host_javabase=@rbe_ubuntu_clang//java:jdk
-build:remote --javabase=@rbe_ubuntu_clang//java:jdk
-build:remote --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8
-build:remote --java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8
-build:remote --crosstool_top=@rbe_ubuntu_clang//cc:toolchain
-build:remote --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
-# Platform flags:
-# The toolchain container used for execution is defined in the target indicated
-# by "extra_execution_platforms", "host_platform" and "platforms".
-# More about platforms: https://docs.bazel.build/versions/master/platforms.html
-build:remote --extra_toolchains=@rbe_ubuntu_clang//config:cc-toolchain
-build:remote --extra_execution_platforms=@rbe_ubuntu_clang//config:platform
-build:remote --host_platform=@rbe_ubuntu_clang//config:platform
-build:remote --platforms=@rbe_ubuntu_clang//config:platform
-
-# Starting with Bazel 0.27.0 strategies do not need to be explicitly
-# defined. See https://github.com/bazelbuild/bazel/issues/7480
-build:remote --define=EXECUTOR=remote
-
-# Enable remote execution so actions are performed on the remote systems.
-# build:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
-
-# Enforce stricter environment rules, which eliminates some non-hermetic
-# behavior and therefore improves both the remote cache hit rate and the
-# correctness and repeatability of the build.
-build:remote --incompatible_strict_action_env=true
-
-# Set a higher timeout value, just in case.
-build:remote --remote_timeout=3600
-
-# Enable authentication. This will pick up application default credentials by
-# default. You can use --google_credentials=some_file.json to use a service
-# account credential instead.
-# build:remote --google_default_credentials=true
-
-# Enable build without the bytes
-# See: https://github.com/bazelbuild/bazel/issues/6862
-build:remote --experimental_remote_download_outputs=toplevel --experimental_inmemory_jdeps_files --experimental_inmemory_dotd_files
-
-build:remote --remote_local_fallback
-
-# Ignore GoStdLib with remote caching
-build --modify_execution_info='GoStdlib.*=+no-remote-cache'
 
 # Set bazel gotag
 build --define gotags=bazel

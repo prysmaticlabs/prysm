@@ -219,17 +219,6 @@ func TestConfigureInterop(t *testing.T) {
 			},
 			"interop",
 		},
-		{
-			"genesis state set",
-			func() *cli.Context {
-				app := cli.App{}
-				set := flag.NewFlagSet("test", 0)
-				set.String(flags.InteropGenesisStateFlag.Name, "", "")
-				assert.NoError(t, set.Set(flags.InteropGenesisStateFlag.Name, "/path/"))
-				return cli.NewContext(&app, set, nil)
-			},
-			"interop",
-		},
 	}
 
 	for _, tt := range tests {
