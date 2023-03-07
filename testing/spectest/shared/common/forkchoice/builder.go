@@ -104,7 +104,7 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 
 // Attestation receives the attestation and updates forkchoice.
 func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
-	require.NoError(t, bb.service.OnAttestation(context.TODO(), a))
+	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconNetworkConfig().MaximumGossipClockDisparity))
 }
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.
@@ -152,7 +152,9 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+		bb.service.ForkChoiceStore().RLock()
 		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
+		bb.service.ForkChoiceStore().RUnlock()
 		require.DeepEqual(t, want, got)
 	}
 

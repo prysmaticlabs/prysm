@@ -124,7 +124,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//            /
 	//           5 <- head, justified epoch = 2
 	//
-	// We set this node's slot to be 64 so that when prunning below we do not prune its child
+	// We set this node's slot to be 64 so that when pruning below we do not prune its child
 	state, blkRoot, err = prepareForkchoiceState(context.Background(), 2*params.BeaconConfig().SlotsPerEpoch, indexToHash(5), indexToHash(4), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))

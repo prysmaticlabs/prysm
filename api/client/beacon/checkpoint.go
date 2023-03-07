@@ -103,8 +103,8 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	}
 
 	log.Printf("BeaconState slot=%d, Block slot=%d", s.Slot(), b.Block().Slot())
-	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", sr, b.Block().StateRoot())
-	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", br, realBlockRoot)
+	log.Printf("BeaconState htr=%#x, Block state_root=%#x", sr, b.Block().StateRoot())
+	log.Printf("BeaconState latest_block_header htr=%#x, block htr=%#x", br, realBlockRoot)
 	return &OriginData{
 		st: s,
 		b:  b,
