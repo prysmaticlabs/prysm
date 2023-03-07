@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -118,7 +117,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.OnAttestation(ctx, tt.a)
+			err := service.OnAttestation(ctx, tt.a, 0)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -155,7 +154,7 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
-	require.NoError(t, service.OnAttestation(ctx, att[0]))
+	require.NoError(t, service.OnAttestation(ctx, att[0], 0))
 }
 
 func TestStore_SaveCheckpointState(t *testing.T) {
@@ -323,97 +322,4 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
 
 	assert.NoError(t, service.verifyBeaconBlock(ctx, d), "Did not receive the wanted error")
-}
-
-func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-		WithForkChoiceStore(fcs),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	b32 := util.NewBeaconBlock()
-	b32.Block.Slot = 32
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
-	r32, err := b32.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
-	b33 := util.NewBeaconBlock()
-	b33.Block.Slot = 33
-	b33.Block.ParentRoot = r32[:]
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
-	r33, err := b33.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
-	require.ErrorContains(t, "Root and finalized store are not consistent", err)
-}
-
-func TestVerifyFinalizedConsistency_OK(t *testing.T) {
-	ctx := context.Background()
-
-	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	b32 := util.NewBeaconBlock()
-	b32.Block.Slot = 32
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
-	r32, err := b32.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1, Root: r32}))
-	b33 := util.NewBeaconBlock()
-	b33.Block.Slot = 33
-	b33.Block.ParentRoot = r32[:]
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
-	r33, err := b33.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
-	require.NoError(t, err)
-}
-
-func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
-	ctx := context.Background()
-
-	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	b32 := util.NewBeaconBlock()
-	b32.Block.Slot = 32
-	r32, err := b32.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	b33 := util.NewBeaconBlock()
-	b33.Block.Slot = 33
-	b33.Block.ParentRoot = r32[:]
-	r33, err := b33.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	state, blkRoot, err := prepareForkchoiceState(ctx, b32.Block.Slot, r32, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, b33.Block.Slot, r33, r32, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
-
-	jc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r32}
-	bState, _ := util.DeterministicGenesisState(t, 10)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, bState, r32))
-	require.NoError(t, service.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(ctx, jc))
-	_, err = service.cfg.ForkChoiceStore.Head(ctx)
-	require.NoError(t, err)
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
-	require.NoError(t, err)
 }

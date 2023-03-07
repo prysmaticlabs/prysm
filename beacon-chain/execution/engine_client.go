@@ -225,12 +225,12 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 	defer cancel()
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-		result := &pb.ExecutionPayloadDeneb{}
+		result := &pb.ExecutionPayloadDenebWithValue{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-		return blocks.WrappedExecutionPayloadDeneb(result)
+		return blocks.WrappedExecutionPayloadDeneb(result.Payload, big.NewInt(0).SetBytes(result.Value))
 	}
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
@@ -240,7 +240,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 			return nil, handleRPCError(err)
 		}
 
-		return blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(result.Value))
+		return blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value)))
 	}
 
 	result := &pb.ExecutionPayload{}
@@ -414,30 +414,27 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 	numOfHashes := len(hashes)
 	elems := make([]gethRPC.BatchElem, 0, numOfHashes)
 	execBlks := make([]*pb.ExecutionBlock, 0, numOfHashes)
-	errs := make([]error, 0, numOfHashes)
 	if numOfHashes == 0 {
 		return execBlks, nil
 	}
 	for _, h := range hashes {
 		blk := &pb.ExecutionBlock{}
-		err := error(nil)
 		newH := h
 		elems = append(elems, gethRPC.BatchElem{
 			Method: ExecutionBlockByHashMethod,
 			Args:   []interface{}{newH, withTxs},
 			Result: blk,
-			Error:  err,
+			Error:  error(nil),
 		})
 		execBlks = append(execBlks, blk)
-		errs = append(errs, err)
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {
 		return nil, ioErr
 	}
-	for _, e := range errs {
-		if e != nil {
-			return nil, handleRPCError(e)
+	for _, e := range elems {
+		if e.Error != nil {
+			return nil, handleRPCError(e.Error)
 		}
 	}
 	return execBlks, nil

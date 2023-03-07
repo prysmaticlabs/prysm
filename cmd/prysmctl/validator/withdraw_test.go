@@ -3,6 +3,7 @@ package validator
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -10,33 +11,54 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
 
+func getHappyPathTestServer(file string, t *testing.T) *httptest.Server {
+	return httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet {
+			fmt.Println(r.RequestURI)
+			if r.RequestURI == "/eth/v1/beacon/pool/bls_to_execution_changes" {
+				b, err := os.ReadFile(filepath.Clean(file))
+				require.NoError(t, err)
+				var to []*apimiddleware.SignedBLSToExecutionChangeJson
+				err = json.Unmarshal(b, &to)
+				require.NoError(t, err)
+				err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
+					Data: to,
+				})
+				require.NoError(t, err)
+			} else if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
+				err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
+					Data: &apimiddleware.ForkJson{
+						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
+						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
+						Epoch:           fmt.Sprintf("%d", params.BeaconConfig().CapellaForkEpoch),
+					},
+					ExecutionOptimistic: false,
+					Finalized:           true,
+				})
+				require.NoError(t, err)
+			}
+
+		}
+	}))
+}
+
 func TestCallWithdrawalEndpoint(t *testing.T) {
 	file := "./testdata/change-operations.json"
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)
 	require.NoError(t, err)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodGet {
-			b, err := os.ReadFile(filepath.Clean(file))
-			require.NoError(t, err)
-			var to []*apimiddleware.SignedBLSToExecutionChangeJson
-			err = json.Unmarshal(b, &to)
-			require.NoError(t, err)
-			err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
-				Data: to,
-			})
-			require.NoError(t, err)
-		}
-	}))
+	srv := getHappyPathTestServer(file, t)
 	err = srv.Listener.Close()
 	require.NoError(t, err)
 	srv.Listener = l
@@ -65,21 +87,7 @@ func TestCallWithdrawalEndpoint_Mutiple(t *testing.T) {
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)
 	require.NoError(t, err)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodGet {
-			b, err := os.ReadFile(filepath.Clean(file))
-			require.NoError(t, err)
-			var to []*apimiddleware.SignedBLSToExecutionChangeJson
-			err = json.Unmarshal(b, &to)
-			require.NoError(t, err)
-			err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
-				Data: to,
-			})
-			require.NoError(t, err)
-		}
-	}))
+	srv := getHappyPathTestServer(file, t)
 	err = srv.Listener.Close()
 	require.NoError(t, err)
 	srv.Listener = l
@@ -111,21 +119,7 @@ func TestCallWithdrawalEndpoint_Mutiple_stakingcli(t *testing.T) {
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)
 	require.NoError(t, err)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodGet {
-			b, err := os.ReadFile(filepath.Clean(file))
-			require.NoError(t, err)
-			var to []*apimiddleware.SignedBLSToExecutionChangeJson
-			err = json.Unmarshal(b, &to)
-			require.NoError(t, err)
-			err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
-				Data: to,
-			})
-			require.NoError(t, err)
-		}
-	}))
+	srv := getHappyPathTestServer(file, t)
 	err = srv.Listener.Close()
 	require.NoError(t, err)
 	srv.Listener = l
@@ -157,21 +151,7 @@ func TestCallWithdrawalEndpoint_Mutiple_notfound(t *testing.T) {
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)
 	require.NoError(t, err)
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodGet {
-			b, err := os.ReadFile(filepath.Clean(respFile))
-			require.NoError(t, err)
-			var to []*apimiddleware.SignedBLSToExecutionChangeJson
-			err = json.Unmarshal(b, &to)
-			require.NoError(t, err)
-			err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
-				Data: to,
-			})
-			require.NoError(t, err)
-		}
-	}))
+	srv := getHappyPathTestServer(respFile, t)
 	err = srv.Listener.Close()
 	require.NoError(t, err)
 	srv.Listener = l
@@ -228,14 +208,34 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 	l, err := net.Listen("tcp", baseurl)
 	require.NoError(t, err)
 	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(400)
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(&apimiddleware.IndexedVerificationFailureErrorJson{
-			Failures: []*apimiddleware.SingleIndexedVerificationFailureJson{
-				{Index: 0, Message: "Could not validate SignedBLSToExecutionChange"},
-			},
-		})
-		require.NoError(t, err)
+		if r.Method == http.MethodPost && r.RequestURI == "/eth/v1/beacon/pool/bls_to_execution_changes" {
+			w.WriteHeader(400)
+			w.Header().Set("Content-Type", "application/json")
+			err = json.NewEncoder(w).Encode(&apimiddleware.IndexedVerificationFailureErrorJson{
+				Failures: []*apimiddleware.SingleIndexedVerificationFailureJson{
+					{Index: 0, Message: "Could not validate SignedBLSToExecutionChange"},
+				},
+			})
+			require.NoError(t, err)
+		} else if r.Method == http.MethodGet {
+			if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
+				w.WriteHeader(200)
+				w.Header().Set("Content-Type", "application/json")
+				err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
+					Data: &apimiddleware.ForkJson{
+						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
+						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
+						Epoch:           fmt.Sprintf("%d", params.BeaconConfig().CapellaForkEpoch),
+					},
+					ExecutionOptimistic: false,
+					Finalized:           true,
+				})
+				require.NoError(t, err)
+			} else {
+				w.WriteHeader(400)
+				w.Header().Set("Content-Type", "application/json")
+			}
+		}
 	}))
 	err = srv.Listener.Close()
 	require.NoError(t, err)
@@ -258,6 +258,45 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 	require.ErrorContains(t, "did not receive 2xx response from API", err)
 
 	assert.LogsContain(t, hook, "Could not validate SignedBLSToExecutionChange")
+}
+
+func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
+	file := "./testdata/change-operations.json"
+	baseurl := "127.0.0.1:3500"
+	l, err := net.Listen("tcp", baseurl)
+	require.NoError(t, err)
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
+			Data: &apimiddleware.ForkJson{
+				PreviousVersion: hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
+				CurrentVersion:  hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
+				Epoch:           fmt.Sprintf("%d", params.BeaconConfig().BellatrixForkEpoch),
+			},
+			ExecutionOptimistic: false,
+			Finalized:           true,
+		})
+		require.NoError(t, err)
+	}))
+	err = srv.Listener.Close()
+	require.NoError(t, err)
+	srv.Listener = l
+	srv.Start()
+	defer srv.Close()
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String("beacon-node-host", baseurl, "")
+	set.String("path", file, "")
+	set.Bool("confirm", true, "")
+	set.Bool("accept-terms-of-use", true, "")
+	assert.NoError(t, set.Set("beacon-node-host", baseurl))
+	assert.NoError(t, set.Set("path", file))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	err = setWithdrawalAddresses(cliCtx)
+	require.ErrorContains(t, "setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork.", err)
 }
 
 func TestVerifyWithdrawal_Mutiple(t *testing.T) {

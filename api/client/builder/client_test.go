@@ -263,6 +263,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		hc := &http.Client{
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
+				require.Equal(t, "bellatrix", r.Header.Get("Eth-Consensus-Version"))
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayload)),
@@ -288,6 +289,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		hc := &http.Client{
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
+				require.Equal(t, "capella", r.Header.Get("Eth-Consensus-Version"))
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayloadCapella)),

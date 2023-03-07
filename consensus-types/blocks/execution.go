@@ -36,6 +36,11 @@ func (e executionPayload) IsNil() bool {
 	return e.p == nil
 }
 
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayload) IsBlinded() bool {
+	return false
+}
+
 // MarshalSSZ --
 func (e executionPayload) MarshalSSZ() ([]byte, error) {
 	return e.p.MarshalSSZ()
@@ -195,6 +200,11 @@ func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfac
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadHeader) IsNil() bool {
 	return e.p == nil
+}
+
+// IsBlinded returns true if the underlying data is a header.
+func (e executionPayloadHeader) IsBlinded() bool {
+	return true
 }
 
 // MarshalSSZ --
@@ -387,6 +397,11 @@ func (e executionPayloadCapella) IsNil() bool {
 	return e.p == nil
 }
 
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadCapella) IsBlinded() bool {
+	return false
+}
+
 // MarshalSSZ --
 func (e executionPayloadCapella) MarshalSSZ() ([]byte, error) {
 	return e.p.MarshalSSZ()
@@ -546,6 +561,11 @@ func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCape
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadHeaderCapella) IsNil() bool {
 	return e.p == nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadHeaderCapella) IsBlinded() bool {
+	return true
 }
 
 // MarshalSSZ --
@@ -834,8 +854,8 @@ type executionPayloadHeaderDeneb struct {
 }
 
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderDeneb{p: p}
+func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value *big.Int) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderDeneb{p: p, value: value}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -985,6 +1005,11 @@ func (e executionPayloadHeaderDeneb) Value() (*big.Int, error) {
 	return e.value, nil
 }
 
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadHeaderDeneb) IsBlinded() bool {
+	return true
+}
+
 // executionPayloadDeneb is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -994,8 +1019,8 @@ type executionPayloadDeneb struct {
 }
 
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb) (interfaces.ExecutionData, error) {
-	w := executionPayloadDeneb{p: p}
+func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value *big.Int) (interfaces.ExecutionData, error) {
+	w := executionPayloadDeneb{p: p, value: value}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -1143,4 +1168,9 @@ func (e executionPayloadDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, e
 
 func (e executionPayloadDeneb) Value() (*big.Int, error) {
 	return e.value, nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadDeneb) IsBlinded() bool {
+	return false
 }

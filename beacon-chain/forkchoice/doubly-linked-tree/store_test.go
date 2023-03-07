@@ -320,45 +320,6 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 
 }
 
-func TestStore_HasParent(t *testing.T) {
-	f := setup(1, 1)
-	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	require.Equal(t, false, f.HasParent(params.BeaconConfig().ZeroHash))
-	require.Equal(t, true, f.HasParent(indexToHash(1)))
-	require.Equal(t, true, f.HasParent(indexToHash(2)))
-	require.Equal(t, true, f.HasParent(indexToHash(3)))
-	require.Equal(t, false, f.HasParent(indexToHash(4)))
-}
-
-func TestForkChoice_HighestReceivedBlockSlotRoot(t *testing.T) {
-	f := setup(1, 1)
-	s := f.store
-	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(100), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(100), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'A'}, f.HighestReceivedBlockRoot())
-	_, err = s.insert(context.Background(), 1000, [32]byte{'B'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(1000), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(1000), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
-	_, err = s.insert(context.Background(), 500, [32]byte{'C'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(1000), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(1000), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
-}
-
 func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	f := setup(1, 1)
 	s := f.store

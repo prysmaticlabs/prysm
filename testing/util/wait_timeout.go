@@ -1,7 +1,9 @@
 package util
 
 import (
+	"context"
 	"sync"
+	"testing"
 	"time"
 )
 
@@ -18,5 +20,37 @@ func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		return false
 	case <-time.After(timeout):
 		return true
+	}
+}
+
+type Waiter struct {
+	c chan struct{}
+}
+
+func NewWaiter() *Waiter {
+	return &Waiter{
+		c: make(chan struct{}),
+	}
+}
+
+func (w *Waiter) Done() {
+	close(w.c)
+}
+
+func (w *Waiter) RequireDoneAfter(t *testing.T, timeout time.Duration) {
+	select {
+	case <-w.c:
+		return
+	case <-time.After(timeout):
+		t.Fatalf("timeout after %s", timeout)
+	}
+}
+
+func (w *Waiter) RequireDoneBeforeCancel(t *testing.T, ctx context.Context) {
+	select {
+	case <-w.c:
+		return
+	case <-ctx.Done():
+		t.Fatalf("context canceled before Done with error=%s", ctx.Err())
 	}
 }

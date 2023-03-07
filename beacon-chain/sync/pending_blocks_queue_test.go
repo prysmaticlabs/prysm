@@ -185,6 +185,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 	db := dbtest.SetupDB(t)
 
 	p1 := p2ptest.NewTestP2P(t)
+	fcs := doublylinkedtree.New()
 	r := &Service{
 		cfg: &config{
 			p2p:      p1,
@@ -195,7 +196,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 				},
 				ReceiveBlockMockErr: execution.ErrHTTPTimeout,
 			},
-			stateGen: stategen.New(db, doublylinkedtree.New()),
+			stateGen: stategen.New(db, fcs),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -554,6 +555,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 func TestService_sortedPendingSlots(t *testing.T) {
 	r := &Service{
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
@@ -701,7 +703,9 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 	db := dbtest.SetupDB(t)
 
 	p1 := p2ptest.NewTestP2P(t)
-	mockChain := mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+	fcs := doublylinkedtree.New()
+	mockChain := mock.ChainService{
+		Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 		}}
@@ -710,7 +714,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 			p2p:      p1,
 			beaconDB: db,
 			chain:    &mockChain,
-			stateGen: stategen.New(db, doublylinkedtree.New()),
+			stateGen: stategen.New(db, fcs),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -791,6 +795,7 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 	r.initCaches()

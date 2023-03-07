@@ -18,6 +18,13 @@ import (
 
 type Option func(s *Service) error
 
+func WithBlobDB(bdb BlobDB) Option {
+	return func(s *Service) error {
+		s.blobs = bdb
+		return nil
+	}
+}
+
 func WithAttestationNotifier(notifier operation.Notifier) Option {
 	return func(s *Service) error {
 		s.cfg.attestationNotifier = notifier

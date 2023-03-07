@@ -64,7 +64,7 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	// BlocksByRoots requests
 	topicMap[addEncoding(p2p.RPCBlocksByRootTopicV1)] = blockCollector
 	topicMap[addEncoding(p2p.RPCBlocksByRootTopicV2)] = blockCollectorV2
-	topicMap[addEncoding(p2p.RPCBeaconBlockAndBlobsSidecarByRootTopicV1)] = blobCollector
+	topicMap[addEncoding(p2p.RPCBlobSidecarsByRootTopicV1)] = blobCollector
 
 	// BlockByRange requests
 	topicMap[addEncoding(p2p.RPCBlocksByRangeTopicV1)] = blockCollector

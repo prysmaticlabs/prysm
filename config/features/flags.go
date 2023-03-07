@@ -13,11 +13,6 @@ var (
 		Usage:   "Run Prysm configured for the Prater / Goerli test network",
 		Aliases: []string{"goerli"},
 	}
-	// RopstenTestnet flag for the multiclient Ethereum consensus testnet.
-	RopstenTestnet = &cli.BoolFlag{
-		Name:  "ropsten",
-		Usage: "Run Prysm configured for the Ropsten beacon chain test network",
-	}
 	// SepoliaTestnet flag for the multiclient Ethereum consensus testnet.
 	SepoliaTestnet = &cli.BoolFlag{
 		Name:  "sepolia",
@@ -49,6 +44,10 @@ var (
 	disablePeerScorer = &cli.BoolFlag{
 		Name:  "disable-peer-scorer",
 		Usage: "Disables experimental P2P peer scorer",
+	}
+	enableReorgLateBlocks = &cli.BoolFlag{
+		Name:  "enable-reorg-late-blocks",
+		Usage: "Enables reorgs of late blocks",
 	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
@@ -114,10 +113,6 @@ var (
 		Name:  "disable-gossip-batch-aggregation",
 		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
 	}
-	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
-		Name:  "enable-only-blinded-beacon-blocks",
-		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
-	}
 	enableStartupOptimistic = &cli.BoolFlag{
 		Name:   "startup-optimistic",
 		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
@@ -127,6 +122,10 @@ var (
 	enableFullSSZDataLogging = &cli.BoolFlag{
 		Name:  "enable-full-ssz-data-logging",
 		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
+	}
+	SaveFullExecutionPayloads = &cli.BoolFlag{
+		Name:  "save-full-execution-payloads",
+		Usage: "Saves beacon blocks with full execution payloads instead of execution payload headers in the database",
 	}
 	EnableBeaconRESTApi = &cli.BoolFlag{
 		Name:  "enable-beacon-rest-api",
@@ -146,7 +145,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
 	PraterTestnet,
-	RopstenTestnet,
 	SepoliaTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
@@ -167,7 +165,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
 	PraterTestnet,
-	RopstenTestnet,
 	SepoliaTestnet,
 	Mainnet,
 	disablePeerScorer,
@@ -177,9 +174,10 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableStakinContractCheck,
 	disablePullTips,
 	disableVecHTR,
+	enableReorgLateBlocks,
 	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
-	EnableOnlyBlindedBeaconBlocks,
+	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	disableDefensivePull,
 	enableFullSSZDataLogging,
@@ -195,6 +193,5 @@ var E2EBeaconChainFlags = []string{
 var NetworkFlags = []cli.Flag{
 	Mainnet,
 	PraterTestnet,
-	RopstenTestnet,
 	SepoliaTestnet,
 }

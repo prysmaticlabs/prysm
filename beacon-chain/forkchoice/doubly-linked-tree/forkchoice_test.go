@@ -205,7 +205,6 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
 
-	f.store.nodesLock.Lock()
 	f.store.nodeByRoot[[32]byte{'3'}].balance = 10
 	require.NoError(t, f.store.treeRootNode.applyWeightChanges(ctx))
 	require.Equal(t, uint64(10), f.store.nodeByRoot[[32]byte{'1'}].weight)
@@ -213,7 +212,6 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 
 	require.NoError(t, f.store.treeRootNode.updateBestDescendant(ctx, 1, 1, 1))
 	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRootNode.bestDescendant.root)
-	f.store.nodesLock.Unlock()
 
 	r1 := [32]byte{'1'}
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: r1}
@@ -580,7 +578,7 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 }
 
-func TestStore_InsertOptimisticChain(t *testing.T) {
+func TestStore_InsertChain(t *testing.T) {
 	f := setup(1, 1)
 	blks := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 	blk := util.NewBeaconBlock()
@@ -613,10 +611,10 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 	for i := 0; i < len(blks); i++ {
 		args[i] = blks[10-i-1]
 	}
-	require.NoError(t, f.InsertOptimisticChain(context.Background(), args))
+	require.NoError(t, f.InsertChain(context.Background(), args))
 
 	f = setup(1, 1)
-	require.NoError(t, f.InsertOptimisticChain(context.Background(), args[2:]))
+	require.NoError(t, f.InsertChain(context.Background(), args[2:]))
 }
 
 func TestForkChoice_UpdateCheckpoints(t *testing.T) {
@@ -784,4 +782,17 @@ func TestWeight(t *testing.T) {
 	w, err = f.Weight([32]byte{'b'})
 	require.ErrorIs(t, err, ErrNilNode)
 	require.Equal(t, uint64(0), w)
+}
+
+func TestForkchoice_UpdateJustifiedBalances(t *testing.T) {
+	f := setup(0, 0)
+	balances := []uint64{10, 0, 0, 40, 50, 60, 0, 80, 90, 100}
+	f.balancesByRoot = func(context.Context, [32]byte) ([]uint64, error) {
+		return balances, nil
+	}
+	require.NoError(t, f.updateJustifiedBalances(context.Background(), [32]byte{}))
+	require.Equal(t, uint64(7), f.numActiveValidators)
+	require.Equal(t, uint64(430)/32, f.store.committeeWeight)
+	require.DeepEqual(t, balances, f.justifiedBalances)
+
 }

@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -140,6 +141,7 @@ type Service struct {
 	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
 	blobCache                        *blobCache
+	blobs                            BlobDB
 }
 
 // NewService initializes new regular sync service.
@@ -289,6 +291,10 @@ func (s *Service) registerHandlers() {
 			return
 		}
 	}
+}
+
+func (s *Service) setRateCollector(topic string, c *leakybucket.Collector) {
+	s.rateLimiter.limiterMap[topic] = c
 }
 
 // marks the chain as having started.

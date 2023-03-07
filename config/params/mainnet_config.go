@@ -119,8 +119,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafeSlotsToUpdateJustified:       8,
 
 	// Fork choice algorithm constants.
-	ProposerScoreBoost: 40,
-	IntervalsPerSlot:   3,
+	ProposerScoreBoost:              40,
+	ReorgWeightThreshold:            20,
+	ReorgMaxEpochsSinceFinalization: 2,
+	IntervalsPerSlot:                3,
 
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.
@@ -177,6 +179,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
 	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
 	DomainBLSToExecutionChange:        bytesutil.Uint32ToBytes4(0x0A000000),
+	DomainBlobSidecar:                 bytesutil.Uint32ToBytes4(0x0B000000),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,
@@ -262,10 +265,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Mevboost circuit breaker
 	MaxBuilderConsecutiveMissedSlots: 3,
-	MaxBuilderEpochMissedSlots:       8,
+	MaxBuilderEpochMissedSlots:       5,
 
 	// Execution engine timeout value
 	ExecutionEngineTimeoutValue: 8, // 8 seconds default based on: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
+
+	// deneb presets
+	MaxBlobsPerBlock: 4,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

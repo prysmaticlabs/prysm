@@ -9,12 +9,11 @@ import (
 )
 
 func NewValidatorClient(validatorConn validatorHelpers.NodeConnection) iface.ValidatorClient {
-	grpcClient := grpcApi.NewGrpcValidatorClient(validatorConn.GetGrpcClientConn())
 	featureFlags := features.Get()
 
 	if featureFlags.EnableBeaconRESTApi {
-		return beaconApi.NewBeaconApiValidatorClientWithFallback(validatorConn.GetBeaconApiUrl(), validatorConn.GetBeaconApiTimeout(), grpcClient)
+		return beaconApi.NewBeaconApiValidatorClient(validatorConn.GetBeaconApiUrl(), validatorConn.GetBeaconApiTimeout())
 	} else {
-		return grpcClient
+		return grpcApi.NewGrpcValidatorClient(validatorConn.GetGrpcClientConn())
 	}
 }

@@ -132,6 +132,50 @@ func SendBeaconBlocksByRootRequest(
 	return blocks, nil
 }
 
+func SendSidecarsByRoot(
+	ctx context.Context, ci blockchain.ChainInfoFetcher, p2pApi p2p.P2P, pid peer.ID,
+	req *p2ptypes.BlobSidecarsByRootReq, processor BlobsSidecarProcessor,
+) ([]*pb.BlobsSidecar, error) {
+	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRootName, slots.ToEpoch(ci.CurrentSlot()))
+	if err != nil {
+		return nil, err
+	}
+	stream, err := p2pApi.Send(ctx, req, topic, pid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeStream(stream, log)
+
+	sidecars := make([]*pb.BlobsSidecar, 0, len(*req))
+	process := func(s *pb.BlobsSidecar) error {
+		sidecars = append(sidecars, s)
+		if processor != nil {
+			return processor(s)
+		}
+		return nil
+	}
+
+	max := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
+	for i := 0; i < len(*req); i++ {
+		// Exit if peer sends more than MAX_REQUEST_BLOBS_SIDECARS.
+		if uint64(i) >= max {
+			break
+		}
+		isFirstChunk := i == 0
+		sc, err := ReadChunkedBlobsSidecar(stream, ci, p2pApi, isFirstChunk)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if err := process(sc); err != nil {
+			return nil, err
+		}
+	}
+	return sidecars, nil
+}
+
 func SendBlocksAndSidecarsByRootRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *p2ptypes.BeaconBlockByRootsReq, processor BeaconBlockAndSidecarProcessor,

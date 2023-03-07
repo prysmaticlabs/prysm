@@ -48,6 +48,11 @@ type TestP2P struct {
 	LocalMetadata   metadata.Metadata
 }
 
+func (p *TestP2P) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewTestP2P initializes a new p2p test service.
 func NewTestP2P(t *testing.T) *TestP2P {
 	ctx := context.Background()
@@ -166,6 +171,11 @@ func (p *TestP2P) Broadcast(_ context.Context, _ proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation.
 func (p *TestP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
+	p.BroadcastCalled = true
+	return nil
+}
+
+func (p *TestP2P) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
 	p.BroadcastCalled = true
 	return nil
 }
