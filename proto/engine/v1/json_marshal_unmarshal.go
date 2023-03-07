@@ -655,8 +655,22 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type executionPayloadBodyV1JSON struct {
-	Transactions []hexutil.Bytes   `json:"transactions"`
-	Withdrawals  []*withdrawalJSON `json:"withdrawals"`
+	Transactions []hexutil.Bytes `json:"transactions"`
+	Withdrawals  []*Withdrawal   `json:"withdrawals"`
+}
+
+func (b *ExecutionPayloadBodyV1) MarshalJSON() ([]byte, error) {
+	transactions := make([]hexutil.Bytes, len(b.Transactions))
+	for i, tx := range b.Transactions {
+		transactions[i] = tx
+	}
+	if len(b.Withdrawals) == 0 {
+		b.Withdrawals = make([]*Withdrawal, 0)
+	}
+	return json.Marshal(executionPayloadBodyV1JSON{
+		Transactions: transactions,
+		Withdrawals:  b.Withdrawals,
+	})
 }
 
 func (b *ExecutionPayloadBodyV1) UnmarshalJSON(enc []byte) error {
@@ -671,19 +685,10 @@ func (b *ExecutionPayloadBodyV1) UnmarshalJSON(enc []byte) error {
 	if len(decoded.Withdrawals) == 0 {
 		b.Withdrawals = make([]*Withdrawal, 0)
 	}
-
 	transactions := make([][]byte, len(decoded.Transactions))
 	for i, tx := range decoded.Transactions {
 		transactions[i] = tx
 	}
 	b.Transactions = transactions
-	ws := make([]*Withdrawal, len(decoded.Withdrawals))
-	for i, wj := range decoded.Withdrawals {
-		ws[i], err = wj.ToWithdrawal()
-		if err != nil {
-			return err
-		}
-	}
-	b.Withdrawals = ws
 	return nil
 }
