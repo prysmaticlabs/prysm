@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
