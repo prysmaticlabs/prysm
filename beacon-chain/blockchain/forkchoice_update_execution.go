@@ -2,12 +2,17 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Service) isNewProposer(slot primitives.Slot) bool {
@@ -50,13 +55,37 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	}
 	isNewProposer := s.isNewProposer(proposingSlot)
 	if isNewProposer && !features.Get().DisableReorgLateBlocks {
-		if proposingSlot == s.CurrentSlot() {
+		headWeight, err := s.ForkChoicer().Weight(newHeadRoot)
+		if err != nil {
+			log.WithError(err).WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
+		}
+		currentSlot := s.CurrentSlot()
+		if proposingSlot == currentSlot {
 			proposerHead := s.ForkChoicer().GetProposerHead()
 			if proposerHead != newHeadRoot {
 				return nil
 			}
-		} else if s.ForkChoicer().ShouldOverrideFCU() {
-			return nil
+			log.WithFields(logrus.Fields{
+				"root":   fmt.Sprintf("%#x", newHeadRoot),
+				"weight": headWeight,
+			}).Info("Attempted late block reorg aborted due to attestations at 12 seconds")
+			lateBlockFailedAttemptFirstThreshold.Inc()
+		} else {
+			if s.ForkChoicer().ShouldOverrideFCU() {
+				return nil
+			}
+			secs, err := slots.SecondsSinceSlotStart(currentSlot,
+				uint64(s.genesisTime.Unix()), uint64(time.Now().Unix()))
+			if err != nil {
+				log.WithError(err).Error("could not compute seconds since slot start")
+			}
+			if secs >= doublylinkedtree.ProcessAttestationsThreshold {
+				log.WithFields(logrus.Fields{
+					"root":   fmt.Sprintf("%#x", newHeadRoot),
+					"weight": headWeight,
+				}).Info("Attempted late block reorg aborted due to attestations at 10 seconds")
+				lateBlockFailedAttemptSecondThreshold.Inc()
+			}
 		}
 	}
 	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
