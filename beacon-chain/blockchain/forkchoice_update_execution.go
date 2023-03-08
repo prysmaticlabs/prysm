@@ -102,7 +102,7 @@ func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitiv
 			"root":   fmt.Sprintf("%#x", newHeadRoot),
 			"weight": headWeight,
 		}).Info("Attempted late block reorg aborted due to attestations at 12 seconds")
-		lateBlockFailedAttemptFirstThreshold.Inc()
+		lateBlockFailedAttemptSecondThreshold.Inc()
 	} else {
 		if s.ForkChoicer().ShouldOverrideFCU() {
 			return true
@@ -117,7 +117,7 @@ func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitiv
 				"root":   fmt.Sprintf("%#x", newHeadRoot),
 				"weight": headWeight,
 			}).Info("Attempted late block reorg aborted due to attestations at 10 seconds")
-			lateBlockFailedAttemptSecondThreshold.Inc()
+			lateBlockFailedAttemptFirstThreshold.Inc()
 		}
 	}
 	return false
