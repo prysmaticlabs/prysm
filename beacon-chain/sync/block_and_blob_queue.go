@@ -3,6 +3,7 @@ package sync
 import (
 	"sync"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -84,11 +85,11 @@ func (q *blockAndBlocksQueue) getBlock(r [32]byte) (interfaces.SignedBeaconBlock
 	return bnb.blk, nil
 }
 
-func (q *blockAndBlocksQueue) getBlobs(r [32]byte, i uint64) (*eth.SignedBlobSidecar, error) {
+func (q *blockAndBlocksQueue) getBlob(r [32]byte, i uint64) (*eth.SignedBlobSidecar, error) {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 
-	if i > 3 {
+	if i >= params.MaxBlobsPerBlock {
 		return nil, errors.New("request out of bounds")
 	}
 

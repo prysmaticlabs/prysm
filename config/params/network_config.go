@@ -35,6 +35,7 @@ type NetworkConfig struct {
 	// Blobs config
 	MaxRequestBlobsSidecars          uint64           `yaml:"MAX_REQUEST_BLOBS_SIDECARS"`             // MaxRequestBlobsSidecars is the maximum number of blobs sidecars in a single request.
 	MinEpochsForBlobsSidecarsRequest primitives.Epoch `yaml:"MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS"` // MinEpochsForBlobsSidecarsRequest is the minimum epoch range over which a node must serve blobs sidecars.
+	BlobSubnetCount                  uint64           // BlobSubnetCount is the number of blob subnets used in the gossipsub protocol.
 }
 
 var networkConfig = mainnetNetworkConfig
