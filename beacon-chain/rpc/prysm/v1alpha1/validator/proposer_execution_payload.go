@@ -107,7 +107,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			p, err := emptyPayload()
+			p, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
 			if err != nil {
 				return nil, nil, err
 			}
@@ -118,7 +118,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 			return nil, nil, err
 		}
 		if !hasTerminalBlock {
-			p, err := emptyPayload()
+			p, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
 			if err != nil {
 				return nil, nil, err
 			}
@@ -267,8 +267,8 @@ func activationEpochNotReached(slot primitives.Slot) bool {
 	return false
 }
 
-func emptyPayload() (interfaces.ExecutionData, error) {
-	return consensusblocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
@@ -278,7 +278,7 @@ func emptyPayload() (interfaces.ExecutionData, error) {
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
-	})
+	}
 }
 
 func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
