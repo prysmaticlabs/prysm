@@ -102,11 +102,6 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 		if err := s.pruneAttsFromPool(headBlock); err != nil {
 			return err
 		}
-
-		// Mark block BLS changes as seen so we don't include same ones in future blocks.
-		if err := s.markIncludedBlockBLSToExecChanges(headBlock.Block()); err != nil {
-			return errors.Wrap(err, "could not process BLSToExecutionChanges")
-		}
 	}
 
 	return nil

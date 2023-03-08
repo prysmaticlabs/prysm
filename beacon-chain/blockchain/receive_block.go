@@ -56,11 +56,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		return err
 	}
 
-	// Handle post block operations such as attestations and exits.
-	if err := s.handlePostBlockOperations(blockCopy.Block()); err != nil {
-		return err
-	}
-
 	// Have we been finalizing? Should we start saving hot states to db?
 	if err := s.checkSaveHotStateDB(ctx); err != nil {
 		return err
@@ -161,6 +156,11 @@ func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) er
 	// Mark block exits as seen so we don't include same ones in future blocks.
 	for _, e := range b.Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
+	}
+
+	// Mark block BLS changes as seen so we don't include same ones in future blocks.
+	if err := s.markIncludedBlockBLSToExecChanges(b); err != nil {
+		return errors.Wrap(err, "could not process BLSToExecutionChanges")
 	}
 
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.

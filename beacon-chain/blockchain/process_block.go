@@ -210,9 +210,25 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}).Debug("Head block is not the received block")
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+	// Checks if the current blockRoot ( which is also the head root) is new.
+	// This check must come before forkchoiceUpdateWithExecution because it saves the new head.
+	isNewHead := s.isNewHead(headRoot)
 
+	// updates FCU and prunes the attestations from conical block.
 	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
+	}
+
+	if isNewHead {
+		// uses the newly saved block from forkchoiceUpdateWithExecution
+		headBlock, err := s.headBlock()
+		if err != nil {
+			return err
+		}
+		// Handle post block operations such as attestations and exits.
+		if err := s.handlePostBlockOperations(headBlock.Block()); err != nil {
+			return err
+		}
 	}
 
 	// Send notification of the processed block to the state feed.
