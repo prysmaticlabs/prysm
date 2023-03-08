@@ -3337,10 +3337,21 @@ def prysm_deps():
     )
 
     go_repository(
+        name = "com_github_quic_go_qtls_go1_20",
+        build_directives = [
+            "gazelle:exclude generate_cert.go",
+        ],
+        importpath = "github.com/quic-go/qtls-go1-20",
+        sum = "h1:KbChDlg82d3IHqaj2bn6GfKRj84Per2VGf5XV3wSwQk=",
+        version = "v0.1.1",
+    )
+
+    go_repository(
         name = "com_github_quic_go_quic_go",
         build_directives = [
             "gazelle:exclude mockgen.go",
             "gazelle:exclude tools.go",
+            "gazelle:exclude internal/qtls/go120.go",  # Disabled until go1.20 is supported in Prysm.
         ],
         importpath = "github.com/quic-go/quic-go",
         sum = "h1:ItNoTDN/Fm/zBlq769lLJc8ECe9gYaW40veHCCco7y0=",
