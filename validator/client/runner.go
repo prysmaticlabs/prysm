@@ -130,9 +130,9 @@ func run(ctx context.Context, v iface.Validator) {
 
 			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
 				go func() {
-					//deadline set for next epoch rounded up
-					roundUpDeadline := v.SlotDeadline(slots.RoundUpToNearestEpoch(slots.CurrentSlot(v.genesisTime)))
-					if err := v.PushProposerSettings(ctx, km, roundUpDeadline); err != nil {
+					//deadline set for end of epoch
+					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
+					if err := v.PushProposerSettings(ctx, km, epochDeadline); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")
 					}
 				}()
