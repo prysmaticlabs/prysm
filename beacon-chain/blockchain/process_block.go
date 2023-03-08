@@ -221,12 +221,12 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 
 	if isNewHead {
 		// uses the newly saved block from forkchoiceUpdateWithExecution
-		headBlock, err := s.headBlock()
+		headBlock, err := s.HeadBlock(ctx)
 		if err != nil {
 			return err
 		}
 		// Handle post block operations such as attestations and exits.
-		if err := s.handlePostBlockOperations(headBlock.Block()); err != nil {
+		if err := s.prunePostBlockOperationPools(headBlock.Block()); err != nil {
 			return err
 		}
 	}

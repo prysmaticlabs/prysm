@@ -152,19 +152,19 @@ func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.A
 	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
-func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) error {
+func (s *Service) prunePostBlockOperationPools(headBlock interfaces.ReadOnlyBeaconBlock) error {
 	// Mark block exits as seen so we don't include same ones in future blocks.
-	for _, e := range b.Body().VoluntaryExits() {
+	for _, e := range headBlock.Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
 	// Mark block BLS changes as seen so we don't include same ones in future blocks.
-	if err := s.markIncludedBlockBLSToExecChanges(b); err != nil {
+	if err := s.markIncludedBlockBLSToExecChanges(headBlock); err != nil {
 		return errors.Wrap(err, "could not process BLSToExecutionChanges")
 	}
 
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
-	for _, as := range b.Body().AttesterSlashings() {
+	for _, as := range headBlock.Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
 	}
 	return nil
