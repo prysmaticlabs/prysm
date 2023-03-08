@@ -19,11 +19,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -459,7 +461,17 @@ func (s *ChainService) IsOptimisticForRoot(_ context.Context, root [32]byte) (bo
 }
 
 // UpdateHead mocks the same method in the chain service.
-func (s *ChainService) UpdateHead(_ context.Context) error { return nil }
+func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) {
+	ojc := &ethpb.Checkpoint{}
+	st, root, err := prepareForkchoiceState(ctx, slot, bytesutil.ToBytes32(s.Root), [32]byte{}, [32]byte{}, ojc, ojc)
+	if err != nil {
+		logrus.WithError(err).Error("could not update head")
+	}
+	err = s.ForkChoicer().InsertNode(ctx, st, root)
+	if err != nil {
+		logrus.WithError(err).Error("could not insert node to forkchoice")
+	}
+}
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.
 func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}
@@ -467,4 +479,38 @@ func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterS
 // IsFinalized mocks the same method in the chain service.
 func (s *ChainService) IsFinalized(_ context.Context, blockRoot [32]byte) bool {
 	return s.FinalizedRoots[blockRoot]
+}
+
+// prepareForkchoiceState prepares a beacon state with the given data to mock
+// insert into forkchoice
+func prepareForkchoiceState(
+	_ context.Context,
+	slot primitives.Slot,
+	blockRoot [32]byte,
+	parentRoot [32]byte,
+	payloadHash [32]byte,
+	justified *ethpb.Checkpoint,
+	finalized *ethpb.Checkpoint,
+) (state.BeaconState, [32]byte, error) {
+	blockHeader := &ethpb.BeaconBlockHeader{
+		ParentRoot: parentRoot[:],
+	}
+
+	executionHeader := &enginev1.ExecutionPayloadHeader{
+		BlockHash: payloadHash[:],
+	}
+
+	base := &ethpb.BeaconStateBellatrix{
+		Slot:                         slot,
+		RandaoMixes:                  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:                   make([][]byte, 1),
+		CurrentJustifiedCheckpoint:   justified,
+		FinalizedCheckpoint:          finalized,
+		LatestExecutionPayloadHeader: executionHeader,
+		LatestBlockHeader:            blockHeader,
+	}
+
+	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
+	st, err := state_native.InitializeFromProtoBellatrix(base)
+	return st, blockRoot, err
 }

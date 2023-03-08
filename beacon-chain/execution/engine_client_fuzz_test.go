@@ -11,9 +11,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/beacon"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
@@ -23,10 +23,10 @@ import (
 
 func FuzzForkChoiceResponse(f *testing.F) {
 	valHash := common.Hash([32]byte{0xFF, 0x01})
-	payloadID := beacon.PayloadID([8]byte{0x01, 0xFF, 0xAA, 0x00, 0xEE, 0xFE, 0x00, 0x00})
+	payloadID := engine.PayloadID([8]byte{0x01, 0xFF, 0xAA, 0x00, 0xEE, 0xFE, 0x00, 0x00})
 	valErr := "asjajshjahsaj"
-	seed := &beacon.ForkChoiceResponse{
-		PayloadStatus: beacon.PayloadStatusV1{
+	seed := &engine.ForkChoiceResponse{
+		PayloadStatus: engine.PayloadStatusV1{
 			Status:          "INVALID_TERMINAL_BLOCK",
 			LatestValidHash: &valHash,
 			ValidationError: &valErr,
@@ -37,7 +37,7 @@ func FuzzForkChoiceResponse(f *testing.F) {
 	assert.NoError(f, err)
 	f.Add(output)
 	f.Fuzz(func(t *testing.T, jsonBlob []byte) {
-		gethResp := &beacon.ForkChoiceResponse{}
+		gethResp := &engine.ForkChoiceResponse{}
 		prysmResp := &execution.ForkchoiceUpdatedResponse{}
 		gethErr := json.Unmarshal(jsonBlob, gethResp)
 		prysmErr := json.Unmarshal(jsonBlob, prysmResp)
@@ -49,14 +49,14 @@ func FuzzForkChoiceResponse(f *testing.F) {
 		gethBlob, gethErr := json.Marshal(gethResp)
 		prysmBlob, prysmErr := json.Marshal(prysmResp)
 		assert.Equal(t, gethErr != nil, prysmErr != nil, "geth and prysm unmarshaller return inconsistent errors")
-		newGethResp := &beacon.ForkChoiceResponse{}
+		newGethResp := &engine.ForkChoiceResponse{}
 		newGethErr := json.Unmarshal(prysmBlob, newGethResp)
 		assert.NoError(t, newGethErr)
 		if newGethResp.PayloadStatus.Status == "UNKNOWN" {
 			return
 		}
 
-		newGethResp2 := &beacon.ForkChoiceResponse{}
+		newGethResp2 := &engine.ForkChoiceResponse{}
 		newGethErr = json.Unmarshal(gethBlob, newGethResp2)
 		assert.NoError(t, newGethErr)
 
@@ -75,7 +75,7 @@ func FuzzForkChoiceResponse(f *testing.F) {
 func FuzzExchangeTransitionConfiguration(f *testing.F) {
 	valHash := common.Hash([32]byte{0xFF, 0x01})
 	ttd := hexutil.Big(*big.NewInt(math.MaxInt))
-	seed := &beacon.TransitionConfigurationV1{
+	seed := &engine.TransitionConfigurationV1{
 		TerminalTotalDifficulty: &ttd,
 		TerminalBlockHash:       valHash,
 		TerminalBlockNumber:     hexutil.Uint64(math.MaxUint64),
@@ -85,7 +85,7 @@ func FuzzExchangeTransitionConfiguration(f *testing.F) {
 	assert.NoError(f, err)
 	f.Add(output)
 	f.Fuzz(func(t *testing.T, jsonBlob []byte) {
-		gethResp := &beacon.TransitionConfigurationV1{}
+		gethResp := &engine.TransitionConfigurationV1{}
 		prysmResp := &pb.TransitionConfiguration{}
 		gethErr := json.Unmarshal(jsonBlob, gethResp)
 		prysmErr := json.Unmarshal(jsonBlob, prysmResp)
@@ -103,11 +103,11 @@ func FuzzExchangeTransitionConfiguration(f *testing.F) {
 		if gethErr != nil {
 			t.Errorf("%s %s", gethResp.TerminalTotalDifficulty.String(), prysmResp.TerminalTotalDifficulty)
 		}
-		newGethResp := &beacon.TransitionConfigurationV1{}
+		newGethResp := &engine.TransitionConfigurationV1{}
 		newGethErr := json.Unmarshal(prysmBlob, newGethResp)
 		assert.NoError(t, newGethErr)
 
-		newGethResp2 := &beacon.TransitionConfigurationV1{}
+		newGethResp2 := &engine.TransitionConfigurationV1{}
 		newGethErr = json.Unmarshal(gethBlob, newGethResp2)
 		assert.NoError(t, newGethErr)
 	})
@@ -115,7 +115,7 @@ func FuzzExchangeTransitionConfiguration(f *testing.F) {
 
 func FuzzExecutionPayload(f *testing.F) {
 	logsBloom := [256]byte{'j', 'u', 'n', 'k'}
-	execData := &beacon.ExecutableData{
+	execData := &engine.ExecutableData{
 		ParentHash:    common.Hash([32]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01}),
 		FeeRecipient:  common.Address([20]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}),
 		StateRoot:     common.Hash([32]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01}),
@@ -135,7 +135,7 @@ func FuzzExecutionPayload(f *testing.F) {
 	assert.NoError(f, err)
 	f.Add(output)
 	f.Fuzz(func(t *testing.T, jsonBlob []byte) {
-		gethResp := &beacon.ExecutableData{}
+		gethResp := &engine.ExecutableData{}
 		prysmResp := &pb.ExecutionPayload{}
 		gethErr := json.Unmarshal(jsonBlob, gethResp)
 		prysmErr := json.Unmarshal(jsonBlob, prysmResp)
@@ -147,10 +147,10 @@ func FuzzExecutionPayload(f *testing.F) {
 		gethBlob, gethErr := json.Marshal(gethResp)
 		prysmBlob, prysmErr := json.Marshal(prysmResp)
 		assert.Equal(t, gethErr != nil, prysmErr != nil, "geth and prysm unmarshaller return inconsistent errors")
-		newGethResp := &beacon.ExecutableData{}
+		newGethResp := &engine.ExecutableData{}
 		newGethErr := json.Unmarshal(prysmBlob, newGethResp)
 		assert.NoError(t, newGethErr)
-		newGethResp2 := &beacon.ExecutableData{}
+		newGethResp2 := &engine.ExecutableData{}
 		newGethErr = json.Unmarshal(gethBlob, newGethResp2)
 		assert.NoError(t, newGethErr)
 
