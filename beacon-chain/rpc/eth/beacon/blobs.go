@@ -30,8 +30,8 @@ func (bs *Server) GetBlobsSidecar(ctx context.Context, req *ethpbv1.BlobsRequest
 		for _, b := range sidecar.Blobs {
 			var data []byte
 			// go through each element, concat them
-			for _, el := range b.Data {
-				data = append(data, el)
+			for range b.Data {
+				data = append(data, b.Data...)
 			}
 			blobs = append(blobs, &ethpbv1.Blob{Data: data})
 		}

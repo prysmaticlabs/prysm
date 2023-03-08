@@ -55,7 +55,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		if fnComplexity > over {
 			pass.Reportf(fnDecl.Pos(), "cognitive complexity %d of func %s is high (> %d)", fnComplexity, fnName, over)
 		}
-	})
+	})w
 
 	return nil, nil
 }
