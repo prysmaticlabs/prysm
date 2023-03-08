@@ -469,7 +469,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(knownBlocks[4])
 		require.NoError(t, err)
 		_, err = fetcher.findAncestor(ctx, p2.PeerID(), wsb)
-		assert.ErrorContains(t, "protocol not supported", err)
+		assert.ErrorContains(t, "protocols not supported", err)
 	})
 
 	t.Run("no blocks", func(t *testing.T) {
