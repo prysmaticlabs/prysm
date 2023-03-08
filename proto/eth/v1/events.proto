@@ -106,7 +106,15 @@ message EventFinalizedCheckpoint {
 }
 
 message EventPayloadAttributeV1 {
-
+      // the identifier of the beacon hard fork at `proposal_slot`, e.g.`"bellatrix"`, `"capella"`.
+      string version = 1;
+      // The slot at which a block using these payload attributes may be built.
+      uint64 proposal_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+      // The previous dependent root.
+      bytes parent_block_root = 5 [(ethereum.eth.ext.ssz_size) = "32"];
+      bytes parent_block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+      // Validator index of the validator that proposed the block header.
+      uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 }
 
 message EventPayloadAttributeV2 {
