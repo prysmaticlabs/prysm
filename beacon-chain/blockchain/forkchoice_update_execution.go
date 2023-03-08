@@ -55,37 +55,8 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	}
 	isNewProposer := s.isNewProposer(proposingSlot)
 	if isNewProposer && !features.Get().DisableReorgLateBlocks {
-		headWeight, err := s.ForkChoicer().Weight(newHeadRoot)
-		if err != nil {
-			log.WithError(err).WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
-		}
-		currentSlot := s.CurrentSlot()
-		if proposingSlot == currentSlot {
-			proposerHead := s.ForkChoicer().GetProposerHead()
-			if proposerHead != newHeadRoot {
-				return nil
-			}
-			log.WithFields(logrus.Fields{
-				"root":   fmt.Sprintf("%#x", newHeadRoot),
-				"weight": headWeight,
-			}).Info("Attempted late block reorg aborted due to attestations at 12 seconds")
-			lateBlockFailedAttemptFirstThreshold.Inc()
-		} else {
-			if s.ForkChoicer().ShouldOverrideFCU() {
-				return nil
-			}
-			secs, err := slots.SecondsSinceSlotStart(currentSlot,
-				uint64(s.genesisTime.Unix()), uint64(time.Now().Unix()))
-			if err != nil {
-				log.WithError(err).Error("could not compute seconds since slot start")
-			}
-			if secs >= doublylinkedtree.ProcessAttestationsThreshold {
-				log.WithFields(logrus.Fields{
-					"root":   fmt.Sprintf("%#x", newHeadRoot),
-					"weight": headWeight,
-				}).Info("Attempted late block reorg aborted due to attestations at 10 seconds")
-				lateBlockFailedAttemptSecondThreshold.Inc()
-			}
+		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
+			return nil
 		}
 	}
 	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
@@ -112,4 +83,42 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 		log.WithError(err).Error("could not prune attestations from pool")
 	}
 	return nil
+}
+
+// shouldOverrideFCU checks whether the incoming block is still subject to being
+// reorged or not by the next proposer.
+func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitives.Slot) bool {
+	headWeight, err := s.ForkChoicer().Weight(newHeadRoot)
+	if err != nil {
+		log.WithError(err).WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
+	}
+	currentSlot := s.CurrentSlot()
+	if proposingSlot == currentSlot {
+		proposerHead := s.ForkChoicer().GetProposerHead()
+		if proposerHead != newHeadRoot {
+			return true
+		}
+		log.WithFields(logrus.Fields{
+			"root":   fmt.Sprintf("%#x", newHeadRoot),
+			"weight": headWeight,
+		}).Info("Attempted late block reorg aborted due to attestations at 12 seconds")
+		lateBlockFailedAttemptFirstThreshold.Inc()
+	} else {
+		if s.ForkChoicer().ShouldOverrideFCU() {
+			return true
+		}
+		secs, err := slots.SecondsSinceSlotStart(currentSlot,
+			uint64(s.genesisTime.Unix()), uint64(time.Now().Unix()))
+		if err != nil {
+			log.WithError(err).Error("could not compute seconds since slot start")
+		}
+		if secs >= doublylinkedtree.ProcessAttestationsThreshold {
+			log.WithFields(logrus.Fields{
+				"root":   fmt.Sprintf("%#x", newHeadRoot),
+				"weight": headWeight,
+			}).Info("Attempted late block reorg aborted due to attestations at 10 seconds")
+			lateBlockFailedAttemptSecondThreshold.Inc()
+		}
+	}
+	return false
 }
