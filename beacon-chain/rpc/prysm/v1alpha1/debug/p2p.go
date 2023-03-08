@@ -76,6 +76,10 @@ func (ds *Server) getPeer(pid peer.ID) (*ethpb.DebugPeerResponse, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
+	protocolStrings := []string{}
+	for _, v := range protocols {
+		protocolStrings = append(protocolStrings, string(v))
+	}
 	resp, err := peers.Scorers().BadResponsesScorer().Count(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
@@ -92,7 +96,7 @@ func (ds *Server) getPeer(pid peer.ID) (*ethpb.DebugPeerResponse, error) {
 		aVersion = ""
 	}
 	peerInfo := &ethpb.DebugPeerResponse_PeerInfo{
-		Protocols:       protocols,
+		Protocols:       protocolStrings,
 		FaultCount:      uint64(resp),
 		ProtocolVersion: pVersion,
 		AgentVersion:    aVersion,
