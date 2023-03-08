@@ -152,11 +152,16 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		log.WithError(err).Error("Could not set head root to valid")
 		return nil, nil
 	}
+
 	// If the forkchoice update call has an attribute, update the proposer payload ID cache.
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
+		// On successful FCU notify that the payload was sent to the event stream.
+		if err := s.notifyPayloadAttributesStream(proposerId, arg.headBlock.Slot(), arg.headRoot[:], headPayload.BlockHash(), attr); err != nil {
+			return nil, err
+		}
 	} else if hasAttr && payloadID == nil {
 		log.WithFields(logrus.Fields{
 			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
@@ -167,16 +172,48 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 }
 
 // notifyPayloadAttributesStream on successful FCU notify the event stream that a payload was sent
-func (s *Service) notifyPayloadAttributesStream(ctx context.Context, arg *notifyForkchoiceUpdateArg, proposerIndex primitives.ValidatorIndex, attrs payloadattribute.Attributer) error {
-	parentBlockRoot := arg.headRoot     // parent root
-	proposalSlot := s.CurrentSlot() + 1 // slot used for payload
-	parentBlockNumber := arg.headBlock.Slot()
-	attrs.
+func (s *Service) notifyPayloadAttributesStream(proposerIndex primitives.ValidatorIndex,
+	parentBlockNumber primitives.Slot, parentBlockRoot []byte, parentBlockHash []byte, attrs payloadattribute.Attributer) error {
+	switch attrs.Version() {
+	case version.Bellatrix:
+		pbv1, err := attrs.PbV1()
+		if err != nil {
+			return err
+		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.PayloadAttributeSent,
-		Data: &ethpbv1.EventHead{},
-	})
-	return nil
+			Type: statefeed.PayloadAttributeSent,
+			Data: &ethpbv1.EventPayloadAttributeV1{
+				Version:           version.String(attrs.Version()),
+				ProposerIndex:     proposerIndex,
+				ProposalSlot:      s.CurrentSlot() + 1,
+				ParentBlockNumber: parentBlockNumber,
+				ParentBlockRoot:   parentBlockRoot,
+				ParentBlockHash:   parentBlockHash,
+				PayloadAttributes: pbv1,
+			},
+		})
+		return nil
+	case version.Capella:
+		pbv2, err := attrs.PbV2()
+		if err != nil {
+			return err
+		}
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.PayloadAttributeSent,
+			Data: &ethpbv1.EventPayloadAttributeV2{
+				Version:           version.String(attrs.Version()),
+				ProposerIndex:     proposerIndex,
+				ProposalSlot:      s.CurrentSlot() + 1,
+				ParentBlockNumber: parentBlockNumber,
+				ParentBlockRoot:   parentBlockRoot,
+				ParentBlockHash:   parentBlockHash,
+				PayloadAttributes: pbv2,
+			},
+		})
+		return nil
+	default:
+		return errors.New("payload version is not supported")
+	}
 }
 
 // getPayloadHash returns the payload hash given the block root.
