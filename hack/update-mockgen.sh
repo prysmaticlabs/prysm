@@ -4,6 +4,7 @@
 # Use a space to separate mock destination from its interfaces.
 
 mock_path="testing/mock"
+iface_mock_path="testing/validator-mock"
 
 # github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1
 # ------------------------------------------------------
@@ -55,10 +56,10 @@ done
 # github.com/prysmaticlabs/prysm/v3/validator/client/iface
 # --------------------------------------------------------
 iface_mocks=(
-      "$mock_path/beacon_chain_client_mock.go BeaconChainClient"
-      "$mock_path/node_client_mock.go NodeClient"
-      "$mock_path/slasher_client_mock.go SlasherClient"
-      "$mock_path/validator_client_mock.go ValidatorClient"
+      "$iface_mock_path/beacon_chain_client_mock.go BeaconChainClient"
+      "$iface_mock_path/node_client_mock.go NodeClient"
+      "$iface_mock_path/slasher_client_mock.go SlasherClient"
+      "$iface_mock_path/validator_client_mock.go ValidatorClient"
 )
 
 for ((i = 0; i < ${#iface_mocks[@]}; i++)); do

@@ -9,19 +9,19 @@ import (
 )
 
 type grpcSlasherClient struct {
-	beaconNodeValidatorClient ethpb.SlasherClient
+	slasherClient ethpb.SlasherClient
 }
 
 func (c *grpcSlasherClient) IsSlashableAttestation(ctx context.Context, in *ethpb.IndexedAttestation) (*ethpb.AttesterSlashingResponse, error) {
-	return c.IsSlashableAttestation(ctx, in)
+	return c.slasherClient.IsSlashableAttestation(ctx, in)
 }
 
 func (c *grpcSlasherClient) IsSlashableBlock(ctx context.Context, in *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashingResponse, error) {
-	return c.IsSlashableBlock(ctx, in)
+	return c.slasherClient.IsSlashableBlock(ctx, in)
 }
 
 func (c *grpcSlasherClient) HighestAttestations(ctx context.Context, in *ethpb.HighestAttestationRequest) (*ethpb.HighestAttestationResponse, error) {
-	return c.HighestAttestations(ctx, in)
+	return c.slasherClient.HighestAttestations(ctx, in)
 }
 
 func NewSlasherClient(cc grpc.ClientConnInterface) iface.SlasherClient {
