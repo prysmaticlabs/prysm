@@ -90,7 +90,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
 				rpcMap := make(map[string]bool)
 				for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
-					rpcMap[p] = true
+					rpcMap[string(p)] = true
 				}
 				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRangeTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
 				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRootTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
@@ -134,7 +134,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
 				rpcMap := make(map[string]bool)
 				for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
-					rpcMap[p] = true
+					rpcMap[string(p)] = true
 				}
 			},
 		},
@@ -189,7 +189,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				ptcls := s.cfg.p2p.Host().Mux().Protocols()
 				pMap := make(map[string]bool)
 				for _, p := range ptcls {
-					pMap[p] = true
+					pMap[string(p)] = true
 				}
 				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
 				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
@@ -259,7 +259,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				ptcls := s.cfg.p2p.Host().Mux().Protocols()
 				pMap := make(map[string]bool)
 				for _, p := range ptcls {
-					pMap[p] = true
+					pMap[string(p)] = true
 				}
 				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
 				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
