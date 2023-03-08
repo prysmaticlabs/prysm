@@ -6,6 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
@@ -19,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -144,6 +147,12 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
+	
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.PayloadAttributeSent,
+		Data: &ethpbv1.EventHead{},
+	})
+
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, arg.headRoot); err != nil {
 		log.WithError(err).Error("Could not set head root to valid")
 		return nil, nil
@@ -210,6 +219,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	switch err {
 	case nil:
 		newPayloadValidNodeCount.Inc()
+		blk.Version()
 		return true, nil
 	case execution.ErrAcceptedSyncingPayloadStatus:
 		newPayloadOptimisticNodeCount.Inc()

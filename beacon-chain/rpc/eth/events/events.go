@@ -194,6 +194,7 @@ func handleBlockOperationEvents(
 		}
 		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(changeData.Change)
 		return streamData(stream, BLSToExecutionChangeTopic, v2Change)
+
 	default:
 		return nil
 	}
@@ -230,6 +231,12 @@ func handleStateEvents(
 			return nil
 		}
 		return streamData(stream, ChainReorgTopic, reorg)
+	case statefeed.PayloadAttributeSent:
+		if _, ok := requestedTopics[PayloadAttributesTopic]; !ok {
+			return nil
+		}
+
+		return streamData(stream, PayloadAttributesTopic, nil)
 	default:
 		return nil
 	}

@@ -104,3 +104,11 @@ message EventFinalizedCheckpoint {
   // Information about optimistic sync.
   bool execution_optimistic = 4;
 }
+
+message EventPayloadAttributeV1 {
+
+}
+
+message EventPayloadAttributeV2 {
+
+}
