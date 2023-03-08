@@ -214,7 +214,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	// This check must come before forkchoiceUpdateWithExecution because it saves the new head.
 	isNewHead := s.isNewHead(headRoot)
 
-	// updates FCU and prunes the attestations from conical block.
+	// verify conditions for FCU, notifies FCU, and saves the new head.
 	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
 	}
@@ -610,8 +610,8 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 }
 
 // This removes the attestations in block `b` from the attestation mem pool.
-func (s *Service) pruneAttsFromPool(b interfaces.ReadOnlySignedBeaconBlock) error {
-	atts := b.Block().Body().Attestations()
+func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlyBeaconBlock) error {
+	atts := headBlock.Body().Attestations()
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
 			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {

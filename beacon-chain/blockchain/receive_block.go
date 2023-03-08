@@ -152,7 +152,13 @@ func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.A
 	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
+// prunePostBlockOperationPools only runs on new head
 func (s *Service) prunePostBlockOperationPools(headBlock interfaces.ReadOnlyBeaconBlock) error {
+	// Only need to prune attestations from pool if the head has changed.
+	if err := s.pruneAttsFromPool(headBlock); err != nil {
+		return err
+	}
+
 	// Mark block exits as seen so we don't include same ones in future blocks.
 	for _, e := range headBlock.Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
@@ -170,11 +176,11 @@ func (s *Service) prunePostBlockOperationPools(headBlock interfaces.ReadOnlyBeac
 	return nil
 }
 
-func (s *Service) markIncludedBlockBLSToExecChanges(blk interfaces.ReadOnlyBeaconBlock) error {
-	if blk.Version() < version.Capella {
+func (s *Service) markIncludedBlockBLSToExecChanges(headBlock interfaces.ReadOnlyBeaconBlock) error {
+	if headBlock.Version() < version.Capella {
 		return nil
 	}
-	changes, err := blk.Body().BLSToExecutionChanges()
+	changes, err := headBlock.Body().BLSToExecutionChanges()
 	if err != nil {
 		return errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}
