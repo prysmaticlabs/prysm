@@ -171,8 +171,8 @@ func (s *Service) notifyPayloadAttributesStream(ctx context.Context, arg *notify
 	parentBlockRoot := arg.headRoot     // parent root
 	proposalSlot := s.CurrentSlot() + 1 // slot used for payload
 	parentBlockNumber := arg.headBlock.Slot()
-
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+	attrs.
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.PayloadAttributeSent,
 		Data: &ethpbv1.EventHead{},
 	})
