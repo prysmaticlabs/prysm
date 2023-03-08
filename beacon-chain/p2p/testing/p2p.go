@@ -48,11 +48,6 @@ type TestP2P struct {
 	LocalMetadata   metadata.Metadata
 }
 
-func (p *TestP2P) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 // NewTestP2P initializes a new p2p test service.
 func NewTestP2P(t *testing.T) *TestP2P {
 	ctx := context.Background()
