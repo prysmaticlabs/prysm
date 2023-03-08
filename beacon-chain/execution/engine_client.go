@@ -450,21 +450,7 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByHashV1")
 	defer span.End()
 
-	// TODO: Might need to check if execution client is syncing.
-	// What's the consequence if we do not?
-
 	result := make([]*pb.ExecutionPayloadBodyV1, 0)
-
-	// TODO: Does our code handle this response well?
-	// {
-	// withdrawals: null,
-	// 	transactions: []transactions
-	// }
-
-	// TODO: Does our code handle this response well?
-	// request: [a, b ,c]
-	// response: [abody, null, cbody]
-
 	err := s.rpcClient.CallContext(ctx, &result, GetPayloadBodiesByHashV1, executionBlockHashes)
 
 	for i, item := range result {
@@ -485,8 +471,10 @@ func (s *Service) GetPayloadBodiesByRange(ctx context.Context, start, count uint
 	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByRangeV1")
 	defer span.End()
+
 	result := make([]*pb.ExecutionPayloadBodyV1, 0)
 	err := s.rpcClient.CallContext(ctx, &result, GetPayloadBodiesByRangeV1, start, count)
+
 	for i, item := range result {
 		if item == nil {
 			result[i] = &pb.ExecutionPayloadBodyV1{
