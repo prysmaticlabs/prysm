@@ -25,8 +25,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	validator_mock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
@@ -608,7 +608,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	m := mock.NewMockValidatorClient(ctrl)
+	m := validator_mock.NewMockValidatorClient(ctrl)
 
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
 	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []primitives.ValidatorIndex{1, math.MaxUint64, 2}}

@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	iface "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/node-client-factory"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
@@ -67,7 +67,7 @@ type AccountsCLIManager struct {
 	beaconApiTimeout     time.Duration
 }
 
-func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface.ValidatorClient, *ethpb.NodeClient, error) {
+func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface.ValidatorClient, *iface.NodeClient, error) {
 	if acm.dialOpts == nil {
 		return nil, nil, errors.New("failed to construct dial options for beacon clients")
 	}
@@ -85,6 +85,6 @@ func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface
 	)
 
 	validatorClient := validatorClientFactory.NewValidatorClient(conn)
-	nodeClient := ethpb.NewNodeClient(grpcConn)
+	nodeClient := nodeClientFactory.NewNodeClient(conn)
 	return &validatorClient, &nodeClient, nil
 }

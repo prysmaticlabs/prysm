@@ -55,6 +55,9 @@ done
 # github.com/prysmaticlabs/prysm/v3/validator/client/iface
 # --------------------------------------------------------
 iface_mocks=(
+      "$mock_path/beacon_chain_client_mock.go BeaconChainClient"
+      "$mock_path/node_client_mock.go NodeClient"
+      "$mock_path/slasher_client_mock.go SlasherClient"
       "$mock_path/validator_client_mock.go ValidatorClient"
 )
 
@@ -62,7 +65,7 @@ for ((i = 0; i < ${#iface_mocks[@]}; i++)); do
     file=${iface_mocks[i]% *};
     interfaces=${iface_mocks[i]#* };
     echo "generating $file for interfaces: $interfaces";
-    GO11MODULE=on mockgen -package=mock -destination="$file" github.com/prysmaticlabs/prysm/v3/validator/client/iface "$interfaces"
+    GO11MODULE=on mockgen -package=validator_mock -destination="$file" github.com/prysmaticlabs/prysm/v3/validator/client/iface "$interfaces"
 done
 
 goimports -w "$mock_path/."

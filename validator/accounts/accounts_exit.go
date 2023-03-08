@@ -12,7 +12,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
@@ -22,7 +21,7 @@ import (
 // PerformExitCfg for account voluntary exits.
 type PerformExitCfg struct {
 	ValidatorClient  iface.ValidatorClient
-	NodeClient       ethpb.NodeClient
+	NodeClient       iface.NodeClient
 	Keymanager       keymanager.IKeymanager
 	RawPubKeys       [][]byte
 	FormattedPubKeys []string
