@@ -83,7 +83,7 @@ load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolcha
 gcc_register_toolchain(
     name = "gcc10_toolchain_x86_64",
     gcc_version = "10.3.0",
-    sysroot_variant = "x86_64",
+    sysroot_variant = ARCHS.x86_64,
     target_arch = ARCHS.x86_64,
     target_settings = ["@//:gcc10_requested"],
 )
@@ -93,7 +93,7 @@ gcc_register_toolchain(
     name = "gcc11_x86-64",
     sha256 = "861c1e8ad0a66e4c28e7a1f8319d68080ab0ff8d16a765e65540f1957203a190",
     strip_prefix = "x86-64--glibc--stable-2022.08-1",
-    target_arch = "x86_64",
+    target_arch = ARCHS.x86_64,
     target_settings = ["@//:gcc11_requested"],
     url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64/tarballs/x86-64--glibc--stable-2022.08-1.tar.bz2",
 )
@@ -103,18 +103,10 @@ gcc_register_toolchain(
     name = "gcc12_x86-64",
     sha256 = "9a09ac03001ef2a6cab391cc658fc2a32730b6a8f25614e97a91b9a79537fe33",
     strip_prefix = "x86-64--glibc--bleeding-edge-2022.08-1",
-    target_arch = "x86_64",
+    target_arch = ARCHS.x86_64,
     target_settings = ["@//:gcc12_requested"],
     url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64/tarballs/x86-64--glibc--bleeding-edge-2022.08-1.tar.bz2",
 )
-
-# gcc_register_toolchain(
-#     name = "gcc12_toolchain_x86_64",
-#     gcc_version = "12.2.1",
-#     sysroot_variant = "x86_64",
-#     target_arch = ARCHS.x86_64,
-#     target_settings = ["@//:gcc12_requested"],
-# )
 
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
