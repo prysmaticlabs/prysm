@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/r3labs/sse"
 )
 
@@ -418,6 +419,8 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				data = &SignedContributionAndProofJson{}
 			case events.BLSToExecutionChangeTopic:
 				data = &SignedBLSToExecutionChangeJson{}
+			case events.PayloadAttributesTopic:
+				data = &enginev1.PayloadAttributesV2{}
 			case "error":
 				data = &EventErrorJson{}
 			default:
