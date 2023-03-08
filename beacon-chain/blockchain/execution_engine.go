@@ -147,11 +147,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
-	
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.PayloadAttributeSent,
-		Data: &ethpbv1.EventHead{},
-	})
 
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, arg.headRoot); err != nil {
 		log.WithError(err).Error("Could not set head root to valid")
@@ -169,6 +164,19 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		}).Error("Received nil payload ID on VALID engine response")
 	}
 	return payloadID, nil
+}
+
+// notifyPayloadAttributesStream on successful FCU notify the event stream that a payload was sent
+func (s *Service) notifyPayloadAttributesStream(ctx context.Context, arg *notifyForkchoiceUpdateArg, proposerIndex primitives.ValidatorIndex, attrs payloadattribute.Attributer) error {
+	parentBlockRoot := arg.headRoot     // parent root
+	proposalSlot := s.CurrentSlot() + 1 // slot used for payload
+	parentBlockNumber := arg.headBlock.Slot()
+
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.PayloadAttributeSent,
+		Data: &ethpbv1.EventHead{},
+	})
+	return nil
 }
 
 // getPayloadHash returns the payload hash given the block root.
