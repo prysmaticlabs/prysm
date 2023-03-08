@@ -57,6 +57,13 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 }
 
 func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
+	type transactionsJson struct {
+		Transactions []*gethtypes.Transaction `json:"transactions"`
+	}
+	type withdrawalsJson struct {
+		Withdrawals []*withdrawalJSON `json:"withdrawals"`
+	}
+
 	if err := e.Header.UnmarshalJSON(enc); err != nil {
 		return err
 	}
@@ -77,72 +84,50 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	if !ok {
 		return errors.New("expected `totalDifficulty` field in JSON response")
 	}
-	e.Transactions, err = unmarshalTransactions(decoded, enc)
-	if err != nil {
-		return err
-	}
-	e.Withdrawals, err = unmarshalWithdrawals(decoded, enc)
-	if err != nil {
-		return err
-	}
-	if e.Withdrawals == nil {
+
+	rawWithdrawals, ok := decoded["withdrawals"]
+	if !ok || rawWithdrawals == nil {
 		e.Version = version.Bellatrix
 	} else {
 		e.Version = version.Capella
+		j := &withdrawalsJson{}
+		if err := json.Unmarshal(enc, j); err != nil {
+			return err
+		}
+		ws := make([]*Withdrawal, len(j.Withdrawals))
+		for i, wj := range j.Withdrawals {
+			ws[i], err = wj.ToWithdrawal()
+			if err != nil {
+				return err
+			}
+		}
+		e.Withdrawals = ws
 	}
-	return nil
-}
 
-func unmarshalTransactions(decoded map[string]interface{}, enc []byte) ([]*gethtypes.Transaction, error) {
-	type transactionsJson struct {
-		Transactions []*gethtypes.Transaction `json:"transactions"`
-	}
 	rawTxList, ok := decoded["transactions"]
 	if !ok || rawTxList == nil {
 		// Exit early if there are no transactions stored in the json payload.
-		return nil, nil
+		return nil
 	}
 	txsList, ok := rawTxList.([]interface{})
 	if !ok {
-		return nil, errors.Errorf("expected transaction list to be of a slice interface type.")
+		return errors.Errorf("expected transaction list to be of a slice interface type.")
 	}
 	for _, tx := range txsList {
 		// If the transaction is just a hex string, do not attempt to
 		// unmarshal into a full transaction object.
 		if txItem, ok := tx.(string); ok && strings.HasPrefix(txItem, "0x") {
-			return nil, nil
+			return nil
 		}
 	}
 	// If the block contains a list of transactions, we JSON unmarshal
 	// them into a list of geth transaction objects.
 	txJson := &transactionsJson{}
 	if err := json.Unmarshal(enc, txJson); err != nil {
-		return nil, err
+		return err
 	}
-	return txJson.Transactions, nil
-}
-
-func unmarshalWithdrawals(decoded map[string]interface{}, enc []byte) ([]*Withdrawal, error) {
-	type withdrawalsJson struct {
-		Withdrawals []*withdrawalJSON `json:"withdrawals"`
-	}
-	rawWithdrawals, ok := decoded["withdrawals"]
-	if !ok || rawWithdrawals == nil {
-		return nil, nil
-	}
-	j := &withdrawalsJson{}
-	err := json.Unmarshal(enc, j)
-	if err != nil {
-		return nil, err
-	}
-	ws := make([]*Withdrawal, len(j.Withdrawals))
-	for i, wj := range j.Withdrawals {
-		ws[i], err = wj.ToWithdrawal()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ws, nil
+	e.Transactions = txJson.Transactions
+	return nil
 }
 
 // UnmarshalJSON --

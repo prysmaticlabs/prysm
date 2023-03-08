@@ -1901,11 +1901,11 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 			}
 			executionPayloadBodies[1] = nil
 			executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
-				Transactions: [][]byte{[]byte("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        []byte("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1942,11 +1942,11 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 			}()
 			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 1)
 			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
-				Transactions: [][]byte{[]byte("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        []byte("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1983,20 +1983,20 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 			}()
 			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 2)
 			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
-				Transactions: [][]byte{[]byte("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        []byte("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
 			executionPayloadBodies[1] = &pb.ExecutionPayloadBodyV1{
-				Transactions: [][]byte{[]byte("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          2,
 					ValidatorIndex: 1,
-					Address:        []byte("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -2152,11 +2152,11 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 			}
 			executionPayloadBodies[1] = nil
 			executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
-				Transactions: [][]byte{[]byte("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        []byte("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -2193,11 +2193,11 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 			}()
 			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 1)
 			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
-				Transactions: [][]byte{[]byte("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        []byte("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -2234,20 +2234,20 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 			}()
 			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 2)
 			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
-				Transactions: [][]byte{[]byte("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        []byte("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
 			executionPayloadBodies[1] = &pb.ExecutionPayloadBodyV1{
-				Transactions: [][]byte{[]byte("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          2,
 					ValidatorIndex: 1,
-					Address:        []byte("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
