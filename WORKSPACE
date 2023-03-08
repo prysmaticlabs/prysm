@@ -37,7 +37,7 @@ load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
 llvm_toolchain(
     name = "llvm_11_toolchain",
     cxx_standard = {
-        "": "c++14",
+        "": "c++20",
     },
     llvm_version = "11.1.0",
     target_settings = {
@@ -52,7 +52,7 @@ llvm_11_register_toolchains()
 llvm_toolchain(
     name = "llvm_14_toolchain",
     cxx_standard = {
-        "": "c++14",
+        "": "c++20",
     },
     llvm_version = "14.0.0",
     target_settings = {

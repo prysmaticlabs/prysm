@@ -4,6 +4,7 @@ build --config=gcc
 
 # Add a generic alias if the user doesn't care about the exact version.
 build:clang --config=clang14
+build:llvm --config=clang
 build:gcc --config=gcc11
 
 build:clang11 --platform_suffix=clang11
