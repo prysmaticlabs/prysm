@@ -5,7 +5,7 @@ go 1.19
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220901111237-4348e62e228d
-	github.com/MariusVanDerWijden/tx-fuzz v0.0.0-00010101000000-000000000000
+	github.com/MariusVanDerWijden/tx-fuzz v1.0.2
 	github.com/aristanetworks/goarista v0.0.0-20200805130819-fd197cf57d96
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
