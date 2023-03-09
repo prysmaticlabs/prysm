@@ -89,7 +89,6 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 		return err
 	}
 
-	//	log := log.WithField("handler", p2p.BlobSidecarsByRangeName[1:]) // slice the leading slash off the name var
 	_, ok := msg.(*types.BlobSidecarsByRootReq)
 	if !ok {
 		return errors.New("message is not type BlobsSidecarsByRangeRequest")

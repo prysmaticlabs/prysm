@@ -7,6 +7,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -59,6 +60,7 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
+	log := log.WithField("handler", p2p.BlobSidecarsByRangeName[1:]) // slice the leading slash off the name var
 
 	r, ok := msg.(*pb.BlobSidecarsByRangeRequest)
 	if !ok {
@@ -104,22 +106,11 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 
 func validateBlobsByRange(r *pb.BlobSidecarsByRangeRequest, current primitives.Slot) (primitives.Slot, primitives.Slot, uint64, error) {
 	start := r.StartSlot
-	count := r.Count
-	if r.StartSlot > current {
+	if start > current {
 		return 0, 0, 0, p2ptypes.ErrInvalidRequest
 	}
-	minStart := params.BeaconConfig().DenebForkEpoch
 
-	// Clients MUST keep a record of signed blobs sidecars seen on the epoch range
-	// [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
-	// where current_epoch is defined by the current wall-clock time,
-	// and clients MUST support serving requests of blobs on this range.
-	minReqEpochs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	currEpoch := slots.ToEpoch(current)
-	if currEpoch > minReqEpochs && currEpoch-minReqEpochs > minStart {
-		minStart = currEpoch - minReqEpochs
-	}
-
+	count := r.Count
 	maxRequest := params.BeaconNetworkConfig().MaxRequestBlocksDeneb
 	// Ensure all request params are within appropriate bounds
 	if count == 0 || count > maxRequest {
@@ -131,9 +122,25 @@ func validateBlobsByRange(r *pb.BlobSidecarsByRangeRequest, current primitives.S
 	if err != nil {
 		return 0, 0, 0, p2ptypes.ErrInvalidRequest
 	}
-	if start > maxStart {
+
+	// Clients MUST keep a record of signed blobs sidecars seen on the epoch range
+	// [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
+	// where current_epoch is defined by the current wall-clock time,
+	// and clients MUST support serving requests of blobs on this range.
+	minReqEpochs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	currEpoch := slots.ToEpoch(current)
+	minStart := params.BeaconConfig().DenebForkEpoch
+	if currEpoch > minReqEpochs && currEpoch-minReqEpochs > minStart {
+		minStart = currEpoch - minReqEpochs
+	}
+	minStartSlot, err := slots.EpochStart(minStart)
+	if err != nil {
 		return 0, 0, 0, p2ptypes.ErrInvalidRequest
 	}
+	if start < minStartSlot || start > maxStart {
+		return 0, 0, 0, p2ptypes.ErrInvalidRequest
+	}
+
 	end, err := start.SafeAdd((count - 1))
 	if err != nil {
 		return 0, 0, 0, p2ptypes.ErrInvalidRequest
