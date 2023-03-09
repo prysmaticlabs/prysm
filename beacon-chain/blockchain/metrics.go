@@ -111,6 +111,18 @@ var (
 		Name: "beacon_reorgs_total",
 		Help: "Count the number of times beacon chain has a reorg",
 	})
+	lateBlockAttemptedReorgCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_late_block_attempted_reorgs",
+		Help: "Count the number of times a proposer served by this beacon has attempted a late block reorg",
+	})
+	lateBlockFailedAttemptFirstThreshold = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_failed_reorg_attempts_first_threshold",
+		Help: "Count the number of times a proposer served by this beacon attempted a late block reorg but desisted in the first threshold",
+	})
+	lateBlockFailedAttemptSecondThreshold = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_failed_reorg_attempts_second_threshold",
+		Help: "Count the number of times a proposer served by this beacon attempted a late block reorg but desisted in the second threshold",
+	})
 	saveOrphanedAttCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "saved_orphaned_att_total",
 		Help: "Count the number of times an orphaned attestation is saved",
@@ -157,10 +169,6 @@ var (
 	txsPerSlotCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "txs_per_slot_count",
 		Help: "Count the number of txs per slot",
-	})
-	missedPayloadIDFilledCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "missed_payload_id_filled_count",
-		Help: "",
 	})
 	onBlockProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
 		Name: "on_block_processing_milliseconds",
