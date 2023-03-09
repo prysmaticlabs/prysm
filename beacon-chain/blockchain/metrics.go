@@ -111,7 +111,7 @@ var (
 		Name: "beacon_reorgs_total",
 		Help: "Count the number of times beacon chain has a reorg",
 	})
-	lateBlockAttemptedReorgCount = promauto.NewCounter(prometheus.CounterOpts{
+	LateBlockAttemptedReorgCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "beacon_late_block_attempted_reorgs",
 		Help: "Count the number of times a proposer served by this beacon has attempted a late block reorg",
 	})
