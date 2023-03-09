@@ -73,6 +73,7 @@ func FuzzValidateBeaconBlockPubSub_Phase0(f *testing.F) {
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 	buf := new(bytes.Buffer)
@@ -154,6 +155,7 @@ func FuzzValidateBeaconBlockPubSub_Altair(f *testing.F) {
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 	buf := new(bytes.Buffer)
@@ -235,6 +237,7 @@ func FuzzValidateBeaconBlockPubSub_Bellatrix(f *testing.F) {
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 	buf := new(bytes.Buffer)
