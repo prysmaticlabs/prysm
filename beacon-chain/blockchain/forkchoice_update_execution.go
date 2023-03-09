@@ -87,7 +87,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	}
 	// Only need to prune attestations from pool if the block is early and
 	// we are not calling at the beginning of the slot.
-	if !isNewProposer || (proposingSlot != currentSlot && secs < uint64(params.BeaconConfig().SlotsPerEpoch)) {
+	if !isNewProposer || (proposingSlot != currentSlot && secs < uint64(params.BeaconConfig().SlotsPerEpoch)/3) {
 		if err := s.pruneAttsFromPool(headBlock); err != nil {
 			log.WithError(err).Error("could not prune attestations from pool")
 		}
