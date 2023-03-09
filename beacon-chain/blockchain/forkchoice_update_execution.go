@@ -54,9 +54,16 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	if !isNewHead {
 		return nil
 	}
+	currentSlot := s.CurrentSlot()
+	secs, err := slots.SecondsSinceSlotStart(currentSlot,
+		uint64(s.genesisTime.Unix()), uint64(time.Now().Unix()))
+	if err != nil {
+		log.WithError(err).Error("could not compute seconds since slot start")
+	}
+
 	isNewProposer := s.isNewProposer(proposingSlot)
 	if isNewProposer && !features.Get().DisableReorgLateBlocks {
-		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
+		if s.shouldOverrideFCU(newHeadRoot, proposingSlot, secs) {
 			return nil
 		}
 	}
@@ -78,17 +85,19 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
 		log.WithError(err).Error("could not save head")
 	}
-
-	// Only need to prune attestations from pool if the head has changed.
-	if err := s.pruneAttsFromPool(headBlock); err != nil {
-		log.WithError(err).Error("could not prune attestations from pool")
+	// Only need to prune attestations from pool if the block is early and
+	// we are not calling at the beginning of the slot.
+	if proposingSlot != currentSlot && secs < uint64(params.BeaconConfig().SlotsPerEpoch) {
+		if err := s.pruneAttsFromPool(headBlock); err != nil {
+			log.WithError(err).Error("could not prune attestations from pool")
+		}
 	}
 	return nil
 }
 
 // shouldOverrideFCU checks whether the incoming block is still subject to being
 // reorged or not by the next proposer.
-func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitives.Slot) bool {
+func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitives.Slot, secs uint64) bool {
 	headWeight, err := s.ForkChoicer().Weight(newHeadRoot)
 	if err != nil {
 		log.WithError(err).WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
@@ -108,11 +117,6 @@ func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitiv
 	} else {
 		if s.ForkChoicer().ShouldOverrideFCU() {
 			return true
-		}
-		secs, err := slots.SecondsSinceSlotStart(currentSlot,
-			uint64(s.genesisTime.Unix()), uint64(time.Now().Unix()))
-		if err != nil {
-			log.WithError(err).Error("could not compute seconds since slot start")
 		}
 		if secs >= doublylinkedtree.ProcessAttestationsThreshold {
 			log.WithFields(logrus.Fields{
