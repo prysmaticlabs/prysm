@@ -11,12 +11,11 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/testutil"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote/mock"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -69,8 +68,8 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -89,8 +88,8 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -108,8 +107,8 @@ func TestRoleAt_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -127,8 +126,8 @@ func TestAttests_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []iface.ValidatorRole{iface.RoleAttester}
 	go func() {
@@ -147,8 +146,8 @@ func TestProposes_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []iface.ValidatorRole{iface.RoleProposer}
 	go func() {
@@ -167,8 +166,8 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []iface.ValidatorRole{iface.RoleAttester, iface.RoleProposer}
 	go func() {
@@ -190,8 +189,8 @@ func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), testutil.AllValidatorsAreExitedCtxKey, true))
 	hook := logTest.NewGlobal()
 
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
+	slot := types.Slot(55)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -232,23 +231,6 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	assert.Equal(t, 2, v.WaitForActivationCalled)
 }
 
-func TestKeyReload_RemoteKeymanager(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	km := mock.NewMock()
-	v := &testutil.FakeValidator{Km: &km}
-
-	ticker := make(chan primitives.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- primitives.Slot(55)
-
-		cancel()
-	}()
-	run(ctx, v)
-	assert.Equal(t, true, km.ReloadPublicKeysCalled)
-}
-
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
@@ -261,7 +243,7 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch
-	ticker := make(chan primitives.Slot)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -289,7 +271,7 @@ func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *test
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch
-	ticker := make(chan primitives.Slot)
+	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
