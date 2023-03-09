@@ -118,7 +118,7 @@ func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitiv
 			log.WithFields(logrus.Fields{
 				"root":   fmt.Sprintf("%#x", newHeadRoot),
 				"weight": headWeight,
-			}).Info("Attempted late block reorg aborted due to attestations at %d seconds",
+			}).Infof("Attempted late block reorg aborted due to attestations at %d seconds",
 				doublylinkedtree.ProcessAttestationsThreshold)
 			lateBlockFailedAttemptFirstThreshold.Inc()
 		}
