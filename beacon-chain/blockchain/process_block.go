@@ -698,7 +698,6 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
 	if !has || id != [8]byte{} {
 		return nil
 	}
-	missedPayloadIDFilledCount.Inc()
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
