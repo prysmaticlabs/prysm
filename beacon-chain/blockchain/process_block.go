@@ -210,25 +210,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}).Debug("Head block is not the received block")
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-	// Checks if the current blockRoot ( which is also the head root) is new.
-	// This check must come before forkchoiceUpdateWithExecution because it saves the new head.
-	isNewHead := s.isNewHead(headRoot)
 
 	// verify conditions for FCU, notifies FCU, and saves the new head.
+	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
 	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
-	}
-
-	if isNewHead {
-		// uses the newly saved block from forkchoiceUpdateWithExecution
-		headBlock, err := s.HeadBlock(ctx)
-		if err != nil {
-			return err
-		}
-		// Handle post block operations such as attestations and exits.
-		if err := s.prunePostBlockOperationPools(headBlock.Block()); err != nil {
-			return err
-		}
 	}
 
 	// Send notification of the processed block to the state feed.
@@ -610,8 +596,8 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 }
 
 // This removes the attestations in block `b` from the attestation mem pool.
-func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlyBeaconBlock) error {
-	atts := headBlock.Body().Attestations()
+func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlySignedBeaconBlock) error {
+	atts := headBlock.Block().Body().Attestations()
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
 			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
