@@ -143,18 +143,19 @@ func TestConfigureNetwork_ConfigFile(t *testing.T) {
 		"node2")), 0666))
 
 	require.NoError(t, set.Parse([]string{"test-command", "--" + cmd.ConfigFileFlag.Name, "flags_test.yaml"}))
+	comFlags := cmd.WrapFlags([]cli.Flag{
+		&cli.StringFlag{
+			Name: cmd.ConfigFileFlag.Name,
+		},
+		&cli.StringSliceFlag{
+			Name: cmd.BootstrapNode.Name,
+		},
+	})
 	command := &cli.Command{
-		Name: "test-command",
-		Flags: cmd.WrapFlags([]cli.Flag{
-			&cli.StringFlag{
-				Name: cmd.ConfigFileFlag.Name,
-			},
-			&cli.StringSliceFlag{
-				Name: cmd.BootstrapNode.Name,
-			},
-		}),
+		Name:  "test-command",
+		Flags: comFlags,
 		Before: func(cliCtx *cli.Context) error {
-			return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+			return cmd.LoadFlagsFromConfig(cliCtx, comFlags)
 		},
 		Action: func(cliCtx *cli.Context) error {
 			//TODO: https://github.com/urfave/cli/issues/1197 right now does not set flag
@@ -165,7 +166,7 @@ func TestConfigureNetwork_ConfigFile(t *testing.T) {
 			return nil
 		},
 	}
-	require.NoError(t, command.Run(context))
+	require.NoError(t, command.Run(context, context.Args().Slice()...))
 	require.NoError(t, os.Remove("flags_test.yaml"))
 }
 
