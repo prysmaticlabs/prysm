@@ -31,7 +31,7 @@ func main() {
 	}
 	c := v1alpha1.NewBeaconChainClient(cc)
 	g, ctx := errgroup.WithContext(ctx)
-	v := NewVotes()
+	v := newVotes()
 
 	current := slots.ToEpoch(slots.CurrentSlot(*genesis))
 	start := current.Div(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)).Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
