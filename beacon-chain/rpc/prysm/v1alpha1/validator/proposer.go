@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
@@ -50,7 +51,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	// process attestations and update head in forkchoice
 	vs.ForkFetcher.ForkChoicer().Lock()
 	vs.HeadUpdater.UpdateHead(ctx, vs.ForkFetcher.CurrentSlot())
+	headRoot := vs.ForkFetcher.ForkChoicer().CachedHeadRoot()
 	parentRoot := vs.ForkFetcher.ForkChoicer().GetProposerHead()
+	if parentRoot != headRoot {
+		blockchain.LateBlockAttemptedReorgCount.Inc()
+	}
 	vs.ForkFetcher.ForkChoicer().Unlock()
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
