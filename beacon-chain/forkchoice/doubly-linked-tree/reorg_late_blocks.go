@@ -41,9 +41,11 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 	if head == nil {
 		return
 	}
+
 	if head.slot != slots.CurrentSlot(f.store.genesisTime) {
 		return
 	}
+
 	// Do not reorg on epoch boundaries
 	if (head.slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
 		return
