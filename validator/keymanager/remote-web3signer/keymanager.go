@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	remoteutils "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-utils"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/internal"
 	web3signerv1 "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
@@ -313,8 +313,22 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
 	}
-	remoteutils.DisplayRemotePublicKeys(validatingPubKeys)
+	DisplayRemotePublicKeys(validatingPubKeys)
 	return nil
+}
+
+// DisplayRemotePublicKeys prints remote public keys to stdout.
+func DisplayRemotePublicKeys(validatingPubKeys [][48]byte) {
+	au := aurora.NewAurora(true)
+	for i := 0; i < len(validatingPubKeys); i++ {
+		fmt.Println("")
+		fmt.Printf(
+			"%s\n", au.BrightGreen(petnames.DeterministicName(validatingPubKeys[i][:], "-")).Bold(),
+		)
+		// Retrieve the validating key account metadata.
+		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
+		fmt.Println(" ")
+	}
 }
 
 // AddPublicKeys imports a list of public keys into the keymanager for web3signer use. Returns status with message.
