@@ -443,8 +443,9 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 		return nil
 	}
 
+	postDeneb := slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch
 	blobs := s.pendingBlobsInCache(slot)
-	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
+	if postDeneb {
 		if len(blobs) != len(blks) {
 			return fmt.Errorf("blobs and blks are different length in pending queue for deletion: %d, %d", len(blobs), len(blks))
 		}
@@ -470,11 +471,15 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 			continue
 		}
 		newBlks = append(newBlks, blk)
-		newBlobs = append(newBlobs, blobs[i])
+		if postDeneb {
+			newBlobs = append(newBlobs, blobs[i])
+		}
 	}
 	if len(newBlks) == 0 {
 		s.slotToPendingBlocks.Delete(slotToCacheKey(slot))
-		s.slotToPendingBlobs.Delete(slotToCacheKey(slot))
+		if postDeneb {
+			s.slotToPendingBlobs.Delete(slotToCacheKey(slot))
+		}
 		delete(s.seenPendingBlocks, r)
 		return nil
 	}
@@ -484,8 +489,11 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, d); err != nil {
 		return err
 	}
-	if err := s.slotToPendingBlobs.Replace(slotToCacheKey(slot), newBlobs, d); err != nil {
-		return err
+
+	if postDeneb {
+		if err := s.slotToPendingBlobs.Replace(slotToCacheKey(slot), newBlobs, d); err != nil {
+			return err
+		}
 	}
 
 	delete(s.seenPendingBlocks, r)

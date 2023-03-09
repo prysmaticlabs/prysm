@@ -842,8 +842,10 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 	bA, err := blocks.NewSignedBeaconBlock(b)
 	assert.NoError(t, err)
 
+	// TODO: using the old deprecated type here because that's what the code expects, will get fixed with new sync queue
+	bs := &ethpb.BlobsSidecar{}
 	// Add block1 for slot 55
-	require.NoError(t, r.insertBlkAndBlobToQueue(b.Block.Slot, bA, b1Root, nil))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b.Block.Slot, bA, b1Root, bs))
 	bB, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	assert.NoError(t, err)
 	// remove with a different block from the same slot.
