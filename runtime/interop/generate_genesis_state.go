@@ -5,8 +5,8 @@ package interop
 import (
 	"bufio"
 	"context"
-	"io/ioutil"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -48,7 +48,7 @@ func GenerateGenesisState(ctx context.Context, genesisTime, numValidators uint64
 }
 
 func outputPrivateKeys(keys []bls.SecretKey) error {
-	f, err := ioutil.TempFile("tmp", "privkeys")
+	f, err := os.CreateTemp("", "privkeys")
 	if err != nil {
 		return err
 	}
