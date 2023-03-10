@@ -186,10 +186,7 @@ func WithinDataAvailabilityBound(genesisTimeSec uint64, epoch primitives.Epoch) 
 	currentSlot := primitives.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := ToEpoch(currentSlot)
 
-	if currentEpoch-params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest >= epoch {
-		return true
-	}
-	return false
+	return currentEpoch-params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest >= epoch
 }
 
 // ValidateClock validates a provided slot against the local

@@ -105,6 +105,8 @@ func TestGetSpec(t *testing.T) {
 	config.MaxWithdrawalsPerPayload = 74
 	config.MaxBlsToExecutionChanges = 75
 	config.MaxValidatorsPerWithdrawalsSweep = 76
+	config.DenebForkEpoch = 77
+	config.DenebForkVersion = []byte("DenebForkVersion")
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -130,6 +132,9 @@ func TestGetSpec(t *testing.T) {
 	var dam [4]byte
 	copy(dam[:], []byte{'1', '0', '0', '0'})
 	config.DomainApplicationMask = dam
+	var dbs [4]byte
+	copy(dbs[:], []byte{'0', '0', '0', '8'})
+	config.DomainBlobSidecar = dbs
 
 	params.OverrideBeaconConfig(config)
 
@@ -137,7 +142,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 105, len(resp.Data))
+	assert.Equal(t, 108, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -363,8 +368,14 @@ func TestGetSpec(t *testing.T) {
 		case "REORG_WEIGHT_THRESHOLD":
 			assert.Equal(t, "20", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
+		case "DENEB_FORK_EPOCH":
+			assert.Equal(t, "77", v)
+		case "DENEB_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("DenebForkVersion")), v)
+		case "DOMAIN_BLOB_SIDECAR":
+			assert.Equal(t, "0x30303038", v)
 		default:
-			t.Errorf("Incorrect key: %s", k)
+			t.Errorf("Unknown key: %s", k)
 		}
 	}
 }

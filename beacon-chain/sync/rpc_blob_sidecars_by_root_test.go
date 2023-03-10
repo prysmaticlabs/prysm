@@ -92,7 +92,7 @@ func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, ind
 		BlockRoot:       root[:],
 		Index:           uint64(index),
 		Slot:            block.Block.Slot,
-		BlockParentRoot: block.Block.ParentRoot[:],
+		BlockParentRoot: block.Block.ParentRoot,
 		ProposerIndex:   block.Block.ProposerIndex,
 		Blob:            blob,
 		KzgCommitment:   make([]byte, 48),
@@ -101,10 +101,10 @@ func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, ind
 }
 
 type expectedResponse struct {
-	sidecar *ethpb.BlobSidecar
-	code    uint8
-	message string
 	skipped bool
+	code    uint8
+	sidecar *ethpb.BlobSidecar
+	message string
 }
 
 type streamDecoder func(io.Reader, ssz.Unmarshaler) error

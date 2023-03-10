@@ -48,7 +48,7 @@ func GenerateGenesisState(ctx context.Context, genesisTime, numValidators uint64
 }
 
 func outputPrivateKeys(keys []bls.SecretKey) error {
-	f, err := os.Create("/tmp/privkeys")
+	f, err := os.CreateTemp("", "privkeys")
 	if err != nil {
 		return err
 	}

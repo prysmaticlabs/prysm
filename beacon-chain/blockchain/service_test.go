@@ -57,6 +57,11 @@ type mockBroadcaster struct {
 	broadcastCalled bool
 }
 
+func (mb *mockBroadcaster) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 	mb.broadcastCalled = true
 	return nil

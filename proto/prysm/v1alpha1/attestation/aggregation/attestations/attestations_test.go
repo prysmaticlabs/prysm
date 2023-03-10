@@ -1,7 +1,6 @@
 package attestations
 
 import (
-	"fmt"
 	"io"
 	"sort"
 	"testing"
@@ -226,7 +225,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 				assert.DeepEqual(t, w.Bytes(), got[i].AggregationBits.Bytes())
 			}
 		}
-		t.Run(fmt.Sprintf("%s", tt.name), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			runner()
 		})
 	}

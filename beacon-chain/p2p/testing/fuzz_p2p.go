@@ -21,11 +21,6 @@ import (
 type FakeP2P struct {
 }
 
-func (_ *FakeP2P) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 // NewFuzzTestP2P - Create a new fake p2p stack.
 func NewFuzzTestP2P() *FakeP2P {
 	return &FakeP2P{}
