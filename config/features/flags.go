@@ -135,9 +135,9 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block",
 	}
-	EnableCapellaEngineMethods = &cli.BoolFlag{
-		Name:  "enable-capella-engine-methods",
-		Usage: "Enables the capella engine methods",
+	EnableOptionalEngineMethods = &cli.BoolFlag{
+		Name:  "enable-optional-engine-methods",
+		Usage: "Enables the optional engine methods",
 	}
 )
 
@@ -186,7 +186,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableDefensivePull,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
-	EnableCapellaEngineMethods,
+	EnableOptionalEngineMethods,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

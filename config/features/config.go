@@ -74,7 +74,7 @@ type Flags struct {
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
-	EnableCapellaEngineMethods   bool // EnableCapellaEngineMethods specifies whether to activate capella specific engine methods
+	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -256,9 +256,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
 	}
-	if ctx.IsSet(EnableCapellaEngineMethods.Name) {
-		logEnabled(EnableCapellaEngineMethods)
-		cfg.EnableCapellaEngineMethods = true
+	if ctx.IsSet(EnableOptionalEngineMethods.Name) {
+		logEnabled(EnableOptionalEngineMethods)
+		cfg.EnableOptionalEngineMethods = true
 	}
 	Init(cfg)
 	return nil

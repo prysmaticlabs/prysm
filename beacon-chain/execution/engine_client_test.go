@@ -1821,7 +1821,7 @@ func newPayloadV2Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.Execu
 
 func TestCapella_PayloadBodiesByHash(t *testing.T) {
 	resetFn := features.InitWithReset(&features.Flags{
-		EnableCapellaEngineMethods: true,
+		EnableOptionalEngineMethods: true,
 	})
 	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
@@ -2072,7 +2072,7 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 
 func TestCapella_PayloadBodiesByRange(t *testing.T) {
 	resetFn := features.InitWithReset(&features.Flags{
-		EnableCapellaEngineMethods: true,
+		EnableOptionalEngineMethods: true,
 	})
 	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {

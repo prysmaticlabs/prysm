@@ -442,10 +442,10 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 	return hdr, err
 }
 
-// GetPayloadBodiesByHash --
+// GetPayloadBodiesByHash returns the relevant payload bodies for the provided block hash.
 func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHashes []common.Hash) ([]*pb.ExecutionPayloadBodyV1, error) {
-	if !features.Get().EnableCapellaEngineMethods {
-		return nil, errors.New("capella engine methods not enabled")
+	if !features.Get().EnableOptionalEngineMethods {
+		return nil, errors.New("optional engine methods not enabled")
 	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByHashV1")
 	defer span.End()
@@ -464,10 +464,10 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 	return result, handleRPCError(err)
 }
 
-// GetPayloadBodiesByRange --
+// GetPayloadBodiesByRange returns the relevant payload bodies for the provided range.
 func (s *Service) GetPayloadBodiesByRange(ctx context.Context, start, count uint64) ([]*pb.ExecutionPayloadBodyV1, error) {
-	if !features.Get().EnableCapellaEngineMethods {
-		return nil, errors.New("capella engine methods not enabled")
+	if !features.Get().EnableOptionalEngineMethods {
+		return nil, errors.New("optional engine methods not enabled")
 	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByRangeV1")
 	defer span.End()
