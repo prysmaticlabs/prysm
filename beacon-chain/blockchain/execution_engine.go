@@ -182,14 +182,18 @@ func (s *Service) notifyPayloadAttributesStream(proposerIndex primitives.Validat
 		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.PayloadAttributeSent,
-			Data: &ethpbv1.EventPayloadAttributeV1{
-				Version:           version.String(attrs.Version()),
-				ProposerIndex:     proposerIndex,
-				ProposalSlot:      s.CurrentSlot() + 1,
-				ParentBlockNumber: parentBlockNumber,
-				ParentBlockRoot:   parentBlockRoot,
-				ParentBlockHash:   parentBlockHash,
-				PayloadAttributes: pbv1,
+			Data: &ethpbv1.EventPayloadAttribute{
+				Version: version.String(attrs.Version()),
+				Data: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute{
+					ProposerIndex:     proposerIndex,
+					ProposalSlot:      s.CurrentSlot() + 1,
+					ParentBlockNumber: parentBlockNumber,
+					ParentBlockRoot:   parentBlockRoot,
+					ParentBlockHash:   parentBlockHash,
+					PayloadAttributes: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute_PayloadAttributesV1{
+						PayloadAttributesV1: pbv1,
+					},
+				},
 			},
 		})
 		return nil
@@ -200,14 +204,18 @@ func (s *Service) notifyPayloadAttributesStream(proposerIndex primitives.Validat
 		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.PayloadAttributeSent,
-			Data: &ethpbv1.EventPayloadAttributeV2{
-				Version:           version.String(attrs.Version()),
-				ProposerIndex:     proposerIndex,
-				ProposalSlot:      s.CurrentSlot() + 1,
-				ParentBlockNumber: parentBlockNumber,
-				ParentBlockRoot:   parentBlockRoot,
-				ParentBlockHash:   parentBlockHash,
-				PayloadAttributes: pbv2,
+			Data: &ethpbv1.EventPayloadAttribute{
+				Version: version.String(attrs.Version()),
+				Data: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute{
+					ProposerIndex:     proposerIndex,
+					ProposalSlot:      s.CurrentSlot() + 1,
+					ParentBlockNumber: parentBlockNumber,
+					ParentBlockRoot:   parentBlockRoot,
+					ParentBlockHash:   parentBlockHash,
+					PayloadAttributes: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute_PayloadAttributesV2{
+						PayloadAttributesV2: pbv2,
+					},
+				},
 			},
 		})
 		return nil
