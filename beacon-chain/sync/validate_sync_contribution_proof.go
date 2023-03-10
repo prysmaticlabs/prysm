@@ -251,7 +251,6 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		defer span.End()
 		// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
 		// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
-		var activePubkeys []bls.PublicKey
 		var activeRawPubkeys [][]byte
 		syncPubkeys, err := s.cfg.chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, primitives.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 		if err != nil {
@@ -265,12 +264,6 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		}
 		for i, pk := range syncPubkeys {
 			if bVector.BitAt(uint64(i)) {
-				pubK, err := bls.PublicKeyFromBytes(pk)
-				if err != nil {
-					tracing.AnnotateError(span, err)
-					return pubsub.ValidationIgnore, err
-				}
-				activePubkeys = append(activePubkeys, pubK)
 				activeRawPubkeys = append(activeRawPubkeys, pk)
 			}
 		}
