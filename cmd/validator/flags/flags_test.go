@@ -25,18 +25,19 @@ func TestLoadFlagsFromConfig_PreProcessing_Web3signer(t *testing.T) {
 		pubkey2)), 0666))
 
 	require.NoError(t, set.Parse([]string{"test-command", "--" + cmd.ConfigFileFlag.Name, "flags_test.yaml"}))
+	comFlags := cmd.WrapFlags([]cli.Flag{
+		&cli.StringFlag{
+			Name: cmd.ConfigFileFlag.Name,
+		},
+		&cli.StringSliceFlag{
+			Name: Web3SignerPublicValidatorKeysFlag.Name,
+		},
+	})
 	command := &cli.Command{
-		Name: "test-command",
-		Flags: cmd.WrapFlags([]cli.Flag{
-			&cli.StringFlag{
-				Name: cmd.ConfigFileFlag.Name,
-			},
-			&cli.StringSliceFlag{
-				Name: Web3SignerPublicValidatorKeysFlag.Name,
-			},
-		}),
+		Name:  "test-command",
+		Flags: comFlags,
 		Before: func(cliCtx *cli.Context) error {
-			return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+			return cmd.LoadFlagsFromConfig(cliCtx, comFlags)
 		},
 		Action: func(cliCtx *cli.Context) error {
 			//TODO: https://github.com/urfave/cli/issues/1197 right now does not set flag
@@ -47,7 +48,7 @@ func TestLoadFlagsFromConfig_PreProcessing_Web3signer(t *testing.T) {
 			return nil
 		},
 	}
-	require.NoError(t, command.Run(context))
+	require.NoError(t, command.Run(context, context.Args().Slice()...))
 	require.NoError(t, os.Remove("flags_test.yaml"))
 }
 
@@ -59,19 +60,20 @@ func TestLoadFlagsFromConfig_EnableBuilderHasDefaultValue(t *testing.T) {
 	require.NoError(t, os.WriteFile("flags_test.yaml", []byte("---\nenable-builder: true"), 0666))
 
 	require.NoError(t, set.Parse([]string{"test-command", "--" + cmd.ConfigFileFlag.Name, "flags_test.yaml"}))
+	comFlags := cmd.WrapFlags([]cli.Flag{
+		&cli.StringFlag{
+			Name: cmd.ConfigFileFlag.Name,
+		},
+		&cli.BoolFlag{
+			Name:  EnableBuilderFlag.Name,
+			Value: false,
+		},
+	})
 	command := &cli.Command{
-		Name: "test-command",
-		Flags: cmd.WrapFlags([]cli.Flag{
-			&cli.StringFlag{
-				Name: cmd.ConfigFileFlag.Name,
-			},
-			&cli.BoolFlag{
-				Name:  EnableBuilderFlag.Name,
-				Value: false,
-			},
-		}),
+		Name:  "test-command",
+		Flags: comFlags,
 		Before: func(cliCtx *cli.Context) error {
-			return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+			return cmd.LoadFlagsFromConfig(cliCtx, comFlags)
 		},
 		Action: func(cliCtx *cli.Context) error {
 
@@ -80,6 +82,6 @@ func TestLoadFlagsFromConfig_EnableBuilderHasDefaultValue(t *testing.T) {
 			return nil
 		},
 	}
-	require.NoError(t, command.Run(context))
+	require.NoError(t, command.Run(context, context.Args().Slice()...))
 	require.NoError(t, os.Remove("flags_test.yaml"))
 }
