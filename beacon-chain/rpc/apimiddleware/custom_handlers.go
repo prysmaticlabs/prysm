@@ -431,9 +431,9 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				}
 				switch dataSubset.Version {
 				case version.String(version.Bellatrix):
-					data = &EventPayloadAttributeV1Json{}
+					data = &EventPayloadAttributeStreamV2Json{}
 				case version.String(version.Capella):
-					data = &EventPayloadAttributeV2Json{}
+					data = &EventPayloadAttributeStreamV2Json{}
 				default:
 					return apimiddleware.InternalServerError(errors.New("payload version unsupported"))
 				}

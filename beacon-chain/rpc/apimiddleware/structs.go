@@ -1160,8 +1160,17 @@ type EventChainReorgJson struct {
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
+type EventPayloadAttributeStreamV1Json struct {
+	Version string `json:"version"`
+	Data    *EventPayloadAttributeV1Json
+}
+
+type EventPayloadAttributeStreamV2Json struct {
+	Version string `json:"version"`
+	Data    *EventPayloadAttributeV2Json
+}
+
 type EventPayloadAttributeBaseJson struct {
-	Version           string `json:"version"`
 	ProposerIndex     string `json:"proposer_index"`
 	ProposalSlot      string `json:"proposal_slot"`
 	ParentBlockNumber string `json:"parent_block_number"`
