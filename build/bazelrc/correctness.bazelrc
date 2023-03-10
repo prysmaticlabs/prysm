@@ -1,10 +1,3 @@
-# Do not upload locally executed action results to the remote cache.
-# This should be the default for local builds so local builds cannot poison the remote cache.
-# It should be flipped to `--remote_upload_local_results` on CI
-# by using `--bazelrc=.aspect/bazelrc/ci.bazelrc`.
-# Docs: https://bazel.build/reference/command-line-reference#flag--remote_upload_local_results
-build --noremote_upload_local_results
-
 # Don't allow network access for build actions in the sandbox.
 # Ensures that you don't accidentally make non-hermetic actions/tests which depend on remote
 # services.

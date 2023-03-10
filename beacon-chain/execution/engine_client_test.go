@@ -1314,7 +1314,7 @@ func fixtures() map[string]interface{} {
 			ReceiptsRoot:  &common.Hash{'d'},
 			LogsBloom:     &hexutil.Bytes{'e'},
 			PrevRandao:    &common.Hash{'f'},
-			BaseFeePerGas: fmt.Sprintf("%s", "0x123"),
+			BaseFeePerGas: "0x123",
 			BlockHash:     &common.Hash{'g'},
 			Transactions:  []hexutil.Bytes{{'h'}},
 			Withdrawals:   []*pb.Withdrawal{},
@@ -1323,7 +1323,7 @@ func fixtures() map[string]interface{} {
 			GasUsed:       &hexUint,
 			Timestamp:     &hexUint,
 		},
-		BlockValue: fmt.Sprintf("%s", "0x11ff"),
+		BlockValue: "0x11ff",
 	}
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 	sha3Uncles := bytesutil.PadTo([]byte("sha3Uncles"), fieldparams.RootLength)
