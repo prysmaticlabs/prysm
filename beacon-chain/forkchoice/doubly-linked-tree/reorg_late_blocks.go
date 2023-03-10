@@ -3,6 +3,7 @@ package doublylinkedtree
 import (
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -92,6 +93,9 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 // This function needs to be called only when proposing a block and all
 // attestation processing has already happened.
 func (f *ForkChoice) GetProposerHead() [32]byte {
+	if features.Get().DisableReorgLateBlocks {
+		return f.CachedHeadRoot()
+	}
 	head := f.store.headNode
 	if head == nil {
 		return [32]byte{}
