@@ -20,13 +20,9 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
-	"github.com/prysmaticlabs/gohashtree"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/sirupsen/logrus"
@@ -65,7 +61,6 @@ type Flags struct {
 
 	DisablePullTips                   bool // DisablePullTips disables experimental disabling of boundary checks.
 	EnableDefensivePull               bool // EnableDefensivePull enables exerimental back boundary checks.
-	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
 	SaveFullExecutionPayloads         bool // Save full beacon blocks with execution payloads in the database.
@@ -209,26 +204,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disableStakinContractCheck.Name) {
 		logEnabled(disableStakinContractCheck)
 		cfg.DisableStakinContractCheck = true
-	}
-	if ctx.Bool(disableVecHTR.Name) {
-		logEnabled(disableVecHTR)
-	} else {
-		sigc := make(chan os.Signal, 1)
-		signal.Notify(sigc, syscall.SIGILL)
-		defer signal.Stop(sigc)
-		buffer := make([][32]byte, 2)
-		err := gohashtree.Hash(buffer, buffer)
-		if err != nil {
-			log.Error("could not test if gohashtree is supported")
-		} else {
-			t := time.NewTimer(time.Millisecond * 100)
-			select {
-			case <-sigc:
-				log.Error("gohashtree is not supported in this CPU")
-			case <-t.C:
-				cfg.EnableVectorizedHTR = true
-			}
-		}
 	}
 	if ctx.Bool(disableForkChoiceDoublyLinkedTree.Name) {
 		logEnabled(disableForkChoiceDoublyLinkedTree)

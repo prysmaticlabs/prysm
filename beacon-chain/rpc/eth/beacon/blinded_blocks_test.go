@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -1141,7 +1140,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 				Amount:         2,
 			},
 		}
-		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, 16)
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, 16)
 		require.NoError(t, err)
 
 		beaconDB := dbTest.SetupDB(t)
