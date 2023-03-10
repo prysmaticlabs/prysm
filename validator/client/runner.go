@@ -10,12 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -103,7 +101,6 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
-			reloadRemoteKeys(ctx, km)
 			allExited, err := v.AllValidatorsAreExited(ctx)
 			if err != nil {
 				log.WithError(err).Error("Could not check if validators are exited")
@@ -155,21 +152,11 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 }
 
-func reloadRemoteKeys(ctx context.Context, km keymanager.IKeymanager) {
-	remoteKm, ok := km.(remote.RemoteKeymanager)
-	if ok {
-		_, err := remoteKm.ReloadPublicKeys(ctx)
-		if err != nil {
-			log.WithError(err).Error(msgCouldNotFetchKeys)
-		}
-	}
-}
-
-func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (primitives.Slot, error) {
+func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (types.Slot, error) {
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
-	var headSlot primitives.Slot
+	var headSlot types.Slot
 	firstTime := true
 	for {
 		if !firstTime {
@@ -231,7 +218,7 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 	return headSlot, nil
 }
 
-func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *trace.Span) {
+func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot types.Slot, wg *sync.WaitGroup, span *trace.Span) {
 	for pubKey, roles := range allRoles {
 		wg.Add(len(roles))
 		for _, role := range roles {
@@ -281,7 +268,7 @@ func isConnectionError(err error) bool {
 	return err != nil && errors.Is(err, iface.ErrConnectionIssue)
 }
 
-func handleAssignmentError(err error, slot primitives.Slot) {
+func handleAssignmentError(err error, slot types.Slot) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,

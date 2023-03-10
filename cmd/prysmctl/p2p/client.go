@@ -13,7 +13,6 @@ import (
 	corenet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/pkg/errors"
@@ -70,7 +69,6 @@ func newClient(beaconEndpoints []string, clientPort uint) (*client, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not start libp2p")
 	}
-	h.RemoveStreamHandler(identify.IDDelta)
 	if len(beaconEndpoints) == 0 {
 		return nil, errors.New("no specified beacon API endpoints")
 	}

@@ -51,7 +51,8 @@ func (_ *MockHost) Connect(_ context.Context, _ peer.AddrInfo) error {
 func (_ *MockHost) SetStreamHandler(_ protocol.ID, _ network.StreamHandler) {}
 
 // SetStreamHandlerMatch --
-func (_ *MockHost) SetStreamHandlerMatch(protocol.ID, func(string) bool, network.StreamHandler) {}
+func (_ *MockHost) SetStreamHandlerMatch(protocol.ID, func(id protocol.ID) bool, network.StreamHandler) {
+}
 
 // RemoveStreamHandler --
 func (_ *MockHost) RemoveStreamHandler(_ protocol.ID) {}
