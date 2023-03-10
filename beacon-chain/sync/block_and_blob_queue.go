@@ -12,7 +12,7 @@ import (
 )
 
 type blockAndBlobs struct {
-	blk   interfaces.SignedBeaconBlock
+	blk   interfaces.ReadOnlySignedBeaconBlock
 	blobs []*eth.SignedBlobSidecar
 }
 
@@ -27,7 +27,7 @@ func newBlockAndBlobs() *blockAndBlocksQueue {
 	}
 }
 
-func (q *blockAndBlocksQueue) addBlock(b interfaces.SignedBeaconBlock) error {
+func (q *blockAndBlocksQueue) addBlock(b interfaces.ReadOnlySignedBeaconBlock) error {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -71,7 +71,7 @@ func (q *blockAndBlocksQueue) addBlob(b *eth.SignedBlobSidecar) error {
 	return nil
 }
 
-func (q *blockAndBlocksQueue) getBlock(r [32]byte) (interfaces.SignedBeaconBlock, error) {
+func (q *blockAndBlocksQueue) getBlock(r [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 
