@@ -152,7 +152,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		log.WithError(err).Error("Could not set head root to valid")
 		return nil, nil
 	}
-
+	if err := s.notifyPayloadAttributesStream(proposerId, arg.headBlock.Slot(), arg.headRoot[:], headPayload.BlockHash(), attr); err != nil {
+		return nil, err
+	}
 	// If the forkchoice update call has an attribute, update the proposer payload ID cache.
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
@@ -190,8 +192,8 @@ func (s *Service) notifyPayloadAttributesStream(proposerIndex primitives.Validat
 					ParentBlockNumber: parentBlockNumber,
 					ParentBlockRoot:   parentBlockRoot,
 					ParentBlockHash:   parentBlockHash,
-					PayloadAttributes: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute_PayloadAttributesV1{
-						PayloadAttributesV1: pbv1,
+					VersionedPayloadAttributes: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute_PayloadAttributes{
+						PayloadAttributes: pbv1,
 					},
 				},
 			},
@@ -212,7 +214,7 @@ func (s *Service) notifyPayloadAttributesStream(proposerIndex primitives.Validat
 					ParentBlockNumber: parentBlockNumber,
 					ParentBlockRoot:   parentBlockRoot,
 					ParentBlockHash:   parentBlockHash,
-					PayloadAttributes: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute_PayloadAttributesV2{
+					VersionedPayloadAttributes: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute_PayloadAttributesV2{
 						PayloadAttributesV2: pbv2,
 					},
 				},
@@ -318,7 +320,11 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
 	if !ok { // There's no need to build attribute if there is no proposer for slot.
-		return false, emptyAttri, 0
+		headBlock, err := s.HeadBlock(ctx)
+		if err != nil {
+			return false, emptyAttri, 0
+		}
+		proposerID = headBlock.Block().ProposerIndex()
 	}
 
 	// Get previous randao.

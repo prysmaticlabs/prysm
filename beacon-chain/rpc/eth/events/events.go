@@ -236,7 +236,7 @@ func handleStateEvents(
 			return nil
 		}
 		payloadAttr, ok := event.Data.(*ethpb.EventPayloadAttribute)
-		if ok {
+		if !ok {
 			return nil
 		}
 		return streamData(stream, PayloadAttributesTopic, payloadAttr)
