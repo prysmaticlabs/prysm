@@ -37,7 +37,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		req := &ethpb.BeaconBlocksByRangeRequest{}
 		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		_, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, bogusPeer.PeerID(), req, nil)
-		assert.ErrorContains(t, "protocol not supported", err)
+		assert.ErrorContains(t, "protocols not supported", err)
 	})
 
 	knownBlocks := make([]*ethpb.SignedBeaconBlock, 0)
@@ -329,7 +329,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		req := &p2pTypes.BeaconBlockByRootsReq{}
 		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		_, err := SendBeaconBlocksByRootRequest(ctx, chain, p1, bogusPeer.PeerID(), req, nil)
-		assert.ErrorContains(t, "protocol not supported", err)
+		assert.ErrorContains(t, "protocols not supported", err)
 	})
 
 	knownBlocksProvider := func(p2pProvider p2p.P2P, processor BeaconBlockProcessor) func(stream network.Stream) {

@@ -2,12 +2,18 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Service) isNewProposer(slot primitives.Slot) bool {
@@ -50,12 +56,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	}
 	isNewProposer := s.isNewProposer(proposingSlot)
 	if isNewProposer && !features.Get().DisableReorgLateBlocks {
-		if proposingSlot == s.CurrentSlot() {
-			proposerHead := s.ForkChoicer().GetProposerHead()
-			if proposerHead != newHeadRoot {
-				return nil
-			}
-		} else if s.ForkChoicer().ShouldOverrideFCU() {
+		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
 			return nil
 		}
 	}
@@ -83,4 +84,44 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 		log.WithError(err).Error("could not prune attestations from pool")
 	}
 	return nil
+}
+
+// shouldOverrideFCU checks whether the incoming block is still subject to being
+// reorged or not by the next proposer.
+func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitives.Slot) bool {
+	headWeight, err := s.ForkChoicer().Weight(newHeadRoot)
+	if err != nil {
+		log.WithError(err).WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
+	}
+	currentSlot := s.CurrentSlot()
+	if proposingSlot == currentSlot {
+		proposerHead := s.ForkChoicer().GetProposerHead()
+		if proposerHead != newHeadRoot {
+			return true
+		}
+		log.WithFields(logrus.Fields{
+			"root":   fmt.Sprintf("%#x", newHeadRoot),
+			"weight": headWeight,
+		}).Infof("Attempted late block reorg aborted due to attestations at %d seconds",
+			params.BeaconConfig().SecondsPerSlot)
+		lateBlockFailedAttemptSecondThreshold.Inc()
+	} else {
+		if s.ForkChoicer().ShouldOverrideFCU() {
+			return true
+		}
+		secs, err := slots.SecondsSinceSlotStart(currentSlot,
+			uint64(s.genesisTime.Unix()), uint64(time.Now().Unix()))
+		if err != nil {
+			log.WithError(err).Error("could not compute seconds since slot start")
+		}
+		if secs >= doublylinkedtree.ProcessAttestationsThreshold {
+			log.WithFields(logrus.Fields{
+				"root":   fmt.Sprintf("%#x", newHeadRoot),
+				"weight": headWeight,
+			}).Infof("Attempted late block reorg aborted due to attestations at %d seconds",
+				doublylinkedtree.ProcessAttestationsThreshold)
+			lateBlockFailedAttemptFirstThreshold.Inc()
+		}
+	}
+	return false
 }
