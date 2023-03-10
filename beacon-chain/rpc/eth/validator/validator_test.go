@@ -2666,7 +2666,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
 	})
 
-	t.Run("Capella", func(t *testing.T) {
+	t.Run("Blind Capella", func(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
@@ -2752,6 +2752,242 @@ func TestProduceBlindedBlock(t *testing.T) {
 		mockChainService := &mockChain.ChainService{Slot: &chainSlot, Genesis: ti, State: beaconState, Root: parentRoot[:], ForkChoiceStore: fcs, Block: wfb}
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller:  &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: big.NewInt(0)},
+			BeaconDB:               db,
+			ForkFetcher:            mockChainService,
+			TimeFetcher:            mockChainService,
+			HeadFetcher:            mockChainService,
+			OptimisticModeFetcher:  mockChainService,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          mockChainService,
+			HeadUpdater:            mockChainService,
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, fcs),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				BidCapella:    sBid,
+			},
+			FinalizationFetcher: &mockChain.ChainService{
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{
+					Root: r[:],
+				},
+			},
+		}
+
+		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
+				beaconState,
+				privKeys[i],
+				i,
+			)
+			require.NoError(t, err)
+			proposerSlashings[i] = proposerSlashing
+			err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+			require.NoError(t, err)
+		}
+
+		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+		for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
+			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
+				beaconState,
+				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+			)
+			require.NoError(t, err)
+			attSlashings[i] = attesterSlashing
+			err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
+			require.NoError(t, err)
+		}
+
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := signing.ComputeDomainAndSign(beaconState, coreTime.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+		contribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
+			BlockRoot:         parentRoot[:],
+			SubcommitteeIndex: 0,
+			AggregationBits:   aggregationBits,
+			Signature:         aggregatedSig,
+		}
+		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
+
+		v1Server := &Server{
+			V1Alpha1Server:        v1Alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           &mockChain.ChainService{},
+			OptimisticModeFetcher: &mockChain.ChainService{},
+		}
+		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+
+		copied := beaconState.Copy()
+		require.NoError(t, copied.SetSlot(params.BeaconConfig().SlotsPerEpoch*2+1))
+		idx, err := helpers.BeaconProposerIndex(ctx, copied)
+		require.NoError(t, err)
+		require.NoError(t,
+			db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{idx},
+				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Pubkey: make([]byte, 48)}}))
+
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		resp, err := v1Server.ProduceBlindedBlock(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+
+		containerBlock, ok := resp.Data.Block.(*ethpbv2.BlindedBeaconBlockContainer_CapellaBlock)
+		require.Equal(t, true, ok)
+		blk := containerBlock.CapellaBlock
+		assert.Equal(t, req.Slot, blk.Slot, "Expected block to have slot of 1")
+		assert.DeepEqual(t, parentRoot[:], blk.ParentRoot, "Expected block to have correct parent root")
+		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
+		assert.DeepEqual(t, req.Graffiti, blk.Body.Graffiti, "Expected block to have correct graffiti")
+		assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(blk.Body.ProposerSlashings)))
+		expectedPropSlashings := make([]*ethpbv1.ProposerSlashing, len(proposerSlashings))
+		for i, slash := range proposerSlashings {
+			expectedPropSlashings[i] = migration.V1Alpha1ProposerSlashingToV1(slash)
+		}
+		assert.DeepEqual(t, expectedPropSlashings, blk.Body.ProposerSlashings)
+		assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(blk.Body.AttesterSlashings)))
+		expectedAttSlashings := make([]*ethpbv1.AttesterSlashing, len(attSlashings))
+		for i, slash := range attSlashings {
+			expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
+		}
+		assert.DeepEqual(t, expectedAttSlashings, blk.Body.AttesterSlashings)
+		expectedBits := bitfield.NewBitvector512()
+		for i := 0; i <= 15; i++ {
+			expectedBits[i] = 0xAA
+		}
+		assert.DeepEqual(t, expectedBits, blk.Body.SyncAggregate.SyncCommitteeBits)
+		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig().Copy()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		bc.MaxBuilderConsecutiveMissedSlots = params.BeaconConfig().SlotsPerEpoch*2 + 1
+		bc.MaxBuilderEpochMissedSlots = params.BeaconConfig().SlotsPerEpoch * 2
+		params.OverrideBeaconConfig(bc)
+
+		beaconState, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
+
+		ts := time.Now()
+		ti := ts.Add(-time.Duration(uint64(2*params.BeaconConfig().SlotsPerEpoch+1)*params.BeaconConfig().SecondsPerSlot) * time.Second)
+		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
+
+		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		fb := util.HydrateSignedBeaconBlockCapella(&ethpbalpha.SignedBeaconBlockCapella{})
+		fb.Block.Body.ExecutionPayload.GasLimit = 123
+		wfb, err := blocks.NewSignedBeaconBlock(fb)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wfb), "Could not save block")
+		r, err := wfb.Block().HashTreeRoot()
+		require.NoError(t, err)
+
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
+		require.NoError(t, err)
+		wds, err := beaconState.ExpectedWithdrawals()
+		require.NoError(t, err)
+		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		bid := &ethpbalpha.BuilderBidCapella{
+			Header: &enginev1.ExecutionPayloadHeaderCapella{
+				ParentHash:       make([]byte, fieldparams.RootLength),
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       random,
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: make([]byte, fieldparams.RootLength),
+				BlockNumber:      1,
+				Timestamp:        uint64(ts.Unix()),
+				WithdrawalsRoot:  wr[:],
+			},
+			Pubkey: sk.PublicKey().Marshal(),
+			Value:  bytesutil.PadTo([]byte{0}, 32),
+		}
+		d := params.BeaconConfig().DomainApplicationBuilder
+		domain, err := signing.ComputeDomain(d, nil, nil)
+		require.NoError(t, err)
+		sr, err := signing.ComputeSigningRoot(bid, domain)
+		require.NoError(t, err)
+		sBid := &ethpbalpha.SignedBuilderBidCapella{
+			Message:   bid,
+			Signature: sk.Sign(sr[:]).Marshal(),
+		}
+		id := &enginev1.PayloadIDBytes{0x1}
+
+		chainSlot := 2*params.BeaconConfig().SlotsPerEpoch + 1
+		fcs := doublylinkedtree.New()
+		fcs.SetGenesisTime(uint64(ti.Unix()))
+		mockChainService := &mockChain.ChainService{Slot: &chainSlot, Genesis: ti, State: beaconState, Root: parentRoot[:], ForkChoiceStore: fcs, Block: wfb}
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{
+				ParentHash:    make([]byte, fieldparams.RootLength),
+				FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:     make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:    random,
+				BaseFeePerGas: make([]byte, fieldparams.RootLength),
+				BlockHash:     make([]byte, fieldparams.RootLength),
+				Timestamp:     uint64(ts.Unix()),
+				BlockNumber:   1,
+				Withdrawals:   wds},
+				BlockValue: big.NewInt(0)},
 			BeaconDB:               db,
 			ForkFetcher:            mockChainService,
 			TimeFetcher:            mockChainService,

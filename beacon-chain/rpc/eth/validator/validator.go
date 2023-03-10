@@ -539,9 +539,9 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
-	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	capellaBlindBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {
-		blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(capellaBlock.BlindedCapella)
+		blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(capellaBlindBlock.BlindedCapella)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
@@ -552,6 +552,20 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
+	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	if ok {
+		blind, err := migration.V1Alpha1BeaconBlockCapellaToV2Blinded(capellaBlock.Capella)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_CAPELLA,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: blind},
+			},
+		}, nil
+	}
+
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
