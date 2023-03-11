@@ -235,11 +235,15 @@ func handleStateEvents(
 		if _, ok := requestedTopics[PayloadAttributesTopic]; !ok {
 			return nil
 		}
-		payloadAttr, ok := event.Data.(*ethpb.EventPayloadAttribute)
-		if !ok {
-			return nil
+		payloadAttrV2, ok := event.Data.(*ethpb.EventPayloadAttributeV2)
+		if ok {
+			return streamData(stream, PayloadAttributesTopic, payloadAttrV2)
 		}
-		return streamData(stream, PayloadAttributesTopic, payloadAttr)
+		payloadAttrV1, ok := event.Data.(*ethpb.EventPayloadAttributeV1)
+		if ok {
+			return streamData(stream, PayloadAttributesTopic, payloadAttrV1)
+		}
+		return nil
 	default:
 		return nil
 	}

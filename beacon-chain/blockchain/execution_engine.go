@@ -152,9 +152,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		log.WithError(err).Error("Could not set head root to valid")
 		return nil, nil
 	}
-	if err := s.notifyPayloadAttributesStream(proposerId, arg.headBlock.Slot(), arg.headRoot[:], headPayload.BlockHash(), attr); err != nil {
-		return nil, err
-	}
+
 	// If the forkchoice update call has an attribute, update the proposer payload ID cache.
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
@@ -184,17 +182,15 @@ func (s *Service) notifyPayloadAttributesStream(proposerIndex primitives.Validat
 		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.PayloadAttributeSent,
-			Data: &ethpbv1.EventPayloadAttribute{
+			Data: &ethpbv1.EventPayloadAttributeV1{
 				Version: version.String(attrs.Version()),
-				Data: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute{
+				Data: &ethpbv1.EventPayloadAttributeV1_BasePayloadAttribute{
 					ProposerIndex:     proposerIndex,
 					ProposalSlot:      s.CurrentSlot() + 1,
 					ParentBlockNumber: parentBlockNumber,
 					ParentBlockRoot:   parentBlockRoot,
 					ParentBlockHash:   parentBlockHash,
-					VersionedPayloadAttributes: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute_PayloadAttributes{
-						PayloadAttributes: pbv1,
-					},
+					PayloadAttributes: pbv1,
 				},
 			},
 		})
@@ -206,17 +202,15 @@ func (s *Service) notifyPayloadAttributesStream(proposerIndex primitives.Validat
 		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.PayloadAttributeSent,
-			Data: &ethpbv1.EventPayloadAttribute{
+			Data: &ethpbv1.EventPayloadAttributeV2{
 				Version: version.String(attrs.Version()),
-				Data: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute{
-					ProposerIndex:     proposerIndex,
-					ProposalSlot:      s.CurrentSlot() + 1,
-					ParentBlockNumber: parentBlockNumber,
-					ParentBlockRoot:   parentBlockRoot,
-					ParentBlockHash:   parentBlockHash,
-					VersionedPayloadAttributes: &ethpbv1.EventPayloadAttribute_BasePayloadAttribute_PayloadAttributesV2{
-						PayloadAttributesV2: pbv2,
-					},
+				Data: &ethpbv1.EventPayloadAttributeV2_BasePayloadAttribute{
+					ProposerIndex:       proposerIndex,
+					ProposalSlot:        s.CurrentSlot() + 1,
+					ParentBlockNumber:   parentBlockNumber,
+					ParentBlockRoot:     parentBlockRoot,
+					ParentBlockHash:     parentBlockHash,
+					PayloadAttributesV2: pbv2,
 				},
 			},
 		})
@@ -320,6 +314,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
 	if !ok { // There's no need to build attribute if there is no proposer for slot.
+		// TODO: add in flag config to configure this...
 		headBlock, err := s.HeadBlock(ctx)
 		if err != nil {
 			return false, emptyAttri, 0
