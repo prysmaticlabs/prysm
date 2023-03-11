@@ -5,18 +5,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
-type commitmentSequenceImpl [][]byte
-
-func (s commitmentSequenceImpl) At(i int) eth.KZGCommitment {
-	var out eth.KZGCommitment
-	copy(out[:], s[i])
-	return out
-}
-
-func (s commitmentSequenceImpl) Len() int {
-	return len(s)
-}
-
 type BlobImpl []byte
 
 func (b BlobImpl) At(i int) [32]byte {

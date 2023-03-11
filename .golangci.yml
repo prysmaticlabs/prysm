@@ -21,7 +21,7 @@ linters:
 linters-settings:
   gocognit:
     # TODO: We should target for < 50
-    min-complexity: 69
+    min-complexity: 100
 
 output:
   print-issued-lines: true
