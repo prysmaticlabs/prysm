@@ -295,12 +295,9 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
 		if slots.ToEpoch(s.cfg.chain.CurrentSlot()) >= params.BeaconConfig().DenebForkEpoch {
-			if err := s.sendBlocksAndSidecarsRequest(ctx, &req, pid); err != nil {
-				log.WithError(err).Error("Could not send recent block and blob request, falling back to block only")
-				if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
-					tracing.AnnotateError(span, err)
-					log.WithError(err).Error("Could not send recent block request after Deneb fork epoch")
-				}
+			if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
+				tracing.AnnotateError(span, err)
+				log.WithError(err).Debug("Could not send recent block request")
 			}
 		} else {
 			if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {

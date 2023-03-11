@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -28,6 +30,29 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		defer s.pendingQueueLock.Unlock()
 		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blkRoot, nil); err != nil {
 			return err
+		}
+		if blk.Version() >= version.Deneb {
+			c, err := blk.Block().Body().BlobKzgCommitments()
+			if err != nil {
+				return err
+			}
+			blobIdentifiers := make([]*eth.BlobIdentifier, len(c))
+			for i := 0; i < len(c); i++ {
+				blobIdentifiers[i] = &eth.BlobIdentifier{
+					BlockRoot: blkRoot[:],
+					Index:     uint64(i),
+				}
+			}
+			blobs, err := SendBlobSidecarByRoot(ctx, s.cfg.chain, s.cfg.p2p, id, blobIdentifiers)
+			if err != nil {
+				return err
+			}
+			for _, blob := range blobs {
+				// TODO(TT): Validate the blob is valid
+				if err := s.blockAndBlobs.addBlob(blob); err != nil {
+					return err
+				}
+			}
 		}
 		return nil
 	})

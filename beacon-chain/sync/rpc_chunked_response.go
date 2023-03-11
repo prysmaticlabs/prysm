@@ -176,7 +176,7 @@ func ReadChunkedBlockAndBlobsSidecar(stream libp2pcore.Stream, chain blockchain.
 	return b, err
 }
 
-func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider, isFirstChunk bool) (*ethpb.BlobsSidecar, error) {
+func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider, isFirstChunk bool) (*ethpb.BlobSidecar, error) {
 	var (
 		code   uint8
 		errMsg string
@@ -292,7 +292,7 @@ func extractBeaconBlockAndBlobsSidecarDataType(digest []byte, chain blockchain.F
 	return &ethpb.SignedBeaconBlockAndBlobsSidecar{}, nil
 }
 
-func extractBlobsSidecarDataType(digest []byte, chain blockchain.ForkFetcher) (*ethpb.BlobsSidecar, error) {
+func extractBlobsSidecarDataType(digest []byte, chain blockchain.ForkFetcher) (*ethpb.BlobSidecar, error) {
 	if len(digest) != forkDigestLength {
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
@@ -304,5 +304,5 @@ func extractBlobsSidecarDataType(digest []byte, chain blockchain.ForkFetcher) (*
 	if rDigest != bytesutil.ToBytes4(digest) {
 		return nil, errors.Errorf("invalid digest returned, wanted %x but received %x", rDigest, digest)
 	}
-	return &ethpb.BlobsSidecar{}, nil
+	return &ethpb.BlobSidecar{}, nil
 }

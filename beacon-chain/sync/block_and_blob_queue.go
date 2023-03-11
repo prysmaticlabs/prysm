@@ -13,7 +13,7 @@ import (
 
 type blockAndBlobs struct {
 	blk   interfaces.ReadOnlySignedBeaconBlock
-	blobs []*eth.SignedBlobSidecar
+	blobs []*eth.BlobSidecar
 }
 
 type blockAndBlocksQueue struct {
@@ -43,7 +43,7 @@ func (q *blockAndBlocksQueue) addBlock(b interfaces.ReadOnlySignedBeaconBlock) e
 	if !ok {
 		q.queue[r] = blockAndBlobs{
 			blk:   b,
-			blobs: make([]*eth.SignedBlobSidecar, 0, 4),
+			blobs: make([]*eth.BlobSidecar, 0, 4),
 		}
 		return nil
 	}
@@ -53,15 +53,15 @@ func (q *blockAndBlocksQueue) addBlock(b interfaces.ReadOnlySignedBeaconBlock) e
 	return nil
 }
 
-func (q *blockAndBlocksQueue) addBlob(b *eth.SignedBlobSidecar) error {
+func (q *blockAndBlocksQueue) addBlob(b *eth.BlobSidecar) error {
 	q.lock.Lock()
 	defer q.lock.Unlock()
-	r := bytesutil.ToBytes32(b.Message.BlockRoot)
+	r := bytesutil.ToBytes32(b.BlockRoot)
 
 	bnb, ok := q.queue[r]
 	if !ok {
 		q.queue[r] = blockAndBlobs{
-			blobs: make([]*eth.SignedBlobSidecar, 0, 4),
+			blobs: make([]*eth.BlobSidecar, 0, 4),
 		}
 		bnb = q.queue[r]
 	}
@@ -85,7 +85,7 @@ func (q *blockAndBlocksQueue) getBlock(r [32]byte) (interfaces.ReadOnlySignedBea
 	return bnb.blk, nil
 }
 
-func (q *blockAndBlocksQueue) getBlob(r [32]byte, i uint64) (*eth.SignedBlobSidecar, error) {
+func (q *blockAndBlocksQueue) getBlob(r [32]byte, i uint64) (*eth.BlobSidecar, error) {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 
@@ -98,7 +98,7 @@ func (q *blockAndBlocksQueue) getBlob(r [32]byte, i uint64) (*eth.SignedBlobSide
 		return nil, errors.New("blob does not exist")
 	}
 	for _, blob := range bnb.blobs {
-		if i == blob.Message.Index {
+		if i == blob.Index {
 			return blob, nil
 		}
 	}

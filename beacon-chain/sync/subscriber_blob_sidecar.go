@@ -16,7 +16,7 @@ func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
 	}
 
-	if err := s.blockAndBlobs.addBlob(b); err != nil {
+	if err := s.blockAndBlobs.addBlob(b.Message); err != nil {
 		return errors.Wrap(err, "could not add blob to queue")
 	}
 

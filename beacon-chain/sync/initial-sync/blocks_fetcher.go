@@ -397,7 +397,7 @@ func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobsSideca
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
-	return prysmsync.SendBlobsSidecarsByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
+	return []*p2ppb.BlobsSidecar{}, nil // TODO: return the correct blobs
 }
 
 // requestBlocksByRoot is a wrapper for handling BeaconBlockByRootsReq requests/streams.
