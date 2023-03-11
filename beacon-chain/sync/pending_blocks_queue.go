@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/async"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -159,21 +159,31 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			default:
 			}
 
-			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				if blockchain.IsInvalidBlock(err) {
-					r := blockchain.InvalidBlockRoot(err)
-					if r != [32]byte{} {
-						s.setBadBlock(ctx, r) // Setting head block as bad.
-					} else {
-						s.setBadBlock(ctx, blkRoot)
+			if b.Version() >= version.Deneb {
+				if err := s.blockAndBlobs.addBlock(b); err != nil {
+					return err
+				}
+				root, err := b.Block().HashTreeRoot()
+				if err != nil {
+					return err
+				}
+				hasEverything, err := s.blockAndBlobs.hasEverything(root)
+				if err != nil {
+					return err
+				}
+				if hasEverything {
+					if err := s.receiveBlockAndBlobs(ctx, b, root); err != nil {
+						return err
+					}
+					s.blockAndBlobs.delete(root)
+				}
+			} else {
+				if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+					if s.receiveBlock(ctx, b, blkRoot) != nil {
+						log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
+						continue
 					}
 				}
-				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
-
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
-				span.End()
-				continue
 			}
 
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())

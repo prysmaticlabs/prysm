@@ -89,25 +89,6 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2
 	return readResponseChunk(stream, chain, p2p)
 }
 
-// WriteBlobsSidecarChunk writes blobs chunk object to stream.
-// response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
-func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, blobs *ethpb.BlobsSidecar) error {
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		return err
-	}
-	valRoot := chain.GenesisValidatorsRoot()
-	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().DenebForkEpoch, valRoot[:])
-	if err != nil {
-		return err
-	}
-
-	if err := writeContextToStream(ctxBytes[:], stream, chain); err != nil {
-		return err
-	}
-	_, err = encoding.EncodeWithMaxLength(stream, blobs)
-	return err
-}
-
 // WriteBlobSidecarChunk writes blob chunk object to stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
 func WriteBlobSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, sidecar *ethpb.BlobSidecar) error {
@@ -125,55 +106,6 @@ func WriteBlobSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoF
 	}
 	_, err = encoding.EncodeWithMaxLength(stream, sidecar)
 	return err
-}
-
-func WriteBlockAndBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, b *ethpb.SignedBeaconBlockAndBlobsSidecar) error {
-	SetStreamWriteDeadline(stream, defaultWriteDuration)
-	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		return err
-	}
-	valRoot := chain.GenesisValidatorsRoot()
-	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().DenebForkEpoch, valRoot[:])
-	if err != nil {
-		return err
-	}
-
-	if err := writeContextToStream(ctxBytes[:], stream, chain); err != nil {
-		return err
-	}
-	_, err = encoding.EncodeWithMaxLength(stream, b)
-	return err
-}
-
-func ReadChunkedBlockAndBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*ethpb.SignedBeaconBlockAndBlobsSidecar, error) {
-	var (
-		code   uint8
-		errMsg string
-		err    error
-	)
-	if isFirstChunk {
-		code, errMsg, err = ReadStatusCode(stream, p2p.Encoding())
-	} else {
-		SetStreamReadDeadline(stream, respTimeout)
-		code, errMsg, err = readStatusCodeNoDeadline(stream, p2p.Encoding())
-	}
-	if err != nil {
-		return nil, err
-	}
-	if code != 0 {
-		return nil, errors.New(errMsg)
-	}
-	// No-op for now with the rpc context.
-	rpcCtx, err := readContextFromStream(stream, chain)
-	if err != nil {
-		return nil, err
-	}
-	b, err := extractBeaconBlockAndBlobsSidecarDataType(rpcCtx, chain)
-	if err != nil {
-		return nil, err
-	}
-	err = p2p.Encoding().DecodeWithMaxLength(stream, b)
-	return b, err
 }
 
 func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider, isFirstChunk bool) (*ethpb.BlobSidecar, error) {
@@ -275,21 +207,6 @@ func extractBlockDataType(digest []byte, chain blockchain.ForkFetcher) (interfac
 		}
 	}
 	return nil, errors.New("no valid digest matched")
-}
-
-func extractBeaconBlockAndBlobsSidecarDataType(digest []byte, chain blockchain.ForkFetcher) (*ethpb.SignedBeaconBlockAndBlobsSidecar, error) {
-	if len(digest) != forkDigestLength {
-		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
-	}
-	vRoot := chain.GenesisValidatorsRoot()
-	rDigest, err := signing.ComputeForkDigest(params.BeaconConfig().DenebForkVersion, vRoot[:])
-	if err != nil {
-		return nil, err
-	}
-	if rDigest != bytesutil.ToBytes4(digest) {
-		return nil, errors.Errorf("invalid digest returned, wanted %x but received %x", rDigest, digest)
-	}
-	return &ethpb.SignedBeaconBlockAndBlobsSidecar{}, nil
 }
 
 func extractBlobsSidecarDataType(digest []byte, chain blockchain.ForkFetcher) (*ethpb.BlobSidecar, error) {

@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
@@ -21,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	blobs2 "github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -355,22 +353,6 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, req *ethpb.Gene
 }
 
 func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.ReadOnlySignedBeaconBlock, blobSidecars []*ethpb.SignedBlobSidecar) error {
-	blobs, err := vs.BlobsCache.Get(blk.Block().Slot())
-	if err != nil {
-		return errors.Wrap(err, "could not get blobs from cache")
-	}
-	sc := &ethpb.BlobsSidecar{
-		Blobs:           blobs,
-		BeaconBlockSlot: blk.Block().Slot(),
-		BeaconBlockRoot: root[:],
-	}
-	aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs2.BlobsSequenceImpl(blobs))
-	if err != nil {
-		interop.WriteBadBlobsToDisk("proposer", sc)
-		return fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
-	}
-	sc.AggregatedProof = aggregatedProof[:]
-
 	for _, sidecar := range blobSidecars {
 		if err := vs.P2P.BroadcastBlob(ctx, sidecar.Message.Index, sidecar); err != nil {
 			return errors.Wrap(err, "could not broadcast blob sidecar")
@@ -378,9 +360,6 @@ func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk i
 	}
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return fmt.Errorf("could not process beacon block: %v", err)
-	}
-	if err := vs.BeaconDB.SaveBlobsSidecar(ctx, sc); err != nil {
-		return errors.Wrap(err, "could not save sidecar to DB")
 	}
 	return nil
 }

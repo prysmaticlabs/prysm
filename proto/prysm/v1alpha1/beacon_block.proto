@@ -445,15 +445,6 @@ message BlindedBeaconBlockBodyBellatrix {
     ethereum.engine.v1.ExecutionPayloadHeader execution_payload_header = 10;
 }
 
-// This contains beacon block and the blob sidecar objects under single container.
-// It is to be gossip'ed over p2p to peers to validate and process.
-message SignedBeaconBlockAndBlobsSidecar {
-    // The block of the beacon chain.
-    SignedBeaconBlockDeneb beacon_block = 1;
-    // The blob sidecar which corresponds to the block itself.
-    BlobsSidecar blobs_sidecar = 2;
-}
-
 message SignedBeaconBlockDenebAndBlobs {
     SignedBeaconBlockDeneb block = 1;
     repeated SignedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];

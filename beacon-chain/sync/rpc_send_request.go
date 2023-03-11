@@ -23,8 +23,6 @@ var ErrInvalidFetchedData = errors.New("invalid data returned from peer")
 // blocks even before all blocks are ready.
 type BeaconBlockProcessor func(block interfaces.ReadOnlySignedBeaconBlock) error
 
-type BeaconBlockAndSidecarProcessor func(blockAndSidecar *pb.SignedBeaconBlockAndBlobsSidecar) error
-
 // SendBeaconBlocksByRangeRequest sends BeaconBlocksByRange and returns fetched blocks, if any.
 func SendBeaconBlocksByRangeRequest(
 	ctx context.Context, chain blockchain.ForkFetcher, p2pProvider p2p.SenderEncoder, pid peer.ID,
