@@ -63,6 +63,7 @@ message ExecutionPayloadCapella {
 message ExecutionPayloadCapellaWithValue {
 	ExecutionPayloadCapella payload = 1;
 	bytes value = 2;
+	bool override_builder = 3;
 }
 
 message ExecutionPayloadHeader {

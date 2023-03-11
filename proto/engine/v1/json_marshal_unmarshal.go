@@ -215,8 +215,9 @@ type executionPayloadJSON struct {
 }
 
 type GetPayloadV2ResponseJson struct {
-	ExecutionPayload *ExecutionPayloadCapellaJSON `json:"executionPayload"`
-	BlockValue       string                       `json:"blockValue"`
+	ExecutionPayload      *ExecutionPayloadCapellaJSON `json:"executionPayload"`
+	BlockValue            string                       `json:"blockValue"`
+	ShouldOverrideBuilder bool                         `json:"shouldOverrideBuilder"`
 }
 
 type ExecutionPayloadCapellaJSON struct {
@@ -468,6 +469,8 @@ func (e *ExecutionPayloadCapellaWithValue) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	e.Value = bytesutil.PadTo(bytesutil.ReverseByteOrder(v.Bytes()), fieldparams.RootLength)
+
+	e.OverrideBuilder = dec.ShouldOverrideBuilder
 
 	return nil
 }

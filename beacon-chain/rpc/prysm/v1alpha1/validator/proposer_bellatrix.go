@@ -56,9 +56,13 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 		} else {
 			switch {
 			case blk.Version() >= version.Capella:
-				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
+				localPayload, override, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 				if err != nil {
 					return errors.Wrap(err, "failed to get execution payload")
+				}
+				if override {
+					log.Warn("Proposer: using local execution payload because detected on-chain censorship")
+					return blk.SetExecution(localPayload)
 				}
 				// Compare payload values between local and builder. Default to the local value if it is higher.
 				localValue, err := localPayload.Value()
@@ -100,7 +104,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 
 	}
 
-	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
+	executionData, _, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload")
 	}
