@@ -3,13 +3,13 @@ package sync
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -19,8 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -86,18 +84,10 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			span.End()
 			continue
 		}
-		var blobs []*ethpb.BlobsSidecar
-		if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-			blobs = s.pendingBlobsInCache(slot)
-			if len(bs) != len(blobs) {
-				log.Errorf("Processing pending blocks and blobs are not the same length: %d != %d", len(bs), len(blobs))
-				continue
-			}
-		}
 		s.pendingQueueLock.RUnlock()
 
 		// Loop through the pending queue and mark the potential parent blocks as seen.
-		for i, b := range bs {
+		for _, b := range bs {
 			if b == nil || b.IsNil() || b.Block().IsNil() {
 				span.End()
 				continue
@@ -169,45 +159,30 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			default:
 			}
 
-			if b.Version() >= version.Deneb {
-				if err := s.blockAndBlobs.addBlock(b); err != nil {
-					return err
-				}
-				root, err := b.Block().HashTreeRoot()
-				if err != nil {
-					return err
-				}
-				hasEverything, err := s.blockAndBlobs.hasEverything(root)
-				if err != nil {
-					return err
-				}
-				if hasEverything {
-					if err := s.receiveBlockAndBlobs(ctx, b, root); err != nil {
-						return err
-					}
-					s.blockAndBlobs.delete(root)
-				}
-			} else {
-				if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-					if s.receiveBlock(ctx, b, blkRoot) != nil {
-						log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
-						continue
+			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+				if blockchain.IsInvalidBlock(err) {
+					r := blockchain.InvalidBlockRoot(err)
+					if r != [32]byte{} {
+						s.setBadBlock(ctx, r) // Setting head block as bad.
+					} else {
+						s.setBadBlock(ctx, blkRoot)
 					}
 				}
+				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
+
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
+				span.End()
+				continue
 			}
 
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
 
 			// Broadcasting the block again once a node is able to process it.
-			if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-				if err := s.broadcastBlockAndBlobsSidecar(ctx, b, blobs[i]); err != nil {
-					log.WithError(err).Debug("Could not broadcast block and blobs sidecar")
-				}
+			pb, err := b.Proto()
+			if err != nil {
+				log.WithError(err).Debug("Could not get protobuf block")
 			} else {
-				pb, err := b.Proto()
-				if err != nil {
-					log.WithError(err).Debug("Could not get protobuf block")
-				}
 				if err := s.cfg.p2p.Broadcast(ctx, pb); err != nil {
 					log.WithError(err).Debug("Could not broadcast block")
 				}
@@ -230,18 +205,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	}
 
 	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
-}
-
-func (s *Service) broadcastBlockAndBlobsSidecar(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blobs *ethpb.BlobsSidecar) error {
-	blkPb, err := b.PbDenebBlock()
-	if err != nil {
-		return err
-	}
-	pb := &ethpb.SignedBeaconBlockAndBlobsSidecar{
-		BeaconBlock:  blkPb,
-		BlobsSidecar: blobs,
-	}
-	return s.cfg.p2p.Broadcast(ctx, pb)
 }
 
 func (s *Service) checkIfBlockIsBad(
@@ -294,18 +257,10 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
 			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
-		if slots.ToEpoch(s.cfg.chain.CurrentSlot()) >= params.BeaconConfig().DenebForkEpoch {
-			if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
-				tracing.AnnotateError(span, err)
-				log.WithError(err).Debug("Could not send recent block request")
-			}
-		} else {
-			if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
-				tracing.AnnotateError(span, err)
-				log.WithError(err).Debug("Could not send recent block request")
-			}
+		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
+			tracing.AnnotateError(span, err)
+			log.WithError(err).Debug("Could not send recent block request")
 		}
-
 		newRoots := make([][32]byte, 0, len(roots))
 		s.pendingQueueLock.RLock()
 		for _, rt := range roots {
@@ -331,26 +286,15 @@ func (s *Service) sortedPendingSlots() []primitives.Slot {
 
 	items := s.slotToPendingBlocks.Items()
 
-	ss1 := make([]primitives.Slot, 0, len(items))
+	ss := make([]primitives.Slot, 0, len(items))
 	for k := range items {
 		slot := cacheKeyToSlot(k)
-		ss1 = append(ss1, slot)
+		ss = append(ss, slot)
 	}
-	sort.Slice(ss1, func(i, j int) bool {
-		return ss1[i] < ss1[j]
+	sort.Slice(ss, func(i, j int) bool {
+		return ss[i] < ss[j]
 	})
-
-	items = s.slotToPendingBlobs.Items()
-	ss2 := make([]primitives.Slot, 0, len(items))
-	for k := range items {
-		slot := cacheKeyToSlot(k)
-		ss2 = append(ss2, slot)
-	}
-	sort.Slice(ss2, func(i, j int) bool {
-		return ss2[i] < ss2[j]
-	})
-
-	return ss1
+	return ss
 }
 
 // validatePendingSlots validates the pending blocks
@@ -366,21 +310,10 @@ func (s *Service) validatePendingSlots() error {
 	if s.slotToPendingBlocks == nil {
 		return errors.New("slotToPendingBlocks cache can't be nil")
 	}
-	if s.slotToPendingBlobs == nil {
-		return errors.New("slotToPendingBlobs cache can't be nil")
-	}
 	items := s.slotToPendingBlocks.Items()
-
 	for k := range items {
 		slot := cacheKeyToSlot(k)
 		blks := s.pendingBlocksInCache(slot)
-		blobs := s.pendingBlobsInCache(slot)
-		if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-			if len(blks) != len(blobs) {
-				return fmt.Errorf("blks and blobs are different length in pending queue: %d, %d", len(blks), len(blobs))
-			}
-		}
-
 		for _, b := range blks {
 			epoch := slots.ToEpoch(slot)
 			// remove all descendant blocks of old blocks
@@ -415,7 +348,6 @@ func (s *Service) clearPendingSlots() {
 	s.pendingQueueLock.Lock()
 	defer s.pendingQueueLock.Unlock()
 	s.slotToPendingBlocks.Flush()
-	s.slotToPendingBlobs.Flush()
 	s.seenPendingBlocks = make(map[[32]byte]bool)
 }
 
@@ -429,22 +361,13 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 		return nil
 	}
 
-	postDeneb := slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch
-	blobs := s.pendingBlobsInCache(slot)
-	if postDeneb {
-		if len(blobs) != len(blks) {
-			return fmt.Errorf("blobs and blks are different length in pending queue for deletion: %d, %d", len(blobs), len(blks))
-		}
-	}
-
 	// Defensive check to ignore nil blocks
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
 	newBlks := make([]interfaces.ReadOnlySignedBeaconBlock, 0, len(blks))
-	newBlobs := make([]*ethpb.BlobsSidecar, 0, len(blobs))
-	for i, blk := range blks {
+	for _, blk := range blks {
 		blkPb, err := blk.Proto()
 		if err != nil {
 			return err
@@ -457,15 +380,9 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 			continue
 		}
 		newBlks = append(newBlks, blk)
-		if postDeneb {
-			newBlobs = append(newBlobs, blobs[i])
-		}
 	}
 	if len(newBlks) == 0 {
 		s.slotToPendingBlocks.Delete(slotToCacheKey(slot))
-		if postDeneb {
-			s.slotToPendingBlobs.Delete(slotToCacheKey(slot))
-		}
 		delete(s.seenPendingBlocks, r)
 		return nil
 	}
@@ -475,20 +392,13 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 	if err := s.slotToPendingBlocks.Replace(slotToCacheKey(slot), newBlks, d); err != nil {
 		return err
 	}
-
-	if postDeneb {
-		if err := s.slotToPendingBlobs.Replace(slotToCacheKey(slot), newBlobs, d); err != nil {
-			return err
-		}
-	}
-
 	delete(s.seenPendingBlocks, r)
 	return nil
 }
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlkAndBlobToQueue(_ primitives.Slot, b interfaces.ReadOnlySignedBeaconBlock, r [32]byte, blob *ethpb.BlobsSidecar) error {
+func (s *Service) insertBlockToPendingQueue(_ primitives.Slot, b interfaces.ReadOnlySignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
@@ -496,9 +406,6 @@ func (s *Service) insertBlkAndBlobToQueue(_ primitives.Slot, b interfaces.ReadOn
 	}
 
 	if err := s.addPendingBlockToCache(b); err != nil {
-		return err
-	}
-	if err := s.addPeningBlobsToCache(blob); err != nil {
 		return err
 	}
 
@@ -520,20 +427,6 @@ func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.ReadOn
 	return blks
 }
 
-// This returns blobs  given input key from slotToPendingBlobs.
-func (s *Service) pendingBlobsInCache(slot primitives.Slot) []*ethpb.BlobsSidecar {
-	k := slotToCacheKey(slot)
-	value, ok := s.slotToPendingBlobs.Get(k)
-	if !ok {
-		return []*ethpb.BlobsSidecar{}
-	}
-	blobs, ok := value.([]*ethpb.BlobsSidecar)
-	if !ok {
-		return []*ethpb.BlobsSidecar{}
-	}
-	return blobs
-}
-
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) error {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
@@ -549,23 +442,6 @@ func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock)
 	blks = append(blks, b)
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
-	return nil
-}
-
-// This adds input signed beacon block to slotToPendingBlobs cache.
-func (s *Service) addPeningBlobsToCache(b *ethpb.BlobsSidecar) error {
-	if b == nil {
-		return nil
-	}
-	blobs := s.pendingBlobsInCache(b.BeaconBlockSlot)
-
-	if len(blobs) >= maxBlocksPerSlot {
-		return nil
-	}
-
-	blobs = append(blobs, b)
-	k := slotToCacheKey(b.BeaconBlockSlot)
-	s.slotToPendingBlobs.Set(k, blobs, pendingBlockExpTime)
 	return nil
 }
 
