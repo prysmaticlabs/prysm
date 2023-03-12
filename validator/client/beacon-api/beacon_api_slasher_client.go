@@ -2,7 +2,6 @@ package beacon_api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -16,30 +15,12 @@ type beaconApiSlasherClient struct {
 }
 
 func (c beaconApiSlasherClient) IsSlashableAttestation(ctx context.Context, in *ethpb.IndexedAttestation) (*ethpb.AttesterSlashingResponse, error) {
-	grpcResult, err := c.fallbackClient.IsSlashableAttestation(ctx, in)
-	if err != nil {
-		return nil, err
+	if c.fallbackClient != nil {
+		return c.fallbackClient.IsSlashableAttestation(ctx, in)
 	}
 
-	restResult, err := c.getSlashableAttestations(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-
-	marshalledGrpcResult, err := json.Marshal(grpcResult)
-	if err != nil {
-		return nil, err
-	}
-
-	marshalledRestResult, err := json.Marshal(restResult)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Errorf("***************GRPC RESULT: %s", string(marshalledGrpcResult))
-	log.Errorf("***************REST RESULT: %s", string(marshalledRestResult))
-
-	return c.getSlashableAttestations(ctx, in)
+	// TODO: Implement me
+	panic("beaconApiSlasherClient.IsSlashableAttestation is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiSlasherClientWithFallback.")
 }
 
 func (c beaconApiSlasherClient) IsSlashableBlock(ctx context.Context, in *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashingResponse, error) {
