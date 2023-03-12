@@ -5,6 +5,8 @@ go_library(
     srcs = [
         "activation.go",
         "attestation_data.go",
+        "attester_slashings.go",
+        "attester_slashings_helpers.go",
         "beacon_api_beacon_chain_client.go",
         "beacon_api_helpers.go",
         "beacon_api_node_client.go",
@@ -65,6 +67,8 @@ go_test(
     srcs = [
         "activation_test.go",
         "attestation_data_test.go",
+        "attester_slashings_helpers_test.go",
+        "attester_slashings_test.go",
         "beacon_api_helpers_test.go",
         "beacon_api_validator_client_test.go",
         "beacon_block_converter_test.go",
