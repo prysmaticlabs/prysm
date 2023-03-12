@@ -209,7 +209,7 @@ func SlashedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validat
 	slashed := make([]primitives.ValidatorIndex, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
-		maxWithdrawableEpoch := primitives.MaxEpoch(val.WithdrawableEpoch, epoch+params.BeaconConfig().EpochsPerSlashingsVector)
+		maxWithdrawableEpoch := primitives.MaxEpoch(val.WithdrawableEpoch, epoch-1+params.BeaconConfig().EpochsPerSlashingsVector)
 		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
 			slashed = append(slashed, primitives.ValidatorIndex(i))
 		}

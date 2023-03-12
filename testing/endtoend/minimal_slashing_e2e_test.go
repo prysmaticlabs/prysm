@@ -31,8 +31,8 @@ func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,
-			ev.ValidatorsSlashedAfterEpoch(4),
-			ev.SlashedValidatorsLoseBalanceAfterEpoch(4),
+			ev.ValidatorsSlashedAfterEpoch(2),
+			ev.SlashedValidatorsLoseBalanceAfterEpoch(2),
 			ev.InjectDoubleVoteOnEpoch(2),
 			ev.InjectDoubleBlockOnEpoch(2),
 		},
