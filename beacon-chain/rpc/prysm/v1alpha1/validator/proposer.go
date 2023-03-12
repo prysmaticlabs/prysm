@@ -69,9 +69,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
-	head, err := vs.HeadFetcher.HeadState(ctx)
+	head, err := vs.StateGen.StateByRoot(ctx, parentRoot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get parent state: %v", err)
 	}
 	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
 	if err != nil {
