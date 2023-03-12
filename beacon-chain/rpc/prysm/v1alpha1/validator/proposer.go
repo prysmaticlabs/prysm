@@ -69,9 +69,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
-	head, err := vs.StateGen.StateByRoot(ctx, parentRoot)
+	head, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get parent state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
 	if err != nil {
@@ -122,7 +122,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	vs.setSyncAggregate(ctx, sBlk)
 
 	// Set execution data. New in Bellatrix.
-	if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
+	if err := vs.setExecutionData(ctx, sBlk); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 

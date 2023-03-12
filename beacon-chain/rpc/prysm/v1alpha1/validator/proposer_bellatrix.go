@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -38,11 +37,15 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, headState state.BeaconState) error {
+func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock) error {
 	idx := blk.Block().ProposerIndex()
 	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
+	}
+	headState, err := vs.StateGen.StateByRoot(ctx, blk.Block().ParentRoot())
+	if err != nil {
+		return errors.Wrap(err, "could not get head state")
 	}
 
 	canUseBuilder, err := vs.canUseBuilder(ctx, slot, idx)
