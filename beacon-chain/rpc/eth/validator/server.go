@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	rpcCache "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/cache"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
@@ -26,5 +27,5 @@ type Server struct {
 	SyncCommitteePool      synccommittee.Pool
 	V1Alpha1Server         *v1alpha1validator.Server
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
-	PayloadCache           *cache.PayloadCache
+	PayloadCache           *rpcCache.BlockCache
 }

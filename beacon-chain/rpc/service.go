@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/beacon"
+	rpcCache "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/node"
@@ -117,7 +118,7 @@ type Config struct {
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
-	payloadsCache                 *cache.PayloadCache
+	payloadsCache                 *rpcCache.BlockCache
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -191,7 +192,7 @@ func (s *Service) Start() {
 	withCache := stategen.WithCache(stateCache)
 	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
 
-	payloadsCache := cache.NewPayloadCache()
+	payloadsCache := rpcCache.NewBlockCache()
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,

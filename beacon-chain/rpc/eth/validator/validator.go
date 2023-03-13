@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"sort"
 	"strconv"
 	"time"
@@ -22,7 +21,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -560,11 +558,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
-		executionData, err := blocks.WrappedExecutionPayloadCapella(capellaBlock.Capella.Body.ExecutionPayload, big.NewInt(0))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-		}
-		vs.PayloadCache.Set(executionData)
+		vs.PayloadCache.Set(capellaBlock.Capella) // Cache the full block for validator submission.
 		return &ethpbv2.ProduceBlindedBlockResponse{
 			Version: ethpbv2.Version_CAPELLA,
 			Data: &ethpbv2.BlindedBeaconBlockContainer{
