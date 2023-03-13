@@ -126,6 +126,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.MaxBuilderConsecutiveMissedSlots,
 			flags.EngineEndpointTimeoutSeconds,
 			flags.SlasherDirFlag,
+			flags.AlwaysPreparePayload,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,

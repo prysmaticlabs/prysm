@@ -103,6 +103,7 @@ var (
 		Name:  "disable-grpc-gateway",
 		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
 	}
+
 	// GRPCGatewayHost specifies a gRPC gateway host for Prysm.
 	GRPCGatewayHost = &cli.StringFlag{
 		Name:  "grpc-gateway-host",
@@ -252,5 +253,11 @@ var (
 		Name:  "slasher-datadir",
 		Usage: "Directory for the slasher database",
 		Value: cmd.DefaultDataDir(),
+	}
+
+	// AlwaysPreparePayload for forcing payload attributes to be sent every fork choice update, used for builders and relays.
+	AlwaysPreparePayload = &cli.BoolFlag{
+		Name:  "always-prepare-payload",
+		Usage: "Forces payload attributes to be sent with every FCU regardless of connected proposers. This is intended for use by builders/relays.",
 	}
 )
