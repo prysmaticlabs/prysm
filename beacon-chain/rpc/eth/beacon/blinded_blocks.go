@@ -588,7 +588,7 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 func (bs *Server) submitBlindedCapellaBlock(ctx context.Context, blindedCapellaBlk *ethpbv2.BlindedBeaconBlockCapella, sig []byte) error {
 	// If we have the full payload in cache, we do not have to goto the relayer for full payload.
 	h := bytesutil.ToBytes32(blindedCapellaBlk.Body.ExecutionPayloadHeader.BlockHash)
-	blk, err := bs.PayloadCache.Get(h)
+	blk, err := bs.BlockCache.Get(h)
 	if err != nil && !errors.Is(err, cache.ErrNoBlockFound) {
 		return status.Errorf(codes.Internal, "Could not get payload: %v", err)
 	}

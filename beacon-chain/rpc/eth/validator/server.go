@@ -27,5 +27,5 @@ type Server struct {
 	SyncCommitteePool      synccommittee.Pool
 	V1Alpha1Server         *v1alpha1validator.Server
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
-	PayloadCache           *rpcCache.BlockCache
+	BlockCache             *rpcCache.BlockCache
 }

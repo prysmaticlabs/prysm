@@ -558,7 +558,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
-		vs.PayloadCache.Set(capellaBlock.Capella) // Cache the full block for validator submission.
+		vs.BlockCache.Set(capellaBlock.Capella) // Cache the full block for validator submission.
 		return &ethpbv2.ProduceBlindedBlockResponse{
 			Version: ethpbv2.Version_CAPELLA,
 			Data: &ethpbv2.BlindedBeaconBlockContainer{

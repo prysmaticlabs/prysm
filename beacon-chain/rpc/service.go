@@ -118,7 +118,6 @@ type Config struct {
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
-	payloadsCache                 *rpcCache.BlockCache
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -248,7 +247,7 @@ func (s *Service) Start() {
 		},
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
-		PayloadCache:           payloadsCache,
+		BlockCache:             payloadsCache,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -329,7 +328,7 @@ func (s *Service) Start() {
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
 		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
-		PayloadCache:                  payloadsCache,
+		BlockCache:                    payloadsCache,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
