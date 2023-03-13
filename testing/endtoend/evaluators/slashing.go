@@ -65,13 +65,27 @@ func validatorsSlashed(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn)
 	conn := conns[0]
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
-	req := &eth.GetValidatorActiveSetChangesRequest{}
-	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
-	if err != nil {
-		return err
+
+	actualSlashedIndices := 0
+
+	for _, slashedIndex := range slashedIndices {
+		req := &eth.GetValidatorRequest{
+			QueryFilter: &eth.GetValidatorRequest_Index{
+				Index: primitives.ValidatorIndex(slashedIndex),
+			},
+		}
+		valResp, err := client.GetValidator(ctx, req)
+		if err != nil {
+			return err
+		}
+
+		if valResp.Slashed {
+			actualSlashedIndices++
+		}
 	}
-	if len(changes.SlashedIndices) != len(slashedIndices) {
-		return fmt.Errorf("expected %d indices to be slashed, received %d", len(slashedIndices), len(changes.SlashedIndices))
+
+	if actualSlashedIndices != len(slashedIndices) {
+		return fmt.Errorf("expected %d indices to be slashed, received %d", len(slashedIndices), actualSlashedIndices)
 	}
 	return nil
 }
