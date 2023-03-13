@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -589,7 +589,7 @@ func (bs *Server) submitBlindedCapellaBlock(ctx context.Context, blindedCapellaB
 
 	h := bytesutil.ToBytes32(blindedCapellaBlk.Body.ExecutionPayloadHeader.BlockHash)
 	payload, err := bs.PayloadCache.Get(h)
-	if err != nil && !errors.Is(err, rpc.ErrNoPayloadFound) {
+	if err != nil && !errors.Is(err, cache.ErrNoPayloadFound) {
 		return status.Errorf(codes.Internal, "Could not get payload: %v", err)
 	}
 	if payload != nil {

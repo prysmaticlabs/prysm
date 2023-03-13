@@ -38,7 +38,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/attestations",
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
-		"/eth/v1/beacon/pool/voluntarfy_exits",
+		"/eth/v1/beacon/pool/voluntary_exits",
 		"/eth/v1/beacon/pool/bls_to_execution_changes",
 		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/beacon/pool/bls_to_execution_changes",
