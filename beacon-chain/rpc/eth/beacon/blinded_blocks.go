@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -584,6 +586,26 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 }
 
 func (bs *Server) submitBlindedCapellaBlock(ctx context.Context, blindedCapellaBlk *ethpbv2.BlindedBeaconBlockCapella, sig []byte) error {
+
+	h := bytesutil.ToBytes32(blindedCapellaBlk.Body.ExecutionPayloadHeader.BlockHash)
+	payload, err := bs.PayloadCache.Get(h)
+	if err != nil && !errors.Is(err, rpc.ErrNoPayloadFound) {
+		return status.Errorf(codes.Internal, "Could not get payload: %v", err)
+	}
+	if payload != nil {
+		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Capella{
+				Capella: &eth.SignedBeaconBlockCapella{
+					Block:     nil, // Fill it
+					Signature: sig,
+				},
+			},
+		})
+		if err != nil {
+			return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
+		}
+	}
+
 	b, err := migration.BlindedCapellaToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockCapella{
 		Message:   blindedCapellaBlk,
 		Signature: sig,

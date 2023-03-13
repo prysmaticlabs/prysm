@@ -43,6 +43,8 @@ import (
 	chainSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/io/logs"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
@@ -117,6 +119,7 @@ type Config struct {
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
+	payloadsCache                 *PayloadCache
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -190,6 +193,8 @@ func (s *Service) Start() {
 	withCache := stategen.WithCache(stateCache)
 	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
 
+	payloadsCache := newPayloadCache()
+
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
 		AttestationCache:       cache.NewAttestationCache(),
@@ -244,6 +249,7 @@ func (s *Service) Start() {
 		},
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
+		PayloadCache:           payloadsCache,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -324,6 +330,7 @@ func (s *Service) Start() {
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
 		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
+		PayloadCache:                  payloadsCache,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
@@ -443,6 +450,48 @@ func (s *Service) logNewClientConnection(ctx context.Context) {
 				"addr": clientInfo.Addr.String(),
 			}).Infof("gRPC client connected to beacon node")
 			s.connectedRPCClients[clientInfo.Addr] = true
+		}
+	}
+}
+
+var ErrNoPayloadFound = errors.New("no payload found")
+
+type PayloadCache struct {
+	sync.RWMutex
+	cache map[[32]byte]interfaces.ExecutionData
+}
+
+func newPayloadCache() *PayloadCache {
+	return &PayloadCache{
+		cache: make(map[[32]byte]interfaces.ExecutionData),
+	}
+}
+
+func (p *PayloadCache) Get(key [32]byte) (interfaces.ExecutionData, error) {
+	p.RLock()
+	defer p.RUnlock()
+	if payload, ok := p.cache[key]; ok {
+		return payload, nil
+	}
+
+	return nil, ErrNoPayloadFound
+}
+
+func (p *PayloadCache) Set(payload interfaces.ExecutionData) {
+	p.Lock()
+	defer p.Unlock()
+	h := payload.BlockHash()
+	p.cache[bytesutil.ToBytes32(h)] = payload
+}
+
+// Delete payloads older than slot
+func (p *PayloadCache) Delete(slot uint64) {
+	p.Lock()
+	defer p.Unlock()
+
+	for _, data := range p.cache {
+		if slot >= data.Timestamp()/params.BeaconConfig().SecondsPerSlot {
+			delete(p.cache, bytesutil.ToBytes32(data.BlockHash()))
 		}
 	}
 }
