@@ -36,7 +36,7 @@ rbe_configs_gen \
   --generate_cpp_configs=true \
   --generate_java_configs=true \
   --cpp_env_json=tools/cross-toolchain/cpp_env_clang.json \
-  --toolchain_container=gcr.io/prysmaticlabs/rbe-worker@sha256:9a30c5ff7dcd1fbc5cb5b5f320782dec755a31cd2f6811e238a8584d94b04e78 # The sha256 digest from step 2.
+  --toolchain_container=gcr.io/prysmaticlabs/rbe-worker@sha256:90d490709a0fb0c817569f37408823a0490e5502cbecc36415caabfc36a0c2e8 # The sha256 digest from step 2.
 ```
 
 4) Test the builds work locally for all supported platforms.
