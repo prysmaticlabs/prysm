@@ -182,5 +182,11 @@
       ".*_test\\.go": "Tests are ok (for now)",
       "tools/analyzers/ineffassign/ineffassign\\.go": "3rd party code with a massive switch statement"
     }
+  },
+  "shift": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
   }
 }
