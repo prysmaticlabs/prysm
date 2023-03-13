@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -48,7 +47,6 @@ type stateMachine struct {
 	state   stateID
 	pid     peer.ID
 	blocks  []interfaces.ReadOnlySignedBeaconBlock
-	blobs   []*eth.BlobsSidecar
 	updated time.Time
 }
 
@@ -81,7 +79,6 @@ func (smm *stateMachineManager) addStateMachine(startSlot primitives.Slot) *stat
 		start:   startSlot,
 		state:   stateNew,
 		blocks:  []interfaces.ReadOnlySignedBeaconBlock{},
-		blobs:   []*eth.BlobsSidecar{},
 		updated: prysmTime.Now(),
 	}
 	smm.recalculateMachineAttribs()
@@ -94,7 +91,6 @@ func (smm *stateMachineManager) removeStateMachine(startSlot primitives.Slot) er
 		return fmt.Errorf("state for machine %v is not found", startSlot)
 	}
 	smm.machines[startSlot].blocks = nil
-	smm.machines[startSlot].blobs = nil
 	delete(smm.machines, startSlot)
 	smm.recalculateMachineAttribs()
 	return nil

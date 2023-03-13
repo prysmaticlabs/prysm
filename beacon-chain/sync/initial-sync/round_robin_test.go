@@ -454,14 +454,14 @@ func TestService_processBlockBatch(t *testing.T) {
 			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
-		}, map[primitives.Slot]*eth.BlobsSidecar{})
+		})
 		assert.NoError(t, err)
 
 		// Duplicate processing should trigger error.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
 			ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
-		}, map[primitives.Slot]*eth.BlobsSidecar{})
+		})
 		assert.ErrorContains(t, "block is already processed", err)
 
 		var badBatch2 []interfaces.ReadOnlySignedBeaconBlock
@@ -477,7 +477,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
 			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
-		}, map[primitives.Slot]*eth.BlobsSidecar{})
+		})
 		expectedSubErr := "expected linear block list"
 		assert.ErrorContains(t, expectedSubErr, err)
 
@@ -486,7 +486,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
-		}, map[primitives.Slot]*eth.BlobsSidecar{})
+		})
 		assert.NoError(t, err)
 		assert.Equal(t, primitives.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})

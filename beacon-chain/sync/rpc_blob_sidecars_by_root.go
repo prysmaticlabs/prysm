@@ -4,17 +4,14 @@ import (
 	"context"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -80,27 +77,4 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 		s.rateLimiter.add(stream, 1)
 	}
 	return nil
-}
-
-func (s *Service) sendBlocksAndSidecarsRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
-	ctx, cancel := context.WithTimeout(ctx, respTimeout)
-	defer cancel()
-
-	_, err := SendBlocksAndSidecarsByRootRequest(ctx, s.cfg.chain, s.cfg.p2p, id, blockRoots, func(blkAndSidecar *ethpb.SignedBeaconBlockAndBlobsSidecar) error {
-		blk, err := blocks.NewSignedBeaconBlock(blkAndSidecar.BeaconBlock)
-		if err != nil {
-			return err
-		}
-		blkRoot, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return err
-		}
-		s.pendingQueueLock.Lock()
-		defer s.pendingQueueLock.Unlock()
-		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blkRoot, blkAndSidecar.BlobsSidecar); err != nil {
-			return err
-		}
-		return nil
-	})
-	return err
 }
