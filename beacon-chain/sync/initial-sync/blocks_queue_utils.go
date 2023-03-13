@@ -29,7 +29,6 @@ func (q *blocksQueue) resetFromFork(fork *forkData) error {
 	fsm := q.smm.addStateMachine(firstBlock.Slot())
 	fsm.pid = fork.peer
 	fsm.blocks = fork.blocks
-	fsm.blobs = fork.blobs
 	fsm.state = stateDataParsed
 
 	// The rest of machines are in skipped state.

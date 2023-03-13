@@ -29,7 +29,7 @@ const (
 	// GossipBlsToExecutionChangeMessage is the name for the bls to execution change message type.
 	GossipBlsToExecutionChangeMessage = "bls_to_execution_change"
 	// GossipBlobSidecarMessage is the name for the blob sidecar message type.
-	GossipBlobSidecarMessage = "blobs_sidecar"
+	GossipBlobSidecarMessage = "blob_sidecar"
 
 	// Topic Formats
 	//

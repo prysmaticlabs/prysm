@@ -54,9 +54,6 @@ type ReadOnlyDatabase interface {
 	// Fee recipients operations.
 	FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error)
 	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
-	// Blobs related methods.
-	BlobsSidecar(ctx context.Context, blockRoot [32]byte) (*ethpb.BlobsSidecar, error)
-	BlobsSidecarsBySlot(ctx context.Context, slot primitives.Slot) ([]*ethpb.BlobsSidecar, error)
 
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
@@ -72,9 +69,6 @@ type NoHeadAccessDatabase interface {
 	SaveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
-	// Blob related methods.
-	SaveBlobsSidecar(ctx context.Context, blob *ethpb.BlobsSidecar) error
-	DeleteBlobsSidecar(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
 	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error

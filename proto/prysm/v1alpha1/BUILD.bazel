@@ -130,8 +130,6 @@ ssz_gen_marshal(
         "BuilderBid",
         "BlobsAndCommitments",
         "PolynomialAndCommitment",
-        "BlobsSidecar",
-        "SignedBeaconBlockAndBlobsSidecar",
         "BuilderBidCapella",
         "BlobSidecar",
         "SignedBlobSidecar",
