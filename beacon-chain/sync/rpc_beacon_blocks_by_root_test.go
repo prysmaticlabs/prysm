@@ -216,7 +216,6 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			},
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
-		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		ctx:                 context.Background(),
 		rateLimiter:         newRateLimiter(p1),

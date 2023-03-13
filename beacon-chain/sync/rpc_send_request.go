@@ -152,15 +152,7 @@ func SendBlobSidecarByRoot(
 		if uint64(i) >= max {
 			break
 		}
-		isFirstChunk := i == 0
-		sc, err := ReadChunkedBlobsSidecar(stream, ci, p2pApi, isFirstChunk)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		sidecars = append(sidecars, sc)
+		// TODO: Read sidecar
 	}
 	return sidecars, nil
 }

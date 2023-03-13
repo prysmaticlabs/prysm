@@ -100,7 +100,6 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		},
 		chainStarted:        abool.New(),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
-		slotToPendingBlobs:  gcache.New(time.Second, 2*time.Second),
 	}
 
 	go r.registerHandlers()
