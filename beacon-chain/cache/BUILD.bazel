@@ -13,6 +13,7 @@ go_library(
         "common.go",
         "doc.go",
         "error.go",
+        "payload.go",
         "payload_id.go",
         "proposer_indices.go",
         "proposer_indices_disabled.go",  # keep
@@ -34,6 +35,7 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//cache/lru:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//container/slice:go_default_library",
         "//crypto/hash:go_default_library",

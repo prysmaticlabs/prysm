@@ -5,6 +5,7 @@ package beacon
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
@@ -44,5 +44,5 @@ type Server struct {
 	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	BLSChangesPool                blstoexec.PoolManager
-	PayloadCache                  *rpc.PayloadCache
+	PayloadCache                  *cache.PayloadCache
 }
