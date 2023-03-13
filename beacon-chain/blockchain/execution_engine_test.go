@@ -794,12 +794,17 @@ func Test_GetPayloadAttribute(t *testing.T) {
 		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
-
+	b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
+		Body: &ethpb.BeaconBlockBodyBellatrix{
+			ExecutionPayload: &v1.ExecutionPayload{},
+		},
+	})
+	require.NoError(t, err)
 	// Cache miss
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, b, st, 0)
 	require.Equal(t, false, hasPayload)
 	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
@@ -808,7 +813,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	slot := primitives.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hook := logTest.NewGlobal()
-	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, b, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
@@ -818,7 +823,17 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	suggestedAddr := common.HexToAddress("123")
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, b, st, slot)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+
+	// Override for non proposer
+	service.cfg.AlwaysPreparePayload = true
+	err = service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{b.ProposerIndex()}, []common.Address{suggestedAddr})
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, b, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
@@ -832,12 +847,20 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
+	b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockCapella{
+		Slot:          1,
+		ProposerIndex: 1,
+		Body: &ethpb.BeaconBlockBodyCapella{
+			ExecutionPayload: &v1.ExecutionPayloadCapella{},
+		},
+	})
+	require.NoError(t, err)
 
 	// Cache miss
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisStateCapella(t, 1)
-	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, b, st, 0)
 	require.Equal(t, false, hasPayload)
 	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
@@ -846,7 +869,7 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 	slot := primitives.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hook := logTest.NewGlobal()
-	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, b, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
@@ -859,7 +882,20 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 	suggestedAddr := common.HexToAddress("123")
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, b, st, slot)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+	a, err = attr.Withdrawals()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(a))
+
+	// Override for non proposer
+	service.cfg.AlwaysPreparePayload = true
+	err = service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{b.ProposerIndex()}, []common.Address{suggestedAddr})
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, b, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
