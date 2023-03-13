@@ -17,7 +17,6 @@ go_library(
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/synccommittee:go_default_library",
         "//beacon-chain/p2p:go_default_library",
-        "//beacon-chain/rpc/eth/cache:go_default_library",
         "//beacon-chain/rpc/eth/helpers:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/rpc/statefetcher:go_default_library",

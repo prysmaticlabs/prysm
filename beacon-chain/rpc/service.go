@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/beacon"
-	rpcCache "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/node"
@@ -191,7 +190,7 @@ func (s *Service) Start() {
 	withCache := stategen.WithCache(stateCache)
 	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
 
-	payloadsCache := rpcCache.NewBlockCache()
+	var lastServedBlock *ethpbv1alpha1.BeaconBlockCapella
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
@@ -247,7 +246,7 @@ func (s *Service) Start() {
 		},
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
-		BlockCache:             payloadsCache,
+		LastServedBlock:        lastServedBlock,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -328,7 +327,7 @@ func (s *Service) Start() {
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
 		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
-		BlockCache:                    payloadsCache,
+		LastServedBlock:               lastServedBlock,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
