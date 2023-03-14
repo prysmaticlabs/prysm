@@ -135,7 +135,9 @@ service BeaconChain {
     //
     // This includes the head block slot and root as well as information about
     // the most recent finalized and justified slots.
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/beacon Beacon API endpoint
     rpc GetChainHead(google.protobuf.Empty) returns (ChainHead) {
+        option deprecated = true;
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/chainhead"
         };
