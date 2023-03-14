@@ -345,12 +345,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		require.NoError(t, err)
 		validatorClient := validator_mock.NewMockValidatorClient(ctrl)
 		beaconClient := validator_mock.NewMockBeaconChainClient(ctrl)
-		v := validator{
-			validatorClient: validatorClient,
-			keyManager:      km,
-			genesisTime:     1,
-			beaconClient:    beaconClient,
-		}
 
 		inactiveResp := generateMockStatusResponse([][]byte{inactivePubKey[:]})
 		inactiveResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
