@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	validator_mock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
 	walletMock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
