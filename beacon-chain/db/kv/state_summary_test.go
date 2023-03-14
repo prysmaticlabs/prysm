@@ -74,5 +74,5 @@ func TestStateSummary_CanDelete(t *testing.T) {
 	require.Equal(t, true, db.HasStateSummary(ctx, r1), "State summary should be saved")
 
 	require.NoError(t, db.deleteStateSummary(r1))
-	require.Equal(t, false, db.HasStateSummary(ctx, r1), "State summary should not be saved")
+	require.Equal(t, false, db.HasStateSummary(ctx, r1), "State summary should be deleted")
 }
