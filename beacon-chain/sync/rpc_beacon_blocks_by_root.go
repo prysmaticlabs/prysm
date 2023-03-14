@@ -54,6 +54,10 @@ func (s *Service) sendRecentBeaconBlocksAndBlobsRequest(ctx context.Context, blo
 			})
 		}
 	}
+	if len(reqs) == 0 {
+		return nil
+	}
+
 	blobs, err := SendBlobSidecarByRoot(ctx, s.cfg.chain, s.cfg.p2p, id, reqs)
 	if err != nil {
 		return err
