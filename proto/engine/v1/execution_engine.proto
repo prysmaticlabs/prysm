@@ -41,6 +41,11 @@ message ExecutionPayload {
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 }
 
+message ExecutionPayloadBodyV1 {
+	repeated bytes transactions = 1;
+	repeated Withdrawal withdrawals = 2;
+}
+
 message ExecutionPayloadCapella {
 	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];

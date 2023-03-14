@@ -266,6 +266,7 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 //
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
+// DEPRECATED: This endpoint is superseded by the /eth/v1/beacon API endpoint
 func (bs *Server) GetChainHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.ChainHead, error) {
 	return bs.chainHeadRetrieval(ctx)
 }
