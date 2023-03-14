@@ -132,6 +132,7 @@ cc_toolchain_config(
         "ar": "/usr/bin/ar",
         "ld": "/usr/bin/ld",
         "llvm-cov": "/usr/bin/llvm-cov",
+        "llvm-profdata": "/usr/bin/llvm-profdata",
         "cpp": "/usr/bin/cpp",
         "gcc": "/usr/bin/clang-12",
         "dwp": "/usr/bin/dwp",
