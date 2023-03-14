@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/async"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -159,21 +159,20 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			default:
 			}
 
-			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				if blockchain.IsInvalidBlock(err) {
-					r := blockchain.InvalidBlockRoot(err)
-					if r != [32]byte{} {
-						s.setBadBlock(ctx, r) // Setting head block as bad.
-					} else {
-						s.setBadBlock(ctx, blkRoot)
-					}
+			if b.Version() >= version.Deneb {
+				if err = s.blockAndBlobs.addBlock(b); err != nil {
+					log.WithError(err).Error("Could not add block to block and blobs pool")
+					continue
 				}
-				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
-
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
-				span.End()
-				continue
+				if err = s.importBlockAndBlobs(ctx, blkRoot); err != nil {
+					log.WithError(err).Error("Could not import block and blobs")
+					continue
+				}
+			} else {
+				if err = s.receiveBlock(ctx, b, blkRoot); err != nil {
+					log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
+					continue
+				}
 			}
 
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
@@ -256,7 +255,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
 			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
-		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
+		if err := s.sendRecentBeaconBlocksAndBlobsRequest(ctx, &req, pid); err != nil {
 			tracing.AnnotateError(span, err)
 			log.WithError(err).Debug("Could not send recent block request")
 		}
@@ -397,6 +396,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 	}
 
 	delete(s.seenPendingBlocks, r)
+
 	return nil
 }
 
