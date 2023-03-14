@@ -2,6 +2,7 @@ package testnet
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -9,35 +10,41 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/capella"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/cmd/flags"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-
-	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
 var (
 	generateGenesisStateFlags = struct {
-		DepositJsonFile string
-		ChainConfigFile string
-		ConfigName      string
-		NumValidators   uint64
-		GenesisTime     uint64
-		OutputSSZ       string
-		OutputJSON      string
-		OutputYaml      string
-		ForkName        string
+		DepositJsonFile   string
+		ChainConfigFile   string
+		ConfigName        string
+		NumValidators     uint64
+		GenesisTime       uint64
+		OutputSSZ         string
+		OutputJSON        string
+		OutputYaml        string
+		ForkName          string
+		OverrideEth1Data  bool
+		ExecutionEndpoint string
 	}{}
 	log           = logrus.WithField("prefix", "genesis")
 	outputSSZFlag = &cli.StringFlag{
@@ -94,6 +101,18 @@ var (
 				Name:        "genesis-time",
 				Destination: &generateGenesisStateFlags.GenesisTime,
 				Usage:       "Unix timestamp seconds used as the genesis time in the genesis state. If unset, defaults to now()",
+			},
+			&cli.BoolFlag{
+				Name:        "override-eth1data",
+				Destination: &generateGenesisStateFlags.OverrideEth1Data,
+				Usage:       "Overrides Eth1Data with values from execution client. If unset, defaults to false",
+				Value:       false,
+			},
+			&cli.StringFlag{
+				Name:        "execution-endpoint",
+				Destination: &generateGenesisStateFlags.ExecutionEndpoint,
+				Usage:       "Endpoint to preferred execution client. If unset, defaults to Geth",
+				Value:       "http://localhost:8545",
 			},
 			flags.EnumValue{
 				Name:        "fork",
@@ -238,6 +257,7 @@ func generateGenesis(ctx context.Context) (*ethpb.BeaconState, error) {
 	genesisTime := generateGenesisStateFlags.GenesisTime
 	numValidators := generateGenesisStateFlags.NumValidators
 	depositJsonFile := generateGenesisStateFlags.DepositJsonFile
+	eth1Data := generateGenesisStateFlags.OverrideEth1Data
 	if depositJsonFile != "" {
 		expanded, err := file.ExpandPath(depositJsonFile)
 		if err != nil {
@@ -264,6 +284,39 @@ func generateGenesis(ctx context.Context) (*ethpb.BeaconState, error) {
 	genesisState, _, err := interop.GenerateGenesisState(ctx, genesisTime, numValidators)
 	if err != nil {
 		return nil, err
+	}
+	if eth1Data {
+		log.Print("Overriding Eth1Data with data from execution client")
+		conn, err := rpc.Dial(generateGenesisStateFlags.ExecutionEndpoint)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"could not dial %s please make sure you are running your execution client",
+				generateGenesisStateFlags.ExecutionEndpoint)
+		}
+		client := ethclient.NewClient(conn)
+		header, err := client.HeaderByNumber(ctx, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get header by number")
+		}
+		depositContract, err := deposit.NewDepositContract(
+			common.HexToAddress(params.BeaconConfig().DepositContractAddress), client)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get deposit contract address")
+		}
+		depositRoot, err := depositContract.GetDepositRoot(&bind.CallOpts{})
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get deposit root")
+		}
+		depositCount, err := depositContract.GetDepositCount(&bind.CallOpts{})
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get deposit count")
+		}
+		genesisState.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot:  depositRoot[:],
+			DepositCount: binary.LittleEndian.Uint64(depositCount),
+			BlockHash:    header.Hash().Bytes(),
+		}
 	}
 	return genesisState, err
 }
