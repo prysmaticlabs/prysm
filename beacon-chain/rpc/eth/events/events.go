@@ -9,9 +9,15 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -98,7 +104,7 @@ func (s *Server) StreamEvents(
 				return status.Errorf(codes.Internal, "Could not handle block operations event: %v", err)
 			}
 		case event := <-stateChan:
-			if err := handleStateEvents(stream, requestedTopics, event); err != nil {
+			if err := s.handleStateEvents(stream, requestedTopics, event); err != nil {
 				return status.Errorf(codes.Internal, "Could not handle state event: %v", err)
 			}
 		case <-s.Ctx.Done():
@@ -200,19 +206,25 @@ func handleBlockOperationEvents(
 	}
 }
 
-func handleStateEvents(
+func (s *Server) handleStateEvents(
 	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
 ) error {
 	switch event.Type {
 	case statefeed.NewHead:
-		if _, ok := requestedTopics[HeadTopic]; !ok {
+		if _, ok := requestedTopics[HeadTopic]; ok {
+			head, ok := event.Data.(*ethpb.EventHead)
+			if !ok {
+				return nil
+			}
+			return streamData(stream, HeadTopic, head)
+		}
+		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
+			if err := s.streamPayloadAttributes(stream); err != nil {
+				log.Error("Unable to obtain stream payload attributes: %v", err)
+			}
 			return nil
 		}
-		head, ok := event.Data.(*ethpb.EventHead)
-		if !ok {
-			return nil
-		}
-		return streamData(stream, HeadTopic, head)
+		return nil
 	case statefeed.FinalizedCheckpoint:
 		if _, ok := requestedTopics[FinalizedCheckpointTopic]; !ok {
 			return nil
@@ -231,21 +243,85 @@ func handleStateEvents(
 			return nil
 		}
 		return streamData(stream, ChainReorgTopic, reorg)
-	case statefeed.PayloadAttributeSent:
-		if _, ok := requestedTopics[PayloadAttributesTopic]; !ok {
-			return nil
-		}
-		payloadAttrV2, ok := event.Data.(*ethpb.EventPayloadAttributeV2)
-		if ok {
-			return streamData(stream, PayloadAttributesTopic, payloadAttrV2)
-		}
-		payloadAttrV1, ok := event.Data.(*ethpb.EventPayloadAttributeV1)
-		if ok {
-			return streamData(stream, PayloadAttributesTopic, payloadAttrV1)
-		}
-		return nil
 	default:
 		return nil
+	}
+}
+
+// notifyPayloadAttributesStream on successful FCU notify the event stream that a payload was sent
+func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
+	headState, err := s.HeadFetcher.HeadStateReadOnly(s.Ctx)
+	if err != nil {
+		return err
+	}
+
+	headBlock, err := s.HeadFetcher.HeadBlock(s.Ctx)
+	if err != nil {
+		return err
+	}
+
+	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
+	if err != nil {
+
+		return err
+	}
+
+	headPayload, err := headBlock.Block().Body().Execution()
+	if err != nil {
+
+		return err
+	}
+
+	t, err := slots.ToTime(uint64(headState.GenesisTime()), headState.Slot())
+	if err != nil {
+		return err
+	}
+
+	prevRando, err := helpers.RandaoMix(headState, time.CurrentEpoch(headState))
+	if err != nil {
+		return err
+	}
+
+	switch headState.Version() {
+	case version.Bellatrix:
+		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV1{
+			Version: version.String(headState.Version()),
+			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
+				ProposerIndex:     headBlock.Block().ProposerIndex(),
+				ProposalSlot:      headState.Slot(),
+				ParentBlockNumber: headBlock.Block().Slot(),
+				ParentBlockRoot:   headRoot,
+				ParentBlockHash:   headPayload.BlockHash(),
+				PayloadAttributes: &enginev1.PayloadAttributes{
+					Timestamp:             uint64(t.Unix()),
+					PrevRandao:            prevRando,
+					SuggestedFeeRecipient: headPayload.FeeRecipient(),
+				},
+			},
+		})
+	case version.Capella:
+		withdrawals, err := headState.ExpectedWithdrawals()
+		if err != nil {
+			return err
+		}
+		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV2{
+			Version: version.String(headState.Version()),
+			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
+				ProposerIndex:     headBlock.Block().ProposerIndex(),
+				ProposalSlot:      headState.Slot(),
+				ParentBlockNumber: headBlock.Block().Slot(),
+				ParentBlockRoot:   headRoot,
+				ParentBlockHash:   headPayload.BlockHash(),
+				PayloadAttributesV2: &enginev1.PayloadAttributesV2{
+					Timestamp:             uint64(t.Unix()),
+					PrevRandao:            prevRando,
+					SuggestedFeeRecipient: headPayload.FeeRecipient(),
+					Withdrawals:           withdrawals,
+				},
+			},
+		})
+	default:
+		return errors.New("payload version is not supported")
 	}
 }
 

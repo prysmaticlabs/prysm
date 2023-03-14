@@ -6,8 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
@@ -21,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -158,10 +155,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
-		// On successful FCU notify that the payload was sent to the event stream.
-		if err := s.notifyPayloadAttributesStream(proposerId, arg.headBlock.Slot(), arg.headRoot[:], headPayload.BlockHash(), attr); err != nil {
-			return nil, err
-		}
 	} else if hasAttr && payloadID == nil {
 		log.WithFields(logrus.Fields{
 			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
@@ -169,55 +162,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		}).Error("Received nil payload ID on VALID engine response")
 	}
 	return payloadID, nil
-}
-
-// notifyPayloadAttributesStream on successful FCU notify the event stream that a payload was sent
-func (s *Service) notifyPayloadAttributesStream(proposerIndex primitives.ValidatorIndex,
-	parentBlockNumber primitives.Slot, parentBlockRoot []byte, parentBlockHash []byte, attrs payloadattribute.Attributer) error {
-	switch attrs.Version() {
-	case version.Bellatrix:
-		pbv1, err := attrs.PbV1()
-		if err != nil {
-			return err
-		}
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.PayloadAttributeSent,
-			Data: &ethpbv1.EventPayloadAttributeV1{
-				Version: version.String(attrs.Version()),
-				Data: &ethpbv1.EventPayloadAttributeV1_BasePayloadAttribute{
-					ProposerIndex:     proposerIndex,
-					ProposalSlot:      s.CurrentSlot() + 1,
-					ParentBlockNumber: parentBlockNumber,
-					ParentBlockRoot:   parentBlockRoot,
-					ParentBlockHash:   parentBlockHash,
-					PayloadAttributes: pbv1,
-				},
-			},
-		})
-		return nil
-	case version.Capella:
-		pbv2, err := attrs.PbV2()
-		if err != nil {
-			return err
-		}
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.PayloadAttributeSent,
-			Data: &ethpbv1.EventPayloadAttributeV2{
-				Version: version.String(attrs.Version()),
-				Data: &ethpbv1.EventPayloadAttributeV2_BasePayloadAttribute{
-					ProposerIndex:       proposerIndex,
-					ProposalSlot:        s.CurrentSlot() + 1,
-					ParentBlockNumber:   parentBlockNumber,
-					ParentBlockRoot:     parentBlockRoot,
-					ParentBlockHash:     parentBlockHash,
-					PayloadAttributesV2: pbv2,
-				},
-			},
-		})
-		return nil
-	default:
-		return errors.New("payload version is not supported")
-	}
 }
 
 // getPayloadHash returns the payload hash given the block root.
@@ -314,12 +258,8 @@ func (s *Service) getPayloadAttribute(ctx context.Context, blk interfaces.ReadOn
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
 	if !ok { // There's no need to build attribute if there is no proposer for slot.
-		if s.cfg.AlwaysPreparePayload {
-			proposerID = blk.ProposerIndex()
-			// fee recipient is not accurate in this case but shouldn't matter as builders should ignore it anyway.
-		} else {
-			return false, emptyAttri, 0
-		}
+
+		return false, emptyAttri, 0
 	}
 	// Get previous randao.
 	st = st.Copy()
