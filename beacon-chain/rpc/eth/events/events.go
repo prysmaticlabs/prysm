@@ -248,7 +248,8 @@ func (s *Server) handleStateEvents(
 	}
 }
 
-// notifyPayloadAttributesStream on successful FCU notify the event stream that a payload was sent
+// streamPayloadAttributes on new head event.
+// This event stream is intended to be used by builders and relays.
 func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
 	headState, err := s.HeadFetcher.HeadStateReadOnly(s.Ctx)
 	if err != nil {

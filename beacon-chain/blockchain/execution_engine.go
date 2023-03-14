@@ -70,6 +70,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
 	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
+
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
@@ -256,6 +257,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	if !ok { // There's no need to build attribute if there is no proposer for slot.
 		return false, emptyAttri, 0
 	}
+
 	// Get previous randao.
 	st = st.Copy()
 	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
