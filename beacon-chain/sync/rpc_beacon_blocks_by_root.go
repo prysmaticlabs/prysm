@@ -41,6 +41,9 @@ func (s *Service) sendRecentBeaconBlocksAndBlobsRequest(ctx context.Context, blo
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	var reqs []*eth.BlobIdentifier
 	for root, count := range requestBlobs {
@@ -58,7 +61,9 @@ func (s *Service) sendRecentBeaconBlocksAndBlobsRequest(ctx context.Context, blo
 
 	// TODO: validate blobs
 	for _, blob := range blobs {
-		s.blockAndBlobs.addBlob(blob)
+		if err = s.blockAndBlobs.addBlob(blob); err != nil {
+			return err
+		}
 	}
 
 	return err
