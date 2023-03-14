@@ -311,21 +311,18 @@ message ForkChoiceDump {
     Checkpoint justified_checkpoint = 1;
     // Latest finalized checkpoint in forkchoice store.
     Checkpoint finalized_checkpoint = 2;
-    // Best justified checkpoint in forkchoice store.
-    Checkpoint best_justified_checkpoint = 3;
     // Unrealized justified checkpoint in forkchoice store.
-    Checkpoint unrealized_justified_checkpoint = 4;
+    Checkpoint unrealized_justified_checkpoint = 3;
     // Unrealized finalized checkpoint in forkchoice store.
-    Checkpoint unrealized_finalized_checkpoint = 5;
+    Checkpoint unrealized_finalized_checkpoint = 4;
     // Proposer Boost Root in forkchoice store.
-    bytes proposer_boost_root = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes proposer_boost_root = 5 [(ethereum.eth.ext.ssz_size) = "32"];
     // Previous proposer Boost Root in forkchoice store.
-    bytes previous_proposer_boost_root = 7 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes previous_proposer_boost_root = 6 [(ethereum.eth.ext.ssz_size) = "32"];
     // Head root in forkchoice store.
-    bytes head_root = 8 [(ethereum.eth.ext.ssz_size) = "32"];
-
+    bytes head_root = 7 [(ethereum.eth.ext.ssz_size) = "32"];
     // The list of the forkchoice nodes in store.
-    repeated ForkChoiceNode fork_choice_nodes = 9;
+    repeated ForkChoiceNode fork_choice_nodes = 8;
 }
 
 message ForkChoiceNode {
