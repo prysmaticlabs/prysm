@@ -152,9 +152,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
 		return errors.Wrap(err, "could not handle block's attestations")
 	}
-	if err := s.handleBlockBLSToExecChanges(signed.Block()); err != nil {
-		return errors.Wrap(err, "could not handle block's BLSToExecutionChanges")
-	}
 
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
@@ -214,6 +211,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
+	// verify conditions for FCU, notifies FCU, and saves the new head.
+	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
 	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
 	}
@@ -597,8 +596,8 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 }
 
 // This removes the attestations in block `b` from the attestation mem pool.
-func (s *Service) pruneAttsFromPool(b interfaces.ReadOnlySignedBeaconBlock) error {
-	atts := b.Block().Body().Attestations()
+func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlySignedBeaconBlock) error {
+	atts := headBlock.Block().Body().Attestations()
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
 			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
