@@ -5,7 +5,10 @@ go_library(
     srcs = [
         "deposit_tree.go",
         "deposit_tree_snapshot.go",
+        "deposit_tree_snapshot_test 2.go",
         "merkle_tree.go",
+        "merkle_tree_test 2.go",
+        "spec_test 2.go",
         "zerohashes.gen.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositsnapshot",
@@ -14,9 +17,14 @@ go_library(
         "//container/slice:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//io/file:go_default_library",
         "//math:go_default_library",
         "//proto/eth/v1:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@in_gopkg_yaml_v3//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
 

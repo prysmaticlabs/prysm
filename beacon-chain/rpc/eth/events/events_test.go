@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -15,10 +16,9 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -287,45 +286,46 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 }
 
 func TestStreamEvents_StateEvents(t *testing.T) {
-	//t.Run(HeadTopic, func(t *testing.T) {
-	//	ctx := context.Background()
-	//	srv, ctrl, mockStream := setupServer(ctx, t)
-	//	defer ctrl.Finish()
-	//
-	//	wantedHead := &ethpb.EventHead{
-	//		Slot:                      8,
-	//		Block:                     make([]byte, 32),
-	//		State:                     make([]byte, 32),
-	//		EpochTransition:           true,
-	//		PreviousDutyDependentRoot: make([]byte, 32),
-	//		CurrentDutyDependentRoot:  make([]byte, 32),
-	//		ExecutionOptimistic:       true,
-	//	}
-	//	genericResponse, err := anypb.New(wantedHead)
-	//	require.NoError(t, err)
-	//	wantedMessage := &gateway.EventSource{
-	//		Event: HeadTopic,
-	//		Data:  genericResponse,
-	//	}
-	//
-	//	assertFeedSendAndReceive(ctx, &assertFeedArgs{
-	//		t:             t,
-	//		srv:           srv,
-	//		topics:        []string{HeadTopic},
-	//		stream:        mockStream,
-	//		shouldReceive: wantedMessage,
-	//		itemToSend: &feed.Event{
-	//			Type: statefeed.NewHead,
-	//			Data: wantedHead,
-	//		},
-	//		feed: srv.StateNotifier.StateFeed(),
-	//	})
-	//})
+	t.Run(HeadTopic, func(t *testing.T) {
+		ctx := context.Background()
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+
+		wantedHead := &ethpb.EventHead{
+			Slot:                      8,
+			Block:                     make([]byte, 32),
+			State:                     make([]byte, 32),
+			EpochTransition:           true,
+			PreviousDutyDependentRoot: make([]byte, 32),
+			CurrentDutyDependentRoot:  make([]byte, 32),
+			ExecutionOptimistic:       true,
+		}
+		genericResponse, err := anypb.New(wantedHead)
+		require.NoError(t, err)
+		wantedMessage := &gateway.EventSource{
+			Event: HeadTopic,
+			Data:  genericResponse,
+		}
+
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{HeadTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: statefeed.NewHead,
+				Data: wantedHead,
+			},
+			feed: srv.StateNotifier.StateFeed(),
+		})
+	})
 	t.Run(PayloadAttributesTopic+"_bellatrix", func(t *testing.T) {
 		ctx := context.Background()
 
 		beaconState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-
+		err := beaconState.SetSlot(2)
+		require.NoError(t, err, "Count not set slot")
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
 
@@ -337,15 +337,17 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 		blk := &eth.SignedBeaconBlockBellatrix{
 			Block: &eth.BeaconBlockBellatrix{
-				Slot:       1,
-				ParentRoot: parentRoot[:],
-				StateRoot:  genesis.Block.StateRoot,
+				ProposerIndex: 1,
+				Slot:          1,
+				ParentRoot:    parentRoot[:],
+				StateRoot:     genesis.Block.StateRoot,
 				Body: &eth.BeaconBlockBodyBellatrix{
 					RandaoReveal:  genesis.Block.Body.RandaoReveal,
 					Graffiti:      genesis.Block.Body.Graffiti,
 					Eth1Data:      genesis.Block.Body.Eth1Data,
 					SyncAggregate: &eth.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 					ExecutionPayload: &enginev1.ExecutionPayload{
+						BlockNumber:   1,
 						ParentHash:    make([]byte, fieldparams.RootLength),
 						FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 						StateRoot:     make([]byte, fieldparams.RootLength),
@@ -360,15 +362,20 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			Signature: genesis.Signature,
 		}
 		signedBlk, err := blocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 		srv.HeadFetcher = &mockChain.ChainService{
 			Genesis:        time.Now(),
 			State:          beaconState,
 			Block:          signedBlk,
-			Root:           []byte("hello-world"),
+			Root:           make([]byte, 32),
 			ValidatorsRoot: [32]byte{},
 		}
+
+		prevRando, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
+		require.NoError(t, err)
+
 		wantedPayload := &ethpb.EventPayloadAttributeV1{
 			Version: version.String(version.Bellatrix),
 			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
@@ -378,8 +385,8 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 				ParentBlockRoot:   make([]byte, 32),
 				ParentBlockHash:   make([]byte, 32),
 				PayloadAttributes: &enginev1.PayloadAttributes{
-					Timestamp:             uint64(time.Now().Unix()),
-					PrevRandao:            make([]byte, 32),
+					Timestamp:             24,
+					PrevRandao:            prevRando,
 					SuggestedFeeRecipient: make([]byte, 20),
 				},
 			},
@@ -407,25 +414,44 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 	t.Run(PayloadAttributesTopic+"_capella", func(t *testing.T) {
 		ctx := context.Background()
 		beaconState, _ := util.DeterministicGenesisStateCapella(t, 1)
-
+		validator, err := beaconState.ValidatorAtIndex(0)
+		require.NoError(t, err, "Could not get validator")
+		by, err := hexutil.Decode("0x010000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b")
+		require.NoError(t, err)
+		validator.WithdrawalCredentials = by
+		err = beaconState.UpdateValidatorAtIndex(0, validator)
+		require.NoError(t, err)
+		err = beaconState.SetSlot(2)
+		require.NoError(t, err, "Count not set slot")
+		err = beaconState.SetNextWithdrawalValidatorIndex(0)
+		require.NoError(t, err, "Could not set withdrawal index")
+		err = beaconState.SetBalances([]uint64{33000000000})
+		require.NoError(t, err, "Could not set validator balance")
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
 
 		genesis := b.NewGenesisBlock(stateRoot[:])
-		util.SaveBlock(t, ctx, db, genesis)
 
+		parentRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err, "Could not get signing root")
+
+		withdrawals, err := beaconState.ExpectedWithdrawals()
+		require.NoError(t, err, "Could get expected withdrawals")
+		require.NotEqual(t, len(withdrawals), 0)
 		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 		blk := &eth.SignedBeaconBlockCapella{
 			Block: &eth.BeaconBlockCapella{
-				Slot:       1,
-				ParentRoot: parentRoot[:],
-				StateRoot:  genesis.Block.StateRoot,
+				ProposerIndex: 1,
+				Slot:          1,
+				ParentRoot:    parentRoot[:],
+				StateRoot:     genesis.Block.StateRoot,
 				Body: &eth.BeaconBlockBodyCapella{
 					RandaoReveal:  genesis.Block.Body.RandaoReveal,
 					Graffiti:      genesis.Block.Body.Graffiti,
 					Eth1Data:      genesis.Block.Body.Eth1Data,
 					SyncAggregate: &eth.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 					ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+						BlockNumber:   1,
 						ParentHash:    make([]byte, fieldparams.RootLength),
 						FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 						StateRoot:     make([]byte, fieldparams.RootLength),
@@ -434,19 +460,26 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 						PrevRandao:    make([]byte, fieldparams.RootLength),
 						BaseFeePerGas: make([]byte, fieldparams.RootLength),
 						BlockHash:     make([]byte, fieldparams.RootLength),
+						Withdrawals:   withdrawals,
 					},
 				},
 			},
 			Signature: genesis.Signature,
 		}
-
-		blkRoot, err := blk.Block.HashTreeRoot()
+		signedBlk, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
+		srv.HeadFetcher = &mockChain.ChainService{
+			Genesis:        time.Now(),
+			State:          beaconState,
+			Block:          signedBlk,
+			Root:           make([]byte, 32),
+			ValidatorsRoot: [32]byte{},
+		}
+
+		prevRando, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
+		require.NoError(t, err)
 
 		wantedPayload := &ethpb.EventPayloadAttributeV2{
 			Version: version.String(version.Capella),
@@ -457,10 +490,10 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 				ParentBlockRoot:   make([]byte, 32),
 				ParentBlockHash:   make([]byte, 32),
 				PayloadAttributesV2: &enginev1.PayloadAttributesV2{
-					Timestamp:             uint64(time.Now().Unix()),
-					PrevRandao:            make([]byte, 32),
+					Timestamp:             24,
+					PrevRandao:            prevRando,
 					SuggestedFeeRecipient: make([]byte, 20),
-					Withdrawals:           make([]*enginev1.Withdrawal, 1),
+					Withdrawals:           withdrawals,
 				},
 			},
 		}
