@@ -2,12 +2,18 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Service) isNewProposer(slot primitives.Slot) bool {
@@ -42,67 +48,80 @@ func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.Beaco
 	return headState, newHeadBlock, nil
 }
 
+// fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
 func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) error {
 	isNewHead := s.isNewHead(newHeadRoot)
-	isNewProposer := s.isNewProposer(proposingSlot)
-	if !isNewHead && !isNewProposer {
+	if !isNewHead {
 		return nil
 	}
-
-	var headState state.BeaconState
-	var headBlock interfaces.ReadOnlySignedBeaconBlock
-	var headRoot [32]byte
-	var err error
-
-	shouldUpdate := isNewHead
-	if isNewHead && isNewProposer && !features.Get().DisableReorgLateBlocks {
-		if proposingSlot == s.CurrentSlot() {
-			proposerHead := s.ForkChoicer().GetProposerHead()
-			if proposerHead != newHeadRoot {
-				shouldUpdate = false
-			}
-		} else if s.ForkChoicer().ShouldOverrideFCU() {
-			shouldUpdate = false
-		}
-	}
-	if shouldUpdate {
-		headRoot = newHeadRoot
-		headState, headBlock, err = s.getStateAndBlock(ctx, newHeadRoot)
-		if err != nil {
-			log.WithError(err).Error("Could not get forkchoice update argument")
+	isNewProposer := s.isNewProposer(proposingSlot)
+	if isNewProposer && !features.Get().DisableReorgLateBlocks {
+		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
 			return nil
 		}
-	} else {
-		// We are guaranteed that the head block is the parent
-		// of the incoming block. We do not process the slot
-		// because it will be processed anyway in notifyForkchoiceUpdate
-		headState = s.headState(ctx)
-		headRoot = s.headRoot()
-		headBlock, err = s.headBlock()
-		if err != nil {
-			return errors.Wrap(err, "could not get head block")
-		}
+	}
+	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("Could not get forkchoice update argument")
+		return nil
 	}
 
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
-		headRoot:  headRoot,
+		headRoot:  newHeadRoot,
 		headBlock: headBlock.Block(),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not notify forkchoice update")
 	}
 
-	if shouldUpdate {
-		if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
-			log.WithError(err).Error("could not save head")
-		}
-
-		// Only need to prune attestations from pool if the head has changed.
-		if err := s.pruneAttsFromPool(headBlock); err != nil {
-			return err
-		}
+	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
+		log.WithError(err).Error("could not save head")
 	}
 
+	// Only need to prune attestations from pool if the head has changed.
+	if err := s.pruneAttsFromPool(headBlock); err != nil {
+		log.WithError(err).Error("could not prune attestations from pool")
+	}
 	return nil
+}
+
+// shouldOverrideFCU checks whether the incoming block is still subject to being
+// reorged or not by the next proposer.
+func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitives.Slot) bool {
+	headWeight, err := s.ForkChoicer().Weight(newHeadRoot)
+	if err != nil {
+		log.WithError(err).WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
+	}
+	currentSlot := s.CurrentSlot()
+	if proposingSlot == currentSlot {
+		proposerHead := s.ForkChoicer().GetProposerHead()
+		if proposerHead != newHeadRoot {
+			return true
+		}
+		log.WithFields(logrus.Fields{
+			"root":   fmt.Sprintf("%#x", newHeadRoot),
+			"weight": headWeight,
+		}).Infof("Attempted late block reorg aborted due to attestations at %d seconds",
+			params.BeaconConfig().SecondsPerSlot)
+		lateBlockFailedAttemptSecondThreshold.Inc()
+	} else {
+		if s.ForkChoicer().ShouldOverrideFCU() {
+			return true
+		}
+		secs, err := slots.SecondsSinceSlotStart(currentSlot,
+			uint64(s.genesisTime.Unix()), uint64(time.Now().Unix()))
+		if err != nil {
+			log.WithError(err).Error("could not compute seconds since slot start")
+		}
+		if secs >= doublylinkedtree.ProcessAttestationsThreshold {
+			log.WithFields(logrus.Fields{
+				"root":   fmt.Sprintf("%#x", newHeadRoot),
+				"weight": headWeight,
+			}).Infof("Attempted late block reorg aborted due to attestations at %d seconds",
+				doublylinkedtree.ProcessAttestationsThreshold)
+			lateBlockFailedAttemptFirstThreshold.Inc()
+		}
+	}
+	return false
 }

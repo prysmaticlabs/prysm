@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/testutil"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote/mock"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -232,23 +231,6 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	assert.Equal(t, 2, v.WaitForActivationCalled)
 }
 
-func TestKeyReload_RemoteKeymanager(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	km := mock.NewMock()
-	v := &testutil.FakeValidator{Km: &km}
-
-	ticker := make(chan primitives.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- primitives.Slot(55)
-
-		cancel()
-	}()
-	run(ctx, v)
-	assert.Equal(t, true, km.ReloadPublicKeysCalled)
-}
-
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
@@ -271,6 +253,54 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 
 	run(ctx, v)
 	assert.LogsContain(t, hook, "updated proposer settings")
+}
+
+func TestUpdateProposerSettingsAt_EpochEndExceeded(t *testing.T) {
+	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot+1) * time.Second}
+	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+		DefaultConfig: &validatorserviceconfig.ProposerOption{
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			},
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	hook := logTest.NewGlobal()
+	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
+	ticker := make(chan primitives.Slot)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+		cancel()
+	}()
+
+	run(ctx, v)
+	// can't test "Failed to update proposer settings" because of log.fatal
+	assert.LogsContain(t, hook, "deadline exceeded")
+}
+
+func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
+	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second}
+	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+		DefaultConfig: &validatorserviceconfig.ProposerOption{
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			},
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	hook := logTest.NewGlobal()
+	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
+	ticker := make(chan primitives.Slot)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+		cancel()
+	}()
+
+	run(ctx, v)
+	// can't test "Failed to update proposer settings" because of log.fatal
+	assert.LogsContain(t, hook, "Mock updated proposer settings")
 }
 
 func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *testing.T) {

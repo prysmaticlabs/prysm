@@ -20,7 +20,7 @@ type votes struct {
 	total      uint
 }
 
-func NewVotes() *votes {
+func newVotes() *votes {
 	return &votes{
 		hashes:     make(map[[32]byte]uint),
 		roots:      make(map[[32]byte]uint),

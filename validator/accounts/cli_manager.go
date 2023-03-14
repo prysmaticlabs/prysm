@@ -14,7 +14,6 @@ import (
 	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"google.golang.org/grpc"
 )
 
@@ -37,7 +36,6 @@ type AccountsCLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
 	keymanagerKind       keymanager.Kind
-	keymanagerOpts       *remote.KeymanagerOpts
 	showDepositData      bool
 	showPrivateKeys      bool
 	listValidatorIndices bool

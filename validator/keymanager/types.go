@@ -100,8 +100,6 @@ const (
 	Local Kind = iota
 	// Derived keymanager using a hierarchical-deterministic algorithm.
 	Derived
-	// Remote keymanager capable of remote-signing data.
-	Remote
 	// Web3Signer keymanager capable of signing data using a remote signer called Web3Signer.
 	Web3Signer
 )
@@ -121,8 +119,6 @@ func (k Kind) String() string {
 		// multiple directories will cause the isValid function to fail in wallet.go
 		// and may result in using a unintended wallet.
 		return "direct"
-	case Remote:
-		return "remote"
 	case Web3Signer:
 		return "web3signer"
 	default:
@@ -137,8 +133,6 @@ func ParseKind(k string) (Kind, error) {
 		return Derived, nil
 	case "direct", "imported", "local":
 		return Local, nil
-	case "remote":
-		return Remote, nil
 	case "web3signer":
 		return Web3Signer, nil
 	default:

@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
@@ -189,4 +190,47 @@ func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testin
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(service.CurrentSlot()+1, 0, [8]byte{}, [32]byte{} /* root */)
 	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r, service.CurrentSlot()+1))
 
+}
+
+func TestShouldOverrideFCU(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := doublylinkedtree.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB, fcs)),
+		WithForkChoiceStore(fcs),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	service.SetGenesisTime(time.Now().Add(-time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second))
+	require.NoError(t, err)
+	headRoot := [32]byte{'b'}
+	parentRoot := [32]byte{'a'}
+	ojc := &ethpb.Checkpoint{}
+	st, root, err := prepareForkchoiceState(ctx, 1, parentRoot, [32]byte{}, [32]byte{}, ojc, ojc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+	st, root, err = prepareForkchoiceState(ctx, 2, headRoot, parentRoot, [32]byte{}, ojc, ojc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+
+	require.Equal(t, primitives.Slot(2), service.CurrentSlot())
+	require.Equal(t, true, service.shouldOverrideFCU(headRoot, 2))
+	require.LogsDoNotContain(t, hook, "12 seconds")
+	require.Equal(t, false, service.shouldOverrideFCU(parentRoot, 2))
+	require.LogsContain(t, hook, "12 seconds")
+
+	head, err := fcs.Head(ctx)
+	require.NoError(t, err)
+	require.Equal(t, headRoot, head)
+
+	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 29)
+	require.Equal(t, true, service.shouldOverrideFCU(parentRoot, 3))
+	require.LogsDoNotContain(t, hook, "10 seconds")
+	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 24)
+	service.SetGenesisTime(time.Now().Add(-time.Duration(2*params.BeaconConfig().SecondsPerSlot+10) * time.Second))
+	require.Equal(t, false, service.shouldOverrideFCU(parentRoot, 3))
+	require.LogsContain(t, hook, "10 seconds")
 }
