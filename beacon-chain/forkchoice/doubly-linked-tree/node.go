@@ -16,13 +16,12 @@ import (
 // consider a block to be late, and thus a candidate to being reorged.
 const orphanLateBlockFirstThreshold = 4
 
-// processAttestationsThreshold  is the number of seconds after which we
+// ProcessAttestationsThreshold  is the number of seconds after which we
 // process attestations for the current slot
-const processAttestationsThreshold = 10
+const ProcessAttestationsThreshold = 10
 
 // applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
-// using the current balance stored in each node. This function requires a lock
-// in Store.nodesLock
+// using the current balance stored in each node.
 func (n *Node) applyWeightChanges(ctx context.Context) error {
 	// Recursively calling the children to sum their weights.
 	childrenWeight := uint64(0)
@@ -43,7 +42,7 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 }
 
 // updateBestDescendant updates the best descendant of this node and its
-// children. This function assumes the caller has a lock on Store.nodesLock
+// children.
 func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -149,7 +148,7 @@ func (n *Node) arrivedEarly(genesisTime uint64) (bool, error) {
 // slot will have secs = 10 below.
 func (n *Node) arrivedAfterOrphanCheck(genesisTime uint64) (bool, error) {
 	secs, err := slots.SecondsSinceSlotStart(n.slot, genesisTime, n.timestamp)
-	return secs >= processAttestationsThreshold, err
+	return secs >= ProcessAttestationsThreshold, err
 }
 
 // nodeTreeDump appends to the given list all the nodes descending from this one

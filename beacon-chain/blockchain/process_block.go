@@ -214,7 +214,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot); err != nil {
+	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
 	}
 
@@ -447,12 +447,22 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			}
 		}
 	}
+	// Save boundary states that will be useful for forkchoice
+	for r, st := range boundaries {
+		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
+			return err
+		}
+	}
+	// Also saves the last post state which to be used as pre state for the next batch.
+	lastBR := blockRoots[len(blks)-1]
+	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
+		return err
+	}
 	// Insert all nodes but the last one to forkchoice
 	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
 	}
 	// Insert the last block to forkchoice
-	lastBR := blockRoots[len(blks)-1]
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, preState, lastBR); err != nil {
 		return errors.Wrap(err, "could not insert last block in batch to forkchoice")
 	}
@@ -462,17 +472,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
-
-	for r, st := range boundaries {
-		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
-			return err
-		}
-	}
-	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
-	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
-		return err
-	}
 	arg := &notifyForkchoiceUpdateArg{
 		headState: preState,
 		headRoot:  lastBR,
@@ -572,6 +572,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Re
 
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
+// This function requires a write lock on forkchoice.
 func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
@@ -666,15 +667,15 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 			break
 		}
 
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
+		attThreshold := params.BeaconConfig().SecondsPerSlot / 3
+		ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
 		for {
 			select {
-			case ti := <-ticker.C:
-				if err := s.fillMissingBlockPayloadId(ctx, ti); err != nil {
+			case <-ticker.C():
+				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
 					log.WithError(err).Error("Could not fill missing payload ID")
 				}
-			case <-s.ctx.Done():
+			case <-ctx.Done():
 				log.Debug("Context closed, exiting routine")
 				return
 			}
@@ -682,36 +683,34 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 	}()
 }
 
-// Returns true if time `t` is halfway through the slot in sec.
-func atHalfSlot(t time.Time) bool {
-	s := params.BeaconConfig().SecondsPerSlot
-	return uint64(t.Second())%s == s/2
-}
-
-func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) error {
-	if !atHalfSlot(ti) {
-		return nil
-	}
-	if s.CurrentSlot() == s.cfg.ForkChoiceStore.HighestReceivedBlockSlot() {
+// fillMissingBlockPayloadId is called 4 seconds into the slot and calls FCU if we are proposing next slot
+// and the cache has been missed
+func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
+	s.ForkChoicer().RLock()
+	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
+	s.ForkChoicer().RUnlock()
+	if s.CurrentSlot() == highestReceivedSlot {
 		return nil
 	}
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-	if has && id == [8]byte{} {
-		missedPayloadIDFilledCount.Inc()
-		headBlock, err := s.headBlock()
-		if err != nil {
-			return err
-		} else {
-			if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-				headState: s.headState(ctx),
-				headRoot:  s.headRoot(),
-				headBlock: headBlock.Block(),
-			}); err != nil {
-				return err
-			}
-		}
+	if !has || id != [8]byte{} {
+		return nil
 	}
-	return nil
+	s.headLock.RLock()
+	headBlock, err := s.headBlock()
+	if err != nil {
+		s.headLock.RUnlock()
+		return err
+	}
+	headState := s.headState(ctx)
+	headRoot := s.headRoot()
+	s.headLock.RUnlock()
+	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+		headState: headState,
+		headRoot:  headRoot,
+		headBlock: headBlock.Block(),
+	})
+	return err
 }

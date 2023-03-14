@@ -11,12 +11,12 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
+	sync.RWMutex
 	store               *Store
-	votes               []Vote // tracks individual validator's last vote.
-	votesLock           sync.RWMutex
+	votes               []Vote                      // tracks individual validator's last vote.
 	balances            []uint64                    // tracks individual validator's balances last accounted in votes.
 	justifiedBalances   []uint64                    // tracks individual validator's last justified balances.
-	numActiveValidators uint64                      // tracks the total number of active validators. Requires a checkpoints lock to read/write
+	numActiveValidators uint64                      // tracks the total number of active validators.
 	balancesByRoot      forkchoice.BalancesByRooter // handler to obtain balances for the state with a given root
 }
 
@@ -31,16 +31,13 @@ type Store struct {
 	proposerBoostRoot             [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot     [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.
 	previousProposerBoostScore    uint64                                 // previous proposer boosted root score.
-	committeeWeight               uint64                                 // tracks the total active validator balance divided by the number of slots per Epoch. Requires a checkpoints lock to read/write
+	committeeWeight               uint64                                 // tracks the total active validator balance divided by the number of slots per Epoch.
 	treeRootNode                  *Node                                  // the root node of the store tree.
 	headNode                      *Node                                  // last head Node
 	nodeByRoot                    map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
 	nodeByPayload                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by payload Hash
 	slashedIndices                map[primitives.ValidatorIndex]bool     // the list of equivocating validator indices
 	originRoot                    [fieldparams.RootLength]byte           // The genesis block root
-	nodesLock                     sync.RWMutex
-	proposerBoostLock             sync.RWMutex
-	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
 	highestReceivedNode           *Node                                      // The highest slot node.
 	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]primitives.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.

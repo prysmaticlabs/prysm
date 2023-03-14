@@ -439,10 +439,12 @@ func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 
+	mockChainService := &mock.ChainService{ForkChoiceStore: doublylinkedtree.New()}
 	proposerServer := &Server{
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		SyncChecker:           &mockSync.Sync{},
-		HeadUpdater:           &mock.ChainService{},
+		HeadUpdater:           mockChainService,
+		ForkFetcher:           mockChainService,
 		TimeFetcher:           &mock.ChainService{}}
 	req := &ethpb.BlockRequest{
 		Slot: bellatrixSlot + 1,
@@ -455,14 +457,16 @@ func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 }
 
 func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, headRoot []byte) *Server {
+	mockChainService := &mock.ChainService{State: headState, Root: headRoot, ForkChoiceStore: doublylinkedtree.New()}
 	return &Server{
-		HeadFetcher:           &mock.ChainService{State: headState, Root: headRoot},
+		HeadFetcher:           mockChainService,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:         &mock.ChainService{},
-		HeadUpdater:           &mock.ChainService{},
+		BlockReceiver:         mockChainService,
+		HeadUpdater:           mockChainService,
 		ChainStartFetcher:     &mockExecution.Chain{},
 		Eth1InfoFetcher:       &mockExecution.Chain{},
 		Eth1BlockFetcher:      &mockExecution.Chain{},
+		ForkFetcher:           mockChainService,
 		MockEth1Votes:         true,
 		AttPool:               attestations.NewPool(),
 		SlashingsPool:         slashings.NewPool(),

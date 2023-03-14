@@ -27,8 +27,6 @@ func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
 	// The updated balances of each node is 100
 	s := f.store
 
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
 	s.nodeByRoot[indexToHash(1)].balance = 100
 	s.nodeByRoot[indexToHash(2)].balance = 100
 	s.nodeByRoot[indexToHash(3)].balance = 100
@@ -55,8 +53,6 @@ func TestNode_ApplyWeightChanges_NegativeChange(t *testing.T) {
 
 	// The updated balances of each node is 100
 	s := f.store
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
 	s.nodeByRoot[indexToHash(1)].weight = 400
 	s.nodeByRoot[indexToHash(2)].weight = 400
 	s.nodeByRoot[indexToHash(3)].weight = 400
@@ -298,7 +294,7 @@ func TestNode_TimeStampsChecks(t *testing.T) {
 	require.Equal(t, false, late)
 
 	// very late block
-	driftGenesisTime(f, 3, processAttestationsThreshold+1)
+	driftGenesisTime(f, 3, ProcessAttestationsThreshold+1)
 	root = [32]byte{'c'}
 	state, blkRoot, err = prepareForkchoiceState(ctx, 3, root, [32]byte{'b'}, [32]byte{'C'}, 0, 0)
 	require.NoError(t, err)

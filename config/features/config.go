@@ -44,6 +44,7 @@ type Flags struct {
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
+	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -67,7 +68,7 @@ type Flags struct {
 	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
-	EnableOnlyBlindedBeaconBlocks     bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
+	SaveFullExecutionPayloads         bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
@@ -125,13 +126,6 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(RopstenTestnet.Name) {
-		log.Warn("Running on the Ropsten Beacon Chain Testnet")
-		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
-			return err
-		}
-		applyRopstenFeatureFlags(ctx)
-		params.UseRopstenNetworkConfig()
 	} else if ctx.Bool(SepoliaTestnet.Name) {
 		log.Warn("Running on the Sepolia Beacon Chain Testnet")
 		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
@@ -154,13 +148,6 @@ func configureTestnet(ctx *cli.Context) error {
 
 // Insert feature flags within the function to be enabled for Prater testnet.
 func applyPraterFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(EnableOnlyBlindedBeaconBlocks.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling only saving blinded beacon blocks flag")
-	}
-}
-
-// Insert feature flags within the function to be enabled for Ropsten testnet.
-func applyRopstenFeatureFlags(ctx *cli.Context) {
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
@@ -192,6 +179,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disablePeerScorer.Name) {
 		logDisabled(disablePeerScorer)
 		cfg.EnablePeerScorer = false
+	}
+	cfg.DisableReorgLateBlocks = true
+	if ctx.Bool(enableReorgLateBlocks.Name) {
+		logEnabled(enableReorgLateBlocks)
+		cfg.DisableReorgLateBlocks = false
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
@@ -247,9 +239,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableGossipBatchAggregation)
 		cfg.EnableBatchGossipAggregation = false
 	}
-	if ctx.Bool(EnableOnlyBlindedBeaconBlocks.Name) {
-		logEnabled(EnableOnlyBlindedBeaconBlocks)
-		cfg.EnableOnlyBlindedBeaconBlocks = true
+	if ctx.Bool(SaveFullExecutionPayloads.Name) {
+		logEnabled(SaveFullExecutionPayloads)
+		cfg.SaveFullExecutionPayloads = true
 	}
 	if ctx.Bool(enableStartupOptimistic.Name) {
 		logEnabled(enableStartupOptimistic)
