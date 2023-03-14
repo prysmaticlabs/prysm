@@ -49,10 +49,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	// Checks if the current blockRoot ( which is also the head root) is new.
-	// This check must come before forkchoiceUpdateWithExecution because it saves the new head.
-	isNewHead := s.isNewHead(blockRoot)
-
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
@@ -60,11 +56,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		return err
 	}
 
-	if isNewHead {
-		// Handle post block operations such as pruning exits and bls messages.
-		if err := s.prunePostBlockOperationPools(ctx, blockRoot); err != nil {
-			log.WithError(err).Error("Could not prune canonical objects from pool ")
-		}
+	// Handle post block operations such as pruning exits and bls messages.
+	if err := s.prunePostBlockOperationPools(ctx, blockRoot); err != nil {
+		log.WithError(err).Error("Could not prune canonical objects from pool ")
 	}
 
 	// Have we been finalizing? Should we start saving hot states to db?
@@ -169,6 +163,8 @@ func (s *Service) prunePostBlockOperationPools(ctx context.Context, root [32]byt
 	if err != nil {
 		return err
 	}
+	// By comparing the current headroot, that has already gone through forkchoice,
+	// we can assume that if equal the current block root is canonical.
 	if !bytes.Equal(headRoot, root[:]) {
 		return nil
 	}
