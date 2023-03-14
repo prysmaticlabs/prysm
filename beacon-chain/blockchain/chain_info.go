@@ -319,7 +319,7 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 	return v.PublicKey(), nil
 }
 
-// ForkChoicer returns the Capellace.
+// ForkChoicer returns the forkchoice interface.
 func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
 	return s.cfg.ForkChoiceStore
 }
