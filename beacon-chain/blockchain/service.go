@@ -81,7 +81,6 @@ type config struct {
 	BlockFetcher            execution.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
 	ExecutionEngineCaller   execution.EngineCaller
-	AlwaysPreparePayload    bool
 }
 
 // NewService instantiates a new block service instance that will

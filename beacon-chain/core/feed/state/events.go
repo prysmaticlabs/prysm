@@ -26,8 +26,6 @@ const (
 	FinalizedCheckpoint
 	// NewHead of the chain event.
 	NewHead
-	// PayloadAttributeSent is sent when a node computed a new payload attributes for execution payload building
-	PayloadAttributeSent
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.

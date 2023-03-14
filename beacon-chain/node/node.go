@@ -609,6 +609,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer) error 
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 	)
+
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")

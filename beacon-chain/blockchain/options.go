@@ -163,11 +163,3 @@ func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
 		return nil
 	}
 }
-
-// WithAlwaysPreparePayload sets payload attributes to submit on slots
-func WithAlwaysPreparePayload(is bool) Option {
-	return func(s *Service) error {
-		s.cfg.AlwaysPreparePayload = is
-		return nil
-	}
-}

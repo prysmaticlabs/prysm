@@ -827,16 +827,6 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
-
-	// Override for non proposer
-	service.cfg.AlwaysPreparePayload = true
-	err = service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{b.ProposerIndex()}, []common.Address{suggestedAddr})
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, b, st, slot)
-	require.Equal(t, true, hasPayload)
-	require.Equal(t, suggestedVid, vId)
-	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
 }
 
 func Test_GetPayloadAttributeV2(t *testing.T) {
@@ -882,19 +872,6 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 	suggestedAddr := common.HexToAddress("123")
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, b, st, slot)
-	require.Equal(t, true, hasPayload)
-	require.Equal(t, suggestedVid, vId)
-	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
-	a, err = attr.Withdrawals()
-	require.NoError(t, err)
-	require.Equal(t, 0, len(a))
-
-	// Override for non proposer
-	service.cfg.AlwaysPreparePayload = true
-	err = service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{b.ProposerIndex()}, []common.Address{suggestedAddr})
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	hasPayload, attr, vId = service.getPayloadAttribute(ctx, b, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)

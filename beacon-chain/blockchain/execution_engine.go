@@ -69,7 +69,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headBlock, arg.headState, nextSlot)
+	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
 	fmt.Printf("using headblock for proposer ID: %v", proposerId)
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
@@ -253,12 +253,11 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
-func (s *Service) getPayloadAttribute(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState, slot primitives.Slot) (bool, payloadattribute.Attributer, primitives.ValidatorIndex) {
+func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot) (bool, payloadattribute.Attributer, primitives.ValidatorIndex) {
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
 	if !ok { // There's no need to build attribute if there is no proposer for slot.
-
 		return false, emptyAttri, 0
 	}
 	// Get previous randao.
