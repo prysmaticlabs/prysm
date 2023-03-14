@@ -357,7 +357,7 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 		}
 		blk, err := blocks.NewBeaconBlock(pbb)
 		require.NoError(t, err)
-		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
 	})
 
 	t.Run("Post Capella no changes", func(t *testing.T) {
@@ -367,7 +367,7 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 		}
 		blk, err := blocks.NewBeaconBlock(pbb)
 		require.NoError(t, err)
-		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
 	})
 
 	t.Run("Post Capella some changes", func(t *testing.T) {
@@ -389,7 +389,7 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 
 		pool.InsertBLSToExecChange(signedChange)
 		require.Equal(t, true, pool.ValidatorExists(idx))
-		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
 		require.Equal(t, false, pool.ValidatorExists(idx))
 	})
 }
