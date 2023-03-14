@@ -53,6 +53,7 @@ type FakeValidator struct {
 	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
 	proposerSettings                  *validatorserviceconfig.ProposerSettings
+	ProposerSettingWait               time.Duration
 	Km                                keymanager.IKeymanager
 }
 
@@ -258,10 +259,21 @@ func (*FakeValidator) HasProposerSettings() bool {
 }
 
 // PushProposerSettings for mocking
-func (fv *FakeValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
+func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ keymanager.IKeymanager, deadline time.Time) error {
+	nctx, cancel := context.WithDeadline(ctx, deadline)
+	ctx = nctx
+	defer cancel()
+	time.Sleep(fv.ProposerSettingWait)
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Error("deadline exceeded")
+		// can't return error or it will trigger a log.fatal
+		return nil
+	}
+
 	if fv.ProposerSettingsErr != nil {
 		return fv.ProposerSettingsErr
 	}
+
 	log.Infoln("Mock updated proposer settings")
 	return nil
 }
