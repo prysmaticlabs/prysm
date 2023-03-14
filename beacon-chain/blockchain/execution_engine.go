@@ -70,7 +70,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
 	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
-	fmt.Printf("using headblock for proposer ID: %v", proposerId)
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
@@ -144,7 +143,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
-
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, arg.headRoot); err != nil {
 		log.WithError(err).Error("Could not set head root to valid")
 		return nil, nil
@@ -212,7 +210,6 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	switch err {
 	case nil:
 		newPayloadValidNodeCount.Inc()
-		blk.Version()
 		return true, nil
 	case execution.ErrAcceptedSyncingPayloadStatus:
 		newPayloadOptimisticNodeCount.Inc()
