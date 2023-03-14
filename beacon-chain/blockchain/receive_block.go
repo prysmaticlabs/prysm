@@ -57,7 +57,8 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	}
 
 	// Handle post block operations such as pruning exits and bls messages.
-	if err := s.prunePostBlockOperationPools(ctx, blockRoot); err != nil {
+	// Prune service config vlaues based on the block copy if it's the head.
+	if err := s.prunePostBlockOperationPools(ctx, blockCopy, blockRoot); err != nil {
 		log.WithError(err).Error("Could not prune canonical objects from pool ")
 	}
 
@@ -158,7 +159,7 @@ func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.A
 }
 
 // prunePostBlockOperationPools only runs on new head otherwise should return a nil.
-func (s *Service) prunePostBlockOperationPools(ctx context.Context, root [32]byte) error {
+func (s *Service) prunePostBlockOperationPools(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, root [32]byte) error {
 	headRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return err
@@ -168,23 +169,19 @@ func (s *Service) prunePostBlockOperationPools(ctx context.Context, root [32]byt
 	if !bytes.Equal(headRoot, root[:]) {
 		return nil
 	}
-	// uses the newly saved block from forkchoiceUpdateWithExecution
-	headBlock, err := s.HeadBlock(ctx)
-	if err != nil {
-		return err
-	}
+
 	// Mark block exits as seen so we don't include same ones in future blocks.
-	for _, e := range headBlock.Block().Body().VoluntaryExits() {
+	for _, e := range blk.Block().Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
 	// Mark block BLS changes as seen so we don't include same ones in future blocks.
-	if err := s.markIncludedBlockBLSToExecChanges(headBlock.Block()); err != nil {
+	if err := s.markIncludedBlockBLSToExecChanges(blk.Block()); err != nil {
 		return errors.Wrap(err, "could not process BLSToExecutionChanges")
 	}
 
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
-	for _, as := range headBlock.Block().Body().AttesterSlashings() {
+	for _, as := range blk.Block().Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
 	}
 	return nil
