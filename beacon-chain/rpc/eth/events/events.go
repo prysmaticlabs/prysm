@@ -307,7 +307,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
 				ProposerIndex:     headBlock.Block().ProposerIndex(),
 				ProposalSlot:      headState.Slot(),
-				ParentBlockNumber: headBlock.Block().Slot(),
+				ParentBlockNumber: headPayload.BlockNumber(),
 				ParentBlockRoot:   headRoot,
 				ParentBlockHash:   headPayload.BlockHash(),
 				PayloadAttributesV2: &enginev1.PayloadAttributesV2{

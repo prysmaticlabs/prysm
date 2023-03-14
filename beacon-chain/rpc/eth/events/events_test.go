@@ -324,7 +324,6 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 	t.Run(PayloadAttributesTopic+"_bellatrix", func(t *testing.T) {
 		ctx := context.Background()
 
-		params.SetupTestConfigCleanup(t)
 		beaconState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -407,16 +406,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 	})
 	t.Run(PayloadAttributesTopic+"_capella", func(t *testing.T) {
 		ctx := context.Background()
-		db := dbutil.SetupDB(t)
-		transition.SkipSlotCache.Disable()
-
-		params.SetupTestConfigCleanup(t)
-		cfg := params.BeaconConfig().Copy()
-		cfg.CapellaForkEpoch = 3
-		cfg.BellatrixForkEpoch = 2
-		cfg.AltairForkEpoch = 1
-		params.OverrideBeaconConfig(cfg)
-		beaconState, _ := util.DeterministicGenesisState(t, 64)
+		beaconState, _ := util.DeterministicGenesisStateCapella(t, 1)
 
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
@@ -424,18 +414,10 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		genesis := b.NewGenesisBlock(stateRoot[:])
 		util.SaveBlock(t, ctx, db, genesis)
 
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
-
-		capellaSlot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
-		require.NoError(t, err)
-
 		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 		blk := &eth.SignedBeaconBlockCapella{
 			Block: &eth.BeaconBlockCapella{
-				Slot:       capellaSlot + 1,
+				Slot:       1,
 				ParentRoot: parentRoot[:],
 				StateRoot:  genesis.Block.StateRoot,
 				Body: &eth.BeaconBlockBodyCapella{
