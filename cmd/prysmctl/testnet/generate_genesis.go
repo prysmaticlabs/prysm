@@ -257,7 +257,7 @@ func generateGenesis(ctx context.Context) (*ethpb.BeaconState, error) {
 	genesisTime := generateGenesisStateFlags.GenesisTime
 	numValidators := generateGenesisStateFlags.NumValidators
 	depositJsonFile := generateGenesisStateFlags.DepositJsonFile
-	eth1Data := generateGenesisStateFlags.OverrideEth1Data
+	overrideEth1Data := generateGenesisStateFlags.OverrideEth1Data
 	if depositJsonFile != "" {
 		expanded, err := file.ExpandPath(depositJsonFile)
 		if err != nil {
@@ -285,7 +285,7 @@ func generateGenesis(ctx context.Context) (*ethpb.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	if eth1Data {
+	if overrideEth1Data {
 		log.Print("Overriding Eth1Data with data from execution client")
 		conn, err := rpc.Dial(generateGenesisStateFlags.ExecutionEndpoint)
 		if err != nil {
