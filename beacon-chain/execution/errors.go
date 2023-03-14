@@ -34,4 +34,6 @@ var (
 	ErrInvalidBlockHashPayloadStatus = errors.New("payload status is INVALID_BLOCK_HASH")
 	// ErrNilResponse when the response is nil.
 	ErrNilResponse = errors.New("nil response")
+	// ErrRequestTooLarge when the request is too large
+	ErrRequestTooLarge = errors.New("request too large")
 )
