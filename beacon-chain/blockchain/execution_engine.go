@@ -147,7 +147,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		log.WithError(err).Error("Could not set head root to valid")
 		return nil, nil
 	}
-
 	// If the forkchoice update call has an attribute, update the proposer payload ID cache.
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
