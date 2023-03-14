@@ -1958,7 +1958,8 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.Equal(t, len(tt.mockExpectedRequests), len(signedRegisterValidatorRequests))
 				require.Equal(t, len(signedRegisterValidatorRequests), len(v.signedValidatorRegistrations))
 			}
-			if err := v.PushProposerSettings(ctx, km); tt.err != "" {
+			deadline := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+			if err := v.PushProposerSettings(ctx, km, deadline); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 			if len(tt.logMessages) > 0 {
