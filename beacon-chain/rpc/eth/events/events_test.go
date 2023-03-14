@@ -3,17 +3,24 @@ package events
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -21,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -308,6 +316,199 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			itemToSend: &feed.Event{
 				Type: statefeed.NewHead,
 				Data: wantedHead,
+			},
+			feed: srv.StateNotifier.StateFeed(),
+		})
+	})
+	t.Run(PayloadAttributesTopic+"_bellatrix", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+		transition.SkipSlotCache.Disable()
+
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.BellatrixForkEpoch = 2
+		cfg.AltairForkEpoch = 1
+		params.OverrideBeaconConfig(cfg)
+		beaconState, _ := util.DeterministicGenesisState(t, 64)
+
+		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+
+		genesis := b.NewGenesisBlock(stateRoot[:])
+		util.SaveBlock(t, ctx, db, genesis)
+
+		parentRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err, "Could not get signing root")
+		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+		require.NoError(t, err)
+
+		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
+		blk := &eth.SignedBeaconBlockBellatrix{
+			Block: &eth.BeaconBlockBellatrix{
+				Slot:       bellatrixSlot + 1,
+				ParentRoot: parentRoot[:],
+				StateRoot:  genesis.Block.StateRoot,
+				Body: &eth.BeaconBlockBodyBellatrix{
+					RandaoReveal:  genesis.Block.Body.RandaoReveal,
+					Graffiti:      genesis.Block.Body.Graffiti,
+					Eth1Data:      genesis.Block.Body.Eth1Data,
+					SyncAggregate: &eth.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
+					ExecutionPayload: &enginev1.ExecutionPayload{
+						ParentHash:    make([]byte, fieldparams.RootLength),
+						FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+						StateRoot:     make([]byte, fieldparams.RootLength),
+						ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+						LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+						PrevRandao:    make([]byte, fieldparams.RootLength),
+						BaseFeePerGas: make([]byte, fieldparams.RootLength),
+						BlockHash:     make([]byte, fieldparams.RootLength),
+					},
+				},
+			},
+			Signature: genesis.Signature,
+		}
+
+		blkRoot, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, err, "Could not get signing root")
+		require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
+
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+		srv.HeadFetcher = &mockChain.ChainService{
+			Genesis:        time.Now(),
+			DB:             db,
+			State:          beaconState,
+			Root:           []byte("hello-world"),
+			ValidatorsRoot: [32]byte{},
+		}
+		wantedPayload := &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
+			ProposerIndex:     1,
+			ProposalSlot:      2,
+			ParentBlockNumber: 1,
+			ParentBlockRoot:   make([]byte, 32),
+			ParentBlockHash:   make([]byte, 32),
+			PayloadAttributes: &enginev1.PayloadAttributes{
+				Timestamp:             uint64(time.Now().Unix()),
+				PrevRandao:            make([]byte, 32),
+				SuggestedFeeRecipient: make([]byte, 20),
+			},
+		}
+		genericResponse, err := anypb.New(wantedPayload)
+		require.NoError(t, err)
+		wantedMessage := &gateway.EventSource{
+			Event: PayloadAttributesTopic,
+			Data:  genericResponse,
+		}
+
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{PayloadAttributesTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: statefeed.NewHead,
+				Data: wantedPayload,
+			},
+			feed: srv.StateNotifier.StateFeed(),
+		})
+	})
+	t.Run(PayloadAttributesTopic+"_capella", func(t *testing.T) {
+		ctx := context.Background()
+		db := dbutil.SetupDB(t)
+		transition.SkipSlotCache.Disable()
+
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.CapellaForkEpoch = 3
+		cfg.BellatrixForkEpoch = 2
+		cfg.AltairForkEpoch = 1
+		params.OverrideBeaconConfig(cfg)
+		beaconState, _ := util.DeterministicGenesisState(t, 64)
+
+		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+
+		genesis := b.NewGenesisBlock(stateRoot[:])
+		util.SaveBlock(t, ctx, db, genesis)
+
+		parentRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err, "Could not get signing root")
+		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		capellaSlot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+		require.NoError(t, err)
+
+		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
+		blk := &eth.SignedBeaconBlockCapella{
+			Block: &eth.BeaconBlockCapella{
+				Slot:       capellaSlot + 1,
+				ParentRoot: parentRoot[:],
+				StateRoot:  genesis.Block.StateRoot,
+				Body: &eth.BeaconBlockBodyCapella{
+					RandaoReveal:  genesis.Block.Body.RandaoReveal,
+					Graffiti:      genesis.Block.Body.Graffiti,
+					Eth1Data:      genesis.Block.Body.Eth1Data,
+					SyncAggregate: &eth.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
+					ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+						ParentHash:    make([]byte, fieldparams.RootLength),
+						FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+						StateRoot:     make([]byte, fieldparams.RootLength),
+						ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+						LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+						PrevRandao:    make([]byte, fieldparams.RootLength),
+						BaseFeePerGas: make([]byte, fieldparams.RootLength),
+						BlockHash:     make([]byte, fieldparams.RootLength),
+					},
+				},
+			},
+			Signature: genesis.Signature,
+		}
+
+		blkRoot, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, err, "Could not get signing root")
+		require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+
+		wantedPayload := &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
+			ProposerIndex:     1,
+			ProposalSlot:      2,
+			ParentBlockNumber: 1,
+			ParentBlockRoot:   make([]byte, 32),
+			ParentBlockHash:   make([]byte, 32),
+			PayloadAttributesV2: &enginev1.PayloadAttributesV2{
+				Timestamp:             uint64(time.Now().Unix()),
+				PrevRandao:            make([]byte, 32),
+				SuggestedFeeRecipient: make([]byte, 20),
+				Withdrawals:           make([]*enginev1.Withdrawal, 1),
+			},
+		}
+		genericResponse, err := anypb.New(wantedPayload)
+		require.NoError(t, err)
+		wantedMessage := &gateway.EventSource{
+			Event: PayloadAttributesTopic,
+			Data:  genericResponse,
+		}
+
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{PayloadAttributesTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: statefeed.NewHead,
+				Data: wantedPayload,
 			},
 			feed: srv.StateNotifier.StateFeed(),
 		})

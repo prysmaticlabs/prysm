@@ -262,13 +262,11 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 
 	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
 	if err != nil {
-
 		return err
 	}
 
 	headPayload, err := headBlock.Block().Body().Execution()
 	if err != nil {
-
 		return err
 	}
 
