@@ -92,15 +92,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disablePullTips = &cli.BoolFlag{
-		Name:  "experimental-enable-boundary-checks",
-		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
-	}
-	disableDefensivePull = &cli.BoolFlag{
-		Name:   "disable-back-pull",
-		Usage:  "Experimental disable of past boundary checks, useful for debugging, may cause bad votes.",
-		Hidden: true,
-	}
 	disableVecHTR = &cli.BoolFlag{
 		Name:  "disable-vectorized-htr",
 		Usage: "Disables the new go sha256 library which utilizes optimized routines for merkle trees",
@@ -172,14 +163,12 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
-	disablePullTips,
 	disableVecHTR,
 	enableReorgLateBlocks,
 	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
-	disableDefensivePull,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
 }...)...)
