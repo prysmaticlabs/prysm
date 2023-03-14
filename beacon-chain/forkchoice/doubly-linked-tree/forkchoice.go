@@ -30,7 +30,6 @@ func New() *ForkChoice {
 		bestJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
 		unrealizedJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
 		unrealizedFinalizedCheckpoint: &forkchoicetypes.Checkpoint{},
-		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
 		finalizedCheckpoint:           &forkchoicetypes.Checkpoint{},
 		proposerBoostRoot:             [32]byte{},
 		nodeByRoot:                    make(map[[fieldparams.RootLength]byte]*Node),
@@ -158,7 +157,6 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 		if !features.Get().EnableDefensivePull {
 			currentSlot := slots.CurrentSlot(f.store.genesisTime)
 			if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
-				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				root := bytesutil.ToBytes32(jc.Root)
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 					Root: root}
@@ -181,7 +179,6 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 					return err
 				}
 				if root == currentRoot {
-					f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 					f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 						Root: jcRoot}
 					if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
@@ -190,7 +187,6 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				}
 			}
 		} else {
-			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 			jcRoot := bytesutil.ToBytes32(jc.Root)
 			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jcRoot}
 			if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
@@ -375,11 +371,6 @@ func (f *ForkChoice) BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	return f.store.bestJustifiedCheckpoint
 }
 
-// PreviousJustifiedCheckpoint of fork choice store.
-func (f *ForkChoice) PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
-	return f.store.prevJustifiedCheckpoint
-}
-
 // JustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	return f.store.justifiedCheckpoint
@@ -432,7 +423,6 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(ctx context.Context, jc *forkchoi
 	if jc == nil {
 		return errInvalidNilCheckpoint
 	}
-	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = jc
 	f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jc.Root}
 	if err := f.updateJustifiedBalances(ctx, jc.Root); err != nil {

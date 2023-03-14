@@ -60,7 +60,6 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot primitives.Slot) error {
 			return err
 		}
 		if r == fcp.Root {
-			f.store.prevJustifiedCheckpoint = jcp
 			f.store.justifiedCheckpoint = bjcp
 			if err := f.updateJustifiedBalances(ctx, bjcp.Root); err != nil {
 				log.Error("could not update justified balances")

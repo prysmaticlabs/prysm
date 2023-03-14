@@ -83,7 +83,6 @@ type CanonicalFetcher interface {
 type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
-	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 	InForkchoice([32]byte) bool
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
@@ -99,14 +98,6 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 	s.ForkChoicer().RLock()
 	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().FinalizedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
-}
-
-// PreviousJustifiedCheckpt returns the current justified checkpoint from chain store.
-func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
-	cp := s.ForkChoicer().PreviousJustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
@@ -328,7 +319,7 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 	return v.PublicKey(), nil
 }
 
-// ForkChoicer returns the forkchoice interface.
+// ForkChoicer returns the Capellace.
 func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
 	return s.cfg.ForkChoiceStore
 }

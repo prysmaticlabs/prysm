@@ -307,11 +307,6 @@ func (s *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 	return s.CurrentJustifiedCheckPoint
 }
 
-// PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
-func (s *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	return s.PreviousJustifiedCheckPoint
-}
-
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
 func (_ *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
 	return nil
