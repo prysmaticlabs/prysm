@@ -56,8 +56,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		return err
 	}
 
-	// Handle post block operations such as pruning exits and bls messages.
-	// Prune service config vlaues based on the block copy if it's the head.
+	// Handle post block operations such as pruning exits and bls messages if incoming block is the head
 	if err := s.prunePostBlockOperationPools(ctx, blockCopy, blockRoot); err != nil {
 		log.WithError(err).Error("Could not prune canonical objects from pool ")
 	}
