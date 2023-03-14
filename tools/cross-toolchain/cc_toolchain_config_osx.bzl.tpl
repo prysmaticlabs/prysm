@@ -11,12 +11,35 @@ load(
     "with_feature_set",
 )
 
-load(
-    "@bazel_tools//tools/cpp:cc_toolchain_config.bzl",
-    ALL_COMPILE_ACTIONS = "all_compile_actions",
-    ALL_CPP_COMPILE_ACTIONS = "all_cpp_compile_actions",
-    ALL_LINK_ACTIONS = "all_link_actions",
-)
+load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
+
+all_compile_actions = [
+    ACTION_NAMES.c_compile,
+    ACTION_NAMES.cpp_compile,
+    ACTION_NAMES.linkstamp_compile,
+    ACTION_NAMES.assemble,
+    ACTION_NAMES.preprocess_assemble,
+    ACTION_NAMES.cpp_header_parsing,
+    ACTION_NAMES.cpp_module_compile,
+    ACTION_NAMES.cpp_module_codegen,
+    ACTION_NAMES.clif_match,
+    ACTION_NAMES.lto_backend,
+]
+
+all_cpp_compile_actions = [
+    ACTION_NAMES.cpp_compile,
+    ACTION_NAMES.linkstamp_compile,
+    ACTION_NAMES.cpp_header_parsing,
+    ACTION_NAMES.cpp_module_compile,
+    ACTION_NAMES.cpp_module_codegen,
+    ACTION_NAMES.clif_match,
+]
+
+all_link_actions = [
+    ACTION_NAMES.cpp_link_executable,
+    ACTION_NAMES.cpp_link_dynamic_library,
+    ACTION_NAMES.cpp_link_nodeps_dynamic_library,
+]
 
 def _impl(ctx):
     toolchain_identifier = "osxcross"
@@ -62,7 +85,7 @@ def _impl(ctx):
         enabled = True,
         flag_sets = [
             flag_set(
-                actions = ALL_COMPILE_ACTIONS,
+                actions = all_compile_actions,
                 flag_groups = [
                     flag_group(
                         flags = [
@@ -89,7 +112,7 @@ def _impl(ctx):
         enabled = True,
         flag_sets = [
             flag_set(
-                actions = ALL_COMPILE_ACTIONS,
+                actions = all_compile_actions,
                 flag_groups = [
                     flag_group(
                         flags = [
@@ -108,12 +131,12 @@ def _impl(ctx):
                 ],
             ),
             flag_set(
-                actions = ALL_COMPILE_ACTIONS,
+                actions = all_compile_actions,
                 flag_groups = [flag_group(flags = ["-g", "-fstandalone-debug"])],
                 with_features = [with_feature_set(features = ["dbg"])],
             ),
             flag_set(
-                actions = ALL_COMPILE_ACTIONS,
+                actions = all_compile_actions,
                 flag_groups = [
                     flag_group(
                         flags = [
@@ -129,7 +152,7 @@ def _impl(ctx):
                 with_features = [with_feature_set(features = ["opt"])],
             ),
             flag_set(
-                actions = ALL_CPP_COMPILE_ACTIONS,
+                actions = all_cpp_compile_actions,
                 flag_groups = [flag_group(flags = ["-std=c++17", "-nostdinc++"])],
             ),
         ],
@@ -140,7 +163,7 @@ def _impl(ctx):
         enabled = True,
         flag_sets = [
             flag_set(
-                actions = ALL_LINK_ACTIONS,
+                actions = all_link_actions,
                 flag_groups = [
                     flag_group(
                         flags = [
@@ -176,7 +199,7 @@ def _impl(ctx):
         enabled = True,
         flag_sets = [
             flag_set(
-                actions = ALL_COMPILE_ACTIONS,
+                actions = all_compile_actions,
                 flag_groups = [
                     flag_group(
                         expand_if_available = "user_compile_flags",
@@ -192,7 +215,7 @@ def _impl(ctx):
         name = "coverage",
         flag_sets = [
             flag_set(
-                actions = ALL_COMPILE_ACTIONS,
+                actions = all_compile_actions,
                 flag_groups = [
                     flag_group(
                         flags = ["-fprofile-instr-generate", "-fcoverage-mapping"],
@@ -200,7 +223,7 @@ def _impl(ctx):
                 ],
             ),
             flag_set(
-                actions = ALL_LINK_ACTIONS,
+                actions = all_link_actions,
                 flag_groups = [flag_group(flags = ["-fprofile-instr-generate"])],
             ),
         ],
