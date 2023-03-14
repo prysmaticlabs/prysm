@@ -220,7 +220,7 @@ func (s *Server) handleStateEvents(
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
 			if err := s.streamPayloadAttributes(stream); err != nil {
-				log.Error("Unable to obtain stream payload attributes: %v", err)
+				log.Errorf("Unable to obtain stream payload attributes: %v", err)
 			}
 			return nil
 		}
