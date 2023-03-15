@@ -111,8 +111,6 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*et
 		}
 	}
 
-	blsToExecMessageInPoolTotal.Set(float64(p.numPending()))
-
 	return result, nil
 }
 
@@ -129,7 +127,8 @@ func (p *Pool) InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange) {
 	p.pending.Append(doublylinkedlist.NewNode(change))
 	p.m[change.Message.ValidatorIndex] = p.pending.Last()
 
-	blsToExecMessageInPoolTotal.Set(float64(p.numPending()))
+	blsToExecMessageInPoolTotal.Inc()
+
 }
 
 // MarkIncluded is used when an object has been included in a beacon block. Every block seen by this
@@ -148,6 +147,8 @@ func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) {
 	if p.numPending() == blsChangesPoolThreshold {
 		p.cycleMap()
 	}
+
+	blsToExecMessageInPoolTotal.Dec()
 }
 
 // ValidatorExists checks if the bls to execution change object exists
