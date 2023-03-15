@@ -110,7 +110,6 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*et
 			return nil, err
 		}
 	}
-
 	return result, nil
 }
 
