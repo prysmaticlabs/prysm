@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -33,6 +34,7 @@ const (
 	getForkForStatePath      = "/eth/v1/beacon/states/{{.Id}}/fork"
 	getWeakSubjectivityPath  = "/eth/v1/beacon/weak_subjectivity"
 	getForkSchedulePath      = "/eth/v1/config/fork_schedule"
+	getConfigSpecPath        = "/eth/v1/config/spec"
 	getStatePath             = "/eth/v2/debug/beacon/states"
 	getNodeVersionPath       = "/eth/v1/node/version"
 	changeBLStoExecutionPath = "/eth/v1/beacon/pool/bls_to_execution_changes"
@@ -250,6 +252,20 @@ func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, er
 		return nil, errors.Wrap(err, fmt.Sprintf("problem unmarshaling %s response", getForkSchedulePath))
 	}
 	return ofs, nil
+}
+
+// GetConfigSpec retrieve the current configs of the network used by the beacon node.
+func (c *Client) GetConfigSpec(ctx context.Context) (*v1.SpecResponse, error) {
+	body, err := c.get(ctx, getConfigSpecPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "error requesting configSpecPath")
+	}
+	fsr := &v1.SpecResponse{}
+	err = json.Unmarshal(body, fsr)
+	if err != nil {
+		return nil, err
+	}
+	return fsr, nil
 }
 
 type NodeVersion struct {
