@@ -398,11 +398,7 @@ func populateValidators(cfg *params.BeaconChainConfig, st state.BeaconState, val
 	if err := st.SetValidators(validators); err != nil {
 		return err
 	}
-	if err := st.SetBalances(balances); err != nil {
-		return err
-	}
-
-	return nil
+	return st.SetBalances(balances)
 }
 
 func TestDownloadFinalizedData(t *testing.T) {

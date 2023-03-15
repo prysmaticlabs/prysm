@@ -17,7 +17,7 @@ import (
 )
 
 var streamDeadline = 1 * time.Minute
-var startingFork = version.Bellatrix
+var startingFork = version.Phase0
 
 // AltairForkTransition ensures that the Altair hard fork has occurred successfully.
 var AltairForkTransition = types.Evaluator{
