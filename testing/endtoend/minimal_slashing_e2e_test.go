@@ -24,7 +24,7 @@ func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 			"--slasher",
 		},
 		ValidatorFlags: []string{},
-		EpochsToRun:    4,
+		EpochsToRun:    6,
 		TestSync:       false,
 		TestFeature:    false,
 		TestDeposits:   false,
