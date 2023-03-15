@@ -2,16 +2,14 @@ package testnet
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ghodss/yaml"
@@ -23,7 +21,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/cmd/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
@@ -295,28 +293,24 @@ func generateGenesis(ctx context.Context) (*ethpb.BeaconState, error) {
 				generateGenesisStateFlags.ExecutionEndpoint)
 		}
 		client := ethclient.NewClient(conn)
-		header, err := client.HeaderByNumber(ctx, nil)
+		header, err := client.HeaderByNumber(ctx, big.NewInt(0))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get header by number")
 		}
-		depositContract, err := deposit.NewDepositContract(
-			common.HexToAddress(params.BeaconConfig().DepositContractAddress), client)
+		t, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get deposit contract address")
+			return nil, errors.Wrap(err, "could not create deposit tree")
 		}
-		depositRoot, err := depositContract.GetDepositRoot(&bind.CallOpts{})
+		depositRoot, err := t.HashTreeRoot()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get deposit root")
-		}
-		depositCount, err := depositContract.GetDepositCount(&bind.CallOpts{})
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get deposit count")
+			return nil, errors.Wrap(err, "could not get hash tree root")
 		}
 		genesisState.Eth1Data = &ethpb.Eth1Data{
 			DepositRoot:  depositRoot[:],
-			DepositCount: binary.LittleEndian.Uint64(depositCount),
+			DepositCount: 0,
 			BlockHash:    header.Hash().Bytes(),
 		}
+		genesisState.Eth1DepositIndex = 0
 	}
 	return genesisState, err
 }
