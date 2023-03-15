@@ -38,6 +38,29 @@ load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
 
 llvm_register_toolchains()
 
+BAZEL_ZIG_CC_VERSION = "v1.0.1"
+
+http_archive(
+    name = "bazel-zig-cc",
+    sha256 = "e9f82bfb74b3df5ca0e67f4d4989e7f1f7ce3386c295fd7fda881ab91f83e509",
+    strip_prefix = "bazel-zig-cc-{}".format(BAZEL_ZIG_CC_VERSION),
+    urls = ["https://git.sr.ht/~motiejus/bazel-zig-cc/archive/{}.tar.gz".format(BAZEL_ZIG_CC_VERSION)],
+)
+
+load("@bazel-zig-cc//toolchain:defs.bzl", zig_toolchains = "toolchains")
+
+zig_toolchains()
+
+# Register zig sdk toolchains with support for Ubuntu 20.04.
+# For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc 
+register_toolchains(
+  "@zig_sdk//toolchain:linux_amd64_gnu.2.31",
+  "@zig_sdk//toolchain:linux_arm64_gnu.2.31",
+  "@zig_sdk//toolchain:darwin_amd64",
+  "@zig_sdk//toolchain:darwin_arm64",
+  "@zig_sdk//toolchain:windows_amd64",
+)
+
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
 configure_prysm_toolchains()
