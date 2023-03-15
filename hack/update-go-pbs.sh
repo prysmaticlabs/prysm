@@ -4,7 +4,7 @@
 # Script to copy pb.go files from bazel build folder to appropriate location.
 # Bazel builds to bazel-bin/... folder, script copies them back to original folder where .proto is.
 
-bazel build //proto/...
+bazel query 'attr(testonly, 0, //proto/...)' | xargs bazel build $@
 
 file_list=()
 while IFS= read -d $'\0' -r file; do
