@@ -53,7 +53,7 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 		}
 		var to []*apimiddleware.SignedBLSToExecutionChangeJson
 		if err := json.Unmarshal(b, &to); err != nil {
-			log.Warnf("provided file: %s, is not a list of signed withdrawal messages", foundFilePath)
+			log.Warnf("provided file: %s, is not a list of signed withdrawal messages. Error:%s", foundFilePath, err.Error())
 			continue
 		}
 		// verify 0x from file and add if needed
