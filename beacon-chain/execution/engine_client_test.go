@@ -20,6 +20,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	mocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -1816,4 +1817,506 @@ func newPayloadV2Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.Execu
 	service := &Service{}
 	service.rpcClient = rpcClient
 	return service
+}
+
+func TestCapella_PayloadBodiesByHash(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableOptionalEngineMethods: true,
+	})
+	defer resetFn()
+	t.Run("empty response works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 0)
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("single element response null works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 1)
+			executionPayloadBodies[0] = nil
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("empty, null, full works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 3)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{},
+				Withdrawals:  []*pb.Withdrawal{},
+			}
+			executionPayloadBodies[1] = nil
+			executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Withdrawals: []*pb.Withdrawal{{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Amount:         1,
+				}},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		require.NoError(t, err)
+		require.Equal(t, 3, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("full works, single item", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 1)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Withdrawals: []*pb.Withdrawal{{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Amount:         1,
+				}},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("full works, multiple items", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 2)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Withdrawals: []*pb.Withdrawal{{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Amount:         1,
+				}},
+			}
+			executionPayloadBodies[1] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Withdrawals: []*pb.Withdrawal{{
+					Index:          2,
+					ValidatorIndex: 1,
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Amount:         1,
+				}},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		require.NoError(t, err)
+		require.Equal(t, 2, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("returning empty, null, empty should work properly", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			// [A, B, C] but no B in the server means
+			// we get [Abody, null, Cbody].
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 3)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{},
+				Withdrawals:  []*pb.Withdrawal{},
+			}
+			executionPayloadBodies[1] = nil
+			executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{},
+				Withdrawals:  []*pb.Withdrawal{},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		require.NoError(t, err)
+		require.Equal(t, 3, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+}
+
+func TestCapella_PayloadBodiesByRange(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableOptionalEngineMethods: true,
+	})
+	defer resetFn()
+	t.Run("empty response works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 0)
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByRange(ctx, uint64(1), uint64(2))
+		require.NoError(t, err)
+		require.Equal(t, 0, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("single element response null works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 1)
+			executionPayloadBodies[0] = nil
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByRange(ctx, uint64(1), uint64(2))
+		require.NoError(t, err)
+		require.Equal(t, 1, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("empty, null, full works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 3)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{},
+				Withdrawals:  []*pb.Withdrawal{},
+			}
+			executionPayloadBodies[1] = nil
+			executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Withdrawals: []*pb.Withdrawal{{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Amount:         1,
+				}},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByRange(ctx, uint64(1), uint64(2))
+		require.NoError(t, err)
+		require.Equal(t, 3, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("full works, single item", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 1)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Withdrawals: []*pb.Withdrawal{{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Amount:         1,
+				}},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByRange(ctx, uint64(1), uint64(2))
+		require.NoError(t, err)
+		require.Equal(t, 1, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("full works, multiple items", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 2)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Withdrawals: []*pb.Withdrawal{{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Amount:         1,
+				}},
+			}
+			executionPayloadBodies[1] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{hexutil.MustDecode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")},
+				Withdrawals: []*pb.Withdrawal{{
+					Index:          2,
+					ValidatorIndex: 1,
+					Address:        hexutil.MustDecode("0xcf8e0d4e9587369b2301d0790347320302cc0943"),
+					Amount:         1,
+				}},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByRange(ctx, uint64(1), uint64(2))
+		require.NoError(t, err)
+		require.Equal(t, 2, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("returning empty, null, empty should work properly", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			// [A, B, C] but no B in the server means
+			// we get [Abody, null, Cbody].
+			executionPayloadBodies := make([]*pb.ExecutionPayloadBodyV1, 3)
+			executionPayloadBodies[0] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{},
+				Withdrawals:  []*pb.Withdrawal{},
+			}
+			executionPayloadBodies[1] = nil
+			executionPayloadBodies[2] = &pb.ExecutionPayloadBodyV1{
+				Transactions: [][]byte{},
+				Withdrawals:  []*pb.Withdrawal{},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  executionPayloadBodies,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.GetPayloadBodiesByRange(ctx, uint64(1), uint64(2))
+		require.NoError(t, err)
+		require.Equal(t, 3, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
 }

@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/pkg/errors"
@@ -48,7 +49,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
@@ -56,9 +56,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		return err
 	}
 
-	// Handle post block operations such as attestations and exits.
-	if err := s.handlePostBlockOperations(blockCopy.Block()); err != nil {
-		return err
+	// Handle post block operations such as pruning exits and bls messages if incoming block is the head
+	if err := s.prunePostBlockOperationPools(ctx, blockCopy, blockRoot); err != nil {
+		log.WithError(err).Error("Could not prune canonical objects from pool ")
 	}
 
 	// Have we been finalizing? Should we start saving hot states to db?
@@ -157,29 +157,40 @@ func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.A
 	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
-func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) error {
+// prunePostBlockOperationPools only runs on new head otherwise should return a nil.
+func (s *Service) prunePostBlockOperationPools(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, root [32]byte) error {
+	headRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return err
+	}
+	// By comparing the current headroot, that has already gone through forkchoice,
+	// we can assume that if equal the current block root is canonical.
+	if !bytes.Equal(headRoot, root[:]) {
+		return nil
+	}
+
 	// Mark block exits as seen so we don't include same ones in future blocks.
-	for _, e := range b.Body().VoluntaryExits() {
+	for _, e := range blk.Block().Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
 	// Mark block BLS changes as seen so we don't include same ones in future blocks.
-	if err := s.handleBlockBLSToExecChanges(b); err != nil {
+	if err := s.markIncludedBlockBLSToExecChanges(blk.Block()); err != nil {
 		return errors.Wrap(err, "could not process BLSToExecutionChanges")
 	}
 
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
-	for _, as := range b.Body().AttesterSlashings() {
+	for _, as := range blk.Block().Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
 	}
 	return nil
 }
 
-func (s *Service) handleBlockBLSToExecChanges(blk interfaces.ReadOnlyBeaconBlock) error {
-	if blk.Version() < version.Capella {
+func (s *Service) markIncludedBlockBLSToExecChanges(headBlock interfaces.ReadOnlyBeaconBlock) error {
+	if headBlock.Version() < version.Capella {
 		return nil
 	}
-	changes, err := blk.Body().BLSToExecutionChanges()
+	changes, err := headBlock.Body().BLSToExecutionChanges()
 	if err != nil {
 		return errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}

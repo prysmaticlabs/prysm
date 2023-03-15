@@ -71,4 +71,8 @@ var (
 		Name: "reconstructed_execution_payload_count",
 		Help: "Count the number of execution payloads that are reconstructed using JSON-RPC from payload headers",
 	})
+	errRequestTooLargeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "execution_payload_bodies_count",
+		Help: "The number of requested payload bodies is too large",
+	})
 )
