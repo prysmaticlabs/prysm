@@ -4,9 +4,9 @@ package eth
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
-	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	v11 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	v11 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 )
 
 // MarshalSSZ ssz marshals the SignedBeaconBlockBellatrix object
