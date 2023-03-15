@@ -6,6 +6,7 @@ package events
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
@@ -18,4 +19,5 @@ type Server struct {
 	StateNotifier     statefeed.Notifier
 	BlockNotifier     blockfeed.Notifier
 	OperationNotifier opfeed.Notifier
+	HeadFetcher       blockchain.HeadFetcher
 }
