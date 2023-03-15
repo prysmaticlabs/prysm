@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	validator_mock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
+	validatormock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
 	testing2 "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -32,9 +32,9 @@ import (
 )
 
 type mocks struct {
-	validatorClient *validator_mock.MockValidatorClient
-	nodeClient      *validator_mock.MockNodeClient
-	slasherClient   *validator_mock.MockSlasherClient
+	validatorClient *validatormock.MockValidatorClient
+	nodeClient      *validatormock.MockNodeClient
+	slasherClient   *validatormock.MockSlasherClient
 	signfunc        func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
@@ -71,9 +71,9 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: validator_mock.NewMockValidatorClient(ctrl),
-		nodeClient:      validator_mock.NewMockNodeClient(ctrl),
-		slasherClient:   validator_mock.NewMockSlasherClient(ctrl),
+		validatorClient: validatormock.NewMockValidatorClient(ctrl),
+		nodeClient:      validatormock.NewMockNodeClient(ctrl),
+		slasherClient:   validatormock.NewMockSlasherClient(ctrl),
 		signfunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
@@ -935,7 +935,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 func TestGetGraffiti_Ok(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: validator_mock.NewMockValidatorClient(ctrl),
+		validatorClient: validatormock.NewMockValidatorClient(ctrl),
 	}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
 	tests := []struct {
@@ -1018,7 +1018,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: validator_mock.NewMockValidatorClient(ctrl),
+		validatorClient: validatormock.NewMockValidatorClient(ctrl),
 	}
 	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).

@@ -12,14 +12,14 @@ import (
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	validator_mock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
+	validatormock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestGetBeaconStatus_NotConnected(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	nodeClient := validator_mock.NewMockNodeClient(ctrl)
+	nodeClient := validatormock.NewMockNodeClient(ctrl)
 	nodeClient.EXPECT().GetSyncStatus(
 		gomock.Any(), // ctx
 		gomock.Any(),
@@ -40,8 +40,8 @@ func TestGetBeaconStatus_NotConnected(t *testing.T) {
 
 func TestGetBeaconStatus_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	nodeClient := validator_mock.NewMockNodeClient(ctrl)
-	beaconChainClient := validator_mock.NewMockBeaconChainClient(ctrl)
+	nodeClient := validatormock.NewMockNodeClient(ctrl)
+	beaconChainClient := validatormock.NewMockBeaconChainClient(ctrl)
 	nodeClient.EXPECT().GetSyncStatus(
 		gomock.Any(), // ctx
 		gomock.Any(),

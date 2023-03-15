@@ -17,7 +17,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	validator_mock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
+	validatormock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
 	mock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
@@ -187,8 +187,8 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	mockValidatorClient := validator_mock.NewMockValidatorClient(ctrl)
-	mockNodeClient := validator_mock.NewMockNodeClient(ctrl)
+	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).

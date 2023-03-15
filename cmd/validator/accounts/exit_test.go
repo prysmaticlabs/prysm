@@ -12,7 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	validator_mock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
+	validatormock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -21,8 +21,8 @@ import (
 func TestExitAccountsCli_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := validator_mock.NewMockValidatorClient(ctrl)
-	mockNodeClient := validator_mock.NewMockNodeClient(ctrl)
+	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
@@ -113,8 +113,8 @@ func TestExitAccountsCli_OK(t *testing.T) {
 func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := validator_mock.NewMockValidatorClient(ctrl)
-	mockNodeClient := validator_mock.NewMockNodeClient(ctrl)
+	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
@@ -220,8 +220,8 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 func TestExitAccountsCli_OK_ForceExit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := validator_mock.NewMockValidatorClient(ctrl)
-	mockNodeClient := validator_mock.NewMockNodeClient(ctrl)
+	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).

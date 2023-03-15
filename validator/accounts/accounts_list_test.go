@@ -20,7 +20,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	validator_mock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
+	validatormock "github.com/prysmaticlabs/prysm/v3/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
@@ -287,7 +287,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	m := validator_mock.NewMockValidatorClient(ctrl)
+	m := validatormock.NewMockValidatorClient(ctrl)
 	var pks [][]byte
 	for i := range pubKeys {
 		pks = append(pks, pubKeys[i][:])
