@@ -4,6 +4,8 @@ import (
 	"math"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -17,6 +19,13 @@ import (
 // bound. The cycling operation is expensive because it copies all elements, so
 // we only do it when the map is smaller than this upper bound.
 const blsChangesPoolThreshold = 2000
+
+var (
+	blsToExecMessageInPoolTotal = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "bls_to_exec_message_pool_total",
+		Help: "The number of saved bls to exec message in the operation cool.",
+	})
+)
 
 // PoolManager maintains pending and seen BLS-to-execution-change objects.
 // This pool is used by proposers to insert BLS-to-execution-change objects into new blocks.
@@ -101,6 +110,9 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*et
 			return nil, err
 		}
 	}
+
+	blsToExecMessageInPoolTotal.Set(float64(p.numPending()))
+
 	return result, nil
 }
 
@@ -116,6 +128,8 @@ func (p *Pool) InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange) {
 
 	p.pending.Append(doublylinkedlist.NewNode(change))
 	p.m[change.Message.ValidatorIndex] = p.pending.Last()
+
+	blsToExecMessageInPoolTotal.Set(float64(p.numPending()))
 }
 
 // MarkIncluded is used when an object has been included in a beacon block. Every block seen by this
