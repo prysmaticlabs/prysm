@@ -38,11 +38,11 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, headState state.BeaconState) error {
+func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, headState state.BeaconState) ([]*enginev1.Blob, error) {
 	idx := blk.Block().ProposerIndex()
 	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return nil
+		return nil, nil
 	}
 
 	canUseBuilder, err := vs.canUseBuilder(ctx, slot, idx)
@@ -58,12 +58,12 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 			case blk.Version() >= version.Capella:
 				localPayload, _, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 				if err != nil {
-					return errors.Wrap(err, "failed to get execution payload")
+					return nil, errors.Wrap(err, "failed to get execution payload")
 				}
 				// Compare payload values between local and builder. Default to the local value if it is higher.
 				localValue, err := localPayload.Value()
 				if err != nil {
-					return errors.Wrap(err, "failed to get local payload value")
+					return nil, errors.Wrap(err, "failed to get local payload value")
 				}
 				builderValue, err := builderPayload.Value()
 				if err != nil {
@@ -72,7 +72,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
-					return errors.Wrap(err, "failed to match withdrawals root")
+					return nil, errors.Wrap(err, "failed to match withdrawals root")
 				}
 				// If we can't get the builder value, just use local block.
 				if builderValue.Cmp(localValue) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
@@ -80,37 +80,38 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
 					} else {
-						return nil
+						return nil, nil
 					}
 				}
 				log.WithFields(logrus.Fields{
 					"localValue":   localValue,
 					"builderValue": builderValue,
 				}).Warn("Proposer: using local execution payload because higher value")
-				return blk.SetExecution(localPayload)
+				return nil, blk.SetExecution(localPayload)
 			default: // Bellatrix case.
 				blk.SetBlinded(true)
 				if err := blk.SetExecution(builderPayload); err != nil {
 					log.WithError(err).Warn("Proposer: failed to set builder payload")
 				} else {
-					return nil
+					return nil, nil
 				}
 			}
 		}
-
 	}
 
 	executionData, blobsBundle, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 	if err != nil {
-		return errors.Wrap(err, "failed to get execution payload")
+		return nil, errors.Wrap(err, "failed to get execution payload")
 	}
-	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch && len(blobsBundle.KzgCommitments) > 0 {
+		// TODO: check block hash matches blob bundle hash
 		if err := blk.SetBlobKzgCommitments(blobsBundle.KzgCommitments); err != nil {
-			return errors.Wrap(err, "could not set blob kzg commitments")
+			return nil, errors.Wrap(err, "could not set blob kzg commitments")
 		}
-		vs.BlobsCache.Put(slot, blobsBundle.Blobs)
+		return blobsBundle.Blobs, nil
 	}
-	return blk.SetExecution(executionData)
+
+	return nil, blk.SetExecution(executionData)
 }
 
 // This function retrieves the payload header given the slot number and the validator index.
@@ -205,7 +206,6 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-
 	// No-op if the input block is not version blind and bellatrix.
 	if b.Version() != version.Bellatrix || !b.IsBlinded() {
 		return b, nil
