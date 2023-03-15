@@ -52,13 +52,13 @@ load("@bazel-zig-cc//toolchain:defs.bzl", zig_toolchains = "toolchains")
 zig_toolchains()
 
 # Register zig sdk toolchains with support for Ubuntu 20.04.
-# For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc 
+# For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc
 register_toolchains(
-  "@zig_sdk//toolchain:linux_amd64_gnu.2.31",
-  "@zig_sdk//toolchain:linux_arm64_gnu.2.31",
-  "@zig_sdk//toolchain:darwin_amd64",
-  "@zig_sdk//toolchain:darwin_arm64",
-  "@zig_sdk//toolchain:windows_amd64",
+    "@zig_sdk//toolchain:linux_amd64_gnu.2.31",
+    "@zig_sdk//toolchain:linux_arm64_gnu.2.31",
+    "@zig_sdk//toolchain:darwin_amd64",
+    "@zig_sdk//toolchain:darwin_arm64",
+    "@zig_sdk//toolchain:windows_amd64",
 )
 
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
