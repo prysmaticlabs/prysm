@@ -55,9 +55,6 @@ var Commands = []*cli.Command{
 					VerifyOnlyFlag,
 					cmd.ConfigFileFlag,
 					cmd.AcceptTosFlag,
-					features.Mainnet,
-					features.PraterTestnet,
-					features.SepoliaTestnet,
 				},
 				Before: func(cliCtx *cli.Context) error {
 					if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
@@ -78,7 +75,6 @@ var Commands = []*cli.Command{
 					} else {
 						return nil
 					}
-
 				},
 				Action: func(cliCtx *cli.Context) error {
 					if cliCtx.Bool(VerifyOnlyFlag.Name) {
