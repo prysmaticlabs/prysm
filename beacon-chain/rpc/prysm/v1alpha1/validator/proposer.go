@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/crate-crypto/go-proto-danksharding-crypto/eth"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -156,7 +155,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 
 		// TODO: Better error handling. If something is wrong with the blob, we don't want to fail block production. Also should check if the kzg commitment matches.
-		eth.CryptoCtx.VerifyBlobKZGProofBatch()
 		validatorBlobs := make([]*ethpb.BlobSidecar, len(blk.Body.BlobKzgCommitments))
 		var gethBlobs types.Blobs
 		for _, b := range blobs {
