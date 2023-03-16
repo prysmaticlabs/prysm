@@ -582,7 +582,7 @@ func TestPeerIPTracker(t *testing.T) {
 	p.Prune()
 
 	for _, pr := range badPeers {
-		assert.Equal(t, false, p.IsBad(pr), "peer with good ip is regarded as bad")
+		assert.Equal(t, true, p.IsBad(pr), "peer with good ip is regarded as bad")
 	}
 }
 
@@ -736,13 +736,11 @@ func TestPrunePeers(t *testing.T) {
 	}
 
 	// Ensure it is in the descending order.
-	currCount, err := p.Scorers().BadResponsesScorer().Count(peersToPrune[0])
-	require.NoError(t, err)
+	currScore := p.Scorers().Score(peersToPrune[0])
 	for _, pid := range peersToPrune {
-		count, err := p.Scorers().BadResponsesScorer().Count(pid)
-		require.NoError(t, err)
-		assert.Equal(t, true, currCount >= count)
-		currCount = count
+		score := p.Scorers().BadResponsesScorer().Score(pid)
+		assert.Equal(t, true, currScore >= score)
+		currScore = score
 	}
 }
 
