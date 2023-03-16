@@ -41,10 +41,6 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
-	disablePeerScorer = &cli.BoolFlag{
-		Name:  "disable-peer-scorer",
-		Usage: "Disables experimental P2P peer scorer",
-	}
 	enableReorgLateBlocks = &cli.BoolFlag{
 		Name:  "enable-reorg-late-blocks",
 		Usage: "Enables reorgs of late blocks",
@@ -135,6 +131,10 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block",
 	}
+	EnableOptionalEngineMethods = &cli.BoolFlag{
+		Name:  "enable-optional-engine-methods",
+		Usage: "Enables the optional engine methods",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -167,7 +167,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
-	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
@@ -182,6 +181,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableDefensivePull,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
+	EnableOptionalEngineMethods,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

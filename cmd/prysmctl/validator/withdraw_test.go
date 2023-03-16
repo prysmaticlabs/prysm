@@ -41,10 +41,17 @@ func getHappyPathTestServer(file string, t *testing.T) *httptest.Server {
 					Data: &apimiddleware.ForkJson{
 						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
-						Epoch:           fmt.Sprintf("%d", params.BeaconConfig().CapellaForkEpoch),
+						Epoch:           "1350",
 					},
 					ExecutionOptimistic: false,
 					Finalized:           true,
+				})
+				require.NoError(t, err)
+			} else if r.RequestURI == "/eth/v1/config/spec" {
+				m := make(map[string]string)
+				m["CAPELLA_FORK_EPOCH"] = "1350"
+				err := json.NewEncoder(w).Encode(&apimiddleware.SpecResponseJson{
+					Data: m,
 				})
 				require.NoError(t, err)
 			}
@@ -231,6 +238,15 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 					Finalized:           true,
 				})
 				require.NoError(t, err)
+			} else if r.RequestURI == "/eth/v1/config/spec" {
+				w.WriteHeader(200)
+				w.Header().Set("Content-Type", "application/json")
+				m := make(map[string]string)
+				m["CAPELLA_FORK_EPOCH"] = "1350"
+				err := json.NewEncoder(w).Encode(&apimiddleware.SpecResponseJson{
+					Data: m,
+				})
+				require.NoError(t, err)
 			} else {
 				w.WriteHeader(400)
 				w.Header().Set("Content-Type", "application/json")
@@ -268,16 +284,26 @@ func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
 	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Header().Set("Content-Type", "application/json")
-		err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
-			Data: &apimiddleware.ForkJson{
-				PreviousVersion: hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
-				CurrentVersion:  hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
-				Epoch:           fmt.Sprintf("%d", params.BeaconConfig().BellatrixForkEpoch),
-			},
-			ExecutionOptimistic: false,
-			Finalized:           true,
-		})
-		require.NoError(t, err)
+		if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
+
+			err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
+				Data: &apimiddleware.ForkJson{
+					PreviousVersion: hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
+					CurrentVersion:  hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
+					Epoch:           "1000",
+				},
+				ExecutionOptimistic: false,
+				Finalized:           true,
+			})
+			require.NoError(t, err)
+		} else if r.RequestURI == "/eth/v1/config/spec" {
+			m := make(map[string]string)
+			m["CAPELLA_FORK_EPOCH"] = "1350"
+			err := json.NewEncoder(w).Encode(&apimiddleware.SpecResponseJson{
+				Data: m,
+			})
+			require.NoError(t, err)
+		}
 	}))
 	err = srv.Listener.Close()
 	require.NoError(t, err)

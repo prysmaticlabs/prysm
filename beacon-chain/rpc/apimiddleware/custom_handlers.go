@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/r3labs/sse"
 )
 
@@ -364,6 +366,10 @@ func handleEvents(m *apimiddleware.ApiProxyMiddleware, _ apimiddleware.Endpoint,
 	return true
 }
 
+type dataSubset struct {
+	Version string `json:"version"`
+}
+
 func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http.Request) apimiddleware.ErrorJson {
 	for {
 		select {
@@ -418,6 +424,19 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				data = &SignedContributionAndProofJson{}
 			case events.BLSToExecutionChangeTopic:
 				data = &SignedBLSToExecutionChangeJson{}
+			case events.PayloadAttributesTopic:
+				dataSubset := &dataSubset{}
+				if err := json.Unmarshal(msg.Data, dataSubset); err != nil {
+					return apimiddleware.InternalServerError(err)
+				}
+				switch dataSubset.Version {
+				case version.String(version.Capella):
+					data = &EventPayloadAttributeStreamV2Json{}
+				case version.String(version.Bellatrix):
+					data = &EventPayloadAttributeStreamV1Json{}
+				default:
+					return apimiddleware.InternalServerError(errors.New("payload version unsupported"))
+				}
 			case "error":
 				data = &EventErrorJson{}
 			default:

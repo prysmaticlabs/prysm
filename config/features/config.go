@@ -43,7 +43,6 @@ type Flags struct {
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
-	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
@@ -74,6 +73,7 @@ type Flags struct {
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
+	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -175,11 +175,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
 	}
-	cfg.EnablePeerScorer = true
-	if ctx.Bool(disablePeerScorer.Name) {
-		logDisabled(disablePeerScorer)
-		cfg.EnablePeerScorer = false
-	}
+
 	cfg.DisableReorgLateBlocks = true
 	if ctx.Bool(enableReorgLateBlocks.Name) {
 		logEnabled(enableReorgLateBlocks)
@@ -254,6 +250,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(enableVerboseSigVerification.Name) {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
+	}
+	if ctx.IsSet(EnableOptionalEngineMethods.Name) {
+		logEnabled(EnableOptionalEngineMethods)
+		cfg.EnableOptionalEngineMethods = true
 	}
 	Init(cfg)
 	return nil
