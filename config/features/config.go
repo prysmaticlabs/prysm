@@ -62,8 +62,6 @@ type Flags struct {
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 
-	DisablePullTips                   bool // DisablePullTips disables experimental disabling of boundary checks.
-	EnableDefensivePull               bool // EnableDefensivePull enables exerimental back boundary checks.
 	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
@@ -192,15 +190,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
-	}
-	if ctx.Bool(disablePullTips.Name) {
-		logEnabled(disablePullTips)
-		cfg.DisablePullTips = true
-	}
-	cfg.EnableDefensivePull = true
-	if ctx.Bool(disableDefensivePull.Name) {
-		logEnabled(disableDefensivePull)
-		cfg.EnableDefensivePull = false
 	}
 	if ctx.Bool(disableStakinContractCheck.Name) {
 		logEnabled(disableStakinContractCheck)

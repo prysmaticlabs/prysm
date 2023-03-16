@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -27,7 +26,6 @@ import (
 func New() *ForkChoice {
 	s := &Store{
 		justifiedCheckpoint:           &forkchoicetypes.Checkpoint{},
-		bestJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
 		unrealizedJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
 		unrealizedFinalizedCheckpoint: &forkchoicetypes.Checkpoint{},
 		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
@@ -142,60 +140,18 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	if !features.Get().DisablePullTips {
-		jc, fc = f.store.pullTips(state, node, jc, fc)
-	}
+	jc, fc = f.store.pullTips(state, node, jc, fc)
 	return f.updateCheckpoints(ctx, jc, fc)
 }
 
 // updateCheckpoints update the checkpoints when inserting a new node.
 func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkpoint) error {
 	if jc.Epoch > f.store.justifiedCheckpoint.Epoch {
-		if jc.Epoch > f.store.bestJustifiedCheckpoint.Epoch {
-			f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
-				Root: bytesutil.ToBytes32(jc.Root)}
-		}
-		if !features.Get().EnableDefensivePull {
-			currentSlot := slots.CurrentSlot(f.store.genesisTime)
-			if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
-				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
-				root := bytesutil.ToBytes32(jc.Root)
-				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
-					Root: root}
-				if err := f.updateJustifiedBalances(ctx, root); err != nil {
-					return errors.Wrap(err, "could not update justified balances")
-				}
-			} else {
-				currentJcp := f.store.justifiedCheckpoint
-				currentRoot := currentJcp.Root
-				if currentRoot == params.BeaconConfig().ZeroHash {
-					currentRoot = f.store.originRoot
-				}
-				jSlot, err := slots.EpochStart(currentJcp.Epoch)
-				if err != nil {
-					return err
-				}
-				jcRoot := bytesutil.ToBytes32(jc.Root)
-				root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
-				if err != nil {
-					return err
-				}
-				if root == currentRoot {
-					f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
-					f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
-						Root: jcRoot}
-					if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
-						return errors.Wrap(err, "could not update justified balances")
-					}
-				}
-			}
-		} else {
-			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
-			jcRoot := bytesutil.ToBytes32(jc.Root)
-			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jcRoot}
-			if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
-				return errors.Wrap(err, "could not update justified balances")
-			}
+		f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
+		jcRoot := bytesutil.ToBytes32(jc.Root)
+		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jcRoot}
+		if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
+			return errors.Wrap(err, "could not update justified balances")
 		}
 	}
 	// Update finalization
@@ -204,14 +160,6 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 	}
 	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
 		Root: bytesutil.ToBytes32(fc.Root)}
-	if !features.Get().EnableDefensivePull {
-		root := bytesutil.ToBytes32(jc.Root)
-		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
-			Root: root}
-		if err := f.updateJustifiedBalances(ctx, root); err != nil {
-			return errors.Wrap(err, "could not update justified balances")
-		}
-	}
 	return f.store.prune(ctx)
 }
 
@@ -370,11 +318,6 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 	return node.setNodeAndParentValidated(ctx)
 }
 
-// BestJustifiedCheckpoint of fork choice store.
-func (f *ForkChoice) BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
-	return f.store.bestJustifiedCheckpoint
-}
-
 // PreviousJustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	return f.store.prevJustifiedCheckpoint
@@ -434,7 +377,6 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(ctx context.Context, jc *forkchoi
 	}
 	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = jc
-	f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jc.Root}
 	if err := f.updateJustifiedBalances(ctx, jc.Root); err != nil {
 		return errors.Wrap(err, "could not update justified balances")
 	}
@@ -572,10 +514,6 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 		Epoch: f.store.justifiedCheckpoint.Epoch,
 		Root:  f.store.justifiedCheckpoint.Root[:],
 	}
-	bjc := &v1.Checkpoint{
-		Epoch: f.store.bestJustifiedCheckpoint.Epoch,
-		Root:  f.store.bestJustifiedCheckpoint.Root[:],
-	}
 	ujc := &v1.Checkpoint{
 		Epoch: f.store.unrealizedJustifiedCheckpoint.Epoch,
 		Root:  f.store.unrealizedJustifiedCheckpoint.Root[:],
@@ -602,7 +540,6 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 	}
 	resp := &v1.ForkChoiceDump{
 		JustifiedCheckpoint:           jc,
-		BestJustifiedCheckpoint:       bjc,
 		UnrealizedJustifiedCheckpoint: ujc,
 		FinalizedCheckpoint:           fc,
 		UnrealizedFinalizedCheckpoint: ufc,
