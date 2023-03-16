@@ -97,6 +97,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
+		Name:   "disable-forkchoice-doubly-linked-tree",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -117,6 +122,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableNativeState,
 	deprecatedRopstenTestnet,
 	deprecatedInteropGenesisState,
+	deprecatedDisableForkChoiceDoublyLinkedTree,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components

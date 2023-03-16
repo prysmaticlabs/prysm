@@ -63,13 +63,12 @@ type Flags struct {
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 
-	DisablePullTips                   bool // DisablePullTips disables experimental disabling of boundary checks.
-	EnableDefensivePull               bool // EnableDefensivePull enables exerimental back boundary checks.
-	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
-	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
-	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
-	SaveFullExecutionPayloads         bool // Save full beacon blocks with execution payloads in the database.
-	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
+	DisablePullTips              bool // DisablePullTips disables experimental disabling of boundary checks.
+	EnableDefensivePull          bool // EnableDefensivePull enables exerimental back boundary checks.
+	EnableVectorizedHTR          bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
+	EnableBatchGossipAggregation bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
+	SaveFullExecutionPayloads    bool // Save full beacon blocks with execution payloads in the database.
+	EnableStartOptimistic        bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
@@ -230,10 +229,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 				cfg.EnableVectorizedHTR = true
 			}
 		}
-	}
-	if ctx.Bool(disableForkChoiceDoublyLinkedTree.Name) {
-		logEnabled(disableForkChoiceDoublyLinkedTree)
-		cfg.DisableForkchoiceDoublyLinkedTree = true
 	}
 	cfg.EnableBatchGossipAggregation = true
 	if ctx.Bool(disableGossipBatchAggregation.Name) {
