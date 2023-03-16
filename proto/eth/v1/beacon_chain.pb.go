@@ -9,8 +9,8 @@ package v1
 import (
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	_ "github.com/prysmaticlabs/prysm/v4/proto/eth/ext"
 	github_com_prysmaticlabs_prysm_v4_consensus_types_primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	_ "github.com/prysmaticlabs/prysm/v4/proto/eth/ext"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
