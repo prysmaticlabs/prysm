@@ -111,7 +111,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ShardCommitteePeriod:             256,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
-	SafeSlotsToUpdateJustified:       8,
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost:              40,
