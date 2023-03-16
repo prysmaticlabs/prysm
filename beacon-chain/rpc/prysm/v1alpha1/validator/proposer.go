@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
@@ -152,11 +153,21 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 		}
-		kzgs, err := sBlk.Block().Body().BlobKzgCommitments()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get kzg commitments: %v", err)
-		}
+
+		// TODO: Better error handling. If something is wrong with the blob, we don't want to fail block production. Also should check if the kzg commitment matches.
 		validatorBlobs := make([]*ethpb.BlobSidecar, len(blk.Body.BlobKzgCommitments))
+		var gethBlobs types.Blobs
+		for _, b := range blobs {
+			var gethBlob types.Blob
+			for i, d := range b.Data {
+				gethBlob[i] = d
+			}
+			gethBlobs = append(gethBlobs, gethBlob)
+		}
+		commitments, _, proofs, err := gethBlobs.ComputeCommitmentsAndProofs()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not compute commitments and proofs: %v", err)
+		}
 		for i, b := range blobs {
 			validatorBlobs[i] = &ethpb.BlobSidecar{
 				BlockRoot:       br[:],
@@ -165,8 +176,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 				BlockParentRoot: blk.ParentRoot,
 				ProposerIndex:   blk.ProposerIndex,
 				Blob:            b,
-				KzgCommitment:   kzgs[i],
-				KzgProof:        []byte{}, // TODO(TT): add proof
+				KzgCommitment:   commitments[i][:],
+				KzgProof:        proofs[i][:],
 			}
 		}
 		blkAndBlobs := &ethpb.BeaconBlockDenebAndBlobs{
