@@ -307,6 +307,7 @@ message WeakSubjectivityData {
 }
 
 message ForkChoiceDump {
+    reserved 3;
     // Latest justified checkpoint in forkchoice store.
     Checkpoint justified_checkpoint = 1;
     // Latest finalized checkpoint in forkchoice store.
