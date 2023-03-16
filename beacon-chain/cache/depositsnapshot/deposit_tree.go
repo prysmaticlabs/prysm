@@ -7,9 +7,9 @@ import (
 	"crypto/sha256"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/math"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 )
 
 var (
