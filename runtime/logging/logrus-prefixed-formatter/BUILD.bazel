@@ -19,6 +19,7 @@ go_test(
         "logrus_prefixed_formatter_suite_test.go",
     ],
     deps = [
+        ":go_default_library",
         "//testing/require:go_default_library",
         "@com_github_onsi_ginkgo//:go_default_library",
         "@com_github_onsi_gomega//:go_default_library",
