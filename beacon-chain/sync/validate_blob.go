@@ -72,7 +72,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	// [IGNORE] The blob's block's parent (defined by sidecar.block_parent_root) has been seen (via both gossip and non-gossip sources)
 	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
 	if !s.cfg.chain.HasBlock(ctx, parentRoot) {
-		if err := s.blockAndBlobs.addBlob(sBlob); err != nil {
+		if err := s.blockAndBlobs.addBlob(sBlob.Message); err != nil {
 			log.WithError(err).WithFields(blobFields(blob)).Error("Failed to add blob to queue")
 			return pubsub.ValidationIgnore, err
 		}
