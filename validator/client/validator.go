@@ -1011,9 +1011,9 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}
 	if len(proposerReqs) != len(pubkeys) {
 		log.WithFields(logrus.Fields{
-			"pubkeysCount": len(pubkeys),
-			"reqCount":     len(proposerReqs),
-		}).Debugln("Prepare proposer request did not success with all pubkeys")
+			"pubkeysCount":             len(pubkeys),
+			"proposerSettingsreqCount": len(proposerReqs),
+		}).Debugln("Request count did not match included validator count. Only keys that have been activated will be included in the request.")
 	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: proposerReqs,
@@ -1054,7 +1054,7 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 				return nil, err
 			}
 
-			if !ok { // Nothing we can do if RPC server doesn't have validator index.
+			if !ok { // Nothing we can do if RPC server doesn't have the validator index.
 				continue
 			}
 

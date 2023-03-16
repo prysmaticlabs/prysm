@@ -1,0 +1,3 @@
+package validator
+
+func getProposerSettings(
