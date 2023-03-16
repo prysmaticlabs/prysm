@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/time"
@@ -460,16 +459,6 @@ func TestScorers_BlockProvider_FormatScorePretty(t *testing.T) {
 			tt.check(scorer)
 		})
 	}
-
-	t.Run("peer scorer disabled", func(t *testing.T) {
-		resetCfg := features.InitWithReset(&features.Flags{
-			EnablePeerScorer: false,
-		})
-		defer resetCfg()
-		peerStatuses := peerStatusGen()
-		scorer := peerStatuses.Scorers().BlockProviderScorer()
-		assert.Equal(t, "disabled", scorer.FormatScorePretty("peer1"))
-	})
 }
 
 func TestScorers_BlockProvider_BadPeerMarking(t *testing.T) {

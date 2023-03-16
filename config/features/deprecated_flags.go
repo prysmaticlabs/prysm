@@ -12,11 +12,17 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisablePeerScorer = &cli.BoolFlag{
+		Name:   "disable-peer-scorer",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
+	deprecatedDisablePeerScorer,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
