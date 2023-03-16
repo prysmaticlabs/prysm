@@ -38,7 +38,7 @@ for ((i = 0; i < ${#proto_mocks_service[@]}; i++)); do
     GO11MODULE=on mockgen -package=mock -destination="$file" github.com/prysmaticlabs/prysm/v4/proto/eth/service "$interfaces"
 done
 
-# github.com/prysmaticlabs/prysm/proto/v3/prysm/v1alpha1/validator-client
+# github.com/prysmaticlabs/prysm/proto/v4/prysm/v1alpha1/validator-client
 # -----------------------------------------------------------------------
 proto_mocks_v1alpha1_validator_clients=(
     "$mock_path/keymanager_mock.go RemoteSignerClient"
