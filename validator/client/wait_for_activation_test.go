@@ -345,6 +345,12 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		require.NoError(t, err)
 		validatorClient := validatormock.NewMockValidatorClient(ctrl)
 		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+		v := validator{
+			validatorClient: validatorClient,
+			keyManager:      km,
+			genesisTime:     1,
+			beaconClient:    beaconClient,
+		}
 
 		inactiveResp := generateMockStatusResponse([][]byte{inactivePubKey[:]})
 		inactiveResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
@@ -385,6 +391,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			channel <- [][fieldparams.BLSPubkeyLength]byte{}
 		}()
 
+		assert.NoError(t, v.internalWaitForActivation(context.Background(), channel))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})
