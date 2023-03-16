@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -51,19 +50,8 @@ func (f *ForkChoice) updateUnrealizedCheckpoints(ctx context.Context) error {
 			if err := f.updateJustifiedBalances(ctx, f.store.justifiedCheckpoint.Root); err != nil {
 				return errors.Wrap(err, "could not update justified balances")
 			}
-			if !features.Get().EnableDefensivePull && node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
-				f.store.bestJustifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
-			}
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
-			if !features.Get().EnableDefensivePull {
-				if f.store.unrealizedJustifiedCheckpoint.Epoch != f.store.justifiedCheckpoint.Epoch {
-					if err := f.updateJustifiedBalances(ctx, f.store.unrealizedJustifiedCheckpoint.Root); err != nil {
-						return errors.Wrap(err, "could not update justified balances")
-					}
-					f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
-				}
-			}
 			f.store.finalizedCheckpoint = f.store.unrealizedFinalizedCheckpoint
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -42,35 +41,8 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot primitives.Slot) error {
 	}
 
 	// Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
-	bjcp := f.store.bestJustifiedCheckpoint
-	jcp := f.store.justifiedCheckpoint
-	fcp := f.store.finalizedCheckpoint
-	if bjcp.Epoch > jcp.Epoch {
-		finalizedSlot, err := slots.EpochStart(fcp.Epoch)
-		if err != nil {
-			return err
-		}
-
-		// We check that the best justified checkpoint is a descendant of the finalized checkpoint.
-		// This should always happen as forkchoice enforces that every node is a descendant of the
-		// finalized checkpoint. This check is here for additional security, consider removing the extra
-		// loop call here.
-		r, err := f.AncestorRoot(ctx, bjcp.Root, finalizedSlot)
-		if err != nil {
-			return err
-		}
-		if r == fcp.Root {
-			f.store.prevJustifiedCheckpoint = jcp
-			f.store.justifiedCheckpoint = bjcp
-			if err := f.updateJustifiedBalances(ctx, bjcp.Root); err != nil {
-				log.Error("could not update justified balances")
-			}
-		}
-	}
-	if !features.Get().DisablePullTips {
-		if err := f.updateUnrealizedCheckpoints(ctx); err != nil {
-			return errors.Wrap(err, "could not update unrealized checkpoints")
-		}
+	if err := f.updateUnrealizedCheckpoints(ctx); err != nil {
+		return errors.Wrap(err, "could not update unrealized checkpoints")
 	}
 	return f.store.prune(ctx)
 }
