@@ -166,7 +166,7 @@ func TestGetSpec(t *testing.T) {
 		case "HYSTERESIS_UPWARD_MULTIPLIER":
 			assert.Equal(t, "11", v)
 		case "SAFE_SLOTS_TO_UPDATE_JUSTIFIED":
-			assert.Equal(t, "12", v)
+			assert.Equal(t, "0", v)
 		case "ETH1_FOLLOW_DISTANCE":
 			assert.Equal(t, "13", v)
 		case "TARGET_AGGREGATORS_PER_COMMITTEE":
