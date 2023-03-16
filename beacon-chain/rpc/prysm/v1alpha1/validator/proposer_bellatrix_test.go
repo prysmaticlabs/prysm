@@ -71,7 +71,8 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("No builder configured. Use local block", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		_, err = vs.setExecutionData(context.Background(), blk, capellaTransitionState)
+		require.NoError(t, err)
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
@@ -122,7 +123,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		_, err = vs.setExecutionData(context.Background(), blk, capellaTransitionState)
+		require.NoError(t, err)
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
@@ -175,7 +177,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		_, err = vs.setExecutionData(context.Background(), blk, capellaTransitionState)
+		require.NoError(t, err)
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
@@ -184,7 +187,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(3)}
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		_, err = vs.setExecutionData(context.Background(), blk, capellaTransitionState)
+		require.NoError(t, err)
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -196,7 +200,8 @@ func TestServer_setExecutionData(t *testing.T) {
 			ErrGetHeader: errors.New("fault"),
 		}
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: big.NewInt(0)}
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		_, err = vs.setExecutionData(context.Background(), blk, capellaTransitionState)
+		require.NoError(t, err)
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), e.BlockNumber()) // Local block

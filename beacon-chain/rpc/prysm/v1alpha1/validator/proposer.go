@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
@@ -124,7 +125,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	vs.setSyncAggregate(ctx, sBlk)
 
 	// Set execution data. New in Bellatrix.
-	if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
+	blobs, err := vs.setExecutionData(ctx, sBlk, head)
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
@@ -147,19 +149,25 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		if !ok {
 			return nil, status.Errorf(codes.Internal, "Could not cast block to BeaconBlockDeneb")
 		}
-		blobs, err := vs.BlobsCache.Get(blk.Slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get sidecars: %v", err)
-		}
 		br, err := blk.HashTreeRoot()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 		}
-		kzgs, err := sBlk.Block().Body().BlobKzgCommitments()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get kzg commitments: %v", err)
-		}
+
+		// TODO: Better error handling. If something is wrong with the blob, we don't want to fail block production. Also should check if the kzg commitment matches.
 		validatorBlobs := make([]*ethpb.BlobSidecar, len(blk.Body.BlobKzgCommitments))
+		var gethBlobs types.Blobs
+		for _, b := range blobs {
+			var gethBlob types.Blob
+			for i, d := range b.Data {
+				gethBlob[i] = d
+			}
+			gethBlobs = append(gethBlobs, gethBlob)
+		}
+		commitments, _, proofs, err := gethBlobs.ComputeCommitmentsAndProofs()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not compute commitments and proofs: %v", err)
+		}
 		for i, b := range blobs {
 			validatorBlobs[i] = &ethpb.BlobSidecar{
 				BlockRoot:       br[:],
@@ -168,8 +176,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 				BlockParentRoot: blk.ParentRoot,
 				ProposerIndex:   blk.ProposerIndex,
 				Blob:            b,
-				KzgCommitment:   kzgs[i],
-				KzgProof:        []byte{}, // TODO(TT): add proof
+				KzgCommitment:   commitments[i][:],
+				KzgProof:        proofs[i][:],
 			}
 		}
 		blkAndBlobs := &ethpb.BeaconBlockDenebAndBlobs{
@@ -310,6 +318,34 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, req *ethpb.Gene
 		}
 	}
 
+	// Broadcast the new block to the network.
+	blkPb, err := blk.Proto()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get protobuf block")
+	}
+	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
+		return nil, fmt.Errorf("could not broadcast block: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"blockRoot": hex.EncodeToString(root[:]),
+	}).Debug("Broadcasting block")
+
+	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
+		return nil, fmt.Errorf("could not process beacon block: %v", err)
+	}
+
+	if blk.Version() >= version.Deneb {
+		b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
+		if !ok {
+			return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
+		}
+		for _, sidecar := range b.Deneb.Blobs {
+			if err := vs.P2P.BroadcastBlob(ctx, sidecar.Message.Index, sidecar); err != nil {
+				return nil, errors.Wrap(err, "could not broadcast blob sidecar")
+			}
+		}
+	}
+
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
 		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
@@ -320,48 +356,9 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, req *ethpb.Gene
 		})
 	}()
 
-	if blk.Version() == version.Deneb {
-		b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
-		if !ok {
-			return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
-		}
-		if err := vs.proposeBlockAndBlobs(ctx, root, blk, b.Deneb.Blobs); err != nil {
-			return nil, errors.Wrap(err, "could not propose block and blob")
-		}
-	} else {
-		// Broadcast the new block to the network.
-		blkPb, err := blk.Proto()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get protobuf block")
-		}
-		if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
-			return nil, fmt.Errorf("could not broadcast block: %v", err)
-		}
-		log.WithFields(logrus.Fields{
-			"blockRoot": hex.EncodeToString(root[:]),
-		}).Debug("Broadcasting block")
-
-		if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
-			return nil, fmt.Errorf("could not process beacon block: %v", err)
-		}
-
-	}
-
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
-}
-
-func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.ReadOnlySignedBeaconBlock, blobSidecars []*ethpb.SignedBlobSidecar) error {
-	for _, sidecar := range blobSidecars {
-		if err := vs.P2P.BroadcastBlob(ctx, sidecar.Message.Index, sidecar); err != nil {
-			return errors.Wrap(err, "could not broadcast blob sidecar")
-		}
-	}
-	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
-		return fmt.Errorf("could not process beacon block: %v", err)
-	}
-	return nil
 }
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and

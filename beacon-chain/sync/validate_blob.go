@@ -44,6 +44,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	// [REJECT] The sidecar is for the correct topic -- i.e. sidecar.index matches the topic {index}.
 	want := fmt.Sprintf("blob_sidecar_%d", blob.Index)
 	if !strings.Contains(*msg.Topic, want) {
+		log.WithFields(blobFields(blob)).Error("Sidecar blob does not match topic")
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
@@ -51,7 +52,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	// i.e. validate that sidecar.slot <= current_slot (a client MAY queue future blocks for processing at the appropriate slot).
 	genesisTime := uint64(s.cfg.chain.GenesisTime().Unix())
 	if err := slots.VerifyTime(genesisTime, blob.Slot, earlyBlockProcessingTolerance); err != nil {
-		log.WithError(err).WithFields(blobFields(blob)).Debug("Ignored blob: too far into future")
+		log.WithError(err).WithFields(blobFields(blob)).Error("Ignored blob: too far into future")
 		return pubsub.ValidationIgnore, err
 	}
 
@@ -59,7 +60,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	// i.e. validate that sidecar.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
 	startSlot, err := slots.EpochStart(s.cfg.chain.FinalizedCheckpt().Epoch)
 	if err != nil {
-		log.WithError(err).WithFields(blobFields(blob)).Debug("Ignored block: could not calculate epoch start slot")
+		log.WithError(err).WithFields(blobFields(blob)).Error("Ignored block: could not calculate epoch start slot")
 		return pubsub.ValidationIgnore, err
 	}
 	if startSlot >= blob.Slot {
@@ -71,9 +72,27 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	// [IGNORE] The blob's block's parent (defined by sidecar.block_parent_root) has been seen (via both gossip and non-gossip sources)
 	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
 	if !s.cfg.chain.HasBlock(ctx, parentRoot) {
-		// TODO(TT): Insert blob to pending queues
-		log.WithFields(blobFields(blob)).Debug("Ignored blob: parent block not found")
+		if err := s.blockAndBlobs.addBlob(sBlob); err != nil {
+			log.WithError(err).WithFields(blobFields(blob)).Error("Failed to add blob to queue")
+			return pubsub.ValidationIgnore, err
+		}
+		log.WithFields(blobFields(blob)).Warn("Ignored blob: parent block not found")
 		return pubsub.ValidationIgnore, nil
+	}
+
+	// [REJECT] The sidecar's block's parent (defined by sidecar.block_parent_root) passes validation.
+	// TODO: I'm not sure how to deal with this special case.
+
+	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
+	blk, err := s.cfg.beaconDB.Block(ctx, parentRoot)
+	if err != nil {
+		log.WithError(err).WithFields(blobFields(blob)).Error("Failed to get parent block")
+		return pubsub.ValidationIgnore, err
+	}
+	if blk.Block().Slot() >= blob.Slot {
+		err := fmt.Errorf("parent block slot %d greater or equal to blob slot %d", blk.Block().Slot(), blob.Slot)
+		log.WithFields(blobFields(blob)).Debug(err)
+		return pubsub.ValidationReject, err
 	}
 
 	// [REJECT] The proposer signature, signed_blob_sidecar.signature,
@@ -83,13 +102,15 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationIgnore, err
 	}
 	if err := verifyBlobSignature(parentState, sBlob); err != nil {
+		log.WithError(err).WithFields(blobFields(blob)).Error("Failed to verify blob signature")
 		return pubsub.ValidationReject, err
 	}
 
-	// [IGNORE] The sidecar is the only sidecar with valid signature received for the tuple (sidecar.slot, sidecar.proposer_index, sidecar.index)
+	// [IGNORE] The sidecar is the only sidecar with valid signature received for the tuple (sidecar.block_root, sidecar.index).
 	blockRoot := bytesutil.ToBytes32(blob.BlockRoot)
 	b, err := s.blockAndBlobs.getBlob(blockRoot, blob.Index)
 	if err == nil || b != nil {
+		log.WithFields(blobFields(blob)).Warn("Ignored blob: blob already exists")
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -103,6 +124,8 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationIgnore, err
 	}
 	if blob.ProposerIndex != idx {
+		err := fmt.Errorf("expected proposer index %d, got %d", idx, blob.ProposerIndex)
+		log.WithFields(blobFields(blob)).Error(err)
 		return pubsub.ValidationReject, err
 	}
 
