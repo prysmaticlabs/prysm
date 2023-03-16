@@ -159,9 +159,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		var gethBlobs types.Blobs
 		for _, b := range blobs {
 			var gethBlob types.Blob
-			for i, d := range b.Data {
-				gethBlob[i] = d
-			}
+			copy(gethBlob[:], b.Data)
 			gethBlobs = append(gethBlobs, gethBlob)
 		}
 		commitments, _, proofs, err := gethBlobs.ComputeCommitmentsAndProofs()
