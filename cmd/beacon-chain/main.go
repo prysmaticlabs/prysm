@@ -39,7 +39,6 @@ var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.ExecutionEngineEndpoint,
 	flags.ExecutionEngineHeaders,
-	flags.HTTPWeb3ProviderFlag,
 	flags.ExecutionJWTSecretFlag,
 	flags.RPCHost,
 	flags.RPCPort,
