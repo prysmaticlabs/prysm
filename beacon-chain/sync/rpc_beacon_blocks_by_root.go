@@ -11,14 +11,17 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
-// sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
+// sendRecentBeaconBlocksAndBlobsRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
-func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
+func (s *Service) sendRecentBeaconBlocksAndBlobsRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
+	var requestBlobs map[[32]byte]int
 	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.chain, s.cfg.p2p, id, blockRoots, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
@@ -29,8 +32,44 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blkRoot); err != nil {
 			return err
 		}
+		if blk.Version() >= version.Deneb {
+			kzgs, err := blk.Block().Body().BlobKzgCommitments()
+			if err != nil {
+				return err
+			}
+			requestBlobs[blkRoot] = len(kzgs)
+		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	var reqs []*eth.BlobIdentifier
+	for root, count := range requestBlobs {
+		for i := 0; i < count; i++ {
+			reqs = append(reqs, &eth.BlobIdentifier{
+				BlockRoot: root[:],
+				Index:     uint64(i),
+			})
+		}
+	}
+	if len(reqs) == 0 {
+		return nil
+	}
+
+	blobs, err := SendBlobSidecarByRoot(ctx, s.cfg.chain, s.cfg.p2p, id, reqs)
+	if err != nil {
+		return err
+	}
+
+	// TODO: validate blobs
+	for _, blob := range blobs {
+		if err = s.blockAndBlobs.addBlob(blob); err != nil {
+			return err
+		}
+	}
+
 	return err
 }
 
