@@ -27,13 +27,13 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	}
 	if blk.Version() == version.Phase0 {
 		errJson := &helpers.DefaultErrorJson{
-			Message: errors.Wrapf(err, "block rewards are not supported for Phase 0 blocks").Error(),
+			Message: "block rewards are not supported for Phase 0 blocks",
 			Code:    http.StatusBadRequest,
 		}
 		helpers.WriteError(w, errJson)
 		return
 	}
-	st, err := s.CanonicalHistory.ReplayerForSlot(blk.Block().Slot()-1).ReplayToSlot(r.Context(), blk.Block().Slot())
+	st, err := s.ReplayerBuilder.ReplayerForSlot(blk.Block().Slot()-1).ReplayToSlot(r.Context(), blk.Block().Slot())
 	if err != nil {
 		errJson := &helpers.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get state").Error(),

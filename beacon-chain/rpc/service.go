@@ -457,22 +457,15 @@ func (s *Service) logNewClientConnection(ctx context.Context) {
 	}
 }
 
-func (s *Service) registerHTTPHandlers(ch *stategen.CanonicalHistory) {
+func (s *Service) registerHTTPHandlers(replayer stategen.ReplayerBuilder) {
 	rewardsServer := &rewards.Server{
 		BlockFetcher: &blockfetcher.BlockProvider{
 			BeaconDB:         s.cfg.BeaconDB,
 			ChainInfoFetcher: s.cfg.ChainInfoFetcher,
 		},
-		StateFetcher: &statefetcher.StateProvider{
-			BeaconDB:           s.cfg.BeaconDB,
-			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-			StateGenService:    s.cfg.StateGen,
-			ReplayerBuilder:    ch,
-		},
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-		CanonicalHistory:      ch,
+		ReplayerBuilder:       replayer,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
 }
