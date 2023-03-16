@@ -278,7 +278,14 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
 	}
 
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, st, vs.OptimisticModeFetcher)
+	isOptimistic, err := rpchelpers.IsOptimistic(
+		ctx,
+		[]byte(strconv.FormatUint(uint64(slot), 10)),
+		vs.OptimisticModeFetcher,
+		vs.StateFetcher,
+		vs.ChainInfoFetcher,
+		vs.BeaconDB,
+	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
