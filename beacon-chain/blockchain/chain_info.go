@@ -118,14 +118,6 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
-// BestJustifiedCheckpt returns the best justified checkpoint from store.
-func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
-	cp := s.ForkChoicer().BestJustifiedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
-}
-
 // HeadSlot returns the slot of the head of the chain.
 func (s *Service) HeadSlot() primitives.Slot {
 	s.headLock.RLock()

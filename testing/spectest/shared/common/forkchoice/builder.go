@@ -134,14 +134,6 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		got := bb.service.CurrentJustifiedCheckpt()
 		require.DeepEqual(t, cp, got)
 	}
-	if c.BestJustifiedCheckPoint != nil {
-		cp := &ethpb.Checkpoint{
-			Epoch: primitives.Epoch(c.BestJustifiedCheckPoint.Epoch),
-			Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
-		}
-		got := bb.service.BestJustifiedCheckpt()
-		require.DeepEqual(t, cp, got)
-	}
 	if c.FinalizedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
 			Epoch: primitives.Epoch(c.FinalizedCheckPoint.Epoch),

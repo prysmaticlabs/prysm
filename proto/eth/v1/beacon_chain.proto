@@ -307,12 +307,11 @@ message WeakSubjectivityData {
 }
 
 message ForkChoiceDump {
+    reserved 3;
     // Latest justified checkpoint in forkchoice store.
     Checkpoint justified_checkpoint = 1;
     // Latest finalized checkpoint in forkchoice store.
     Checkpoint finalized_checkpoint = 2;
-    // Best justified checkpoint in forkchoice store.
-    Checkpoint best_justified_checkpoint = 3;
     // Unrealized justified checkpoint in forkchoice store.
     Checkpoint unrealized_justified_checkpoint = 4;
     // Unrealized finalized checkpoint in forkchoice store.

@@ -39,7 +39,6 @@ var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.ExecutionEngineEndpoint,
 	flags.ExecutionEngineHeaders,
-	flags.HTTPWeb3ProviderFlag,
 	flags.ExecutionJWTSecretFlag,
 	flags.RPCHost,
 	flags.RPCPort,
@@ -193,9 +192,6 @@ func main() {
 			}
 		}
 		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
-			return err
-		}
-		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
 			return err
 		}
 		if ctx.IsSet(flags.SetGCPercent.Name) {
