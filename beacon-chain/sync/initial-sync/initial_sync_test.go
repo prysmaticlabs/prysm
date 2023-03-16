@@ -19,7 +19,6 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	beaconsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -54,11 +53,6 @@ type peerData struct {
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(io.Discard)
-
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnablePeerScorer: true,
-	})
-	defer resetCfg()
 
 	resetFlags := flags.Get()
 	flags.Init(&flags.GlobalFlags{

@@ -41,10 +41,6 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
-	disablePeerScorer = &cli.BoolFlag{
-		Name:  "disable-peer-scorer",
-		Usage: "Disables experimental P2P peer scorer",
-	}
 	enableReorgLateBlocks = &cli.BoolFlag{
 		Name:  "enable-reorg-late-blocks",
 		Usage: "Enables reorgs of late blocks",
@@ -91,15 +87,6 @@ var (
 		Usage: "Enables the beacon chain to save historical states in a space efficient manner." +
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
-	}
-	disablePullTips = &cli.BoolFlag{
-		Name:  "experimental-enable-boundary-checks",
-		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
-	}
-	disableDefensivePull = &cli.BoolFlag{
-		Name:   "disable-back-pull",
-		Usage:  "Experimental disable of past boundary checks, useful for debugging, may cause bad votes.",
-		Hidden: true,
 	}
 	disableVecHTR = &cli.BoolFlag{
 		Name:  "disable-vectorized-htr",
@@ -171,19 +158,16 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
-	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
-	disablePullTips,
 	disableVecHTR,
 	enableReorgLateBlocks,
 	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
-	disableDefensivePull,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
 	EnableOptionalEngineMethods,
