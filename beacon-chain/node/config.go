@@ -7,7 +7,6 @@ import (
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -193,7 +192,5 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 }
 
 func configureFastSSZHashingAlgorithm() {
-	if features.Get().EnableVectorizedHTR {
-		fastssz.EnableVectorizedHTR = true
-	}
+	fastssz.EnableVectorizedHTR = true
 }

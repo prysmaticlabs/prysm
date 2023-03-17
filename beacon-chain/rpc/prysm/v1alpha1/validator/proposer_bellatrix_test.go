@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -136,7 +135,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bid := &ethpb.BuilderBidCapella{
 			Header: &v1.ExecutionPayloadHeaderCapella{
@@ -579,7 +578,7 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeaderCapella{}
-		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		header.WithdrawalsRoot = wr[:]
 		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, big.NewInt(0))

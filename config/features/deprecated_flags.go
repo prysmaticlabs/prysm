@@ -17,6 +17,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableVecHTR = &cli.BoolFlag{
+		Name:   "disable-vectorized-htr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableReorgLateBlocks = &cli.BoolFlag{
 		Name:   "enable-reorg-late-blocks",
 		Usage:  deprecatedUsage,
@@ -28,6 +33,7 @@ var (
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedDisablePeerScorer,
+	deprecatedDisableVecHTR,
 	deprecatedEnableReorgLateBlocks,
 }
 

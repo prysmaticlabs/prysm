@@ -5,9 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -32,23 +30,12 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 }
 
 func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
-
-	var err error
-	var roots [][32]byte
-	if features.Get().EnableVectorizedHTR {
-		roots, err = optimizedValidatorRoots(validators)
-		if err != nil {
-			return [32]byte{}, err
-		}
-	} else {
-		roots, err = validatorRoots(hasher, validators)
-		if err != nil {
-			return [32]byte{}, err
-		}
+	roots, err := optimizedValidatorRoots(validators)
+	if err != nil {
+		return [32]byte{}, err
 	}
 
-	validatorsRootsRoot, err := ssz.BitwiseMerkleize(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
+	validatorsRootsRoot, err := ssz.BitwiseMerkleize(roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -64,27 +51,14 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	return res, nil
 }
 
-func validatorRoots(hasher func([]byte) [32]byte, validators []*ethpb.Validator) ([][32]byte, error) {
-	roots := make([][32]byte, len(validators))
-	for i := 0; i < len(validators); i++ {
-		val, err := validatorRoot(hasher, validators[i])
-		if err != nil {
-			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
-		}
-		roots[i] = val
-	}
-	return roots, nil
-}
-
 func optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
 	// Exit early if no validators are provided.
 	if len(validators) == 0 {
 		return [][32]byte{}, nil
 	}
 	roots := make([][32]byte, 0, len(validators)*validatorFieldRoots)
-	hasher := hash.CustomSHA256Hasher()
 	for i := 0; i < len(validators); i++ {
-		fRoots, err := ValidatorFieldRoots(hasher, validators[i])
+		fRoots, err := ValidatorFieldRoots(validators[i])
 		if err != nil {
 			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
@@ -102,11 +76,4 @@ func optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) 
 		roots = roots[:outputLen]
 	}
 	return roots, nil
-}
-
-func validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
-	if validator == nil {
-		return [32]byte{}, errors.New("nil validator")
-	}
-	return ValidatorRootWithHasher(hasher, validator)
 }

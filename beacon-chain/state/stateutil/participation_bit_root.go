@@ -5,14 +5,12 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 )
 
 // ParticipationBitsRoot computes the HashTreeRoot merkleization of
 // participation roots.
 func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
 	chunkedRoots, err := packParticipationBits(bits)
 	if err != nil {
 		return [32]byte{}, err
@@ -20,7 +18,7 @@ func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
 
 	limit := (uint64(fieldparams.ValidatorRegistryLimit + 31)) / 32
 
-	bytesRoot, err := ssz.BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), limit)
+	bytesRoot, err := ssz.BitwiseMerkleize(chunkedRoots, uint64(len(chunkedRoots)), limit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
 	}

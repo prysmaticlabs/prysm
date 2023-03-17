@@ -39,7 +39,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -455,6 +454,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	currCommittee := &ethpbalpha.SyncCommittee{}
 	for i := 0; i < 5; i++ {
 		currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
+		currCommittee.AggregatePubkey = make([]byte, 48)
 	}
 	// add one public key twice - this is needed for one of the test cases
 	currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[0].PublicKey)
@@ -462,6 +462,8 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	nextCommittee := &ethpbalpha.SyncCommittee{}
 	for i := 5; i < 10; i++ {
 		nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+		nextCommittee.AggregatePubkey = make([]byte, 48)
+
 	}
 	require.NoError(t, st.SetNextSyncCommittee(nextCommittee))
 	db := dbutil.SetupDB(t)
@@ -590,11 +592,14 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		currCommittee := &ethpbalpha.SyncCommittee{}
 		for i := 5; i < 10; i++ {
 			currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
+			currCommittee.AggregatePubkey = make([]byte, 48)
 		}
 		require.NoError(t, newSyncPeriodSt.SetCurrentSyncCommittee(currCommittee))
 		nextCommittee := &ethpbalpha.SyncCommittee{}
 		for i := 0; i < 5; i++ {
 			nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+			nextCommittee.AggregatePubkey = make([]byte, 48)
+
 		}
 		require.NoError(t, newSyncPeriodSt.SetNextSyncCommittee(nextCommittee))
 
@@ -1181,7 +1186,7 @@ func TestProduceBlockV2(t *testing.T) {
 				Amount:         123,
 			},
 		}
-		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, 2)
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, 2)
 		require.NoError(t, err)
 
 		payloadHeader, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
@@ -2715,7 +2720,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		wds, err := beaconState.ExpectedWithdrawals()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bid := &ethpbalpha.BuilderBidCapella{
 			Header: &enginev1.ExecutionPayloadHeaderCapella{
