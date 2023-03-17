@@ -11,10 +11,10 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -37,7 +37,7 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.HysteresisUpwardMultiplier, actual.HysteresisUpwardMultiplier, "%s: HysteresisUpwardMultiplier", name)
 
 	// Fork Choice params.
-	assert.Equal(t, expected.SafeSlotsToUpdateJustified, actual.SafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
+	assert.Equal(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
 
 	// Validator params.
 	assert.Equal(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance, "%s: Eth1FollowDistance", name)

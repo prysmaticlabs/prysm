@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

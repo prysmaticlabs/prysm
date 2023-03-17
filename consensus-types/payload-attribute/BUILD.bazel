@@ -7,7 +7,7 @@ go_library(
         "interface.go",
         "types.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute",
+    importpath = "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute",
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/blocks:go_default_library",

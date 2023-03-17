@@ -13,12 +13,12 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v3/network"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v4/network"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestPrivateKeyLoading(t *testing.T) {

@@ -1,9 +1,9 @@
 package p2p
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // A background routine which listens for new and upcoming forks and

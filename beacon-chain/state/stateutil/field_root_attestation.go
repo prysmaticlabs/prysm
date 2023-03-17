@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	params "github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	params "github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
@@ -35,7 +35,6 @@ func EpochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
 	}
 
 	attsRootsRoot, err := ssz.BitwiseMerkleize(
-		hasher,
 		roots,
 		uint64(len(roots)),
 		params.BeaconConfig().CurrentEpochAttestationsLength(),
@@ -58,5 +57,5 @@ func pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.PendingAttestation) ([
 	if att == nil {
 		return [32]byte{}, errors.New("nil pending attestation")
 	}
-	return PendingAttRootWithHasher(hasher, att)
+	return PendingAttRootWithHasher(att)
 }

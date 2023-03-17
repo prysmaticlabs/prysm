@@ -6,17 +6,17 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -115,14 +115,6 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 	s.ForkChoicer().RLock()
 	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().JustifiedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
-}
-
-// BestJustifiedCheckpt returns the best justified checkpoint from store.
-func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
-	cp := s.ForkChoicer().BestJustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 

@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestGetRestJsonResponse_Valid(t *testing.T) {

@@ -8,13 +8,13 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/backup"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
+	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/backup"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.

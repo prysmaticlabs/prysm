@@ -10,17 +10,17 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/math"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 var (

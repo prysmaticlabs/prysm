@@ -12,17 +12,16 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestStatus(t *testing.T) {
@@ -549,10 +548,6 @@ func TestPrune(t *testing.T) {
 }
 
 func TestPeerIPTracker(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnablePeerScorer: false,
-	})
-	defer resetCfg()
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
@@ -587,7 +582,7 @@ func TestPeerIPTracker(t *testing.T) {
 	p.Prune()
 
 	for _, pr := range badPeers {
-		assert.Equal(t, false, p.IsBad(pr), "peer with good ip is regarded as bad")
+		assert.Equal(t, true, p.IsBad(pr), "peer with good ip is regarded as bad")
 	}
 }
 
@@ -691,10 +686,6 @@ func TestAtInboundPeerLimit(t *testing.T) {
 }
 
 func TestPrunePeers(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnablePeerScorer: false,
-	})
-	defer resetCfg()
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &scorers.Config{
@@ -745,13 +736,11 @@ func TestPrunePeers(t *testing.T) {
 	}
 
 	// Ensure it is in the descending order.
-	currCount, err := p.Scorers().BadResponsesScorer().Count(peersToPrune[0])
-	require.NoError(t, err)
+	currScore := p.Scorers().Score(peersToPrune[0])
 	for _, pid := range peersToPrune {
-		count, err := p.Scorers().BadResponsesScorer().Count(pid)
-		require.NoError(t, err)
-		assert.Equal(t, true, currCount >= count)
-		currCount = count
+		score := p.Scorers().BadResponsesScorer().Score(pid)
+		assert.Equal(t, true, currScore >= score)
+		currScore = score
 	}
 }
 
