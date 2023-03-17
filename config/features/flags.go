@@ -88,10 +88,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableGossipBatchAggregation = &cli.BoolFlag{
-		Name:  "disable-gossip-batch-aggregation",
-		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
-	}
 	enableStartupOptimistic = &cli.BoolFlag{
 		Name:   "startup-optimistic",
 		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
@@ -155,7 +151,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
 	disableReorgLateBlocks,
-	disableGossipBatchAggregation,
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,

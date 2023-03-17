@@ -57,9 +57,8 @@ type Flags struct {
 	EnableSlasher                   bool // Enable slasher in the beacon node runtime.
 	EnableSlashingProtectionPruning bool // EnableSlashingProtectionPruning for the validator client.
 
-	EnableBatchGossipAggregation bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
-	SaveFullExecutionPayloads    bool // Save full beacon blocks with execution payloads in the database.
-	EnableStartOptimistic        bool // EnableStartOptimistic treats every block as optimistic at startup.
+	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
+	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
@@ -186,11 +185,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disableStakinContractCheck.Name) {
 		logEnabled(disableStakinContractCheck)
 		cfg.DisableStakinContractCheck = true
-	}
-	cfg.EnableBatchGossipAggregation = true
-	if ctx.Bool(disableGossipBatchAggregation.Name) {
-		logDisabled(disableGossipBatchAggregation)
-		cfg.EnableBatchGossipAggregation = false
 	}
 	if ctx.Bool(SaveFullExecutionPayloads.Name) {
 		logEnabled(SaveFullExecutionPayloads)

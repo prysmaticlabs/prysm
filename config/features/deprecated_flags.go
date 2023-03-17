@@ -27,6 +27,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableGossipBatchAggregation = &cli.BoolFlag{
+		Name:   "disable-gossip-batch-aggregation",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -35,6 +40,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisablePeerScorer,
 	deprecatedDisableVecHTR,
 	deprecatedEnableReorgLateBlocks,
+	deprecatedDisableGossipBatchAggregation,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
