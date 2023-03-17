@@ -336,6 +336,7 @@ func (s *Service) Start() {
 		BlockNotifier:     s.cfg.BlockNotifier,
 		OperationNotifier: s.cfg.OperationNotifier,
 		HeadFetcher:       s.cfg.HeadFetcher,
+		ChainInfoFetcher:  s.cfg.ChainInfoFetcher,
 	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
