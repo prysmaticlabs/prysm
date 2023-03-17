@@ -212,9 +212,8 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := stateutil.ValidatorRootWithHasher(hasher, input)
+		newRoot, err := stateutil.ValidatorRootWithHasher(input)
 		if err != nil {
 			return err
 		}
@@ -290,9 +289,8 @@ func handlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []ui
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.PendingAttestation) error {
-		newRoot, err := stateutil.PendingAttRootWithHasher(hasher, input)
+		newRoot, err := stateutil.PendingAttRootWithHasher(input)
 		if err != nil {
 			return err
 		}

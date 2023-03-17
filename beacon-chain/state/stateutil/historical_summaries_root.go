@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -18,7 +17,6 @@ func HistoricalSummariesRoot(summaries []*ethpb.HistoricalSummary) ([32]byte, er
 		return [32]byte{}, fmt.Errorf("historical summary exceeds max length %d", max)
 	}
 
-	hasher := hash.CustomSHA256Hasher()
 	roots := make([][32]byte, len(summaries))
 	for i := 0; i < len(summaries); i++ {
 		r, err := summaries[i].HashTreeRoot()
@@ -29,7 +27,6 @@ func HistoricalSummariesRoot(summaries []*ethpb.HistoricalSummary) ([32]byte, er
 	}
 
 	summariesRoot, err := ssz.BitwiseMerkleize(
-		hasher,
 		roots,
 		uint64(len(roots)),
 		fieldparams.HistoricalRootsLength,

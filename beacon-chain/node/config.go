@@ -4,10 +4,8 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
@@ -190,10 +188,4 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+
 		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
 	return params.SetActive(c)
-}
-
-func configureFastSSZHashingAlgorithm() {
-	if features.Get().EnableVectorizedHTR {
-		fastssz.EnableVectorizedHTR = true
-	}
 }

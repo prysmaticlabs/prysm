@@ -33,7 +33,7 @@ func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]by
 	if len(eth1Data.BlockHash) > 0 {
 		fieldRoots[2] = bytesutil.ToBytes32(eth1Data.BlockHash)
 	}
-	root, err := ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	root, err := ssz.BitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -53,7 +53,6 @@ func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	}
 
 	eth1VotesRootsRoot, err := ssz.BitwiseMerkleize(
-		hasher,
 		eth1VotesRoots,
 		uint64(len(eth1VotesRoots)),
 		params.BeaconConfig().Eth1DataVotesLength(),
