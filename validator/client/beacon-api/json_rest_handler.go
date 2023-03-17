@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 )
 
 type jsonRestHandler interface {

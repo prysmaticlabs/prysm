@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/r3labs/sse"
 )
 

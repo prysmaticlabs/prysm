@@ -17,7 +17,7 @@ go_library(
         "slasher_client_mock.go",
         "validator_client_mock.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/testing/mock",
+    importpath = "github.com/prysmaticlabs/prysm/v4/testing/mock",
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/primitives:go_default_library",

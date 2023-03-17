@@ -4,8 +4,8 @@ import (
 	"math"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
