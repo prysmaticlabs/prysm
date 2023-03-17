@@ -16,28 +16,6 @@ load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 rules_pkg_dependencies()
 
-http_archive(
-    name = "com_grail_bazel_toolchain",
-    sha256 = "b210fc8e58782ef171f428bfc850ed7179bdd805543ebd1aa144b9c93489134f",
-    strip_prefix = "bazel-toolchain-83e69ba9e4b4fdad0d1d057fcb87addf77c281c9",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/83e69ba9e4b4fdad0d1d057fcb87addf77c281c9.tar.gz"],
-)
-
-load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
-
-bazel_toolchain_dependencies()
-
-load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
-
-llvm_toolchain(
-    name = "llvm_toolchain",
-    llvm_version = "13.0.1",
-)
-
-load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
-
-llvm_register_toolchains()
-
 BAZEL_ZIG_CC_VERSION = "v1.0.1"
 
 http_archive(
