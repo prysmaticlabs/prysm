@@ -43,7 +43,6 @@ type Flags struct {
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
-	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
@@ -63,12 +62,10 @@ type Flags struct {
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 
-	DisablePullTips              bool // DisablePullTips disables experimental disabling of boundary checks.
-	EnableDefensivePull          bool // EnableDefensivePull enables exerimental back boundary checks.
-	EnableVectorizedHTR          bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
-	EnableBatchGossipAggregation bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
-	SaveFullExecutionPayloads    bool // Save full beacon blocks with execution payloads in the database.
-	EnableStartOptimistic        bool // EnableStartOptimistic treats every block as optimistic at startup.
+	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
+	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
+	SaveFullExecutionPayloads         bool // Save full beacon blocks with execution payloads in the database.
+	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
@@ -175,15 +172,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
 	}
-	cfg.EnablePeerScorer = true
-	if ctx.Bool(disablePeerScorer.Name) {
-		logDisabled(disablePeerScorer)
-		cfg.EnablePeerScorer = false
-	}
-	cfg.DisableReorgLateBlocks = true
-	if ctx.Bool(enableReorgLateBlocks.Name) {
-		logEnabled(enableReorgLateBlocks)
-		cfg.DisableReorgLateBlocks = false
+
+	if ctx.Bool(disableReorgLateBlocks.Name) {
+		logEnabled(disableReorgLateBlocks)
+		cfg.DisableReorgLateBlocks = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
@@ -196,15 +188,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
-	}
-	if ctx.Bool(disablePullTips.Name) {
-		logEnabled(disablePullTips)
-		cfg.DisablePullTips = true
-	}
-	cfg.EnableDefensivePull = true
-	if ctx.Bool(disableDefensivePull.Name) {
-		logEnabled(disableDefensivePull)
-		cfg.EnableDefensivePull = false
 	}
 	if ctx.Bool(disableStakinContractCheck.Name) {
 		logEnabled(disableStakinContractCheck)

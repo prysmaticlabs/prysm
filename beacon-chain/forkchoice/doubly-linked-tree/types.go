@@ -23,7 +23,6 @@ type ForkChoice struct {
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
 	justifiedCheckpoint           *forkchoicetypes.Checkpoint            // latest justified epoch in store.
-	bestJustifiedCheckpoint       *forkchoicetypes.Checkpoint            // best justified checkpoint in store.
 	unrealizedJustifiedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized justified checkpoint in store.
 	unrealizedFinalizedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized finalized checkpoint in store.
 	prevJustifiedCheckpoint       *forkchoicetypes.Checkpoint            // previous justified checkpoint in store.
