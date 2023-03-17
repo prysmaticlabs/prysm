@@ -138,20 +138,15 @@ func isStateRootOptimistic(
 	if err != nil {
 		return true, errors.Wrap(err, "could not fetch state")
 	}
-	headSt, err := stateFetcher.State(ctx, []byte("head"))
-	if err != nil {
-		return true, errors.Wrap(err, "could not fetch head state")
-	}
 	if st.Slot() == chainInfo.HeadSlot() {
 		return optimisticModeFetcher.IsOptimistic(ctx)
 	}
-	_, roots, err := database.BlockRootsBySlot(ctx, st.Slot())
+	_, roots, err := database.HighestRootsBelowSlot(ctx, st.Slot()+1)
 	if err != nil {
 		return true, errors.Wrapf(err, "could not get block roots for slot %d", st.Slot())
 	}
 	if len(roots) == 0 {
-		// TODO: What to do here?
-		return false, errors.New("no block")
+		return false, errors.New("no blocks returned from the database")
 	}
 	for _, r := range roots {
 		canonical, err := chainInfo.IsCanonical(ctx, r)
@@ -166,7 +161,7 @@ func isStateRootOptimistic(
 			if !optimistic {
 				return false, nil
 			}
-			finalizedSlot, err := slots.EpochStart(headSt.FinalizedCheckpoint().Epoch)
+			finalizedSlot, err := slots.EpochStart(chainInfo.FinalizedCheckpt().Epoch)
 			if err != nil {
 				return true, errors.Wrap(err, "could not get head state's finalized slot")
 			}
