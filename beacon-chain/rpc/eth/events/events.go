@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
@@ -223,7 +225,7 @@ func (s *Server) handleStateEvents(
 			if !ok {
 				return nil
 			}
-			if err := s.streamPayloadAttributes(stream, head.Slot); err != nil {
+			if err := s.streamPayloadAttributes(stream, head.Slot+1); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
@@ -235,7 +237,7 @@ func (s *Server) handleStateEvents(
 			if !ok {
 				return nil
 			}
-			if err := s.streamPayloadAttributes(stream, emitSlot); err != nil {
+			if err := s.streamPayloadAttributes(stream, emitSlot+1); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
@@ -267,9 +269,16 @@ func (s *Server) handleStateEvents(
 // streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
 func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer, emitSlot primitives.Slot) error {
-	headState, err := s.HeadFetcher.HeadStateReadOnly(s.Ctx)
+	headState, err := s.HeadFetcher.HeadState(s.Ctx)
 	if err != nil {
 		return err
+	}
+	if headState.Slot() != emitSlot {
+		st, err := transition.ProcessSlotsIfPossible(s.Ctx, headState, emitSlot)
+		if err != nil {
+			return err
+		}
+		headState = st
 	}
 
 	headBlock, err := s.HeadFetcher.HeadBlock(s.Ctx)
@@ -287,12 +296,12 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return err
 	}
 
-	t, err := slots.ToTime(uint64(headState.GenesisTime()), emitSlot)
+	t, err := slots.ToTime(uint64(headState.GenesisTime()), headState.Slot())
 	if err != nil {
 		return err
 	}
 
-	prevRando, err := helpers.RandaoMix(headState, slots.ToEpoch(emitSlot))
+	prevRando, err := helpers.RandaoMix(headState, time.CurrentEpoch(headState))
 	if err != nil {
 		return err
 	}
@@ -303,7 +312,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 			Version: version.String(headState.Version()),
 			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
 				ProposerIndex:     headBlock.Block().ProposerIndex(),
-				ProposalSlot:      emitSlot,
+				ProposalSlot:      headState.Slot(),
 				ParentBlockNumber: headPayload.BlockNumber(),
 				ParentBlockRoot:   headRoot,
 				ParentBlockHash:   headPayload.BlockHash(),
@@ -323,7 +332,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 			Version: version.String(headState.Version()),
 			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
 				ProposerIndex:     headBlock.Block().ProposerIndex(),
-				ProposalSlot:      emitSlot,
+				ProposalSlot:      headState.Slot(),
 				ParentBlockNumber: headPayload.BlockNumber(),
 				ParentBlockRoot:   headRoot,
 				ParentBlockHash:   headPayload.BlockHash(),
