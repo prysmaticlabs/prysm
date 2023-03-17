@@ -2,9 +2,9 @@ package depositsnapshot
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/math"
 )
 
 const (

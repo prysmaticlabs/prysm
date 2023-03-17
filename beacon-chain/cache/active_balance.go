@@ -10,10 +10,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 const (

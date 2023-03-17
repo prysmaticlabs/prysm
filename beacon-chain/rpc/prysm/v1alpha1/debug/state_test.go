@@ -5,16 +5,16 @@ import (
 	"math"
 	"testing"
 
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	mockstategen "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen/mock"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	pbrpc "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {

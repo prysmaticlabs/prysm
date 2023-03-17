@@ -8,14 +8,14 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/internal"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1/mock"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/internal"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/v1/mock"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -3,9 +3,9 @@ package doublylinkedtree
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // orphanLateBlockProposingEarly determines the maximum threshold that we

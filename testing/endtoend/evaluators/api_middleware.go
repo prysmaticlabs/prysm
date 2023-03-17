@@ -11,14 +11,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
-	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
+	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"google.golang.org/grpc"
 )
 

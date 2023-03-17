@@ -8,11 +8,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

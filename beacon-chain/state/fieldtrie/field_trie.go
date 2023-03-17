@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	pmath "github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	pmath "github.com/prysmaticlabs/prysm/v4/math"
 )
 
 var (

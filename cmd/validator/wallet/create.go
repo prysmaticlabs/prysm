@@ -7,12 +7,12 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/io/prompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/urfave/cli/v2"
 )
 

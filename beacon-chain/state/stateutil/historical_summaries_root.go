@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 func HistoricalSummariesRoot(summaries []*ethpb.HistoricalSummary) ([32]byte, error) {
@@ -26,7 +26,11 @@ func HistoricalSummariesRoot(summaries []*ethpb.HistoricalSummary) ([32]byte, er
 		roots[i] = r
 	}
 
-	summariesRoot, err := ssz.BitwiseMerkleize(roots, uint64(len(roots)), fieldparams.HistoricalRootsLength)
+	summariesRoot, err := ssz.BitwiseMerkleize(
+		roots,
+		uint64(len(roots)),
+		fieldparams.HistoricalRootsLength,
+	)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute historical summaries merkleization")
 	}

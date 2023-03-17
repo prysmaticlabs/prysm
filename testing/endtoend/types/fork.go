@@ -3,8 +3,8 @@ package types
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 func StartAt(v int, c *params.BeaconChainConfig) *params.BeaconChainConfig {
