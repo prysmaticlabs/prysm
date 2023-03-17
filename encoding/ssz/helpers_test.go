@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -13,7 +12,6 @@ import (
 const merkleizingListLimitError = "merkleizing list that is too large, over limit"
 
 func TestBitlistRoot(t *testing.T) {
-	hasher := hash.CustomSHA256Hasher()
 	capacity := uint64(10)
 	bfield := bitfield.NewBitlist(capacity)
 	expected := [32]byte{176, 76, 194, 203, 142, 166, 117, 79, 148, 194, 231, 64, 60, 245, 142, 32, 201, 2, 58, 152, 53, 12, 132, 40, 41, 102, 224, 189, 103, 41, 211, 202}
