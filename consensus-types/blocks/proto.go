@@ -4,10 +4,10 @@ import (
 	"math/big"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 

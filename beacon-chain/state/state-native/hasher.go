@@ -5,14 +5,14 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -188,21 +188,21 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.JustificationBits.RealPosition()] = justifiedBitsRoot[:]
 
 	// PreviousJustifiedCheckpoint data structure root.
-	prevCheckRoot, err := ssz.CheckpointRoot(hasher, state.previousJustifiedCheckpoint)
+	prevCheckRoot, err := ssz.CheckpointRoot(state.previousJustifiedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute previous justified checkpoint merkleization")
 	}
 	fieldRoots[types.PreviousJustifiedCheckpoint.RealPosition()] = prevCheckRoot[:]
 
 	// CurrentJustifiedCheckpoint data structure root.
-	currJustRoot, err := ssz.CheckpointRoot(hasher, state.currentJustifiedCheckpoint)
+	currJustRoot, err := ssz.CheckpointRoot(state.currentJustifiedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute current justified checkpoint merkleization")
 	}
 	fieldRoots[types.CurrentJustifiedCheckpoint.RealPosition()] = currJustRoot[:]
 
 	// FinalizedCheckpoint data structure root.
-	finalRoot, err := ssz.CheckpointRoot(hasher, state.finalizedCheckpoint)
+	finalRoot, err := ssz.CheckpointRoot(state.finalizedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}

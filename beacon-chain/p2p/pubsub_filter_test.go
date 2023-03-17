@@ -9,16 +9,16 @@ import (
 
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 )
 
 func TestService_CanSubscribe(t *testing.T) {

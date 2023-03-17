@@ -6,26 +6,25 @@ import (
 	"reflect"
 	"testing"
 
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	executionTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
-	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	executionTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
+	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -1141,7 +1140,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 				Amount:         2,
 			},
 		}
-		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, 16)
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, 16)
 		require.NoError(t, err)
 
 		beaconDB := dbTest.SetupDB(t)

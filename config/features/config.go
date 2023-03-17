@@ -20,15 +20,11 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
-	"github.com/prysmaticlabs/gohashtree"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -58,15 +54,11 @@ type Flags struct {
 	// Bug fixes related flags.
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 
-	EnableSlasher bool // Enable slasher in the beacon node runtime.
-	// EnableSlashingProtectionPruning for the validator client.
-	EnableSlashingProtectionPruning bool
+	EnableSlasher                   bool // Enable slasher in the beacon node runtime.
+	EnableSlashingProtectionPruning bool // EnableSlashingProtectionPruning for the validator client.
 
-	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
-	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
-	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
-	SaveFullExecutionPayloads         bool // Save full beacon blocks with execution payloads in the database.
-	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
+	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
+	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
@@ -174,10 +166,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 
-	cfg.DisableReorgLateBlocks = true
-	if ctx.Bool(enableReorgLateBlocks.Name) {
-		logEnabled(enableReorgLateBlocks)
-		cfg.DisableReorgLateBlocks = false
+	if ctx.Bool(disableReorgLateBlocks.Name) {
+		logEnabled(disableReorgLateBlocks)
+		cfg.DisableReorgLateBlocks = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
@@ -194,35 +185,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disableStakinContractCheck.Name) {
 		logEnabled(disableStakinContractCheck)
 		cfg.DisableStakinContractCheck = true
-	}
-	if ctx.Bool(disableVecHTR.Name) {
-		logEnabled(disableVecHTR)
-	} else {
-		sigc := make(chan os.Signal, 1)
-		signal.Notify(sigc, syscall.SIGILL)
-		defer signal.Stop(sigc)
-		buffer := make([][32]byte, 2)
-		err := gohashtree.Hash(buffer, buffer)
-		if err != nil {
-			log.Error("could not test if gohashtree is supported")
-		} else {
-			t := time.NewTimer(time.Millisecond * 100)
-			select {
-			case <-sigc:
-				log.Error("gohashtree is not supported in this CPU")
-			case <-t.C:
-				cfg.EnableVectorizedHTR = true
-			}
-		}
-	}
-	if ctx.Bool(disableForkChoiceDoublyLinkedTree.Name) {
-		logEnabled(disableForkChoiceDoublyLinkedTree)
-		cfg.DisableForkchoiceDoublyLinkedTree = true
-	}
-	cfg.EnableBatchGossipAggregation = true
-	if ctx.Bool(disableGossipBatchAggregation.Name) {
-		logDisabled(disableGossipBatchAggregation)
-		cfg.EnableBatchGossipAggregation = false
 	}
 	if ctx.Bool(SaveFullExecutionPayloads.Name) {
 		logEnabled(SaveFullExecutionPayloads)

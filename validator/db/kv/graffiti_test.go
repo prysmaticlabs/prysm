@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestStore_GraffitiOrderedIndex_ReadAndWrite(t *testing.T) {

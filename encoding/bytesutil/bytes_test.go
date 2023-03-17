@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
 func TestTruncate(t *testing.T) {

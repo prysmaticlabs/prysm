@@ -8,28 +8,27 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
-	blockchainTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	powtesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
+	blockchainTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	powtesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 func TestServer_setExecutionData(t *testing.T) {
@@ -138,7 +137,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bid := &ethpb.BuilderBidCapella{
 			Header: &v1.ExecutionPayloadHeaderCapella{
@@ -584,7 +583,7 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeaderCapella{}
-		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		header.WithdrawalsRoot = wr[:]
 		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, big.NewInt(0))

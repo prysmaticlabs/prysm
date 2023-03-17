@@ -6,7 +6,7 @@ go_library(
         "cmd.go",
         "withdraw.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/validator",
+    importpath = "github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/validator",
     visibility = ["//visibility:public"],
     deps = [
         "//api/client/beacon:go_default_library",

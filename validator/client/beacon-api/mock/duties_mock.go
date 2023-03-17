@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	apimiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	apimiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // MockdutiesProvider is a mock of dutiesProvider interface.

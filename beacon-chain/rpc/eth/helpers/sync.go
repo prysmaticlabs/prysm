@@ -6,11 +6,11 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
 )
 
 // WalletCreate creates wallet specified by configuration options.

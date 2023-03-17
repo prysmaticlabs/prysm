@@ -10,7 +10,7 @@ go_library(
         "phase0_beacon_block_test_helpers.go",
         "test_helpers.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/test-helpers",
+    importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/test-helpers",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/rpc/apimiddleware:go_default_library",

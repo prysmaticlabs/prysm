@@ -2,12 +2,12 @@ package state_native
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	_ "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	_ "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // SetLatestExecutionPayloadHeader for the beacon state.

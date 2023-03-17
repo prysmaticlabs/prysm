@@ -1,8 +1,8 @@
 package state_native
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 func (b *BeaconState) ProportionalSlashingMultiplier() (uint64, error) {

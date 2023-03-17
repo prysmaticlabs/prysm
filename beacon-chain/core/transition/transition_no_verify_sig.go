@@ -7,16 +7,17 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/protolambda/go-kzg/eth"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	v "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+
 	"go.opencensus.io/trace"
 )
 

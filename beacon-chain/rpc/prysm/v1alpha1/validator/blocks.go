@@ -2,13 +2,13 @@ package validator
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

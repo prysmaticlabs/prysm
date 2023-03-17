@@ -323,6 +323,7 @@ def prysm_deps():
         sum = "h1:11zJVA0D4uJVGOC9h+oOVHrKKoBgMYIqJJ0d1Xt6oeQ=",
         version = "v0.37.0",
     )
+
     go_repository(
         name = "com_github_buger_jsonparser",
         importpath = "github.com/buger/jsonparser",
@@ -533,6 +534,7 @@ def prysm_deps():
         sum = "h1:wZwiHHUieZCquLkDL0B8UhzreNWsPHooDAG3q34zk0s=",
         version = "v1.3.2",
     )
+
     go_repository(
         name = "com_github_coreos_etcd",
         importpath = "github.com/coreos/etcd",
@@ -1242,6 +1244,7 @@ def prysm_deps():
         sum = "h1:MSdYClljsF3PbENUUEx85nkWfJSGfzYI9yEBZOJz6CY=",
         version = "v0.8.0",
     )
+
     go_repository(
         name = "com_github_gofrs_uuid",
         importpath = "github.com/gofrs/uuid",
@@ -1470,6 +1473,7 @@ def prysm_deps():
         sum = "h1:vc7Dmrk4JwS0ZPS6WZvWlwDflgDTA26jItmbSj83nug=",
         version = "v0.0.0-20200309095847-7953dde2c7bf",
     )
+
     go_repository(
         name = "com_github_gorilla_context",
         importpath = "github.com/gorilla/context",
@@ -1545,8 +1549,8 @@ def prysm_deps():
         name = "com_github_grpc_ecosystem_grpc_gateway_v2",
         importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
         replace = "github.com/prysmaticlabs/grpc-gateway/v2",
-        sum = "h1:elSfkWAcpL94zg7B9J2ozu+WcbMxD1rZ3rzUjYAy6R8=",
-        version = "v2.3.1-0.20220721162526-0d1c40b5f064",
+        sum = "h1:4wctORg/1TkgLgXejv9yOSAm3cDBJxoTzl/RNuZmX28=",
+        version = "v2.3.1-0.20230315201114-09284ba20446",
     )
     go_repository(
         name = "com_github_hashicorp_consul_api",
@@ -1961,6 +1965,7 @@ def prysm_deps():
         sum = "h1:z7Ciiz3Bz37zSd485fbiTW8ABafIasyOWZI0N9EUUdo=",
         version = "v1.8.1",
     )
+
     go_repository(
         name = "com_github_jmespath_go_jmespath",
         importpath = "github.com/jmespath/go-jmespath",
@@ -2791,7 +2796,6 @@ def prysm_deps():
         sum = "h1:eFXv9Nu1lGbrNbj619aWwZfVF5HBrm9Plte8aNptuTI=",
         version = "v0.0.0-20151028013722-8c68805598ab",
     )
-
     go_repository(
         name = "com_github_nishanths_predeclared",
         importpath = "github.com/nishanths/predeclared",
@@ -4050,6 +4054,7 @@ def prysm_deps():
         sum = "h1:9x7Bx0A9R5/M9jibeJeZWqjeVEIxYW9fZYqB9a70/bY=",
         version = "v1.1.0",
     )
+
     go_repository(
         name = "com_google_cloud_go_pubsub",
         importpath = "cloud.google.com/go/pubsub",

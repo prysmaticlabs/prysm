@@ -6,7 +6,7 @@ go_library(
         "server.go",
         "validator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/validator",
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
@@ -79,7 +79,6 @@ go_test(
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//crypto/bls:go_default_library",
-        "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz:go_default_library",
         "//proto/engine/v1:go_default_library",
