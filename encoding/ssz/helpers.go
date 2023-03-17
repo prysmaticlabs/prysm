@@ -8,7 +8,6 @@ import (
 	"github.com/minio/sha256-simd"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
@@ -51,14 +50,7 @@ func BitwiseMerkleize(hasher HashFn, chunks [][32]byte, count, limit uint64) ([3
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-	if features.Get().EnableVectorizedHTR {
-		return MerkleizeVector(chunks, limit), nil
-	}
-	hashFn := NewHasherFunc(hasher)
-	leafIndexer := func(i uint64) []byte {
-		return chunks[i][:]
-	}
-	return Merkleize(hashFn, count, limit, leafIndexer), nil
+	return MerkleizeVector(chunks, limit), nil
 }
 
 // PackByChunk a given byte array's final chunk with zeroes if needed.

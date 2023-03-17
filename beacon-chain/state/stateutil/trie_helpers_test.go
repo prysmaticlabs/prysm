@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -25,11 +24,6 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 	assert.NoError(t, err)
 	newRoot := *layers[len(layers)-1][0]
 	assert.Equal(t, root, newRoot)
-
-	flags := &features.Flags{}
-	flags.EnableVectorizedHTR = true
-	reset := features.InitWithReset(flags)
-	defer reset()
 
 	layers, err = stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
 	assert.NoError(t, err)
@@ -53,11 +47,6 @@ func BenchmarkReturnTrieLayer_NormalAlgorithm(b *testing.B) {
 }
 
 func BenchmarkReturnTrieLayer_VectorizedAlgorithm(b *testing.B) {
-	flags := &features.Flags{}
-	flags.EnableVectorizedHTR = true
-	reset := features.InitWithReset(flags)
-	defer reset()
-
 	newState, _ := util.DeterministicGenesisState(b, 32)
 	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(b, err)
@@ -90,11 +79,6 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, root, newRoot)
 
-	flags := &features.Flags{}
-	flags.EnableVectorizedHTR = true
-	reset := features.InitWithReset(flags)
-	defer reset()
-
 	layers = stateutil.ReturnTrieLayerVariable(roots, params.BeaconConfig().ValidatorRegistryLimit)
 	lastRoot := *layers[len(layers)-1][0]
 	lastRoot, err = stateutil.AddInMixin(lastRoot, uint64(len(validators)))
@@ -126,10 +110,6 @@ func BenchmarkReturnTrieLayerVariable_NormalAlgorithm(b *testing.B) {
 }
 
 func BenchmarkReturnTrieLayerVariable_VectorizedAlgorithm(b *testing.B) {
-	flags := &features.Flags{}
-	flags.EnableVectorizedHTR = true
-	reset := features.InitWithReset(flags)
-	defer reset()
 
 	newState, _ := util.DeterministicGenesisState(b, 16000)
 	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())

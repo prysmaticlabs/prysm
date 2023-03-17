@@ -17,12 +17,18 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableVecHTR = &cli.BoolFlag{
+		Name:   "disable-vectorized-htr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedDisablePeerScorer,
+	deprecatedDisableVecHTR,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
