@@ -23,7 +23,7 @@ const blsChangesPoolThreshold = 2000
 var (
 	blsToExecMessageInPoolTotal = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bls_to_exec_message_pool_total",
-		Help: "The number of saved bls to exec message in the operation cool.",
+		Help: "The number of saved bls to exec messages in the operation pool.",
 	})
 )
 
