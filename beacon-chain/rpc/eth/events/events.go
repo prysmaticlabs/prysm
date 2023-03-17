@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -221,11 +220,7 @@ func (s *Server) handleStateEvents(
 			return streamData(stream, HeadTopic, head)
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			head, ok := event.Data.(*ethpb.EventHead)
-			if !ok {
-				return nil
-			}
-			if err := s.streamPayloadAttributes(stream, head.Slot+1); err != nil {
+			if err := s.streamPayloadAttributes(stream); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
@@ -233,11 +228,7 @@ func (s *Server) handleStateEvents(
 		return nil
 	case statefeed.MissedSlot:
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			currentSlot, ok := event.Data.(primitives.Slot)
-			if !ok {
-				return nil
-			}
-			if err := s.streamPayloadAttributes(stream, currentSlot+1); err != nil {
+			if err := s.streamPayloadAttributes(stream); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
@@ -268,13 +259,14 @@ func (s *Server) handleStateEvents(
 
 // streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
-func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer, emitSlot primitives.Slot) error {
+// parent_ fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
+func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
 	st, err := s.HeadFetcher.HeadState(s.Ctx)
 	if err != nil {
 		return err
 	}
-	// advance the headstate to current + 1
-	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, emitSlot)
+	// advance the headstate
+	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
 	if err != nil {
 		return err
 	}

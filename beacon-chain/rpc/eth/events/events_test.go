@@ -365,13 +365,15 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		require.NoError(t, err)
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
-		srv.HeadFetcher = &mockChain.ChainService{
+		fetcher := &mockChain.ChainService{
 			Genesis:        time.Now(),
 			State:          beaconState,
 			Block:          signedBlk,
 			Root:           make([]byte, 32),
 			ValidatorsRoot: [32]byte{},
 		}
+		srv.HeadFetcher = fetcher
+		srv.ChainInfoFetcher = fetcher
 
 		prevRando, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
 		require.NoError(t, err)
@@ -470,13 +472,16 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		require.NoError(t, err)
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
-		srv.HeadFetcher = &mockChain.ChainService{
+		fetcher := &mockChain.ChainService{
 			Genesis:        time.Now(),
 			State:          beaconState,
 			Block:          signedBlk,
 			Root:           make([]byte, 32),
 			ValidatorsRoot: [32]byte{},
 		}
+
+		srv.HeadFetcher = fetcher
+		srv.ChainInfoFetcher = fetcher
 
 		prevRando, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
 		require.NoError(t, err)

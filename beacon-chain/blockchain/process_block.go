@@ -673,7 +673,6 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 			case <-ticker.C():
 				s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 					Type: statefeed.MissedSlot,
-					Data: s.CurrentSlot(),
 				})
 				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
 					log.WithError(err).Error("Could not fill missing payload ID")
