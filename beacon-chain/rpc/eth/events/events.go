@@ -11,6 +11,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -219,7 +220,11 @@ func (s *Server) handleStateEvents(
 			return streamData(stream, HeadTopic, head)
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if err := s.streamPayloadAttributes(stream); err != nil {
+			head, ok := event.Data.(*ethpb.EventHead)
+			if !ok {
+				return nil
+			}
+			if err := s.streamPayloadAttributes(stream, head.Slot); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
@@ -227,7 +232,11 @@ func (s *Server) handleStateEvents(
 		return nil
 	case statefeed.MissedSlot:
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if err := s.streamPayloadAttributes(stream); err != nil {
+			emitSlot, ok := event.Data.(primitives.Slot)
+			if !ok {
+				return nil
+			}
+			if err := s.streamPayloadAttributes(stream, emitSlot); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
@@ -258,7 +267,7 @@ func (s *Server) handleStateEvents(
 
 // streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
-func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
+func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer, emitSlot primitives.Slot) error {
 	headState, err := s.HeadFetcher.HeadStateReadOnly(s.Ctx)
 	if err != nil {
 		return err
