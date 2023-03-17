@@ -56,21 +56,7 @@ func ValidateSync(
 	return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 }
 
-// IsOptimistic checks whether the beacon state's block is optimistic. The algorithm works as follows:
-//   - For head, return the node's optimistic status.
-//   - For genesis and finalized states, immediately return false.
-//   - For justified state and a state root:
-//     # If state's slot is equal to head's slot, return the node's optimistic status.
-//     # If block for state's slot is not canonical, return true.
-//     # If state's id is a state root and block for state's slot doesn't have the correct state root, continue.
-//     # If state's block is canonical and node is not optimistic, return false.
-//     # If state's block is canonical and node is optimistic and state's slot is not after head's finalized slot, return false.
-//     # Otherwise return true.
-//   - For slot number:
-//     # If node is not optimistic, return false.
-//     # If slot is not after head's finalized slot, return false.
-//     # If slot is equal to head's slot, return true.
-//     # Otherwise fetch the state's ancestor root and return its optimistic status.
+// IsOptimistic checks whether the beacon state's block is optimistic.
 func IsOptimistic(
 	ctx context.Context,
 	stateId []byte,
@@ -108,7 +94,11 @@ func IsOptimistic(
 			if !optimistic {
 				return false, nil
 			}
-			finalizedSlot, err := slots.EpochStart(chainInfo.FinalizedCheckpt().Epoch)
+			fcp := chainInfo.FinalizedCheckpt()
+			if fcp == nil {
+				return true, errors.New("received nil finalized checkpoint")
+			}
+			finalizedSlot, err := slots.EpochStart(fcp.Epoch)
 			if err != nil {
 				return true, errors.Wrap(err, "could not get head state's finalized slot")
 			}
@@ -174,7 +164,11 @@ func isStateRootOptimistic(
 			if !optimistic {
 				return false, nil
 			}
-			finalizedSlot, err := slots.EpochStart(chainInfo.FinalizedCheckpt().Epoch)
+			fcp := chainInfo.FinalizedCheckpt()
+			if fcp == nil {
+				return true, errors.New("received nil finalized checkpoint")
+			}
+			finalizedSlot, err := slots.EpochStart(fcp.Epoch)
 			if err != nil {
 				return true, errors.Wrap(err, "could not get head state's finalized slot")
 			}
