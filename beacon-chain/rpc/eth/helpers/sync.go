@@ -94,28 +94,32 @@ func IsOptimistic(
 			if parseErr != nil {
 				// ID format does not match any valid options.
 				e := statefetcher.NewStateIdParseError(parseErr)
-				return false, &e
+				return true, &e
 			}
 			optimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 			if err != nil {
-				return false, errors.Wrap(err, "could not check optimistic status")
+				return true, errors.Wrap(err, "could not check optimistic status")
 			}
 			if !optimistic {
+				return false, nil
+			}
+			finalizedSlot, err := slots.EpochStart(chainInfo.FinalizedCheckpt().Epoch)
+			if err != nil {
+				return true, errors.Wrap(err, "could not get head state's finalized slot")
+			}
+			if primitives.Slot(slotNumber) <= finalizedSlot {
 				return false, nil
 			}
 			if primitives.Slot(slotNumber) == chainInfo.HeadSlot() {
 				return optimisticModeFetcher.IsOptimistic(ctx)
 			}
-			finalizedSlot, err := slots.EpochStart(chainInfo.FinalizedCheckpt().Epoch)
+			headRoot, err := chainInfo.HeadRoot(ctx)
 			if err != nil {
-				return false, errors.Wrap(err, "could not get head state's finalized slot")
+				return true, errors.Wrap(err, "could not get head root")
 			}
-			if primitives.Slot(slotNumber) <= finalizedSlot {
-				return false, nil
-			}
-			r, err := chainInfo.ForkChoicer().AncestorRoot(ctx, bytesutil.ToBytes32(stateId), primitives.Slot(slotNumber))
+			r, err := chainInfo.ForkChoicer().AncestorRoot(ctx, bytesutil.ToBytes32(headRoot), primitives.Slot(slotNumber))
 			if err != nil {
-				return false, errors.Wrap(err, "could not get ancestor root")
+				return true, errors.Wrap(err, "could not get ancestor root")
 			}
 			return optimisticModeFetcher.IsOptimisticForRoot(ctx, r)
 		}
@@ -132,18 +136,18 @@ func isStateRootOptimistic(
 ) (bool, error) {
 	st, err := stateFetcher.State(ctx, stateId)
 	if err != nil {
-		return false, errors.Wrap(err, "could not fetch state")
+		return true, errors.Wrap(err, "could not fetch state")
 	}
 	headSt, err := stateFetcher.State(ctx, []byte("head"))
 	if err != nil {
-		return false, errors.Wrap(err, "could not fetch head state")
+		return true, errors.Wrap(err, "could not fetch head state")
 	}
 	if st.Slot() == chainInfo.HeadSlot() {
 		return optimisticModeFetcher.IsOptimistic(ctx)
 	}
 	_, roots, err := database.BlockRootsBySlot(ctx, st.Slot())
 	if err != nil {
-		return false, errors.Wrapf(err, "could not get block roots for slot %d", st.Slot())
+		return true, errors.Wrapf(err, "could not get block roots for slot %d", st.Slot())
 	}
 	if len(roots) == 0 {
 		// TODO: What to do here?
@@ -152,19 +156,19 @@ func isStateRootOptimistic(
 	for _, r := range roots {
 		canonical, err := chainInfo.IsCanonical(ctx, r)
 		if err != nil {
-			return false, errors.Wrapf(err, "could not check canonical status")
+			return true, errors.Wrapf(err, "could not check canonical status")
 		}
 		if canonical {
 			optimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 			if err != nil {
-				return false, errors.Wrap(err, "could not check optimistic status")
+				return true, errors.Wrap(err, "could not check optimistic status")
 			}
 			if !optimistic {
 				return false, nil
 			}
 			finalizedSlot, err := slots.EpochStart(headSt.FinalizedCheckpoint().Epoch)
 			if err != nil {
-				return false, errors.Wrap(err, "could not get head state's finalized slot")
+				return true, errors.Wrap(err, "could not get head state's finalized slot")
 			}
 			if st.Slot() <= finalizedSlot {
 				return false, nil
