@@ -259,14 +259,9 @@ func (s *Server) handleStateEvents(
 
 // streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
-// parent_ fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
+// parent_ fields are based on state at N_{current_slot}, while the rest of the fields are based on state at N_{current_slot + 1}
 func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
 	st, err := s.HeadFetcher.HeadState(s.Ctx)
-	if err != nil {
-		return err
-	}
-	// advance the headstate
-	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
 	if err != nil {
 		return err
 	}
@@ -286,6 +281,13 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return err
 	}
 
+	// advance the headstate to the next slot for builders
+	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
+	if err != nil {
+		return err
+	}
+
+	// generate updated information based on the advanced headstate
 	t, err := slots.ToTime(uint64(headState.GenesisTime()), headState.Slot())
 	if err != nil {
 		return err
@@ -301,6 +303,8 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return err
 	}
 
+	// All headstate values have advanced to currentslot + 1 at this point.
+	// Advancing the headstate in this way for proposal will account for hardfork upgrades.
 	switch headState.Version() {
 	case version.Bellatrix:
 		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV1{
