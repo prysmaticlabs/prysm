@@ -14,7 +14,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -694,7 +693,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("field", field.String(b.version)))
 
-	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case types.GenesisTime:
 		return ssz.Uint64Root(b.genesisTime), nil
@@ -735,7 +733,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return ssz.ByteArrayRootWithLimit(hRoots, fieldparams.HistoricalRootsLength)
 	case types.Eth1Data:
-		return stateutil.Eth1Root(hasher, b.eth1Data)
+		return stateutil.Eth1Root(b.eth1Data)
 	case types.Eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(
@@ -817,11 +815,11 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case types.JustificationBits:
 		return bytesutil.ToBytes32(b.justificationBits), nil
 	case types.PreviousJustifiedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.previousJustifiedCheckpoint)
+		return ssz.CheckpointRoot(b.previousJustifiedCheckpoint)
 	case types.CurrentJustifiedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.currentJustifiedCheckpoint)
+		return ssz.CheckpointRoot(b.currentJustifiedCheckpoint)
 	case types.FinalizedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.finalizedCheckpoint)
+		return ssz.CheckpointRoot(b.finalizedCheckpoint)
 	case types.InactivityScores:
 		return stateutil.Uint64ListRootWithRegistryLimit(b.inactivityScores)
 	case types.CurrentSyncCommittee:
