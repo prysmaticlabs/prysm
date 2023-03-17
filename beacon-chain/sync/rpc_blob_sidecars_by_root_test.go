@@ -22,7 +22,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -108,21 +107,32 @@ type blobsByRootExpected struct {
 
 type streamDecoder func(io.Reader, ssz.Unmarshaler) error
 
-func (r *blobsByRootExpected) requireExpected(t *testing.T, d streamDecoder, stream network.Stream) {
+func (r *blobsByRootExpected) requireExpected(t *testing.T, s *Service, stream network.Stream) {
+	d := s.cfg.p2p.Encoding().DecodeWithMaxLength
+
 	code, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 	require.NoError(t, err)
 	require.Equal(t, r.code, code, "unexpected response code")
-	//require.Equal(t, r.message, msg, "unexpected error message")
 	if r.sidecar == nil {
 		return
 	}
+
+	c, err := readContextFromStream(stream, s.cfg.chain)
+	require.NoError(t, err)
+
+	valRoot := s.cfg.chain.GenesisValidatorsRoot()
+	ctxBytes, err := forks.ForkDigestFromEpoch(slots.ToEpoch(r.sidecar.GetSlot()), valRoot[:])
+	require.NoError(t, err)
+	require.Equal(t, ctxBytes, bytesutil.ToBytes4(c))
+
+	//require.Equal(t, r.message, msg, "unexpected error message")
 	sc := &ethpb.BlobSidecar{}
 	require.NoError(t, d(stream, sc))
 	require.Equal(t, bytesutil.ToBytes32(sc.BlockRoot), bytesutil.ToBytes32(r.sidecar.BlockRoot))
 	require.Equal(t, sc.Index, r.sidecar.Index)
 }
 
-func (c *blobsTestCase) setup(t *testing.T) (BlobDB, []*ethpb.BlobIdentifier, []*blobsByRootExpected, func()) {
+func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobIdentifier, []*blobsByRootExpected, func()) {
 	cfg := params.BeaconConfig()
 	repositionFutureEpochs(cfg)
 	undo, err := params.SetActiveWithUndo(cfg)
@@ -192,32 +202,41 @@ func (c *blobsTestCase) setup(t *testing.T) (BlobDB, []*ethpb.BlobIdentifier, []
 		}
 	}
 
-	return db, req, expect, cleanup
-}
-
-func (c *blobsTestCase) run(t *testing.T) {
-	db, ids, expect, cleanup := c.setup(t)
-	req := p2pTypes.BlobSidecarsByRootReq(ids)
-	defer cleanup()
-	rate := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
 	client := p2ptest.NewTestP2P(t)
 	s := &Service{
 		cfg:         &config{p2p: client, chain: c.chain},
 		blobs:       db,
 		rateLimiter: newRateLimiter(client)}
-	s.setRateCollector(p2p.RPCBlobSidecarsByRootTopicV1, leakybucket.NewCollector(0.000001, int64(rate), time.Second, false))
+	//s.registerRPCHandlersDeneb()
 
-	dec := s.cfg.p2p.Encoding().DecodeWithMaxLength
+	//byRootRate := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
+	//s.setRateCollector(p2p.RPCBlobSidecarsByRootTopicV1, leakybucket.NewCollector(0.000001, int64(byRootRate), time.Second, false))
+	//s.setRateCollector(p2p.RPCBlobSidecarsByRangeTopicV1, leakybucket.NewCollector(0.000001, int64(byRootRate), time.Second, false))
+
+	return s, req, expect, cleanup
+}
+
+func (c *blobsTestCase) run(t *testing.T, topic protocol.ID) {
+	s, ids, expect, cleanup := c.setup(t)
+	defer cleanup()
+
 	if c.total != nil {
 		require.Equal(t, *c.total, len(expect))
 	}
 	nh := func(stream network.Stream) {
 		for _, ex := range expect {
-			ex.requireExpected(t, dec, stream)
+			ex.requireExpected(t, s, stream)
 		}
 	}
-	rht := &rpcHandlerTest{t: t, client: client, topic: p2p.RPCBlocksByRootTopicV1, timeout: time.Second * 10, err: c.err}
-	rht.testHandler(nh, s.blobSidecarByRootRPCHandler, &req)
+	client := s.cfg.p2p.(*p2ptest.TestP2P)
+	rht := &rpcHandlerTest{t: t, client: client, topic: topic, timeout: time.Second * 10, err: c.err}
+	switch topic {
+	case p2p.RPCBlobSidecarsByRootTopicV1:
+		req := p2pTypes.BlobSidecarsByRootReq(ids)
+		rht.testHandler(nh, s.blobSidecarByRootRPCHandler, &req)
+	case p2p.RPCBlobSidecarsByRangeTopicV1:
+		t.Fatal("not implemented")
+	}
 }
 
 type rpcHandlerTest struct {
@@ -349,7 +368,7 @@ func TestBlobsByRootValidation(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			c.run(t)
+			c.run(t, p2p.RPCBlobSidecarsByRootTopicV1)
 		})
 	}
 }
@@ -371,7 +390,7 @@ func TestBlobsByRootOK(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			c.run(t)
+			c.run(t, p2p.RPCBlobSidecarsByRootTopicV1)
 		})
 	}
 }

@@ -141,15 +141,12 @@ var versionMapping = map[string]bool{
 }
 
 var PreAltairV1SchemaMapping = map[string]bool{
-	StatusMessageName:                    true,
-	GoodbyeMessageName:                   true,
-	BeaconBlocksByRangeMessageName:       true,
-	BeaconBlocksByRootsMessageName:       true,
-	PingMessageName:                      true,
-	MetadataMessageName:                  true,
-	BlobsSidecarsByRangeMessageName:      false,
-	BeaconBlockAndBlobsSidecarByRootName: false,
-	BlobSidecarsByRootName:               false,
+	StatusMessageName:              true,
+	GoodbyeMessageName:             true,
+	BeaconBlocksByRangeMessageName: true,
+	BeaconBlocksByRootsMessageName: true,
+	PingMessageName:                true,
+	MetadataMessageName:            true,
 }
 
 // VerifyTopicMapping verifies that the topic and its accompanying
