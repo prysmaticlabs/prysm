@@ -296,12 +296,17 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return err
 	}
 
+	proposerIndex, err := helpers.BeaconProposerIndex(s.Ctx, headState)
+	if err != nil {
+		return err
+	}
+
 	switch headState.Version() {
 	case version.Bellatrix:
 		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV1{
 			Version: version.String(headState.Version()),
 			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
-				ProposerIndex:     headBlock.Block().ProposerIndex(),
+				ProposerIndex:     proposerIndex,
 				ProposalSlot:      headState.Slot(),
 				ParentBlockNumber: headPayload.BlockNumber(),
 				ParentBlockRoot:   headRoot,
@@ -321,7 +326,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV2{
 			Version: version.String(headState.Version()),
 			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
-				ProposerIndex:     headBlock.Block().ProposerIndex(),
+				ProposerIndex:     proposerIndex,
 				ProposalSlot:      headState.Slot(),
 				ParentBlockNumber: headPayload.BlockNumber(),
 				ParentBlockRoot:   headRoot,
