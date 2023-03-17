@@ -6,7 +6,6 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"go.opencensus.io/trace"
@@ -90,9 +89,7 @@ func verifyBatch(verifierBatch []*signatureVerifier) {
 	}
 	var verificationErr error
 
-	if features.Get().EnableBatchGossipAggregation {
-		aggSet, verificationErr = performBatchAggregation(aggSet)
-	}
+	aggSet, verificationErr = performBatchAggregation(aggSet)
 	if verificationErr == nil {
 		verified, err := aggSet.Verify()
 		switch {

@@ -88,18 +88,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableVecHTR = &cli.BoolFlag{
-		Name:  "disable-vectorized-htr",
-		Usage: "Disables the new go sha256 library which utilizes optimized routines for merkle trees",
-	}
-	disableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
-		Name:  "disable-forkchoice-doubly-linked-tree",
-		Usage: "Disables the new forkchoice store structure that uses doubly linked trees",
-	}
-	disableGossipBatchAggregation = &cli.BoolFlag{
-		Name:  "disable-gossip-batch-aggregation",
-		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
-	}
 	enableStartupOptimistic = &cli.BoolFlag{
 		Name:   "startup-optimistic",
 		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
@@ -165,10 +153,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
-	disableVecHTR,
 	disableReorgLateBlocks,
-	disableForkChoiceDoublyLinkedTree,
-	disableGossipBatchAggregation,
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,

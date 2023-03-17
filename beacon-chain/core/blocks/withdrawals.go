@@ -163,13 +163,13 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get withdrawals")
 		}
-		wdRoot, err = ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		wdRoot, err = ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get withdrawals root")
 		}
 	}
 
-	expectedRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), expectedWithdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	expectedRoot, err := ssz.WithdrawalSliceRoot(expectedWithdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals root")
 	}

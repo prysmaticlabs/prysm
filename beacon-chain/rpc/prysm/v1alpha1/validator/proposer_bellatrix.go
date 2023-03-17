@@ -17,7 +17,6 @@ import (
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -344,7 +343,7 @@ func matchingWithdrawalsRoot(local, builder interfaces.ExecutionData) (bool, err
 	if err != nil {
 		return false, errors.Wrap(err, "could not get builder withdrawals root")
 	}
-	wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+	wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return false, errors.Wrap(err, "could not compute local withdrawals root")
 	}
