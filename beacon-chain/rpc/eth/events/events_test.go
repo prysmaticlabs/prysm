@@ -337,7 +337,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 		blk := &eth.SignedBeaconBlockBellatrix{
 			Block: &eth.BeaconBlockBellatrix{
-				ProposerIndex: 1,
+				ProposerIndex: 0,
 				Slot:          1,
 				ParentRoot:    parentRoot[:],
 				StateRoot:     genesis.Block.StateRoot,
@@ -381,7 +381,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		wantedPayload := &ethpb.EventPayloadAttributeV1{
 			Version: version.String(version.Bellatrix),
 			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
-				ProposerIndex:     1,
+				ProposerIndex:     0,
 				ProposalSlot:      2,
 				ParentBlockNumber: 1,
 				ParentBlockRoot:   make([]byte, 32),
@@ -443,7 +443,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 		blk := &eth.SignedBeaconBlockCapella{
 			Block: &eth.BeaconBlockCapella{
-				ProposerIndex: 1,
+				ProposerIndex: 0,
 				Slot:          1,
 				ParentRoot:    parentRoot[:],
 				StateRoot:     genesis.Block.StateRoot,
@@ -489,7 +489,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		wantedPayload := &ethpb.EventPayloadAttributeV2{
 			Version: version.String(version.Capella),
 			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
-				ProposerIndex:     1,
+				ProposerIndex:     0,
 				ProposalSlot:      2,
 				ParentBlockNumber: 1,
 				ParentBlockRoot:   make([]byte, 32),
