@@ -143,20 +143,20 @@ func isStateRootOptimistic(
 	if st.Slot() == chainInfo.HeadSlot() {
 		return optimisticModeFetcher.IsOptimistic(ctx)
 	}
-	blocks, err := database.BlocksBySlot(ctx, st.Slot())
+	has, roots, err := database.BlockRootsBySlot(ctx, st.Slot())
 	if err != nil {
 		return true, errors.Wrapf(err, "could not get block roots for slot %d", st.Slot())
 	}
-	if len(blocks) == 0 {
+	if !has {
 		return true, errors.New("no blocks returned from the database")
 	}
-	for _, b := range blocks {
+	for _, r := range roots {
+		b, err := database.Block(ctx, r)
+		if err != nil {
+			return true, errors.Wrapf(err, "could not obtain block")
+		}
 		if strings.ToLower(string(stateId)) != "justified" && bytesutil.ToBytes32(stateId) != b.Block().StateRoot() {
 			continue
-		}
-		r, err := b.Block().HashTreeRoot()
-		if err != nil {
-			return true, errors.Wrapf(err, "could not calculate block root")
 		}
 		canonical, err := chainInfo.IsCanonical(ctx, r)
 		if err != nil {
