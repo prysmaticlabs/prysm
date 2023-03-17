@@ -33,7 +33,6 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/transition/stateutils:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
@@ -63,7 +62,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",

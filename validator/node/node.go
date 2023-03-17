@@ -886,7 +886,5 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 }
 
 func configureFastSSZHashingAlgorithm() {
-	if features.Get().EnableVectorizedHTR {
-		fastssz.EnableVectorizedHTR = true
-	}
+	fastssz.EnableVectorizedHTR = true
 }

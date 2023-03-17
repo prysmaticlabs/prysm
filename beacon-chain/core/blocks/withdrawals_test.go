@@ -642,7 +642,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			}
 			st, err := prepareValidators(spb, test.Args)
 			require.NoError(t, err)
-			wdRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+			wdRoot, err := ssz.WithdrawalSliceRoot(test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 			require.NoError(t, err)
 			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]}, big.NewInt(0))
 			require.NoError(t, err)
