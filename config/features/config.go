@@ -174,10 +174,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 
-	cfg.DisableReorgLateBlocks = true
-	if ctx.Bool(enableReorgLateBlocks.Name) {
-		logEnabled(enableReorgLateBlocks)
-		cfg.DisableReorgLateBlocks = false
+	if ctx.Bool(disableReorgLateBlocks.Name) {
+		logEnabled(disableReorgLateBlocks)
+		cfg.DisableReorgLateBlocks = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)

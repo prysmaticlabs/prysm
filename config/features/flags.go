@@ -41,9 +41,9 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
-	enableReorgLateBlocks = &cli.BoolFlag{
-		Name:  "enable-reorg-late-blocks",
-		Usage: "Enables reorgs of late blocks",
+	disableReorgLateBlocks = &cli.BoolFlag{
+		Name:  "disable-reorg-late-blocks",
+		Usage: "Disables reorgs of late blocks",
 	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
@@ -163,7 +163,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
 	disableVecHTR,
-	enableReorgLateBlocks,
+	disableReorgLateBlocks,
 	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	SaveFullExecutionPayloads,
