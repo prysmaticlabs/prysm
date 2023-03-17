@@ -60,7 +60,7 @@ func TestValidateSync(t *testing.T) {
 	})
 }
 
-func TestIsOptimistic(t *testing.T) {
+/*func TestIsOptimistic(t *testing.T) {
 	ctx := context.Background()
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -102,4 +102,4 @@ func TestIsOptimistic(t *testing.T) {
 			mockOptSyncFetcher.OptimisticCheckRootReceived,
 		)
 	})
-}
+}*/

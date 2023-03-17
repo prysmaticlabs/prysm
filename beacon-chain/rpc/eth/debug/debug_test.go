@@ -37,7 +37,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -55,7 +55,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -73,7 +73,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -91,7 +91,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -117,7 +117,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -150,7 +150,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)

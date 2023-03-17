@@ -639,13 +639,15 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Optimistic: true}
+		slot := primitives.Slot(0)
+		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Optimistic: true, Slot: &slot}
 		vs := &Server{
 			StateFetcher:          &testutil.MockFetcher{BeaconState: st},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			ChainInfoFetcher:      mockChainService,
 		}
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,

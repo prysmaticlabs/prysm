@@ -94,7 +94,7 @@ func TestGetStateRoot(t *testing.T) {
 	}
 
 	resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
-		StateId: make([]byte, 0),
+		StateId: []byte("head"),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -121,7 +121,7 @@ func TestGetStateRoot(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -155,7 +155,7 @@ func TestGetStateRoot(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -189,7 +189,7 @@ func TestGetStateFork(t *testing.T) {
 	}
 
 	resp, err := server.GetStateFork(ctx, &eth.StateRequest{
-		StateId: make([]byte, 0),
+		StateId: []byte("head"),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -218,7 +218,7 @@ func TestGetStateFork(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -251,7 +251,7 @@ func TestGetStateFork(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -292,7 +292,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	}
 
 	resp, err := server.GetFinalityCheckpoints(ctx, &eth.StateRequest{
-		StateId: make([]byte, 0),
+		StateId: []byte("head"),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -323,7 +323,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -356,7 +356,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -398,17 +398,17 @@ func TestGetRandao(t *testing.T) {
 	}
 
 	t.Run("no epoch requested", func(t *testing.T) {
-		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0)})
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head")})
 		require.NoError(t, err)
 		assert.DeepEqual(t, mixCurrent, resp.Data.Randao)
 	})
 	t.Run("current epoch requested", func(t *testing.T) {
-		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochCurrent})
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head"), Epoch: &epochCurrent})
 		require.NoError(t, err)
 		assert.DeepEqual(t, mixCurrent, resp.Data.Randao)
 	})
 	t.Run("old epoch requested", func(t *testing.T) {
-		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochOld})
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head"), Epoch: &epochOld})
 		require.NoError(t, err)
 		assert.DeepEqual(t, mixOld, resp.Data.Randao)
 	})
@@ -450,7 +450,7 @@ func TestGetRandao(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -482,7 +482,7 @@ func TestGetRandao(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
