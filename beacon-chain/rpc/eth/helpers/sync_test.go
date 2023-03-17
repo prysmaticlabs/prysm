@@ -98,89 +98,23 @@ func TestIsOptimistic(t *testing.T) {
 		assert.Equal(t, false, o)
 	})
 	t.Run("justified", func(t *testing.T) {
-		t.Run("is head and head is optimistic", func(t *testing.T) {
+		t.Run("justified checkpoint is optimistic", func(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
-			cs := &chainmock.ChainService{Optimistic: true}
+			cs := &chainmock.ChainService{Optimistic: true, CurrentJustifiedCheckPoint: &eth.Checkpoint{}, OptimisticRoots: map[[32]byte]bool{[32]byte{}: true}}
 			mf := &testutil.MockFetcher{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte("justified"), cs, mf, cs, nil)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
 		})
-		t.Run("is head and head is not optimistic", func(t *testing.T) {
+		t.Run("justified checkpoint is not optimistic", func(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
-			cs := &chainmock.ChainService{Optimistic: false}
+			cs := &chainmock.ChainService{Optimistic: true, CurrentJustifiedCheckPoint: &eth.Checkpoint{}}
 			mf := &testutil.MockFetcher{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte("justified"), cs, mf, cs, nil)
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
-		})
-		t.Run("head is not optimistic", func(t *testing.T) {
-			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-			require.NoError(t, err)
-			db := dbtest.SetupDB(t)
-			require.NoError(t, db.SaveBlock(ctx, b))
-			fetcherSt, err := util.NewBeaconState()
-			require.NoError(t, err)
-			chainState, err := util.NewBeaconState()
-			require.NoError(t, err)
-			require.NoError(t, chainState.SetSlot(fieldparams.SlotsPerEpoch))
-			cs := &chainmock.ChainService{Optimistic: false, State: chainState}
-			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
-			o, err := IsOptimistic(ctx, []byte("justified"), cs, mf, cs, db)
-			require.NoError(t, err)
-			assert.Equal(t, false, o)
-		})
-		t.Run("is finalized when head is optimistic", func(t *testing.T) {
-			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-			require.NoError(t, err)
-			db := dbtest.SetupDB(t)
-			require.NoError(t, db.SaveBlock(ctx, b))
-			fetcherSt, err := util.NewBeaconState()
-			require.NoError(t, err)
-			chainState, err := util.NewBeaconState()
-			require.NoError(t, err)
-			require.NoError(t, chainState.SetSlot(fieldparams.SlotsPerEpoch))
-			cs := &chainmock.ChainService{Optimistic: true, State: chainState, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 1}}
-			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
-			o, err := IsOptimistic(ctx, []byte("justified"), cs, mf, cs, db)
-			require.NoError(t, err)
-			assert.Equal(t, false, o)
-		})
-		t.Run("is not finalized when head is optimistic", func(t *testing.T) {
-			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-			require.NoError(t, err)
-			b.SetSlot(fieldparams.SlotsPerEpoch)
-			db := dbtest.SetupDB(t)
-			require.NoError(t, db.SaveBlock(ctx, b))
-			fetcherSt, err := util.NewBeaconState()
-			require.NoError(t, err)
-			require.NoError(t, fetcherSt.SetSlot(fieldparams.SlotsPerEpoch))
-			chainState, err := util.NewBeaconState()
-			require.NoError(t, err)
-			require.NoError(t, chainState.SetSlot(fieldparams.SlotsPerEpoch*2))
-			cs := &chainmock.ChainService{Optimistic: true, State: chainState, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 0}}
-			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
-			o, err := IsOptimistic(ctx, []byte("justified"), cs, mf, cs, db)
-			require.NoError(t, err)
-			assert.Equal(t, true, o)
-		})
-		t.Run("no canonical blocks", func(t *testing.T) {
-			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-			require.NoError(t, err)
-			db := dbtest.SetupDB(t)
-			require.NoError(t, db.SaveBlock(ctx, b))
-			fetcherSt, err := util.NewBeaconState()
-			require.NoError(t, err)
-			chainState, err := util.NewBeaconState()
-			require.NoError(t, err)
-			require.NoError(t, chainState.SetSlot(fieldparams.SlotsPerEpoch))
-			cs := &chainmock.ChainService{Optimistic: false, State: chainState, CanonicalRoots: map[[32]byte]bool{}}
-			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
-			o, err := IsOptimistic(ctx, []byte("justified"), nil, mf, cs, db)
-			require.NoError(t, err)
-			assert.Equal(t, true, o)
 		})
 	})
 	t.Run("root", func(t *testing.T) {
