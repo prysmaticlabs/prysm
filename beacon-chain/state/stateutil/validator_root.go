@@ -50,7 +50,7 @@ func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]b
 		binary.LittleEndian.PutUint64(withdrawalBuf[:8], uint64(validator.WithdrawableEpoch))
 
 		// Public key.
-		pubKeyRoot, err := merkleizePubkey(hasher, pubkey[:])
+		pubKeyRoot, err := merkleizePubkey(pubkey[:])
 		if err != nil {
 			return [][32]byte{}, err
 		}

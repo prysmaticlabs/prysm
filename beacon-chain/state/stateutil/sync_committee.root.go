@@ -1,6 +1,7 @@
 package stateutil
 
 import (
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
@@ -20,7 +21,7 @@ func SyncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
 	// Field 1:  Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
 	pubKeyRoots := make([][32]byte, 0)
 	for _, pubkey := range committee.Pubkeys {
-		r, err := merkleizePubkey(hasher, pubkey)
+		r, err := merkleizePubkey(pubkey)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -32,7 +33,7 @@ func SyncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
 	}
 
 	// Field 2: BLSPubkey
-	aggregateKeyRoot, err := merkleizePubkey(hasher, committee.AggregatePubkey)
+	aggregateKeyRoot, err := merkleizePubkey(committee.AggregatePubkey)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -41,7 +42,10 @@ func SyncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
 	return ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func merkleizePubkey(hasher ssz.HashFn, pubkey []byte) ([32]byte, error) {
+func merkleizePubkey(pubkey []byte) ([32]byte, error) {
+	if len(pubkey) == 0 {
+		return [32]byte{}, errors.New("zero length pubkey provided")
+	}
 	chunks, err := ssz.PackByChunk([][]byte{pubkey})
 	if err != nil {
 		return [32]byte{}, err
