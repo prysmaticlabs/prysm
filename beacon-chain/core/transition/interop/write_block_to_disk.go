@@ -11,12 +11,12 @@ import (
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
-func WriteBlockToDisk(prefix string, block interfaces.ReadOnlySignedBeaconBlock, failed bool) {
+func WriteBlockToDisk(block interfaces.ReadOnlySignedBeaconBlock, failed bool) {
 	if !features.Get().WriteSSZStateTransitions {
 		return
 	}
 
-	filename := fmt.Sprintf(prefix+"_beacon_block_%d.ssz", block.Block().Slot())
+	filename := fmt.Sprintf("beacon_block_%d.ssz", block.Block().Slot())
 	if failed {
 		filename = "failed_" + filename
 	}

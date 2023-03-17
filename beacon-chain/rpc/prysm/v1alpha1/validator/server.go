@@ -63,7 +63,6 @@ type Server struct {
 	SlashingsPool          slashings.PoolManager
 	ExitPool               voluntaryexits.PoolManager
 	SyncCommitteePool      synccommittee.Pool
-	BLSChangesPool         blstoexec.PoolManager
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       execution.POWBlockFetcher
@@ -74,6 +73,7 @@ type Server struct {
 	BeaconDB               db.HeadAccessDatabase
 	ExecutionEngineCaller  execution.EngineCaller
 	BlockBuilder           builder.BlockBuilder
+	BLSChangesPool         blstoexec.PoolManager
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

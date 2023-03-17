@@ -135,7 +135,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
 	if err != nil {
-		interop.WriteBlockToDisk("proposer", sBlk, true /*failed*/)
+		interop.WriteBlockToDisk(sBlk, true /*failed*/)
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	sBlk.SetStateRoot(sr)

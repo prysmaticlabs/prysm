@@ -98,7 +98,6 @@ type Config struct {
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager
-	BLSToExecPool                 blstoexec.PoolManager
 	SlashingChecker               slasherservice.SlashingChecker
 	SyncCommitteeObjectPool       synccommittee.Pool
 	BLSChangesPool                blstoexec.PoolManager
@@ -219,12 +218,12 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
-		BLSChangesPool:         s.cfg.BLSChangesPool,
 		ReplayerBuilder:        ch,
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 		BlockBuilder:           s.cfg.BlockBuilder,
+		BLSChangesPool:         s.cfg.BLSChangesPool,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:           s.cfg.HeadFetcher,
@@ -244,7 +243,6 @@ func (s *Service) Start() {
 			ReplayerBuilder:    ch,
 		},
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
-		BLSChangesPool:         s.cfg.BLSChangesPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
 
@@ -298,7 +296,6 @@ func (s *Service) Start() {
 		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
 		ReplayerBuilder:             ch,
-		BLSChangesPool:              s.cfg.BLSChangesPool,
 	}
 	beaconChainServerV1 := &beacon.Server{
 		CanonicalHistory:   ch,

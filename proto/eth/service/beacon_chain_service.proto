@@ -445,10 +445,5 @@ service BeaconChain {
   rpc GetDepositContract(google.protobuf.Empty) returns (v1.DepositContractResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/config/deposit_contract"};
   }
-
-  // GetBlobs retrieves blob data by block ID and data hash
-  rpc GetBlobsSidecar(v1.BlobsRequest) returns (v1.BlobsResponse) {
-    option (google.api.http) = {get: "/internal/eth/v1/beacon/blobs_sidecars/{block_id}"};
-  }
 }
 

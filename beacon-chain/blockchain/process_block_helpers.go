@@ -66,7 +66,6 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 	// during initial syncing. There's no risk given a state summary object is just a
 	// a subset of the block object.
 	if !s.cfg.BeaconDB.HasStateSummary(ctx, parentRoot) && !s.cfg.BeaconDB.HasBlock(ctx, parentRoot) {
-		log.Errorf("requesting blockroot %#x", bytesutil.Trunc(parentRoot[:]))
 		return errors.New("could not reconstruct parent state")
 	}
 

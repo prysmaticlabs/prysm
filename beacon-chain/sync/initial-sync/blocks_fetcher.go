@@ -274,7 +274,6 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 	}
 
 	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
-
 	return response
 }
 

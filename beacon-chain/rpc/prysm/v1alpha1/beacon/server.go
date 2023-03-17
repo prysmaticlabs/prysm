@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
@@ -41,7 +40,6 @@ type Server struct {
 	Broadcaster                 p2p.Broadcaster
 	AttestationsPool            attestations.Pool
 	SlashingsPool               slashings.PoolManager
-	BLSChangesPool              blstoexec.PoolManager
 	ChainStartChan              chan time.Time
 	ReceivedAttestationsBuffer  chan *ethpb.Attestation
 	CollectedAttestationsBuffer chan []*ethpb.Attestation

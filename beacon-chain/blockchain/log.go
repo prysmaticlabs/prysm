@@ -60,15 +60,8 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 			log = log.WithField("txCount", len(txs))
 			txsPerSlotCount.Set(float64(len(txs)))
 		}
-		if b.Version() == version.Deneb {
-			k, err := b.Body().BlobKzgCommitments()
-			if err != nil {
-				return err
-			}
-			log = log.WithField("blobCount", len(k))
-		}
 	}
-	if b.Version() == version.Deneb {
+	if b.Version() >= version.Deneb {
 		k, err := b.Body().BlobKzgCommitments()
 		if err != nil {
 			return err

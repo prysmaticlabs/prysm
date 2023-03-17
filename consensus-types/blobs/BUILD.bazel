@@ -1,12 +1,1 @@
 load("@prysm//tools/go:def.bzl", "go_library")
-
-go_library(
-    name = "go_default_library",
-    srcs = ["blob.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v3/consensus-types/blobs",
-    visibility = ["//visibility:public"],
-    deps = [
-        "//proto/engine/v1:go_default_library",
-        "@com_github_protolambda_go_kzg//eth:go_default_library",
-    ],
-)

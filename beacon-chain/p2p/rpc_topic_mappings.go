@@ -37,12 +37,6 @@ const PingMessageName = "/ping"
 // MetadataMessageName specifies the name for the metadata message topic.
 const MetadataMessageName = "/metadata"
 
-// BlobsSidecarsByRangeMessageName specifies the name for the blobs sidecars by range message topic.
-const BlobsSidecarsByRangeMessageName = "/blobs_sidecars_by_range"
-
-// BeaconBlockAndBlobsSidecarByRootName is a topic for fetching beacon blocks and sidecar blobs by root.
-const BeaconBlockAndBlobsSidecarByRootName = "/beacon_block_and_blobs_sidecar_by_root"
-
 const BlobSidecarsByRootName = "/blob_sidecars_by_root"
 
 const (
@@ -59,8 +53,6 @@ const (
 	RPCPingTopicV1 = protocolPrefix + PingMessageName + SchemaVersionV1
 	// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
 	RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
-	// RPCBlobsSidecarsByRangeTopicV1 defines the v1 topic for the blobs sidecars by range rpc method.
-	RPCBlobsSidecarsByRangeTopicV1 = protocolPrefix + BlobsSidecarsByRangeMessageName + SchemaVersionV1
 	// RPCBlobSidecarsByRootTopicV1 is a topic for requestion blob sidecars by their block root. New in deneb.
 	// /eth2/beacon_chain/req/blob_sidecars_by_root/1/
 	RPCBlobSidecarsByRootTopicV1 = protocolPrefix + BlobSidecarsByRootName + SchemaVersionV1
@@ -96,8 +88,6 @@ var RPCTopicMappings = map[string]interface{}{
 	// RPC Metadata Message
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),
-	// RPC Blobs Sidecars By Range Message
-	RPCBlobsSidecarsByRangeTopicV1: new(pb.BlobsSidecarsByRangeRequest),
 	// RPC Blobs Sidecars By Root Message
 	RPCBlobSidecarsByRootTopicV1: new(p2ptypes.BlobSidecarsByRootReq),
 }
@@ -110,15 +100,13 @@ var protocolMapping = map[string]bool{
 // Maps all the protocol message names for the different rpc
 // topics.
 var messageMapping = map[string]bool{
-	StatusMessageName:                    true,
-	GoodbyeMessageName:                   true,
-	BeaconBlocksByRangeMessageName:       true,
-	BeaconBlocksByRootsMessageName:       true,
-	PingMessageName:                      true,
-	MetadataMessageName:                  true,
-	BlobsSidecarsByRangeMessageName:      true,
-	BeaconBlockAndBlobsSidecarByRootName: true,
-	BlobSidecarsByRootName:               true,
+	StatusMessageName:              true,
+	GoodbyeMessageName:             true,
+	BeaconBlocksByRangeMessageName: true,
+	BeaconBlocksByRootsMessageName: true,
+	PingMessageName:                true,
+	MetadataMessageName:            true,
+	BlobSidecarsByRootName:         true,
 }
 
 // Maps all the RPC messages which are to updated in altair.
@@ -134,15 +122,13 @@ var versionMapping = map[string]bool{
 }
 
 var PreAltairV1SchemaMapping = map[string]bool{
-	StatusMessageName:                    true,
-	GoodbyeMessageName:                   true,
-	BeaconBlocksByRangeMessageName:       true,
-	BeaconBlocksByRootsMessageName:       true,
-	PingMessageName:                      true,
-	MetadataMessageName:                  true,
-	BlobsSidecarsByRangeMessageName:      false,
-	BeaconBlockAndBlobsSidecarByRootName: false,
-	BlobSidecarsByRootName:               false,
+	StatusMessageName:              true,
+	GoodbyeMessageName:             true,
+	BeaconBlocksByRangeMessageName: true,
+	BeaconBlocksByRootsMessageName: true,
+	PingMessageName:                true,
+	MetadataMessageName:            true,
+	BlobSidecarsByRootName:         false,
 }
 
 // VerifyTopicMapping verifies that the topic and its accompanying
