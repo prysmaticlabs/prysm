@@ -10,47 +10,46 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-bitfield"
-	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
-	p2pmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
+	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	p2pType "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -455,6 +454,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	currCommittee := &ethpbalpha.SyncCommittee{}
 	for i := 0; i < 5; i++ {
 		currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
+		currCommittee.AggregatePubkey = make([]byte, 48)
 	}
 	// add one public key twice - this is needed for one of the test cases
 	currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[0].PublicKey)
@@ -462,6 +462,8 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	nextCommittee := &ethpbalpha.SyncCommittee{}
 	for i := 5; i < 10; i++ {
 		nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+		nextCommittee.AggregatePubkey = make([]byte, 48)
+
 	}
 	require.NoError(t, st.SetNextSyncCommittee(nextCommittee))
 	db := dbutil.SetupDB(t)
@@ -590,11 +592,14 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		currCommittee := &ethpbalpha.SyncCommittee{}
 		for i := 5; i < 10; i++ {
 			currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
+			currCommittee.AggregatePubkey = make([]byte, 48)
 		}
 		require.NoError(t, newSyncPeriodSt.SetCurrentSyncCommittee(currCommittee))
 		nextCommittee := &ethpbalpha.SyncCommittee{}
 		for i := 0; i < 5; i++ {
 			nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+			nextCommittee.AggregatePubkey = make([]byte, 48)
+
 		}
 		require.NoError(t, newSyncPeriodSt.SetNextSyncCommittee(nextCommittee))
 
@@ -1181,7 +1186,7 @@ func TestProduceBlockV2(t *testing.T) {
 				Amount:         123,
 			},
 		}
-		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, 2)
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, 2)
 		require.NoError(t, err)
 
 		payloadHeader, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
@@ -2715,7 +2720,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		wds, err := beaconState.ExpectedWithdrawals()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bid := &ethpbalpha.BuilderBidCapella{
 			Header: &enginev1.ExecutionPayloadHeaderCapella{

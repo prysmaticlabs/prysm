@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 )
 
 // ProposerSettingsPayload is the struct representation of the JSON or YAML payload set in the validator through the CLI.

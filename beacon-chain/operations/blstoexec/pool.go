@@ -6,12 +6,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	doublylinkedlist "github.com/prysmaticlabs/prysm/v4/container/doubly-linked-list"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,7 +23,7 @@ const blsChangesPoolThreshold = 2000
 var (
 	blsToExecMessageInPoolTotal = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bls_to_exec_message_pool_total",
-		Help: "The number of saved bls to exec message in the operation cool.",
+		Help: "The number of saved bls to exec messages in the operation pool.",
 	})
 )
 
