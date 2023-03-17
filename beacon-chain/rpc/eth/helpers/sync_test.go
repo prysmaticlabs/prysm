@@ -12,11 +12,15 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	syncmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -295,10 +299,16 @@ func TestIsOptimistic(t *testing.T) {
 		})
 		t.Run("ancestor is optimistic", func(t *testing.T) {
 			r := bytesutil.ToBytes32([]byte("root"))
-			st, err := util.NewBeaconState()
+			fcs := doublylinkedtree.New()
+			finalizedCheckpt := &eth.Checkpoint{Epoch: 0}
+			st, root, err := prepareForkchoiceState(fieldparams.SlotsPerEpoch, r, [32]byte{}, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
 			require.NoError(t, err)
-			fcs := &doublylinkedtree.ForkChoice{}
-			cs := &chainmock.ChainService{Optimistic: true, ForkChoiceStore: fcs, OptimisticRoots: map[[32]byte]bool{r: true}, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 0}}
+			require.NoError(t, fcs.InsertNode(ctx, st, root))
+			headRoot := [32]byte{'r'}
+			st, root, err = prepareForkchoiceState(fieldparams.SlotsPerEpoch+1, headRoot, r, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, st, root))
+			cs := &chainmock.ChainService{Root: headRoot[:], Optimistic: true, ForkChoiceStore: fcs, OptimisticRoots: map[[32]byte]bool{r: true}, FinalizedCheckPoint: finalizedCheckpt}
 			mf := &testutil.MockFetcher{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch)), cs, mf, cs, nil)
 			require.NoError(t, err)
@@ -316,4 +326,37 @@ func TestIsOptimistic(t *testing.T) {
 			assert.Equal(t, true, o)
 		})
 	})
+}
+
+// prepareForkchoiceState prepares a beacon state with the given data to mock
+// insert into forkchoice
+func prepareForkchoiceState(
+	slot primitives.Slot,
+	blockRoot [32]byte,
+	parentRoot [32]byte,
+	payloadHash [32]byte,
+	justified *eth.Checkpoint,
+	finalized *eth.Checkpoint,
+) (state.BeaconState, [32]byte, error) {
+	blockHeader := &eth.BeaconBlockHeader{
+		ParentRoot: parentRoot[:],
+	}
+
+	executionHeader := &enginev1.ExecutionPayloadHeader{
+		BlockHash: payloadHash[:],
+	}
+
+	base := &eth.BeaconStateBellatrix{
+		Slot:                         slot,
+		RandaoMixes:                  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:                   make([][]byte, 1),
+		CurrentJustifiedCheckpoint:   justified,
+		FinalizedCheckpoint:          finalized,
+		LatestExecutionPayloadHeader: executionHeader,
+		LatestBlockHeader:            blockHeader,
+	}
+
+	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
+	st, err := state_native.InitializeFromProtoBellatrix(base)
+	return st, blockRoot, err
 }
