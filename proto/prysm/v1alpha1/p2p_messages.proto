@@ -66,6 +66,6 @@ message MetaDataV1 {
  )
 */
 message BlobsSidecarsByRangeRequest {
-  uint64 start_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+  uint64 start_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
   uint64 count = 2;
 }

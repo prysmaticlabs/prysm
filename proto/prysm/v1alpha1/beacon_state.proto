@@ -293,7 +293,7 @@ message BeaconStateDeneb {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
   Fork fork = 1004;
 
   // History [2001-3000]
@@ -338,7 +338,7 @@ message BeaconStateDeneb {
 
   // Capella fields [11001-12000]
   uint64 next_withdrawal_index = 11001; // [New in Capella]
-  uint64 next_withdrawal_validator_index = 11002 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"]; // [New in Capella]
+  uint64 next_withdrawal_validator_index = 11002 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"]; // [New in Capella]
   repeated HistoricalSummary historical_summaries = 11003 [(ethereum.eth.ext.ssz_max) = "16777216"];
 }
 

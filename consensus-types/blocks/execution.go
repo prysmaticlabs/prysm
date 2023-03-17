@@ -758,7 +758,7 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	if err != nil {
 		return nil, err
 	}
-	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, err
 	}

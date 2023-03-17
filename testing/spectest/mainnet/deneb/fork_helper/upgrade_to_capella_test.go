@@ -3,7 +3,7 @@ package fork_helper
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/deneb/fork"
+	"github.com/prysmaticlabs/prysm/v4/testing/spectest/shared/deneb/fork"
 )
 
 func TestMainnet_Deneb_UpgradeToCapella(t *testing.T) {
