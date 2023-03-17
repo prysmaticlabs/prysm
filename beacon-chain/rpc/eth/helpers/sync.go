@@ -86,7 +86,11 @@ func IsOptimistic(
 	case "genesis", "finalized":
 		return false, nil
 	case "justified":
-		return isStateRootOptimistic(ctx, stateId, optimisticModeFetcher, stateFetcher, chainInfo, database)
+		jcp := chainInfo.CurrentJustifiedCheckpt()
+		if jcp == nil {
+			return true, errors.New("received nil justified checkpoint")
+		}
+		return optimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(jcp.Root))
 	default:
 		if len(stateId) == 32 {
 			return isStateRootOptimistic(ctx, stateId, optimisticModeFetcher, stateFetcher, chainInfo, database)
@@ -155,7 +159,7 @@ func isStateRootOptimistic(
 		if err != nil {
 			return true, errors.Wrapf(err, "could not obtain block")
 		}
-		if strings.ToLower(string(stateId)) != "justified" && bytesutil.ToBytes32(stateId) != b.Block().StateRoot() {
+		if bytesutil.ToBytes32(stateId) != b.Block().StateRoot() {
 			continue
 		}
 		canonical, err := chainInfo.IsCanonical(ctx, r)
