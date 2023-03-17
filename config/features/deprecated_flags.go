@@ -17,12 +17,18 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableReorgLateBlocks = &cli.BoolFlag{
+		Name:   "enable-reorg-late-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
 	deprecatedDisablePeerScorer,
+	deprecatedEnableReorgLateBlocks,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
