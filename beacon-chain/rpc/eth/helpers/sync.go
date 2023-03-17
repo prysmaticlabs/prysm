@@ -111,7 +111,8 @@ func IsOptimistic(
 				return false, nil
 			}
 			if primitives.Slot(slotNumber) == chainInfo.HeadSlot() {
-				return optimisticModeFetcher.IsOptimistic(ctx)
+				// We know the head is optimistic because we checked it above.
+				return true, nil
 			}
 			headRoot, err := chainInfo.HeadRoot(ctx)
 			if err != nil {
@@ -141,7 +142,7 @@ func isStateRootOptimistic(
 	if st.Slot() == chainInfo.HeadSlot() {
 		return optimisticModeFetcher.IsOptimistic(ctx)
 	}
-	_, roots, err := database.HighestRootsBelowSlot(ctx, st.Slot()+1)
+	_, roots, err := database.BlockRootsBySlot(ctx, st.Slot())
 	if err != nil {
 		return true, errors.Wrapf(err, "could not get block roots for slot %d", st.Slot())
 	}

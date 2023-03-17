@@ -67,6 +67,7 @@ type ChainService struct {
 	ReceiveBlockMockErr         error
 	OptimisticCheckRootReceived [32]byte
 	FinalizedRoots              map[[32]byte]bool
+	OptimisticRoots             map[[32]byte]bool
 }
 
 // ForkChoicer mocks the same method in the chain service
@@ -457,7 +458,7 @@ func (s *ChainService) InForkchoice(_ [32]byte) bool {
 // IsOptimisticForRoot mocks the same method in the chain service.
 func (s *ChainService) IsOptimisticForRoot(_ context.Context, root [32]byte) (bool, error) {
 	s.OptimisticCheckRootReceived = root
-	return s.Optimistic, nil
+	return s.OptimisticRoots[root], nil
 }
 
 // UpdateHead mocks the same method in the chain service.
