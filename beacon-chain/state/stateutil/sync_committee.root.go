@@ -2,7 +2,6 @@ package stateutil
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -12,7 +11,6 @@ import (
 // a SyncCommitteeRoot struct according to the eth2
 // Simple Serialize specification.
 func SyncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
 	var fieldRoots [][32]byte
 	if committee == nil {
 		return [32]byte{}, nil
@@ -27,7 +25,7 @@ func SyncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
 		}
 		pubKeyRoots = append(pubKeyRoots, r)
 	}
-	pubkeyRoot, err := ssz.BitwiseMerkleize(hasher, pubKeyRoots, uint64(len(pubKeyRoots)), uint64(len(pubKeyRoots)))
+	pubkeyRoot, err := ssz.BitwiseMerkleize(pubKeyRoots, uint64(len(pubKeyRoots)), uint64(len(pubKeyRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -39,7 +37,7 @@ func SyncCommitteeRoot(committee *ethpb.SyncCommittee) ([32]byte, error) {
 	}
 	fieldRoots = [][32]byte{pubkeyRoot, aggregateKeyRoot}
 
-	return ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return ssz.BitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func merkleizePubkey(pubkey []byte) ([32]byte, error) {

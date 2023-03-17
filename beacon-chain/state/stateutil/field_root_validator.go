@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -31,14 +30,12 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 }
 
 func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
-
 	roots, err := optimizedValidatorRoots(validators)
 	if err != nil {
 		return [32]byte{}, err
 	}
 
-	validatorsRootsRoot, err := ssz.BitwiseMerkleize(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
+	validatorsRootsRoot, err := ssz.BitwiseMerkleize(roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -60,9 +57,8 @@ func optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) 
 		return [][32]byte{}, nil
 	}
 	roots := make([][32]byte, 0, len(validators)*validatorFieldRoots)
-	hasher := hash.CustomSHA256Hasher()
 	for i := 0; i < len(validators); i++ {
-		fRoots, err := ValidatorFieldRoots(hasher, validators[i])
+		fRoots, err := ValidatorFieldRoots(validators[i])
 		if err != nil {
 			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}

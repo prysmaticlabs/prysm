@@ -13,7 +13,7 @@ func Eth1Root(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	if eth1Data == nil {
 		return [32]byte{}, errors.New("nil eth1 data")
 	}
-	return Eth1DataRootWithHasher(hasher, eth1Data)
+	return Eth1DataRootWithHasher(eth1Data)
 }
 
 // Eth1DataVotesRoot computes the HashTreeRoot Merkleization of
