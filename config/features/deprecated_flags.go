@@ -20,7 +20,8 @@ var (
 	deprecatedDisableGossipBatchAggregation = &cli.BoolFlag{
 		Name:   "disable-gossip-batch-aggregation",
 		Usage:  deprecatedUsage,
-		Hidden: true}
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
