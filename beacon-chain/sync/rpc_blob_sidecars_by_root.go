@@ -95,26 +95,3 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	return nil
 }
-
-func (s *Service) sendBlocksAndSidecarsRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
-	ctx, cancel := context.WithTimeout(ctx, respTimeout)
-	defer cancel()
-
-	_, err := SendBlocksAndSidecarsByRootRequest(ctx, s.cfg.chain, s.cfg.p2p, id, blockRoots, func(blkAndSidecar *ethpb.SignedBeaconBlockAndBlobsSidecar) error {
-		blk, err := blocks.NewSignedBeaconBlock(blkAndSidecar.BeaconBlock)
-		if err != nil {
-			return err
-		}
-		blkRoot, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return err
-		}
-		s.pendingQueueLock.Lock()
-		defer s.pendingQueueLock.Unlock()
-		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blkRoot, blkAndSidecar.BlobsSidecar); err != nil {
-			return err
-		}
-		return nil
-	})
-	return err
-}

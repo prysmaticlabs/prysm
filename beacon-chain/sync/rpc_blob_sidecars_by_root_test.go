@@ -32,7 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-type sidecarsTestCase struct {
+type blobsByRootTestCase struct {
 	name    string
 	nblocks int                  // how many blocks to loop through in setting up test fixtures & requests
 	missing map[int]map[int]bool // skip this blob index, so that we can test different custody scenarios
@@ -100,7 +100,7 @@ func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, ind
 	}
 }
 
-type expectedResponse struct {
+type blobsByRootExpected struct {
 	skipped bool
 	code    uint8
 	sidecar *ethpb.BlobSidecar
@@ -109,7 +109,7 @@ type expectedResponse struct {
 
 type streamDecoder func(io.Reader, ssz.Unmarshaler) error
 
-func (r *expectedResponse) requireExpected(t *testing.T, d streamDecoder, stream network.Stream) {
+func (r *blobsByRootExpected) requireExpected(t *testing.T, d streamDecoder, stream network.Stream) {
 	if r.skipped {
 		return
 	}
@@ -126,7 +126,7 @@ func (r *expectedResponse) requireExpected(t *testing.T, d streamDecoder, stream
 	require.Equal(t, sc.Index, r.sidecar.Index)
 }
 
-func (c sidecarsTestCase) run(t *testing.T) {
+func (c blobsByRootTestCase) run(t *testing.T) {
 	cfg := params.BeaconConfig()
 	repositionFutureEpochs(cfg)
 	undo, err := params.SetActiveWithUndo(cfg)
@@ -141,7 +141,7 @@ func (c sidecarsTestCase) run(t *testing.T) {
 
 	db := &MockBlobDB{}
 	var req p2pTypes.BlobSidecarsByRootReq
-	var expect []*expectedResponse
+	var expect []*blobsByRootExpected
 	oldest, err := slots.EpochStart(blobMinReqEpoch(c.chain.FinalizedCheckPoint.Epoch, slots.ToEpoch(c.chain.CurrentSlot())))
 	require.NoError(t, err)
 	streamTerminated := false
@@ -180,7 +180,7 @@ func (c sidecarsTestCase) run(t *testing.T) {
 			// we don't need to check what index this is because we work through them in order and the first one
 			// will set streamTerminated = true and skip everything else in the test case.
 			if c.expired[i] {
-				expect = append(expect, &expectedResponse{
+				expect = append(expect, &blobsByRootExpected{
 					code:    responseCodeResourceUnavailable,
 					message: p2pTypes.ErrBlobLTMinRequest.Error(),
 				})
@@ -188,7 +188,7 @@ func (c sidecarsTestCase) run(t *testing.T) {
 				continue
 			}
 
-			expect = append(expect, &expectedResponse{
+			expect = append(expect, &blobsByRootExpected{
 				sidecar: sc,
 				code:    responseCodeSuccess,
 				message: "",
@@ -294,7 +294,7 @@ func TestSidecarByRootValidation(t *testing.T) {
 	dmc := defaultMockChain(t)
 	dmc.Slot = &capellaSlot
 	dmc.FinalizedCheckPoint = &ethpb.Checkpoint{Epoch: params.BeaconConfig().CapellaForkEpoch}
-	cases := []sidecarsTestCase{
+	cases := []blobsByRootTestCase{
 		{
 			name:    "block before minimum_request_epoch",
 			nblocks: 1,
@@ -351,7 +351,7 @@ func TestSidecarByRootValidation(t *testing.T) {
 }
 
 func TestSidecarsByRootOK(t *testing.T) {
-	cases := []sidecarsTestCase{
+	cases := []blobsByRootTestCase{
 		{
 			name:    "0 blob",
 			nblocks: 0,
@@ -372,7 +372,7 @@ func TestSidecarsByRootOK(t *testing.T) {
 	}
 }
 
-func TestBlobMinReqEpoch(t *testing.T) {
+func TestBlobByRootMinReqEpoch(t *testing.T) {
 	winMin := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	cases := []struct {
 		name      string

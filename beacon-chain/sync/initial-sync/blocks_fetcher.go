@@ -305,6 +305,8 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	return nil, "", errNoPeersAvailable
 }
 
+// TODO: need to fix the blobs by range rpc to bring this back
+/*
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlobsFromPeer(
 	ctx context.Context,
@@ -330,6 +332,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(
 	}
 	return nil, "", errNoPeersAvailable
 }
+*/
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
 func (f *blocksFetcher) requestBlocks(
@@ -361,6 +364,7 @@ func (f *blocksFetcher) requestBlocks(
 	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
 
+/*
 func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecarsByRangeRequest, pid peer.ID) ([]*p2ppb.BlobSidecar, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -384,6 +388,7 @@ func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecar
 	l.Unlock()
 	return prysmsync.SendBlobsSidecarsByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
+*/
 
 // requestBlocksByRoot is a wrapper for handling BeaconBlockByRootsReq requests/streams.
 func (f *blocksFetcher) requestBlocksByRoot(
