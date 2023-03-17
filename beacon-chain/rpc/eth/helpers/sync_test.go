@@ -316,14 +316,20 @@ func TestIsOptimistic(t *testing.T) {
 		})
 		t.Run("ancestor is not optimistic", func(t *testing.T) {
 			r := bytesutil.ToBytes32([]byte("root"))
-			st, err := util.NewBeaconState()
+			fcs := doublylinkedtree.New()
+			finalizedCheckpt := &eth.Checkpoint{Epoch: 0}
+			st, root, err := prepareForkchoiceState(fieldparams.SlotsPerEpoch, r, [32]byte{}, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
 			require.NoError(t, err)
-			fcs := &doublylinkedtree.ForkChoice{}
-			cs := &chainmock.ChainService{Optimistic: true, ForkChoiceStore: fcs, OptimisticRoots: map[[32]byte]bool{r: false}, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 0}}
+			require.NoError(t, fcs.InsertNode(ctx, st, root))
+			headRoot := [32]byte{'r'}
+			st, root, err = prepareForkchoiceState(fieldparams.SlotsPerEpoch+1, headRoot, r, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, st, root))
+			cs := &chainmock.ChainService{Root: headRoot[:], Optimistic: true, ForkChoiceStore: fcs, OptimisticRoots: map[[32]byte]bool{r: false}, FinalizedCheckPoint: finalizedCheckpt}
 			mf := &testutil.MockFetcher{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch)), cs, mf, cs, nil)
 			require.NoError(t, err)
-			assert.Equal(t, true, o)
+			assert.Equal(t, false, o)
 		})
 	})
 }
