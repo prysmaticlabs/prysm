@@ -269,16 +269,14 @@ func (s *Server) handleStateEvents(
 // streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
 func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer, emitSlot primitives.Slot) error {
-	headState, err := s.HeadFetcher.HeadState(s.Ctx)
+	st, err := s.HeadFetcher.HeadState(s.Ctx)
 	if err != nil {
 		return err
 	}
-	if headState.Slot() != emitSlot {
-		st, err := transition.ProcessSlotsIfPossible(s.Ctx, headState, emitSlot)
-		if err != nil {
-			return err
-		}
-		headState = st
+	// advance the headstate to current + 1
+	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, emitSlot)
+	if err != nil {
+		return err
 	}
 
 	headBlock, err := s.HeadFetcher.HeadBlock(s.Ctx)
