@@ -147,6 +147,7 @@ func TestIsOptimistic(t *testing.T) {
 		t.Run("is not finalized when head is optimistic", func(t *testing.T) {
 			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 			require.NoError(t, err)
+			b.SetSlot(fieldparams.SlotsPerEpoch)
 			db := dbtest.SetupDB(t)
 			require.NoError(t, db.SaveBlock(ctx, b))
 			fetcherSt, err := util.NewBeaconState()
@@ -200,6 +201,7 @@ func TestIsOptimistic(t *testing.T) {
 		t.Run("head is not optimistic", func(t *testing.T) {
 			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 			require.NoError(t, err)
+			b.SetStateRoot(bytesutil.PadTo([]byte("root"), 32))
 			db := dbtest.SetupDB(t)
 			require.NoError(t, db.SaveBlock(ctx, b))
 			fetcherSt, err := util.NewBeaconState()
@@ -216,6 +218,7 @@ func TestIsOptimistic(t *testing.T) {
 		t.Run("is finalized when head is optimistic", func(t *testing.T) {
 			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 			require.NoError(t, err)
+			b.SetStateRoot(bytesutil.PadTo([]byte("root"), 32))
 			db := dbtest.SetupDB(t)
 			require.NoError(t, db.SaveBlock(ctx, b))
 			fetcherSt, err := util.NewBeaconState()
@@ -232,6 +235,8 @@ func TestIsOptimistic(t *testing.T) {
 		t.Run("is not finalized when head is optimistic", func(t *testing.T) {
 			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 			require.NoError(t, err)
+			b.SetStateRoot(bytesutil.PadTo([]byte("root"), 32))
+			b.SetSlot(fieldparams.SlotsPerEpoch)
 			db := dbtest.SetupDB(t)
 			require.NoError(t, db.SaveBlock(ctx, b))
 			fetcherSt, err := util.NewBeaconState()

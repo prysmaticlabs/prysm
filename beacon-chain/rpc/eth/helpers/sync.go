@@ -61,14 +61,15 @@ func ValidateSync(
 //   - For genesis and finalized states, immediately return false.
 //   - For justified state and a state root:
 //     # If state's slot is equal to head's slot, return the node's optimistic status.
-//     # If state's block is not canonical, return true.
+//     # If block for state's slot is not canonical, return true.
+//     # If state's id is a state root and block for state's slot doesn't have the correct state root, continue.
 //     # If state's block is canonical and node is not optimistic, return false.
 //     # If state's block is canonical and node is optimistic and state's slot is not after head's finalized slot, return false.
 //     # Otherwise return true.
 //   - For slot number:
 //     # If node is not optimistic, return false.
-//     # If slot is equal to head's slot, return the node's optimistic status.
 //     # If slot is not after head's finalized slot, return false.
+//     # If slot is equal to head's slot, return true.
 //     # Otherwise fetch the state's ancestor root and return its optimistic status.
 func IsOptimistic(
 	ctx context.Context,
@@ -142,14 +143,21 @@ func isStateRootOptimistic(
 	if st.Slot() == chainInfo.HeadSlot() {
 		return optimisticModeFetcher.IsOptimistic(ctx)
 	}
-	_, roots, err := database.BlockRootsBySlot(ctx, st.Slot())
+	blocks, err := database.BlocksBySlot(ctx, st.Slot())
 	if err != nil {
 		return true, errors.Wrapf(err, "could not get block roots for slot %d", st.Slot())
 	}
-	if len(roots) == 0 {
-		return false, errors.New("no blocks returned from the database")
+	if len(blocks) == 0 {
+		return true, errors.New("no blocks returned from the database")
 	}
-	for _, r := range roots {
+	for _, b := range blocks {
+		if strings.ToLower(string(stateId)) != "justified" && bytesutil.ToBytes32(stateId) != b.Block().StateRoot() {
+			continue
+		}
+		r, err := b.Block().HashTreeRoot()
+		if err != nil {
+			return true, errors.Wrapf(err, "could not calculate block root")
+		}
 		canonical, err := chainInfo.IsCanonical(ctx, r)
 		if err != nil {
 			return true, errors.Wrapf(err, "could not check canonical status")
@@ -172,7 +180,7 @@ func isStateRootOptimistic(
 			return true, nil
 		}
 	}
-	// No block is canonical, return true
+	// No canonical block matching requested state root, return true.
 	return true, nil
 }
 
