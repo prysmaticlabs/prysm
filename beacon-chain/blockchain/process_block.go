@@ -671,9 +671,9 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 		for {
 			select {
 			case <-ticker.C():
-				if err := s.notifyMissingSlot(ctx); err != nil {
-					log.WithError(err).Error("Unable to notify event state feed of missed slot")
-				}
+				s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+					Type: statefeed.MissedSlot,
+				})
 				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
 					log.WithError(err).Error("Could not fill missing payload ID")
 				}
@@ -684,64 +684,6 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 			}
 		}
 	}()
-}
-
-func (s *Service) notifyMissingSlot(ctx context.Context) error {
-	s.headLock.RLock()
-	headBlock, err := s.headBlock()
-	if err != nil {
-		s.headLock.RUnlock()
-		return err
-	}
-	headState := s.headState(ctx)
-	headRoot := s.headRoot()
-	s.headLock.RUnlock()
-	previousDutyDependentRoot := s.originBlockRoot[:]
-	currentDutyDependentRoot := s.originBlockRoot[:]
-
-	var previousDutyEpoch primitives.Epoch
-	currentDutyEpoch := slots.ToEpoch(headState.Slot())
-	if currentDutyEpoch > 0 {
-		previousDutyEpoch = currentDutyEpoch.Sub(1)
-	}
-	currentDutySlot, err := slots.EpochStart(currentDutyEpoch)
-	if err != nil {
-		return errors.Wrap(err, "could not get duty slot")
-	}
-	previousDutySlot, err := slots.EpochStart(previousDutyEpoch)
-	if err != nil {
-		return errors.Wrap(err, "could not get duty slot")
-	}
-	if currentDutySlot > 0 {
-		currentDutyDependentRoot, err = helpers.BlockRootAtSlot(headState, currentDutySlot-1)
-		if err != nil {
-			return errors.Wrap(err, "could not get duty dependent root")
-		}
-	}
-	if previousDutySlot > 0 {
-		previousDutyDependentRoot, err = helpers.BlockRootAtSlot(headState, previousDutySlot-1)
-		if err != nil {
-			return errors.Wrap(err, "could not get duty dependent root")
-		}
-	}
-	isOptimistic, err := s.IsOptimistic(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not check if node is optimistically synced")
-	}
-	headStateRoot := headBlock.Block().StateRoot()
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.MissedSlot,
-		Data: &ethpbv1.EventHead{
-			Slot:                      s.CurrentSlot(),
-			Block:                     headRoot[:],
-			State:                     headStateRoot[:],
-			EpochTransition:           slots.IsEpochStart(s.CurrentSlot()),
-			PreviousDutyDependentRoot: previousDutyDependentRoot,
-			CurrentDutyDependentRoot:  currentDutyDependentRoot,
-			ExecutionOptimistic:       isOptimistic,
-		},
-	})
-	return nil
 }
 
 // fillMissingBlockPayloadId is called 4 seconds into the slot and calls FCU if we are proposing next slot
