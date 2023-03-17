@@ -64,7 +64,6 @@ type Flags struct {
 
 	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
-	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
 	SaveFullExecutionPayloads         bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
 
@@ -217,11 +216,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disableForkChoiceDoublyLinkedTree.Name) {
 		logEnabled(disableForkChoiceDoublyLinkedTree)
 		cfg.DisableForkchoiceDoublyLinkedTree = true
-	}
-	cfg.EnableBatchGossipAggregation = true
-	if ctx.Bool(disableGossipBatchAggregation.Name) {
-		logDisabled(disableGossipBatchAggregation)
-		cfg.EnableBatchGossipAggregation = false
 	}
 	if ctx.Bool(SaveFullExecutionPayloads.Name) {
 		logEnabled(SaveFullExecutionPayloads)
