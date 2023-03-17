@@ -88,10 +88,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
-		Name:  "disable-forkchoice-doubly-linked-tree",
-		Usage: "Disables the new forkchoice store structure that uses doubly linked trees",
-	}
 	disableGossipBatchAggregation = &cli.BoolFlag{
 		Name:  "disable-gossip-batch-aggregation",
 		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
@@ -159,7 +155,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
 	disableReorgLateBlocks,
-	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
