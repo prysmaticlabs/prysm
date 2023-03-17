@@ -700,7 +700,7 @@ func (s *Service) notifyMissingSlot(ctx context.Context) error {
 	currentDutyDependentRoot := s.originBlockRoot[:]
 
 	var previousDutyEpoch primitives.Epoch
-	currentDutyEpoch := slots.ToEpoch(s.CurrentSlot() + 1)
+	currentDutyEpoch := slots.ToEpoch(headState.Slot())
 	if currentDutyEpoch > 0 {
 		previousDutyEpoch = currentDutyEpoch.Sub(1)
 	}
@@ -729,14 +729,13 @@ func (s *Service) notifyMissingSlot(ctx context.Context) error {
 		return errors.Wrap(err, "could not check if node is optimistically synced")
 	}
 	headStateRoot := headBlock.Block().StateRoot()
-	emitSlot := s.CurrentSlot() + 1
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.MissedSlot,
 		Data: &ethpbv1.EventHead{
-			Slot:                      emitSlot,
+			Slot:                      s.CurrentSlot(),
 			Block:                     headRoot[:],
 			State:                     headStateRoot[:],
-			EpochTransition:           slots.IsEpochStart(emitSlot),
+			EpochTransition:           slots.IsEpochStart(s.CurrentSlot()),
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 			ExecutionOptimistic:       isOptimistic,
