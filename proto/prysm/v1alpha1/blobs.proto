@@ -19,7 +19,7 @@ import "proto/eth/ext/options.proto";
 import "proto/engine/v1/execution_engine.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "BlobsProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -31,7 +31,7 @@ message BlobsSidecar {
         // The beacon block root which corresponds to the beacon block.
         bytes beacon_block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
         // The beacon block slot which corresponds ot the beacon block.
-        uint64 beacon_block_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+        uint64 beacon_block_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
         // The blobs itself which contains data to be committed.
         repeated ethereum.engine.v1.Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
         // The aggregated proof for blobs and commitments for validation.
