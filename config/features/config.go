@@ -57,8 +57,8 @@ type Flags struct {
 	EnableSlasher                   bool // Enable slasher in the beacon node runtime.
 	EnableSlashingProtectionPruning bool // EnableSlashingProtectionPruning for the validator client.
 
-	SaveFullExecutionPayloads    bool // Save full beacon blocks with execution payloads in the database.
-	EnableStartOptimistic        bool // EnableStartOptimistic treats every block as optimistic at startup.
+	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
+	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
