@@ -1166,8 +1166,8 @@ type EventPayloadAttributeStreamV1Json struct {
 }
 
 type EventPayloadAttributeStreamV2Json struct {
-	Version string `json:"version"`
-	Data    *EventPayloadAttributeV2Json
+	Version string                       `json:"version"`
+	Data    *EventPayloadAttributeV2Json `json:"data"`
 }
 
 type EventPayloadAttributeV1Json struct {

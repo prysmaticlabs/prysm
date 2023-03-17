@@ -11,6 +11,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -225,6 +226,14 @@ func (s *Server) handleStateEvents(
 			return nil
 		}
 		return nil
+	case statefeed.MissedSlot:
+		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
+			if err := s.streamPayloadAttributes(stream); err != nil {
+				log.WithError(err).Error("Unable to obtain stream payload attributes")
+			}
+			return nil
+		}
+		return nil
 	case statefeed.FinalizedCheckpoint:
 		if _, ok := requestedTopics[FinalizedCheckpointTopic]; !ok {
 			return nil
@@ -250,8 +259,14 @@ func (s *Server) handleStateEvents(
 
 // streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
+// parent_ fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
 func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
-	headState, err := s.HeadFetcher.HeadStateReadOnly(s.Ctx)
+	st, err := s.HeadFetcher.HeadState(s.Ctx)
+	if err != nil {
+		return err
+	}
+	// advance the headstate
+	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
 	if err != nil {
 		return err
 	}
@@ -281,12 +296,17 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return err
 	}
 
+	proposerIndex, err := helpers.BeaconProposerIndex(s.Ctx, headState)
+	if err != nil {
+		return err
+	}
+
 	switch headState.Version() {
 	case version.Bellatrix:
 		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV1{
 			Version: version.String(headState.Version()),
 			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
-				ProposerIndex:     headBlock.Block().ProposerIndex(),
+				ProposerIndex:     proposerIndex,
 				ProposalSlot:      headState.Slot(),
 				ParentBlockNumber: headPayload.BlockNumber(),
 				ParentBlockRoot:   headRoot,
@@ -306,7 +326,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV2{
 			Version: version.String(headState.Version()),
 			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
-				ProposerIndex:     headBlock.Block().ProposerIndex(),
+				ProposerIndex:     proposerIndex,
 				ProposalSlot:      headState.Slot(),
 				ParentBlockNumber: headPayload.BlockNumber(),
 				ParentBlockRoot:   headRoot,

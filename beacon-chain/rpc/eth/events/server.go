@@ -20,4 +20,5 @@ type Server struct {
 	BlockNotifier     blockfeed.Notifier
 	OperationNotifier opfeed.Notifier
 	HeadFetcher       blockchain.HeadFetcher
+	ChainInfoFetcher  blockchain.ChainInfoFetcher
 }

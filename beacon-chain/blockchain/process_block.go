@@ -671,9 +671,13 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 		for {
 			select {
 			case <-ticker.C():
+				s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+					Type: statefeed.MissedSlot,
+				})
 				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
 					log.WithError(err).Error("Could not fill missing payload ID")
 				}
+
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting routine")
 				return
