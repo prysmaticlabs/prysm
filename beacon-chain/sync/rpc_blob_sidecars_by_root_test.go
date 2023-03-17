@@ -32,7 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-type blobsByRootTestCase struct {
+type blobsTestCase struct {
 	name    string
 	nblocks int                  // how many blocks to loop through in setting up test fixtures & requests
 	missing map[int]map[int]bool // skip this blob index, so that we can test different custody scenarios
@@ -101,7 +101,6 @@ func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, ind
 }
 
 type blobsByRootExpected struct {
-	skipped bool
 	code    uint8
 	sidecar *ethpb.BlobSidecar
 	message string
@@ -110,9 +109,6 @@ type blobsByRootExpected struct {
 type streamDecoder func(io.Reader, ssz.Unmarshaler) error
 
 func (r *blobsByRootExpected) requireExpected(t *testing.T, d streamDecoder, stream network.Stream) {
-	if r.skipped {
-		return
-	}
 	code, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 	require.NoError(t, err)
 	require.Equal(t, r.code, code, "unexpected response code")
@@ -126,14 +122,14 @@ func (r *blobsByRootExpected) requireExpected(t *testing.T, d streamDecoder, str
 	require.Equal(t, sc.Index, r.sidecar.Index)
 }
 
-func (c blobsByRootTestCase) run(t *testing.T) {
+func (c *blobsTestCase) setup(t *testing.T) (BlobDB, []*ethpb.BlobIdentifier, []*blobsByRootExpected, func()) {
 	cfg := params.BeaconConfig()
 	repositionFutureEpochs(cfg)
 	undo, err := params.SetActiveWithUndo(cfg)
 	require.NoError(t, err)
-	defer func() {
+	cleanup := func() {
 		require.NoError(t, undo())
-	}()
+	}
 	maxBlobs := int(params.BeaconConfig().MaxBlobsPerBlock)
 	if c.chain == nil {
 		c.chain = defaultMockChain(t)
@@ -195,6 +191,14 @@ func (c blobsByRootTestCase) run(t *testing.T) {
 			})
 		}
 	}
+
+	return db, req, expect, cleanup
+}
+
+func (c *blobsTestCase) run(t *testing.T) {
+	db, ids, expect, cleanup := c.setup(t)
+	req := p2pTypes.BlobSidecarsByRootReq(ids)
+	defer cleanup()
 	rate := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
 	client := p2ptest.NewTestP2P(t)
 	s := &Service{
@@ -281,7 +285,7 @@ func defaultMockChain(t *testing.T) *mock.ChainService {
 		Fork:                df}
 }
 
-func TestSidecarByRootValidation(t *testing.T) {
+func TestBlobsByRootValidation(t *testing.T) {
 	cfg := params.BeaconConfig()
 	repositionFutureEpochs(cfg)
 	undo, err := params.SetActiveWithUndo(cfg)
@@ -294,7 +298,7 @@ func TestSidecarByRootValidation(t *testing.T) {
 	dmc := defaultMockChain(t)
 	dmc.Slot = &capellaSlot
 	dmc.FinalizedCheckPoint = &ethpb.Checkpoint{Epoch: params.BeaconConfig().CapellaForkEpoch}
-	cases := []blobsByRootTestCase{
+	cases := []*blobsTestCase{
 		{
 			name:    "block before minimum_request_epoch",
 			nblocks: 1,
@@ -350,8 +354,8 @@ func TestSidecarByRootValidation(t *testing.T) {
 	}
 }
 
-func TestSidecarsByRootOK(t *testing.T) {
-	cases := []blobsByRootTestCase{
+func TestBlobsByRootOK(t *testing.T) {
+	cases := []*blobsTestCase{
 		{
 			name:    "0 blob",
 			nblocks: 0,
@@ -372,7 +376,7 @@ func TestSidecarsByRootOK(t *testing.T) {
 	}
 }
 
-func TestBlobByRootMinReqEpoch(t *testing.T) {
+func TestBlobsByRootMinReqEpoch(t *testing.T) {
 	winMin := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	cases := []struct {
 		name      string
