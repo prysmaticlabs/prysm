@@ -8,18 +8,17 @@ import (
 	"github.com/minio/sha256-simd"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 const bytesPerChunk = 32
 
 // BitlistRoot returns the mix in length of a bitwise Merkleized bitfield.
-func BitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error) {
+func BitlistRoot(bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error) {
 	limit := (maxCapacity + 255) / 256
 	if bfield == nil || bfield.Len() == 0 {
 		length := make([]byte, 32)
-		root, err := BitwiseMerkleize(hasher, [][32]byte{}, 0, limit)
+		root, err := BitwiseMerkleize([][32]byte{}, 0, limit)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -35,7 +34,7 @@ func BitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([
 	}
 	output := make([]byte, 32)
 	copy(output, buf.Bytes())
-	root, err := BitwiseMerkleize(hasher, chunks, uint64(len(chunks)), limit)
+	root, err := BitwiseMerkleize(chunks, uint64(len(chunks)), limit)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -47,18 +46,11 @@ func BitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([
 // and return the root.
 // Note that merkleize on a single chunk is simply that chunk, i.e. the identity
 // when the number of chunks is one.
-func BitwiseMerkleize(hasher HashFn, chunks [][32]byte, count, limit uint64) ([32]byte, error) {
+func BitwiseMerkleize(chunks [][32]byte, count, limit uint64) ([32]byte, error) {
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-	if features.Get().EnableVectorizedHTR {
-		return MerkleizeVector(chunks, limit), nil
-	}
-	hashFn := NewHasherFunc(hasher)
-	leafIndexer := func(i uint64) []byte {
-		return chunks[i][:]
-	}
-	return Merkleize(hashFn, count, limit, leafIndexer), nil
+	return MerkleizeVector(chunks, limit), nil
 }
 
 // PackByChunk a given byte array's final chunk with zeroes if needed.

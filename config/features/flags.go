@@ -88,10 +88,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableVecHTR = &cli.BoolFlag{
-		Name:  "disable-vectorized-htr",
-		Usage: "Disables the new go sha256 library which utilizes optimized routines for merkle trees",
-	}
 	disableGossipBatchAggregation = &cli.BoolFlag{
 		Name:  "disable-gossip-batch-aggregation",
 		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
@@ -158,7 +154,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
-	disableVecHTR,
 	disableReorgLateBlocks,
 	disableGossipBatchAggregation,
 	SaveFullExecutionPayloads,
