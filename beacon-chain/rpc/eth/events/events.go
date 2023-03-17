@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
@@ -288,12 +287,12 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return err
 	}
 
-	t, err := slots.ToTime(uint64(headState.GenesisTime()), headState.Slot())
+	t, err := slots.ToTime(uint64(headState.GenesisTime()), emitSlot)
 	if err != nil {
 		return err
 	}
 
-	prevRando, err := helpers.RandaoMix(headState, time.CurrentEpoch(headState))
+	prevRando, err := helpers.RandaoMix(headState, slots.ToEpoch(emitSlot))
 	if err != nil {
 		return err
 	}
