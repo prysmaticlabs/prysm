@@ -43,7 +43,7 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	log := log.WithField("handler", p2p.BlobSidecarsByRootName[1:]) // slice the leading slash off the name var
 	ref, ok := msg.(*types.BlobSidecarsByRootReq)
 	if !ok {
-		return errors.New("message is not type BeaconBlockByRootsReq")
+		return errors.New("message is not type BlobSidecarsByRootReq")
 	}
 	minReqEpoch := blobMinReqEpoch(s.cfg.chain.FinalizedCheckpt().Epoch, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
 	blobIdents := *ref

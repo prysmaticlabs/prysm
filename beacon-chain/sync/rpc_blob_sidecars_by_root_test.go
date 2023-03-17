@@ -132,7 +132,7 @@ func (r *blobsByRootExpected) requireExpected(t *testing.T, s *Service, stream n
 	require.Equal(t, sc.Index, r.sidecar.Index)
 }
 
-func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobIdentifier, []*blobsByRootExpected, func()) {
+func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, []*blobsByRootExpected, func()) {
 	cfg := params.BeaconConfig()
 	repositionFutureEpochs(cfg)
 	undo, err := params.SetActiveWithUndo(cfg)
@@ -146,7 +146,7 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobIdentifier, 
 	}
 
 	db := &MockBlobDB{}
-	var req p2pTypes.BlobSidecarsByRootReq
+	sidecars := make([]*ethpb.BlobSidecar, 0)
 	var expect []*blobsByRootExpected
 	oldest, err := slots.EpochStart(blobMinReqEpoch(c.chain.FinalizedCheckPoint.Epoch, slots.ToEpoch(c.chain.CurrentSlot())))
 	require.NoError(t, err)
@@ -168,7 +168,8 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobIdentifier, 
 		binary.LittleEndian.PutUint64(root[:], uint64(i))
 		for bi := 0; bi < maxBlobs; bi++ {
 			ubi := uint64(bi)
-			req = append(req, &ethpb.BlobIdentifier{BlockRoot: root[:], Index: ubi})
+			sc := generateTestSidecar(root, block, bi)
+			sidecars = append(sidecars, sc)
 
 			if streamTerminated {
 				// once we know there is a bad response in the sequence, we want to filter out any subsequent
@@ -179,7 +180,6 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobIdentifier, 
 			if missed, ok := c.missing[i]; ok && missed[bi] {
 				continue
 			}
-			sc := generateTestSidecar(root, block, bi)
 			require.NoError(t, db.WriteBlobSidecar(root, ubi, sc))
 			// if a sidecar is expired, we'll expect an error for the *first* index, and after that
 			// we'll expect no further chunks in the stream, so filter out any further expected responses.
@@ -213,11 +213,11 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobIdentifier, 
 	//s.setRateCollector(p2p.RPCBlobSidecarsByRootTopicV1, leakybucket.NewCollector(0.000001, int64(byRootRate), time.Second, false))
 	//s.setRateCollector(p2p.RPCBlobSidecarsByRangeTopicV1, leakybucket.NewCollector(0.000001, int64(byRootRate), time.Second, false))
 
-	return s, req, expect, cleanup
+	return s, sidecars, expect, cleanup
 }
 
 func (c *blobsTestCase) run(t *testing.T, topic protocol.ID) {
-	s, ids, expect, cleanup := c.setup(t)
+	s, sidecars, expect, cleanup := c.setup(t)
 	defer cleanup()
 
 	if c.total != nil {
@@ -232,11 +232,27 @@ func (c *blobsTestCase) run(t *testing.T, topic protocol.ID) {
 	rht := &rpcHandlerTest{t: t, client: client, topic: topic, timeout: time.Second * 10, err: c.err}
 	switch topic {
 	case p2p.RPCBlobSidecarsByRootTopicV1:
-		req := p2pTypes.BlobSidecarsByRootReq(ids)
-		rht.testHandler(nh, s.blobSidecarByRootRPCHandler, &req)
+		req := blobRootRequestFromSidecars(sidecars)
+		rht.testHandler(nh, s.blobSidecarByRootRPCHandler, req)
 	case p2p.RPCBlobSidecarsByRangeTopicV1:
-		t.Fatal("not implemented")
+		req := blobRangeRequestFromIdents(sidecars)
+		rht.testHandler(nh, s.blobSidecarsByRangeRPCHandler, req)
 	}
+}
+
+func blobRangeRequestFromIdents(scs []*ethpb.BlobSidecar) *ethpb.BlobSidecarsByRangeRequest {
+	return &ethpb.BlobSidecarsByRangeRequest{
+		StartSlot: scs[0].Slot,
+		Count:     uint64(len(scs)),
+	}
+}
+
+func blobRootRequestFromSidecars(scs []*ethpb.BlobSidecar) *p2pTypes.BlobSidecarsByRootReq {
+	req := make(p2pTypes.BlobSidecarsByRootReq, 0)
+	for _, sc := range scs {
+		req = append(req, &ethpb.BlobIdentifier{BlockRoot: sc.BlockRoot, Index: sc.Index})
+	}
+	return &req
 }
 
 type rpcHandlerTest struct {
