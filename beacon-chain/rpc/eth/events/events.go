@@ -233,11 +233,11 @@ func (s *Server) handleStateEvents(
 		return nil
 	case statefeed.MissedSlot:
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			emitSlot, ok := event.Data.(primitives.Slot)
+			currentSlot, ok := event.Data.(primitives.Slot)
 			if !ok {
 				return nil
 			}
-			if err := s.streamPayloadAttributes(stream, emitSlot+1); err != nil {
+			if err := s.streamPayloadAttributes(stream, currentSlot+1); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
