@@ -520,8 +520,10 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 			Block:               chainBlk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -734,8 +736,10 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 			Block:               chainBlk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,

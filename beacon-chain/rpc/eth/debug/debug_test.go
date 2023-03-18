@@ -293,7 +293,13 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 	}
 
 	t.Run("optimistic head", func(t *testing.T) {
-		chainService := &blockchainmock.ChainService{Optimistic: true}
+		chainService := &blockchainmock.ChainService{
+			Optimistic:      true,
+			OptimisticRoots: make(map[[32]byte]bool),
+		}
+		for _, sr := range expectedSlotsAndRoots {
+			chainService.OptimisticRoots[sr.Root] = true
+		}
 		server := &Server{
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,

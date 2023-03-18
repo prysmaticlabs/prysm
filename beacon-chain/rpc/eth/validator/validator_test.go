@@ -644,8 +644,26 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		slot := primitives.Slot(0)
-		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Optimistic: true, Slot: &slot}
+		slot, err := slots.EpochStart(1)
+		require.NoError(t, err)
+
+		state, err := util.NewBeaconStateBellatrix()
+		require.NoError(t, err)
+		require.NoError(t, state.SetSlot(slot))
+
+		mockChainService := &mockChain.ChainService{
+			Genesis:    genesisTime,
+			Optimistic: true,
+			Slot:       &slot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{
+				Root:  root[:],
+				Epoch: 0,
+			},
+			State: state,
+		}
+		mockChainService.OptimisticRoots = map[[32]byte]bool{
+			root: true,
+		}
 		vs := &Server{
 			StateFetcher:          &testutil.MockFetcher{BeaconState: st},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
@@ -655,7 +673,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 			ChainInfoFetcher:      mockChainService,
 		}
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
-			Epoch: 0,
+			Epoch: 1,
 			Index: []primitives.ValidatorIndex{1},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
