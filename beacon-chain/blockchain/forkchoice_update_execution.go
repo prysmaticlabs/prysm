@@ -51,10 +51,10 @@ func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.Beaco
 // fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
 func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) error {
 	isNewHead := s.isNewHead(newHeadRoot)
-	if !isNewHead {
+	isNewProposer := s.isNewProposer(proposingSlot)
+	if !isNewHead && !isNewProposer {
 		return nil
 	}
-	isNewProposer := s.isNewProposer(proposingSlot)
 	if isNewProposer && !features.Get().DisableReorgLateBlocks {
 		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
 			return nil
@@ -73,6 +73,11 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not notify forkchoice update")
+	}
+
+	// Don't need to save head info and prune canonical block operations if the head is not new.
+	if !isNewHead {
+		return nil
 	}
 
 	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
