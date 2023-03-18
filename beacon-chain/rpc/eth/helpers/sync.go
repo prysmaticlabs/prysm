@@ -102,8 +102,22 @@ func IsOptimistic(
 			if err != nil {
 				return true, errors.Wrap(err, "could not get head state's finalized slot")
 			}
-			if primitives.Slot(slotNumber) <= finalizedSlot {
+			lastValidatedCheckpoint, err := database.LastValidatedCheckpoint(ctx)
+			if err != nil {
+				return true, errors.Wrap(err, "could not get last validated checkpoint")
+			}
+			validatedSlot, err := slots.EpochStart(lastValidatedCheckpoint.Epoch)
+			if err != nil {
+				return true, errors.Wrap(err, "could not get last validated slot")
+			}
+			if primitives.Slot(slotNumber) <= validatedSlot {
 				return false, nil
+			}
+			// if the finalized checkpoint is higher than the last
+			// validated checkpoint, we are syncing and have synced
+			// a finalization being optimistic
+			if validatedSlot < finalizedSlot || primitives.Slot(slotNumber) <= finalizedSlot {
+				return true, nil
 			}
 			if primitives.Slot(slotNumber) == chainInfo.HeadSlot() {
 				// We know the head is optimistic because we checked it above.
