@@ -55,7 +55,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	if !isNewHead && !isNewProposer {
 		return nil
 	}
-	if isNewProposer && !features.Get().DisableReorgLateBlocks {
+	if isNewHead && isNewProposer && !features.Get().DisableReorgLateBlocks {
 		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
 			return nil
 		}
