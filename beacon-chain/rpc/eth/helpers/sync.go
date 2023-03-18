@@ -69,8 +69,14 @@ func IsOptimistic(
 	switch stateIdString {
 	case "head":
 		return optimisticModeFetcher.IsOptimistic(ctx)
-	case "genesis", "finalized":
+	case "genesis":
 		return false, nil
+	case "finalized":
+		fcp := chainInfo.FinalizedCheckpt()
+		if fcp == nil {
+			return true, errors.New("received nil finalized checkpoint")
+		}
+		return optimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(fcp.Root))
 	case "justified":
 		jcp := chainInfo.CurrentJustifiedCheckpt()
 		if jcp == nil {
