@@ -183,11 +183,15 @@ func TestIsOptimistic(t *testing.T) {
 			ChainSt, err := util.NewBeaconState()
 			require.NoError(t, err)
 			require.NoError(t, ChainSt.SetSlot(fieldparams.SlotsPerEpoch*2))
-			cs := &chainmock.ChainService{Optimistic: true, State: ChainSt, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 0}}
+			br, err := b.Block().HashTreeRoot()
+			require.NoError(t, err)
+			cs := &chainmock.ChainService{Optimistic: true, State: ChainSt, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 0}, OptimisticRoots: map[[32]byte]bool{
+				br: true,
+			}}
 			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
 			o, err := IsOptimistic(ctx, bytesutil.PadTo([]byte("root"), 32), cs, mf, cs, db)
 			require.NoError(t, err)
-			assert.Equal(t, false, o)
+			assert.Equal(t, true, o)
 		})
 		t.Run("no canonical blocks", func(t *testing.T) {
 			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
