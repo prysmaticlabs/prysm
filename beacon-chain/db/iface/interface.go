@@ -55,6 +55,10 @@ type ReadOnlyDatabase interface {
 	FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error)
 	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
 
+	// Blob operations.
+	BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte) (*ethpb.BlobSidecars, error)
+	BlobSidecarsBySlot(ctx context.Context, slot primitives.Slot) (*ethpb.BlobSidecars, error)
+
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	BackfillBlockRoot(ctx context.Context) ([32]byte, error)
@@ -89,6 +93,10 @@ type NoHeadAccessDatabase interface {
 	// Fee recipients operations.
 	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, addrs []common.Address) error
 	SaveRegistrationsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error
+
+	// Blob operations.
+	SaveBlobSidecar(ctx context.Context, blobSidecars *ethpb.BlobSidecars) error
+	DeleteBlobSidecar(ctx context.Context, beaconBlockRoot [32]byte) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint primitives.Slot) error
 }
