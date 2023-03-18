@@ -81,18 +81,18 @@ func IsOptimistic(
 		if len(stateId) == 32 {
 			return isStateRootOptimistic(ctx, stateId, optimisticModeFetcher, stateFetcher, chainInfo, database)
 		} else {
-			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
-			if parseErr != nil {
-				// ID format does not match any valid options.
-				e := statefetcher.NewStateIdParseError(parseErr)
-				return true, &e
-			}
 			optimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 			if err != nil {
 				return true, errors.Wrap(err, "could not check optimistic status")
 			}
 			if !optimistic {
 				return false, nil
+			}
+			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
+			if parseErr != nil {
+				// ID format does not match any valid options.
+				e := statefetcher.NewStateIdParseError(parseErr)
+				return true, &e
 			}
 			fcp := chainInfo.FinalizedCheckpt()
 			if fcp == nil {
