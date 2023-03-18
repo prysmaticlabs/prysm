@@ -152,33 +152,9 @@ func isStateRootOptimistic(
 		if bytesutil.ToBytes32(stateId) != b.Block().StateRoot() {
 			continue
 		}
-		canonical, err := chainInfo.IsCanonical(ctx, r)
-		if err != nil {
-			return true, errors.Wrapf(err, "could not check canonical status")
-		}
-		if canonical {
-			optimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
-			if err != nil {
-				return true, errors.Wrap(err, "could not check optimistic status")
-			}
-			if !optimistic {
-				return false, nil
-			}
-			fcp := chainInfo.FinalizedCheckpt()
-			if fcp == nil {
-				return true, errors.New("received nil finalized checkpoint")
-			}
-			finalizedSlot, err := slots.EpochStart(fcp.Epoch)
-			if err != nil {
-				return true, errors.Wrap(err, "could not get head state's finalized slot")
-			}
-			if st.Slot() <= finalizedSlot {
-				return false, nil
-			}
-			return true, nil
-		}
+		return optimisticModeFetcher.IsOptimisticForRoot(ctx, r)
 	}
-	// No canonical block matching requested state root, return true.
+	// No block matching requested state root, return true.
 	return true, nil
 }
 
