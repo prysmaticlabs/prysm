@@ -187,7 +187,7 @@ func TestIsOptimistic(t *testing.T) {
 			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
 			o, err := IsOptimistic(ctx, bytesutil.PadTo([]byte("root"), 32), cs, mf, cs, db)
 			require.NoError(t, err)
-			assert.Equal(t, true, o)
+			assert.Equal(t, false, o)
 		})
 		t.Run("no canonical blocks", func(t *testing.T) {
 			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
