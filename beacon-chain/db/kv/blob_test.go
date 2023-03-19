@@ -15,24 +15,27 @@ import (
 )
 
 func TestStore_BlobSidecars(t *testing.T) {
-	db := setupDB(t)
 	ctx := context.Background()
 
 	t.Run("empty", func(t *testing.T) {
+		db := setupDB(t)
 		scs := generateBlobSidecars(t, 0)
 		require.ErrorContains(t, "nil or empty blob sidecars", db.SaveBlobSidecar(ctx, scs))
 	})
 	t.Run("empty by root", func(t *testing.T) {
+		db := setupDB(t)
 		got, err := db.BlobSidecarsByRoot(ctx, [32]byte{})
 		require.NoError(t, err)
 		require.DeepEqual(t, (*ethpb.BlobSidecars)(nil), got)
 	})
 	t.Run("empty by slot", func(t *testing.T) {
+		db := setupDB(t)
 		got, err := db.BlobSidecarsBySlot(ctx, 1)
 		require.NoError(t, err)
 		require.DeepEqual(t, (*ethpb.BlobSidecars)(nil), got)
 	})
 	t.Run("save and retrieve by root (one)", func(t *testing.T) {
+		db := setupDB(t)
 		scs := generateBlobSidecars(t, 1)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
 		require.Equal(t, 1, len(scs.Sidecars))
@@ -42,15 +45,17 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.DeepEqual(t, scs, got)
 	})
 	t.Run("save and retrieve by root (max)", func(t *testing.T) {
+		db := setupDB(t)
 		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, params.BeaconConfig().MaxBlobsPerBlock, len(scs.Sidecars))
+		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs.Sidecars))
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs.Sidecars[0].BlockRoot))
 		require.NoError(t, err)
-		require.Equal(t, params.BeaconConfig().MaxBlobsPerBlock, len(got.Sidecars))
+		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(got.Sidecars))
 		require.DeepEqual(t, scs, got)
 	})
 	t.Run("save and retrieve by slot (one)", func(t *testing.T) {
+		db := setupDB(t)
 		scs := generateBlobSidecars(t, 1)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
 		require.Equal(t, 1, len(scs.Sidecars))
@@ -60,6 +65,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.DeepEqual(t, scs, got)
 	})
 	t.Run("save and retrieve by slot (max)", func(t *testing.T) {
+		db := setupDB(t)
 		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
 		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs.Sidecars))
@@ -69,6 +75,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.DeepEqual(t, scs, got)
 	})
 	t.Run("delete works", func(t *testing.T) {
+		db := setupDB(t)
 		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
 		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs.Sidecars))
@@ -82,6 +89,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.DeepEqual(t, (*ethpb.BlobSidecars)(nil), got)
 	})
 	t.Run("saving a blob with older slot", func(t *testing.T) {
+		db := setupDB(t)
 		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
 		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs.Sidecars))
@@ -92,6 +100,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.ErrorContains(t, "but already have older blob with slot", db.SaveBlobSidecar(ctx, scs))
 	})
 	t.Run("saving a new blob for rotation", func(t *testing.T) {
+		db := setupDB(t)
 		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
 		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs.Sidecars))
