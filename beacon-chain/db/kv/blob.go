@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -26,6 +27,11 @@ const blobSidecarKeyLength = 48 // slot_to_rotating_buffer(blob.slot) ++ blob.sl
 func (s *Store) SaveBlobSidecar(ctx context.Context, blobSidecars *ethpb.BlobSidecars) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
+
+	if blobSidecars == nil || len(blobSidecars.Sidecars) == 0 {
+		return errors.New("nil or empty blob sidecars")
+	}
+
 	return s.db.Update(func(tx *bolt.Tx) error {
 		encodedBlobSidecar, err := encode(ctx, blobSidecars)
 		if err != nil {
@@ -70,9 +76,6 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if len(k) != blobSidecarKeyLength {
-				continue
-			}
 			if bytes.HasSuffix(k, beaconBlockRoot[:]) {
 				enc = v
 				break
@@ -81,6 +84,9 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte
 		return nil
 	}); err != nil {
 		return nil, err
+	}
+	if enc == nil {
+		return nil, nil
 	}
 	sidecars := &ethpb.BlobSidecars{}
 	if err := decode(ctx, enc, sidecars); err != nil {
@@ -99,9 +105,6 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot) (*ethpb
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if len(k) != blobSidecarKeyLength {
-				continue
-			}
 			slotInKey := bytesutil.BytesToSlotBigEndian(k[8:16])
 			if slotInKey == slot {
 				enc = v
@@ -111,6 +114,9 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot) (*ethpb
 		return nil
 	}); err != nil {
 		return nil, err
+	}
+	if enc == nil {
+		return nil, nil
 	}
 	sidecars := &ethpb.BlobSidecars{}
 	if err := decode(ctx, enc, sidecars); err != nil {
