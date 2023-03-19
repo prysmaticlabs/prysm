@@ -14,8 +14,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const blobSidecarKeyLength = 48 // slot_to_rotating_buffer(blob.slot) ++ blob.slot ++ blob.block_root
-
 // SaveBlobSidecar saves the blobs for a given epoch in the sidecar bucket. When we receive a blob:
 //
 //  1. Convert slot using a modulo operator to [0, maxSlots] where maxSlots = MAX_BLOB_EPOCHS*SLOTS_PER_EPOCH
