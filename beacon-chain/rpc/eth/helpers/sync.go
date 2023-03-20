@@ -133,11 +133,11 @@ func IsOptimistic(
 			if err != nil {
 				return true, errors.Wrap(err, "could not get head root")
 			}
-			r, err := chainInfo.ForkChoicer().AncestorRoot(ctx, bytesutil.ToBytes32(headRoot), primitives.Slot(slotNumber))
+			r, err := chainInfo.Ancestor(ctx, headRoot, primitives.Slot(slotNumber))
 			if err != nil {
 				return true, errors.Wrap(err, "could not get ancestor root")
 			}
-			return optimisticModeFetcher.IsOptimisticForRoot(ctx, r)
+			return optimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(r))
 		}
 	}
 }
