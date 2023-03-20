@@ -484,8 +484,3 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 func (s *Service) SetGenesisTime(t time.Time) {
 	s.genesisTime = t
 }
-
-// ForkChoiceStore returns the fork choice store in the service.
-func (s *Service) ForkChoiceStore() forkchoice.ForkChoicer {
-	return s.cfg.ForkChoiceStore
-}
