@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 type BlockRewardsResponse struct {

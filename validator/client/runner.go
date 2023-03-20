@@ -7,15 +7,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -59,7 +57,8 @@ func run(ctx context.Context, v iface.Validator) {
 	if v.ProposerSettings() != nil {
 		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
 			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
-		if err := v.PushProposerSettings(ctx, km); err != nil {
+		deadline := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+		if err := v.PushProposerSettings(ctx, km, deadline); err != nil {
 			if errors.Is(err, ErrBuilderValidatorRegistration) {
 				log.WithError(err).Warn("Push proposer settings error")
 			} else {
@@ -103,7 +102,6 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
-			reloadRemoteKeys(ctx, km)
 			allExited, err := v.AllValidatorsAreExited(ctx)
 			if err != nil {
 				log.WithError(err).Error("Could not check if validators are exited")
@@ -129,8 +127,9 @@ func run(ctx context.Context, v iface.Validator) {
 
 			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
 				go func() {
-					//deadline set for next epoch rounded up
-					if err := v.PushProposerSettings(ctx, km); err != nil {
+					//deadline set for end of epoch
+					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
+					if err := v.PushProposerSettings(ctx, km, epochDeadline); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")
 					}
 				}()
@@ -151,16 +150,6 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
-		}
-	}
-}
-
-func reloadRemoteKeys(ctx context.Context, km keymanager.IKeymanager) {
-	remoteKm, ok := km.(remote.RemoteKeymanager)
-	if ok {
-		_, err := remoteKm.ReloadPublicKeys(ctx)
-		if err != nil {
-			log.WithError(err).Error(msgCouldNotFetchKeys)
 		}
 	}
 }

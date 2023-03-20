@@ -6,14 +6,14 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pmath "github.com/prysmaticlabs/prysm/v3/math"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	pmath "github.com/prysmaticlabs/prysm/v4/math"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // ProofFromMerkleLayers creates a proof starting at the leaf index of the state Merkle layers.
@@ -121,8 +121,7 @@ func convertRandaoMixes(indices []uint64, elements interface{}, convertAll bool)
 func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.Eth1Data)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Eth1Data{}, elements)
 	}
 	return handleEth1DataSlice(val, indices, convertAll)
 }
@@ -130,8 +129,7 @@ func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll boo
 func convertValidators(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.Validator)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Validator{}, elements)
 	}
 	return handleValidatorSlice(val, indices, convertAll)
 }
@@ -139,8 +137,7 @@ func convertValidators(indices []uint64, elements interface{}, convertAll bool) 
 func convertAttestations(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.PendingAttestation)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]*ethpb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.PendingAttestation{}, elements)
 	}
 	return handlePendingAttestationSlice(val, indices, convertAll)
 }
@@ -148,8 +145,7 @@ func convertAttestations(indices []uint64, elements interface{}, convertAll bool
 func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]uint64)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %v but got %v",
-			reflect.TypeOf([]uint64{}).Name(), reflect.TypeOf(elements).Name())
+		return nil, errors.Errorf("Wanted type of %T but got %T", []uint64{}, elements)
 	}
 	return handleBalanceSlice(val, indices, convertAll)
 }
@@ -216,9 +212,8 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := stateutil.ValidatorRootWithHasher(hasher, input)
+		newRoot, err := stateutil.ValidatorRootWithHasher(input)
 		if err != nil {
 			return err
 		}
@@ -294,9 +289,8 @@ func handlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []ui
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.PendingAttestation) error {
-		newRoot, err := stateutil.PendingAttRootWithHasher(hasher, input)
+		newRoot, err := stateutil.PendingAttRootWithHasher(input)
 		if err != nil {
 			return err
 		}

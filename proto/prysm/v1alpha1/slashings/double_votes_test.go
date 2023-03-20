@@ -3,7 +3,7 @@ package slashings
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 )
 
 func TestSigningRootsDiffer(t *testing.T) {

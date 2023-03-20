@@ -6,15 +6,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 var (
@@ -111,6 +111,18 @@ var (
 		Name: "beacon_reorgs_total",
 		Help: "Count the number of times beacon chain has a reorg",
 	})
+	LateBlockAttemptedReorgCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_late_block_attempted_reorgs",
+		Help: "Count the number of times a proposer served by this beacon has attempted a late block reorg",
+	})
+	lateBlockFailedAttemptFirstThreshold = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_failed_reorg_attempts_first_threshold",
+		Help: "Count the number of times a proposer served by this beacon attempted a late block reorg but desisted in the first threshold",
+	})
+	lateBlockFailedAttemptSecondThreshold = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_failed_reorg_attempts_second_threshold",
+		Help: "Count the number of times a proposer served by this beacon attempted a late block reorg but desisted in the second threshold",
+	})
 	saveOrphanedAttCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "saved_orphaned_att_total",
 		Help: "Count the number of times an orphaned attestation is saved",
@@ -157,10 +169,6 @@ var (
 	txsPerSlotCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "txs_per_slot_count",
 		Help: "Count the number of txs per slot",
-	})
-	missedPayloadIDFilledCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "missed_payload_id_filled_count",
-		Help: "",
 	})
 	onBlockProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
 		Name: "on_block_processing_milliseconds",

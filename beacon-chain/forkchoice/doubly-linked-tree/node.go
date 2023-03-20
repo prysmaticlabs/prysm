@@ -5,24 +5,22 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // orphanLateBlockFirstThreshold is the number of seconds after which we
 // consider a block to be late, and thus a candidate to being reorged.
 const orphanLateBlockFirstThreshold = 4
 
-// processAttestationsThreshold  is the number of seconds after which we
+// ProcessAttestationsThreshold  is the number of seconds after which we
 // process attestations for the current slot
-const processAttestationsThreshold = 10
+const ProcessAttestationsThreshold = 10
 
 // applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
-// using the current balance stored in each node. This function requires a lock
-// in Store.nodesLock
+// using the current balance stored in each node.
 func (n *Node) applyWeightChanges(ctx context.Context) error {
 	// Recursively calling the children to sum their weights.
 	childrenWeight := uint64(0)
@@ -43,7 +41,7 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 }
 
 // updateBestDescendant updates the best descendant of this node and its
-// children. This function assumes the caller has a lock on Store.nodesLock
+// children.
 func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -100,7 +98,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 // the ones in fork choice store should not be viable to head.
 func (n *Node) viableForHead(justifiedEpoch, currentEpoch primitives.Epoch) bool {
 	justified := justifiedEpoch == n.justifiedEpoch || justifiedEpoch == 0
-	if features.Get().EnableDefensivePull && !justified && justifiedEpoch+1 == currentEpoch {
+	if !justified && justifiedEpoch+1 == currentEpoch {
 		if n.unrealizedJustifiedEpoch+1 >= currentEpoch && n.justifiedEpoch+2 >= currentEpoch {
 			justified = true
 		}
@@ -149,7 +147,7 @@ func (n *Node) arrivedEarly(genesisTime uint64) (bool, error) {
 // slot will have secs = 10 below.
 func (n *Node) arrivedAfterOrphanCheck(genesisTime uint64) (bool, error) {
 	secs, err := slots.SecondsSinceSlotStart(n.slot, genesisTime, n.timestamp)
-	return secs >= processAttestationsThreshold, err
+	return secs >= ProcessAttestationsThreshold, err
 }
 
 // nodeTreeDump appends to the given list all the nodes descending from this one

@@ -9,13 +9,13 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/io/prompt"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -50,8 +50,6 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		switch s.wallet.KeymanagerKind() {
 		case keymanager.Derived:
 			keymanagerKind = pb.KeymanagerKind_DERIVED
-		case keymanager.Remote:
-			keymanagerKind = pb.KeymanagerKind_REMOTE
 		case keymanager.Web3Signer:
 			keymanagerKind = pb.KeymanagerKind_WEB3SIGNER
 		}
@@ -132,8 +130,6 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 		keymanagerKind = pb.KeymanagerKind_DERIVED
 	case keymanager.Local:
 		keymanagerKind = pb.KeymanagerKind_IMPORTED
-	case keymanager.Remote:
-		keymanagerKind = pb.KeymanagerKind_REMOTE
 	case keymanager.Web3Signer:
 		keymanagerKind = pb.KeymanagerKind_WEB3SIGNER
 	}

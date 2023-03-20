@@ -7,16 +7,16 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -53,7 +53,7 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 		}
 		var to []*apimiddleware.SignedBLSToExecutionChangeJson
 		if err := json.Unmarshal(b, &to); err != nil {
-			log.Warnf("provided file: %s, is not a list of signed withdrawal messages", foundFilePath)
+			log.Warnf("provided file: %s, is not a list of signed withdrawal messages. Error:%s", foundFilePath, err.Error())
 			continue
 		}
 		// verify 0x from file and add if needed
@@ -93,7 +93,19 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimid
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve current fork information")
 	}
-	if !(params.BeaconConfig().ForkVersionSchedule[bytesutil.ToBytes4(fork.CurrentVersion)] >= params.BeaconConfig().CapellaForkEpoch) {
+	spec, err := client.GetConfigSpec(ctx)
+	if err != nil {
+		return err
+	}
+	forkEpoch, ok := spec.Data["CAPELLA_FORK_EPOCH"]
+	if !ok {
+		return errors.New("Configs used on beacon node do not contain CAPELLA_FORK_EPOCH")
+	}
+	capellaForkEpoch, err := strconv.Atoi(forkEpoch)
+	if err != nil {
+		return errors.New("could not convert CAPELLA_FORK_EPOCH to a number")
+	}
+	if fork.Epoch < primitives.Epoch(capellaForkEpoch) {
 		return errors.New("setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork.")
 	}
 	err = client.SubmitChangeBLStoExecution(ctx, request)

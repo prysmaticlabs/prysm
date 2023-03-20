@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestStore_JustifiedEpoch(t *testing.T) {
@@ -318,26 +318,6 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 	require.Equal(t, len(s.nodeByRoot), 1)
 	require.Equal(t, len(s.nodeByPayload), 1)
 
-}
-
-func TestForkChoice_HighestReceivedBlockSlotRoot(t *testing.T) {
-	f := setup(1, 1)
-	s := f.store
-	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(100), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(100), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'A'}, f.HighestReceivedBlockRoot())
-	_, err = s.insert(context.Background(), 1000, [32]byte{'B'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(1000), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(1000), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
-	_, err = s.insert(context.Background(), 500, [32]byte{'C'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(1000), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(1000), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
 }
 
 func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {

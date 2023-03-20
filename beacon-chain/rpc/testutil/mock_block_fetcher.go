@@ -4,8 +4,8 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // MockBlockFetcher is a fake implementation of blockfetcher.Fetcher.
