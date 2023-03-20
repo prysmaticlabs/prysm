@@ -75,8 +75,9 @@ func (s *ChainService) ForkChoicer() forkchoice.ForkChoicer {
 	return s.ForkChoiceStore
 }
 
-func (s *ChainService) Ancestor(_ context.Context, _ []byte, _ primitives.Slot) ([]byte, error) {
-	return nil, nil
+func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
+	r, err := s.ForkChoicer().AncestorRoot(ctx, bytesutil.ToBytes32(root), slot)
+	return r[:], err
 }
 
 // StateNotifier mocks the same method in the chain service.
