@@ -100,6 +100,7 @@ type blockchainService interface {
 	blockchain.CanonicalFetcher
 	blockchain.OptimisticModeFetcher
 	blockchain.SlashingReceiver
+	blockchain.ForkchoiceFetcher
 }
 
 // Service is responsible for handling all run time p2p related operations as the

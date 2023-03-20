@@ -600,14 +600,14 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	}
 
 	// Slots 100 to 200 are skip slots. Requesting root at 150 will yield root at 100. The last physical block.
-	r, err := service.ancestor(context.Background(), r200[:], 150)
+	r, err := service.Ancestor(context.Background(), r200[:], 150)
 	require.NoError(t, err)
 	if bytesutil.ToBytes32(r) != r100 {
 		t.Error("Did not get correct root")
 	}
 
 	// Slots 1 to 100 are skip slots. Requesting root at 50 will yield root at 1. The last physical block.
-	r, err = service.ancestor(context.Background(), r200[:], 50)
+	r, err = service.Ancestor(context.Background(), r200[:], 50)
 	require.NoError(t, err)
 	if bytesutil.ToBytes32(r) != r1 {
 		t.Error("Did not get correct root")
@@ -648,7 +648,7 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	}
 
-	r, err := service.ancestor(context.Background(), r200[:], 150)
+	r, err := service.Ancestor(context.Background(), r200[:], 150)
 	require.NoError(t, err)
 	if bytesutil.ToBytes32(r) != r100 {
 		t.Error("Did not get correct root")
@@ -696,7 +696,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 
-	r, err := service.ancestor(context.Background(), r200[:], 150)
+	r, err := service.Ancestor(context.Background(), r200[:], 150)
 	require.NoError(t, err)
 	if bytesutil.ToBytes32(r) != r100 {
 		t.Error("Did not get correct root")
