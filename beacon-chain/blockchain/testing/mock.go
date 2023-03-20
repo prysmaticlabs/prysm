@@ -74,6 +74,10 @@ func (s *ChainService) ForkChoicer() forkchoice.ForkChoicer {
 	return s.ForkChoiceStore
 }
 
+func (s *ChainService) Ancestor(_ context.Context, _ []byte, _ primitives.Slot) ([]byte, error) {
+	return nil, nil
+}
+
 // StateNotifier mocks the same method in the chain service.
 func (s *ChainService) StateNotifier() statefeed.Notifier {
 	if s.stateNotifier == nil {

@@ -56,7 +56,7 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 	if err != nil {
 		return err
 	}
-	r, err := s.ancestor(ctx, a.Data.BeaconBlockRoot, targetSlot)
+	r, err := s.Ancestor(ctx, a.Data.BeaconBlockRoot, targetSlot)
 	if err != nil {
 		return err
 	}
