@@ -466,7 +466,6 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 	}
 	require.NoError(t, st.SetNextSyncCommittee(nextCommittee))
-	db := dbutil.SetupDB(t)
 
 	mockChainService := &mockChain.ChainService{Genesis: genesisTime}
 	vs := &Server{
@@ -636,6 +635,10 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		require.NoError(t, db.SaveStateSummary(ctx, &ethpbalpha.StateSummary{Slot: 0, Root: []byte("root")}))
+		require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, &ethpbalpha.Checkpoint{Epoch: 0, Root: []byte("root")}))
+
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
@@ -657,12 +660,9 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 			Slot:       &slot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{
 				Root:  root[:],
-				Epoch: 0,
+				Epoch: 1,
 			},
 			State: state,
-		}
-		mockChainService.OptimisticRoots = map[[32]byte]bool{
-			root: true,
 		}
 		vs := &Server{
 			StateFetcher:          &testutil.MockFetcher{BeaconState: st},
@@ -671,6 +671,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
 			ChainInfoFetcher:      mockChainService,
+			BeaconDB:              db,
 		}
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 1,
