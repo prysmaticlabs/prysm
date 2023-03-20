@@ -38,6 +38,9 @@ func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock inter
 
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
 func (bb *Builder) Tick(t testing.TB, tick int64) {
+	bb.service.ForkChoicer().Lock()
+	defer bb.service.ForkChoicer().Unlock()
+
 	bb.service.SetGenesisTime(time.Unix(time.Now().Unix()-tick, 0))
 	lastSlot := uint64(bb.lastTick) / params.BeaconConfig().SecondsPerSlot
 	currentSlot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
@@ -104,17 +107,26 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 
 // Attestation receives the attestation and updates forkchoice.
 func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
+	bb.service.ForkChoicer().Lock()
+	defer bb.service.ForkChoicer().Unlock()
+
 	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconNetworkConfig().MaximumGossipClockDisparity))
 }
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.
 func (bb *Builder) AttesterSlashing(s *ethpb.AttesterSlashing) {
+	bb.service.ForkChoicer().Lock()
+	defer bb.service.ForkChoicer().Unlock()
+
 	slashings := []*ethpb.AttesterSlashing{s}
 	bb.service.InsertSlashingsToForkChoiceStore(context.TODO(), slashings)
 }
 
 // Check evaluates the fork choice results and compares them to the expected values.
 func (bb *Builder) Check(t testing.TB, c *Check) {
+	bb.service.ForkChoicer().RUnlock()
+	defer bb.service.ForkChoicer().RUnlock()
+
 	if c == nil {
 		return
 	}
@@ -144,9 +156,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
-		bb.service.ForkChoiceStore().RLock()
 		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
-		bb.service.ForkChoiceStore().RUnlock()
 		require.DeepEqual(t, want, got)
 	}
 
