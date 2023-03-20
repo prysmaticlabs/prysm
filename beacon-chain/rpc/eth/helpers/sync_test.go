@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	chainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	syncmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	chainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	syncmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/grpc"
 )
 

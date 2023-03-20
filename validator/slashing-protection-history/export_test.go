@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	dbtest "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	dbtest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
 )
 
 func TestExportStandardProtectionJSON_EmptyGenesisRoot(t *testing.T) {

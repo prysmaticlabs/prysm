@@ -5,14 +5,15 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	params "github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	params "github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // Eth1DataRootWithHasher returns the hash tree root of input `eth1Data`.
-func Eth1DataRootWithHasher(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
+func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	if eth1Data == nil {
 		return [32]byte{}, errors.New("nil eth1 data")
 	}
@@ -41,16 +42,21 @@ func Eth1DataRootWithHasher(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 
 // Eth1DatasRoot returns the hash tree root of input `eth1Datas`.
 func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
+	hasher := hash.CustomSHA256Hasher()
 	eth1VotesRoots := make([][32]byte, 0, len(eth1Datas))
 	for i := 0; i < len(eth1Datas); i++ {
-		eth1, err := Eth1DataRootWithHasher(eth1Datas[i])
+		eth1, err := Eth1DataRootWithHasher(hasher, eth1Datas[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
 		}
 		eth1VotesRoots = append(eth1VotesRoots, eth1)
 	}
 
-	eth1VotesRootsRoot, err := ssz.BitwiseMerkleize(eth1VotesRoots, uint64(len(eth1VotesRoots)), params.BeaconConfig().Eth1DataVotesLength())
+	eth1VotesRootsRoot, err := ssz.BitwiseMerkleize(
+		eth1VotesRoots,
+		uint64(len(eth1VotesRoots)),
+		params.BeaconConfig().Eth1DataVotesLength(),
+	)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}

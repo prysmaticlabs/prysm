@@ -3,7 +3,7 @@ package iface
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type SlasherClient interface {

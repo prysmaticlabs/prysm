@@ -3,8 +3,8 @@ package grpc_api
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"google.golang.org/grpc"
 )
 

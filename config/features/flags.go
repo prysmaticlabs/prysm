@@ -88,10 +88,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableGossipBatchAggregation = &cli.BoolFlag{
-		Name:  "disable-gossip-batch-aggregation",
-		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
-	}
 	enableStartupOptimistic = &cli.BoolFlag{
 		Name:   "startup-optimistic",
 		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
@@ -114,14 +110,17 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block",
 	}
-	EnableOptionalEngineMethods = &cli.BoolFlag{
+	enableOptionalEngineMethods = &cli.BoolFlag{
 		Name:  "enable-optional-engine-methods",
 		Usage: "Enables the optional engine methods",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
-var devModeFlags = []cli.Flag{}
+var devModeFlags = []cli.Flag{
+	enableVerboseSigVerification,
+	enableOptionalEngineMethods,
+}
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
@@ -155,12 +154,11 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
 	disableReorgLateBlocks,
-	disableGossipBatchAggregation,
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
-	EnableOptionalEngineMethods,
+	enableOptionalEngineMethods,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

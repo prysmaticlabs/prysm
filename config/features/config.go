@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -57,9 +57,8 @@ type Flags struct {
 	EnableSlasher                   bool // Enable slasher in the beacon node runtime.
 	EnableSlashingProtectionPruning bool // EnableSlashingProtectionPruning for the validator client.
 
-	EnableBatchGossipAggregation bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
-	SaveFullExecutionPayloads    bool // Save full beacon blocks with execution payloads in the database.
-	EnableStartOptimistic        bool // EnableStartOptimistic treats every block as optimistic at startup.
+	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
+	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
@@ -187,11 +186,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableStakinContractCheck)
 		cfg.DisableStakinContractCheck = true
 	}
-	cfg.EnableBatchGossipAggregation = true
-	if ctx.Bool(disableGossipBatchAggregation.Name) {
-		logDisabled(disableGossipBatchAggregation)
-		cfg.EnableBatchGossipAggregation = false
-	}
 	if ctx.Bool(SaveFullExecutionPayloads.Name) {
 		logEnabled(SaveFullExecutionPayloads)
 		cfg.SaveFullExecutionPayloads = true
@@ -208,8 +202,8 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
 	}
-	if ctx.IsSet(EnableOptionalEngineMethods.Name) {
-		logEnabled(EnableOptionalEngineMethods)
+	if ctx.IsSet(enableOptionalEngineMethods.Name) {
+		logEnabled(enableOptionalEngineMethods)
 		cfg.EnableOptionalEngineMethods = true
 	}
 	Init(cfg)
