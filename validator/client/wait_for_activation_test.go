@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
 	walletMock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/v4/validator/testing"
@@ -25,8 +26,8 @@ import (
 func TestWaitActivation_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	validatorClient := mock.NewMockValidatorClient(ctrl)
-	beaconClient := mock.NewMockBeaconChainClient(ctrl)
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -61,8 +62,8 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	validatorClient := mock.NewMockValidatorClient(ctrl)
-	beaconClient := mock.NewMockBeaconChainClient(ctrl)
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -94,8 +95,8 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	validatorClient := mock.NewMockValidatorClient(ctrl)
-	beaconClient := mock.NewMockBeaconChainClient(ctrl)
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -132,8 +133,8 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	validatorClient := mock.NewMockValidatorClient(ctrl)
-	beaconClient := mock.NewMockBeaconChainClient(ctrl)
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -170,8 +171,8 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 func TestWaitForActivation_Exiting(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	validatorClient := mock.NewMockValidatorClient(ctrl)
-	beaconClient := mock.NewMockBeaconChainClient(ctrl)
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -213,8 +214,8 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	validatorClient := mock.NewMockValidatorClient(ctrl)
-	beaconClient := mock.NewMockBeaconChainClient(ctrl)
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -268,8 +269,8 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 				inactivePubKey: inactivePrivKey,
 			},
 		}
-		validatorClient := mock.NewMockValidatorClient(ctrl)
-		beaconClient := mock.NewMockBeaconChainClient(ctrl)
+		validatorClient := validatormock.NewMockValidatorClient(ctrl)
+		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient: validatorClient,
 			keyManager:      km,
@@ -342,8 +343,8 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		require.NoError(t, err)
 		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", 1)
 		require.NoError(t, err)
-		validatorClient := mock.NewMockValidatorClient(ctrl)
-		beaconClient := mock.NewMockBeaconChainClient(ctrl)
+		validatorClient := validatormock.NewMockValidatorClient(ctrl)
+		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient: validatorClient,
 			keyManager:      km,

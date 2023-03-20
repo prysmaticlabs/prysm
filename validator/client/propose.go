@@ -198,7 +198,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 func ProposeExit(
 	ctx context.Context,
 	validatorClient iface.ValidatorClient,
-	nodeClient ethpb.NodeClient,
+	nodeClient iface.NodeClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
 ) error {
