@@ -3,6 +3,7 @@ package sync
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -39,6 +40,7 @@ func TestBlobsByRangeValidation(t *testing.T) {
 		name    string
 		current types.Slot
 		req     *ethpb.BlobSidecarsByRangeRequest
+		//chain := defaultMockChain(t)
 
 		start types.Slot
 		end   types.Slot
@@ -112,6 +114,17 @@ func TestBlobsByRangeValidation(t *testing.T) {
 			end:   defaultCurrent,
 			batch: 0,
 		},
+		{
+			name:    "start before deneb",
+			current: defaultCurrent - minReqSlots + 100,
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: denebSlot - 10,
+				Count:     100,
+			},
+			start: denebSlot,
+			end:   denebSlot + 89,
+			batch: 64,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -125,6 +138,20 @@ func TestBlobsByRangeValidation(t *testing.T) {
 			require.Equal(t, c.start, start)
 			require.Equal(t, c.end, end)
 			require.Equal(t, c.batch, batch)
+		})
+	}
+}
+
+func TestBlobByRangeOK(t *testing.T) {
+	cases := []*blobsTestCase{
+		{
+			name:    "beginning of window + 100",
+			nblocks: 10,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			c.run(t, p2p.RPCBlobSidecarsByRangeTopicV1)
 		})
 	}
 }

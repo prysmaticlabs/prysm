@@ -54,7 +54,7 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, stream 
 }
 
 // blobsSidecarsByRangeRPCHandler looks up the request blobs from the database from a given start slot index
-func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.BlobsSidecarsByRangeHandler")
 	defer span.End()
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
@@ -98,6 +98,12 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 		if err := s.streamBlobBatch(ctx, batch, stream); err != nil {
 			return err
 		}
+	}
+	if err := batch.Err(); err != nil {
+		log.WithError(err).Debug("error in BlocksByRange batch")
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		tracing.AnnotateError(span, err)
+		return err
 	}
 
 	closeStream(stream, log)

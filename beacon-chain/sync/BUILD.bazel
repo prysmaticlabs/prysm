@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "batch_verifier.go",
-        "blob_sidecars_by_range.go",
         "block_and_blob_queue.go",
         "broadcast_bls_changes.go",
         "context.go",

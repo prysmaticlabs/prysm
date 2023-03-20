@@ -78,20 +78,3 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	}
 	return nil
 }
-
-func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	ctx, span := trace.StartSpan(ctx, "sync.blobSidecarByRootRPCHandler")
-	defer span.End()
-	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
-	defer cancel()
-	SetRPCStreamDeadlines(stream)
-	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
-		return err
-	}
-
-	_, ok := msg.(*types.BlobSidecarsByRootReq)
-	if !ok {
-		return errors.New("message is not type BlobsSidecarsByRangeRequest")
-	}
-	return nil
-}
