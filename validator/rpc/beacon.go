@@ -14,6 +14,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
 	"google.golang.org/grpc"
@@ -47,8 +49,6 @@ func (s *Server) registerBeaconClient() error {
 	if s.clientWithCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
-	s.beaconChainClient = ethpb.NewBeaconChainClient(grpcConn)
-	s.beaconNodeClient = ethpb.NewNodeClient(grpcConn)
 	s.beaconNodeHealthClient = ethpb.NewHealthClient(grpcConn)
 
 	conn := validatorHelpers.NewNodeConnection(
@@ -57,6 +57,8 @@ func (s *Server) registerBeaconClient() error {
 		s.beaconApiTimeout,
 	)
 
+	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn)
+	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn)
 	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
 	return nil
 }
