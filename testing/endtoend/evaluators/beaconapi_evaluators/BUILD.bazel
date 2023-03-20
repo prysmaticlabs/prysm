@@ -8,7 +8,7 @@ go_library(
         "beacon_api_verify.go",
         "util.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators",
+    importpath = "github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators/beaconapi_evaluators",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
         "//beacon-chain/rpc/apimiddleware:go_default_library",

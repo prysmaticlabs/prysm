@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
-	mocks "github.com/prysmaticlabs/prysm/v3/validator/testing"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
+	mocks "github.com/prysmaticlabs/prysm/v4/validator/testing"
 )
 
 func TestImportSlashingProtection_Preconditions(t *testing.T) {

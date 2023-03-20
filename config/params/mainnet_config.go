@@ -4,8 +4,8 @@ import (
 	"math"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
@@ -111,7 +111,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ShardCommitteePeriod:             256,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
-	SafeSlotsToUpdateJustified:       8,
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost:              40,
@@ -211,7 +210,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
-	CapellaForkEpoch:     math.MaxUint64,
+	CapellaForkEpoch:     194048,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.

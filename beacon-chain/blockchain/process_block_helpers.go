@@ -5,16 +5,16 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	mathutil "github.com/prysmaticlabs/prysm/v3/math"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	mathutil "github.com/prysmaticlabs/prysm/v4/math"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -144,39 +144,6 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		}
 	}()
 	return nil
-}
-
-// ancestor returns the block root of an ancestry block from the input block root.
-//
-// Spec pseudocode definition:
-//
-//	def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
-//	 block = store.blocks[root]
-//	 if block.slot > slot:
-//	     return get_ancestor(store, block.parent_root, slot)
-//	 elif block.slot == slot:
-//	     return root
-//	 else:
-//	     # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
-//	     return root
-func (s *Service) ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
-	defer span.End()
-
-	r := bytesutil.ToBytes32(root)
-	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
-	// This is most optimal outcome.
-	ar, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
-	if err != nil {
-		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
-		// This is the second line of defense for retrieving ancestor root.
-		ar, err = s.ancestorByDB(ctx, r, slot)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return ar[:], nil
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.

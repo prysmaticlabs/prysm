@@ -4,9 +4,9 @@
 package debug
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
@@ -18,4 +18,5 @@ type Server struct {
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
+	ChainInfoFetcher      blockchain.ChainInfoFetcher
 }
