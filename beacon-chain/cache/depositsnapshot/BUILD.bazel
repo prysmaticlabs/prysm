@@ -8,7 +8,7 @@ go_library(
         "merkle_tree.go",
         "zerohashes.gen.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositsnapshot",
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot",
     visibility = ["//visibility:public"],
     deps = [
         "//container/slice:go_default_library",

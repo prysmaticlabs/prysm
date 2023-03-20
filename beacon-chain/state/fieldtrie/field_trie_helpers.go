@@ -6,14 +6,14 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pmath "github.com/prysmaticlabs/prysm/v3/math"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	pmath "github.com/prysmaticlabs/prysm/v4/math"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // ProofFromMerkleLayers creates a proof starting at the leaf index of the state Merkle layers.
@@ -212,9 +212,8 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := stateutil.ValidatorRootWithHasher(hasher, input)
+		newRoot, err := stateutil.ValidatorRootWithHasher(input)
 		if err != nil {
 			return err
 		}
@@ -290,9 +289,8 @@ func handlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []ui
 		length = len(val)
 	}
 	roots := make([][32]byte, 0, length)
-	hasher := hash.CustomSHA256Hasher()
 	rootCreator := func(input *ethpb.PendingAttestation) error {
-		newRoot, err := stateutil.PendingAttRootWithHasher(hasher, input)
+		newRoot, err := stateutil.PendingAttRootWithHasher(input)
 		if err != nil {
 			return err
 		}

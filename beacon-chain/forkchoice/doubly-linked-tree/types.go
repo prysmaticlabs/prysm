@@ -3,10 +3,10 @@ package doublylinkedtree
 import (
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
@@ -23,7 +23,6 @@ type ForkChoice struct {
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
 	justifiedCheckpoint           *forkchoicetypes.Checkpoint            // latest justified epoch in store.
-	bestJustifiedCheckpoint       *forkchoicetypes.Checkpoint            // best justified checkpoint in store.
 	unrealizedJustifiedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized justified checkpoint in store.
 	unrealizedFinalizedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized finalized checkpoint in store.
 	prevJustifiedCheckpoint       *forkchoicetypes.Checkpoint            // previous justified checkpoint in store.

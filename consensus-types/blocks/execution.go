@@ -6,12 +6,11 @@ import (
 	"math/big"
 
 	fastssz "github.com/prysmaticlabs/fastssz"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -703,7 +702,7 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 	if err != nil {
 		return nil, err
 	}
-	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, err
 	}

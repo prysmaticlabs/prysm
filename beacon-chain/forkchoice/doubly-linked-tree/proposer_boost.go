@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 )
 
 // resetBoostedProposerRoot sets the value of the proposer boosted root to zeros.

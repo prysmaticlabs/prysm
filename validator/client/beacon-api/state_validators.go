@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 )
 
 type stateValidatorsProvider interface {

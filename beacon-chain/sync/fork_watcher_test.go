@@ -5,15 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/async/abool"
-	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/async/abool"
+	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
 func TestService_CheckForNextEpochFork(t *testing.T) {
