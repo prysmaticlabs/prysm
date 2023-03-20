@@ -124,16 +124,17 @@ func (bb *Builder) AttesterSlashing(s *ethpb.AttesterSlashing) {
 
 // Check evaluates the fork choice results and compares them to the expected values.
 func (bb *Builder) Check(t testing.TB, c *Check) {
-	bb.service.ForkChoicer().RUnlock()
-	defer bb.service.ForkChoicer().RUnlock()
-
 	if c == nil {
 		return
 	}
 	ctx := context.TODO()
+	bb.service.ForkChoicer().Lock()
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
+	bb.service.ForkChoicer().Unlock()
 	if c.Head != nil {
+		bb.service.ForkChoicer().RLock()
 		r, err := bb.service.HeadRoot(ctx)
+		bb.service.ForkChoicer().RUnlock()
 		require.NoError(t, err)
 		require.DeepEqual(t, common.FromHex(c.Head.Root), r)
 		require.Equal(t, primitives.Slot(c.Head.Slot), bb.service.HeadSlot())
@@ -156,7 +157,9 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+		bb.service.ForkChoicer().RLock()
 		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
+		bb.service.ForkChoicer().RUnlock()
 		require.DeepEqual(t, want, got)
 	}
 
