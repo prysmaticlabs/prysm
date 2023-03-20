@@ -122,7 +122,7 @@ func IsOptimistic(
 			// if the finalized checkpoint is higher than the last
 			// validated checkpoint, we are syncing and have synced
 			// a finalization being optimistic
-			if validatedSlot < finalizedSlot || primitives.Slot(slotNumber) <= finalizedSlot {
+			if validatedSlot < finalizedSlot {
 				return true, nil
 			}
 			if primitives.Slot(slotNumber) == chainInfo.HeadSlot() {

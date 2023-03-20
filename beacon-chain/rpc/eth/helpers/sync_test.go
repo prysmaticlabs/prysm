@@ -211,55 +211,85 @@ func TestIsOptimistic(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
 		})
-		t.Run("is finalized when head is optimistic", func(t *testing.T) {
+		t.Run("is before validated slot when head is optimistic", func(t *testing.T) {
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveStateSummary(ctx, &eth.StateSummary{Slot: fieldparams.SlotsPerEpoch, Root: []byte("root")}))
+			require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, &eth.Checkpoint{Epoch: 1, Root: []byte("root")}))
 			cs := &chainmock.ChainService{Optimistic: true, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 1}}
-			o, err := IsOptimistic(ctx, []byte("0"), cs, nil, cs, nil)
+			o, err := IsOptimistic(ctx, []byte("0"), cs, nil, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
 		})
+		t.Run("is equal to validated slot when head is optimistic", func(t *testing.T) {
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveStateSummary(ctx, &eth.StateSummary{Slot: fieldparams.SlotsPerEpoch, Root: []byte("root")}))
+			require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, &eth.Checkpoint{Epoch: 1, Root: []byte("root")}))
+			cs := &chainmock.ChainService{Optimistic: true, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 1}}
+			o, err := IsOptimistic(ctx, []byte("32"), cs, nil, cs, db)
+			require.NoError(t, err)
+			assert.Equal(t, false, o)
+		})
+		t.Run("is after validated slot and validated slot is before finalized slot", func(t *testing.T) {
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveStateSummary(ctx, &eth.StateSummary{Slot: fieldparams.SlotsPerEpoch, Root: []byte("root")}))
+			require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, &eth.Checkpoint{Epoch: 1, Root: []byte("root")}))
+			cs := &chainmock.ChainService{Optimistic: true, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 2}}
+			o, err := IsOptimistic(ctx, []byte("33"), cs, nil, cs, db)
+			require.NoError(t, err)
+			assert.Equal(t, true, o)
+		})
 		t.Run("is head", func(t *testing.T) {
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveStateSummary(ctx, &eth.StateSummary{Slot: fieldparams.SlotsPerEpoch, Root: []byte("root")}))
+			require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, &eth.Checkpoint{Epoch: 1, Root: []byte("root")}))
 			fetcherSt, err := util.NewBeaconState()
 			require.NoError(t, err)
 			chainSt, err := util.NewBeaconState()
 			require.NoError(t, err)
-			require.NoError(t, chainSt.SetSlot(fieldparams.SlotsPerEpoch))
+			require.NoError(t, chainSt.SetSlot(fieldparams.SlotsPerEpoch*2))
 			cs := &chainmock.ChainService{Optimistic: true, State: chainSt, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 0}}
 			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
-			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch)), cs, mf, cs, nil)
+			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch*2)), cs, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
 		})
 		t.Run("ancestor is optimistic", func(t *testing.T) {
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveStateSummary(ctx, &eth.StateSummary{Slot: fieldparams.SlotsPerEpoch, Root: []byte("root")}))
+			require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, &eth.Checkpoint{Epoch: 1, Root: []byte("root")}))
 			r := bytesutil.ToBytes32([]byte("root"))
 			fcs := doublylinkedtree.New()
 			finalizedCheckpt := &eth.Checkpoint{Epoch: 0}
-			st, root, err := prepareForkchoiceState(fieldparams.SlotsPerEpoch, r, [32]byte{}, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
+			st, root, err := prepareForkchoiceState(fieldparams.SlotsPerEpoch*2, r, [32]byte{}, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
 			require.NoError(t, err)
 			require.NoError(t, fcs.InsertNode(ctx, st, root))
 			headRoot := [32]byte{'r'}
-			st, root, err = prepareForkchoiceState(fieldparams.SlotsPerEpoch+1, headRoot, r, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
+			st, root, err = prepareForkchoiceState(fieldparams.SlotsPerEpoch*2+1, headRoot, r, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
 			require.NoError(t, err)
 			require.NoError(t, fcs.InsertNode(ctx, st, root))
 			cs := &chainmock.ChainService{Root: headRoot[:], Optimistic: true, ForkChoiceStore: fcs, OptimisticRoots: map[[32]byte]bool{r: true}, FinalizedCheckPoint: finalizedCheckpt}
 			mf := &testutil.MockFetcher{BeaconState: st}
-			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch)), cs, mf, cs, nil)
+			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch*2)), cs, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
 		})
 		t.Run("ancestor is not optimistic", func(t *testing.T) {
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveStateSummary(ctx, &eth.StateSummary{Slot: fieldparams.SlotsPerEpoch, Root: []byte("root")}))
+			require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, &eth.Checkpoint{Epoch: 1, Root: []byte("root")}))
 			r := bytesutil.ToBytes32([]byte("root"))
 			fcs := doublylinkedtree.New()
 			finalizedCheckpt := &eth.Checkpoint{Epoch: 0}
-			st, root, err := prepareForkchoiceState(fieldparams.SlotsPerEpoch, r, [32]byte{}, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
+			st, root, err := prepareForkchoiceState(fieldparams.SlotsPerEpoch*2, r, [32]byte{}, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
 			require.NoError(t, err)
 			require.NoError(t, fcs.InsertNode(ctx, st, root))
 			headRoot := [32]byte{'r'}
-			st, root, err = prepareForkchoiceState(fieldparams.SlotsPerEpoch+1, headRoot, r, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
+			st, root, err = prepareForkchoiceState(fieldparams.SlotsPerEpoch*2+1, headRoot, r, [32]byte{}, finalizedCheckpt, finalizedCheckpt)
 			require.NoError(t, err)
 			require.NoError(t, fcs.InsertNode(ctx, st, root))
 			cs := &chainmock.ChainService{Root: headRoot[:], Optimistic: true, ForkChoiceStore: fcs, OptimisticRoots: map[[32]byte]bool{r: false}, FinalizedCheckPoint: finalizedCheckpt}
 			mf := &testutil.MockFetcher{BeaconState: st}
-			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch)), cs, mf, cs, nil)
+			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch*2)), cs, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
 		})
