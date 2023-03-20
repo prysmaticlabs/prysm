@@ -5,7 +5,10 @@ go_library(
     srcs = [
         "activation.go",
         "attestation_data.go",
+        "beacon_api_beacon_chain_client.go",
         "beacon_api_helpers.go",
+        "beacon_api_node_client.go",
+        "beacon_api_slasher_client.go",
         "beacon_api_validator_client.go",
         "beacon_block_converter.go",
         "beacon_block_json_helpers.go",

@@ -58,8 +58,8 @@ type Config struct {
 type Server struct {
 	logsStreamer              logs.Streamer
 	streamLogsBufferSize      int
-	beaconChainClient         ethpb.BeaconChainClient
-	beaconNodeClient          ethpb.NodeClient
+	beaconChainClient         iface.BeaconChainClient
+	beaconNodeClient          iface.NodeClient
 	beaconNodeValidatorClient iface.ValidatorClient
 	beaconNodeHealthClient    ethpb.HealthClient
 	valDB                     db.Database
