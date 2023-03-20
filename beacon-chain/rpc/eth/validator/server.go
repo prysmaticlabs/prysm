@@ -3,6 +3,7 @@ package validator
 import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
@@ -26,4 +27,6 @@ type Server struct {
 	SyncCommitteePool      synccommittee.Pool
 	V1Alpha1Server         *v1alpha1validator.Server
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
+	ChainInfoFetcher       blockchain.ChainInfoFetcher
+	BeaconDB               db.ReadOnlyDatabase
 }
