@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -36,8 +36,8 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				inactivePubKey: inactivePrivKey,
 			},
 		}
-		client := mock.NewMockValidatorClient(ctrl)
-		beaconClient := mock.NewMockBeaconChainClient(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl)
+		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient: client,
 			keyManager:      km,
@@ -75,8 +75,8 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				inactivePubKey: inactivePrivKey,
 			},
 		}
-		client := mock.NewMockValidatorClient(ctrl)
-		beaconClient := mock.NewMockBeaconChainClient(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl)
+		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient: client,
 			keyManager:      km,
@@ -111,7 +111,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				inactivePubKey: inactivePrivKey,
 			},
 		}
-		client := mock.NewMockValidatorClient(ctrl)
+		client := validatormock.NewMockValidatorClient(ctrl)
 		v := validator{
 			validatorClient: client,
 			keyManager:      km,
