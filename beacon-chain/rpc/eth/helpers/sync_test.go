@@ -93,9 +93,24 @@ func TestIsOptimistic(t *testing.T) {
 		assert.Equal(t, false, o)
 	})
 	t.Run("finalized", func(t *testing.T) {
-		o, err := IsOptimistic(ctx, []byte("finalized"), nil, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, false, o)
+		t.Run("finalized checkpoint is optimistic", func(t *testing.T) {
+			st, err := util.NewBeaconState()
+			require.NoError(t, err)
+			cs := &chainmock.ChainService{Optimistic: true, FinalizedCheckPoint: &eth.Checkpoint{}, OptimisticRoots: map[[32]byte]bool{[32]byte{}: true}}
+			mf := &testutil.MockFetcher{BeaconState: st}
+			o, err := IsOptimistic(ctx, []byte("finalized"), cs, mf, cs, nil)
+			require.NoError(t, err)
+			assert.Equal(t, true, o)
+		})
+		t.Run("finalized checkpoint is not optimistic", func(t *testing.T) {
+			st, err := util.NewBeaconState()
+			require.NoError(t, err)
+			cs := &chainmock.ChainService{Optimistic: true, FinalizedCheckPoint: &eth.Checkpoint{}}
+			mf := &testutil.MockFetcher{BeaconState: st}
+			o, err := IsOptimistic(ctx, []byte("finalized"), cs, mf, cs, nil)
+			require.NoError(t, err)
+			assert.Equal(t, false, o)
+		})
 	})
 	t.Run("justified", func(t *testing.T) {
 		t.Run("justified checkpoint is optimistic", func(t *testing.T) {
