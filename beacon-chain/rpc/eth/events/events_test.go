@@ -494,7 +494,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 				ParentBlockNumber: 1,
 				ParentBlockRoot:   make([]byte, 32),
 				ParentBlockHash:   make([]byte, 32),
-				PayloadAttributesV2: &enginev1.PayloadAttributesV2{
+				PayloadAttributes: &enginev1.PayloadAttributesV2{
 					Timestamp:             24,
 					PrevRandao:            prevRando,
 					SuggestedFeeRecipient: make([]byte, 20),

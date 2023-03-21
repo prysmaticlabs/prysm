@@ -112,9 +112,11 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
 		blk, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
+		r, err := blk.Block().HashTreeRoot()
+		require.NoError(t, err)
 
 		mockChainService := &mock.ChainService{
-			Optimistic: true,
+			OptimisticRoots: map[[32]byte]bool{r: true},
 		}
 		bs := &Server{
 			FinalizationFetcher:   mockChainService,
@@ -249,9 +251,11 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
 		blk, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
+		r, err := blk.Block().HashTreeRoot()
+		require.NoError(t, err)
 
 		mockChainService := &mock.ChainService{
-			Optimistic: true,
+			OptimisticRoots: map[[32]byte]bool{r: true},
 		}
 		bs := &Server{
 			FinalizationFetcher:   mockChainService,

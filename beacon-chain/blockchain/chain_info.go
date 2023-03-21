@@ -28,6 +28,15 @@ type ChainInfoFetcher interface {
 	CanonicalFetcher
 	ForkFetcher
 	HeadDomainFetcher
+	ForkchoiceFetcher
+}
+
+// ForkchoiceFetcher defines a common interface for methods that access directly
+// forkchoice information. These typically require a lock and external callers
+// are requested to call methods within this blockchain package that takes care
+// of locking forkchoice
+type ForkchoiceFetcher interface {
+	Ancestor(context.Context, []byte, primitives.Slot) ([]byte, error)
 }
 
 // HeadUpdater defines a common interface for methods in blockchain service
@@ -434,6 +443,41 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return true, nil
 	}
 	return !isCanonical, nil
+}
+
+// Ancestor returns the block root of an ancestry block from the input block root.
+//
+// Spec pseudocode definition:
+//
+//	def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
+//	 block = store.blocks[root]
+//	 if block.slot > slot:
+//	     return get_ancestor(store, block.parent_root, slot)
+//	 elif block.slot == slot:
+//	     return root
+//	 else:
+//	     # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
+//	     return root
+func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
+	defer span.End()
+
+	r := bytesutil.ToBytes32(root)
+	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
+	// This is most optimal outcome.
+	s.ForkChoicer().RLock()
+	ar, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	s.ForkChoicer().RUnlock()
+	if err != nil {
+		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
+		// This is the second line of defense for retrieving ancestor root.
+		ar, err = s.ancestorByDB(ctx, r, slot)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ar[:], nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
