@@ -8,6 +8,9 @@ package validatorpb
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	empty "github.com/golang/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
@@ -16,8 +19,6 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
