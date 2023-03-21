@@ -154,8 +154,8 @@ func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, ind
 		BlockParentRoot: block.Block.ParentRoot,
 		ProposerIndex:   block.Block.ProposerIndex,
 		Blob:            blob,
-		KzgCommitment:   commitment[:],
-		KzgProof:        commitment[:],
+		KzgCommitment:   commitment,
+		KzgProof:        commitment,
 	}
 	return sc
 }
@@ -292,7 +292,8 @@ func (c *blobsTestCase) run(t *testing.T, topic protocol.ID) {
 			ex.requireExpected(t, s, stream)
 		}
 	}
-	client := s.cfg.p2p.(*p2ptest.TestP2P)
+	client, ok := s.cfg.p2p.(*p2ptest.TestP2P)
+	require.Equal(t, true, ok)
 	rht := &rpcHandlerTest{t: t, client: client, topic: topic, timeout: time.Second * 10, err: c.err}
 	switch topic {
 	case p2p.RPCBlobSidecarsByRootTopicV1:

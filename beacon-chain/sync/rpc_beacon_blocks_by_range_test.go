@@ -25,7 +25,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
