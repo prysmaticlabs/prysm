@@ -136,6 +136,7 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
+	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
@@ -144,7 +145,6 @@ require (
 	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.10 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect
-	github.com/holiman/big v0.0.0-20221017200358-a027dc42d04e // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/goevmlab v0.0.0-20221207202144-89074274e1b7 // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
@@ -256,7 +256,6 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/peterh/liner v1.2.0 // indirect
-	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.2-alpha
 	golang.org/x/sys v0.5.0 // indirect
 	google.golang.org/api v0.44.0 // indirect
@@ -269,6 +268,6 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 
-replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20230315150056-81828d700bef
+replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20230317155853-6713fd5025ee
 
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20230315201114-09284ba20446

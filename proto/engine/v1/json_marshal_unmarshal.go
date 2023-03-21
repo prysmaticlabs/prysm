@@ -822,6 +822,7 @@ func (e *ExecutionPayloadDenebWithValue) UnmarshalJSON(enc []byte) error {
 	*e = ExecutionPayloadDenebWithValue{Payload: &ExecutionPayloadDeneb{}}
 	e.Payload.ParentHash = dec.ExecutionPayload.ParentHash.Bytes()
 	e.Payload.FeeRecipient = dec.ExecutionPayload.FeeRecipient.Bytes()
+	e.Payload.StateRoot = dec.ExecutionPayload.StateRoot.Bytes()
 	e.Payload.ReceiptsRoot = dec.ExecutionPayload.ReceiptsRoot.Bytes()
 	e.Payload.LogsBloom = *dec.ExecutionPayload.LogsBloom
 	e.Payload.PrevRandao = dec.ExecutionPayload.PrevRandao.Bytes()
