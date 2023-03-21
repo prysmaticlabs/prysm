@@ -291,64 +291,6 @@ func fillDBTestBlocksBellatrixBlinded(ctx context.Context, t *testing.T, beaconD
 	return genBlk, blkContainers
 }
 
-func fillDBTestBlocksCapellaBlinded(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpbalpha.SignedBlindedBeaconBlockCapella, []*ethpbalpha.BeaconBlockContainer) {
-	parentRoot := [32]byte{1, 2, 3}
-	genBlk := util.NewBlindedBeaconBlockCapella()
-	genBlk.Block.ParentRoot = parentRoot[:]
-	root, err := genBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	util.SaveBlock(t, ctx, beaconDB, genBlk)
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
-
-	count := primitives.Slot(100)
-	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
-	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := primitives.Slot(0); i < count; i++ {
-		b := util.NewBlindedBeaconBlockCapella()
-		b.Block.Slot = i
-		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		syncCommitteeBits := bitfield.NewBitvector512()
-		syncCommitteeBits.SetBitAt(100, true)
-		b.Block.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
-			SyncCommitteeBits:      syncCommitteeBits,
-			SyncCommitteeSignature: bytesutil.PadTo([]byte("signature"), 96),
-		}
-		b.Block.Body.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderCapella{
-			ParentHash:       bytesutil.PadTo([]byte("parent_hash"), 32),
-			FeeRecipient:     bytesutil.PadTo([]byte("fee_recipient"), 20),
-			StateRoot:        bytesutil.PadTo([]byte("state_root"), 32),
-			ReceiptsRoot:     bytesutil.PadTo([]byte("receipts_root"), 32),
-			LogsBloom:        bytesutil.PadTo([]byte("logs_bloom"), 256),
-			PrevRandao:       bytesutil.PadTo([]byte("prev_randao"), 32),
-			BlockNumber:      123,
-			GasLimit:         123,
-			GasUsed:          123,
-			Timestamp:        123,
-			ExtraData:        bytesutil.PadTo([]byte("extra_data"), 32),
-			BaseFeePerGas:    bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
-			BlockHash:        bytesutil.PadTo([]byte("block_hash"), 32),
-			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
-			WithdrawalsRoot:  bytesutil.PadTo([]byte("withdrawals_root"), 32),
-		}
-		root, err := b.Block.HashTreeRoot()
-		require.NoError(t, err)
-		signedB, err := blocks.NewSignedBeaconBlock(b)
-		require.NoError(t, err)
-		blks[i] = signedB
-		blkContainers[i] = &ethpbalpha.BeaconBlockContainer{
-			Block: &ethpbalpha.BeaconBlockContainer_BlindedCapellaBlock{BlindedCapellaBlock: b}, BlockRoot: root[:]}
-	}
-	require.NoError(t, beaconDB.SaveBlocks(ctx, blks))
-	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
-	summary := &ethpbalpha.StateSummary{
-		Root: headRoot[:],
-		Slot: blkContainers[len(blks)-1].Block.(*ethpbalpha.BeaconBlockContainer_BlindedCapellaBlock).BlindedCapellaBlock.Block.Slot,
-	}
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, summary))
-	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
-	return genBlk, blkContainers
-}
-
 func TestServer_GetBlockHeader(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
