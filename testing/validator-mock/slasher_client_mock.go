@@ -35,21 +35,6 @@ func (m *MockSlasherClient) EXPECT() *MockSlasherClientMockRecorder {
 	return m.recorder
 }
 
-// HighestAttestations mocks base method.
-func (m *MockSlasherClient) HighestAttestations(arg0 context.Context, arg1 *eth.HighestAttestationRequest) (*eth.HighestAttestationResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HighestAttestations", arg0, arg1)
-	ret0, _ := ret[0].(*eth.HighestAttestationResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HighestAttestations indicates an expected call of HighestAttestations.
-func (mr *MockSlasherClientMockRecorder) HighestAttestations(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HighestAttestations", reflect.TypeOf((*MockSlasherClient)(nil).HighestAttestations), arg0, arg1)
-}
-
 // IsSlashableAttestation mocks base method.
 func (m *MockSlasherClient) IsSlashableAttestation(arg0 context.Context, arg1 *eth.IndexedAttestation) (*eth.AttesterSlashingResponse, error) {
 	m.ctrl.T.Helper()
