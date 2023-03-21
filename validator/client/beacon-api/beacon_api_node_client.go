@@ -30,7 +30,7 @@ func (c *beaconApiNodeClient) GetSyncStatus(ctx context.Context, in *empty.Empty
 	panic("beaconApiNodeClient.GetSyncStatus is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiNodeClientWithFallback.")
 }
 
-func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, in *empty.Empty) (*ethpb.Genesis, error) {
+func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesis, error) {
 	genesisJson, _, err := c.genesisProvider.GetGenesis(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get genesis")
