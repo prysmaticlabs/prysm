@@ -6,22 +6,22 @@ import (
 	"testing"
 	"time"
 
-	blockchainTesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -97,7 +97,8 @@ func TestService_ReceiveBlock(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, s *Service) {
-				pending := s.cfg.ExitPool.PendingExits(genesis, 1, true /* no limit */)
+				pending, err := s.cfg.ExitPool.PendingExits()
+				require.NoError(t, err)
 				if len(pending) != 0 {
 					t.Errorf(
 						"Did not mark the correct number of exits. Got %d pending but wanted %d",
@@ -261,7 +262,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
-			blks := []interfaces.SignedBeaconBlock{wsb}
+			blks := []interfaces.ReadOnlySignedBeaconBlock{wsb}
 			roots := [][32]byte{root}
 			err = s.ReceiveBlockBatch(ctx, blks, roots)
 			if tt.wantedErr != "" {
@@ -356,7 +357,7 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 		}
 		blk, err := blocks.NewBeaconBlock(pbb)
 		require.NoError(t, err)
-		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
 	})
 
 	t.Run("Post Capella no changes", func(t *testing.T) {
@@ -366,7 +367,7 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 		}
 		blk, err := blocks.NewBeaconBlock(pbb)
 		require.NoError(t, err)
-		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
 	})
 
 	t.Run("Post Capella some changes", func(t *testing.T) {
@@ -388,7 +389,7 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 
 		pool.InsertBLSToExecChange(signedChange)
 		require.Equal(t, true, pool.ValidatorExists(idx))
-		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
 		require.Equal(t, false, pool.ValidatorExists(idx))
 	})
 }

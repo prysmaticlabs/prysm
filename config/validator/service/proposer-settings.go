@@ -4,8 +4,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 )
 
 // ProposerSettingsPayload is the struct representation of the JSON or YAML payload set in the validator through the CLI.
@@ -69,16 +68,12 @@ type ProposerSettings struct {
 	DefaultConfig *ProposerOption
 }
 
-// ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
-type ProposerOption struct {
-	FeeRecipient  common.Address
-	BuilderConfig *BuilderConfig
+type FeeRecipientConfig struct {
+	FeeRecipient common.Address
 }
 
-// DefaultProposerOption returns a Proposer Option with defaults filled
-func DefaultProposerOption() ProposerOption {
-	return ProposerOption{
-		FeeRecipient:  params.BeaconConfig().DefaultFeeRecipient,
-		BuilderConfig: nil,
-	}
+// ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
+type ProposerOption struct {
+	FeeRecipientConfig *FeeRecipientConfig
+	BuilderConfig      *BuilderConfig
 }

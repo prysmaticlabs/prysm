@@ -3,10 +3,10 @@ package state_native
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestSetNextWithdrawalIndex(t *testing.T) {
@@ -20,7 +20,7 @@ func TestSetNextWithdrawalIndex(t *testing.T) {
 	require.Equal(t, true, s.dirtyFields[types.NextWithdrawalIndex])
 }
 
-func TestSetLastWithdrawalValidatorIndex(t *testing.T) {
+func TestSetNextWithdrawalValidatorIndex(t *testing.T) {
 	s := BeaconState{
 		version:                      version.Capella,
 		nextWithdrawalValidatorIndex: 3,

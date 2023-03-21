@@ -6,17 +6,17 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -28,12 +28,21 @@ type ChainInfoFetcher interface {
 	CanonicalFetcher
 	ForkFetcher
 	HeadDomainFetcher
+	ForkchoiceFetcher
+}
+
+// ForkchoiceFetcher defines a common interface for methods that access directly
+// forkchoice information. These typically require a lock and external callers
+// are requested to call methods within this blockchain package that takes care
+// of locking forkchoice
+type ForkchoiceFetcher interface {
+	Ancestor(context.Context, []byte, primitives.Slot) ([]byte, error)
 }
 
 // HeadUpdater defines a common interface for methods in blockchain service
 // which allow to update the head info
 type HeadUpdater interface {
-	UpdateHead(context.Context) error
+	UpdateHead(context.Context, primitives.Slot)
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
@@ -52,8 +61,9 @@ type GenesisFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() primitives.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
-	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
+	HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
 	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
@@ -83,7 +93,7 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
-	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
+	InForkchoice([32]byte) bool
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
 
@@ -95,25 +105,25 @@ type OptimisticModeFetcher interface {
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().FinalizedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // PreviousJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().PreviousJustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	cp := s.ForkChoicer().JustifiedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
-}
-
-// BestJustifiedCheckpt returns the best justified checkpoint from store.
-func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
-	cp := s.ForkChoicer().BestJustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
@@ -157,7 +167,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // HeadBlock returns the head block of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
-func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
+func (s *Service) HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -182,6 +192,28 @@ func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 
 	if ok {
 		return s.headState(ctx), nil
+	}
+
+	return s.cfg.StateGen.StateByRoot(ctx, s.headRoot())
+}
+
+// HeadStateReadOnly returns the read only head state of the chain.
+// If the head is nil from service struct, it will attempt to get the
+// head state from DB. Any callers of this method MUST only use the
+// state instance to read fields from the state. Any type assertions back
+// to the concrete type and subsequent use of it could lead to corruption
+// of the state.
+func (s *Service) HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.HeadStateReadOnly")
+	defer span.End()
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	ok := s.hasHeadState()
+	span.AddAttributes(trace.BoolAttribute("cache_hit", ok))
+
+	if ok {
+		return s.headStateReadOnly(ctx), nil
 	}
 
 	return s.cfg.StateGen.StateByRoot(ctx, s.headRoot())
@@ -254,6 +286,8 @@ func (s *Service) CurrentFork() *ethpb.Fork {
 
 // IsCanonical returns true if the input block root is part of the canonical chain.
 func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	// If the block has not been finalized, check fork choice store to see if the block is canonical
 	if s.cfg.ForkChoiceStore.HasNode(blockRoot) {
 		return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
@@ -266,6 +300,8 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (s *Service) ChainHeads() ([][32]byte, []primitives.Slot) {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	return s.cfg.ForkChoiceStore.Tips()
 }
 
@@ -307,9 +343,8 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	headRoot := s.head.root
 	s.headLock.RUnlock()
 
-	if s.cfg.ForkChoiceStore.AllTipsAreInvalid() {
-		return true, nil
-	}
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(headRoot)
 	if err == nil {
 		return optimistic, nil
@@ -325,6 +360,8 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 // IsFinalized returns true if the input root is finalized.
 // It first checks latest finalized root then checks finalized root index in DB.
 func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
 	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
 		return true
 	}
@@ -336,10 +373,21 @@ func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
 	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)
 }
 
+// InForkchoice returns true if the given root is found in forkchoice
+// This in particular means that the blockroot is a descendant of the
+// finalized checkpoint
+func (s *Service) InForkchoice(root [32]byte) bool {
+	s.ForkChoicer().RLock()
+	defer s.ForkChoicer().RUnlock()
+	return s.ForkChoicer().HasNode(root)
+}
+
 // IsOptimisticForRoot takes the root as argument instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
+	s.ForkChoicer().RLock()
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(root)
+	s.ForkChoicer().RUnlock()
 	if err == nil {
 		return optimistic, nil
 	}
@@ -395,6 +443,41 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return true, nil
 	}
 	return !isCanonical, nil
+}
+
+// Ancestor returns the block root of an ancestry block from the input block root.
+//
+// Spec pseudocode definition:
+//
+//	def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
+//	 block = store.blocks[root]
+//	 if block.slot > slot:
+//	     return get_ancestor(store, block.parent_root, slot)
+//	 elif block.slot == slot:
+//	     return root
+//	 else:
+//	     # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
+//	     return root
+func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
+	defer span.End()
+
+	r := bytesutil.ToBytes32(root)
+	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
+	// This is most optimal outcome.
+	s.ForkChoicer().RLock()
+	ar, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	s.ForkChoicer().RUnlock()
+	if err != nil {
+		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
+		// This is the second line of defense for retrieving ancestor root.
+		ar, err = s.ancestorByDB(ctx, r, slot)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ar[:], nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.

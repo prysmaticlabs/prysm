@@ -12,7 +12,7 @@ go_library(
         "peers.go",
         "request_blocks.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/p2p",
+    importpath = "github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/p2p",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/forkchoice:go_default_library",
@@ -41,7 +41,6 @@ go_library(
         "@com_github_libp2p_go_libp2p//core/network:go_default_library",
         "@com_github_libp2p_go_libp2p//core/peer:go_default_library",
         "@com_github_libp2p_go_libp2p//core/protocol:go_default_library",
-        "@com_github_libp2p_go_libp2p//p2p/protocol/identify:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/security/noise:go_default_library",
         "@com_github_libp2p_go_libp2p//p2p/transport/tcp:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

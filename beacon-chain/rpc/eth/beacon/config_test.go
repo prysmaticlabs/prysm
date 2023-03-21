@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -32,7 +32,6 @@ func TestGetSpec(t *testing.T) {
 	config.HysteresisQuotient = 9
 	config.HysteresisDownwardMultiplier = 10
 	config.HysteresisUpwardMultiplier = 11
-	config.SafeSlotsToUpdateJustified = 12
 	config.Eth1FollowDistance = 13
 	config.TargetAggregatorsPerCommittee = 14
 	config.RandomSubnetsPerValidator = 15
@@ -137,7 +136,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 103, len(resp.Data))
+	assert.Equal(t, 105, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -167,7 +166,7 @@ func TestGetSpec(t *testing.T) {
 		case "HYSTERESIS_UPWARD_MULTIPLIER":
 			assert.Equal(t, "11", v)
 		case "SAFE_SLOTS_TO_UPDATE_JUSTIFIED":
-			assert.Equal(t, "12", v)
+			assert.Equal(t, "0", v)
 		case "ETH1_FOLLOW_DISTANCE":
 			assert.Equal(t, "13", v)
 		case "TARGET_AGGREGATORS_PER_COMMITTEE":
@@ -358,6 +357,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "75", v)
 		case "MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP":
 			assert.Equal(t, "76", v)
+		case "REORG_MAX_EPOCHS_SINCE_FINALIZATION":
+			assert.Equal(t, "2", v)
+		case "REORG_WEIGHT_THRESHOLD":
+			assert.Equal(t, "20", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
 		default:
 			t.Errorf("Incorrect key: %s", k)

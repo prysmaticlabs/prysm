@@ -9,10 +9,10 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type dutiesProvider interface {
@@ -187,11 +187,11 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 			Committee:       committeeValidatorIndices,
 			CommitteeIndex:  committeeIndex,
 			AttesterSlot:    attesterSlot,
-			ProposerSlots:   proposerDutySlots[primitives.ValidatorIndex(validatorIndex)],
+			ProposerSlots:   proposerDutySlots[validatorIndex],
 			PublicKey:       pubkey,
 			Status:          validatorStatus.Status,
-			ValidatorIndex:  primitives.ValidatorIndex(validatorIndex),
-			IsSyncCommittee: syncDutiesMapping[primitives.ValidatorIndex(validatorIndex)],
+			ValidatorIndex:  validatorIndex,
+			IsSyncCommittee: syncDutiesMapping[validatorIndex],
 		}
 	}
 

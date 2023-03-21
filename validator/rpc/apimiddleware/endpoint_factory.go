@@ -2,7 +2,7 @@ package apimiddleware
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 )
 
 // ValidatorEndpointFactory creates endpoints used for running validator API calls through the API Middleware.
@@ -42,6 +42,7 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 	case "/eth/v1/validator/{pubkey}/feerecipient":
 		endpoint.GetResponse = &GetFeeRecipientByPubkeyResponseJson{}
 		endpoint.PostRequest = &SetFeeRecipientByPubkeyRequestJson{}
+		endpoint.DeleteRequest = &DeleteFeeRecipientByPubkeyRequestJson{}
 	case "/eth/v1/validator/{pubkey}/gas_limit":
 		endpoint.GetResponse = &GetGasLimitResponseJson{}
 		endpoint.PostRequest = &SetGasLimitRequestJson{}

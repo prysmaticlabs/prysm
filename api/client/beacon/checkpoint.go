@@ -6,25 +6,25 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
 )
 
-// OriginData represents the BeaconState and SignedBeaconBlock necessary to start an empty Beacon Node
+// OriginData represents the BeaconState and ReadOnlySignedBeaconBlock necessary to start an empty Beacon Node
 // using Checkpoint Sync.
 type OriginData struct {
 	sb []byte
 	bb []byte
 	st state.BeaconState
-	b  interfaces.SignedBeaconBlock
+	b  interfaces.ReadOnlySignedBeaconBlock
 	vu *detect.VersionedUnmarshaler
 	br [32]byte
 	sr [32]byte
@@ -49,7 +49,7 @@ func (o *OriginData) StateBytes() []byte {
 	return o.sb
 }
 
-// BlockBytes returns the ssz-encoded bytes of the downloaded SignedBeaconBlock value.
+// BlockBytes returns the ssz-encoded bytes of the downloaded ReadOnlySignedBeaconBlock value.
 func (o *OriginData) BlockBytes() []byte {
 	return o.bb
 }
@@ -103,8 +103,8 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	}
 
 	log.Printf("BeaconState slot=%d, Block slot=%d", s.Slot(), b.Block().Slot())
-	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", sr, b.Block().StateRoot())
-	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", br, realBlockRoot)
+	log.Printf("BeaconState htr=%#x, Block state_root=%#x", sr, b.Block().StateRoot())
+	log.Printf("BeaconState latest_block_header htr=%#x, block htr=%#x", br, realBlockRoot)
 	return &OriginData{
 		st: s,
 		b:  b,
@@ -116,7 +116,7 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	}, nil
 }
 
-// WeakSubjectivityData represents the state root, block root and epoch of the BeaconState + SignedBeaconBlock
+// WeakSubjectivityData represents the state root, block root and epoch of the BeaconState + ReadOnlySignedBeaconBlock
 // that falls at the beginning of the current weak subjectivity period. These values can be used to construct
 // a weak subjectivity checkpoint beacon node flag to be used for validation.
 type WeakSubjectivityData struct {

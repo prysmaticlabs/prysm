@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestStore_JustifiedEpoch(t *testing.T) {
@@ -224,10 +224,10 @@ func TestStore_Prune_ReturnEarly(t *testing.T) {
 func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, [32]byte{'1'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, [32]byte{'2'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
@@ -235,6 +235,7 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	s.finalizedCheckpoint.Root = indexToHash(1)
 	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
+	require.Equal(t, len(s.nodeByPayload), 1)
 }
 
 // This test starts with the following branching diagram
@@ -304,10 +305,10 @@ func TestStore_tips(t *testing.T) {
 func TestStore_PruneMapsNodes(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, [32]byte{'1'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, [32]byte{'2'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
@@ -315,46 +316,8 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 	s.finalizedCheckpoint.Root = indexToHash(1)
 	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
+	require.Equal(t, len(s.nodeByPayload), 1)
 
-}
-
-func TestStore_HasParent(t *testing.T) {
-	f := setup(1, 1)
-	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	require.Equal(t, false, f.HasParent(params.BeaconConfig().ZeroHash))
-	require.Equal(t, true, f.HasParent(indexToHash(1)))
-	require.Equal(t, true, f.HasParent(indexToHash(2)))
-	require.Equal(t, true, f.HasParent(indexToHash(3)))
-	require.Equal(t, false, f.HasParent(indexToHash(4)))
-}
-
-func TestForkChoice_HighestReceivedBlockSlotRoot(t *testing.T) {
-	f := setup(1, 1)
-	s := f.store
-	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(100), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(100), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'A'}, f.HighestReceivedBlockRoot())
-	_, err = s.insert(context.Background(), 1000, [32]byte{'B'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(1000), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(1000), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
-	_, err = s.insert(context.Background(), 500, [32]byte{'C'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Slot(1000), s.highestReceivedNode.slot)
-	require.Equal(t, primitives.Slot(1000), f.HighestReceivedBlockSlot())
-	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
 }
 
 func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {

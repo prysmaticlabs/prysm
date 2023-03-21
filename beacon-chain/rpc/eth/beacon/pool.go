@@ -2,27 +2,30 @@ package beacon
 
 import (
 	"context"
+	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
-	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+const broadcastBLSChangesRateLimit = 128
 
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
@@ -141,7 +144,7 @@ func (bs *Server) ListPoolAttesterSlashings(ctx context.Context, _ *emptypb.Empt
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolAttesterSlashings")
 	defer span.End()
 
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	headState, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
@@ -197,7 +200,7 @@ func (bs *Server) ListPoolProposerSlashings(ctx context.Context, _ *emptypb.Empt
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolProposerSlashings")
 	defer span.End()
 
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	headState, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
@@ -250,16 +253,13 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
 // not necessarily incorporated into any block.
 func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.VoluntaryExitsPoolResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
+	_, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
 	defer span.End()
 
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	sourceExits, err := bs.VoluntaryExitsPool.PendingExits()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		return nil, status.Error(codes.Internal, "Could not get exits from the pool")
 	}
-
-	sourceExits := bs.VoluntaryExitsPool.PendingExits(headState, headState.Slot(), true /* return unlimited exits */)
-
 	exits := make([]*ethpbv1.SignedVoluntaryExit, len(sourceExits))
 	for i, s := range sourceExits {
 		exits[i] = migration.V1Alpha1ExitToV1(s)
@@ -299,7 +299,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid voluntary exit: %v", err)
 	}
 
-	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)
+	bs.VoluntaryExitsPool.InsertVoluntaryExit(alphaExit)
 	if err := bs.Broadcaster.Broadcast(ctx, alphaExit); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
 	}
@@ -312,7 +312,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *ethpbv2.SubmitBLSToExecutionChangesRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitSignedBLSToExecutionChanges")
 	defer span.End()
-	st, err := bs.ChainInfoFetcher.HeadState(ctx)
+	st, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
@@ -347,7 +347,7 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 			toBroadcast = append(toBroadcast, alphaChange)
 		}
 	}
-	bs.Broadcaster.BroadcastBLSChanges(ctx, toBroadcast)
+	go bs.broadcastBLSChanges(ctx, toBroadcast)
 	if len(failures) > 0 {
 		failuresContainer := &helpers.IndexedVerificationFailure{Failures: failures}
 		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
@@ -361,6 +361,54 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 		return nil, status.Errorf(codes.InvalidArgument, "One or more BLSToExecutionChange failed validation")
 	}
 	return &emptypb.Empty{}, nil
+}
+
+// broadcastBLSBatch broadcasts the first `broadcastBLSChangesRateLimit` messages from the slice pointed to by ptr.
+// It validates the messages again because they could have been invalidated by being included in blocks since the last validation.
+// It removes the messages from the slice and modifies it in place.
+func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.SignedBLSToExecutionChange) {
+	limit := broadcastBLSChangesRateLimit
+	if len(*ptr) < broadcastBLSChangesRateLimit {
+		limit = len(*ptr)
+	}
+	st, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		log.WithError(err).Error("could not get head state")
+		return
+	}
+	for _, ch := range (*ptr)[:limit] {
+		if ch != nil {
+			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
+			if err != nil {
+				log.WithError(err).Error("could not validate BLS to execution change")
+				continue
+			}
+			if err := bs.Broadcaster.Broadcast(ctx, ch); err != nil {
+				log.WithError(err).Error("could not broadcast BLS to execution changes.")
+			}
+		}
+	}
+	*ptr = (*ptr)[limit:]
+}
+
+func (bs *Server) broadcastBLSChanges(ctx context.Context, changes []*ethpbalpha.SignedBLSToExecutionChange) {
+	bs.broadcastBLSBatch(ctx, &changes)
+	if len(changes) == 0 {
+		return
+	}
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			bs.broadcastBLSBatch(ctx, &changes)
+			if len(changes) == 0 {
+				return
+			}
+		}
+	}
 }
 
 // ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block

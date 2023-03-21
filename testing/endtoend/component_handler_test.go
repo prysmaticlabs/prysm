@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components/eth1"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/components"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/components/eth1"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -257,7 +257,6 @@ func PIDsFromMultiComponentRunner(runner e2etypes.MultipleComponentRunners) []in
 func appendDebugEndpoints(cfg *e2etypes.E2EConfig) {
 	debug := []string{
 		"--enable-debug-rpc-endpoints",
-		"--grpc-max-msg-size=65568081",
 	}
 	cfg.BeaconFlags = append(cfg.BeaconFlags, debug...)
 }

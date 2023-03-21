@@ -13,18 +13,17 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
-	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	testpb "github.com/prysmaticlabs/prysm/v3/proto/testing"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	testpb "github.com/prysmaticlabs/prysm/v4/proto/testing"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -439,57 +438,4 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Error("Failed to receive pubsub within 1s")
 	}
-}
-
-func TestBroadcastBLSChanges(t *testing.T) {
-	logHook := logTest.NewGlobal()
-	p1 := p2ptest.NewTestP2P(t)
-	p2 := p2ptest.NewTestP2P(t)
-	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) == 0 {
-		t.Fatal("No peers")
-	}
-
-	p := &Service{
-		host:                  p1.BHost,
-		pubsub:                p1.PubSub(),
-		joinedTopics:          map[string]*pubsub.Topic{},
-		cfg:                   &Config{},
-		ctx:                   context.Background(),
-		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
-		subnetsLock:           make(map[uint64]*sync.RWMutex),
-		subnetsLockLock:       sync.Mutex{},
-		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
-			ScorerParams: &scorers.Config{},
-		}),
-	}
-
-	message := &ethpb.SignedBLSToExecutionChange{
-		Message: &ethpb.BLSToExecutionChange{
-			ValidatorIndex:     1,
-			FromBlsPubkey:      bytesutil.PadTo([]byte("pubkey1"), 48),
-			ToExecutionAddress: bytesutil.PadTo([]byte("address1"), 20),
-		},
-		Signature: bytesutil.PadTo([]byte("signature1"), 96),
-	}
-	message2 := &ethpb.SignedBLSToExecutionChange{
-		Message: &ethpb.BLSToExecutionChange{
-			ValidatorIndex:     1,
-			FromBlsPubkey:      bytesutil.PadTo([]byte("pubkey1"), 48),
-			ToExecutionAddress: bytesutil.PadTo([]byte("address1"), 20),
-		},
-		Signature: bytesutil.PadTo([]byte("signature1"), 96),
-	}
-	messages := make([]*ethpb.SignedBLSToExecutionChange, 200)
-	for i := 0; i < 128; i++ {
-		messages[i] = message
-	}
-	for i := 128; i < 200; i++ {
-		messages[i] = message2
-	}
-
-	p.broadcastBLSChanges(context.Background(), messages)
-	require.LogsDoNotContain(t, logHook, "could not")
-
 }

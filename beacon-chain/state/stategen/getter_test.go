@@ -4,16 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestStateByRoot_GenesisState(t *testing.T) {
@@ -48,6 +48,14 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(1))
+	val, err := beaconState.ValidatorAtIndex(0)
+	require.NoError(t, err)
+	val.Slashed = true
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(0, val))
+	roval, err := beaconState.ValidatorAtIndexReadOnly(0)
+	require.NoError(t, err)
+	require.Equal(t, true, roval.Slashed())
+
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
 	util.SaveBlock(t, ctx, service.beaconDB, b)
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
@@ -55,12 +63,13 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
 
-	bal, err := service.BalancesByRoot(ctx, bRoot)
+	bal, err := service.ActiveNonSlashedBalancesByRoot(ctx, bRoot)
 	require.NoError(t, err)
 	require.Equal(t, 32, len(bal))
-	for i := range bal {
-		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, bal[i])
+	for _, balance := range bal[1:] {
+		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, balance)
 	}
+	require.Equal(t, uint64(0), bal[0])
 }
 
 func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {

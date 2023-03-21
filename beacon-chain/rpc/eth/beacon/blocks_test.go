@@ -7,24 +7,25 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	executionTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	executionTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -38,7 +39,7 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlock()
@@ -74,7 +75,7 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockAltair()
@@ -115,7 +116,7 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockBellatrix()
@@ -172,7 +173,7 @@ func fillDBTestBlocksCapella(ctx context.Context, t *testing.T, beaconDB db.Data
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockCapella()
@@ -243,7 +244,7 @@ func fillDBTestBlocksBellatrixBlinded(ctx context.Context, t *testing.T, beaconD
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBlindedBeaconBlockBellatrix()
@@ -300,7 +301,7 @@ func fillDBTestBlocksCapellaBlinded(ctx context.Context, t *testing.T, beaconDB 
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBlindedBeaconBlockCapella()
@@ -470,6 +471,9 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -633,6 +637,9 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[30].BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1397,6 +1404,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 	})
 
 	t.Run("Bellatrix", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
@@ -1519,6 +1530,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 	})
 
 	t.Run("Capella", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
@@ -1657,6 +1672,9 @@ func TestServer_GetBlockV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1825,6 +1843,10 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 	})
 
 	t.Run("Bellatrix", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
@@ -1860,6 +1882,10 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 	})
 
 	t.Run("Capella", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
@@ -1910,6 +1936,9 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2081,6 +2110,9 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2477,6 +2509,9 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,

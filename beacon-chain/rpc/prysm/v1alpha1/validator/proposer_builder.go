@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/sirupsen/logrus"
 )
 
@@ -45,6 +45,9 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 		return true, errors.New("no fork choicer configured")
 	}
 
+	vs.ForkFetcher.ForkChoicer().RLock()
+	defer vs.ForkFetcher.ForkChoicer().RUnlock()
+
 	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
 	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
 	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
@@ -53,7 +56,7 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 		return true, err
 	}
 
-	if diff > maxConsecutiveSkipSlotsAllowed {
+	if diff >= maxConsecutiveSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
 			"currentSlot":                    s,
 			"highestReceivedSlot":            highestReceivedSlot,
@@ -77,7 +80,7 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	if diff > maxEpochSkipSlotsAllowed {
+	if diff >= maxEpochSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
 			"totalMissed":              diff,
 			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,

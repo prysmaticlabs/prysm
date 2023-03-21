@@ -6,18 +6,18 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestSlotFromBlock(t *testing.T) {
@@ -208,7 +208,7 @@ func TestUnmarshalBlock(t *testing.T) {
 	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
-		b       func(*testing.T, primitives.Slot) interfaces.SignedBeaconBlock
+		b       func(*testing.T, primitives.Slot) interfaces.ReadOnlySignedBeaconBlock
 		name    string
 		version [4]byte
 		slot    primitives.Slot
@@ -299,7 +299,7 @@ func TestUnmarshalBlindedBlock(t *testing.T) {
 	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
-		b       func(*testing.T, primitives.Slot) interfaces.SignedBeaconBlock
+		b       func(*testing.T, primitives.Slot) interfaces.ReadOnlySignedBeaconBlock
 		name    string
 		version [4]byte
 		slot    primitives.Slot
@@ -377,7 +377,7 @@ func TestUnmarshalBlindedBlock(t *testing.T) {
 	}
 }
 
-func signedTestBlockGenesis(t *testing.T, slot primitives.Slot) interfaces.SignedBeaconBlock {
+func signedTestBlockGenesis(t *testing.T, slot primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 	b := util.NewBeaconBlock()
 	b.Block.Slot = slot
 	s, err := blocks.NewSignedBeaconBlock(b)
@@ -385,7 +385,7 @@ func signedTestBlockGenesis(t *testing.T, slot primitives.Slot) interfaces.Signe
 	return s
 }
 
-func signedTestBlockAltair(t *testing.T, slot primitives.Slot) interfaces.SignedBeaconBlock {
+func signedTestBlockAltair(t *testing.T, slot primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 	b := util.NewBeaconBlockAltair()
 	b.Block.Slot = slot
 	s, err := blocks.NewSignedBeaconBlock(b)
@@ -393,7 +393,7 @@ func signedTestBlockAltair(t *testing.T, slot primitives.Slot) interfaces.Signed
 	return s
 }
 
-func signedTestBlockBellatrix(t *testing.T, slot primitives.Slot) interfaces.SignedBeaconBlock {
+func signedTestBlockBellatrix(t *testing.T, slot primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 	b := util.NewBeaconBlockBellatrix()
 	b.Block.Slot = slot
 	s, err := blocks.NewSignedBeaconBlock(b)
@@ -401,7 +401,7 @@ func signedTestBlockBellatrix(t *testing.T, slot primitives.Slot) interfaces.Sig
 	return s
 }
 
-func signedTestBlindedBlockBellatrix(t *testing.T, slot primitives.Slot) interfaces.SignedBeaconBlock {
+func signedTestBlindedBlockBellatrix(t *testing.T, slot primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 	b := util.NewBlindedBeaconBlockBellatrix()
 	b.Block.Slot = slot
 	s, err := blocks.NewSignedBeaconBlock(b)

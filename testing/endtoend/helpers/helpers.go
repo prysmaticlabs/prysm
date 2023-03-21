@@ -20,11 +20,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -37,8 +37,9 @@ const (
 	cpuProfileFileName    = "node_cpu_profile_%d.pb.gz"
 	fileBufferSize        = 64 * 1024
 	maxFileBufferSize     = 1024 * 1024
-	AltairE2EForkEpoch    = 6
-	BellatrixE2EForkEpoch = 8
+	AltairE2EForkEpoch    = params.AltairE2EForkEpoch
+	BellatrixE2EForkEpoch = params.BellatrixE2EForkEpoch
+	CapellaE2EForkEpoch   = params.CapellaE2EForkEpoch
 )
 
 // Graffiti is a list of sample graffiti strings.

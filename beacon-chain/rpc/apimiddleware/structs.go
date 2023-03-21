@@ -3,9 +3,9 @@ package apimiddleware
 import (
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 )
 
 //----------------
@@ -38,6 +38,7 @@ type FeeRecipientsRequestJSON struct {
 type StateRootResponseJson struct {
 	Data                *StateRootResponse_StateRootJson `json:"data"`
 	ExecutionOptimistic bool                             `json:"execution_optimistic"`
+	Finalized           bool                             `json:"finalized"`
 }
 
 type StateRootResponse_StateRootJson struct {
@@ -47,11 +48,13 @@ type StateRootResponse_StateRootJson struct {
 type StateForkResponseJson struct {
 	Data                *ForkJson `json:"data"`
 	ExecutionOptimistic bool      `json:"execution_optimistic"`
+	Finalized           bool      `json:"finalized"`
 }
 
 type StateFinalityCheckpointResponseJson struct {
 	Data                *StateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
 	ExecutionOptimistic bool                                                         `json:"execution_optimistic"`
+	Finalized           bool                                                         `json:"finalized"`
 }
 
 type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
@@ -63,26 +66,31 @@ type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 type StateValidatorsResponseJson struct {
 	Data                []*ValidatorContainerJson `json:"data"`
 	ExecutionOptimistic bool                      `json:"execution_optimistic"`
+	Finalized           bool                      `json:"finalized"`
 }
 
 type StateValidatorResponseJson struct {
 	Data                *ValidatorContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
+	Finalized           bool                    `json:"finalized"`
 }
 
 type ValidatorBalancesResponseJson struct {
 	Data                []*ValidatorBalanceJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
+	Finalized           bool                    `json:"finalized"`
 }
 
 type StateCommitteesResponseJson struct {
 	Data                []*CommitteeJson `json:"data"`
 	ExecutionOptimistic bool             `json:"execution_optimistic"`
+	Finalized           bool             `json:"finalized"`
 }
 
 type SyncCommitteesResponseJson struct {
 	Data                *SyncCommitteeValidatorsJson `json:"data"`
 	ExecutionOptimistic bool                         `json:"execution_optimistic"`
+	Finalized           bool                         `json:"finalized"`
 }
 
 type RandaoResponseJson struct {
@@ -90,6 +98,7 @@ type RandaoResponseJson struct {
 		Randao string `json:"randao" hex:"true"`
 	} `json:"data"`
 	ExecutionOptimistic bool `json:"execution_optimistic"`
+	Finalized           bool `json:"finalized"`
 }
 
 type BlockHeadersResponseJson struct {
@@ -201,6 +210,7 @@ type BeaconStateV2ResponseJson struct {
 	Version             string                      `json:"version" enum:"true"`
 	Data                *BeaconStateContainerV2Json `json:"data"`
 	ExecutionOptimistic bool                        `json:"execution_optimistic"`
+	Finalized           bool                        `json:"finalized"`
 }
 
 type ForkChoiceHeadsResponseJson struct {
@@ -1148,6 +1158,47 @@ type EventChainReorgJson struct {
 	NewHeadState        string `json:"new_head_state" hex:"true"`
 	Epoch               string `json:"epoch"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
+}
+
+type EventPayloadAttributeStreamV1Json struct {
+	Version string `json:"version"`
+	Data    *EventPayloadAttributeV1Json
+}
+
+type EventPayloadAttributeStreamV2Json struct {
+	Version string                       `json:"version"`
+	Data    *EventPayloadAttributeV2Json `json:"data"`
+}
+
+type EventPayloadAttributeV1Json struct {
+	ProposerIndex     string                   `json:"proposer_index"`
+	ProposalSlot      string                   `json:"proposal_slot"`
+	ParentBlockNumber string                   `json:"parent_block_number"`
+	ParentBlockRoot   string                   `json:"parent_block_root" hex:"true"`
+	ParentBlockHash   string                   `json:"parent_block_hash" hex:"true"`
+	PayloadAttributes *PayloadAttributesV1Json `json:"payload_attributes"`
+}
+
+type EventPayloadAttributeV2Json struct {
+	ProposerIndex     string                   `json:"proposer_index"`
+	ProposalSlot      string                   `json:"proposal_slot"`
+	ParentBlockNumber string                   `json:"parent_block_number"`
+	ParentBlockRoot   string                   `json:"parent_block_root" hex:"true"`
+	ParentBlockHash   string                   `json:"parent_block_hash" hex:"true"`
+	PayloadAttributes *PayloadAttributesV2Json `json:"payload_attributes"`
+}
+
+type PayloadAttributesV1Json struct {
+	Timestamp             string `json:"timestamp"`
+	Random                string `json:"prev_randao" hex:"true"`
+	SuggestedFeeRecipient string `json:"suggested_fee_recipient" hex:"true"`
+}
+
+type PayloadAttributesV2Json struct {
+	Timestamp             string            `json:"timestamp"`
+	Random                string            `json:"prev_randao" hex:"true"`
+	SuggestedFeeRecipient string            `json:"suggested_fee_recipient" hex:"true"`
+	Withdrawals           []*WithdrawalJson `json:"withdrawals"`
 }
 
 // ---------------

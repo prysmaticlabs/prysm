@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 )
 
 func TestSlotsSinceGenesis(t *testing.T) {
@@ -458,5 +458,28 @@ func TestSyncCommitteePeriodStartEpoch(t *testing.T) {
 		e, err := SyncCommitteePeriodStartEpoch(test.epoch)
 		require.NoError(t, err)
 		require.Equal(t, test.wanted, e)
+	}
+}
+
+func TestSecondsSinceSlotStart(t *testing.T) {
+	tests := []struct {
+		slot        primitives.Slot
+		genesisTime uint64
+		timeStamp   uint64
+		wanted      uint64
+		wantedErr   bool
+	}{
+		{},
+		{slot: 1, timeStamp: 1, wantedErr: true},
+		{slot: 1, timeStamp: params.BeaconConfig().SecondsPerSlot + 2, wanted: 2},
+	}
+	for _, test := range tests {
+		w, err := SecondsSinceSlotStart(test.slot, test.genesisTime, test.timeStamp)
+		if err != nil {
+			require.Equal(t, true, test.wantedErr)
+		} else {
+			require.Equal(t, false, test.wantedErr)
+			require.Equal(t, w, test.wanted)
+		}
 	}
 }

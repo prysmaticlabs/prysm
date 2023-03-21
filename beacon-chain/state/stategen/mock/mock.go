@@ -3,8 +3,8 @@ package mock
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // MockStateManager is a fake implementation of StateManager.
@@ -52,7 +52,7 @@ func (m *MockStateManager) StateByRoot(_ context.Context, blockRoot [32]byte) (s
 }
 
 // BalancesByRoot --
-func (*MockStateManager) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+func (*MockStateManager) ActiveNonSlashedBalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
 	return []uint64{}, nil
 }
 

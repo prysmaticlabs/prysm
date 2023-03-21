@@ -5,15 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/async/abool"
-	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/async/abool"
+	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
 func TestService_CheckForNextEpochFork(t *testing.T) {
@@ -90,7 +90,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
 				rpcMap := make(map[string]bool)
 				for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
-					rpcMap[p] = true
+					rpcMap[string(p)] = true
 				}
 				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRangeTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
 				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRootTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
@@ -134,7 +134,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
 				rpcMap := make(map[string]bool)
 				for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
-					rpcMap[p] = true
+					rpcMap[string(p)] = true
 				}
 			},
 		},
@@ -189,7 +189,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				ptcls := s.cfg.p2p.Host().Mux().Protocols()
 				pMap := make(map[string]bool)
 				for _, p := range ptcls {
-					pMap[p] = true
+					pMap[string(p)] = true
 				}
 				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
 				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
@@ -259,7 +259,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				ptcls := s.cfg.p2p.Host().Mux().Protocols()
 				pMap := make(map[string]bool)
 				for _, p := range ptcls {
-					pMap[p] = true
+					pMap[string(p)] = true
 				}
 				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
 				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])

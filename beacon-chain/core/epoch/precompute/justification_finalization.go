@@ -3,12 +3,12 @@ package precompute
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 var errNilState = errors.New("nil state")
@@ -16,25 +16,25 @@ var errNilState = errors.New("nil state")
 // UnrealizedCheckpoints returns the justification and finalization checkpoints of the
 // given state as if it was progressed with empty slots until the next epoch. It
 // also returns the total active balance during the epoch.
-func UnrealizedCheckpoints(st state.BeaconState) (uint64, *ethpb.Checkpoint, *ethpb.Checkpoint, error) {
+func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	if st == nil || st.IsNil() {
-		return 0, nil, nil, errNilState
+		return nil, nil, errNilState
 	}
 
 	if slots.ToEpoch(st.Slot()) <= params.BeaconConfig().GenesisEpoch+1 {
 		jc := st.CurrentJustifiedCheckpoint()
 		fc := st.FinalizedCheckpoint()
-		return 0, jc, fc, nil
+		return jc, fc, nil
 	}
 
 	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances()
 	if err != nil {
-		return 0, nil, nil, err
+		return nil, nil, err
 	}
 
 	justification := processJustificationBits(st, activeBalance, prevTarget, currentTarget)
 	jc, fc, err := computeCheckpoints(st, justification)
-	return activeBalance, jc, fc, err
+	return jc, fc, err
 }
 
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during

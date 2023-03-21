@@ -3,18 +3,18 @@ package blstoexec
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestPendingBLSToExecChanges(t *testing.T) {
@@ -154,8 +154,18 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		}
 		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
-		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges)-1, len(changes))
-		assert.Equal(t, primitives.ValidatorIndex(29), changes[1].Message.ValidatorIndex)
+		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
+		assert.Equal(t, primitives.ValidatorIndex(30), changes[1].Message.ValidatorIndex)
+	})
+	t.Run("invalid change not returned", func(t *testing.T) {
+		pool := NewPool()
+		saveByte := signedChanges[1].Message.FromBlsPubkey[5]
+		signedChanges[1].Message.FromBlsPubkey[5] = 0xff
+		pool.InsertBLSToExecChange(signedChanges[1])
+		changes, err := pool.BLSToExecChangesForInclusion(st)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(changes))
+		signedChanges[1].Message.FromBlsPubkey[5] = saveByte
 	})
 }
 

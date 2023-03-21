@@ -12,20 +12,21 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/grpc"
 )
 
 type metadata struct {
 	basepath         string
 	params           func(encoding string, currentEpoch primitives.Epoch) []string
+	requestObject    interface{}
 	prysmResps       map[string]interface{}
 	lighthouseResps  map[string]interface{}
 	customEvaluation func(interface{}, interface{}) error
@@ -137,6 +138,42 @@ var beaconPathsAndObjects = map[string]metadata{
 			return compareJSONResponseObjects(prysmResp, castedl)
 		},
 	},
+	"/validator/duties/attester/{param1}": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, e primitives.Epoch) []string {
+			//ask for a future epoch to test this case
+			return []string{fmt.Sprintf("%v", e+1)}
+		},
+		requestObject: func() []string {
+			validatorIndices := make([]string, 64)
+			for key := range validatorIndices {
+				validatorIndices[key] = fmt.Sprintf("%d", key)
+			}
+			return validatorIndices
+		}(),
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.AttesterDutiesResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.AttesterDutiesResponseJson{},
+		},
+		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
+			castedp, ok := lhouseResp.(*apimiddleware.AttesterDutiesResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			castedl, ok := lhouseResp.(*apimiddleware.AttesterDutiesResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			if len(castedp.Data) == 0 ||
+				len(castedl.Data) == 0 ||
+				len(castedp.Data) != len(castedl.Data) {
+				return fmt.Errorf("attester data does not match, prysm: %d lighthouse: %d", len(castedp.Data), len(castedl.Data))
+			}
+			return compareJSONResponseObjects(prysmResp, castedl)
+		},
+	},
 	"/beacon/headers/{param1}": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, e primitives.Epoch) []string {
@@ -232,6 +269,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				if err := compareJSONMulticlient(beaconNodeIdx,
 					meta.basepath,
 					apipath,
+					meta.requestObject,
 					beaconPathsAndObjects[path].prysmResps[key],
 					beaconPathsAndObjects[path].lighthouseResps[key],
 					meta.customEvaluation,
@@ -349,24 +387,47 @@ func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, gen
 	return nil
 }
 
-func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSONPrysm interface{}, respJSONLighthouse interface{}, customEvaluator func(interface{}, interface{}) error) error {
-	if err := doMiddlewareJSONGetRequest(
-		base,
-		path,
-		beaconNodeIdx,
-		respJSONPrysm,
-	); err != nil {
-		return errors.Wrap(err, "could not perform GET request for Prysm JSON")
-	}
+func compareJSONMulticlient(beaconNodeIdx int, base string, path string, requestObj, respJSONPrysm interface{}, respJSONLighthouse interface{}, customEvaluator func(interface{}, interface{}) error) error {
+	if requestObj != nil {
+		if err := doMiddlewareJSONPostRequest(
+			base,
+			path,
+			beaconNodeIdx,
+			requestObj,
+			respJSONPrysm,
+		); err != nil {
+			return errors.Wrap(err, "could not perform POST request for Prysm JSON")
+		}
 
-	if err := doMiddlewareJSONGetRequest(
-		base,
-		path,
-		beaconNodeIdx,
-		respJSONLighthouse,
-		"lighthouse",
-	); err != nil {
-		return errors.Wrap(err, "could not perform GET request for Lighthouse JSON")
+		if err := doMiddlewareJSONPostRequest(
+			base,
+			path,
+			beaconNodeIdx,
+			requestObj,
+			respJSONLighthouse,
+			"lighthouse",
+		); err != nil {
+			return errors.Wrap(err, "could not perform POST request for Lighthouse JSON")
+		}
+	} else {
+		if err := doMiddlewareJSONGetRequest(
+			base,
+			path,
+			beaconNodeIdx,
+			respJSONPrysm,
+		); err != nil {
+			return errors.Wrap(err, "could not perform GET request for Prysm JSON")
+		}
+
+		if err := doMiddlewareJSONGetRequest(
+			base,
+			path,
+			beaconNodeIdx,
+			respJSONLighthouse,
+			"lighthouse",
+		); err != nil {
+			return errors.Wrap(err, "could not perform GET request for Lighthouse JSON")
+		}
 	}
 	if customEvaluator != nil {
 		return customEvaluator(respJSONPrysm, respJSONLighthouse)

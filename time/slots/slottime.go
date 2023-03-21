@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	mathutil "github.com/prysmaticlabs/prysm/v3/math"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	mathutil "github.com/prysmaticlabs/prysm/v4/math"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
@@ -229,4 +229,13 @@ func SyncCommitteePeriodStartEpoch(e primitives.Epoch) (primitives.Epoch, error)
 		return 0, err
 	}
 	return primitives.Epoch(startEpoch), nil
+}
+
+// SecondsSinceSlotStart returns the number of seconds transcurred since the
+// given slot start time
+func SecondsSinceSlotStart(s primitives.Slot, genesisTime uint64, timeStamp uint64) (uint64, error) {
+	if timeStamp < genesisTime+uint64(s)*params.BeaconConfig().SecondsPerSlot {
+		return 0, errors.New("could not compute seconds since slot start: invalid timestamp")
+	}
+	return timeStamp - genesisTime - uint64(s)*params.BeaconConfig().SecondsPerSlot, nil
 }

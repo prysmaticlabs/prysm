@@ -26,7 +26,7 @@ go_library(
         "status.go",
         "sync_committee.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator",
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//api/client/builder:go_default_library",
@@ -180,6 +180,7 @@ go_test(
         "proposer_attestations_test.go",
         "proposer_bellatrix_test.go",
         "proposer_builder_test.go",
+        "proposer_capella_test.go",
         "proposer_deposits_test.go",
         "proposer_empty_block_test.go",
         "proposer_execution_payload_test.go",

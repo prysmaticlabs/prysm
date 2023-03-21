@@ -7,21 +7,22 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/api/pagination"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v4/api/pagination"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/petnames"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // ListAccounts allows retrieval of validating keys and their petnames
 // for a user's wallet via RPC.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) (*pb.ListAccountsResponse, error) {
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
@@ -75,6 +76,7 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 
 // BackupAccounts creates a zip file containing EIP-2335 keystores for the user's
 // specified public keys by encrypting them with the specified password.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) BackupAccounts(
 	ctx context.Context, req *pb.BackupAccountsRequest,
 ) (*pb.BackupAccountsResponse, error) {
@@ -157,6 +159,7 @@ func (s *Server) BackupAccounts(
 }
 
 // VoluntaryExit performs a voluntary exit for the validator keys specified in a request.
+// DEPRECATE: Prysm Web UI and associated endpoints will be fully removed in a future hard fork. There is a similar endpoint that is still used /eth/v1alpha1/validator/exit.
 func (s *Server) VoluntaryExit(
 	ctx context.Context, req *pb.VoluntaryExitRequest,
 ) (*pb.VoluntaryExitResponse, error) {

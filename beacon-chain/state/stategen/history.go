@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"go.opencensus.io/trace"
 )
 
@@ -103,7 +103,7 @@ func (c *CanonicalHistory) bestForSlot(ctx context.Context, roots [][32]byte) ([
 // and the stategen transition helper methods. This implementation uses the following algorithm:
 // - find the highest canonical block <= the target slot
 // - starting with this block, recursively search backwards for a stored state, and accumulate intervening blocks
-func (c *CanonicalHistory) chainForSlot(ctx context.Context, target primitives.Slot) (state.BeaconState, []interfaces.SignedBeaconBlock, error) {
+func (c *CanonicalHistory) chainForSlot(ctx context.Context, target primitives.Slot) (state.BeaconState, []interfaces.ReadOnlySignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.chainForSlot")
 	defer span.End()
 	r, err := c.BlockRootForSlot(ctx, target)
@@ -140,10 +140,10 @@ func (c *CanonicalHistory) getState(ctx context.Context, blockRoot [32]byte) (st
 // all blocks in the lineage, including the tail block. Blocks are returned in ascending order.
 // Note that this function assumes that the tail is a canonical block, and therefore assumes that
 // all ancestors are also canonical.
-func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail interfaces.SignedBeaconBlock) (state.BeaconState, []interfaces.SignedBeaconBlock, error) {
+func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, []interfaces.ReadOnlySignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.ancestorChain")
 	defer span.End()
-	chain := make([]interfaces.SignedBeaconBlock, 0)
+	chain := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
 	for {
 		if err := ctx.Err(); err != nil {
 			msg := fmt.Sprintf("context canceled while finding ancestors of block at slot %d", tail.Block().Slot())
@@ -185,7 +185,7 @@ func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail interfaces.Si
 	}
 }
 
-func reverseChain(c []interfaces.SignedBeaconBlock) {
+func reverseChain(c []interfaces.ReadOnlySignedBeaconBlock) {
 	last := len(c) - 1
 	swaps := (last + 1) / 2
 	for i := 0; i < swaps; i++ {

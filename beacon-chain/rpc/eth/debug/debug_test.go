@@ -5,18 +5,18 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	blockchainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -33,10 +33,11 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -50,10 +51,11 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -67,10 +69,11 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -84,10 +87,11 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -109,14 +113,48 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{Optimistic: true},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &blockchainmock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
+			StateId: []byte("head"),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, true, resp.Finalized)
 	})
 }
 
@@ -255,7 +293,13 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 	}
 
 	t.Run("optimistic head", func(t *testing.T) {
-		chainService := &blockchainmock.ChainService{Optimistic: true}
+		chainService := &blockchainmock.ChainService{
+			Optimistic:      true,
+			OptimisticRoots: make(map[[32]byte]bool),
+		}
+		for _, sr := range expectedSlotsAndRoots {
+			chainService.OptimisticRoots[sr.Root] = true
+		}
 		server := &Server{
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
@@ -280,14 +324,10 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 func TestServer_GetForkChoice(t *testing.T) {
 	store := doublylinkedtree.New()
 	fRoot := [32]byte{'a'}
-	jRoot := [32]byte{'b'}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 2, Root: fRoot}
-	jc := &forkchoicetypes.Checkpoint{Epoch: 3, Root: jRoot}
 	require.NoError(t, store.UpdateFinalizedCheckpoint(fc))
-	require.NoError(t, store.UpdateJustifiedCheckpoint(jc))
 	bs := &Server{ForkFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
 	res, err := bs.GetForkChoice(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
-	require.Equal(t, primitives.Epoch(3), res.JustifiedCheckpoint.Epoch, "Did not get wanted justified epoch")
 	require.Equal(t, primitives.Epoch(2), res.FinalizedCheckpoint.Epoch, "Did not get wanted finalized epoch")
 }

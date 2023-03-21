@@ -5,36 +5,37 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/go-bitfield"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	blockchainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
-	blstoexecmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec/mock"
-	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits/mock"
-	p2pMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
+	blstoexecmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec/mock"
+	slashingsmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits/mock"
+	p2pMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -769,7 +770,8 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 
 	_, err = s.SubmitVoluntaryExit(ctx, exit)
 	require.NoError(t, err)
-	pendingExits := s.VoluntaryExitsPool.PendingExits(bs, bs.Slot(), true)
+	pendingExits, err := s.VoluntaryExitsPool.PendingExits()
+	require.NoError(t, err)
 	require.Equal(t, 1, len(pendingExits))
 	assert.DeepEqual(t, migration.V1ExitToV1Alpha1(exit), pendingExits[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
@@ -1250,7 +1252,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1275,6 +1277,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 		Changes: signedChanges,
 	})
 	require.NoError(t, err)
+	time.Sleep(100 * time.Millisecond) // Delay to let the routine start
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages))
 
@@ -1356,7 +1359,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(stc, time.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(stc, prysmtime.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1450,7 +1453,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1475,6 +1478,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	_, err = s.SubmitSignedBLSToExecutionChanges(ctx, &ethpbv2.SubmitBLSToExecutionChangesRequest{
 		Changes: signedChanges,
 	})
+	time.Sleep(10 * time.Millisecond) // Delay to allow the routine to start
 	require.ErrorContains(t, "One or more BLSToExecutionChange failed validation", err)
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages)+1)

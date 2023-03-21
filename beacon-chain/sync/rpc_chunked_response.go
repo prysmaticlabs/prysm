@@ -3,29 +3,29 @@ package sync
 import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // chunkBlockWriter writes the given message as a chunked response to the given network
 // stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
-func (s *Service) chunkBlockWriter(stream libp2pcore.Stream, blk interfaces.SignedBeaconBlock) error {
+func (s *Service) chunkBlockWriter(stream libp2pcore.Stream, blk interfaces.ReadOnlySignedBeaconBlock) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
 	return WriteBlockChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), blk)
 }
 
 // WriteBlockChunk writes block chunk object to stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
-func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, blk interfaces.SignedBeaconBlock) error {
+func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, blk interfaces.ReadOnlySignedBeaconBlock) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 
 // ReadChunkedBlock handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
-func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider, isFirstChunk bool) (interfaces.SignedBeaconBlock, error) {
+func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider, isFirstChunk bool) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	// Handle deadlines differently for first chunk
 	if isFirstChunk {
 		return readFirstChunkedBlock(stream, chain, p2p)
@@ -75,7 +75,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
 // it.
-func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider) (interfaces.SignedBeaconBlock, error) {
+func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetche
 
 // readResponseChunk reads the response from the stream and decodes it into the
 // provided message type.
-func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider) (interfaces.SignedBeaconBlock, error) {
+func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	SetStreamReadDeadline(stream, respTimeout)
 	code, errMsg, err := readStatusCodeNoDeadline(stream, p2p.Encoding())
 	if err != nil {
@@ -119,7 +119,7 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p
 	return blk, err
 }
 
-func extractBlockDataType(digest []byte, chain blockchain.ForkFetcher) (interfaces.SignedBeaconBlock, error) {
+func extractBlockDataType(digest []byte, chain blockchain.ForkFetcher) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if len(digest) == 0 {
 		bFunc, ok := types.BlockMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 		if !ok {

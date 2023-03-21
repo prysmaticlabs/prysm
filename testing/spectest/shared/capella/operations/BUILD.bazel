@@ -15,7 +15,7 @@ go_library(
         "voluntary_exit.go",
         "withdrawals.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/capella/operations",
+    importpath = "github.com/prysmaticlabs/prysm/v4/testing/spectest/shared/capella/operations",
     visibility = ["//testing/spectest:__subpackages__"],
     deps = [
         "//beacon-chain/core/altair:go_default_library",

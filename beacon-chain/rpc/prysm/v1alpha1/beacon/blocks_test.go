@@ -7,25 +7,25 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	chainMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/mock"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/mock"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -557,11 +557,7 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 	})
 }
 
-func runListBlocksGenesis(t *testing.T, blk interfaces.SignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOnlyBlindedBeaconBlocks: true,
-	})
-	defer resetFn()
+func runListBlocksGenesis(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -605,7 +601,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i primitives.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -620,7 +616,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i primitives.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -635,7 +631,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i primitives.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -650,7 +646,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlockCapella()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i primitives.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockCapella()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -663,8 +659,8 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 	})
 }
 
-func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.SignedBeaconBlock,
-	blockCreator func(i primitives.Slot) interfaces.SignedBeaconBlock) {
+func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.ReadOnlySignedBeaconBlock,
+	blockCreator func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -678,7 +674,7 @@ func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.Sig
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		blks[i] = blockCreator(i)
 	}
@@ -699,7 +695,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("phase 0 block", func(t *testing.T) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = 300
-		blockCreator := func(i primitives.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -723,7 +719,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("altair block", func(t *testing.T) {
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.Slot = 300
-		blockCreator := func(i primitives.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -745,9 +741,13 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
 	t.Run("bellatrix block", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.Slot = 300
-		blockCreator := func(i primitives.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -769,9 +769,13 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
 	t.Run("capella block", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		blk := util.NewBeaconBlockCapella()
 		blk.Block.Slot = 300
-		blockCreator := func(i primitives.Slot) interfaces.SignedBeaconBlock {
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockCapella()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
@@ -794,8 +798,8 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	})
 }
 
-func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.SignedBeaconBlock,
-	blockCreator func(i primitives.Slot) interfaces.SignedBeaconBlock, containerCreator func(i primitives.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer) {
+func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.ReadOnlySignedBeaconBlock,
+	blockCreator func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock, containerCreator func(i primitives.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer) {
 
 	db := dbTest.SetupDB(t)
 	chain := &chainMock.ChainService{
@@ -804,7 +808,7 @@ func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.SignedBe
 	ctx := context.Background()
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := blockCreator(i)

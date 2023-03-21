@@ -6,20 +6,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 type roundtrip func(*http.Request) (*http.Response, error)
@@ -199,6 +200,9 @@ func TestClient_GetHeader(t *testing.T) {
 		value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
 		require.NoError(t, err)
 		require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
+		bidValue := bytesutil.ReverseByteOrder(bid.Value())
+		require.DeepEqual(t, bidValue, value.Bytes())
+		require.DeepEqual(t, big.NewInt(0).SetBytes(bidValue), value.Int)
 	})
 	t.Run("capella", func(t *testing.T) {
 		hc := &http.Client{
@@ -225,6 +229,12 @@ func TestClient_GetHeader(t *testing.T) {
 		withdrawalsRoot, err := bidHeader.WithdrawalsRoot()
 		require.NoError(t, err)
 		require.Equal(t, true, bytes.Equal(expectedWithdrawalsRoot, withdrawalsRoot))
+		value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+		require.NoError(t, err)
+		require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
+		bidValue := bytesutil.ReverseByteOrder(bid.Value())
+		require.DeepEqual(t, bidValue, value.Bytes())
+		require.DeepEqual(t, big.NewInt(0).SetBytes(bidValue), value.Int)
 	})
 	t.Run("unsupported version", func(t *testing.T) {
 		hc := &http.Client{
@@ -253,6 +263,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		hc := &http.Client{
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
+				require.Equal(t, "bellatrix", r.Header.Get("Eth-Consensus-Version"))
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayload)),
@@ -278,6 +289,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		hc := &http.Client{
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
+				require.Equal(t, "capella", r.Header.Get("Eth-Consensus-Version"))
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayloadCapella)),

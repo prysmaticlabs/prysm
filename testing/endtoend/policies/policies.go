@@ -1,11 +1,18 @@
 package policies
 
-import "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+import "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
 // AfterNthEpoch runs for every epoch after the provided epoch.
 func AfterNthEpoch(afterEpoch primitives.Epoch) func(epoch primitives.Epoch) bool {
 	return func(currentEpoch primitives.Epoch) bool {
 		return currentEpoch > afterEpoch
+	}
+}
+
+// OnwardsNthEpoch runs for every epoch from the provided epoch.
+func OnwardsNthEpoch(onwardsEpoch primitives.Epoch) func(epoch primitives.Epoch) bool {
+	return func(currentEpoch primitives.Epoch) bool {
+		return currentEpoch >= onwardsEpoch
 	}
 }
 

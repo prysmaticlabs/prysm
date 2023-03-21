@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 type Builder struct {
@@ -25,7 +25,7 @@ type Builder struct {
 	execMock *engineMock
 }
 
-func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.SignedBeaconBlock) *Builder {
+func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.ReadOnlySignedBeaconBlock) *Builder {
 	execMock := &engineMock{
 		powBlocks: make(map[[32]byte]*ethpb.PowBlock),
 	}
@@ -79,20 +79,20 @@ func (bb *Builder) SetPayloadStatus(resp *MockEngineResp) error {
 }
 
 // block returns the block root.
-func (bb *Builder) block(t testing.TB, b interfaces.SignedBeaconBlock) [32]byte {
+func (bb *Builder) block(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) [32]byte {
 	r, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return r
 }
 
 // InvalidBlock receives the invalid block and notifies forkchoice.
-func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.SignedBeaconBlock) {
+func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
 	require.Equal(t, true, bb.service.ReceiveBlock(context.TODO(), b, r) != nil)
 }
 
 // ValidBlock receives the valid block and notifies forkchoice.
-func (bb *Builder) ValidBlock(t testing.TB, b interfaces.SignedBeaconBlock) {
+func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
 	require.NoError(t, bb.service.ReceiveBlock(context.TODO(), b, r))
 }
@@ -104,7 +104,7 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 
 // Attestation receives the attestation and updates forkchoice.
 func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
-	require.NoError(t, bb.service.OnAttestation(context.TODO(), a))
+	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconNetworkConfig().MaximumGossipClockDisparity))
 }
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.
@@ -134,14 +134,6 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		got := bb.service.CurrentJustifiedCheckpt()
 		require.DeepEqual(t, cp, got)
 	}
-	if c.BestJustifiedCheckPoint != nil {
-		cp := &ethpb.Checkpoint{
-			Epoch: primitives.Epoch(c.BestJustifiedCheckPoint.Epoch),
-			Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
-		}
-		got := bb.service.BestJustifiedCheckpt()
-		require.DeepEqual(t, cp, got)
-	}
 	if c.FinalizedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
 			Epoch: primitives.Epoch(c.FinalizedCheckPoint.Epoch),
@@ -152,7 +144,9 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+		bb.service.ForkChoiceStore().RLock()
 		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
+		bb.service.ForkChoiceStore().RUnlock()
 		require.DeepEqual(t, want, got)
 	}
 

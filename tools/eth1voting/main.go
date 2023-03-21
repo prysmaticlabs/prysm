@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	v1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
@@ -31,7 +31,7 @@ func main() {
 	}
 	c := v1alpha1.NewBeaconChainClient(cc)
 	g, ctx := errgroup.WithContext(ctx)
-	v := NewVotes()
+	v := newVotes()
 
 	current := slots.ToEpoch(slots.CurrentSlot(*genesis))
 	start := current.Div(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)).Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
@@ -72,9 +72,9 @@ func main() {
 	fmt.Println(v.Report())
 }
 
-func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.BeaconBlock {
+func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.ReadOnlyBeaconBlock {
 	var err error
-	var wb interfaces.SignedBeaconBlock
+	var wb interfaces.ReadOnlySignedBeaconBlock
 	switch bb := b.Block.(type) {
 	case *v1alpha1.BeaconBlockContainer_Phase0Block:
 		wb, err = blocks.NewSignedBeaconBlock(bb.Phase0Block)
