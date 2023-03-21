@@ -71,12 +71,6 @@ func TestHeadRoot_Nil(t *testing.T) {
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], headRoot, "Incorrect pre chain start value")
 }
 
-func TestService_ForkChoiceStore(t *testing.T) {
-	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}}
-	p := c.ForkChoiceStore()
-	require.Equal(t, primitives.Epoch(0), p.FinalizedCheckpoint().Epoch)
-}
-
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -559,7 +553,7 @@ func TestService_IsFinalized(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}}
 	r1 := [32]byte{'a'}
-	require.NoError(t, c.ForkChoiceStore().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
+	require.NoError(t, c.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
 		Root: r1,
 	}))
 	b := util.NewBeaconBlock()
