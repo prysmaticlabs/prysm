@@ -132,9 +132,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
 	bb.service.ForkChoicer().Unlock()
 	if c.Head != nil {
-		bb.service.ForkChoicer().RLock()
 		r, err := bb.service.HeadRoot(ctx)
-		bb.service.ForkChoicer().RUnlock()
 		require.NoError(t, err)
 		require.DeepEqual(t, common.FromHex(c.Head.Root), r)
 		require.Equal(t, primitives.Slot(c.Head.Slot), bb.service.HeadSlot())
