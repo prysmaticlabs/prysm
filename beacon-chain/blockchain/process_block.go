@@ -671,9 +671,6 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 		for {
 			select {
 			case <-ticker.C():
-				s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-					Type: statefeed.MissedSlot,
-				})
 				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
 					log.WithError(err).Error("Could not fill missing payload ID")
 				}
@@ -689,12 +686,13 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 // fillMissingBlockPayloadId is called 4 seconds into the slot and calls FCU if we are proposing next slot
 // and the cache has been missed
 func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
-	s.ForkChoicer().RLock()
-	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
-	s.ForkChoicer().RUnlock()
-	if s.CurrentSlot() == highestReceivedSlot {
+	if s.CurrentSlot() == s.HeadSlot() {
 		return nil
 	}
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.MissedSlot,
+	})
+
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.

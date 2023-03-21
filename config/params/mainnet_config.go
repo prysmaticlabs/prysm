@@ -216,7 +216,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
-	CapellaForkEpoch:     math.MaxUint64,
+	CapellaForkEpoch:     194048,
 	DenebForkVersion:     []byte{4, 0, 0, 0},
 	DenebForkEpoch:       math.MaxUint64,
 

@@ -21,7 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
+	slasherClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/slasher-client-factory"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
 	"github.com/prysmaticlabs/prysm/v4/validator/db"
 	"github.com/prysmaticlabs/prysm/v4/validator/graffiti"
@@ -188,9 +191,9 @@ func (v *ValidatorService) Start() {
 	valStruct := &validator{
 		db:                             v.db,
 		validatorClient:                validatorClientFactory.NewValidatorClient(v.conn),
-		beaconClient:                   ethpb.NewBeaconChainClient(v.conn.GetGrpcClientConn()),
-		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn.GetGrpcClientConn()),
-		node:                           ethpb.NewNodeClient(v.conn.GetGrpcClientConn()),
+		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn),
+		slashingProtectionClient:       slasherClientFactory.NewSlasherClient(v.conn),
+		node:                           nodeClientFactory.NewNodeClient(v.conn),
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,

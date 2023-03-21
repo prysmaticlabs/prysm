@@ -2,7 +2,12 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["grpc_validator_client.go"],
+    srcs = [
+        "grpc_beacon_chain_client.go",
+        "grpc_node_client.go",
+        "grpc_slasher_client.go",
+        "grpc_validator_client.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/grpc-api",
     visibility = ["//validator:__subpackages__"],
     deps = [

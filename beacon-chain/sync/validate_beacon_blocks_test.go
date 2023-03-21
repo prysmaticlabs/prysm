@@ -1286,12 +1286,17 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
+	blk, err := blocks.NewSignedBeaconBlock(msg)
+	require.NoError(t, err)
+
 	chainService := &mock.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0),
-		Optimistic: true,
+		OptimisticRoots: make(map[[32]byte]bool),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		}}
+
+	chainService.OptimisticRoots[blk.Block().ParentRoot()] = true
 	r := &Service{
 		cfg: &config{
 			beaconDB:      db,
@@ -1304,9 +1309,6 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
 	}
-
-	blk, err := blocks.NewSignedBeaconBlock(msg)
-	require.NoError(t, err)
 	require.ErrorContains(t, "parent of the block is optimistic", r.validateBellatrixBeaconBlock(ctx, beaconState, blk.Block()))
 }
 
