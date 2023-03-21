@@ -32,16 +32,6 @@ func (c beaconApiSlasherClient) IsSlashableBlock(ctx context.Context, in *ethpb.
 	panic("beaconApiSlasherClient.IsSlashableBlock is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiSlasherClientWithFallback.")
 }
 
-// Deprecated: Do not use.
-func (c beaconApiSlasherClient) HighestAttestations(ctx context.Context, in *ethpb.HighestAttestationRequest) (*ethpb.HighestAttestationResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.HighestAttestations(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiSlasherClient.HighestAttestations is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiSlasherClientWithFallback.")
-}
-
 func NewSlasherClientWithFallback(host string, timeout time.Duration, fallbackClient iface.SlasherClient) iface.SlasherClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
