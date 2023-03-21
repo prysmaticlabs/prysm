@@ -36,21 +36,6 @@ func (m *MockNodeClient) EXPECT() *MockNodeClientMockRecorder {
 	return m.recorder
 }
 
-// GetETH1ConnectionStatus mocks base method.
-func (m *MockNodeClient) GetETH1ConnectionStatus(arg0 context.Context, arg1 *emptypb.Empty) (*eth.ETH1ConnectionStatus, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetETH1ConnectionStatus", arg0, arg1)
-	ret0, _ := ret[0].(*eth.ETH1ConnectionStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetETH1ConnectionStatus indicates an expected call of GetETH1ConnectionStatus.
-func (mr *MockNodeClientMockRecorder) GetETH1ConnectionStatus(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetETH1ConnectionStatus", reflect.TypeOf((*MockNodeClient)(nil).GetETH1ConnectionStatus), arg0, arg1)
-}
-
 // GetGenesis mocks base method.
 func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *emptypb.Empty) (*eth.Genesis, error) {
 	m.ctrl.T.Helper()
@@ -64,36 +49,6 @@ func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *emptypb.Empty) (
 func (mr *MockNodeClientMockRecorder) GetGenesis(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGenesis", reflect.TypeOf((*MockNodeClient)(nil).GetGenesis), arg0, arg1)
-}
-
-// GetHost mocks base method.
-func (m *MockNodeClient) GetHost(arg0 context.Context, arg1 *emptypb.Empty) (*eth.HostData, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHost", arg0, arg1)
-	ret0, _ := ret[0].(*eth.HostData)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetHost indicates an expected call of GetHost.
-func (mr *MockNodeClientMockRecorder) GetHost(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHost", reflect.TypeOf((*MockNodeClient)(nil).GetHost), arg0, arg1)
-}
-
-// GetPeer mocks base method.
-func (m *MockNodeClient) GetPeer(arg0 context.Context, arg1 *eth.PeerRequest) (*eth.Peer, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPeer", arg0, arg1)
-	ret0, _ := ret[0].(*eth.Peer)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetPeer indicates an expected call of GetPeer.
-func (mr *MockNodeClientMockRecorder) GetPeer(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPeer", reflect.TypeOf((*MockNodeClient)(nil).GetPeer), arg0, arg1)
 }
 
 // GetSyncStatus mocks base method.
@@ -124,21 +79,6 @@ func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *emptypb.Empty) (
 func (mr *MockNodeClientMockRecorder) GetVersion(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockNodeClient)(nil).GetVersion), arg0, arg1)
-}
-
-// ListImplementedServices mocks base method.
-func (m *MockNodeClient) ListImplementedServices(arg0 context.Context, arg1 *emptypb.Empty) (*eth.ImplementedServices, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListImplementedServices", arg0, arg1)
-	ret0, _ := ret[0].(*eth.ImplementedServices)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListImplementedServices indicates an expected call of ListImplementedServices.
-func (mr *MockNodeClientMockRecorder) ListImplementedServices(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListImplementedServices", reflect.TypeOf((*MockNodeClient)(nil).ListImplementedServices), arg0, arg1)
 }
 
 // ListPeers mocks base method.
