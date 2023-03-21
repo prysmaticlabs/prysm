@@ -331,7 +331,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 				ParentBlockNumber: headPayload.BlockNumber(),
 				ParentBlockRoot:   headRoot,
 				ParentBlockHash:   headPayload.BlockHash(),
-				PayloadAttributesV2: &enginev1.PayloadAttributesV2{
+				PayloadAttributes: &enginev1.PayloadAttributesV2{
 					Timestamp:             uint64(t.Unix()),
 					PrevRandao:            prevRando,
 					SuggestedFeeRecipient: headPayload.FeeRecipient(),
