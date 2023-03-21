@@ -15,6 +15,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	ssz "github.com/prysmaticlabs/fastssz"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
@@ -138,8 +139,8 @@ func (c sidecarsTestCase) run(t *testing.T) {
 	if c.chain == nil {
 		c.chain = defaultMockChain(t)
 	}
+	db := dbtest.SetupDB(t)
 
-	db := &MockBlobDB{}
 	var req p2pTypes.BlobSidecarsByRootReq
 	var expect []*expectedResponse
 	oldest, err := slots.EpochStart(blobMinReqEpoch(c.chain.FinalizedCheckPoint.Epoch, slots.ToEpoch(c.chain.CurrentSlot())))
@@ -160,6 +161,7 @@ func (c sidecarsTestCase) run(t *testing.T) {
 		root, err := block.HashTreeRoot()
 		require.NoError(t, err)
 		binary.LittleEndian.PutUint64(root[:], uint64(i))
+		scs := make([]*ethpb.BlobSidecar, 0)
 		for bi := 0; bi < maxBlobs; bi++ {
 			ubi := uint64(bi)
 			req = append(req, &ethpb.BlobIdentifier{BlockRoot: root[:], Index: ubi})
@@ -174,7 +176,8 @@ func (c sidecarsTestCase) run(t *testing.T) {
 				continue
 			}
 			sc := generateTestSidecar(root, block, bi)
-			require.NoError(t, db.WriteBlobSidecar(root, ubi, sc))
+			scs = append(scs, sc)
+
 			// if a sidecar is expired, we'll expect an error for the *first* index, and after that
 			// we'll expect no further chunks in the stream, so filter out any further expected responses.
 			// we don't need to check what index this is because we work through them in order and the first one
@@ -194,12 +197,14 @@ func (c sidecarsTestCase) run(t *testing.T) {
 				message: "",
 			})
 		}
+		if len(scs) > 0 {
+			require.NoError(t, db.SaveBlobSidecar(context.Background(), &ethpb.BlobSidecars{Sidecars: scs}))
+		}
 	}
 	rate := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
 	client := p2ptest.NewTestP2P(t)
 	s := &Service{
-		cfg:         &config{p2p: client, chain: c.chain},
-		blobs:       db,
+		cfg:         &config{p2p: client, chain: c.chain, beaconDB: db},
 		rateLimiter: newRateLimiter(client)}
 	s.setRateCollector(p2p.RPCBlobSidecarsByRootTopicV1, leakybucket.NewCollector(0.000001, int64(rate), time.Second, false))
 

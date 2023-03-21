@@ -140,7 +140,6 @@ type Service struct {
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
-	blobs                            BlobDB
 	blockAndBlobs                    *blockAndBlocksQueue
 }
 

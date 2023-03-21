@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
@@ -64,15 +65,19 @@ func (s *Service) receiveBlockAndBlobs(ctx context.Context, root [32]byte) error
 	if err != nil {
 		return err
 	}
+	scs := make([]*eth.BlobSidecar, len(kzgs))
 	for i := 0; i < len(kzgs); i++ {
 		index := uint64(i)
-		sb, err := s.blockAndBlobs.getBlob(root, index)
+		scs[i], err = s.blockAndBlobs.getBlob(root, index)
 		if err != nil {
 			return err
 		}
-		if err := s.blobs.WriteBlobSidecar(root, index, sb); err != nil {
-			return err
-		}
+	}
+
+	if err := s.cfg.beaconDB.SaveBlobSidecar(ctx, &eth.BlobSidecars{
+		Sidecars: scs,
+	}); err != nil {
+		return err
 	}
 
 	s.blockAndBlobs.delete(root)
