@@ -244,6 +244,8 @@ func (s *Service) Start() {
 		},
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
+		ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
+		BeaconDB:               s.cfg.BeaconDB,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -362,6 +364,7 @@ func (s *Service) Start() {
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 			ForkFetcher:           s.cfg.ForkFetcher,
 			FinalizationFetcher:   s.cfg.FinalizationFetcher,
+			ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)

@@ -18,4 +18,5 @@ type Server struct {
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
+	ChainInfoFetcher      blockchain.ChainInfoFetcher
 }

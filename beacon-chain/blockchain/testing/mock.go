@@ -67,6 +67,7 @@ type ChainService struct {
 	ReceiveBlockMockErr         error
 	OptimisticCheckRootReceived [32]byte
 	FinalizedRoots              map[[32]byte]bool
+	OptimisticRoots             map[[32]byte]bool
 }
 
 // ForkChoicer mocks the same method in the chain service
@@ -74,8 +75,9 @@ func (s *ChainService) ForkChoicer() forkchoice.ForkChoicer {
 	return s.ForkChoiceStore
 }
 
-func (s *ChainService) Ancestor(_ context.Context, _ []byte, _ primitives.Slot) ([]byte, error) {
-	return nil, nil
+func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
+	r, err := s.ForkChoicer().AncestorRoot(ctx, bytesutil.ToBytes32(root), slot)
+	return r[:], err
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -461,7 +463,7 @@ func (s *ChainService) InForkchoice(_ [32]byte) bool {
 // IsOptimisticForRoot mocks the same method in the chain service.
 func (s *ChainService) IsOptimisticForRoot(_ context.Context, root [32]byte) (bool, error) {
 	s.OptimisticCheckRootReceived = root
-	return s.Optimistic, nil
+	return s.OptimisticRoots[root], nil
 }
 
 // UpdateHead mocks the same method in the chain service.
