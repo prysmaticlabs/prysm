@@ -683,6 +683,7 @@ func TestServer_GetBlock(t *testing.T) {
 	}
 
 	blk, err := bs.GetBlock(ctx, &ethpbv1.BlockRequest{})
+	require.NoError(t, err)
 	v1Block, err := migration.V1Alpha1ToV1SignedBlock(b)
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Block.Block, blk.Data.Message)
