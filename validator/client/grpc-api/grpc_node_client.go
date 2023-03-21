@@ -25,24 +25,8 @@ func (c *grpcNodeClient) GetVersion(ctx context.Context, in *empty.Empty) (*ethp
 	return c.nodeClient.GetVersion(ctx, in)
 }
 
-func (c *grpcNodeClient) ListImplementedServices(ctx context.Context, in *empty.Empty) (*ethpb.ImplementedServices, error) {
-	return c.nodeClient.ListImplementedServices(ctx, in)
-}
-
-func (c *grpcNodeClient) GetHost(ctx context.Context, in *empty.Empty) (*ethpb.HostData, error) {
-	return c.nodeClient.GetHost(ctx, in)
-}
-
-func (c *grpcNodeClient) GetPeer(ctx context.Context, in *ethpb.PeerRequest) (*ethpb.Peer, error) {
-	return c.nodeClient.GetPeer(ctx, in)
-}
-
 func (c *grpcNodeClient) ListPeers(ctx context.Context, in *empty.Empty) (*ethpb.Peers, error) {
 	return c.nodeClient.ListPeers(ctx, in)
-}
-
-func (c *grpcNodeClient) GetETH1ConnectionStatus(ctx context.Context, in *empty.Empty) (*ethpb.ETH1ConnectionStatus, error) {
-	return c.nodeClient.GetETH1ConnectionStatus(ctx, in)
 }
 
 func NewNodeClient(cc grpc.ClientConnInterface) iface.NodeClient {
