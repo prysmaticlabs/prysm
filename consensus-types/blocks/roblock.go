@@ -4,8 +4,8 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 )
 
 var ErrRootLength error = errors.New("incorrect length for hash_tree_root")

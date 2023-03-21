@@ -3,13 +3,13 @@ package sync
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 func TestBlobsByRangeValidation(t *testing.T) {
