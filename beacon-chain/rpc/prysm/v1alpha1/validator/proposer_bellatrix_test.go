@@ -117,8 +117,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 		require.NoError(t, err)
 		chain := &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New(), Genesis: time.Now(), Block: wb}
-		vs.ForkFetcher = chain
-		vs.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
+		vs.ForkchoiceFetcher = chain
+		vs.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
@@ -171,7 +171,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		chain := &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New(), Genesis: time.Now(), Block: wb}
 		vs.ForkFetcher = chain
-		vs.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
+		vs.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))

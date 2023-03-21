@@ -26,8 +26,8 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	_, err := s.circuitBreakBuilder(0)
 	require.ErrorContains(t, "no fork choicer configured", err)
 
-	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
-	s.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
+	s.ForkchoiceFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
+	s.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 	b, err := s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
 	require.NoError(
 		t,
@@ -41,7 +41,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	ctx := context.Background()
 	st, blkRoot, err := createState(1, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
+	require.NoError(t, s.ForkchoiceFetcher.InsertNode(ctx, st, blkRoot))
 	b, err = s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots)
 	require.NoError(t, err)
 	require.Equal(t, false, b)
@@ -52,7 +52,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	st, blkRoot, err = createState(params.BeaconConfig().SlotsPerEpoch, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
+	require.NoError(t, s.ForkchoiceFetcher.InsertNode(ctx, st, blkRoot))
 	b, err = s.circuitBreakBuilder(params.BeaconConfig().SlotsPerEpoch + 1)
 	require.NoError(t, err)
 	require.Equal(t, true, b)
@@ -62,7 +62,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	for i := primitives.Slot(2); i <= want+2; i++ {
 		st, blkRoot, err = createState(i, [32]byte{byte(i)}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
+		require.NoError(t, s.ForkchoiceFetcher.InsertNode(ctx, st, blkRoot))
 	}
 	b, err = s.circuitBreakBuilder(params.BeaconConfig().SlotsPerEpoch + 1)
 	require.NoError(t, err)
@@ -99,8 +99,8 @@ func TestServer_canUseBuilder(t *testing.T) {
 	proposerServer := &Server{}
 	ctx := context.Background()
 
-	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
-	proposerServer.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
+	proposerServer.ForkchoiceFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
+	proposerServer.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 	reg, err := proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)

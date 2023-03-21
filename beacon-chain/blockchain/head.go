@@ -28,6 +28,8 @@ import (
 // UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
 // This function is only used in spec-tests, it does save the head after updating it.
 func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not update head")
@@ -94,18 +96,18 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	}
 	oldHeadRoot := bytesutil.ToBytes32(r)
 	if headBlock.Block().ParentRoot() != oldHeadRoot {
-		commonRoot, forkSlot, err := s.ForkChoicer().CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
+		commonRoot, forkSlot, err := s.cfg.ForkChoiceStore.CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
 			log.WithError(err).Error("Could not find common ancestor root")
 			commonRoot = params.BeaconConfig().ZeroHash
 		}
 		dis := headSlot + newHeadSlot - 2*forkSlot
 		dep := math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot))
-		oldWeight, err := s.ForkChoicer().Weight(oldHeadRoot)
+		oldWeight, err := s.cfg.ForkChoiceStore.Weight(oldHeadRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", oldHeadRoot)).Warn("could not determine node weight")
 		}
-		newWeight, err := s.ForkChoicer().Weight(newHeadRoot)
+		newWeight, err := s.cfg.ForkChoiceStore.Weight(newHeadRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
 		}
@@ -123,7 +125,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		reorgDistance.Observe(float64(dis))
 		reorgDepth.Observe(float64(dep))
 
-		isOptimistic, err := s.ForkChoicer().IsOptimistic(newHeadRoot)
+		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(newHeadRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
 		}
@@ -363,7 +365,7 @@ func (s *Service) notifyNewHeadEvent(
 // This saves the Attestations and BLSToExecChanges between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
 // It also filters out the attestations that is one epoch older as a defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
-	commonAncestorRoot, _, err := s.ForkChoicer().CommonAncestor(ctx, newHeadRoot, orphanedRoot)
+	commonAncestorRoot, _, err := s.cfg.ForkChoiceStore.CommonAncestor(ctx, newHeadRoot, orphanedRoot)
 	switch {
 	// Exit early if there's no common ancestor and root doesn't exist, there would be nothing to save.
 	case errors.Is(err, forkchoice.ErrUnknownCommonAncestor):

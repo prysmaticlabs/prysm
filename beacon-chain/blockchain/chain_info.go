@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -37,12 +37,16 @@ type ChainInfoFetcher interface {
 // of locking forkchoice
 type ForkchoiceFetcher interface {
 	Ancestor(context.Context, []byte, primitives.Slot) ([]byte, error)
-}
-
-// HeadUpdater defines a common interface for methods in blockchain service
-// which allow to update the head info
-type HeadUpdater interface {
+	CachedHeadRoot() [32]byte
+	GetProposerHead() [32]byte
+	SetForkChoiceGenesisTime(uint64)
 	UpdateHead(context.Context, primitives.Slot)
+	HighestReceivedBlockSlot() primitives.Slot
+	ReceivedBlocksLastEpoch() (uint64, error)
+	InsertNode(context.Context, state.BeaconState, [32]byte) error
+	ForkChoiceDump(context.Context) (*ethpbv1.ForkChoiceDump, error)
+	NewSlot(context.Context, primitives.Slot) error
+	ProposerBoost() [32]byte
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
@@ -76,7 +80,6 @@ type HeadFetcher interface {
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
-	ForkChoicer() forkchoice.ForkChoicer
 	CurrentFork() *ethpb.Fork
 	GenesisFetcher
 	TimeFetcher
@@ -105,25 +108,25 @@ type OptimisticModeFetcher interface {
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
-	cp := s.ForkChoicer().FinalizedCheckpoint()
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	cp := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // PreviousJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
-	cp := s.ForkChoicer().PreviousJustifiedCheckpoint()
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	cp := s.cfg.ForkChoiceStore.PreviousJustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
-	cp := s.ForkChoicer().JustifiedCheckpoint()
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	cp := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
@@ -286,8 +289,8 @@ func (s *Service) CurrentFork() *ethpb.Fork {
 
 // IsCanonical returns true if the input block root is part of the canonical chain.
 func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
 	// If the block has not been finalized, check fork choice store to see if the block is canonical
 	if s.cfg.ForkChoiceStore.HasNode(blockRoot) {
 		return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
@@ -300,8 +303,8 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (s *Service) ChainHeads() ([][32]byte, []primitives.Slot) {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.Tips()
 }
 
@@ -329,11 +332,6 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 	return v.PublicKey(), nil
 }
 
-// ForkChoicer returns the forkchoice interface.
-func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
-	return s.cfg.ForkChoiceStore
-}
-
 // IsOptimistic returns true if the current head is optimistic.
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
@@ -343,8 +341,8 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	headRoot := s.head.root
 	s.headLock.RUnlock()
 
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(headRoot)
 	if err == nil {
 		return optimistic, nil
@@ -360,14 +358,14 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 // IsFinalized returns true if the input root is finalized.
 // It first checks latest finalized root then checks finalized root index in DB.
 func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
-	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	if s.cfg.ForkChoiceStore.FinalizedCheckpoint().Root == root {
 		return true
 	}
 	// If node exists in our store, then it is not
 	// finalized.
-	if s.ForkChoicer().HasNode(root) {
+	if s.cfg.ForkChoiceStore.HasNode(root) {
 		return false
 	}
 	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)
@@ -377,17 +375,17 @@ func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
 // This in particular means that the blockroot is a descendant of the
 // finalized checkpoint
 func (s *Service) InForkchoice(root [32]byte) bool {
-	s.ForkChoicer().RLock()
-	defer s.ForkChoicer().RUnlock()
-	return s.ForkChoicer().HasNode(root)
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.HasNode(root)
 }
 
 // IsOptimisticForRoot takes the root as argument instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
-	s.ForkChoicer().RLock()
+	s.cfg.ForkChoiceStore.RLock()
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(root)
-	s.ForkChoicer().RUnlock()
+	s.cfg.ForkChoiceStore.RUnlock()
 	if err == nil {
 		return optimistic, nil
 	}
@@ -465,9 +463,9 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 	r := bytesutil.ToBytes32(root)
 	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
 	// This is most optimal outcome.
-	s.ForkChoicer().RLock()
+	s.cfg.ForkChoiceStore.RLock()
 	ar, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
-	s.ForkChoicer().RUnlock()
+	s.cfg.ForkChoiceStore.RUnlock()
 	if err != nil {
 		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
 		// This is the second line of defense for retrieving ancestor root.
@@ -483,4 +481,67 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 // SetGenesisTime sets the genesis time of beacon chain.
 func (s *Service) SetGenesisTime(t time.Time) {
 	s.genesisTime = t
+}
+
+// CachedHeadRoot returns the corresponding value from Forkchoice
+func (s *Service) CachedHeadRoot() [32]byte {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.CachedHeadRoot()
+}
+
+// GetProposerHead returns the corresponding value from forkchoice
+func (s *Service) GetProposerHead() [32]byte {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.GetProposerHead()
+}
+
+// SetForkChoiceGenesisTime sets the genesis time in Forkchoice
+func (s *Service) SetForkChoiceGenesisTime(timestamp uint64) {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	s.cfg.ForkChoiceStore.SetGenesisTime(timestamp)
+}
+
+// HighestReceivedBlockSlot returns the corresponding value from forkchoice
+func (s *Service) HighestReceivedBlockSlot() primitives.Slot {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
+}
+
+// ReceivedBlocksLastEpoch returns the corresponding value from forkchoice
+func (s *Service) ReceivedBlocksLastEpoch() (uint64, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.ReceivedBlocksLastEpoch()
+}
+
+// InsertNode is a wrapper for node insertion which is self locked
+func (s *Service) InsertNode(ctx context.Context, st state.BeaconState, root [32]byte) error {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, root)
+}
+
+// ForkChoiceDump returns the corresponding value from forkchoice
+func (s *Service) ForkChoiceDump(ctx context.Context) (*ethpbv1.ForkChoiceDump, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.ForkChoiceDump(ctx)
+}
+
+// NewSlot returns the corresponding value from forkchoice
+func (s *Service) NewSlot(ctx context.Context, slot primitives.Slot) error {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	return s.cfg.ForkChoiceStore.NewSlot(ctx, slot)
+}
+
+// ProposerBoost wraps the corresponding method from forkchoice
+func (s *Service) ProposerBoost() [32]byte {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	return s.cfg.ForkChoiceStore.ProposerBoost()
 }

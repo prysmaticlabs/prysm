@@ -38,19 +38,16 @@ func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock inter
 
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
 func (bb *Builder) Tick(t testing.TB, tick int64) {
-	bb.service.ForkChoicer().Lock()
-	defer bb.service.ForkChoicer().Unlock()
-
 	bb.service.SetGenesisTime(time.Unix(time.Now().Unix()-tick, 0))
 	lastSlot := uint64(bb.lastTick) / params.BeaconConfig().SecondsPerSlot
 	currentSlot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
 	for lastSlot < currentSlot {
 		lastSlot++
-		bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot*lastSlot)))
-		require.NoError(t, bb.service.ForkChoicer().NewSlot(context.TODO(), primitives.Slot(lastSlot)))
+		bb.service.SetForkChoiceGenesisTime(uint64(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot*lastSlot)))
+		require.NoError(t, bb.service.NewSlot(context.TODO(), primitives.Slot(lastSlot)))
 	}
 	if tick > int64(params.BeaconConfig().SecondsPerSlot*lastSlot) {
-		bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - tick))
+		bb.service.SetForkChoiceGenesisTime(uint64(time.Now().Unix() - tick))
 	}
 	bb.lastTick = tick
 }
@@ -107,17 +104,11 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 
 // Attestation receives the attestation and updates forkchoice.
 func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
-	bb.service.ForkChoicer().Lock()
-	defer bb.service.ForkChoicer().Unlock()
-
 	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconNetworkConfig().MaximumGossipClockDisparity))
 }
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.
 func (bb *Builder) AttesterSlashing(s *ethpb.AttesterSlashing) {
-	bb.service.ForkChoicer().Lock()
-	defer bb.service.ForkChoicer().Unlock()
-
 	slashings := []*ethpb.AttesterSlashing{s}
 	bb.service.InsertSlashingsToForkChoiceStore(context.TODO(), slashings)
 }
@@ -128,9 +119,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		return
 	}
 	ctx := context.TODO()
-	bb.service.ForkChoicer().Lock()
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
-	bb.service.ForkChoicer().Unlock()
 	if c.Head != nil {
 		r, err := bb.service.HeadRoot(ctx)
 		require.NoError(t, err)
@@ -155,9 +144,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
-		bb.service.ForkChoicer().RLock()
-		got := fmt.Sprintf("%#x", bb.service.ForkChoicer().ProposerBoost())
-		bb.service.ForkChoicer().RUnlock()
+		got := fmt.Sprintf("%#x", bb.service.ProposerBoost())
 		require.DeepEqual(t, want, got)
 	}
 
