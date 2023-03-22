@@ -61,7 +61,7 @@ func IsOptimistic(
 	ctx context.Context,
 	stateId []byte,
 	optimisticModeFetcher blockchain.OptimisticModeFetcher,
-	stateFetcher lookup.Fetcher,
+	stateFetcher lookup.Stater,
 	chainInfo blockchain.ChainInfoFetcher,
 	database db.ReadOnlyDatabase,
 ) (bool, error) {
@@ -146,7 +146,7 @@ func isStateRootOptimistic(
 	ctx context.Context,
 	stateId []byte,
 	optimisticModeFetcher blockchain.OptimisticModeFetcher,
-	stateFetcher lookup.Fetcher,
+	stateFetcher lookup.Stater,
 	chainInfo blockchain.ChainInfoFetcher,
 	database db.ReadOnlyDatabase,
 ) (bool, error) {

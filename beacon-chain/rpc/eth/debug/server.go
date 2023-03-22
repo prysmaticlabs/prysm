@@ -14,7 +14,7 @@ import (
 type Server struct {
 	BeaconDB              db.ReadOnlyDatabase
 	HeadFetcher           blockchain.HeadFetcher
-	StateFetcher          lookup.Fetcher
+	StateFetcher          lookup.Stater
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher

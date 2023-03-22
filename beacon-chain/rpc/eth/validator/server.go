@@ -22,7 +22,7 @@ type Server struct {
 	AttestationsPool       attestations.Pool
 	PeerManager            p2p.PeerManager
 	Broadcaster            p2p.Broadcaster
-	StateFetcher           lookup.Fetcher
+	StateFetcher           lookup.Stater
 	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncCommitteePool      synccommittee.Pool
 	V1Alpha1Server         *v1alpha1validator.Server
