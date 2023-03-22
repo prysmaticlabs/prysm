@@ -715,3 +715,39 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
 	})
 	return err
 }
+
+// validateBlobs validates the blobs with the kzg commitments in block.
+// Spec code:
+// def validate_blobs(expected_kzg_commitments: Sequence[KZGCommitment],
+//
+//	               blobs: Sequence[Blob],
+//	               proofs: Sequence[KZGProof]) -> None:
+//	assert len(expected_kzg_commitments) == len(blobs)
+//	assert len(blobs) == len(proofs)
+//
+//	assert verify_blob_kzg_proof_batch(blobs, expected_kzg_commitments, proofs)
+func (s *Service) validateBlobs(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) error {
+	if blk.Version() < version.Deneb {
+		return nil
+	}
+	comms, err := blk.Body().BlobKzgCommitments()
+	if err != nil {
+		return err
+	}
+	if len(comms) == 0 {
+		return nil
+	}
+	scs, err := s.cfg.BeaconDB.BlobSidecarsBySlot(ctx, blk.Slot()) // Also can use ByRoot here.
+	if err != nil {
+		return err
+	}
+	if len(scs.Sidecars) != len(comms) {
+		return fmt.Errorf("number of sidecars %d does not match number of commitments %d", len(scs.Sidecars), len(comms))
+	}
+	proofs := make([][]byte, len(comms))
+	for i, sc := range scs.Sidecars {
+		proofs[i] = sc.KzgProof
+	}
+	// TODO(Potuz):  assert verify_blob_kzg_proof_batch(blobs, expected_kzg_commitments, proofs)
+	return nil
+}

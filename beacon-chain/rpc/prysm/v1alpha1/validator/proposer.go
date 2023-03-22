@@ -154,7 +154,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 		}
 
-		// TODO: Better error handling. If something is wrong with the blob, we don't want to fail block production. Also should check if the kzg commitment matches.
 		validatorBlobs := make([]*ethpb.BlobSidecar, len(blk.Body.BlobKzgCommitments))
 		var gethBlobs types.Blobs
 		for _, b := range blobs {
@@ -162,6 +161,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			copy(gethBlob[:], b.Data)
 			gethBlobs = append(gethBlobs, gethBlob)
 		}
+
+		// TODO(Potuz):
+		// - Currently using `ComputeCommitmentsAndProofs` from Geth. Is this ok?
+		// - Add a defensive check if block's kzg commitments align with blobs. If fails, we continue and skip blob.
+
 		commitments, _, proofs, err := gethBlobs.ComputeCommitmentsAndProofs()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute commitments and proofs: %v", err)
