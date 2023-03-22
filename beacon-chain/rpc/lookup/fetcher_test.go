@@ -46,7 +46,7 @@ func TestGetBlock(t *testing.T) {
 	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 	require.NoError(t, err)
 
-	fetcher := &BlockProvider{
+	fetcher := &BeaconDbBlocker{
 		BeaconDB: beaconDB,
 		ChainInfoFetcher: &mock.ChainService{
 			DB:                  beaconDB,

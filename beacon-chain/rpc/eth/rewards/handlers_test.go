@@ -156,7 +156,7 @@ func TestBlockRewards(t *testing.T) {
 	require.NoError(t, err)
 	mockChainService := &mock.ChainService{Optimistic: true}
 	s := &Server{
-		BlockFetcher: &testutil.MockBlockFetcher{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+		BlockFetcher: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
 			0: phase0block,
 			2: sbb,
 		}},

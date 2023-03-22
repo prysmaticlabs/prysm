@@ -8,14 +8,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
-// MockBlockFetcher is a fake implementation of blockfetcher.Fetcher.
-type MockBlockFetcher struct {
+// MockBlocker is a fake implementation of lookup.Blocker.
+type MockBlocker struct {
 	BlockToReturn interfaces.ReadOnlySignedBeaconBlock
 	ErrorToReturn error
 	SlotBlockMap  map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock
 }
 
-func (m *MockBlockFetcher) Block(_ context.Context, b []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+// Block --
+func (m *MockBlocker) Block(_ context.Context, b []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if m.ErrorToReturn != nil {
 		return nil, m.ErrorToReturn
 	}

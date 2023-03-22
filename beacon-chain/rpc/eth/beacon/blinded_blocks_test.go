@@ -35,7 +35,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 
 		bs := &Server{
 			FinalizationFetcher: &mock.ChainService{},
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: blk},
 		}
 
 		expected, err := migration.V1Alpha1ToV1SignedBlock(b)
@@ -54,7 +54,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 
 		bs := &Server{
 			FinalizationFetcher: &mock.ChainService{},
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: blk},
 		}
 
 		expected, err := migration.V1Alpha1BeaconBlockAltairToV2(b.Block)
@@ -74,7 +74,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		mockChainService := &mock.ChainService{}
 		bs := &Server{
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: blk},
 			OptimisticModeFetcher: mockChainService,
 		}
 
@@ -95,7 +95,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		mockChainService := &mock.ChainService{}
 		bs := &Server{
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: blk},
 			OptimisticModeFetcher: mockChainService,
 		}
 
@@ -120,7 +120,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: blk},
 			OptimisticModeFetcher: mockChainService,
 		}
 
@@ -140,7 +140,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: blk},
 		}
 
 		resp, err := bs.GetBlindedBlock(ctx, &ethpbv1.BlockRequest{BlockId: root[:]})
@@ -159,7 +159,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: blk},
 		}
 
 		resp, err := bs.GetBlindedBlock(ctx, &ethpbv1.BlockRequest{BlockId: root[:]})
@@ -178,7 +178,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 
 		bs := &Server{
 			FinalizationFetcher: &mock.ChainService{},
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: blk},
 		}
 
 		expected, err := blk.MarshalSSZ()
@@ -196,7 +196,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 
 		bs := &Server{
 			FinalizationFetcher: &mock.ChainService{},
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: blk},
 		}
 
 		expected, err := blk.MarshalSSZ()
@@ -215,7 +215,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		mockChainService := &mock.ChainService{}
 		bs := &Server{
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: blk},
 			OptimisticModeFetcher: mockChainService,
 		}
 
@@ -235,7 +235,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		mockChainService := &mock.ChainService{}
 		bs := &Server{
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: blk},
 			OptimisticModeFetcher: mockChainService,
 		}
 
@@ -259,7 +259,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: blk},
 			OptimisticModeFetcher: mockChainService,
 		}
 
@@ -279,7 +279,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: blk},
 		}
 
 		resp, err := bs.GetBlindedBlockSSZ(ctx, &ethpbv1.BlockRequest{BlockId: root[:]})
@@ -298,7 +298,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: blk},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: blk},
 		}
 
 		resp, err := bs.GetBlindedBlockSSZ(ctx, &ethpbv1.BlockRequest{BlockId: root[:]})

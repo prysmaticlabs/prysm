@@ -35,7 +35,7 @@ type Server struct {
 	VoluntaryExitsPool            voluntaryexits.PoolManager
 	StateGenService               stategen.StateManager
 	StateFetcher                  lookup.Stater
-	BlockFetcher                  lookup.Fetcher
+	BlockFetcher                  lookup.Blocker
 	HeadFetcher                   blockchain.HeadFetcher
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	V1Alpha1ValidatorServer       *v1alpha1validator.Server

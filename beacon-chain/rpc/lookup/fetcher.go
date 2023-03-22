@@ -29,13 +29,13 @@ func (e BlockIdParseError) Error() string {
 	return e.message
 }
 
-// Fetcher is responsible for retrieving info related with the beacon block.
-type Fetcher interface {
+// Blocker is responsible for retrieving blocks.
+type Blocker interface {
 	Block(ctx context.Context, id []byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 }
 
-// BlockProvider is a real implementation of Fetcher.
-type BlockProvider struct {
+// BeaconDbBlocker is an implementation of Blocker. It retrieves blocks from the beacon chain database.
+type BeaconDbBlocker struct {
 	BeaconDB         db.ReadOnlyDatabase
 	ChainInfoFetcher blockchain.ChainInfoFetcher
 }
@@ -47,7 +47,7 @@ type BlockProvider struct {
 //   - "justified"
 //   - <slot>
 //   - <hex encoded block root with '0x' prefix>
-func (p *BlockProvider) Block(ctx context.Context, id []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	var err error
 	var blk interfaces.ReadOnlySignedBeaconBlock
 	switch string(id) {

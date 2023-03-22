@@ -69,7 +69,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	b.Block.StateRoot = bytesutil.PadTo([]byte("stateroot"), 32)
 	sb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+	mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 
 	t.Run("get header", func(t *testing.T) {
 		mockChainService := &mock.ChainService{
@@ -679,7 +679,7 @@ func TestServer_GetBlock(t *testing.T) {
 	sb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bs := &Server{
-		BlockFetcher: &testutil.MockBlockFetcher{BlockToReturn: sb},
+		BlockFetcher: &testutil.MockBlocker{BlockToReturn: sb},
 	}
 
 	blk, err := bs.GetBlock(ctx, &ethpbv1.BlockRequest{})
@@ -697,7 +697,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b.Block.Slot = 123
 		sb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
 		}
@@ -721,7 +721,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b.Block.Slot = 123
 		sb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
 		}
@@ -745,7 +745,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b.Block.Slot = 123
 		sb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
 		}
@@ -770,7 +770,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b.Block.Slot = 123
 		sb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
 		}
@@ -796,7 +796,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		require.NoError(t, err)
 		r, err := sb.Block().HashTreeRoot()
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			OptimisticRoots: map[[32]byte]bool{r: true},
 			FinalizedRoots:  map[[32]byte]bool{},
@@ -817,7 +817,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		require.NoError(t, err)
 		r, err := sb.Block().HashTreeRoot()
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 
 		t.Run("true", func(t *testing.T) {
 			mockChainService := &mock.ChainService{FinalizedRoots: map[[32]byte]bool{r: true}}
@@ -853,7 +853,7 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 	sb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bs := &Server{
-		BlockFetcher: &testutil.MockBlockFetcher{BlockToReturn: sb},
+		BlockFetcher: &testutil.MockBlocker{BlockToReturn: sb},
 	}
 
 	resp, err := bs.GetBlockSSZ(ctx, &ethpbv1.BlockRequest{})
@@ -878,7 +878,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: sb},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -900,7 +900,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        &testutil.MockBlockFetcher{BlockToReturn: sb},
+			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -923,7 +923,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: sb},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -946,7 +946,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: sb},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -971,7 +971,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlockFetcher{BlockToReturn: sb},
+			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -984,7 +984,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		require.NoError(t, err)
 		r, err := sb.Block().HashTreeRoot()
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 
 		t.Run("true", func(t *testing.T) {
 			mockChainService := &mock.ChainService{FinalizedRoots: map[[32]byte]bool{r: true}}
@@ -1223,7 +1223,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		}
 		sb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
 		}
@@ -1280,7 +1280,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		}
 		sb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
 		}
@@ -1337,7 +1337,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		}
 		sb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
 		}
@@ -1394,7 +1394,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		}
 		sb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
 		}
@@ -1417,7 +1417,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		require.NoError(t, err)
 		r, err := sb.Block().HashTreeRoot()
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 		mockChainService := &mock.ChainService{
 			OptimisticRoots: map[[32]byte]bool{r: true},
 			FinalizedRoots:  map[[32]byte]bool{},
@@ -1438,7 +1438,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		require.NoError(t, err)
 		r, err := sb.Block().HashTreeRoot()
 		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlockFetcher{BlockToReturn: sb}
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
 
 		t.Run("true", func(t *testing.T) {
 			mockChainService := &mock.ChainService{FinalizedRoots: map[[32]byte]bool{r: true}}

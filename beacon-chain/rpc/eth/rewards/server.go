@@ -7,7 +7,7 @@ import (
 )
 
 type Server struct {
-	BlockFetcher          lookup.Fetcher
+	BlockFetcher          lookup.Blocker
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
 	ReplayerBuilder       stategen.ReplayerBuilder
