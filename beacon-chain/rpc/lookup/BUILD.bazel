@@ -2,7 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["fetcher.go"],
+    srcs = ["stater.go"],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup",
     visibility = ["//visibility:public"],
     deps = [
@@ -22,7 +22,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["fetcher_test.go"],
+    srcs = ["stater_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
