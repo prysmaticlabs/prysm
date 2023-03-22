@@ -4,9 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chain_info.go",
+        "chain_info_forkchoice.go",
         "error.go",
         "execution_engine.go",
-        "forkchoice_chain_info.go",
         "forkchoice_update_execution.go",
         "head.go",
         "head_sync_committee_info.go",
