@@ -1,4 +1,4 @@
-package blockfetcher
+package lookup
 
 import (
 	"context"

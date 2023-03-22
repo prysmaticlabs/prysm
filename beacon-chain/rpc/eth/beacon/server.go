@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/blockfetcher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
@@ -36,7 +35,7 @@ type Server struct {
 	VoluntaryExitsPool            voluntaryexits.PoolManager
 	StateGenService               stategen.StateManager
 	StateFetcher                  lookup.Stater
-	BlockFetcher                  blockfetcher.Fetcher
+	BlockFetcher                  lookup.Fetcher
 	HeadFetcher                   blockchain.HeadFetcher
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	V1Alpha1ValidatorServer       *v1alpha1validator.Server

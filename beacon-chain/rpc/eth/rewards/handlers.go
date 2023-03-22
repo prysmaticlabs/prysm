@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	coreblocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/blockfetcher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/network"
@@ -167,7 +167,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) *network.DefaultErrorJson {
-	if errors.Is(err, blockfetcher.BlockIdParseError{}) {
+	if errors.Is(err, lookup.BlockIdParseError{}) {
 		return &network.DefaultErrorJson{
 			Message: errors.Wrapf(err, "invalid block ID").Error(),
 			Code:    http.StatusBadRequest,

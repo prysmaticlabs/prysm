@@ -11,8 +11,8 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/blockfetcher"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -544,7 +544,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 }
 
 func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) error {
-	if invalidBlockIdErr, ok := err.(*blockfetcher.BlockIdParseError); ok {
+	if invalidBlockIdErr, ok := err.(*lookup.BlockIdParseError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
 	if err != nil {
