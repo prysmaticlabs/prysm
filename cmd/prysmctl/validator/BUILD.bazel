@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cmd.go",
+        "proposerSettings.go",
         "withdraw.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/validator",

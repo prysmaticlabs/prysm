@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -45,8 +46,8 @@ func cliActionCheckpoint(_ *cli.Context) error {
 	ctx := context.Background()
 	f := checkpointFlags
 
-	opts := []beacon.ClientOpt{beacon.WithTimeout(f.Timeout)}
-	client, err := beacon.NewClient(checkpointFlags.BeaconNodeHost, opts...)
+	opts := []client.ClientOpt{client.WithTimeout(f.Timeout)}
+	client, err := beacon.NewBeaconAPIClient(checkpointFlags.BeaconNodeHost, opts...)
 	if err != nil {
 		return err
 	}

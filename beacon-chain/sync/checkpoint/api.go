@@ -13,13 +13,13 @@ import (
 // APIInitializer manages initializing the beacon node using checkpoint sync, retrieving the checkpoint state and root
 // from the remote beacon node api.
 type APIInitializer struct {
-	c *beacon.Client
+	c *beacon.BeaconAPIClient
 }
 
 // NewAPIInitializer creates an APIInitializer, handling the set up of a beacon node api client
 // using the provided host string.
 func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
-	c, err := beacon.NewClient(beaconNodeHost)
+	c, err := beacon.NewBeaconAPIClient(beaconNodeHost)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to parse beacon node url or hostname - %s", beaconNodeHost)
 	}

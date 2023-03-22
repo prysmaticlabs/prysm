@@ -20,17 +20,20 @@ var (
 		Usage: "host:port for beacon node to query",
 		Value: "127.0.0.1:3500",
 	}
+
 	PathFlag = &cli.StringFlag{
 		Name:    "path",
 		Aliases: []string{"p"},
 		Usage:   "path to the signed withdrawal messages JSON",
 	}
+
 	ConfirmFlag = &cli.BoolFlag{
 		Name:    "confirm",
 		Aliases: []string{"c"},
 		Usage: "WARNING: User confirms and accepts responsibility of all input data provided and actions for setting their withdrawal address for their validator key. " +
 			"This action is not reversible and withdrawal addresses can not be changed once set.",
 	}
+
 	VerifyOnlyFlag = &cli.BoolFlag{
 		Name:    "verify-only",
 		Aliases: []string{"vo"},
@@ -41,6 +44,17 @@ var (
 		Name:  "validator-client-host",
 		Usage: "host:port for validator client.",
 		Value: "http://127.0.0.1:7500",
+	}
+
+	TokenFlag = &cli.StringFlag{
+		Name:    "output-proposer-settings-path",
+		Aliases: []string{"settings-path"},
+		Usage:   "path to outputting a proposer settings file ( i.e. ./path/to/proposer-settings.json), file does not include builder settings and will need to be added for advanced users using those features",
+	}
+
+	ProposerSettingsOutputFlag = &cli.StringFlag{
+		Name:  "token",
+		Usage: "keymanager API bearer token, note:currently required but may be removed in the future, this is the same token as the web ui token.",
 	}
 )
 
@@ -100,32 +114,19 @@ var Commands = []*cli.Command{
 				Aliases: []string{"w"},
 				Usage:   "Display or recreate currently used proposer settings.",
 				Flags: []cli.Flag{
-					BeaconHostFlag,
-					PathFlag,
-					ConfirmFlag,
-					VerifyOnlyFlag,
 					cmd.ConfigFileFlag,
-					cmd.AcceptTosFlag,
+					TokenFlag,
+					ValidatorHostFlag,
+					ProposerSettingsOutputFlag,
 				},
 				Before: func(cliCtx *cli.Context) error {
-					if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
-						return err
+					return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+				},
+				Action: func(cliCtx *cli.Context) error {
+					if err := getProposerSettings(cliCtx); err != nil {
+						log.WithError(err).Fatal("Could not get proposer settings")
 					}
-					au := aurora.NewAurora(true)
-					if !cliCtx.Bool(cmd.AcceptTosFlag.Name) || !cliCtx.Bool(ConfirmFlag.Name) {
-						fmt.Println(au.Red("===============IMPORTANT==============="))
-						fmt.Println(au.Red("Please read the following carefully"))
-						fmt.Print("This action will allow the partial withdrawal of amounts over the 32 staked ETH in your active validator balance. \n" +
-							"You will also be entitled to the full withdrawal of the entire validator balance if your validator has exited. \n" +
-							"Please navigate to our website (https://docs.prylabs.network/) and make sure you understand the full implications of setting your withdrawal address. \n")
-						fmt.Println(au.Red("THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. "))
-						fmt.Println(au.Red("You will NOT be able to change the address again once changed. "))
-						return fmt.Errorf("both the `--%s` and `--%s` flags are required to run this command. \n"+
-							"By providing these flags the user has read and accepts the TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md "+
-							"and confirms the action of setting withdrawals addresses", cmd.AcceptTosFlag.Name, ConfirmFlag.Name)
-					} else {
-						return nil
-					}
+					return nil
 				},
 			},
 			{
