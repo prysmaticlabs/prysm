@@ -235,7 +235,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-		return blocks.WrappedExecutionPayloadDeneb(result.Payload, big.NewInt(0).SetBytes(result.Value))
+		return blocks.WrappedExecutionPayloadDeneb(result.Payload, big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value)))
 	}
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
