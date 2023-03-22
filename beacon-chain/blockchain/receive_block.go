@@ -67,12 +67,12 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	}
 
 	// Reports on block and fork choice metrics.
-	cp := s.ForkChoicer().FinalizedCheckpoint()
+	cp := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
-	cp = s.ForkChoicer().JustifiedCheckpoint()
+	cp = s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	justified := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		log.WithError(err).Error("Unable to log block sync status")
@@ -123,7 +123,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		cp := s.ForkChoicer().FinalizedCheckpoint()
+		cp := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 		finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
@@ -131,7 +131,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -152,8 +152,8 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
 func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
-	s.ForkChoicer().Lock()
-	defer s.ForkChoicer().Unlock()
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
@@ -207,7 +207,7 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality primitives.Epoch
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}

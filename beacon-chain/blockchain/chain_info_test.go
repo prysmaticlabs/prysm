@@ -553,7 +553,7 @@ func TestService_IsFinalized(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}}
 	r1 := [32]byte{'a'}
-	require.NoError(t, c.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
+	require.NoError(t, c.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
 		Root: r1,
 	}))
 	b := util.NewBeaconBlock()

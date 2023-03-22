@@ -78,7 +78,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 				wsVerifier: wv,
 			}
 			require.NoError(t, fcs.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: tt.finalizedEpoch}))
-			cp := s.ForkChoicer().FinalizedCheckpoint()
+			cp := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 			err = s.wsVerifier.VerifyWeakSubjectivity(context.Background(), cp.Epoch)
 			if tt.wantErr == nil {
 				require.NoError(t, err)

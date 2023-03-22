@@ -139,7 +139,7 @@ func TestStore_OnBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fRoot := bytesutil.ToBytes32(roots[0])
-			require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: fRoot}))
+			require.NoError(t, service.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: fRoot}))
 			root, err := tt.blk.Block.HashTreeRoot()
 			assert.NoError(t, err)
 			wsb, err := consensusblocks.NewSignedBeaconBlock(tt.blk)
@@ -288,9 +288,9 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	r0 := bytesutil.ToBytes32(roots[0])
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, r0, service.originBlockRoot, [32]byte{}, fcp, fcp)
 	require.NoError(t, err)
-	require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	fcp2 := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r0}
-	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(fcp2))
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fcp2))
 
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
@@ -339,9 +339,9 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 	r0 := bytesutil.ToBytes32(roots[0])
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, r0, service.originBlockRoot, [32]byte{}, fcp, fcp)
 	require.NoError(t, err)
-	require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	fcp2 := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r0}
-	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(fcp2))
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fcp2))
 
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
@@ -406,7 +406,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 
 	// Set finalized epoch to 2.
-	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 2, Root: r64}))
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 2, Root: r64}))
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
 	require.NoError(t, err)
@@ -1363,7 +1363,7 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
 	blk := util.HydrateBeaconBlock(&ethpb.BeaconBlock{Slot: 1})
 	wb, err := consensusblocks.NewBeaconBlock(blk)
 	require.NoError(t, err)
@@ -1459,7 +1459,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// Check that we haven't justified the second epoch yet
-	jc := service.ForkChoicer().JustifiedCheckpoint()
+	jc := service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(0), jc.Epoch)
 
 	// import a block that justifies the second epoch
@@ -1474,14 +1474,14 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	require.NoError(t, err)
 	err = service.onBlock(ctx, wsb, firstInvalidRoot)
 	require.NoError(t, err)
-	jc = service.ForkChoicer().JustifiedCheckpoint()
+	jc = service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(2), jc.Epoch)
 
 	sjc := validHeadState.CurrentJustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(0), sjc.Epoch)
 	lvh := b.Block.Body.ExecutionPayload.ParentHash
 	// check our head
-	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, firstInvalidRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
 
 	// import another block to find out that it was invalid
 	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
@@ -1500,7 +1500,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	// Check that forkchoice's head is the last invalid block imported. The
 	// store's headroot is the previous head (since the invalid block did
 	// not finish importing) one and that the node is optimistic
-	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, root, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, firstInvalidRoot, bytesutil.ToBytes32(headRoot))
@@ -1522,7 +1522,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	require.NoError(t, err)
 	// Check the newly imported block is head, it justified the right
 	// checkpoint and the node is no longer optimistic
-	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, root, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	sjc = service.CurrentJustifiedCheckpt()
 	require.Equal(t, jc.Epoch, sjc.Epoch)
 	require.Equal(t, jc.Root, bytesutil.ToBytes32(sjc.Root))
@@ -1619,7 +1619,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// Check that we haven't justified the second epoch yet
-	jc := service.ForkChoicer().JustifiedCheckpoint()
+	jc := service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(0), jc.Epoch)
 
 	// import a block that justifies the second epoch
@@ -1634,14 +1634,14 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	require.NoError(t, err)
 	err = service.onBlock(ctx, wsb, firstInvalidRoot)
 	require.NoError(t, err)
-	jc = service.ForkChoicer().JustifiedCheckpoint()
+	jc = service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(2), jc.Epoch)
 
 	sjc := validHeadState.CurrentJustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(0), sjc.Epoch)
 	lvh := b.Block.Body.ExecutionPayload.ParentHash
 	// check our head
-	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, firstInvalidRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
 
 	// import another block to find out that it was invalid
 	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
@@ -1660,7 +1660,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	// Check that forkchoice's head and store's headroot are the previous head (since the invalid block did
 	// not finish importing and it was never imported to forkchoice). Check
 	// also that the node is optimistic
-	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, firstInvalidRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, firstInvalidRoot, bytesutil.ToBytes32(headRoot))
@@ -1682,7 +1682,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	require.NoError(t, err)
 	// Check the newly imported block is head, it justified the right
 	// checkpoint and the node is no longer optimistic
-	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, root, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	sjc = service.CurrentJustifiedCheckpt()
 	require.Equal(t, jc.Epoch, sjc.Epoch)
 	require.Equal(t, jc.Root, bytesutil.ToBytes32(sjc.Root))
@@ -1802,9 +1802,9 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// Check that we have justified the second epoch
-	jc := service.ForkChoicer().JustifiedCheckpoint()
+	jc := service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(2), jc.Epoch)
-	invalidHeadRoot := service.ForkChoicer().CachedHeadRoot()
+	invalidHeadRoot := service.cfg.ForkChoiceStore.CachedHeadRoot()
 
 	// import block 19 to find out that the whole chain 13--18 was in fact
 	// invalid
@@ -1825,7 +1825,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	// Check that forkchoice's head and store's headroot are the previous head (since the invalid block did
 	// not finish importing and it was never imported to forkchoice). Check
 	// also that the node is optimistic
-	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, invalidHeadRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, invalidHeadRoot, bytesutil.ToBytes32(headRoot))
@@ -1855,7 +1855,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
 	// Check that the head is still INVALID and the node is still optimistic
-	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, invalidHeadRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
@@ -1877,7 +1877,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// Head should still be INVALID and the node optimistic
-	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, invalidHeadRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
@@ -1893,7 +1893,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	require.NoError(t, err)
 	err = service.onBlock(ctx, wsb, root)
 	require.NoError(t, err)
-	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, root, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	sjc = service.CurrentJustifiedCheckpt()
 	require.Equal(t, primitives.Epoch(4), sjc.Epoch)
 	optimistic, err = service.IsOptimistic(ctx)
@@ -2011,7 +2011,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		require.NoError(t, service.onBlock(ctx, wsb, root))
 	}
 	// Check that we have justified the second epoch
-	jc := service.ForkChoicer().JustifiedCheckpoint()
+	jc := service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(2), jc.Epoch)
 
 	// import block 19 to find out that the whole chain 13--18 was in fact
@@ -2045,7 +2045,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	// Forkchoice has the genesisRoot loaded at startup
-	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.cfg.ForkChoiceStore.CachedHeadRoot()))
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
@@ -2072,7 +2072,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	// We use onBlockBatch here because the valid chain is missing in forkchoice
 	require.NoError(t, service.onBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{wsb}, [][32]byte{root}))
 	// Check that the head is now VALID and the node is not optimistic
-	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.cfg.ForkChoiceStore.CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, root, bytesutil.ToBytes32(headRoot))
