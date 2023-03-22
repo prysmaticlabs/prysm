@@ -3,8 +3,8 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["fetcher.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher",
-    visibility = ["//beacon-chain:__subpackages__"],
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup",
+    visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/db:go_default_library",

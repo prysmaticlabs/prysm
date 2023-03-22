@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -60,9 +60,9 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 
 	stateRoot, err := bs.StateFetcher.StateRoot(ctx, req.StateId)
 	if err != nil {
-		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
+		if rootNotFoundErr, ok := err.(*lookup.StateRootNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+		} else if parseErr, ok := err.(*lookup.StateIdParseError); ok {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)

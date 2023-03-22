@@ -9,7 +9,7 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
@@ -440,7 +440,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All ACTIVE Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			StateFetcher: &lookup.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -478,7 +478,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All ACTIVE_ONGOING Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			StateFetcher: &lookup.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -515,7 +515,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All EXITED Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			StateFetcher: &lookup.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -551,7 +551,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All PENDING_INITIALIZED and EXITED_UNSLASHED Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			StateFetcher: &lookup.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -587,7 +587,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All PENDING and EXITED Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			StateFetcher: &lookup.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,

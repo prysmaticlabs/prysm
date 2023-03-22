@@ -33,11 +33,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher"
 	slasherservice "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	chainSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
@@ -235,7 +235,7 @@ func (s *Service) Start() {
 		PeerManager:           s.cfg.PeerManager,
 		Broadcaster:           s.cfg.Broadcaster,
 		V1Alpha1Server:        validatorServer,
-		StateFetcher: &statefetcher.StateProvider{
+		StateFetcher: &lookup.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
@@ -311,7 +311,7 @@ func (s *Service) Start() {
 		Broadcaster:        s.cfg.Broadcaster,
 		BlockReceiver:      s.cfg.BlockReceiver,
 		StateGenService:    s.cfg.StateGen,
-		StateFetcher: &statefetcher.StateProvider{
+		StateFetcher: &lookup.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
@@ -354,7 +354,7 @@ func (s *Service) Start() {
 		debugServerV1 := &debug.Server{
 			BeaconDB:    s.cfg.BeaconDB,
 			HeadFetcher: s.cfg.HeadFetcher,
-			StateFetcher: &statefetcher.StateProvider{
+			StateFetcher: &lookup.StateProvider{
 				BeaconDB:           s.cfg.BeaconDB,
 				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,

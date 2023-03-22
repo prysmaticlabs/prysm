@@ -1,4 +1,4 @@
-package statefetcher
+package lookup
 
 import (
 	"context"
