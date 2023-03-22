@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "fetcher.go",
+        "blocker.go",
         "stater.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup",
@@ -27,7 +27,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "fetcher_test.go",
+        "blocker_test.go",
         "stater_test.go",
     ],
     embed = [":go_default_library"],

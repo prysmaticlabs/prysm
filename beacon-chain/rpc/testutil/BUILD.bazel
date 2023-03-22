@@ -5,10 +5,10 @@ go_library(
     testonly = True,
     srcs = [
         "db.go",
-        "mock_block_fetcher.go",
+        "mock_blocker.go",
         "mock_exec_chain_info_fetcher.go",
         "mock_genesis_timefetcher.go",
-        "mock_state_fetcher.go",
+        "mock_stater.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil",
     visibility = ["//beacon-chain:__subpackages__"],
