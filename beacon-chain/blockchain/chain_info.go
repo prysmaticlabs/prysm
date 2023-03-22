@@ -469,3 +469,8 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 
 	return ar[:], nil
 }
+
+// SetGenesisTime sets the genesis time of beacon chain.
+func (s *Service) SetGenesisTime(t time.Time) {
+	s.genesisTime = t
+}

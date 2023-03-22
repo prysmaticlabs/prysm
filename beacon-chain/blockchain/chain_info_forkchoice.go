@@ -2,17 +2,11 @@ package blockchain
 
 import (
 	"context"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 )
-
-// SetGenesisTime sets the genesis time of beacon chain.
-func (s *Service) SetGenesisTime(t time.Time) {
-	s.genesisTime = t
-}
 
 // CachedHeadRoot returns the corresponding value from Forkchoice
 func (s *Service) CachedHeadRoot() [32]byte {
