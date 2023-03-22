@@ -31,7 +31,7 @@ func (e BlockIdParseError) Error() string {
 
 // Fetcher is responsible for retrieving info related with the beacon block.
 type Fetcher interface {
-	Block(ctx context.Context, blockId []byte) (interfaces.ReadOnlySignedBeaconBlock, error)
+	Block(ctx context.Context, id []byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 }
 
 // BlockProvider is a real implementation of Fetcher.
@@ -40,10 +40,17 @@ type BlockProvider struct {
 	ChainInfoFetcher blockchain.ChainInfoFetcher
 }
 
-func (p *BlockProvider) Block(ctx context.Context, blockId []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+// Block returns the beacon block for a given identifier. The identifier can be one of:
+//   - "head" (canonical head in node's view)
+//   - "genesis"
+//   - "finalized"
+//   - "justified"
+//   - <slot>
+//   - <hex encoded block root with '0x' prefix>
+func (p *BlockProvider) Block(ctx context.Context, id []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	var err error
 	var blk interfaces.ReadOnlySignedBeaconBlock
-	switch string(blockId) {
+	switch string(id) {
 	case "head":
 		blk, err = p.ChainInfoFetcher.HeadBlock(ctx)
 		if err != nil {
@@ -62,13 +69,13 @@ func (p *BlockProvider) Block(ctx context.Context, blockId []byte) (interfaces.R
 			return nil, errors.Wrap(err, "could not retrieve genesis block")
 		}
 	default:
-		if len(blockId) == 32 {
-			blk, err = p.BeaconDB.Block(ctx, bytesutil.ToBytes32(blockId))
+		if len(id) == 32 {
+			blk, err = p.BeaconDB.Block(ctx, bytesutil.ToBytes32(id))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not retrieve block")
 			}
 		} else {
-			slot, err := strconv.ParseUint(string(blockId), 10, 64)
+			slot, err := strconv.ParseUint(string(id), 10, 64)
 			if err != nil {
 				e := NewBlockIdParseError(err)
 				return nil, &e

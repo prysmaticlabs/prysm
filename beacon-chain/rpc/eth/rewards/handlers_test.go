@@ -12,7 +12,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	mockstategen "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen/mock"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -23,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -192,7 +192,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &helpers.DefaultErrorJson{}
+		e := &network.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "block rewards are not supported for Phase 0 blocks", e.Message)
