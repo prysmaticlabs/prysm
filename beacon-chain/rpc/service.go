@@ -234,7 +234,7 @@ func (s *Service) Start() {
 		PeerManager:           s.cfg.PeerManager,
 		Broadcaster:           s.cfg.Broadcaster,
 		V1Alpha1Server:        validatorServer,
-		StateFetcher: &lookup.BeaconDbStater{
+		Stater: &lookup.BeaconDbStater{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
@@ -309,7 +309,7 @@ func (s *Service) Start() {
 		Broadcaster:        s.cfg.Broadcaster,
 		BlockReceiver:      s.cfg.BlockReceiver,
 		StateGenService:    s.cfg.StateGen,
-		StateFetcher: &lookup.BeaconDbStater{
+		Stater: &lookup.BeaconDbStater{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
@@ -352,7 +352,7 @@ func (s *Service) Start() {
 		debugServerV1 := &debug.Server{
 			BeaconDB:    s.cfg.BeaconDB,
 			HeadFetcher: s.cfg.HeadFetcher,
-			StateFetcher: &lookup.BeaconDbStater{
+			Stater: &lookup.BeaconDbStater{
 				BeaconDB:           s.cfg.BeaconDB,
 				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,

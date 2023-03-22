@@ -20,7 +20,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	segments := strings.Split(r.URL.Path, "/")
 	blockId := segments[len(segments)-1]
 
-	blk, err := s.BlockFetcher.Block(r.Context(), []byte(blockId))
+	blk, err := s.Blocker.Block(r.Context(), []byte(blockId))
 	if errJson := handleGetBlockError(blk, err); errJson != nil {
 		network.WriteError(w, errJson)
 		return

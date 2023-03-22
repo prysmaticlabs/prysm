@@ -34,8 +34,8 @@ type Server struct {
 	SlashingsPool                 slashings.PoolManager
 	VoluntaryExitsPool            voluntaryexits.PoolManager
 	StateGenService               stategen.StateManager
-	StateFetcher                  lookup.Stater
-	BlockFetcher                  lookup.Blocker
+	Stater                        lookup.Stater
+	Blocker                       lookup.Blocker
 	HeadFetcher                   blockchain.HeadFetcher
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	V1Alpha1ValidatorServer       *v1alpha1validator.Server

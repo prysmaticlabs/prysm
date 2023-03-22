@@ -79,7 +79,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			ChainInfoFetcher:      mockChainService,
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{})
@@ -119,7 +119,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			ChainInfoFetcher:      mockChainService,
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 		header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: []byte("head")})
 		require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 				ChainInfoFetcher:      mockChainService,
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				BlockFetcher:          mockBlockFetcher,
+				Blocker:               mockBlockFetcher,
 			}
 
 			header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: r[:]})
@@ -149,7 +149,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 				ChainInfoFetcher:      mockChainService,
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				BlockFetcher:          mockBlockFetcher,
+				Blocker:               mockBlockFetcher,
 			}
 
 			header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: r[:]})
@@ -679,7 +679,7 @@ func TestServer_GetBlock(t *testing.T) {
 	sb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bs := &Server{
-		BlockFetcher: &testutil.MockBlocker{BlockToReturn: sb},
+		Blocker: &testutil.MockBlocker{BlockToReturn: sb},
 	}
 
 	blk, err := bs.GetBlock(ctx, &ethpbv1.BlockRequest{})
@@ -703,7 +703,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        mockBlockFetcher,
+			Blocker:             mockBlockFetcher,
 		}
 
 		blk, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -727,7 +727,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        mockBlockFetcher,
+			Blocker:             mockBlockFetcher,
 		}
 
 		blk, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -752,7 +752,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		blk, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -777,7 +777,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		blk, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -804,7 +804,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		blk, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -824,7 +824,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			bs := &Server{
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				BlockFetcher:          mockBlockFetcher,
+				Blocker:               mockBlockFetcher,
 			}
 
 			header, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{BlockId: r[:]})
@@ -836,7 +836,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			bs := &Server{
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				BlockFetcher:          mockBlockFetcher,
+				Blocker:               mockBlockFetcher,
 			}
 
 			resp, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{BlockId: r[:]})
@@ -853,7 +853,7 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 	sb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bs := &Server{
-		BlockFetcher: &testutil.MockBlocker{BlockToReturn: sb},
+		Blocker: &testutil.MockBlocker{BlockToReturn: sb},
 	}
 
 	resp, err := bs.GetBlockSSZ(ctx, &ethpbv1.BlockRequest{})
@@ -878,7 +878,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: sb},
+			Blocker:             &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -900,7 +900,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		}
 		bs := &Server{
 			FinalizationFetcher: mockChainService,
-			BlockFetcher:        &testutil.MockBlocker{BlockToReturn: sb},
+			Blocker:             &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -923,7 +923,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: sb},
+			Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -946,7 +946,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: sb},
+			Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -971,7 +971,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          &testutil.MockBlocker{BlockToReturn: sb},
+			Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
 		}
 
 		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
@@ -991,7 +991,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			bs := &Server{
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				BlockFetcher:          mockBlockFetcher,
+				Blocker:               mockBlockFetcher,
 			}
 
 			header, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{BlockId: r[:]})
@@ -1003,7 +1003,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			bs := &Server{
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				BlockFetcher:          mockBlockFetcher,
+				Blocker:               mockBlockFetcher,
 			}
 
 			resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{BlockId: r[:]})
@@ -1230,7 +1230,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{})
@@ -1287,7 +1287,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{})
@@ -1344,7 +1344,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{})
@@ -1401,7 +1401,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{})
@@ -1425,7 +1425,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		bs := &Server{
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockFetcher:          mockBlockFetcher,
+			Blocker:               mockBlockFetcher,
 		}
 
 		resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{})
@@ -1445,7 +1445,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			bs := &Server{
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				BlockFetcher:          mockBlockFetcher,
+				Blocker:               mockBlockFetcher,
 			}
 
 			resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{BlockId: r[:]})
@@ -1457,7 +1457,7 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			bs := &Server{
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				BlockFetcher:          mockBlockFetcher,
+				Blocker:               mockBlockFetcher,
 			}
 
 			resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{BlockId: r[:]})
