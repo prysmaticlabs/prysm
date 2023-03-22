@@ -2,13 +2,11 @@ package customtypes
 
 import (
 	"fmt"
-	"runtime/debug"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
-	log "github.com/sirupsen/logrus"
 )
 
 // TODO:
@@ -19,8 +17,7 @@ type Balances struct {
 	len           int
 	fullChunkSize uint64
 	sharedRefs    map[uint64]*stateutil.Reference
-	// TODO: Is a lock needed?
-	lock sync.RWMutex
+	lock          sync.RWMutex
 }
 
 func NewBalances(balances []uint64) *Balances {
@@ -38,8 +35,8 @@ func (b *Balances) Copy() *Balances {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	log.Warnf("Copying balances")
-	debug.PrintStack()
+	//log.Warnf("Copying balances")
+	//debug.PrintStack()
 	var chunks [256][]uint64
 	refs := make(map[uint64]*stateutil.Reference)
 	// TODO: Can we simply do bCopy.chunks = b.chunks?
