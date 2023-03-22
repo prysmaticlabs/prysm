@@ -81,10 +81,10 @@ type Config struct {
 	BeaconMonitoringPort          int
 	BeaconDB                      db.HeadAccessDatabase
 	ChainInfoFetcher              blockchain.ChainInfoFetcher
-	HeadUpdater                   blockchain.HeadUpdater
 	HeadFetcher                   blockchain.HeadFetcher
 	CanonicalFetcher              blockchain.CanonicalFetcher
 	ForkFetcher                   blockchain.ForkFetcher
+	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	AttestationReceiver           blockchain.AttestationReceiver
 	BlockReceiver                 blockchain.BlockReceiver
@@ -196,8 +196,8 @@ func (s *Service) Start() {
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
 		HeadFetcher:            s.cfg.HeadFetcher,
-		HeadUpdater:            s.cfg.HeadUpdater,
 		ForkFetcher:            s.cfg.ForkFetcher,
+		ForkchoiceFetcher:      s.cfg.ForkchoiceFetcher,
 		GenesisFetcher:         s.cfg.GenesisFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
@@ -227,7 +227,6 @@ func (s *Service) Start() {
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:           s.cfg.HeadFetcher,
-		HeadUpdater:           s.cfg.HeadUpdater,
 		TimeFetcher:           s.cfg.GenesisTimeFetcher,
 		SyncChecker:           s.cfg.SyncService,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
@@ -280,7 +279,6 @@ func (s *Service) Start() {
 		BeaconDB:                    s.cfg.BeaconDB,
 		AttestationsPool:            s.cfg.AttestationsPool,
 		SlashingsPool:               s.cfg.SlashingsPool,
-		HeadUpdater:                 s.cfg.HeadUpdater,
 		OptimisticModeFetcher:       s.cfg.OptimisticModeFetcher,
 		HeadFetcher:                 s.cfg.HeadFetcher,
 		FinalizationFetcher:         s.cfg.FinalizationFetcher,
@@ -363,6 +361,7 @@ func (s *Service) Start() {
 			},
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 			ForkFetcher:           s.cfg.ForkFetcher,
+			ForkchoiceFetcher:     s.cfg.ForkchoiceFetcher,
 			FinalizationFetcher:   s.cfg.FinalizationFetcher,
 			ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
 		}
