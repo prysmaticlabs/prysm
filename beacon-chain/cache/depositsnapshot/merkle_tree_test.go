@@ -85,18 +85,41 @@ func Test_fromSnapshotParts(t *testing.T) {
 			name:      "multiple deposits and 1 Finalized",
 			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
 			deposits:  2,
-			level:     4,
 			want: &InnerNode{
 				left:  &InnerNode{&InnerNode{&FinalizedNode{depositCount: 2, hash: hexString(t, fmt.Sprintf("%064d", 0))}, &ZeroNode{1}}, &ZeroNode{2}},
+				right: &ZeroNode{3},
+			},
+		},
+		{
+			name:      "multiple deposits and multiple Finalized",
+			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0)), hexString(t, fmt.Sprintf("%064d", 1))},
+			deposits:  3,
+			want: &InnerNode{
+				left:  &InnerNode{&InnerNode{&FinalizedNode{depositCount: 23, hash: hexString(t, fmt.Sprintf("%064d", 0))}, &ZeroNode{1}}, &ZeroNode{2}},
 				right: &ZeroNode{3},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tree, err := fromSnapshotParts(tt.finalized, tt.deposits, tt.level)
+			test := newDepositTree()
+			var err error
+			sShot := DepositTreeSnapshot{
+				finalized:      tt.finalized,
+				depositRoot:    test.tree.GetRoot(),
+				depositCount:   tt.deposits,
+				executionBlock: executionBlock{},
+			}
+			sShot.depositRoot, err = sShot.CalculateRoot()
 			require.NoError(t, err)
-			if got := tree; !reflect.DeepEqual(got, tt.want) {
+			tree, err := fromSnapshot(sShot)
+			require.NoError(t, err)
+			err = printTree(tree.tree)
+			require.NoError(t, err)
+			test.tree = tree.tree
+			//dp.tree, err = fromSnapshotParts(tt.finalized, dp.depositCount, DepositContractDepth)
+			require.NoError(t, err)
+			if got := test.tree; !reflect.DeepEqual(got, tt.want) {
 				require.DeepEqual(t, tt.want, got)
 			}
 		})

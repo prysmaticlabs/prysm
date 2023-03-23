@@ -148,17 +148,33 @@ func (d *depositTree) pushLeaf(leaf [32]byte) error {
 func (d *depositTree) Insert(item []byte, index int) error {
 	var err error
 	var leaf [32]byte
-	var deposits uint64
+	//var deposits uint64
 	var finalizedDeposits [][32]byte
 	copy(leaf[:], item[:32])
 	numItems := d.NumOfItems()
 	if numItems == 0 {
 		finalizedDeposits = append(finalizedDeposits, leaf)
 	} else {
-		deposits, finalizedDeposits = d.tree.GetFinalized([][32]byte{})
+		_, finalizedDeposits = d.tree.GetFinalized([][32]byte{})
 		finalizedDeposits = append(finalizedDeposits, leaf)
 	}
-	d.tree, err = fromSnapshotParts(finalizedDeposits, deposits+1, DepositContractDepth)
+	treeSnapshot := DepositTreeSnapshot{
+		finalized:      finalizedDeposits,
+		depositRoot:    [32]byte{},
+		depositCount:   3,
+		executionBlock: executionBlock{},
+	}
+	root, err := treeSnapshot.CalculateRoot()
+	if err != nil {
+		return err
+	}
+	treeSnapshot.depositRoot = root
+	tree, err := fromSnapshot(treeSnapshot)
+	if err != nil {
+		return err
+	}
+	d.tree = tree.tree
+	err = printTree(d.tree)
 	if err != nil {
 		return err
 	}
