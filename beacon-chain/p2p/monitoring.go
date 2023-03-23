@@ -72,70 +72,70 @@ var (
 	},
 		[]string{"topic"})
 	pubsubTopicsGraft = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_graft_count",
+		Name: "p2p_pubsub_graft_total",
 		Help: "The number of graft messages sent for a particular topic",
 	},
 		[]string{"topic"})
 	pubsubTopicsPrune = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_prune_count",
+		Name: "p2p_pubsub_prune_total",
 		Help: "The number of prune messages sent for a particular topic",
 	},
 		[]string{"topic"})
 	pubsubMessageDeliver = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_deliver_count",
+		Name: "p2p_pubsub_deliver_total",
 		Help: "The number of messages received for delivery of a particular topic",
 	},
 		[]string{"topic"})
 	pubsubMessageUndeliverable = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_undeliverable_count",
+		Name: "p2p_pubsub_undeliverable_total",
 		Help: "The number of messages received which weren't able to be delivered of a particular topic",
 	},
 		[]string{"topic"})
 	pubsubMessageValidate = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_validate_count",
+		Name: "p2p_pubsub_validate_total",
 		Help: "The number of messages received for validation of a particular topic",
 	},
 		[]string{"topic"})
 	pubsubMessageDuplicate = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_duplicate_count",
+		Name: "p2p_pubsub_duplicate_total",
 		Help: "The number of duplicate messages sent for a particular topic",
 	},
 		[]string{"topic"})
 	pubsubMessageReject = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_reject_count",
+		Name: "p2p_pubsub_reject_total",
 		Help: "The number of messages rejected of a particular topic",
 	},
 		[]string{"topic"})
 	pubsubPeerThrottle = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_throttle_count",
+		Name: "p2p_pubsub_throttle_total",
 		Help: "The number of times a peer has been throttled for a particular topic",
 	},
 		[]string{"topic"})
 	pubsubRPCRecv = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_rpc_recv_count",
+		Name: "p2p_pubsub_rpc_recv_total",
 		Help: "The number of messages received via rpc for a particular topic",
 	},
 		[]string{"control_message"})
 	pubsubRPCSubRecv = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "p2p_pubsub_rpc_recv_sub_count",
+		Name: "p2p_pubsub_rpc_recv_sub_total",
 		Help: "The number of subscription messages received via rpc",
 	})
 	pubsubRPCDrop = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_rpc_drop_count",
+		Name: "p2p_pubsub_rpc_drop_total",
 		Help: "The number of messages dropped via rpc for a particular topic",
 	},
 		[]string{"control_message"})
 	pubsubRPCSubDrop = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "p2p_pubsub_rpc_drop_sub_count",
+		Name: "p2p_pubsub_rpc_drop_sub_total",
 		Help: "The number of subscription messages dropped via rpc",
 	})
 	pubsubRPCSent = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_pubsub_rpc_sent_count",
+		Name: "p2p_pubsub_rpc_sent_total",
 		Help: "The number of messages sent via rpc for a particular topic",
 	},
 		[]string{"control_message"})
 	pubsubRPCSubSent = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "p2p_pubsub_rpc_sent_sub_count",
+		Name: "p2p_pubsub_rpc_sent_sub_total",
 		Help: "The number of subscription messages sent via rpc",
 	})
 )
