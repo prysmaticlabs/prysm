@@ -443,8 +443,8 @@ func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	proposerServer := &Server{
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		SyncChecker:           &mockSync.Sync{},
-		HeadUpdater:           mockChainService,
 		ForkFetcher:           mockChainService,
+		ForkchoiceFetcher:     mockChainService,
 		TimeFetcher:           &mock.ChainService{}}
 	req := &ethpb.BlockRequest{
 		Slot: bellatrixSlot + 1,
@@ -462,11 +462,11 @@ func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, he
 		HeadFetcher:           mockChainService,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:         mockChainService,
-		HeadUpdater:           mockChainService,
 		ChainStartFetcher:     &mockExecution.Chain{},
 		Eth1InfoFetcher:       &mockExecution.Chain{},
 		Eth1BlockFetcher:      &mockExecution.Chain{},
 		ForkFetcher:           mockChainService,
+		ForkchoiceFetcher:     mockChainService,
 		MockEth1Votes:         true,
 		AttPool:               attestations.NewPool(),
 		SlashingsPool:         slashings.NewPool(),

@@ -100,17 +100,15 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-pat.C():
-				s.ForkChoicer().Lock()
 				s.UpdateHead(s.ctx, s.CurrentSlot()+1)
-				s.ForkChoicer().Unlock()
 			case <-st.C():
-				s.ForkChoicer().Lock()
-				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+				s.cfg.ForkChoiceStore.Lock()
+				if err := s.cfg.ForkChoiceStore.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("could not process new slot")
 				}
+				s.cfg.ForkChoiceStore.Unlock()
 
 				s.UpdateHead(s.ctx, s.CurrentSlot())
-				s.ForkChoicer().Unlock()
 			}
 		}
 	}()
@@ -120,7 +118,8 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 // The caller of this function MUST hold a lock in forkchoice
 func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
 	start := time.Now()
-
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
 	disparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	if !features.Get().DisableReorgLateBlocks {

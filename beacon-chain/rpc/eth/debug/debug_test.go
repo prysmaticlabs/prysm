@@ -326,7 +326,7 @@ func TestServer_GetForkChoice(t *testing.T) {
 	fRoot := [32]byte{'a'}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 2, Root: fRoot}
 	require.NoError(t, store.UpdateFinalizedCheckpoint(fc))
-	bs := &Server{ForkFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
+	bs := &Server{ForkchoiceFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
 	res, err := bs.GetForkChoice(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, primitives.Epoch(2), res.FinalizedCheckpoint.Epoch, "Did not get wanted finalized epoch")
