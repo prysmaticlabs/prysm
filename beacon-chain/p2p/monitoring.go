@@ -71,47 +71,47 @@ var (
 		Help: "The topics that the peer is participating in gossipsub.",
 	},
 		[]string{"topic"})
-	pubsubTopicsGraft = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubTopicsGraft = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_graft_count",
 		Help: "The number of graft messages sent for a particular topic",
 	},
 		[]string{"topic"})
-	pubsubTopicsPrune = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubTopicsPrune = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_prune_count",
 		Help: "The number of prune messages sent for a particular topic",
 	},
 		[]string{"topic"})
-	pubsubMessageDeliver = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubMessageDeliver = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_deliver_count",
 		Help: "The number of messages received for delivery of a particular topic",
 	},
 		[]string{"topic"})
-	pubsubMessageUndeliverable = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubMessageUndeliverable = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_undeliverable_count",
 		Help: "The number of messages received which weren't able to be delivered of a particular topic",
 	},
 		[]string{"topic"})
-	pubsubMessageValidate = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubMessageValidate = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_validate_count",
 		Help: "The number of messages received for validation of a particular topic",
 	},
 		[]string{"topic"})
-	pubsubMessageDuplicate = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubMessageDuplicate = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_duplicate_count",
 		Help: "The number of duplicate messages sent for a particular topic",
 	},
 		[]string{"topic"})
-	pubsubMessageReject = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubMessageReject = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_reject_count",
 		Help: "The number of messages rejected of a particular topic",
 	},
 		[]string{"topic"})
-	pubsubPeerThrottle = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubPeerThrottle = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_throttle_count",
 		Help: "The number of times a peer has been throttled for a particular topic",
 	},
 		[]string{"topic"})
-	pubsubRPCRecv = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubRPCRecv = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_rpc_recv_count",
 		Help: "The number of messages received via rpc for a particular topic",
 	},
@@ -120,7 +120,7 @@ var (
 		Name: "p2p_pubsub_rpc_recv_sub_count",
 		Help: "The number of subscription messages received via rpc",
 	})
-	pubsubRPCDrop = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubRPCDrop = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_rpc_drop_count",
 		Help: "The number of messages dropped via rpc for a particular topic",
 	},
@@ -129,7 +129,7 @@ var (
 		Name: "p2p_pubsub_rpc_drop_sub_count",
 		Help: "The number of subscription messages dropped via rpc",
 	})
-	pubsubRPCSent = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	pubsubRPCSent = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_rpc_sent_count",
 		Help: "The number of messages sent via rpc for a particular topic",
 	},

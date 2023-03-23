@@ -92,7 +92,7 @@ func (g gossipTracer) DropRPC(rpc *pubsub.RPC, p peer.ID) {
 	setMetricFromRPC(pubsubRPCSubDrop, pubsubRPCDrop, rpc)
 }
 
-func setMetricFromRPC(ctr prometheus.Counter, gauge *prometheus.GaugeVec, rpc *pubsub.RPC) {
+func setMetricFromRPC(ctr prometheus.Counter, gauge *prometheus.CounterVec, rpc *pubsub.RPC) {
 	ctr.Add(float64(len(rpc.Subscriptions)))
 	if rpc.Control != nil {
 		gauge.WithLabelValues("graft").Add(float64(len(rpc.Control.Graft)))
