@@ -118,6 +118,8 @@ func (m *SparseMerkleTrie) HashTreeRoot() ([32]byte, error) {
 		depositCount = 0
 	}
 	binary.LittleEndian.PutUint64(enc[:], depositCount)
+	preMixInRoot := m.branches[len(m.branches)-1][0]
+	fmt.Printf("Mixing in %d and root premixing is %#x\n", depositCount, preMixInRoot)
 	return hash.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...)), nil
 }
 

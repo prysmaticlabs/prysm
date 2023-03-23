@@ -127,10 +127,10 @@ func (d *depositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 // getRoot returns the root of the deposit tree.
 func (d *depositTree) getRoot() [32]byte {
 	var enc [32]byte
-	fmt.Println(d.depositCount)
 	binary.LittleEndian.PutUint64(enc[:], d.depositCount)
 
 	root := d.tree.GetRoot()
+	fmt.Printf("Our deposit snapshot tree has deposit count %d, and premixin %#x\n", d.depositCount, root)
 	return hash.Hash(append(root[:], enc[:]...))
 }
 
@@ -158,10 +158,11 @@ func (d *depositTree) Insert(item []byte, index int) error {
 		_, finalizedDeposits = d.tree.GetFinalized([][32]byte{})
 		finalizedDeposits = append(finalizedDeposits, leaf)
 	}
+	fmt.Println("finalized len", len(finalizedDeposits))
 	treeSnapshot := DepositTreeSnapshot{
 		finalized:      finalizedDeposits,
 		depositRoot:    [32]byte{},
-		depositCount:   3,
+		depositCount:   uint64(len(finalizedDeposits)) + 1,
 		executionBlock: executionBlock{},
 	}
 	root, err := treeSnapshot.CalculateRoot()
@@ -174,10 +175,6 @@ func (d *depositTree) Insert(item []byte, index int) error {
 		return err
 	}
 	d.tree = tree.tree
-	err = printTree(d.tree)
-	if err != nil {
-		return err
-	}
 	d.depositCount++
 	fmt.Println("Increased: ", d.depositCount)
 	return nil

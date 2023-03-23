@@ -1,0 +1,126 @@
+digraph G {
+N0 [shape=circle, color=cyan, style=bold, label=N0];
+N1 [shape=circle, color=cyan, style=bold, label=N1];
+N2 [shape=circle, color=cyan, style=bold, label=N2];
+N3 [shape=circle, color=cyan, style=bold, label=N3];
+N4 [shape=circle, color=cyan, style=bold, label=N4];
+N5 [shape=circle, color=cyan, style=bold, label=N5];
+N6 [shape=circle, color=cyan, style=bold, label=N6];
+N7 [shape=circle, color=cyan, style=bold, label=N7];
+N8 [shape=circle, color=cyan, style=bold, label=N8];
+N9 [shape=circle, color=cyan, style=bold, label=N9];
+N10 [shape=circle, color=cyan, style=bold, label=N10];
+N11 [shape=circle, color=cyan, style=bold, label=N11];
+N12 [shape=circle, color=cyan, style=bold, label=N12];
+N13 [shape=circle, color=cyan, style=bold, label=N13];
+N14 [shape=circle, color=cyan, style=bold, label=N14];
+N15 [shape=circle, color=cyan, style=bold, label=N15];
+N16 [shape=circle, color=cyan, style=bold, label=N16];
+N17 [shape=circle, color=cyan, style=bold, label=N17];
+N18 [shape=circle, color=cyan, style=bold, label=N18];
+N19 [shape=circle, color=cyan, style=bold, label=N19];
+N20 [shape=circle, color=cyan, style=bold, label=N20];
+N21 [shape=circle, color=cyan, style=bold, label=N21];
+N22 [shape=circle, color=cyan, style=bold, label=N22];
+N23 [shape=circle, color=cyan, style=bold, label=N23];
+N24 [shape=circle, color=cyan, style=bold, label=N24];
+N25 [shape=circle, color=cyan, style=bold, label=N25];
+N26 [shape=circle, color=cyan, style=bold, label=N26];
+N27 [shape=circle, color=cyan, style=bold, label=N27];
+N28 [shape=circle, color=cyan, style=bold, label=N28];
+N29 [shape=circle, color=cyan, style=bold, label=N29];
+N30 [shape=circle, color=cyan, style=bold, label=N30];
+N31 [shape=circle, color=violet, style=bold, label=F31];
+N30 -> N31
+N32 [shape=circle, color=black, style=dashed, label=Z32];
+N30 -> N32
+N29 -> N30
+N33 [shape=circle, color=black, style=dashed, label=Z33];
+N29 -> N33
+N28 -> N29
+N34 [shape=circle, color=black, style=dashed, label=Z34];
+N28 -> N34
+N27 -> N28
+N35 [shape=circle, color=black, style=dashed, label=Z35];
+N27 -> N35
+N26 -> N27
+N36 [shape=circle, color=black, style=dashed, label=Z36];
+N26 -> N36
+N25 -> N26
+N37 [shape=circle, color=black, style=dashed, label=Z37];
+N25 -> N37
+N24 -> N25
+N38 [shape=circle, color=black, style=dashed, label=Z38];
+N24 -> N38
+N23 -> N24
+N39 [shape=circle, color=black, style=dashed, label=Z39];
+N23 -> N39
+N22 -> N23
+N40 [shape=circle, color=black, style=dashed, label=Z40];
+N22 -> N40
+N21 -> N22
+N41 [shape=circle, color=black, style=dashed, label=Z41];
+N21 -> N41
+N20 -> N21
+N42 [shape=circle, color=black, style=dashed, label=Z42];
+N20 -> N42
+N19 -> N20
+N43 [shape=circle, color=black, style=dashed, label=Z43];
+N19 -> N43
+N18 -> N19
+N44 [shape=circle, color=black, style=dashed, label=Z44];
+N18 -> N44
+N17 -> N18
+N45 [shape=circle, color=black, style=dashed, label=Z45];
+N17 -> N45
+N16 -> N17
+N46 [shape=circle, color=black, style=dashed, label=Z46];
+N16 -> N46
+N15 -> N16
+N47 [shape=circle, color=black, style=dashed, label=Z47];
+N15 -> N47
+N14 -> N15
+N48 [shape=circle, color=black, style=dashed, label=Z48];
+N14 -> N48
+N13 -> N14
+N49 [shape=circle, color=black, style=dashed, label=Z49];
+N13 -> N49
+N12 -> N13
+N50 [shape=circle, color=black, style=dashed, label=Z50];
+N12 -> N50
+N11 -> N12
+N51 [shape=circle, color=black, style=dashed, label=Z51];
+N11 -> N51
+N10 -> N11
+N52 [shape=circle, color=black, style=dashed, label=Z52];
+N10 -> N52
+N9 -> N10
+N53 [shape=circle, color=black, style=dashed, label=Z53];
+N9 -> N53
+N8 -> N9
+N54 [shape=circle, color=black, style=dashed, label=Z54];
+N8 -> N54
+N7 -> N8
+N55 [shape=circle, color=black, style=dashed, label=Z55];
+N7 -> N55
+N6 -> N7
+N56 [shape=circle, color=black, style=dashed, label=Z56];
+N6 -> N56
+N5 -> N6
+N57 [shape=circle, color=black, style=dashed, label=Z57];
+N5 -> N57
+N4 -> N5
+N58 [shape=circle, color=black, style=dashed, label=Z58];
+N4 -> N58
+N3 -> N4
+N59 [shape=circle, color=black, style=dashed, label=Z59];
+N3 -> N59
+N2 -> N3
+N60 [shape=circle, color=black, style=dashed, label=Z60];
+N2 -> N60
+N1 -> N2
+N61 [shape=circle, color=black, style=dashed, label=Z61];
+N1 -> N61
+N0 -> N1
+N62 [shape=circle, color=black, style=dashed, label=Z62];
+N0 -> N62}

@@ -8,7 +8,7 @@ import (
 
 func printTree(tree MerkleTreeNode) error {
 	nodes, _ := printNode(tree, 0)
-	file, err := os.Create("/home/sammy/prysmaticLabs/prysm/beacon-chain/cache/depositsnapshot/graph.gv")
+	file, err := os.Create("/home/zodiark/Desktop/code/go/prysm/beacon-chain/cache/depositsnapshot/graph.gv")
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -261,6 +262,30 @@ func TestDepositCases(t *testing.T) {
 		err = tree.pushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 	}
+}
+
+func TestRootEquivalence(t *testing.T) {
+	tree := newDepositTree()
+	testCases, err := readTestCases()
+	require.NoError(t, err)
+	transformed := make([][]byte, 0)
+	depositCount := uint64(0)
+	for _, c := range testCases[:128] {
+		err = tree.pushLeaf(c.DepositDataRoot)
+		require.NoError(t, err)
+		transformed = append(transformed, c.DepositDataRoot[:])
+		depositCount++
+	}
+	tree.depositCount = depositCount
+	originalRoot, err := tree.HashTreeRoot()
+	require.NoError(t, err)
+
+	generatedTrie, err := trie.GenerateTrieFromItems(transformed, 32)
+	require.NoError(t, err)
+
+	rootA, err := generatedTrie.HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, rootA, originalRoot)
 }
 
 func TestFinalization(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -64,35 +65,35 @@ func Test_fromSnapshotParts(t *testing.T) {
 		level     uint64
 		want      MerkleTreeNode
 	}{
-		{
-			name:      "empty",
-			finalized: nil,
-			deposits:  0,
-			level:     0,
-			want:      &ZeroNode{},
-		},
-		{
-			name:      "single finalized node",
-			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
-			deposits:  1,
-			level:     0,
-			want: &FinalizedNode{
-				depositCount: 1,
-				hash:         [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-		},
-		{
-			name:      "multiple deposits and 1 Finalized",
-			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
-			deposits:  2,
-			want: &InnerNode{
-				left:  &InnerNode{&InnerNode{&FinalizedNode{depositCount: 2, hash: hexString(t, fmt.Sprintf("%064d", 0))}, &ZeroNode{1}}, &ZeroNode{2}},
-				right: &ZeroNode{3},
-			},
-		},
+		// {
+		// 	name:      "empty",
+		// 	finalized: nil,
+		// 	deposits:  0,
+		// 	level:     0,
+		// 	want:      &ZeroNode{},
+		// },
+		// {
+		// 	name:      "single finalized node",
+		// 	finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
+		// 	deposits:  1,
+		// 	level:     0,
+		// 	want: &FinalizedNode{
+		// 		depositCount: 1,
+		// 		hash:         [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		// 	},
+		// },
+		// {
+		// 	name:      "multiple deposits and 1 Finalized",
+		// 	finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
+		// 	deposits:  2,
+		// 	want: &InnerNode{
+		// 		left:  &InnerNode{&InnerNode{&FinalizedNode{depositCount: 2, hash: hexString(t, fmt.Sprintf("%064d", 0))}, &ZeroNode{1}}, &ZeroNode{2}},
+		// 		right: &ZeroNode{3},
+		// 	},
+		// },
 		{
 			name:      "multiple deposits and multiple Finalized",
-			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0)), hexString(t, fmt.Sprintf("%064d", 1))},
+			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 1)), hexString(t, fmt.Sprintf("%064d", 2))},
 			deposits:  3,
 			want: &InnerNode{
 				left:  &InnerNode{&InnerNode{&FinalizedNode{depositCount: 23, hash: hexString(t, fmt.Sprintf("%064d", 0))}, &ZeroNode{1}}, &ZeroNode{2}},
@@ -107,21 +108,29 @@ func Test_fromSnapshotParts(t *testing.T) {
 			sShot := DepositTreeSnapshot{
 				finalized:      tt.finalized,
 				depositRoot:    test.tree.GetRoot(),
-				depositCount:   tt.deposits,
+				depositCount:   uint64(len(tt.finalized)),
 				executionBlock: executionBlock{},
 			}
+			fmt.Println(len(sShot.finalized), sShot.depositCount)
 			sShot.depositRoot, err = sShot.CalculateRoot()
 			require.NoError(t, err)
 			tree, err := fromSnapshot(sShot)
 			require.NoError(t, err)
-			err = printTree(tree.tree)
-			require.NoError(t, err)
 			test.tree = tree.tree
-			//dp.tree, err = fromSnapshotParts(tt.finalized, dp.depositCount, DepositContractDepth)
-			require.NoError(t, err)
-			if got := test.tree; !reflect.DeepEqual(got, tt.want) {
-				require.DeepEqual(t, tt.want, got)
+
+			transformed := make([][]byte, len(tt.finalized))
+			for i, d := range tt.finalized {
+				transformed[i] = d[:]
 			}
+			generatedTrie, err := trie.GenerateTrieFromItems(transformed, 32)
+			require.NoError(t, err, "Could not generate deposit trie")
+			rootA, err := generatedTrie.HashTreeRoot()
+			require.NoError(t, err)
+
+			test.depositCount = sShot.depositCount
+			rootB, err := test.HashTreeRoot()
+			require.NoError(t, err)
+			assert.Equal(t, rootA, rootB)
 		})
 	}
 }

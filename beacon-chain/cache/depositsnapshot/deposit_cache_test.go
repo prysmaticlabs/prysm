@@ -414,7 +414,8 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex)
+	require.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex)
+	require.Equal(t, cachedDeposits.Deposits.NumOfItems(), 2)
 
 	var deps [][]byte
 	for _, d := range oldFinalizedDeposits {
@@ -426,6 +427,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	require.NoError(t, err, "Could not generate deposit trie")
 	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
+
 	rootB, err := cachedDeposits.Deposits.HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, rootA, rootB)
