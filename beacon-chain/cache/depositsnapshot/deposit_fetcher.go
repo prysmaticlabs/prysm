@@ -6,8 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
 )
