@@ -85,7 +85,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b interfaces.ReadOnlyBeaconBlock) error {
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
@@ -146,39 +146,6 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	return nil
 }
 
-// ancestor returns the block root of an ancestry block from the input block root.
-//
-// Spec pseudocode definition:
-//
-//	def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
-//	 block = store.blocks[root]
-//	 if block.slot > slot:
-//	     return get_ancestor(store, block.parent_root, slot)
-//	 elif block.slot == slot:
-//	     return root
-//	 else:
-//	     # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
-//	     return root
-func (s *Service) ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
-	defer span.End()
-
-	r := bytesutil.ToBytes32(root)
-	// Get ancestor root from fork choice store instead of recursively looking up blocks in DB.
-	// This is most optimal outcome.
-	ar, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
-	if err != nil {
-		// Try getting ancestor root from DB when failed to retrieve from fork choice store.
-		// This is the second line of defense for retrieving ancestor root.
-		ar, err = s.ancestorByDB(ctx, r, slot)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return ar[:], nil
-}
-
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
 func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot primitives.Slot) (root [32]byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestorByDB")
@@ -210,7 +177,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
 	// Fork choice only matters from last finalized slot.
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
@@ -236,7 +203,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if len(pendingNodes) == 1 {
 		return nil
 	}
-	if root != s.ensureRootNotZeros(finalized.Root) && !s.ForkChoicer().HasNode(root) {
+	if root != s.ensureRootNotZeros(finalized.Root) && !s.cfg.ForkChoiceStore.HasNode(root) {
 		return ErrNotDescendantOfFinalized
 	}
 	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)

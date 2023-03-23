@@ -308,7 +308,7 @@ func TestSaveOrphanedAtts(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -373,7 +373,7 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -431,7 +431,7 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -490,7 +490,7 @@ func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 

@@ -471,6 +471,9 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -634,6 +637,9 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[30].BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1666,6 +1672,9 @@ func TestServer_GetBlockV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1927,6 +1936,9 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2098,6 +2110,9 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2494,6 +2509,9 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
 			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,

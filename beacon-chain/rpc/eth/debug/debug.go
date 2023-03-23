@@ -41,7 +41,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
-	isOptimistic, err := helpers.IsOptimistic(ctx, beaconSt, ds.OptimisticModeFetcher)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, ds.OptimisticModeFetcher, ds.StateFetcher, ds.ChainInfoFetcher, ds.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -166,7 +166,5 @@ func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (
 
 // GetForkChoice returns a dump fork choice store.
 func (ds *Server) GetForkChoice(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceDump, error) {
-	ds.ForkFetcher.ForkChoicer().RLock()
-	defer ds.ForkFetcher.ForkChoicer().RUnlock()
-	return ds.ForkFetcher.ForkChoicer().ForkChoiceDump(ctx)
+	return ds.ForkchoiceFetcher.ForkChoiceDump(ctx)
 }

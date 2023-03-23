@@ -90,10 +90,10 @@ type validator struct {
 	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
-	node                               ethpb.NodeClient
-	slashingProtectionClient           ethpb.SlasherClient
+	node                               iface.NodeClient
+	slashingProtectionClient           iface.SlasherClient
 	db                                 vdb.Database
-	beaconClient                       ethpb.BeaconChainClient
+	beaconClient                       iface.BeaconChainClient
 	keyManager                         keymanager.IKeymanager
 	ticker                             slots.Ticker
 	validatorClient                    iface.ValidatorClient

@@ -43,11 +43,11 @@ func (bb *Builder) Tick(t testing.TB, tick int64) {
 	currentSlot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
 	for lastSlot < currentSlot {
 		lastSlot++
-		bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot*lastSlot)))
-		require.NoError(t, bb.service.ForkChoicer().NewSlot(context.TODO(), primitives.Slot(lastSlot)))
+		bb.service.SetForkChoiceGenesisTime(uint64(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot*lastSlot)))
+		require.NoError(t, bb.service.NewSlot(context.TODO(), primitives.Slot(lastSlot)))
 	}
 	if tick > int64(params.BeaconConfig().SecondsPerSlot*lastSlot) {
-		bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - tick))
+		bb.service.SetForkChoiceGenesisTime(uint64(time.Now().Unix() - tick))
 	}
 	bb.lastTick = tick
 }
@@ -144,9 +144,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
-		bb.service.ForkChoiceStore().RLock()
-		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
-		bb.service.ForkChoiceStore().RUnlock()
+		got := fmt.Sprintf("%#x", bb.service.ProposerBoost())
 		require.DeepEqual(t, want, got)
 	}
 
