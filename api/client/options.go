@@ -16,7 +16,7 @@ func WithSSZEncoding() ReqOption {
 
 func WithTokenAuthorization(token string) ReqOption {
 	return func(req *http.Request) {
-		req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
 }
 

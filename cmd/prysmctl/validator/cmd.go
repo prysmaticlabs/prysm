@@ -41,18 +41,25 @@ var (
 	}
 
 	ValidatorHostFlag = &cli.StringFlag{
-		Name:  "validator-client-host",
-		Usage: "host:port for validator client.",
-		Value: "http://127.0.0.1:7500",
+		Name:    "validator-client-host",
+		Aliases: []string{"vch"},
+		Usage:   "host:port for validator client.",
+		Value:   "http://127.0.0.1:7500",
 	}
 
-	TokenFlag = &cli.StringFlag{
+	ProposerSettingsOutputFlag = &cli.StringFlag{
 		Name:    "output-proposer-settings-path",
 		Aliases: []string{"settings-path"},
 		Usage:   "path to outputting a proposer settings file ( i.e. ./path/to/proposer-settings.json), file does not include builder settings and will need to be added for advanced users using those features",
 	}
 
-	ProposerSettingsOutputFlag = &cli.StringFlag{
+	DefaultFeeRecipientFlag = &cli.StringFlag{
+		Name:    "default-fee-recipient",
+		Aliases: []string{"dfr"},
+		Usage:   "default fee recipient used for proposer-settings, only used with --output-proposer-settings-path",
+	}
+
+	TokenFlag = &cli.StringFlag{
 		Name:  "token",
 		Usage: "keymanager API bearer token, note:currently required but may be removed in the future, this is the same token as the web ui token.",
 	}
@@ -115,6 +122,7 @@ var Commands = []*cli.Command{
 				Usage:   "Display or recreate currently used proposer settings.",
 				Flags: []cli.Flag{
 					cmd.ConfigFileFlag,
+					DefaultFeeRecipientFlag,
 					TokenFlag,
 					ValidatorHostFlag,
 					ProposerSettingsOutputFlag,
@@ -123,7 +131,7 @@ var Commands = []*cli.Command{
 					return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 				},
 				Action: func(cliCtx *cli.Context) error {
-					if err := getProposerSettings(cliCtx); err != nil {
+					if err := getProposerSettings(cliCtx, os.Stdin); err != nil {
 						log.WithError(err).Fatal("Could not get proposer settings")
 					}
 					return nil
