@@ -20,11 +20,34 @@ type Cache struct {
 	depositsLock      sync.RWMutex
 }
 
+// DepositFetcher defines a struct which can retrieve deposit information from a store.
+type DepositFetcher interface {
+	AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
+	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
+	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
+	FinalizedDeposits(ctx context.Context) *FinalizedDeposits
+	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
+}
+
 // FinalizedDeposits stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
 type FinalizedDeposits struct {
 	Deposits        *depositTree
 	MerkleTrieIndex int64
+}
+
+// New instantiates a new deposit cache
+func New() (*Cache, error) {
+	finalizedDepositsTrie := newDepositTree()
+
+	// finalizedDeposits.MerkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
+	// Inserting the first item into the trie will set the value of the index to 0.
+	return &Cache{
+		pendingDeposits:   []*ethpb.DepositContainer{},
+		deposits:          []*ethpb.DepositContainer{},
+		depositsByKey:     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer{},
+		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
+	}, nil
 }
 
 func (c *Cache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
@@ -134,4 +157,29 @@ func (c *Cache) NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int
 	}
 
 	return deposits
+}
+
+// PruneProofs removes proofs from all deposits whose index is equal or less than untilDepositIndex.
+func (c *Cache) PruneProofs(ctx context.Context, untilDepositIndex int64) error {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.PruneProofs")
+	defer span.End()
+	c.depositsLock.Lock()
+	defer c.depositsLock.Unlock()
+
+	if untilDepositIndex >= int64(len(c.deposits)) {
+		untilDepositIndex = int64(len(c.deposits) - 1)
+	}
+
+	for i := untilDepositIndex; i >= 0; i-- {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		// Finding a nil proof means that all proofs up to this deposit have been already pruned.
+		if c.deposits[i].Deposit.Proof == nil {
+			break
+		}
+		c.deposits[i].Deposit.Proof = nil
+	}
+
+	return nil
 }

@@ -230,31 +230,31 @@ func merkleRootFromBranch(leaf [32]byte, branch [][32]byte, index uint64) [32]by
 	return root
 }
 
-func checkProof(t *testing.T, tree *DepositTree, index uint64) {
+func checkProof(t *testing.T, tree *depositTree, index uint64) {
 	leaf, proof, err := tree.getProof(index)
 	require.NoError(t, err)
 	calcRoot := merkleRootFromBranch(leaf, proof, index)
 	require.Equal(t, tree.getRoot(), calcRoot)
 }
 
-func compareProof(t *testing.T, tree1, tree2 *DepositTree, index uint64) {
+func compareProof(t *testing.T, tree1, tree2 *depositTree, index uint64) {
 	require.Equal(t, tree1.getRoot(), tree2.getRoot())
 	checkProof(t, tree1, index)
 	checkProof(t, tree2, index)
 }
 
-func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []testCase) *DepositTree {
+func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []testCase) *depositTree {
 	cp, err := fromSnapshot(snapshot)
 	require.NoError(t, err)
 	for _, c := range testCases {
 		err = cp.pushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 	}
-	return &cp
+	return cp
 }
 
 func TestDepositCases(t *testing.T) {
-	tree := New()
+	tree := newDepositTree()
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases {
@@ -264,7 +264,7 @@ func TestDepositCases(t *testing.T) {
 }
 
 func TestFinalization(t *testing.T) {
-	tree := New()
+	tree := newDepositTree()
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases[:128] {
@@ -303,7 +303,7 @@ func TestFinalization(t *testing.T) {
 	require.NoError(t, err)
 	cp = cloneFromSnapshot(t, snapshotData, testCases[106:128])
 	// create a copy of the tree by replaying ALL deposits from nothing
-	fullTreeCopy := New()
+	fullTreeCopy := newDepositTree()
 	for _, c := range testCases[:128] {
 		err = fullTreeCopy.pushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
@@ -315,7 +315,7 @@ func TestFinalization(t *testing.T) {
 }
 
 func TestSnapshotCases(t *testing.T) {
-	tree := New()
+	tree := newDepositTree()
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases {
@@ -336,7 +336,7 @@ func TestSnapshotCases(t *testing.T) {
 }
 
 func TestEmptyTreeSnapshot(t *testing.T) {
-	_, err := New().getSnapshot()
+	_, err := newDepositTree().getSnapshot()
 	require.ErrorContains(t, "empty execution block", err)
 }
 

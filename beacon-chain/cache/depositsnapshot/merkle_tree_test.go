@@ -125,7 +125,7 @@ func Test_generateProof(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testCases, err := readTestCases()
 			require.NoError(t, err)
-			tree := New()
+			tree := newDepositTree()
 			for _, c := range testCases[:tt.leaves] {
 				err = tree.pushLeaf(c.DepositDataRoot)
 				require.NoError(t, err)
