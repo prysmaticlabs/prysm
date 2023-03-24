@@ -25,21 +25,15 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, stream 
 	defer span.End()
 	for _, b := range batch.Sequence() {
 		root := b.Root()
-		commitments, err := b.Block().Body().BlobKzgCommitments()
-		if err != nil {
-			return errors.Wrapf(err, "unable to retrieve commitments from block root %#x", root)
+		scs, err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, b.Root())
+		if errors.Is(err, db.ErrNotFound) {
+			continue
 		}
-		for i := 0; i < len(commitments); i++ {
-			idx := uint64(i)
-			sc, err := s.blobs.BlobSidecar(root, idx)
-			if err != nil {
-				if errors.Is(err, db.ErrNotFound) {
-					continue
-				}
-				log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, idnex=%d", root, idx)
-				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-				return err
-			}
+		if err != nil {
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+			return errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
+		}
+		for _, sc := range scs.Sidecars {
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 			if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 				log.WithError(chunkErr).Debug("Could not send a chunked response")
