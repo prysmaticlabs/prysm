@@ -186,6 +186,7 @@ func (s *Service) Start() {
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
+	s.requestMissingBlobsRoutine(s.ctx)
 
 	// Update sync metrics.
 	async.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)

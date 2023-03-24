@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/params"
@@ -133,4 +134,27 @@ func (q *blockAndBlocksQueue) canImport(r [32]byte) (bool, error) {
 	// TODO: enhance check to ensure that block commitments match blob
 
 	return len(commitments) == len(bnb.blobs), nil
+}
+
+func (q *blockAndBlocksQueue) missingRootAndIndex(ctx context.Context) (map[[32]byte][]uint64, error) {
+	q.lock.RLock()
+	defer q.lock.RUnlock()
+
+	m := make(map[[32]byte][]uint64)
+
+	for r, b := range q.queue {
+		kzgs, err := b.blk.Block().Body().BlobKzgCommitments()
+		if err != nil {
+			return nil, err
+		}
+		for i := range kzgs {
+			if len(b.blobs) == 0 {
+				b.blobs = make([]*eth.BlobSidecar, 0, 4)
+			}
+			if b.blobs[i] == nil {
+				m[r] = append(m[r], uint64(i))
+			}
+		}
+	}
+	return m, nil
 }

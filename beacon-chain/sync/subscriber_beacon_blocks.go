@@ -3,12 +3,16 @@ package sync
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -110,4 +114,55 @@ func (s *Service) receiveBlock(ctx context.Context, signed interfaces.ReadOnlySi
 		return err
 	}
 	return nil
+}
+
+func (s *Service) requestMissingBlobsRoutine(ctx context.Context) {
+
+	go func() {
+		ticker := slots.NewSlotTickerWithOffset(s.cfg.chain.GenesisTime(), time.Second, params.BeaconConfig().SecondsPerSlot)
+		for {
+			select {
+			case <-ticker.C():
+				m, err := s.blockAndBlobs.missingRootAndIndex(ctx)
+				if err != nil {
+					log.WithError(err).Error("Failed to get missing root and index")
+					continue
+				}
+				cp := s.cfg.chain.FinalizedCheckpt()
+				_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
+				if len(bestPeers) == 0 {
+					log.Warn("No peers to request missing blobs")
+					continue
+				}
+				var reqs []*eth.BlobIdentifier
+				for r, indices := range m {
+					for _, i := range indices {
+						reqs = append(reqs, &eth.BlobIdentifier{
+							BlockRoot: r[:],
+							Index:     i,
+						})
+					}
+				}
+				scs, err := SendBlobSidecarByRoot(ctx, s.cfg.chain, s.cfg.p2p, bestPeers[0], reqs)
+				if err != nil {
+					log.WithError(err).Error("Failed to send blob sidecar by root")
+					continue
+				}
+				for _, sc := range scs {
+					if err := s.blockAndBlobs.addBlob(sc); err != nil {
+						log.WithError(err).Error("Failed to add blob")
+						continue
+					}
+					if err := s.importBlockAndBlobs(ctx, bytesutil.ToBytes32(sc.BlockRoot)); err != nil {
+						log.WithError(err).Error("Failed to import block and blobs")
+						continue
+					}
+				}
+
+			case <-ctx.Done():
+				log.Debug("Context closed, exiting routine")
+				return
+			}
+		}
+	}()
 }
