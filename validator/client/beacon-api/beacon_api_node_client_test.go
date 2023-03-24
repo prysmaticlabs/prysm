@@ -84,7 +84,7 @@ func TestGetGenesis(t *testing.T) {
 			expectedError: "failed to decode deposit contract address `foo`",
 		},
 		{
-			name: "fails to decode deposit contract address",
+			name: "successfully retrieves genesis info",
 			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
 				GenesisTime:           "654812",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
@@ -95,7 +95,6 @@ func TestGetGenesis(t *testing.T) {
 					Address: hexutil.Encode([]byte{3}),
 				},
 			},
-			expectedError: "failed to decode deposit contract address `foo`",
 			expectedResponse: &ethpb.Genesis{
 				GenesisTime: &timestamppb.Timestamp{
 					Seconds: 654812,
