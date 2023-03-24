@@ -4,10 +4,13 @@ import (
 	"context"
 	"io"
 
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -144,15 +147,46 @@ func SendBlobSidecarByRoot(
 	}
 	defer closeStream(stream, log)
 
-	sidecars := make([]*pb.BlobSidecar, 0, len(req))
+	max := int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock)
+	return readChunkEncodedBlobs(stream, max, ci, p2pApi.Encoding().DecodeWithMaxLength)
+}
 
-	max := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
-	for i := 0; i < len(req); i++ {
-		// Exit if peer sends more than MAX_REQUEST_BLOBS_SIDECARS.
-		if uint64(i) >= max {
+var ErrBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
+
+type readerSSZDecoder func(io.Reader, ssz.Unmarshaler) error
+
+func readChunkEncodedBlobs(stream network.Stream, max int, ff blockchain.ForkFetcher, decode readerSSZDecoder) ([]*pb.BlobSidecar, error) {
+	defer closeStream(stream, log)
+	//d := s.cfg.p2p.Encoding().DecodeWithMaxLength
+	sidecars := make([]*pb.BlobSidecar, 0)
+	var (
+		code uint8
+		msg  string
+		err  error
+		br   int
+	)
+	for code, msg, err = ReadStatusCode(stream, &encoder.SszNetworkEncoder{}); err != nil; br++ {
+		if code != 0 {
+			return nil, errors.Wrap(ErrBlobChunkedReadFailure, msg)
+		}
+		if br > max {
 			break
 		}
-		// TODO: Read sidecar
+		// TODO: we should add some code to switch on the fork version to determine deserialization type
+		// punting to rush this out to unblock testing.
+		_, err = readContextFromStream(stream, ff)
+		if err != nil {
+			return nil, errors.Wrap(err, "error reading chunk context bytes from stream")
+		}
+
+		sc := &pb.BlobSidecar{}
+		if err := decode(stream, sc); err != nil {
+			return nil, errors.Wrap(err, "failed to decode the protobuf-enoded BlobSidecar message from RPC chunk stream")
+		}
+		sidecars = append(sidecars, sc)
+	}
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
 	}
 	return sidecars, nil
 }
