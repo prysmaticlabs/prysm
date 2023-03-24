@@ -862,8 +862,8 @@ def prysm_deps():
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
         replace = "github.com/mdehoog/go-ethereum",
-        sum = "h1:9qLnNc4MaHj9+cuUBgtCzj30kXCfddskCLW8kCpTmM4=",
-        version = "v1.10.19-0.20230317155853-6713fd5025ee",
+        sum = "h1:Zxwp6I9DxV9fAtqJLC9No25Xh/SNQETeQ4DuclZZA94=",
+        version = "v1.10.19-0.20230322143632-22f9817975d2",
     )
     go_repository(
         name = "com_github_evanphx_json_patch",
@@ -1241,8 +1241,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_gofrs_flock",
         importpath = "github.com/gofrs/flock",
-        sum = "h1:MSdYClljsF3PbENUUEx85nkWfJSGfzYI9yEBZOJz6CY=",
-        version = "v0.8.0",
+        sum = "h1:+gYjHKf32LDeiEEFhQaotPbLuUXjY5ZqxKgXy7n59aw=",
+        version = "v0.8.1",
     )
 
     go_repository(
@@ -1692,12 +1692,6 @@ def prysm_deps():
         importpath = "github.com/herumi/bls-eth-go-binary",
         sum = "h1:fcIZ48y5EE9973k05XjE8+P3YiQgjZz4JI/YabAm8KA=",
         version = "v1.28.1",
-    )
-    go_repository(
-        name = "com_github_holiman_big",
-        importpath = "github.com/holiman/big",
-        sum = "h1:pIYdhNkDh+YENVNi3gto8n9hAmRxKxoar0iE6BLucjw=",
-        version = "v0.0.0-20221017200358-a027dc42d04e",
     )
 
     go_repository(

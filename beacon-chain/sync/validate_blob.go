@@ -32,11 +32,13 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
+		log.WithError(err).Error("Failed to decode message")
 		return pubsub.ValidationReject, err
 	}
 
 	sBlob, ok := m.(*eth.SignedBlobSidecar)
 	if !ok {
+		log.WithField("message", m).Error("Message is not of type *eth.SignedBlobSidecar")
 		return pubsub.ValidationReject, errWrongMessage
 	}
 	blob := sBlob.Message
@@ -65,7 +67,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 	if startSlot >= blob.Slot {
 		err := fmt.Errorf("finalized slot %d greater or equal to blob slot %d", startSlot, blob.Slot)
-		log.WithFields(blobFields(blob)).Debug(err)
+		log.WithFields(blobFields(blob)).Warn(err)
 		return pubsub.ValidationIgnore, err
 	}
 
@@ -91,7 +93,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 	if blk.Block().Slot() >= blob.Slot {
 		err := fmt.Errorf("parent block slot %d greater or equal to blob slot %d", blk.Block().Slot(), blob.Slot)
-		log.WithFields(blobFields(blob)).Debug(err)
+		log.WithFields(blobFields(blob)).Error(err)
 		return pubsub.ValidationReject, err
 	}
 
@@ -129,6 +131,8 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationReject, err
 	}
 
+	msg.ValidatorData = sBlob
+
 	return pubsub.ValidationAccept, nil
 }
 
@@ -138,7 +142,7 @@ func verifyBlobSignature(st state.BeaconState, blob *eth.SignedBlobSidecar) erro
 	if err != nil {
 		return err
 	}
-	domain, err := signing.Domain(fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer, st.GenesisValidatorsRoot())
+	domain, err := signing.Domain(fork, currentEpoch, params.BeaconConfig().DomainBlobSidecar, st.GenesisValidatorsRoot())
 	if err != nil {
 		return err
 	}
@@ -161,6 +165,7 @@ func verifyBlobSignature(st state.BeaconState, blob *eth.SignedBlobSidecar) erro
 	if !sig.Verify(pb, sr[:]) {
 		return signing.ErrSigFailedToVerify
 	}
+
 	return nil
 }
 

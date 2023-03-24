@@ -49,15 +49,21 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	blobIdents := *ref
 	for i := range blobIdents {
 		root, idx := bytesutil.ToBytes32(blobIdents[i].BlockRoot), blobIdents[i].Index
-		sc, err := s.blobs.BlobSidecar(root, idx)
+		scs, err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, root)
 		if err != nil {
 			if errors.Is(err, db.ErrNotFound) {
 				continue
 			}
-			log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, idnex=%d", root, idx)
+			log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, index=%d", root, idx)
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
+		if idx >= uint64(len(scs.Sidecars)) {
+			log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, index=%d", root, idx)
+			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
+			return err
+		}
+		sc := scs.Sidecars[idx]
 
 		// If any root in the request content references a block earlier than minimum_request_epoch,
 		// peers MAY respond with error code 3: ResourceUnavailable or not include the blob in the response.

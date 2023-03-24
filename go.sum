@@ -929,8 +929,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
 github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
-github.com/mdehoog/go-ethereum v1.10.19-0.20230317155853-6713fd5025ee h1:9qLnNc4MaHj9+cuUBgtCzj30kXCfddskCLW8kCpTmM4=
-github.com/mdehoog/go-ethereum v1.10.19-0.20230317155853-6713fd5025ee/go.mod h1:oCKJ9Emf5yP5hJsC2ychFaphxkRta6rgiQvIY3NHDy4=
+github.com/mdehoog/go-ethereum v1.10.19-0.20230322143632-22f9817975d2 h1:Zxwp6I9DxV9fAtqJLC9No25Xh/SNQETeQ4DuclZZA94=
+github.com/mdehoog/go-ethereum v1.10.19-0.20230322143632-22f9817975d2/go.mod h1:oCKJ9Emf5yP5hJsC2ychFaphxkRta6rgiQvIY3NHDy4=
 github.com/mediocregopher/mediocre-go-lib v0.0.0-20181029021733-cb65787f37ed/go.mod h1:dSsfyI2zABAdhcbvkXqgxOxrCsbYeHCPgrZkku60dSg=
 github.com/mediocregopher/radix/v3 v3.3.0/go.mod h1:EmfVyvspXz1uZEyPBMyGK+kjWiKQGvsUt6O3Pj+LDCQ=
 github.com/mediocregopher/radix/v3 v3.4.2/go.mod h1:8FL3F6UQRXHXIBSPUs5h0RybMF8i4n7wVopoX3x7Bv8=
