@@ -39,6 +39,7 @@ func (c *blobsTestCase) filterExpectedByRange(t *testing.T, scs []*ethpb.BlobSid
 	lastRoot := bytesutil.ToBytes32(scs[0].BlockRoot)
 	rreq, ok := req.(*ethpb.BlobSidecarsByRangeRequest)
 	require.Equal(t, true, ok)
+	var writes uint64
 	for _, sc := range scs {
 		root := bytesutil.ToBytes32(sc.BlockRoot)
 		if root != lastRoot {
@@ -52,11 +53,15 @@ func (c *blobsTestCase) filterExpectedByRange(t *testing.T, scs []*ethpb.BlobSid
 		if sc.Slot < rreq.StartSlot || sc.Slot > rreq.StartSlot+types.Slot(rreq.Count)-1 {
 			continue
 		}
+		if writes == params.BeaconNetworkConfig().MaxRequestBlobsSidecars {
+			continue
+		}
 		expect = append(expect, &expectedBlobChunk{
 			sidecar: sc,
 			code:    responseCodeSuccess,
 			message: "",
 		})
+		writes += 1
 	}
 	return expect
 }
@@ -117,6 +122,17 @@ func TestBlobByRangeOK(t *testing.T) {
 				}
 			},
 			total: func() *int { x := int(params.BeaconConfig().MaxBlobsPerBlock * 10); return &x }(), // 10 blocks * 4 blobs = 40
+		},
+		{
+			name:    "request before window, empty response",
+			nblocks: int(params.BeaconNetworkConfig().MaxRequestBlocksDeneb) + 10,
+			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
+				return &ethpb.BlobSidecarsByRangeRequest{
+					StartSlot: scs[0].Slot,
+					Count:     params.BeaconNetworkConfig().MaxRequestBlocksDeneb + 1,
+				}
+			},
+			total: func() *int { x := int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars); return &x }(),
 		},
 	}
 	for _, c := range cases {

@@ -20,16 +20,21 @@ import (
 
 type BlobSidecarProcessor func(sidecar *pb.BlobSidecar) error
 
-func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, stream libp2pcore.Stream) error {
+func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, stream libp2pcore.Stream, tw uint64) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
 	defer span.End()
+	var writes uint64
 	for _, b := range batch.Sequence() {
 		root := b.Root()
 		commitments, err := b.Block().Body().BlobKzgCommitments()
 		if err != nil {
-			return errors.Wrapf(err, "unable to retrieve commitments from block root %#x", root)
+			return writes, errors.Wrapf(err, "unable to retrieve commitments from block root %#x", root)
 		}
 		for i := 0; i < len(commitments); i++ {
+			// once we have written MAX_REQUEST_BLOB_SIDECARS, we're done serving the request
+			if writes+tw >= params.BeaconNetworkConfig().MaxRequestBlobsSidecars {
+				return writes, nil
+			}
 			idx := uint64(i)
 			sc, err := s.blobs.BlobSidecar(root, idx)
 			if err != nil {
@@ -38,19 +43,20 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, stream 
 				}
 				log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, idnex=%d", root, idx)
 				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-				return err
+				return writes, err
 			}
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 			if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 				log.WithError(chunkErr).Debug("Could not send a chunked response")
 				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 				tracing.AnnotateError(span, chunkErr)
-				return chunkErr
+				return writes, chunkErr
 			}
 			s.rateLimiter.add(stream, 1)
+			writes += 1
 		}
 	}
-	return nil
+	return writes, nil
 }
 
 // blobsSidecarsByRangeRPCHandler looks up the request blobs from the database from a given start slot index
@@ -92,11 +98,18 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 
 	var batch blockBatch
+	var totalWrites uint64
 	for batch, ok = batcher.Next(ctx, stream); ok; batch, ok = batcher.Next(ctx, stream) {
 		batchStart := time.Now()
 		rpcBlobsByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
-		if err := s.streamBlobBatch(ctx, batch, stream); err != nil {
+		writes, err := s.streamBlobBatch(ctx, batch, stream, totalWrites)
+		if err != nil {
 			return err
+		}
+		totalWrites += writes
+		// once we have written MAX_REQUEST_BLOB_SIDECARS, we're done serving the request
+		if totalWrites >= params.BeaconNetworkConfig().MaxRequestBlobsSidecars {
+			break
 		}
 	}
 	if err := batch.Err(); err != nil {
