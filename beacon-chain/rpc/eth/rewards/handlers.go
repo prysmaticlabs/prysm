@@ -122,7 +122,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var syncCommitteeReward uint64
-	st, syncCommitteeReward, err = altair.ProcessSyncAggregate(r.Context(), st, sa)
+	_, syncCommitteeReward, err = altair.ProcessSyncAggregate(r.Context(), st, sa)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get sync aggregate rewards").Error(),

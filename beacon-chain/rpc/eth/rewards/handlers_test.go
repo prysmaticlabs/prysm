@@ -38,7 +38,6 @@ func TestBlockRewards(t *testing.T) {
 	validators := make([]*eth.Validator, 0, valCount)
 	balances := make([]uint64, 0, valCount)
 	secretKeys := make([]bls.SecretKey, 0, valCount)
-	pubkeys := make([][]byte, 0, valCount)
 	for i := 0; i < valCount; i++ {
 		blsKey, err := bls.RandKey()
 		require.NoError(t, err)
@@ -50,7 +49,6 @@ func TestBlockRewards(t *testing.T) {
 			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 		})
 		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
-		pubkeys = append(pubkeys, blsKey.PublicKey().Marshal())
 	}
 	require.NoError(t, st.SetValidators(validators))
 	require.NoError(t, st.SetBalances(balances))
