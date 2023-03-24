@@ -135,7 +135,7 @@ func SendBeaconBlocksByRootRequest(
 
 func SendBlobSidecarByRoot(
 	ctx context.Context, ci blockchain.ChainInfoFetcher, p2pApi p2p.P2P, pid peer.ID,
-	req p2ptypes.BlobSidecarsByRootReq,
+	req *p2ptypes.BlobSidecarsByRootReq,
 ) ([]*pb.BlobSidecar, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRootName, slots.ToEpoch(ci.CurrentSlot()))
 	if err != nil {

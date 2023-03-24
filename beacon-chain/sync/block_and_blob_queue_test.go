@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -105,4 +106,17 @@ func Test_blockAndBlocksQueue(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, false, canImport)
 	})
+}
+
+func Test_blockAndBlocksQueue_missingRootAndIndex(t *testing.T) {
+	q := newBlockAndBlobs()
+	sb, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlockDeneb(&eth.SignedBeaconBlockDeneb{Block: &eth.BeaconBlockDeneb{}}))
+	require.NoError(t, err)
+	b := bytesutil.PadTo([]byte("kzg"), 48)
+	require.NoError(t, sb.SetBlobKzgCommitments([][]byte{b, b, b}))
+	require.NoError(t, err)
+	require.NoError(t, q.addBlock(sb))
+	m, err := q.missingRootAndIndex(context.Background())
+	require.NoError(t, err)
+	t.Log(m)
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -123,11 +124,7 @@ func (s *Service) requestMissingBlobsRoutine(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C():
-				m, err := s.blockAndBlobs.missingRootAndIndex(ctx)
-				if err != nil {
-					log.WithError(err).Error("Failed to get missing root and index")
-					continue
-				}
+				log.Info("Tick ", ticker.C())
 				cp := s.cfg.chain.FinalizedCheckpt()
 				_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
 				if len(bestPeers) == 0 {
@@ -135,6 +132,15 @@ func (s *Service) requestMissingBlobsRoutine(ctx context.Context) {
 					continue
 				}
 				var reqs []*eth.BlobIdentifier
+
+				m, err := s.blockAndBlobs.missingRootAndIndex(ctx)
+				if err != nil {
+					log.WithError(err).Error("Failed to get missing root and index")
+					continue
+				}
+				if len(m) == 0 {
+					continue
+				}
 				for r, indices := range m {
 					for _, i := range indices {
 						reqs = append(reqs, &eth.BlobIdentifier{
@@ -143,7 +149,8 @@ func (s *Service) requestMissingBlobsRoutine(ctx context.Context) {
 						})
 					}
 				}
-				scs, err := SendBlobSidecarByRoot(ctx, s.cfg.chain, s.cfg.p2p, bestPeers[0], reqs)
+				req := types.BlobSidecarsByRootReq(reqs)
+				scs, err := SendBlobSidecarByRoot(ctx, s.cfg.chain, s.cfg.p2p, bestPeers[0], &req)
 				if err != nil {
 					log.WithError(err).Error("Failed to send blob sidecar by root")
 					continue

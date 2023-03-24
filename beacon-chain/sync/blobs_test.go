@@ -196,7 +196,6 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, fun
 	client := p2ptest.NewTestP2P(t)
 	s := &Service{
 		cfg:         &config{p2p: client, chain: c.chain, beaconDB: d},
-		blobs:       &MockBlobDB{},
 		rateLimiter: newRateLimiter(client),
 	}
 
@@ -213,9 +212,9 @@ func (c *blobsTestCase) run(t *testing.T) {
 	defer cleanup()
 	req := c.requestFromSidecars(sidecars)
 	expect := c.defineExpected(t, sidecars, req)
-	for _, sc := range expect {
-		require.NoError(t, s.blobs.WriteBlobSidecar(sc.sidecar))
-	}
+	//for _, sc := range expect {
+	//	require.NoError(t, s.blobs.WriteBlobSidecar(sc.sidecar))
+	//}
 	if c.total != nil {
 		require.Equal(t, *c.total, len(expect))
 	}

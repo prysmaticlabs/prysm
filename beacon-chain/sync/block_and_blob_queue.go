@@ -147,13 +147,15 @@ func (q *blockAndBlocksQueue) missingRootAndIndex(ctx context.Context) (map[[32]
 		if err != nil {
 			return nil, err
 		}
+		has := make(map[uint64]bool)
+		for _, blob := range b.blobs {
+			has[blob.Index] = true
+		}
 		for i := range kzgs {
-			if len(b.blobs) == 0 {
-				b.blobs = make([]*eth.BlobSidecar, 0, 4)
+			if has[uint64(i)] {
+				continue
 			}
-			if b.blobs[i] == nil {
-				m[r] = append(m[r], uint64(i))
-			}
+			m[r] = append(m[r], uint64(i))
 		}
 	}
 	return m, nil

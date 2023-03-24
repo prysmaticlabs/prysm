@@ -338,6 +338,10 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, req *ethpb.Gene
 			return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
 		}
 		for _, sidecar := range b.Deneb.Blobs {
+			// Hehehe skip index 1 and let peers handle it.
+			if sidecar.Message.Index == 1 {
+				continue
+			}
 			if err := vs.P2P.BroadcastBlob(ctx, sidecar.Message.Index, sidecar); err != nil {
 				return nil, errors.Wrap(err, "could not broadcast blob sidecar")
 			}
