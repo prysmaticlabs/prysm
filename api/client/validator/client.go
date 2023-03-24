@@ -58,10 +58,10 @@ func (c *ValidatorAPIClient) GetListOfValidators(ctx context.Context) ([]string,
 
 	hexKeys := make(map[string]bool)
 
-	for index, _ := range jsonlocal.Keystores {
+	for index := range jsonlocal.Keystores {
 		hexKeys[jsonlocal.Keystores[index].ValidatingPubkey] = true
 	}
-	for index, _ := range jsonremote.Keystores {
+	for index := range jsonremote.Keystores {
 		hexKeys[jsonremote.Keystores[index].Pubkey] = true
 	}
 	keys := make([]string, 0)
