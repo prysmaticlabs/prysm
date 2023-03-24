@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"encoding/binary"
-	"io"
 	"math"
 	"math/big"
 	"testing"
@@ -13,13 +12,11 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	ssz "github.com/prysmaticlabs/fastssz"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -34,14 +31,24 @@ import (
 )
 
 type blobsTestCase struct {
-	name    string
-	nblocks int                  // how many blocks to loop through in setting up test fixtures & requests
-	missing map[int]map[int]bool // skip this blob index, so that we can test different custody scenarios
-	expired map[int]bool         // mark block expired to test scenarios where requests are outside retention window
-	chain   *mock.ChainService   // allow tests to control retention window via current slot and finalized checkpoint
-	total   *int                 // allow a test to specify the total number of responses received
-	err     error
+	name                string
+	nblocks             int                  // how many blocks to loop through in setting up test fixtures & requests
+	missing             map[int]map[int]bool // skip this blob index, so that we can test different custody scenarios
+	expired             map[int]bool         // mark block expired to test scenarios where requests are outside retention window
+	chain               *mock.ChainService   // allow tests to control retention window via current slot and finalized checkpoint
+	total               *int                 // allow a test to specify the total number of responses received
+	err                 error
+	serverHandle        testHandler
+	defineExpected      expectedDefiner
+	requestFromSidecars requestFromSidecars
+	topic               protocol.ID
+	oldestSlot          oldestSlotCallback
 }
+
+type testHandler func(s *Service) rpcHandler
+type expectedDefiner func(t *testing.T, scs []*ethpb.BlobSidecar, req interface{}) []*expectedBlobChunk
+type requestFromSidecars func([]*ethpb.BlobSidecar) interface{}
+type oldestSlotCallback func(t *testing.T) types.Slot
 
 func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slot, nblobs int) (*ethpb.SignedBeaconBlockDeneb, []*ethpb.BlobSidecar) {
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
@@ -99,49 +106,6 @@ func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slo
 	return block, sidecars
 }
 
-func generateTestBlock(t *testing.T, parent [32]byte, slot types.Slot) *ethpb.SignedBeaconBlockDeneb {
-	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
-	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
-	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
-	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	parentHash := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
-	tx := gethTypes.NewTransaction(
-		0,
-		common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
-		big.NewInt(0), 0, big.NewInt(0),
-		nil,
-	)
-	txs := []*gethTypes.Transaction{tx}
-	encodedBinaryTxs := make([][]byte, 1)
-	var err error
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
-	require.NoError(t, err)
-	blockHash := bytesutil.ToBytes32([]byte("foo"))
-	payload := &enginev1.ExecutionPayloadDeneb{
-		ParentHash:    parentHash,
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     stateRoot,
-		ReceiptsRoot:  receiptsRoot,
-		LogsBloom:     logsBloom,
-		PrevRandao:    blockHash[:],
-		BlockNumber:   0,
-		GasLimit:      0,
-		GasUsed:       0,
-		Timestamp:     0,
-		ExtraData:     make([]byte, 0),
-		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
-		ExcessDataGas: bytesutil.PadTo([]byte("excessDataGas"), fieldparams.RootLength),
-		BlockHash:     blockHash[:],
-		Transactions:  encodedBinaryTxs,
-	}
-	block := util.NewBeaconBlockDeneb()
-	block.Block.Body.ExecutionPayload = payload
-	block.Block.Slot = slot
-	block.Block.Body.BlobKzgCommitments = make([][]byte, 0)
-	block.Block.ParentRoot = parent[:]
-	return block
-}
-
 func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.BlobSidecar {
 	blob := &enginev1.Blob{
 		Data: make([]byte, fieldparams.BlobSize),
@@ -160,21 +124,20 @@ func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, ind
 	return sc
 }
 
-type blobsByRootExpected struct {
+type expectedBlobChunk struct {
 	code    uint8
 	sidecar *ethpb.BlobSidecar
 	message string
 }
 
-type streamDecoder func(io.Reader, ssz.Unmarshaler) error
-
-func (r *blobsByRootExpected) requireExpected(t *testing.T, s *Service, stream network.Stream) {
+func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream network.Stream) {
 	d := s.cfg.p2p.Encoding().DecodeWithMaxLength
 
 	code, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 	require.NoError(t, err)
 	require.Equal(t, r.code, code, "unexpected response code")
-	if r.sidecar == nil {
+	//require.Equal(t, r.message, msg, "unexpected error message")
+	if code != responseCodeSuccess {
 		return
 	}
 
@@ -186,14 +149,13 @@ func (r *blobsByRootExpected) requireExpected(t *testing.T, s *Service, stream n
 	require.NoError(t, err)
 	require.Equal(t, ctxBytes, bytesutil.ToBytes4(c))
 
-	//require.Equal(t, r.message, msg, "unexpected error message")
 	sc := &ethpb.BlobSidecar{}
 	require.NoError(t, d(stream, sc))
 	require.Equal(t, bytesutil.ToBytes32(sc.BlockRoot), bytesutil.ToBytes32(r.sidecar.BlockRoot))
 	require.Equal(t, sc.Index, r.sidecar.Index)
 }
 
-func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, []*blobsByRootExpected, func()) {
+func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, func()) {
 	cfg := params.BeaconConfig()
 	repositionFutureEpochs(cfg)
 	undo, err := params.SetActiveWithUndo(cfg)
@@ -207,12 +169,8 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, []*
 	}
 	d := db.SetupDB(t)
 
-	bdb := &MockBlobDB{}
 	sidecars := make([]*ethpb.BlobSidecar, 0)
-	var expect []*blobsByRootExpected
-	oldest, err := slots.EpochStart(blobMinReqEpoch(c.chain.FinalizedCheckPoint.Epoch, slots.ToEpoch(c.chain.CurrentSlot())))
-	require.NoError(t, err)
-	streamTerminated := false
+	oldest := c.oldestSlot(t)
 	var parentRoot [32]byte
 	for i := 0; i < c.nblocks; i++ {
 		// check if there is a slot override for this index
@@ -228,38 +186,8 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, []*
 		block, bsc := generateTestBlockWithSidecars(t, parentRoot, bs, maxBlobs)
 		root, err := block.Block.HashTreeRoot()
 		require.NoError(t, err)
-		for bi, sc := range bsc {
-			ubi := uint64(bi)
+		for _, sc := range bsc {
 			sidecars = append(sidecars, sc)
-
-			if streamTerminated {
-				// once we know there is a bad response in the sequence, we want to filter out any subsequent
-				// expected responses, because an error response terminates the stream.
-				continue
-			}
-			// skip sidecars that are supposed to be missing
-			if missed, ok := c.missing[i]; ok && missed[bi] {
-				continue
-			}
-			require.NoError(t, bdb.WriteBlobSidecar(root, ubi, sc))
-			// if a sidecar is expired, we'll expect an error for the *first* index, and after that
-			// we'll expect no further chunks in the stream, so filter out any further expected responses.
-			// we don't need to check what index this is because we work through them in order and the first one
-			// will set streamTerminated = true and skip everything else in the test case.
-			if c.expired[i] {
-				expect = append(expect, &blobsByRootExpected{
-					code:    responseCodeResourceUnavailable,
-					message: p2pTypes.ErrBlobLTMinRequest.Error(),
-				})
-				streamTerminated = true
-				continue
-			}
-
-			expect = append(expect, &blobsByRootExpected{
-				sidecar: sc,
-				code:    responseCodeSuccess,
-				message: "",
-			})
 		}
 		util.SaveBlock(t, context.Background(), d, block)
 		parentRoot = root
@@ -268,22 +196,26 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, []*
 	client := p2ptest.NewTestP2P(t)
 	s := &Service{
 		cfg:         &config{p2p: client, chain: c.chain, beaconDB: d},
-		blobs:       bdb,
-		rateLimiter: newRateLimiter(client)}
-	//s.registerRPCHandlersDeneb()
+		blobs:       &MockBlobDB{},
+		rateLimiter: newRateLimiter(client),
+	}
 
 	byRootRate := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
 	byRangeRate := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
 	s.setRateCollector(p2p.RPCBlobSidecarsByRootTopicV1, leakybucket.NewCollector(0.000001, int64(byRootRate), time.Second, false))
 	s.setRateCollector(p2p.RPCBlobSidecarsByRangeTopicV1, leakybucket.NewCollector(0.000001, int64(byRangeRate), time.Second, false))
 
-	return s, sidecars, expect, cleanup
+	return s, sidecars, cleanup
 }
 
-func (c *blobsTestCase) run(t *testing.T, topic protocol.ID) {
-	s, sidecars, expect, cleanup := c.setup(t)
+func (c *blobsTestCase) run(t *testing.T) {
+	s, sidecars, cleanup := c.setup(t)
 	defer cleanup()
-
+	req := c.requestFromSidecars(sidecars)
+	expect := c.defineExpected(t, sidecars, req)
+	for _, sc := range expect {
+		require.NoError(t, s.blobs.WriteBlobSidecar(sc.sidecar))
+	}
 	if c.total != nil {
 		require.Equal(t, *c.total, len(expect))
 	}
@@ -292,73 +224,14 @@ func (c *blobsTestCase) run(t *testing.T, topic protocol.ID) {
 			ex.requireExpected(t, s, stream)
 		}
 	}
-	client, ok := s.cfg.p2p.(*p2ptest.TestP2P)
-	require.Equal(t, true, ok)
-	rht := &rpcHandlerTest{t: t, client: client, topic: topic, timeout: time.Second * 10, err: c.err}
-	switch topic {
-	case p2p.RPCBlobSidecarsByRootTopicV1:
-		req := blobRootRequestFromSidecars(sidecars)
-		rht.testHandler(nh, s.blobSidecarByRootRPCHandler, req)
-	case p2p.RPCBlobSidecarsByRangeTopicV1:
-		req := blobRangeRequestFromSidecars(sidecars)
-		rht.testHandler(nh, s.blobSidecarsByRangeRPCHandler, req)
+	rht := &rpcHandlerTest{
+		t:       t,
+		topic:   c.topic,
+		timeout: time.Second * 10,
+		err:     c.err,
+		s:       s,
 	}
-}
-
-func blobRangeRequestFromSidecars(scs []*ethpb.BlobSidecar) *ethpb.BlobSidecarsByRangeRequest {
-	maxBlobs := params.BeaconConfig().MaxBlobsPerBlock
-	count := uint64(len(scs)) / maxBlobs
-	return &ethpb.BlobSidecarsByRangeRequest{
-		StartSlot: scs[0].Slot,
-		Count:     count,
-	}
-}
-
-func blobRootRequestFromSidecars(scs []*ethpb.BlobSidecar) *p2pTypes.BlobSidecarsByRootReq {
-	req := make(p2pTypes.BlobSidecarsByRootReq, 0)
-	for _, sc := range scs {
-		req = append(req, &ethpb.BlobIdentifier{BlockRoot: sc.BlockRoot, Index: sc.Index})
-	}
-	return &req
-}
-
-type rpcHandlerTest struct {
-	t       *testing.T
-	client  *p2ptest.TestP2P
-	topic   protocol.ID
-	timeout time.Duration
-	err     error
-}
-
-func (rt *rpcHandlerTest) testHandler(nh network.StreamHandler, rh rpcHandler, rhi interface{}) {
-	ctx, cancel := context.WithTimeout(context.Background(), rt.timeout)
-	defer func() {
-		cancel()
-	}()
-
-	w := util.NewWaiter()
-	server := p2ptest.NewTestP2P(rt.t)
-	rt.client.Connect(server)
-	defer func() {
-		require.NoError(rt.t, rt.client.Disconnect(server.PeerID()))
-	}()
-	require.Equal(rt.t, 1, len(rt.client.BHost.Network().Peers()), "Expected peers to be connected")
-	h := func(stream network.Stream) {
-		defer w.Done()
-		nh(stream)
-	}
-	server.BHost.SetStreamHandler(protocol.ID(rt.topic), h)
-	stream, err := rt.client.BHost.NewStream(ctx, server.BHost.ID(), protocol.ID(rt.topic))
-	require.NoError(rt.t, err)
-
-	err = rh(ctx, rhi, stream)
-	if rt.err == nil {
-		require.NoError(rt.t, err)
-	} else {
-		require.ErrorIs(rt.t, err, rt.err)
-	}
-
-	w.RequireDoneBeforeCancel(rt.t, ctx)
+	rht.testHandler(nh, c.serverHandle(s), req)
 }
 
 // we use max uints for future forks, but this causes overflows when computing slots
@@ -389,8 +262,11 @@ func defaultMockChain(t *testing.T) *mock.ChainService {
 
 func TestTestcaseSetup_BlocksAndBlobs(t *testing.T) {
 	ctx := context.Background()
-	c := blobsTestCase{nblocks: 10}
-	s, sidecars, expect, cleanup := c.setup(t)
+	c := &blobsTestCase{nblocks: 10}
+	c.oldestSlot = c.defaultOldestSlotByRoot
+	s, sidecars, cleanup := c.setup(t)
+	req := blobRootRequestFromSidecars(sidecars)
+	expect := c.filterExpectedByRoot(t, sidecars, req)
 	defer cleanup()
 	require.Equal(t, 40, len(sidecars))
 	require.Equal(t, 40, len(expect))
