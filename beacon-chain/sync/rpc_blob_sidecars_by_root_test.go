@@ -7,10 +7,83 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
+
+func (c *blobsTestCase) defaultOldestSlotByRoot(t *testing.T) types.Slot {
+	oldest, err := slots.EpochStart(blobMinReqEpoch(c.chain.FinalizedCheckPoint.Epoch, slots.ToEpoch(c.chain.CurrentSlot())))
+	require.NoError(t, err)
+	return oldest
+}
+
+func blobRootRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
+	req := make(p2pTypes.BlobSidecarsByRootReq, 0)
+	for _, sc := range scs {
+		req = append(req, &ethpb.BlobIdentifier{BlockRoot: sc.BlockRoot, Index: sc.Index})
+	}
+	return &req
+}
+
+func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSidecar, req interface{}) []*expectedBlobChunk {
+	var expect []*expectedBlobChunk
+	blockOffset := 0
+	if len(scs) == 0 {
+		return expect
+	}
+	lastRoot := bytesutil.ToBytes32(scs[0].BlockRoot)
+	for _, sc := range scs {
+		root := bytesutil.ToBytes32(sc.BlockRoot)
+		if root != lastRoot {
+			blockOffset += 1
+		}
+		lastRoot = root
+
+		// skip sidecars that are supposed to be missing
+		if missed, ok := c.missing[blockOffset]; ok && missed[int(sc.Index)] {
+			continue
+		}
+		// if a sidecar is expired, we'll expect an error for the *first* index, and after that
+		// we'll expect no further chunks in the stream, so filter out any further expected responses.
+		// we don't need to check what index this is because we work through them in order and the first one
+		// will set streamTerminated = true and skip everything else in the test case.
+		if c.expired[blockOffset] {
+			return append(expect, &expectedBlobChunk{
+				sidecar: sc,
+				code:    responseCodeResourceUnavailable,
+				message: p2pTypes.ErrBlobLTMinRequest.Error(),
+			})
+		}
+
+		expect = append(expect, &expectedBlobChunk{
+			sidecar: sc,
+			code:    responseCodeSuccess,
+			message: "",
+		})
+	}
+	return expect
+}
+
+func (c *blobsTestCase) runTestBlobSidecarsByRoot(t *testing.T) {
+	if c.serverHandle == nil {
+		c.serverHandle = func(s *Service) rpcHandler { return s.blobSidecarByRootRPCHandler }
+	}
+	if c.defineExpected == nil {
+		c.defineExpected = c.filterExpectedByRoot
+	}
+	if c.requestFromSidecars == nil {
+		c.requestFromSidecars = blobRootRequestFromSidecars
+	}
+	if c.topic == "" {
+		c.topic = p2p.RPCBlobSidecarsByRootTopicV1
+	}
+	if c.oldestSlot == nil {
+		c.oldestSlot = c.defaultOldestSlotByRoot
+	}
+	c.run(t)
+}
 
 func TestBlobsByRootValidation(t *testing.T) {
 	cfg := params.BeaconConfig()
@@ -65,18 +138,18 @@ func TestBlobsByRootValidation(t *testing.T) {
 			name:    "all indices missing",
 			nblocks: 1,
 			missing: map[int]map[int]bool{0: map[int]bool{0: true, 1: true, 2: true, 3: true}},
-			total:   func(i int) *int { return &i }(0), // aka 10
+			total:   func(i int) *int { return &i }(0),
 		},
 		{
 			name:    "block with all indices missing between 2 full blocks",
 			nblocks: 3,
 			missing: map[int]map[int]bool{1: map[int]bool{0: true, 1: true, 2: true, 3: true}},
-			total:   func(i int) *int { return &i }(8), // aka 10
+			total:   func(i int) *int { return &i }(8),
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			c.run(t, p2p.RPCBlobSidecarsByRootTopicV1)
+			c.runTestBlobSidecarsByRoot(t)
 		})
 	}
 }
@@ -98,7 +171,7 @@ func TestBlobsByRootOK(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			c.run(t, p2p.RPCBlobSidecarsByRootTopicV1)
+			c.runTestBlobSidecarsByRoot(t)
 		})
 	}
 }

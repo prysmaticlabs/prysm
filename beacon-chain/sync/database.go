@@ -7,7 +7,7 @@ type BlobSidecarGetter interface {
 }
 
 type BlobSidecarWriter interface {
-	WriteBlobSidecar(blockRoot [32]byte, index uint64, sidecar *eth.BlobSidecar) error
+	WriteBlobSidecar(sidecar *eth.BlobSidecar) error
 }
 
 type BlobDB interface {

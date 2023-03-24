@@ -7,10 +7,124 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
+
+func (c *blobsTestCase) defaultOldestSlotByRange(t *testing.T) types.Slot {
+	currentEpoch := slots.ToEpoch(c.chain.CurrentSlot())
+	oldestEpoch := currentEpoch - params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	if oldestEpoch < params.BeaconConfig().DenebForkEpoch {
+		oldestEpoch = params.BeaconConfig().DenebForkEpoch
+	}
+	oldestSlot, err := slots.EpochStart(oldestEpoch)
+	require.NoError(t, err)
+	return oldestSlot
+}
+
+func blobRangeRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
+	maxBlobs := params.BeaconConfig().MaxBlobsPerBlock
+	count := uint64(len(scs)) / maxBlobs
+	return &ethpb.BlobSidecarsByRangeRequest{
+		StartSlot: scs[0].Slot,
+		Count:     count,
+	}
+}
+
+func (c *blobsTestCase) filterExpectedByRange(t *testing.T, scs []*ethpb.BlobSidecar, req interface{}) []*expectedBlobChunk {
+	var expect []*expectedBlobChunk
+	blockOffset := 0
+	lastRoot := bytesutil.ToBytes32(scs[0].BlockRoot)
+	rreq, ok := req.(*ethpb.BlobSidecarsByRangeRequest)
+	require.Equal(t, true, ok)
+	for _, sc := range scs {
+		root := bytesutil.ToBytes32(sc.BlockRoot)
+		if root != lastRoot {
+			blockOffset += 1
+		}
+		lastRoot = root
+
+		if sc.Slot < c.oldestSlot(t) {
+			continue
+		}
+		if sc.Slot < rreq.StartSlot || sc.Slot > rreq.StartSlot+types.Slot(rreq.Count)-1 {
+			continue
+		}
+		expect = append(expect, &expectedBlobChunk{
+			sidecar: sc,
+			code:    responseCodeSuccess,
+			message: "",
+		})
+	}
+	return expect
+}
+
+func (c *blobsTestCase) runTestBlobSidecarsByRange(t *testing.T) {
+	if c.serverHandle == nil {
+		c.serverHandle = func(s *Service) rpcHandler { return s.blobSidecarsByRangeRPCHandler }
+	}
+	if c.defineExpected == nil {
+		c.defineExpected = c.filterExpectedByRange
+	}
+	if c.requestFromSidecars == nil {
+		c.requestFromSidecars = blobRangeRequestFromSidecars
+	}
+	if c.topic == "" {
+		c.topic = p2p.RPCBlobSidecarsByRangeTopicV1
+	}
+	if c.oldestSlot == nil {
+		c.oldestSlot = c.defaultOldestSlotByRange
+	}
+	c.run(t)
+}
+
+func TestBlobByRangeOK(t *testing.T) {
+	cases := []*blobsTestCase{
+		{
+			name:    "beginning of window + 10",
+			nblocks: 10,
+		},
+		{
+			name:    "10 slots before window, 10 slots after, count = 20",
+			nblocks: 10,
+			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
+				return &ethpb.BlobSidecarsByRangeRequest{
+					StartSlot: scs[0].Slot - 10,
+					Count:     20,
+				}
+			},
+		},
+		{
+			name:    "request before window, empty response",
+			nblocks: 10,
+			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
+				return &ethpb.BlobSidecarsByRangeRequest{
+					StartSlot: scs[0].Slot - 10,
+					Count:     10,
+				}
+			},
+			total: func() *int { x := 0; return &x }(),
+		},
+		{
+			name:    "request before window, empty response",
+			nblocks: 10,
+			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
+				return &ethpb.BlobSidecarsByRangeRequest{
+					StartSlot: scs[0].Slot - 10,
+					Count:     20,
+				}
+			},
+			total: func() *int { x := int(params.BeaconConfig().MaxBlobsPerBlock * 10); return &x }(), // 10 blocks * 4 blobs = 40
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			c.runTestBlobSidecarsByRange(t)
+		})
+	}
+}
 
 func TestBlobsByRangeValidation(t *testing.T) {
 	cfg := params.BeaconConfig()
@@ -138,20 +252,6 @@ func TestBlobsByRangeValidation(t *testing.T) {
 			require.Equal(t, c.start, start)
 			require.Equal(t, c.end, end)
 			require.Equal(t, c.batch, batch)
-		})
-	}
-}
-
-func TestBlobByRangeOK(t *testing.T) {
-	cases := []*blobsTestCase{
-		{
-			name:    "beginning of window + 100",
-			nblocks: 10,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			c.run(t, p2p.RPCBlobSidecarsByRangeTopicV1)
 		})
 	}
 }

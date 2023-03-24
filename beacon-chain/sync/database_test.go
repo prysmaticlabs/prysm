@@ -3,6 +3,7 @@ package sync
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -23,11 +24,11 @@ func (m *MockBlobDB) BlobSidecar(r [32]byte, idx uint64) (*ethpb.BlobSidecar, er
 	return sc, nil
 }
 
-func (m *MockBlobDB) WriteBlobSidecar(r [32]byte, idx uint64, s *ethpb.BlobSidecar) error {
+func (m *MockBlobDB) WriteBlobSidecar(s *ethpb.BlobSidecar) error {
 	if m.storage == nil {
 		m.storage = make(map[mockSidecarId]*ethpb.BlobSidecar)
 	}
-	m.storage[mockSidecarId{r, idx}] = s
+	m.storage[mockSidecarId{bytesutil.ToBytes32(s.BlockRoot), s.Index}] = s
 	return nil
 }
 

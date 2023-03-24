@@ -70,7 +70,7 @@ func (s *Service) receiveBlockAndBlobs(ctx context.Context, root [32]byte) error
 		if err != nil {
 			return err
 		}
-		if err := s.blobs.WriteBlobSidecar(root, index, sb); err != nil {
+		if err := s.blobs.WriteBlobSidecar(sb); err != nil {
 			return err
 		}
 	}
