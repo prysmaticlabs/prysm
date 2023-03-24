@@ -15,6 +15,7 @@ func TestMain(m *testing.M) {
 	resetFlags := flags.Get()
 	flags.Init(&flags.GlobalFlags{
 		BlockBatchLimit:            64,
+		BlobBatchLimit:             64,
 		BlockBatchLimitBurstFactor: 10,
 	})
 	defer func() {

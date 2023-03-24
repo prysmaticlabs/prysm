@@ -84,7 +84,7 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte
 		return nil, err
 	}
 	if enc == nil {
-		return nil, nil
+		return nil, ErrNotFound
 	}
 	sidecars := &ethpb.BlobSidecars{}
 	if err := decode(ctx, enc, sidecars); err != nil {
@@ -114,7 +114,7 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot) (*ethpb
 		return nil, err
 	}
 	if enc == nil {
-		return nil, nil
+		return nil, ErrNotFound
 	}
 	sidecars := &ethpb.BlobSidecars{}
 	if err := decode(ctx, enc, sidecars); err != nil {
