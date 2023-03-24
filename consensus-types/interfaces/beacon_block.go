@@ -37,6 +37,8 @@ type ReadOnlySignedBeaconBlock interface {
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
+type ReadOnlySignedBeaconBlockSlice []ReadOnlySignedBeaconBlock
+
 // ReadOnlyBeaconBlock describes an interface which states the methods
 // employed by an object that is a beacon block.
 type ReadOnlyBeaconBlock interface {
