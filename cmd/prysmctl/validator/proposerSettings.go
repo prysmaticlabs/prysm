@@ -14,6 +14,7 @@ import (
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
 )
@@ -60,14 +61,14 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 		return err
 	}
 
-	fmt.Println("===============DISPLAYING CURRENT PROPOSER SETTINGS===============")
+	log.Infoln("===============DISPLAYING CURRENT PROPOSER SETTINGS===============")
 
 	for index, _ := range validators {
-		fmt.Printf("validator: %s. fee-recipient: %s \n", validators[index], feeRecipients[index])
+		log.Infof("validator: %s. fee-recipient: %s", validators[index], feeRecipients[index])
 	}
 
 	if c.IsSet(ProposerSettingsOutputFlag.Name) {
-		fmt.Printf("the default fee recipient is set to %s \n", defaultFeeRecipient)
+		log.Infof("the default fee recipient is set to %s", defaultFeeRecipient)
 		proposerConfig := make(map[string]*validatorServiceConfig.ProposerOptionPayload)
 		for index, validator := range validators {
 			proposerConfig[validator] = &validatorServiceConfig.ProposerOptionPayload{
@@ -87,7 +88,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 		if err := file.WriteFile(c.String(ProposerSettingsOutputFlag.Name), b); err != nil {
 			return err
 		}
-		fmt.Printf("successfully created `%s`. settings can be imported into validator client using --%s flag. does not include custom builder settings. \n", c.String(ProposerSettingsOutputFlag.Name), flags.ProposerSettingsFlag.Name)
+		log.Infof("successfully created `%s`. settings can be imported into validator client using --%s flag. does not include custom builder settings.", c.String(ProposerSettingsOutputFlag.Name), flags.ProposerSettingsFlag.Name)
 	}
 
 	return nil
