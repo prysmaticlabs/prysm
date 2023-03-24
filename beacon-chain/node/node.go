@@ -148,6 +148,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return nil, err
 	}
+	configureFastSSZHashingAlgorithm()
 
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
@@ -798,10 +799,10 @@ func (b *BeaconNode) registerRPCService() error {
 		PeerManager:                   p2pService,
 		MetadataProvider:              p2pService,
 		ChainInfoFetcher:              chainService,
-		HeadUpdater:                   chainService,
 		HeadFetcher:                   chainService,
 		CanonicalFetcher:              chainService,
 		ForkFetcher:                   chainService,
+		ForkchoiceFetcher:             chainService,
 		FinalizationFetcher:           chainService,
 		BlockReceiver:                 chainService,
 		AttestationReceiver:           chainService,

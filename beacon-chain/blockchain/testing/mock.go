@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -70,13 +71,8 @@ type ChainService struct {
 	OptimisticRoots             map[[32]byte]bool
 }
 
-// ForkChoicer mocks the same method in the chain service
-func (s *ChainService) ForkChoicer() forkchoice.ForkChoicer {
-	return s.ForkChoiceStore
-}
-
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
-	r, err := s.ForkChoicer().AncestorRoot(ctx, bytesutil.ToBytes32(root), slot)
+	r, err := s.ForkChoiceStore.AncestorRoot(ctx, bytesutil.ToBytes32(root), slot)
 	return r[:], err
 }
 
@@ -473,7 +469,7 @@ func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) {
 	if err != nil {
 		logrus.WithError(err).Error("could not update head")
 	}
-	err = s.ForkChoicer().InsertNode(ctx, st, root)
+	err = s.ForkChoiceStore.InsertNode(ctx, st, root)
 	if err != nil {
 		logrus.WithError(err).Error("could not insert node to forkchoice")
 	}
@@ -519,4 +515,75 @@ func prepareForkchoiceState(
 	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
 	st, err := state_native.InitializeFromProtoBellatrix(base)
 	return st, blockRoot, err
+}
+
+// CachedHeadRoot mocks the same method in the chain service
+func (s *ChainService) CachedHeadRoot() [32]byte {
+	if s.ForkChoiceStore != nil {
+		return s.ForkChoiceStore.CachedHeadRoot()
+	}
+	return [32]byte{}
+}
+
+// GetProposerHead mocks the same method in the chain service
+func (s *ChainService) GetProposerHead() [32]byte {
+	if s.ForkChoiceStore != nil {
+		return s.ForkChoiceStore.GetProposerHead()
+	}
+	return [32]byte{}
+}
+
+// SetForkchoiceGenesisTime mocks the same method in the chain service
+func (s *ChainService) SetForkChoiceGenesisTime(timestamp uint64) {
+	if s.ForkChoiceStore != nil {
+		s.ForkChoiceStore.SetGenesisTime(timestamp)
+	}
+}
+
+// ReceivedBlocksLastEpoch mocks the same method in the chain service
+func (s *ChainService) ReceivedBlocksLastEpoch() (uint64, error) {
+	if s.ForkChoiceStore != nil {
+		return s.ForkChoiceStore.ReceivedBlocksLastEpoch()
+	}
+	return 0, nil
+}
+
+// HighestReceivedBlockSlot mocks the same method in the chain service
+func (s *ChainService) HighestReceivedBlockSlot() primitives.Slot {
+	if s.ForkChoiceStore != nil {
+		return s.ForkChoiceStore.HighestReceivedBlockSlot()
+	}
+	return 0
+}
+
+// InsertNode mocks the same method in the chain service
+func (s *ChainService) InsertNode(ctx context.Context, st state.BeaconState, root [32]byte) error {
+	if s.ForkChoiceStore != nil {
+		return s.ForkChoiceStore.InsertNode(ctx, st, root)
+	}
+	return nil
+}
+
+// ForkChoiceDump mocks the same method in the chain service
+func (s *ChainService) ForkChoiceDump(ctx context.Context) (*ethpbv1.ForkChoiceDump, error) {
+	if s.ForkChoiceStore != nil {
+		return s.ForkChoiceStore.ForkChoiceDump(ctx)
+	}
+	return nil, nil
+}
+
+// NewSlot mocks the same method in the chain service
+func (s *ChainService) NewSlot(ctx context.Context, slot primitives.Slot) error {
+	if s.ForkChoiceStore != nil {
+		return s.ForkChoiceStore.NewSlot(ctx, slot)
+	}
+	return nil
+}
+
+// ProposerBoost mocks the same method in the chain service
+func (s *ChainService) ProposerBoost() [32]byte {
+	if s.ForkChoiceStore != nil {
+		return s.ForkChoiceStore.ProposerBoost()
+	}
+	return [32]byte{}
 }
