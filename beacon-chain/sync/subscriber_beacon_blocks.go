@@ -2,13 +2,14 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -34,9 +35,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		if err := s.blockAndBlobs.addBlock(signed); err != nil {
 			return err
 		}
-		if err := s.importBlockAndBlobs(ctx, root); err != nil {
-			return errors.Wrap(err, "could not import block and blobs")
-		}
+		return s.importBlockAndBlobs(ctx, root)
 	}
 
 	return s.receiveBlock(ctx, signed, root)
@@ -58,6 +57,7 @@ func (s *Service) receiveBlockAndBlobs(ctx context.Context, root [32]byte) error
 	if err != nil {
 		return err
 	}
+
 	if err = s.receiveBlock(ctx, signed, root); err != nil {
 		return err
 	}
@@ -65,6 +65,7 @@ func (s *Service) receiveBlockAndBlobs(ctx context.Context, root [32]byte) error
 	if err != nil {
 		return err
 	}
+
 	scs := make([]*eth.BlobSidecar, len(kzgs))
 	for i := 0; i < len(kzgs); i++ {
 		index := uint64(i)
@@ -74,10 +75,17 @@ func (s *Service) receiveBlockAndBlobs(ctx context.Context, root [32]byte) error
 		}
 	}
 
-	if err := s.cfg.beaconDB.SaveBlobSidecar(ctx, &eth.BlobSidecars{
-		Sidecars: scs,
-	}); err != nil {
-		return err
+	if len(scs) > 0 {
+		log.WithFields(logrus.Fields{
+			"slot":      scs[0].Slot,
+			"root":      fmt.Sprintf("%#x", scs[0].BlockRoot),
+			"blobCount": len(scs),
+		}).Info("Saving blobs")
+		if err := s.cfg.beaconDB.SaveBlobSidecar(ctx, &eth.BlobSidecars{
+			Sidecars: scs,
+		}); err != nil {
+			return err
+		}
 	}
 
 	s.blockAndBlobs.delete(root)

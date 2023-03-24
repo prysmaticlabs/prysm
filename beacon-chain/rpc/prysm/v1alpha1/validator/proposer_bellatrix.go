@@ -107,7 +107,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 		if err := blk.SetBlobKzgCommitments(blobsBundle.KzgCommitments); err != nil {
 			return nil, errors.Wrap(err, "could not set blob kzg commitments")
 		}
-		return blobsBundle.Blobs, nil
+		return blobsBundle.Blobs, blk.SetExecution(executionData)
 	}
 
 	return nil, blk.SetExecution(executionData)

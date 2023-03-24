@@ -164,28 +164,6 @@ func (s *Service) broadcastBlob(ctx context.Context, subnet uint64, blobSidecar 
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
-	// Ensure we have peers with this subnet.
-	s.subnetLocker(subnet).RLock()
-	hasPeer := s.hasPeerWithSubnet(blobSubnetToTopic(subnet, forkDigest))
-	s.subnetLocker(subnet).RUnlock()
-
-	if !hasPeer {
-		if err := func() error {
-			s.subnetLocker(subnet).Lock()
-			defer s.subnetLocker(subnet).Unlock()
-			ok, err := s.FindPeersWithSubnet(ctx, blobSubnetToTopic(subnet, forkDigest), subnet, 1)
-			if err != nil {
-				return err
-			}
-			if ok {
-				return nil
-			}
-			return errors.New("failed to find peers for subnet")
-		}(); err != nil {
-			log.WithError(err).Error("Failed to find peers")
-		}
-	}
-
 	if err := s.broadcastObject(ctx, blobSidecar, blobSubnetToTopic(subnet, forkDigest)); err != nil {
 		log.WithError(err).Error("Failed to broadcast blob sidecar")
 		tracing.AnnotateError(span, err)
