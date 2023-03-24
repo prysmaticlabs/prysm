@@ -18,7 +18,6 @@ go_library(
         "//beacon-chain/state/stategen:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",
-        "//consensus-types/primitives:go_default_library",
         "//network:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -27,10 +26,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "handlers_test.go",
-        "structs_test.go",
-    ],
+    srcs = ["handlers_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",

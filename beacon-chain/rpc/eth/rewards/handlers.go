@@ -2,6 +2,7 @@ package rewards
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -33,6 +34,10 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
+
+	// We want to run several block processing functions that update the proposer's balance.
+	// This will allow us to calculate proposer rewards for each operation (atts, slashings etc).
+	// To do this, we replay the state up to the block's slot, but before processing the block.
 	st, err := s.ReplayerBuilder.ReplayerForSlot(blk.Block().Slot()-1).ReplayToSlot(r.Context(), blk.Block().Slot())
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
@@ -44,7 +49,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proposerIndex := blk.Block().ProposerIndex()
-	oldBalance, err := st.BalanceAtIndex(proposerIndex)
+	initBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get proposer's balance").Error(),
@@ -62,7 +67,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	newBalance, err := st.BalanceAtIndex(proposerIndex)
+	attBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get proposer's balance").Error(),
@@ -71,8 +76,6 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	attsReward := newBalance - oldBalance
-	oldBalance = newBalance
 	st, err = coreblocks.ProcessAttesterSlashings(r.Context(), st, blk.Block().Body().AttesterSlashings(), validators.SlashValidator)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
@@ -82,7 +85,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	newBalance, err = st.BalanceAtIndex(proposerIndex)
+	attSlashingsBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get proposer's balance").Error(),
@@ -91,8 +94,6 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	attSlashingsReward := newBalance - oldBalance
-	oldBalance = newBalance
 	st, err = coreblocks.ProcessProposerSlashings(r.Context(), st, blk.Block().Body().ProposerSlashings(), validators.SlashValidator)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
@@ -102,7 +103,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	newBalance, err = st.BalanceAtIndex(proposerIndex)
+	proposerSlashingsBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not get proposer's balance").Error(),
@@ -111,7 +112,6 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	proposerSlashingsReward := newBalance - oldBalance
 	sa, err := blk.Block().Body().SyncAggregate()
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
@@ -153,12 +153,12 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 
 	response := &BlockRewardsResponse{
 		Data: &BlockRewards{
-			ProposerIndex:     proposerIndex,
-			Total:             attsReward + proposerSlashingsReward + attSlashingsReward + syncCommitteeReward,
-			Attestations:      attsReward,
-			SyncAggregate:     syncCommitteeReward,
-			ProposerSlashings: proposerSlashingsReward,
-			AttesterSlashings: attSlashingsReward,
+			ProposerIndex:     strconv.FormatUint(uint64(proposerIndex), 10),
+			Total:             strconv.FormatUint(proposerSlashingsBalance-initBalance+syncCommitteeReward, 10),
+			Attestations:      strconv.FormatUint(attBalance-initBalance, 10),
+			SyncAggregate:     strconv.FormatUint(syncCommitteeReward, 10),
+			ProposerSlashings: strconv.FormatUint(proposerSlashingsBalance-attSlashingsBalance, 10),
+			AttesterSlashings: strconv.FormatUint(attSlashingsBalance-attBalance, 10),
 		},
 		ExecutionOptimistic: optimistic,
 		Finalized:           s.FinalizationFetcher.IsFinalized(r.Context(), blkRoot),
