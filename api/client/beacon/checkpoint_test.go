@@ -308,8 +308,7 @@ func TestGetWeakSubjectivityEpochFromHead(t *testing.T) {
 	require.NoError(t, err)
 	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
 		res := &http.Response{Request: req}
-		switch req.URL.Path {
-		case renderGetStatePath(IdHead):
+		if req.URL.Path == renderGetStatePath(IdHead) {
 			res.StatusCode = http.StatusOK
 			res.Body = io.NopCloser(bytes.NewBuffer(serialized))
 		}
