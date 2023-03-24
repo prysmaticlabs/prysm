@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -24,7 +23,6 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
-	hasher := hash.CustomSHA256Hasher()
 	var fieldRoots [][]byte
 	switch state.version {
 	case version.Phase0:
@@ -98,7 +96,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.HistoricalRoots.RealPosition()] = historicalRootsRt[:]
 
 	// Eth1Data data structure root.
-	eth1HashTreeRoot, err := stateutil.Eth1Root(hasher, state.eth1Data)
+	eth1HashTreeRoot, err := stateutil.Eth1Root(state.eth1Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data merkleization")
 	}

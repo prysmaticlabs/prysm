@@ -145,6 +145,7 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 		pubsub.WithPeerScore(peerScoringParams()),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
+		pubsub.WithRawTracer(gossipTracer{host: s.host}),
 	}
 	return psOpts
 }
