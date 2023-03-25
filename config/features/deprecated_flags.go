@@ -32,6 +32,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
+		Name:   "enable-only-blinded-beacon-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -45,4 +50,6 @@ var deprecatedFlags = []cli.Flag{
 
 // deprecatedBeaconFlags contains flags that are still used by other components
 // and therefore cannot be added to deprecatedFlags
-var deprecatedBeaconFlags = []cli.Flag{}
+var deprecatedBeaconFlags = []cli.Flag{
+	deprecatedEnableOnlyBlindedBeaconBlocks,
+}
