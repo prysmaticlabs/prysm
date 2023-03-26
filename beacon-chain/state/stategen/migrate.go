@@ -1,11 +1,14 @@
 package stategen
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -33,7 +36,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 		return err
 	}
 	fSlot := fBlock.Block().Slot()
-	if oldFSlot > fSlot {
+	if oldFSlot >= fSlot {
 		return nil
 	}
 
@@ -96,6 +99,23 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				}
 				s.saveHotStateDB.lock.Unlock()
 				continue
+			}
+
+			header := aState.LatestBlockHeader()
+			zeroHash := params.BeaconConfig().ZeroHash
+			if header.StateRoot == nil || bytes.Equal(header.StateRoot, zeroHash[:]) {
+				prevStateRoot, err := aState.HashTreeRoot(ctx)
+				if err != nil {
+					return errors.Wrap(err, "could not get state root")
+				}
+				header.StateRoot = prevStateRoot[:]
+			}
+			r, err := header.HashTreeRoot()
+			if err != nil {
+				return errors.Wrap(err, "could not get header root")
+			}
+			if r != aRoot {
+				return fmt.Errorf("could not migrate, block root %#x does not match the state root %#x", r, aRoot)
 			}
 
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
