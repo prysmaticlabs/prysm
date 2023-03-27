@@ -217,10 +217,7 @@ func (c *blobsTestCase) run(t *testing.T) {
 		m[sc.sidecar.Slot] = append(m[sc.sidecar.Slot], sc.sidecar)
 	}
 	for _, blobSidecars := range m {
-		err := s.cfg.beaconDB.SaveBlobSidecar(context.Background(), &ethpb.BlobSidecars{
-			Sidecars: blobSidecars,
-		})
-		require.NoError(t, err)
+		require.NoError(t, s.cfg.beaconDB.SaveBlobSidecar(context.Background(), blobSidecars))
 	}
 	if c.total != nil {
 		require.Equal(t, *c.total, len(expect))
