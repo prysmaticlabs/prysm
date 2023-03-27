@@ -22,22 +22,23 @@ import (
 //
 //  3. Begin the save algorithm:  If the incoming blob has a slot bigger than the saved slot at the spot
 //     in the rotating keys buffer, we overwrite all elements for that slot.
-func (s *Store) SaveBlobSidecar(ctx context.Context, blobSidecars *ethpb.BlobSidecars) error {
+func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
 
-	if blobSidecars == nil || len(blobSidecars.Sidecars) == 0 {
+	if scs == nil || len(scs) == 0 {
 		return errors.New("nil or empty blob sidecars")
 	}
+	slot := scs[0].Slot
 
 	return s.db.Update(func(tx *bolt.Tx) error {
-		encodedBlobSidecar, err := encode(ctx, blobSidecars)
+		encodedBlobSidecar, err := encode(ctx, &ethpb.BlobSidecars{Sidecars: scs})
 		if err != nil {
 			return err
 		}
 		bkt := tx.Bucket(blobsBucket)
 		c := bkt.Cursor()
-		newKey := blobSidecarKey(blobSidecars.Sidecars[0])
+		newKey := blobSidecarKey(scs[0])
 		rotatingBufferPrefix := newKey[0:8]
 		var replacingKey []byte
 		for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
@@ -45,8 +46,8 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, blobSidecars *ethpb.BlobSid
 				replacingKey = k
 				oldSlotBytes := replacingKey[8:16]
 				oldSlot := bytesutil.BytesToSlotBigEndian(oldSlotBytes)
-				if oldSlot >= blobSidecars.Sidecars[0].Slot {
-					return fmt.Errorf("attempted to save blob with slot %d but already have older blob with slot %d", blobSidecars.Sidecars[0].Slot, oldSlot)
+				if oldSlot >= slot {
+					return fmt.Errorf("attempted to save blob with slot %d but already have older blob with slot %d", slot, oldSlot)
 				}
 				break
 			}
@@ -65,7 +66,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, blobSidecars *ethpb.BlobSid
 }
 
 // BlobSidecarsByRoot retrieves the blobs given a beacon block root.
-func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte) (*ethpb.BlobSidecars, error) {
+func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte) ([]*ethpb.BlobSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobSidecarsByRoot")
 	defer span.End()
 
@@ -86,15 +87,15 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte
 	if enc == nil {
 		return nil, ErrNotFound
 	}
-	sidecars := &ethpb.BlobSidecars{}
-	if err := decode(ctx, enc, sidecars); err != nil {
+	sc := &ethpb.BlobSidecars{}
+	if err := decode(ctx, enc, sc); err != nil {
 		return nil, err
 	}
-	return sidecars, nil
+	return sc.Sidecars, nil
 }
 
 // BlobSidecarsBySlot retrieves sidecars from a slot.
-func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot) (*ethpb.BlobSidecars, error) {
+func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*ethpb.BlobSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobSidecarsBySlot")
 	defer span.End()
 
@@ -116,11 +117,11 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot) (*ethpb
 	if enc == nil {
 		return nil, ErrNotFound
 	}
-	sidecars := &ethpb.BlobSidecars{}
-	if err := decode(ctx, enc, sidecars); err != nil {
+	sc := &ethpb.BlobSidecars{}
+	if err := decode(ctx, enc, sc); err != nil {
 		return nil, err
 	}
-	return sidecars, nil
+	return sc.Sidecars, nil
 }
 
 // DeleteBlobSidecar returns true if the blobs are in the db.

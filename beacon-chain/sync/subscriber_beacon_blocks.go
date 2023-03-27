@@ -81,9 +81,7 @@ func (s *Service) receiveBlockAndBlobs(ctx context.Context, root [32]byte) error
 			"root":      fmt.Sprintf("%#x", scs[0].BlockRoot),
 			"blobCount": len(scs),
 		}).Info("Saving blobs")
-		if err := s.cfg.beaconDB.SaveBlobSidecar(ctx, &eth.BlobSidecars{
-			Sidecars: scs,
-		}); err != nil {
+		if err := s.cfg.beaconDB.SaveBlobSidecar(ctx, scs); err != nil {
 			return err
 		}
 	}
