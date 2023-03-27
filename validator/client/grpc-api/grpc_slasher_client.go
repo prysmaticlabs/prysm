@@ -20,10 +20,6 @@ func (c *grpcSlasherClient) IsSlashableBlock(ctx context.Context, in *ethpb.Sign
 	return c.slasherClient.IsSlashableBlock(ctx, in)
 }
 
-func (c *grpcSlasherClient) HighestAttestations(ctx context.Context, in *ethpb.HighestAttestationRequest) (*ethpb.HighestAttestationResponse, error) {
-	return c.slasherClient.HighestAttestations(ctx, in)
-}
-
 func NewSlasherClient(cc grpc.ClientConnInterface) iface.SlasherClient {
 	return &grpcSlasherClient{ethpb.NewSlasherClient(cc)}
 }

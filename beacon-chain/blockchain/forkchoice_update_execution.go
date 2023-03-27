@@ -89,13 +89,13 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 // shouldOverrideFCU checks whether the incoming block is still subject to being
 // reorged or not by the next proposer.
 func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitives.Slot) bool {
-	headWeight, err := s.ForkChoicer().Weight(newHeadRoot)
+	headWeight, err := s.cfg.ForkChoiceStore.Weight(newHeadRoot)
 	if err != nil {
 		log.WithError(err).WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
 	}
 	currentSlot := s.CurrentSlot()
 	if proposingSlot == currentSlot {
-		proposerHead := s.ForkChoicer().GetProposerHead()
+		proposerHead := s.cfg.ForkChoiceStore.GetProposerHead()
 		if proposerHead != newHeadRoot {
 			return true
 		}
@@ -106,7 +106,7 @@ func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitiv
 			params.BeaconConfig().SecondsPerSlot)
 		lateBlockFailedAttemptSecondThreshold.Inc()
 	} else {
-		if s.ForkChoicer().ShouldOverrideFCU() {
+		if s.cfg.ForkChoiceStore.ShouldOverrideFCU() {
 			return true
 		}
 		secs, err := slots.SecondsSinceSlotStart(currentSlot,
