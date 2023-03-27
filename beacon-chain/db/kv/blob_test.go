@@ -71,6 +71,33 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 	})
+	t.Run("save and retrieve valid subset by root", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+
+		// we'll request indices 0 and 3, so make a slice with those indices for comparison
+		expect := make([]*ethpb.BlobSidecar, 2)
+		expect[0] = scs[0]
+		expect[1] = scs[3]
+
+		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot), 0, 3)
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(expect, got))
+		require.Equal(t, uint64(0), got[0].Index)
+		require.Equal(t, uint64(3), got[1].Index)
+	})
+	t.Run("error for invalid index when retrieving by root", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+
+		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot), uint64(len(scs)))
+		require.ErrorIs(t, err, ErrNotFound)
+		require.Equal(t, 0, len(got))
+	})
 	t.Run("save and retrieve by slot (one)", func(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, 1)
@@ -88,6 +115,34 @@ func TestStore_BlobSidecars(t *testing.T) {
 		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot)
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
+	})
+	t.Run("save and retrieve valid subset by slot", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+
+		// we'll request indices 0 and 3, so make a slice with those indices for comparison
+		expect := make([]*ethpb.BlobSidecar, 2)
+		expect[0] = scs[0]
+		expect[1] = scs[3]
+
+		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot, 0, 3)
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(expect, got))
+
+		require.Equal(t, uint64(0), got[0].Index)
+		require.Equal(t, uint64(3), got[1].Index)
+	})
+	t.Run("error for invalid index when retrieving by slot", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+
+		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot, uint64(len(scs)))
+		require.ErrorIs(t, err, ErrNotFound)
+		require.Equal(t, 0, len(got))
 	})
 	t.Run("delete works", func(t *testing.T) {
 		db := setupDB(t)
@@ -139,17 +194,15 @@ func TestStore_BlobSidecars(t *testing.T) {
 func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
 	blobSidecars := make([]*ethpb.BlobSidecar, n)
 	for i := uint64(0); i < n; i++ {
-		blobSidecars[i] = generateBlobSidecar(t)
+		blobSidecars[i] = generateBlobSidecar(t, i)
 	}
 	return blobSidecars
 }
 
-func generateBlobSidecar(t *testing.T) *ethpb.BlobSidecar {
+func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 	blockRoot := make([]byte, 32)
 	_, err := rand.Read(blockRoot)
 	require.NoError(t, err)
-	index := make([]byte, 8)
-	_, err = rand.Read(index)
 	require.NoError(t, err)
 	slot := make([]byte, 8)
 	_, err = rand.Read(slot)
@@ -175,7 +228,7 @@ func generateBlobSidecar(t *testing.T) *ethpb.BlobSidecar {
 
 	return &ethpb.BlobSidecar{
 		BlockRoot:       blockRoot,
-		Index:           binary.LittleEndian.Uint64(index),
+		Index:           index,
 		Slot:            primitives.Slot(binary.LittleEndian.Uint64(slot)),
 		BlockParentRoot: blockParentRoot,
 		ProposerIndex:   primitives.ValidatorIndex(binary.LittleEndian.Uint64(proposerIndex)),
