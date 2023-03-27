@@ -24,15 +24,13 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 	t.Run("empty by root", func(t *testing.T) {
 		db := setupDB(t)
-		got, err := db.BlobSidecarsByRoot(ctx, [32]byte{})
-		require.NoError(t, err)
-		require.DeepEqual(t, (*ethpb.BlobSidecars)(nil), got)
+		_, err := db.BlobSidecarsByRoot(ctx, [32]byte{})
+		require.ErrorIs(t, ErrNotFound, err)
 	})
 	t.Run("empty by slot", func(t *testing.T) {
 		db := setupDB(t)
-		got, err := db.BlobSidecarsBySlot(ctx, 1)
-		require.NoError(t, err)
-		require.DeepEqual(t, (*ethpb.BlobSidecars)(nil), got)
+		_, err := db.BlobSidecarsBySlot(ctx, 1)
+		require.ErrorIs(t, ErrNotFound, err)
 	})
 	t.Run("save and retrieve by root (one)", func(t *testing.T) {
 		db := setupDB(t)
@@ -84,9 +82,8 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(got.Sidecars))
 		require.DeepEqual(t, scs, got)
 		require.NoError(t, db.DeleteBlobSidecar(ctx, bytesutil.ToBytes32(scs.Sidecars[0].BlockRoot)))
-		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs.Sidecars[0].BlockRoot))
-		require.NoError(t, err)
-		require.DeepEqual(t, (*ethpb.BlobSidecars)(nil), got)
+		_, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs.Sidecars[0].BlockRoot))
+		require.ErrorIs(t, ErrNotFound, err)
 	})
 	t.Run("saving a blob with older slot", func(t *testing.T) {
 		db := setupDB(t)
@@ -115,9 +112,8 @@ func TestStore_BlobSidecars(t *testing.T) {
 		newScs.Sidecars[0].Slot = scs.Sidecars[0].Slot + newRetentionSlot
 		require.NoError(t, db.SaveBlobSidecar(ctx, newScs))
 
-		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(oldBlockRoot))
-		require.NoError(t, err)
-		require.DeepEqual(t, (*ethpb.BlobSidecars)(nil), got)
+		_, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(oldBlockRoot))
+		require.ErrorIs(t, ErrNotFound, err)
 
 		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(newScs.Sidecars[0].BlockRoot))
 		require.NoError(t, err)

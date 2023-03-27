@@ -59,9 +59,7 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 			return err
 		}
 		if idx >= uint64(len(scs.Sidecars)) {
-			log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, index=%d", root, idx)
-			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
-			return err
+			continue
 		}
 		sc := scs.Sidecars[idx]
 
