@@ -53,6 +53,9 @@ var squareRootTable = map[uint64]uint64{
 // SquareRootEffectiveBalance implements Newton's algorithm to compute the square root of
 // the given uint64 starting from the last cached value
 func SquareRootEffectiveBalance(balance uint64) uint64 {
+	if balance == 0 {
+		return 0
+	}
 	cachedSquareRoot.Lock()
 	defer cachedSquareRoot.Unlock()
 	if balance == cachedSquareRoot.balance {
