@@ -24,6 +24,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -597,7 +598,8 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 				Step:  0,
 				Count: 1,
 			},
-			expectedError: nil, // The Step param is ignored in v2 RPC
+			expectedError: p2ptypes.ErrInvalidRequest,
+			errorToLog:    "validation did not fail with bad step",
 		},
 		{
 			name: "Over limit Step",
@@ -605,7 +607,8 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 				Step:  rangeLimit + 1,
 				Count: 1,
 			},
-			expectedError: nil, // The Step param is ignored in v2 RPC
+			expectedError: p2ptypes.ErrInvalidRequest,
+			errorToLog:    "validation did not fail with bad step",
 		},
 		{
 			name: "Correct Step",
@@ -640,7 +643,8 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 				Step:  3,
 				Count: uint64(slotsSinceGenesis / 2),
 			},
-			expectedError: nil, // this is fine with the deprecation of Step
+			expectedError: p2ptypes.ErrInvalidRequest,
+			errorToLog:    "validation did not fail with bad range",
 		},
 		{
 			name: "Valid Request",
@@ -655,11 +659,10 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, _, err := validateRangeRequest(tt.req, r.cfg.chain.CurrentSlot())
 			if tt.expectedError != nil {
-				assert.ErrorContains(t, tt.expectedError.Error(), err, tt.errorToLog)
+				assert.ErrorContains(t, tt.expectedError.Error(), r.validateRangeRequest(tt.req), tt.errorToLog)
 			} else {
-				assert.NoError(t, err, tt.errorToLog)
+				assert.NoError(t, r.validateRangeRequest(tt.req), tt.errorToLog)
 			}
 		})
 	}
@@ -1067,6 +1070,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+	d := db.SetupDB(t)
 
 	req := &ethpb.BeaconBlocksByRangeRequest{
 		StartSlot: 100,
@@ -1077,7 +1081,8 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 	// Populate the database with blocks that would match the request.
 	var prevRoot [32]byte
 	var err error
-	var blks []blocks.ROBlock
+	blks := []interfaces.ReadOnlySignedBeaconBlock{}
+	var roots [][32]byte
 	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += primitives.Slot(1) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
@@ -1086,18 +1091,21 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 		require.NoError(t, err)
 		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
+		blks = append(blks, wsb)
 		copiedRt := prevRoot
-		blks = append(blks, blocks.NewROBlock(wsb, copiedRt))
+		roots = append(roots, copiedRt)
 	}
 
-	chain := &chainMock.ChainService{}
+	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
+	r := &Service{cfg: &config{p2p: p1, beaconDB: d, chain: &chainMock.ChainService{}}, rateLimiter: newRateLimiter(p1)}
+
 	var initialRoot [32]byte
 	ptrRt := &initialRoot
-	seq, nseq, err := filterCanonical(context.Background(), blks, ptrRt, chain.IsCanonical)
+	newBlks, err := r.filterBlocks(context.Background(), blks, roots, ptrRt, req.Step, req.StartSlot)
 	require.NoError(t, err)
-	require.Equal(t, len(blks), len(seq))
-	require.Equal(t, 0, len(nseq))
+	require.Equal(t, len(blks), len(newBlks))
 
 	// pointer should reference a new root.
 	require.NotEqual(t, *ptrRt, [32]byte{})
+
 }
