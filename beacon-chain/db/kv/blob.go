@@ -26,7 +26,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
 
-	if scs == nil || len(scs) == 0 {
+	if len(scs) == 0 {
 		return errors.New("nil or empty blob sidecars")
 	}
 	slot := scs[0].Slot
