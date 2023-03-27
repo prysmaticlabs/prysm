@@ -50,9 +50,9 @@ var squareRootTable = map[uint64]uint64{
 	4194304: 2048,
 }
 
-// SquareRootEffectiveBalance implements Newton's algorithm to compute the square root of
+// CachedSquareRoot implements Newton's algorithm to compute the square root of
 // the given uint64 starting from the last cached value
-func SquareRootEffectiveBalance(balance uint64) uint64 {
+func CachedSquareRoot(balance uint64) uint64 {
 	if balance == 0 {
 		return 0
 	}
