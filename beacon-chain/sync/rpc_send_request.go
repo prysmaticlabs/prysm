@@ -141,6 +141,7 @@ func SendBlobSidecarByRoot(
 	if err != nil {
 		return nil, err
 	}
+	log.WithField("topic", topic).Debug("Sending blob sidecar request")
 	stream, err := p2pApi.Send(ctx, req, topic, pid)
 	if err != nil {
 		return nil, err
