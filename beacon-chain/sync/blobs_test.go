@@ -43,12 +43,14 @@ type blobsTestCase struct {
 	requestFromSidecars requestFromSidecars
 	topic               protocol.ID
 	oldestSlot          oldestSlotCallback
+	streamReader        expectedRequirer
 }
 
 type testHandler func(s *Service) rpcHandler
 type expectedDefiner func(t *testing.T, scs []*ethpb.BlobSidecar, req interface{}) []*expectedBlobChunk
 type requestFromSidecars func([]*ethpb.BlobSidecar) interface{}
 type oldestSlotCallback func(t *testing.T) types.Slot
+type expectedRequirer func(*testing.T, *Service, []*expectedBlobChunk) func(network.Stream)
 
 func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slot, nblobs int) (*ethpb.SignedBeaconBlockDeneb, []*ethpb.BlobSidecar) {
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
@@ -207,6 +209,14 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, fun
 	return s, sidecars, cleanup
 }
 
+func defaultExpectedRequirer(t *testing.T, s *Service, expect []*expectedBlobChunk) func(network.Stream) {
+	return func(stream network.Stream) {
+		for _, ex := range expect {
+			ex.requireExpected(t, s, stream)
+		}
+	}
+}
+
 func (c *blobsTestCase) run(t *testing.T) {
 	s, sidecars, cleanup := c.setup(t)
 	defer cleanup()
@@ -222,11 +232,6 @@ func (c *blobsTestCase) run(t *testing.T) {
 	if c.total != nil {
 		require.Equal(t, *c.total, len(expect))
 	}
-	nh := func(stream network.Stream) {
-		for _, ex := range expect {
-			ex.requireExpected(t, s, stream)
-		}
-	}
 	rht := &rpcHandlerTest{
 		t:       t,
 		topic:   c.topic,
@@ -234,7 +239,7 @@ func (c *blobsTestCase) run(t *testing.T) {
 		err:     c.err,
 		s:       s,
 	}
-	rht.testHandler(nh, c.serverHandle(s), req)
+	rht.testHandler(c.streamReader(t, s, expect), c.serverHandle(s), req)
 }
 
 // we use max uints for future forks, but this causes overflows when computing slots

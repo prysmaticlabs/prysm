@@ -147,16 +147,16 @@ func SendBlobSidecarByRoot(
 	}
 	defer closeStream(stream, log)
 
-	return readChunkEncodedBlobs(stream, ci, p2pApi.Encoding().DecodeWithMaxLength)
+	return readChunkEncodedBlobs(stream, ci, p2pApi.Encoding())
 }
 
 var ErrBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
 
 type readerSSZDecoder func(io.Reader, ssz.Unmarshaler) error
 
-func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, decode readerSSZDecoder) ([]*pb.BlobSidecar, error) {
+func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, encoding encoder.NetworkEncoding) ([]*pb.BlobSidecar, error) {
+	decode := encoding.DecodeWithMaxLength
 	max := int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars)
-	//d := s.cfg.p2p.Encoding().DecodeWithMaxLength
 	sidecars := make([]*pb.BlobSidecar, 0)
 	var (
 		code uint8
@@ -164,7 +164,7 @@ func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, dec
 		err  error
 		br   int
 	)
-	for code, msg, err = ReadStatusCode(stream, &encoder.SszNetworkEncoder{}); err != nil; br++ {
+	for code, msg, err = ReadStatusCode(stream, encoding); err == nil; br++ {
 		if code != 0 {
 			return nil, errors.Wrap(ErrBlobChunkedReadFailure, msg)
 		}
@@ -180,7 +180,7 @@ func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, dec
 
 		sc := &pb.BlobSidecar{}
 		if err := decode(stream, sc); err != nil {
-			return nil, errors.Wrap(err, "failed to decode the protobuf-enoded BlobSidecar message from RPC chunk stream")
+			return nil, errors.Wrap(err, "failed to decode the protobuf-encoded BlobSidecar message from RPC chunk stream")
 		}
 		sidecars = append(sidecars, sc)
 	}
