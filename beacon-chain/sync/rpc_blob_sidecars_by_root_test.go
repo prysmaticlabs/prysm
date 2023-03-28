@@ -3,6 +3,7 @@ package sync
 import (
 	"testing"
 
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -82,7 +83,43 @@ func (c *blobsTestCase) runTestBlobSidecarsByRoot(t *testing.T) {
 	if c.oldestSlot == nil {
 		c.oldestSlot = c.defaultOldestSlotByRoot
 	}
+	if c.streamReader == nil {
+		c.streamReader = defaultExpectedRequirer
+	}
 	c.run(t)
+}
+
+func TestReadChunkEncodedBlobs(t *testing.T) {
+	dmc := defaultMockChain(t)
+	cases := []*blobsTestCase{
+		{
+			name:         "test successful read via requester",
+			nblocks:      1,
+			chain:        dmc,
+			streamReader: readChunkEncodedBlobsAsStreamReader,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			c.runTestBlobSidecarsByRoot(t)
+		})
+	}
+}
+
+func readChunkEncodedBlobsAsStreamReader(t *testing.T, s *Service, expect []*expectedBlobChunk) func(network.Stream) {
+	ff := s.cfg.chain
+	encoding := s.cfg.p2p.Encoding()
+	return func(stream network.Stream) {
+		scs, err := readChunkEncodedBlobs(stream, ff, encoding)
+		require.NoError(t, err)
+		require.Equal(t, len(expect), len(scs))
+		for i, sc := range scs {
+			esc := expect[i].sidecar
+			require.Equal(t, esc.Slot, sc.Slot)
+			require.Equal(t, esc.Index, sc.Index)
+			require.Equal(t, bytesutil.ToBytes32(esc.BlockRoot), bytesutil.ToBytes32(sc.BlockRoot))
+		}
+	}
 }
 
 func TestBlobsByRootValidation(t *testing.T) {

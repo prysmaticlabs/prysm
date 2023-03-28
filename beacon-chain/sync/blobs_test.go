@@ -15,7 +15,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -43,12 +42,14 @@ type blobsTestCase struct {
 	requestFromSidecars requestFromSidecars
 	topic               protocol.ID
 	oldestSlot          oldestSlotCallback
+	streamReader        expectedRequirer
 }
 
 type testHandler func(s *Service) rpcHandler
 type expectedDefiner func(t *testing.T, scs []*ethpb.BlobSidecar, req interface{}) []*expectedBlobChunk
 type requestFromSidecars func([]*ethpb.BlobSidecar) interface{}
 type oldestSlotCallback func(t *testing.T) types.Slot
+type expectedRequirer func(*testing.T, *Service, []*expectedBlobChunk) func(network.Stream)
 
 func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slot, nblobs int) (*ethpb.SignedBeaconBlockDeneb, []*ethpb.BlobSidecar) {
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
@@ -131,9 +132,9 @@ type expectedBlobChunk struct {
 }
 
 func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream network.Stream) {
-	d := s.cfg.p2p.Encoding().DecodeWithMaxLength
+	encoding := s.cfg.p2p.Encoding()
 
-	code, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
+	code, _, err := ReadStatusCode(stream, encoding)
 	require.NoError(t, err)
 	require.Equal(t, r.code, code, "unexpected response code")
 	//require.Equal(t, r.message, msg, "unexpected error message")
@@ -150,7 +151,7 @@ func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream net
 	require.Equal(t, ctxBytes, bytesutil.ToBytes4(c))
 
 	sc := &ethpb.BlobSidecar{}
-	require.NoError(t, d(stream, sc))
+	require.NoError(t, encoding.DecodeWithMaxLength(stream, sc))
 	require.Equal(t, bytesutil.ToBytes32(sc.BlockRoot), bytesutil.ToBytes32(r.sidecar.BlockRoot))
 	require.Equal(t, sc.Index, r.sidecar.Index)
 }
@@ -207,6 +208,14 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, fun
 	return s, sidecars, cleanup
 }
 
+func defaultExpectedRequirer(t *testing.T, s *Service, expect []*expectedBlobChunk) func(network.Stream) {
+	return func(stream network.Stream) {
+		for _, ex := range expect {
+			ex.requireExpected(t, s, stream)
+		}
+	}
+}
+
 func (c *blobsTestCase) run(t *testing.T) {
 	s, sidecars, cleanup := c.setup(t)
 	defer cleanup()
@@ -222,11 +231,6 @@ func (c *blobsTestCase) run(t *testing.T) {
 	if c.total != nil {
 		require.Equal(t, *c.total, len(expect))
 	}
-	nh := func(stream network.Stream) {
-		for _, ex := range expect {
-			ex.requireExpected(t, s, stream)
-		}
-	}
 	rht := &rpcHandlerTest{
 		t:       t,
 		topic:   c.topic,
@@ -234,7 +238,7 @@ func (c *blobsTestCase) run(t *testing.T) {
 		err:     c.err,
 		s:       s,
 	}
-	rht.testHandler(nh, c.serverHandle(s), req)
+	rht.testHandler(c.streamReader(t, s, expect), c.serverHandle(s), req)
 }
 
 // we use max uints for future forks, but this causes overflows when computing slots
