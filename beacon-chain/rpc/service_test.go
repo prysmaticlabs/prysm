@@ -77,6 +77,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		HeadFetcher:           chainService,
 		ExecutionChainService: &mockExecution.Chain{},
 		StateNotifier:         chainService.StateNotifier(),
+		Router:                mux.NewRouter(),
 	})
 
 	rpcService.Start()
