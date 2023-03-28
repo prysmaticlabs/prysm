@@ -123,25 +123,13 @@ func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch,
 	ctx, span := trace.StartSpan(ctx, "sync.WriteBlockRangeToStream")
 	defer span.End()
 
-	blks := batch.Sequence()
-	// If the blocks are blinded, we reconstruct the full block via the execution client.
-	blindedExists := false
-	blindedIndex := 0
-	for i, b := range blks {
-		// Since the blocks are sorted in ascending order, we assume that the following
-		// blocks from the first blinded block are also ascending.
-		if b.IsBlinded() {
-			blindedExists = true
-			blindedIndex = i
-			break
-		}
-	}
-
-	for _, b := range blks {
+	blinded := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
+	for _, b := range batch.Sequence() {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
 		if b.IsBlinded() {
+			blinded = append(blinded, b.ReadOnlySignedBeaconBlock)
 			continue
 		}
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
@@ -149,22 +137,16 @@ func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch,
 			return chunkErr
 		}
 	}
-
-	var err error
-	var reconstructedBlock []interfaces.SignedBeaconBlock
-	if blindedExists {
-		blinded := blks[blindedIndex:]
-		unwrapped := make([]interfaces.ReadOnlySignedBeaconBlock, len(blinded))
-		for i := range blinded {
-			unwrapped[i] = blks[i].ReadOnlySignedBeaconBlock
-		}
-		reconstructedBlock, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, unwrapped)
-		if err != nil {
-			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
-			return err
-		}
+	if len(blinded) == 0 {
+		return nil
 	}
-	for _, b := range reconstructedBlock {
+
+	reconstructed, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blinded)
+	if err != nil {
+		log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
+		return err
+	}
+	for _, b := range reconstructed {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
