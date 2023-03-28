@@ -117,12 +117,14 @@ func (s *Service) receiveBlock(ctx context.Context, signed interfaces.ReadOnlySi
 
 func (s *Service) requestMissingBlobsRoutine(ctx context.Context) {
 
+	time.Sleep(5 * time.Second)
+
+	ticker := slots.NewSlotTickerWithOffset(s.cfg.chain.GenesisTime(), time.Second, params.BeaconConfig().SecondsPerSlot)
+
 	go func() {
-		ticker := slots.NewSlotTickerWithOffset(s.cfg.chain.GenesisTime(), time.Second, params.BeaconConfig().SecondsPerSlot)
 		for {
 			select {
 			case <-ticker.C():
-				log.Info("Tick ", ticker.C())
 				cp := s.cfg.chain.FinalizedCheckpt()
 				_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
 				if len(bestPeers) == 0 {
