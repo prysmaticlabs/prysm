@@ -32,7 +32,6 @@ func (b *SSZBytes) HashTreeRootWith(hh *ssz.Hasher) error {
 
 // BeaconBlockByRootsReq specifies the block by roots request type.
 type BeaconBlockByRootsReq [][rootLength]byte
-type BlobSidecarsByRootReq []*eth.BlobIdentifier
 
 // MarshalSSZTo marshals the block by roots request with the provided byte slice.
 func (r *BeaconBlockByRootsReq) MarshalSSZTo(dst []byte) ([]byte, error) {
@@ -121,4 +120,67 @@ func (m *ErrorMessage) UnmarshalSSZ(buf []byte) error {
 	copy(errMsg, buf)
 	*m = errMsg
 	return nil
+}
+
+// BlobSidecarsByRootReq is used to specify a list of blob targets (root+index) in a BlobSidecarsByRoot RPC request.
+type BlobSidecarsByRootReq []*eth.BlobIdentifier
+
+// BlobIdentifier is a fixed size value, so we can compute its fixed size at start time (see init below)
+var blobIdSize int
+
+// SizeSSZ returns the size of the serialized representation.
+func (b *BlobSidecarsByRootReq) SizeSSZ() int {
+	return len(*b) * blobIdSize
+}
+
+// MarshalSSZTo marshals the block by roots request with the provided byte slice.
+func (b *BlobSidecarsByRootReq) MarshalSSZTo(dst []byte) ([]byte, error) {
+	// A List without an enclosing container is marshaled exactly like a vector, no length offset required.
+	marshalledObj, err := b.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, marshalledObj...), nil
+}
+
+// MarshalSSZ Marshals the block by roots request type into the serialized object.
+func (b *BlobSidecarsByRootReq) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, len(*b)*blobIdSize)
+	for i, id := range *b {
+		by, err := id.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		copy(buf[i*blobIdSize:(i+1)*blobIdSize], by)
+	}
+	return buf, nil
+}
+
+// UnmarshalSSZ unmarshals the provided bytes buffer into the
+// block by roots request object.
+func (b *BlobSidecarsByRootReq) UnmarshalSSZ(buf []byte) error {
+	bufLen := len(buf)
+	maxLength := int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars) * blobIdSize
+	if bufLen > maxLength {
+		return errors.Errorf("expected buffer with length of upto %d but received length %d", maxLength, bufLen)
+	}
+	if bufLen%blobIdSize != 0 {
+		return errors.Wrapf(ssz.ErrIncorrectByteSize, "size=%d", bufLen)
+	}
+	count := bufLen / blobIdSize
+	*b = make([]*eth.BlobIdentifier, count)
+	for i := 0; i < count; i++ {
+		id := &eth.BlobIdentifier{}
+		err := id.UnmarshalSSZ(buf[i*blobIdSize : (i+1)*blobIdSize])
+		if err != nil {
+			return err
+		}
+		(*b)[i] = id
+	}
+	return nil
+}
+
+func init() {
+	sizer := &eth.BlobIdentifier{}
+	blobIdSize = sizer.SizeSSZ()
 }
