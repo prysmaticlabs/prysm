@@ -113,6 +113,7 @@ go_test(
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/testing:go_default_library",
         "//testing/assert:go_default_library",
+        "//testing/assertions:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

@@ -212,9 +212,13 @@ func (c *blobsTestCase) run(t *testing.T) {
 	defer cleanup()
 	req := c.requestFromSidecars(sidecars)
 	expect := c.defineExpected(t, sidecars, req)
-	//for _, sc := range expect {
-	//	require.NoError(t, s.blobs.WriteBlobSidecar(sc.sidecar))
-	//}
+	m := map[types.Slot][]*ethpb.BlobSidecar{}
+	for _, sc := range expect {
+		m[sc.sidecar.Slot] = append(m[sc.sidecar.Slot], sc.sidecar)
+	}
+	for _, blobSidecars := range m {
+		require.NoError(t, s.cfg.beaconDB.SaveBlobSidecar(context.Background(), blobSidecars))
+	}
 	if c.total != nil {
 		require.Equal(t, *c.total, len(expect))
 	}

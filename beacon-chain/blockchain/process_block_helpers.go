@@ -85,7 +85,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b interfaces.ReadOnlyBeaconBlock) error {
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
 	// Fork choice only matters from last finalized slot.
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if len(pendingNodes) == 1 {
 		return nil
 	}
-	if root != s.ensureRootNotZeros(finalized.Root) && !s.ForkChoicer().HasNode(root) {
+	if root != s.ensureRootNotZeros(finalized.Root) && !s.cfg.ForkChoiceStore.HasNode(root) {
 		return ErrNotDescendantOfFinalized
 	}
 	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)

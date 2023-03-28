@@ -34,7 +34,7 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, stream 
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return writes, errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
 		}
-		for _, sc := range scs.Sidecars {
+		for _, sc := range scs {
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 			if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 				log.WithError(chunkErr).Debug("Could not send a chunked response")

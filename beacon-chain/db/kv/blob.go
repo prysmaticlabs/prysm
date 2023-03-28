@@ -22,22 +22,23 @@ import (
 //
 //  3. Begin the save algorithm:  If the incoming blob has a slot bigger than the saved slot at the spot
 //     in the rotating keys buffer, we overwrite all elements for that slot.
-func (s *Store) SaveBlobSidecar(ctx context.Context, blobSidecars *ethpb.BlobSidecars) error {
+func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
 
-	if blobSidecars == nil || len(blobSidecars.Sidecars) == 0 {
+	if len(scs) == 0 {
 		return errors.New("nil or empty blob sidecars")
 	}
+	slot := scs[0].Slot
 
 	return s.db.Update(func(tx *bolt.Tx) error {
-		encodedBlobSidecar, err := encode(ctx, blobSidecars)
+		encodedBlobSidecar, err := encode(ctx, &ethpb.BlobSidecars{Sidecars: scs})
 		if err != nil {
 			return err
 		}
 		bkt := tx.Bucket(blobsBucket)
 		c := bkt.Cursor()
-		newKey := blobSidecarKey(blobSidecars.Sidecars[0])
+		newKey := blobSidecarKey(scs[0])
 		rotatingBufferPrefix := newKey[0:8]
 		var replacingKey []byte
 		for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
@@ -45,8 +46,8 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, blobSidecars *ethpb.BlobSid
 				replacingKey = k
 				oldSlotBytes := replacingKey[8:16]
 				oldSlot := bytesutil.BytesToSlotBigEndian(oldSlotBytes)
-				if oldSlot >= blobSidecars.Sidecars[0].Slot {
-					return fmt.Errorf("attempted to save blob with slot %d but already have older blob with slot %d", blobSidecars.Sidecars[0].Slot, oldSlot)
+				if oldSlot >= slot {
+					return fmt.Errorf("attempted to save blob with slot %d but already have older blob with slot %d", slot, oldSlot)
 				}
 				break
 			}
@@ -64,8 +65,11 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, blobSidecars *ethpb.BlobSid
 	})
 }
 
-// BlobSidecarsByRoot retrieves the blobs given a beacon block root.
-func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte) (*ethpb.BlobSidecars, error) {
+// BlobSidecarsByRoot retrieves the blobs for the given beacon block root.
+// If the `indices` argument is omitted, all blobs for the root will be returned.
+// Otherwise, the result will be filtered to only include the specified indices.
+// An error will result if an invalid index is specified.
+func (s *Store) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobSidecarsByRoot")
 	defer span.End()
 
@@ -74,7 +78,7 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if bytes.HasSuffix(k, beaconBlockRoot[:]) {
+			if bytes.HasSuffix(k, root[:]) {
 				enc = v
 				break
 			}
@@ -86,15 +90,37 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte
 	if enc == nil {
 		return nil, ErrNotFound
 	}
-	sidecars := &ethpb.BlobSidecars{}
-	if err := decode(ctx, enc, sidecars); err != nil {
+	sc := &ethpb.BlobSidecars{}
+	if err := decode(ctx, enc, sc); err != nil {
 		return nil, err
+	}
+
+	return filterForIndices(sc, indices...)
+}
+
+func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
+	if len(indices) == 0 {
+		return sc.Sidecars, nil
+	}
+	// NB: This loop assumes that the BlobSidecars value stores the complete set of blobs for a block
+	// in ascending order from eg 0..3, without gaps. This allows us to assume the indices argument
+	// maps 1:1 with indices in the BlobSidecars storage object.
+	maxIdx := uint64(len(sc.Sidecars)) - 1
+	sidecars := make([]*ethpb.BlobSidecar, len(indices))
+	for i, idx := range indices {
+		if idx > maxIdx {
+			return nil, errors.Wrapf(ErrNotFound, "BlobSidecars missing index: index %d", idx)
+		}
+		sidecars[i] = sc.Sidecars[idx]
 	}
 	return sidecars, nil
 }
 
-// BlobSidecarsBySlot retrieves sidecars from a slot.
-func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot) (*ethpb.BlobSidecars, error) {
+// BlobSidecarsBySlot retrieves BlobSidecars for the given slot.
+// If the `indices` argument is omitted, all blobs for the root will be returned.
+// Otherwise, the result will be filtered to only include the specified indices.
+// An error will result if an invalid index is specified.
+func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobSidecarsBySlot")
 	defer span.End()
 
@@ -116,11 +142,12 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot) (*ethpb
 	if enc == nil {
 		return nil, ErrNotFound
 	}
-	sidecars := &ethpb.BlobSidecars{}
-	if err := decode(ctx, enc, sidecars); err != nil {
+	sc := &ethpb.BlobSidecars{}
+	if err := decode(ctx, enc, sc); err != nil {
 		return nil, err
 	}
-	return sidecars, nil
+
+	return filterForIndices(sc, indices...)
 }
 
 // DeleteBlobSidecar returns true if the blobs are in the db.

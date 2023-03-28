@@ -4,11 +4,81 @@ import (
 	"encoding/hex"
 	"testing"
 
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
+
+func generateBlobIdentifiers(n int) []*eth.BlobIdentifier {
+	r := make([]*eth.BlobIdentifier, n)
+	for i := 0; i < n; i++ {
+		r[i] = &eth.BlobIdentifier{
+			BlockRoot: bytesutil.PadTo([]byte{byte(i)}, 32),
+			Index:     0,
+		}
+	}
+	return r
+}
+
+func TestBlobSidecarsByRootReq_MarshalSSZ(t *testing.T) {
+	cases := []struct {
+		name         string
+		ids          []*eth.BlobIdentifier
+		marshalErr   error
+		unmarshalErr error
+		unmarshalMod func([]byte) []byte
+	}{
+		{
+			name: "empty list",
+		},
+		{
+			name: "single item list",
+			ids:  generateBlobIdentifiers(1),
+		},
+		{
+			name: "10 item list",
+			ids:  generateBlobIdentifiers(10),
+		},
+		{
+			name: "wonky unmarshal size",
+			ids:  generateBlobIdentifiers(10),
+			unmarshalMod: func(in []byte) []byte {
+				in = append(in, byte(0))
+				return in
+			},
+			unmarshalErr: ssz.ErrIncorrectByteSize,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := BlobSidecarsByRootReq(c.ids)
+			by, err := r.MarshalSSZ()
+			if c.marshalErr != nil {
+				require.ErrorIs(t, err, c.marshalErr)
+				return
+			}
+			require.NoError(t, err)
+			if c.unmarshalMod != nil {
+				by = c.unmarshalMod(by)
+			}
+			got := &BlobSidecarsByRootReq{}
+			err = got.UnmarshalSSZ(by)
+			if c.unmarshalErr != nil {
+				require.ErrorIs(t, err, c.unmarshalErr)
+				return
+			}
+			require.NoError(t, err)
+			for i, gid := range *got {
+				require.DeepEqual(t, c.ids[i], gid)
+			}
+		})
+	}
+}
 
 func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 	fixedRoots := make([][32]byte, 0)

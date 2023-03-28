@@ -58,12 +58,10 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
-		if idx >= uint64(len(scs.Sidecars)) {
-			log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, index=%d", root, idx)
-			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
-			return err
+		if idx >= uint64(len(scs)) {
+			continue
 		}
-		sc := scs.Sidecars[idx]
+		sc := scs[idx]
 
 		// If any root in the request content references a block earlier than minimum_request_epoch,
 		// peers MAY respond with error code 3: ResourceUnavailable or not include the blob in the response.
