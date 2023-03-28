@@ -41,7 +41,6 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", p2p.BlobSidecarsByRootName[1:]) // slice the leading slash off the name var
-	defer closeStream(stream, log)
 	ref, ok := msg.(*types.BlobSidecarsByRootReq)
 	if !ok {
 		return errors.New("message is not type BlobSidecarsByRootReq")
@@ -81,5 +80,6 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 		}
 		s.rateLimiter.add(stream, 1)
 	}
+	closeStream(stream, log)
 	return nil
 }
