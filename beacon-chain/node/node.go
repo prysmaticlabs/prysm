@@ -255,7 +255,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	log.Debugln("Registering RPC Service")
 	router := mux.NewRouter()
-	if err := beacon.registerRPCService(); err != nil {
+	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
 
@@ -736,7 +736,7 @@ func (b *BeaconNode) registerSlasherService() error {
 	return b.services.RegisterService(slasherSrv)
 }
 
-func (b *BeaconNode) registerRPCService() error {
+func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -832,6 +832,7 @@ func (b *BeaconNode) registerRPCService() error {
 		MaxMsgSize:                    maxMsgSize,
 		ProposerIdsCache:              b.proposerIdsCache,
 		BlockBuilder:                  b.fetchBuilderService(),
+		Router:                        router,
 	})
 
 	return b.services.RegisterService(rpcService)

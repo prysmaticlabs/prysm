@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/gorilla/mux"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -32,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/beacon"
@@ -117,6 +119,7 @@ type Config struct {
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
+	Router                        *mux.Router
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -189,6 +192,17 @@ func (s *Service) Start() {
 	}
 	withCache := stategen.WithCache(stateCache)
 	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
+
+	rewardsServer := &rewards.Server{
+		Blocker: &lookup.BeaconDbBlocker{
+			BeaconDB:         s.cfg.BeaconDB,
+			ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		},
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		ReplayerBuilder:       ch,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
