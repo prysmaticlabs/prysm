@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -58,20 +58,20 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	ctx, span := trace.StartSpan(ctx, "beacon.GetStateRoot")
 	defer span.End()
 
-	stateRoot, err := bs.StateFetcher.StateRoot(ctx, req.StateId)
+	stateRoot, err := bs.Stater.StateRoot(ctx, req.StateId)
 	if err != nil {
-		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
+		if rootNotFoundErr, ok := err.(*lookup.StateRootNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+		} else if parseErr, ok := err.(*lookup.StateIdParseError); ok {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
-	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.StateFetcher, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -95,12 +95,12 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	ctx, span := trace.StartSpan(ctx, "beacon.GetStateFork")
 	defer span.End()
 
-	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 	fork := st.Fork()
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.StateFetcher, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -127,11 +127,11 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	ctx, span := trace.StartSpan(ctx, "beacon.GetFinalityCheckpoints")
 	defer span.End()
 
-	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.StateFetcher, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -160,7 +160,7 @@ func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2
 	ctx, span := trace.StartSpan(ctx, "beacon.GetRandao")
 	defer span.End()
 
-	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -186,7 +186,7 @@ func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2
 		return nil, status.Errorf(codes.Internal, "Could not get randao mix at index %d", idx)
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.StateFetcher, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -215,14 +215,14 @@ func (bs *Server) stateFromRequest(ctx context.Context, req *stateRequest) (stat
 				err,
 			)
 		}
-		st, err := bs.StateFetcher.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
+		st, err := bs.Stater.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
 		if err != nil {
 			return nil, helpers.PrepareStateFetchGRPCError(err)
 		}
 		return st, nil
 	}
 	var err error
-	st, err := bs.StateFetcher.State(ctx, req.stateId)
+	st, err := bs.Stater.State(ctx, req.stateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
