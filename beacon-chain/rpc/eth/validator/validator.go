@@ -70,7 +70,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
 	}
 
-	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
+	s, err := vs.Stater.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -159,7 +159,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
 	}
-	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
+	s, err := vs.Stater.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
@@ -243,7 +243,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
 	}
-	st, err := vs.StateFetcher.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
+	st, err := vs.Stater.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee state: %v", err)
 	}
@@ -282,7 +282,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		ctx,
 		[]byte(strconv.FormatUint(uint64(slot), 10)),
 		vs.OptimisticModeFetcher,
-		vs.StateFetcher,
+		vs.Stater,
 		vs.ChainInfoFetcher,
 		vs.BeaconDB,
 	)
@@ -1081,7 +1081,7 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get requested epoch's end slot")
 		}
-		st, err = vs.StateFetcher.StateBySlot(ctx, epochEnd)
+		st, err = vs.Stater.StateBySlot(ctx, epochEnd)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get slot for requested epoch")
 		}

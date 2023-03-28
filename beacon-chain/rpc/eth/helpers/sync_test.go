@@ -97,7 +97,7 @@ func TestIsOptimistic(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 			cs := &chainmock.ChainService{Optimistic: true, FinalizedCheckPoint: &eth.Checkpoint{}, OptimisticRoots: map[[32]byte]bool{[32]byte{}: true}}
-			mf := &testutil.MockFetcher{BeaconState: st}
+			mf := &testutil.MockStater{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte("finalized"), cs, mf, cs, nil)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
@@ -106,7 +106,7 @@ func TestIsOptimistic(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 			cs := &chainmock.ChainService{Optimistic: true, FinalizedCheckPoint: &eth.Checkpoint{}}
-			mf := &testutil.MockFetcher{BeaconState: st}
+			mf := &testutil.MockStater{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte("finalized"), cs, mf, cs, nil)
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
@@ -117,7 +117,7 @@ func TestIsOptimistic(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 			cs := &chainmock.ChainService{Optimistic: true, CurrentJustifiedCheckPoint: &eth.Checkpoint{}, OptimisticRoots: map[[32]byte]bool{[32]byte{}: true}}
-			mf := &testutil.MockFetcher{BeaconState: st}
+			mf := &testutil.MockStater{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte("justified"), cs, mf, cs, nil)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
@@ -126,7 +126,7 @@ func TestIsOptimistic(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 			cs := &chainmock.ChainService{Optimistic: true, CurrentJustifiedCheckPoint: &eth.Checkpoint{}}
-			mf := &testutil.MockFetcher{BeaconState: st}
+			mf := &testutil.MockStater{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte("justified"), cs, mf, cs, nil)
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
@@ -137,7 +137,7 @@ func TestIsOptimistic(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 			cs := &chainmock.ChainService{Optimistic: true}
-			mf := &testutil.MockFetcher{BeaconState: st}
+			mf := &testutil.MockStater{BeaconState: st}
 			o, err := IsOptimistic(ctx, bytesutil.PadTo([]byte("root"), 32), cs, mf, cs, nil)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
@@ -146,7 +146,7 @@ func TestIsOptimistic(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 			cs := &chainmock.ChainService{Optimistic: false}
-			mf := &testutil.MockFetcher{BeaconState: st}
+			mf := &testutil.MockStater{BeaconState: st}
 			o, err := IsOptimistic(ctx, bytesutil.PadTo([]byte("root"), 32), cs, mf, cs, nil)
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
@@ -165,7 +165,7 @@ func TestIsOptimistic(t *testing.T) {
 			bRoot, err := b.Block().HashTreeRoot()
 			require.NoError(t, err)
 			cs := &chainmock.ChainService{State: chainSt, OptimisticRoots: map[[32]byte]bool{bRoot: true}}
-			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
+			mf := &testutil.MockStater{BeaconState: fetcherSt}
 			o, err := IsOptimistic(ctx, bytesutil.PadTo([]byte("root"), 32), cs, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
@@ -182,7 +182,7 @@ func TestIsOptimistic(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, chainSt.SetSlot(fieldparams.SlotsPerEpoch))
 			cs := &chainmock.ChainService{State: chainSt}
-			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
+			mf := &testutil.MockStater{BeaconState: fetcherSt}
 			o, err := IsOptimistic(ctx, bytesutil.PadTo([]byte("root"), 32), cs, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
@@ -198,7 +198,7 @@ func TestIsOptimistic(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, chainSt.SetSlot(fieldparams.SlotsPerEpoch))
 			cs := &chainmock.ChainService{Optimistic: false, State: chainSt, CanonicalRoots: map[[32]byte]bool{}}
-			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
+			mf := &testutil.MockStater{BeaconState: fetcherSt}
 			o, err := IsOptimistic(ctx, bytesutil.PadTo([]byte("root"), 32), nil, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
@@ -248,7 +248,7 @@ func TestIsOptimistic(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, chainSt.SetSlot(fieldparams.SlotsPerEpoch*2))
 			cs := &chainmock.ChainService{Optimistic: true, State: chainSt, FinalizedCheckPoint: &eth.Checkpoint{Epoch: 0}}
-			mf := &testutil.MockFetcher{BeaconState: fetcherSt}
+			mf := &testutil.MockStater{BeaconState: fetcherSt}
 			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch*2)), cs, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
@@ -268,7 +268,7 @@ func TestIsOptimistic(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, fcs.InsertNode(ctx, st, root))
 			cs := &chainmock.ChainService{Root: headRoot[:], Optimistic: true, ForkChoiceStore: fcs, OptimisticRoots: map[[32]byte]bool{r: true}, FinalizedCheckPoint: finalizedCheckpt}
-			mf := &testutil.MockFetcher{BeaconState: st}
+			mf := &testutil.MockStater{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch*2)), cs, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
@@ -288,7 +288,7 @@ func TestIsOptimistic(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, fcs.InsertNode(ctx, st, root))
 			cs := &chainmock.ChainService{Root: headRoot[:], Optimistic: true, ForkChoiceStore: fcs, OptimisticRoots: map[[32]byte]bool{r: false}, FinalizedCheckPoint: finalizedCheckpt}
-			mf := &testutil.MockFetcher{BeaconState: st}
+			mf := &testutil.MockStater{BeaconState: st}
 			o, err := IsOptimistic(ctx, []byte(strconv.Itoa(fieldparams.SlotsPerEpoch*2)), cs, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, false, o)
