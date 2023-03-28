@@ -96,6 +96,8 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
+	JustifiedBlockHash() [32]byte
+	FinalizedBlockHash() [32]byte
 	InForkchoice([32]byte) bool
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
@@ -128,6 +130,18 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	cp := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
+}
+
+func (s *Service) JustifiedBlockHash() [32]byte {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.JustifiedPayloadBlockHash()
+}
+
+func (s *Service) FinalizedBlockHash() [32]byte {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.FinalizedPayloadBlockHash()
 }
 
 // HeadSlot returns the slot of the head of the chain.
