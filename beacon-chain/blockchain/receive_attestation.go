@@ -133,7 +133,8 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not compute head from new attestations")
-		return
+		// Fallback to our current head root in the event of a failure.
+		newHeadRoot = s.headRoot()
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
