@@ -132,18 +132,6 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
-func (s *Service) UnrealizedJustifiedPayloadBlockHash() [32]byte {
-	s.cfg.ForkChoiceStore.RLock()
-	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.UnrealizedJustifiedPayloadBlockHash()
-}
-
-func (s *Service) FinalizedBlockHash() [32]byte {
-	s.cfg.ForkChoiceStore.RLock()
-	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.FinalizedPayloadBlockHash()
-}
-
 // HeadSlot returns the slot of the head of the chain.
 func (s *Service) HeadSlot() primitives.Slot {
 	s.headLock.RLock()

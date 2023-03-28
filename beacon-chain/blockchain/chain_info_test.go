@@ -119,6 +119,50 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	require.Equal(t, cp.Root, bytesutil.ToBytes32(jp.Root))
 }
 
+func TestFinalizedBlockHash(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := doublylinkedtree.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithForkChoiceStore(fcs),
+		WithStateGen(stategen.New(beaconDB, fcs)),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	jroot := [32]byte{'j'}
+	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: jroot}
+	bState, _ := util.DeterministicGenesisState(t, 10)
+	require.NoError(t, beaconDB.SaveState(ctx, bState, jroot))
+
+	require.NoError(t, fcs.UpdateFinalizedCheckpoint(cp))
+	jp := service.FinalizedBlockHash()
+	require.Equal(t, params.BeaconConfig().ZeroHash, jp)
+}
+
+func TestUnrealizedJustifiedBlockHash(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := doublylinkedtree.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithForkChoiceStore(fcs),
+		WithStateGen(stategen.New(beaconDB, fcs)),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	jroot := [32]byte{'j'}
+	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: jroot}
+	bState, _ := util.DeterministicGenesisState(t, 10)
+	require.NoError(t, beaconDB.SaveState(ctx, bState, jroot))
+
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, cp))
+	jp := service.UnrealizedJustifiedPayloadBlockHash()
+	require.Equal(t, params.BeaconConfig().ZeroHash, jp)
+}
+
 func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
 	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
