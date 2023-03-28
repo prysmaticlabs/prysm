@@ -159,8 +159,8 @@ func TestUnrealizedJustifiedBlockHash(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, bState, jroot))
 
 	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, cp))
-	jp := service.UnrealizedJustifiedPayloadBlockHash()
-	require.Equal(t, params.BeaconConfig().ZeroHash, jp)
+	_, err = service.UnrealizedJustifiedPayloadBlockHash()
+	require.ErrorIs(t, err, doublylinkedtree.ErrNilNode)
 }
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {

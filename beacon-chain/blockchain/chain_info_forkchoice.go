@@ -80,7 +80,7 @@ func (s *Service) ChainHeads() ([][32]byte, []primitives.Slot) {
 }
 
 // UnrealizedJustifiedPayloadBlockHash returns unrealized justified payload block hash from forkchoice.
-func (s *Service) UnrealizedJustifiedPayloadBlockHash() [32]byte {
+func (s *Service) UnrealizedJustifiedPayloadBlockHash() ([32]byte, error) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.UnrealizedJustifiedPayloadBlockHash()
