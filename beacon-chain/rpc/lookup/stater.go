@@ -1,4 +1,4 @@
-package statefetcher
+package lookup
 
 import (
 	"bytes"
@@ -71,15 +71,15 @@ func (e *StateRootNotFoundError) Error() string {
 	return e.message
 }
 
-// Fetcher is responsible for retrieving info related with the beacon chain.
-type Fetcher interface {
-	State(ctx context.Context, stateId []byte) (state.BeaconState, error)
-	StateRoot(ctx context.Context, stateId []byte) ([]byte, error)
+// Stater is responsible for retrieving states.
+type Stater interface {
+	State(ctx context.Context, id []byte) (state.BeaconState, error)
+	StateRoot(ctx context.Context, id []byte) ([]byte, error)
 	StateBySlot(ctx context.Context, slot primitives.Slot) (state.BeaconState, error)
 }
 
-// StateProvider is a real implementation of Fetcher.
-type StateProvider struct {
+// BeaconDbStater is an implementation of Stater. It retrieves states from the beacon chain database.
+type BeaconDbStater struct {
 	BeaconDB           db.ReadOnlyDatabase
 	ChainInfoFetcher   blockchain.ChainInfoFetcher
 	GenesisTimeFetcher blockchain.TimeFetcher
@@ -94,7 +94,7 @@ type StateProvider struct {
 //   - "justified"
 //   - <slot>
 //   - <hex encoded state root with '0x' prefix>
-func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.BeaconState, error) {
+func (p *BeaconDbStater) State(ctx context.Context, stateId []byte) (state.BeaconState, error) {
 	var (
 		s   state.BeaconState
 		err error
@@ -164,7 +164,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 //   - "justified"
 //   - <slot>
 //   - <hex encoded state root with '0x' prefix>
-func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []byte, err error) {
+func (p *BeaconDbStater) StateRoot(ctx context.Context, stateId []byte) (root []byte, err error) {
 	stateIdString := strings.ToLower(string(stateId))
 	switch stateIdString {
 	case "head":
@@ -192,7 +192,7 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 	return root, err
 }
 
-func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (state.BeaconState, error) {
+func (p *BeaconDbStater) stateByRoot(ctx context.Context, stateRoot []byte) (state.BeaconState, error) {
 	headState, err := p.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
@@ -213,7 +213,7 @@ func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (stat
 // between the found state's slot and the target slot.
 // process_blocks is applied for all canonical blocks, and process_slots is called for any skipped
 // slots, or slots following the most recent canonical block up to and including the target slot.
-func (p *StateProvider) StateBySlot(ctx context.Context, target primitives.Slot) (state.BeaconState, error) {
+func (p *BeaconDbStater) StateBySlot(ctx context.Context, target primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
 
@@ -229,7 +229,7 @@ func (p *StateProvider) StateBySlot(ctx context.Context, target primitives.Slot)
 	return st, nil
 }
 
-func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
+func (p *BeaconDbStater) headStateRoot(ctx context.Context) ([]byte, error) {
 	b, err := p.ChainInfoFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head block")
@@ -241,7 +241,7 @@ func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
 	return stateRoot[:], nil
 }
 
-func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
+func (p *BeaconDbStater) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	b, err := p.BeaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis block")
@@ -253,7 +253,7 @@ func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	return stateRoot[:], nil
 }
 
-func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) {
+func (p *BeaconDbStater) finalizedStateRoot(ctx context.Context) ([]byte, error) {
 	cp, err := p.BeaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized checkpoint")
@@ -269,7 +269,7 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 	return stateRoot[:], nil
 }
 
-func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) {
+func (p *BeaconDbStater) justifiedStateRoot(ctx context.Context) ([]byte, error) {
 	cp, err := p.BeaconDB.JustifiedCheckpoint(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified checkpoint")
@@ -285,7 +285,7 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 	return stateRoot[:], nil
 }
 
-func (p *StateProvider) stateRootByRoot(ctx context.Context, stateRoot []byte) ([]byte, error) {
+func (p *BeaconDbStater) stateRootByRoot(ctx context.Context, stateRoot []byte) ([]byte, error) {
 	var r [32]byte
 	copy(r[:], stateRoot)
 	headState, err := p.ChainInfoFetcher.HeadStateReadOnly(ctx)
@@ -302,7 +302,7 @@ func (p *StateProvider) stateRootByRoot(ctx context.Context, stateRoot []byte) (
 	return nil, &rootNotFoundErr
 }
 
-func (p *StateProvider) stateRootBySlot(ctx context.Context, slot primitives.Slot) ([]byte, error) {
+func (p *BeaconDbStater) stateRootBySlot(ctx context.Context, slot primitives.Slot) ([]byte, error) {
 	currentSlot := p.GenesisTimeFetcher.CurrentSlot()
 	if slot > currentSlot {
 		return nil, errors.New("slot cannot be in the future")
