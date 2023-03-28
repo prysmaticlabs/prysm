@@ -192,12 +192,20 @@ func (s *Service) Start() {
 	}
 	withCache := stategen.WithCache(stateCache)
 	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
+	stater := &lookup.BeaconDbStater{
+		BeaconDB:           s.cfg.BeaconDB,
+		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		StateGenService:    s.cfg.StateGen,
+		ReplayerBuilder:    ch,
+	}
+	blocker := &lookup.BeaconDbBlocker{
+		BeaconDB:         s.cfg.BeaconDB,
+		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+	}
 
 	rewardsServer := &rewards.Server{
-		Blocker: &lookup.BeaconDbBlocker{
-			BeaconDB:         s.cfg.BeaconDB,
-			ChainInfoFetcher: s.cfg.ChainInfoFetcher,
-		},
+		Blocker:               blocker,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		ReplayerBuilder:       ch,
@@ -240,21 +248,15 @@ func (s *Service) Start() {
 		BLSChangesPool:         s.cfg.BLSChangesPool,
 	}
 	validatorServerV1 := &validator.Server{
-		HeadFetcher:           s.cfg.HeadFetcher,
-		TimeFetcher:           s.cfg.GenesisTimeFetcher,
-		SyncChecker:           s.cfg.SyncService,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		AttestationsPool:      s.cfg.AttestationsPool,
-		PeerManager:           s.cfg.PeerManager,
-		Broadcaster:           s.cfg.Broadcaster,
-		V1Alpha1Server:        validatorServer,
-		Stater: &lookup.BeaconDbStater{
-			BeaconDB:           s.cfg.BeaconDB,
-			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-			StateGenService:    s.cfg.StateGen,
-			ReplayerBuilder:    ch,
-		},
+		HeadFetcher:            s.cfg.HeadFetcher,
+		TimeFetcher:            s.cfg.GenesisTimeFetcher,
+		SyncChecker:            s.cfg.SyncService,
+		OptimisticModeFetcher:  s.cfg.OptimisticModeFetcher,
+		AttestationsPool:       s.cfg.AttestationsPool,
+		PeerManager:            s.cfg.PeerManager,
+		Broadcaster:            s.cfg.Broadcaster,
+		V1Alpha1Server:         validatorServer,
+		Stater:                 stater,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 		ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
@@ -312,24 +314,19 @@ func (s *Service) Start() {
 		ReplayerBuilder:             ch,
 	}
 	beaconChainServerV1 := &beacon.Server{
-		CanonicalHistory:   ch,
-		BeaconDB:           s.cfg.BeaconDB,
-		AttestationsPool:   s.cfg.AttestationsPool,
-		SlashingsPool:      s.cfg.SlashingsPool,
-		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		BlockNotifier:      s.cfg.BlockNotifier,
-		OperationNotifier:  s.cfg.OperationNotifier,
-		Broadcaster:        s.cfg.Broadcaster,
-		BlockReceiver:      s.cfg.BlockReceiver,
-		StateGenService:    s.cfg.StateGen,
-		Stater: &lookup.BeaconDbStater{
-			BeaconDB:           s.cfg.BeaconDB,
-			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-			StateGenService:    s.cfg.StateGen,
-			ReplayerBuilder:    ch,
-		},
+		CanonicalHistory:              ch,
+		BeaconDB:                      s.cfg.BeaconDB,
+		AttestationsPool:              s.cfg.AttestationsPool,
+		SlashingsPool:                 s.cfg.SlashingsPool,
+		ChainInfoFetcher:              s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher:            s.cfg.GenesisTimeFetcher,
+		BlockNotifier:                 s.cfg.BlockNotifier,
+		OperationNotifier:             s.cfg.OperationNotifier,
+		Broadcaster:                   s.cfg.Broadcaster,
+		BlockReceiver:                 s.cfg.BlockReceiver,
+		StateGenService:               s.cfg.StateGen,
+		Stater:                        stater,
+		Blocker:                       blocker,
 		OptimisticModeFetcher:         s.cfg.OptimisticModeFetcher,
 		HeadFetcher:                   s.cfg.HeadFetcher,
 		VoluntaryExitsPool:            s.cfg.ExitPool,
@@ -364,15 +361,9 @@ func (s *Service) Start() {
 			ReplayerBuilder:    ch,
 		}
 		debugServerV1 := &debug.Server{
-			BeaconDB:    s.cfg.BeaconDB,
-			HeadFetcher: s.cfg.HeadFetcher,
-			Stater: &lookup.BeaconDbStater{
-				BeaconDB:           s.cfg.BeaconDB,
-				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-				StateGenService:    s.cfg.StateGen,
-				ReplayerBuilder:    ch,
-			},
+			BeaconDB:              s.cfg.BeaconDB,
+			HeadFetcher:           s.cfg.HeadFetcher,
+			Stater:                stater,
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 			ForkFetcher:           s.cfg.ForkFetcher,
 			ForkchoiceFetcher:     s.cfg.ForkchoiceFetcher,
