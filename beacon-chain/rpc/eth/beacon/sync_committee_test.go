@@ -167,7 +167,7 @@ func TestListSyncCommittees(t *testing.T) {
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
 		},
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: st,
 		},
 		HeadFetcher:           chainService,
@@ -213,7 +213,7 @@ func TestListSyncCommittees(t *testing.T) {
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -249,7 +249,7 @@ func TestListSyncCommittees(t *testing.T) {
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -309,7 +309,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
 		},
-		StateFetcher: &futureSyncMockFetcher{
+		Stater: &futureSyncMockFetcher{
 			BeaconState: st,
 		},
 		HeadFetcher:           chainService,

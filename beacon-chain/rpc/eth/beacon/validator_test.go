@@ -9,7 +9,7 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
@@ -34,7 +34,7 @@ func TestGetValidator(t *testing.T) {
 	t.Run("Head Get Validator by index", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -54,7 +54,7 @@ func TestGetValidator(t *testing.T) {
 	t.Run("Head Get Validator by pubkey", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -75,7 +75,7 @@ func TestGetValidator(t *testing.T) {
 
 	t.Run("Validator ID required", func(t *testing.T) {
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher: &chainMock.ChainService{},
@@ -98,7 +98,7 @@ func TestGetValidator(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -131,7 +131,7 @@ func TestGetValidator(t *testing.T) {
 			},
 		}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -157,7 +157,7 @@ func TestListValidators(t *testing.T) {
 	t.Run("Head List All Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -179,7 +179,7 @@ func TestListValidators(t *testing.T) {
 	t.Run("Head List Validators by index", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -204,7 +204,7 @@ func TestListValidators(t *testing.T) {
 	t.Run("Head List Validators by pubkey", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -233,7 +233,7 @@ func TestListValidators(t *testing.T) {
 	t.Run("Head List Validators by both index and pubkey", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -264,7 +264,7 @@ func TestListValidators(t *testing.T) {
 	t.Run("Unknown public key is ignored", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -287,7 +287,7 @@ func TestListValidators(t *testing.T) {
 	t.Run("Unknown index is ignored", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -317,7 +317,7 @@ func TestListValidators(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -349,7 +349,7 @@ func TestListValidators(t *testing.T) {
 			},
 		}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -440,7 +440,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All ACTIVE Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			Stater: &lookup.BeaconDbStater{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -478,7 +478,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All ACTIVE_ONGOING Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			Stater: &lookup.BeaconDbStater{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -515,7 +515,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All EXITED Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			Stater: &lookup.BeaconDbStater{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -551,7 +551,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All PENDING_INITIALIZED and EXITED_UNSLASHED Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			Stater: &lookup.BeaconDbStater{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -587,7 +587,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All PENDING and EXITED Validators", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &statefetcher.StateProvider{
+			Stater: &lookup.BeaconDbStater{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 			HeadFetcher:           chainService,
@@ -638,7 +638,7 @@ func TestListValidatorBalances(t *testing.T) {
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -663,7 +663,7 @@ func TestListValidatorBalances(t *testing.T) {
 	t.Run("Head List Validators Balance by pubkey", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -691,7 +691,7 @@ func TestListValidatorBalances(t *testing.T) {
 	t.Run("Head List Validators Balance by both index and pubkey", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -726,7 +726,7 @@ func TestListValidatorBalances(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -761,7 +761,7 @@ func TestListValidatorBalances(t *testing.T) {
 			},
 		}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -791,7 +791,7 @@ func TestListCommittees(t *testing.T) {
 	t.Run("Head All Committees", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -814,7 +814,7 @@ func TestListCommittees(t *testing.T) {
 	t.Run("Head All Committees of Epoch 10", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -836,7 +836,7 @@ func TestListCommittees(t *testing.T) {
 	t.Run("Head All Committees of Slot 4", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -864,7 +864,7 @@ func TestListCommittees(t *testing.T) {
 	t.Run("Head All Committees of Index 1", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -892,7 +892,7 @@ func TestListCommittees(t *testing.T) {
 	t.Run("Head All Committees of Slot 2, Index 1", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -928,7 +928,7 @@ func TestListCommittees(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -961,7 +961,7 @@ func TestListCommittees(t *testing.T) {
 			},
 		}
 		s := Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
