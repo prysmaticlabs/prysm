@@ -28,7 +28,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		fakeState, err := util.NewBeaconState()
 		require.NoError(t, err)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -46,7 +46,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateAltair(t, 1)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -64,7 +64,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -82,7 +82,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 	t.Run("Capella", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateCapella(t, 1)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -108,7 +108,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -141,7 +141,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -165,7 +165,7 @@ func TestGetBeaconStateSSZ(t *testing.T) {
 	require.NoError(t, err)
 
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: fakeState,
 		},
 	}
@@ -186,7 +186,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 		}
@@ -205,7 +205,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 		}
@@ -224,7 +224,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 		}
@@ -243,7 +243,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 		}
