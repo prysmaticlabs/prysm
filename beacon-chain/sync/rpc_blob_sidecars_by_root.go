@@ -52,6 +52,7 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 		scs, err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, root)
 		if err != nil {
 			if errors.Is(err, db.ErrNotFound) {
+				log.WithError(err).Errorf("error retrieving BlobSidecar, root=%x, index=%d", root, idx)
 				continue
 			}
 			log.WithError(err).Debugf("error retrieving BlobSidecar, root=%x, index=%d", root, idx)
@@ -80,5 +81,6 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 		}
 		s.rateLimiter.add(stream, 1)
 	}
+	closeStream(stream, log)
 	return nil
 }

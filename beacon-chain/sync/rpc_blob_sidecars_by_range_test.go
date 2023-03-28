@@ -82,6 +82,9 @@ func (c *blobsTestCase) runTestBlobSidecarsByRange(t *testing.T) {
 	if c.oldestSlot == nil {
 		c.oldestSlot = c.defaultOldestSlotByRange
 	}
+	if c.streamReader == nil {
+		c.streamReader = defaultExpectedRequirer
+	}
 	c.run(t)
 }
 
