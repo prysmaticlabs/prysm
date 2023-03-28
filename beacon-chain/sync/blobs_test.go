@@ -15,7 +15,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -133,9 +132,9 @@ type expectedBlobChunk struct {
 }
 
 func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream network.Stream) {
-	d := s.cfg.p2p.Encoding().DecodeWithMaxLength
+	encoding := s.cfg.p2p.Encoding()
 
-	code, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
+	code, _, err := ReadStatusCode(stream, encoding)
 	require.NoError(t, err)
 	require.Equal(t, r.code, code, "unexpected response code")
 	//require.Equal(t, r.message, msg, "unexpected error message")
@@ -152,7 +151,7 @@ func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream net
 	require.Equal(t, ctxBytes, bytesutil.ToBytes4(c))
 
 	sc := &ethpb.BlobSidecar{}
-	require.NoError(t, d(stream, sc))
+	require.NoError(t, encoding.DecodeWithMaxLength(stream, sc))
 	require.Equal(t, bytesutil.ToBytes32(sc.BlockRoot), bytesutil.ToBytes32(r.sidecar.BlockRoot))
 	require.Equal(t, sc.Index, r.sidecar.Index)
 }

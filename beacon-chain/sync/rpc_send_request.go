@@ -157,19 +157,19 @@ type readerSSZDecoder func(io.Reader, ssz.Unmarshaler) error
 func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, encoding encoder.NetworkEncoding) ([]*pb.BlobSidecar, error) {
 	decode := encoding.DecodeWithMaxLength
 	max := int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars)
-	sidecars := make([]*pb.BlobSidecar, 0)
 	var (
 		code uint8
 		msg  string
 		err  error
-		br   int
 	)
-	for code, msg, err = ReadStatusCode(stream, encoding); err == nil; br++ {
+	sidecars := make([]*pb.BlobSidecar, 0)
+	for i := 0; i < max; i++ {
+		code, msg, err = ReadStatusCode(stream, encoding)
+		if err != nil {
+			break
+		}
 		if code != 0 {
 			return nil, errors.Wrap(ErrBlobChunkedReadFailure, msg)
-		}
-		if br > max {
-			break
 		}
 		// TODO: we should add some code to switch on the fork version to determine deserialization type
 		// punting to rush this out to unblock testing.
@@ -184,7 +184,7 @@ func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, enc
 		}
 		sidecars = append(sidecars, sc)
 	}
-	if err != nil && !errors.Is(err, io.EOF) {
+	if !errors.Is(err, io.EOF) {
 		return nil, err
 	}
 	return sidecars, nil
