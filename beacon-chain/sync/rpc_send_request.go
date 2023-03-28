@@ -7,7 +7,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
@@ -152,8 +151,6 @@ func SendBlobSidecarByRoot(
 }
 
 var ErrBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
-
-type readerSSZDecoder func(io.Reader, ssz.Unmarshaler) error
 
 func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, encoding encoder.NetworkEncoding) ([]*pb.BlobSidecar, error) {
 	decode := encoding.DecodeWithMaxLength
