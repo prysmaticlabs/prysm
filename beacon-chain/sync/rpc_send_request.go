@@ -147,16 +147,15 @@ func SendBlobSidecarByRoot(
 	}
 	defer closeStream(stream, log)
 
-	max := int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock)
-	return readChunkEncodedBlobs(stream, max, ci, p2pApi.Encoding().DecodeWithMaxLength)
+	return readChunkEncodedBlobs(stream, ci, p2pApi.Encoding().DecodeWithMaxLength)
 }
 
 var ErrBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
 
 type readerSSZDecoder func(io.Reader, ssz.Unmarshaler) error
 
-func readChunkEncodedBlobs(stream network.Stream, max int, ff blockchain.ForkFetcher, decode readerSSZDecoder) ([]*pb.BlobSidecar, error) {
-	defer closeStream(stream, log)
+func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, decode readerSSZDecoder) ([]*pb.BlobSidecar, error) {
+	max := int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars)
 	//d := s.cfg.p2p.Encoding().DecodeWithMaxLength
 	sidecars := make([]*pb.BlobSidecar, 0)
 	var (
