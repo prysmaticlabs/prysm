@@ -351,6 +351,16 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
+
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockDenebContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &capellaPublishBlockRequestJson{
+			CapellaBlock: block.Message,
+			Signature:    block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
 	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
 }
 
@@ -794,6 +804,7 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 			Version: respContainer.Version,
 			Data:    respContainer.Data.CapellaBlock,
 		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_Deneb.String())):
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
