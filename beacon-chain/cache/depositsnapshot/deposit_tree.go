@@ -130,7 +130,7 @@ func (d *depositTree) getRoot() [32]byte {
 	binary.LittleEndian.PutUint64(enc[:], d.depositCount)
 
 	root := d.tree.GetRoot()
-	fmt.Printf("Our deposit snapshot tree has deposit count %d, and premixin %#x\n", d.depositCount, root)
+	fmt.Printf("Our deposit snapshot tree has deposit count %#x, and premixin %#x\n", enc, root)
 	return hash.Hash(append(root[:], enc[:]...))
 }
 
