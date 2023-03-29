@@ -130,8 +130,8 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 
 	f := &enginev1.ForkchoiceState{
 		HeadBlockHash:      parentHash,
-		SafeBlockHash:      finalizedBlockHash[:],
-		FinalizedBlockHash: justifiedBlockHash[:],
+		SafeBlockHash:      justifiedBlockHash[:],
+		FinalizedBlockHash: finalizedBlockHash[:],
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {

@@ -143,24 +143,16 @@ func TestFinalizedBlockHash(t *testing.T) {
 
 func TestUnrealizedJustifiedBlockHash(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-	}
-	service, err := NewService(ctx, opts...)
+	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}}
+	ojc := &ethpb.Checkpoint{Root: []byte{'j'}}
+	ofc := &ethpb.Checkpoint{Root: []byte{'f'}}
+	st, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
+	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 
-	jroot := [32]byte{'j'}
-	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: jroot}
-	bState, _ := util.DeterministicGenesisState(t, 10)
-	require.NoError(t, beaconDB.SaveState(ctx, bState, jroot))
-
-	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, cp))
-	_, err = service.UnrealizedJustifiedPayloadBlockHash()
-	require.ErrorIs(t, err, doublylinkedtree.ErrNilNode)
+	h, err := c.UnrealizedJustifiedPayloadBlockHash()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().ZeroHash, h)
 }
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {

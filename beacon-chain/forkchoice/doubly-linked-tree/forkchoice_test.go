@@ -740,7 +740,6 @@ func TestForkchoice_UpdateJustifiedBalances(t *testing.T) {
 	require.Equal(t, uint64(7), f.numActiveValidators)
 	require.Equal(t, uint64(430)/32, f.store.committeeWeight)
 	require.DeepEqual(t, balances, f.justifiedBalances)
-
 }
 
 func TestForkChoice_UnrealizedJustifiedPayloadBlockHash(t *testing.T) {
@@ -754,7 +753,7 @@ func TestForkChoice_UnrealizedJustifiedPayloadBlockHash(t *testing.T) {
 	f.store.unrealizedJustifiedCheckpoint.Root = [32]byte{'a'}
 	got, err := f.UnrealizedJustifiedPayloadBlockHash()
 	require.NoError(t, err)
-	require.DeepEqual(t, [32]byte{'A'}, got)
+	require.Equal(t, [32]byte{'A'}, got)
 
 	f.store.unrealizedJustifiedCheckpoint.Root = [32]byte{'b'}
 	_, err = f.UnrealizedJustifiedPayloadBlockHash()
