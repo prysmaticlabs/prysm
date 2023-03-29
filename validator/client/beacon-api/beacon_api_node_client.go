@@ -21,13 +21,19 @@ type beaconApiNodeClient struct {
 	genesisProvider genesisProvider
 }
 
-func (c *beaconApiNodeClient) GetSyncStatus(ctx context.Context, in *empty.Empty) (*ethpb.SyncStatus, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetSyncStatus(ctx, in)
+func (c *beaconApiNodeClient) GetSyncStatus(ctx context.Context, _ *empty.Empty) (*ethpb.SyncStatus, error) {
+	syncingResponse := apimiddleware.SyncingResponseJson{}
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/node/syncing", &syncingResponse); err != nil {
+		return nil, errors.Wrap(err, "failed to get sync status")
 	}
 
-	// TODO: Implement me
-	panic("beaconApiNodeClient.GetSyncStatus is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiNodeClientWithFallback.")
+	if syncingResponse.Data == nil {
+		return nil, errors.New("syncing data is nil")
+	}
+
+	return &ethpb.SyncStatus{
+		Syncing: syncingResponse.Data.IsSyncing,
+	}, nil
 }
 
 func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesis, error) {
