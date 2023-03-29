@@ -83,7 +83,7 @@ func TestGetStateRoot(t *testing.T) {
 
 	chainService := &chainMock.ChainService{}
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconStateRoot: stateRoot[:],
 			BeaconState:     fakeState,
 		},
@@ -111,7 +111,7 @@ func TestGetStateRoot(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconStateRoot: stateRoot[:],
 				BeaconState:     fakeState,
 			},
@@ -145,7 +145,7 @@ func TestGetStateRoot(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconStateRoot: stateRoot[:],
 				BeaconState:     fakeState,
 			},
@@ -179,7 +179,7 @@ func TestGetStateFork(t *testing.T) {
 
 	chainService := &chainMock.ChainService{}
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: fakeState,
 		},
 		HeadFetcher:           chainService,
@@ -209,7 +209,7 @@ func TestGetStateFork(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -242,7 +242,7 @@ func TestGetStateFork(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -282,7 +282,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 	chainService := &chainMock.ChainService{}
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: fakeState,
 		},
 		HeadFetcher:           chainService,
@@ -314,7 +314,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -347,7 +347,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -388,7 +388,7 @@ func TestGetRandao(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	chainService := &chainMock.ChainService{}
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: st,
 		},
 		HeadFetcher:           chainService,
@@ -413,7 +413,7 @@ func TestGetRandao(t *testing.T) {
 		assert.DeepEqual(t, mixOld, resp.Data.Randao)
 	})
 	t.Run("head state below `EpochsPerHistoricalVector`", func(t *testing.T) {
-		server.StateFetcher = &testutil.MockFetcher{
+		server.Stater = &testutil.MockStater{
 			BeaconState: headSt,
 		}
 		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head")})
@@ -441,7 +441,7 @@ func TestGetRandao(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -473,7 +473,7 @@ func TestGetRandao(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,

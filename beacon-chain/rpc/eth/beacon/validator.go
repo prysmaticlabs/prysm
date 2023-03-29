@@ -42,7 +42,7 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 	ctx, span := trace.StartSpan(ctx, "beacon.GetValidator")
 	defer span.End()
 
-	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -57,7 +57,7 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 		return nil, status.Error(codes.NotFound, "Could not find validator")
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.StateFetcher, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -76,7 +76,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 	ctx, span := trace.StartSpan(ctx, "beacon.ListValidators")
 	defer span.End()
 
-	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -86,7 +86,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		return nil, handleValContainerErr(err)
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.StateFetcher, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -138,7 +138,7 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 	ctx, span := trace.StartSpan(ctx, "beacon.ListValidatorBalances")
 	defer span.End()
 
-	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -155,7 +155,7 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 		}
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.StateFetcher, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -175,7 +175,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 	ctx, span := trace.StartSpan(ctx, "beacon.ListCommittees")
 	defer span.End()
 
-	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -220,7 +220,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 		}
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.StateFetcher, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
