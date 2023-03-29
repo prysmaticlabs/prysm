@@ -82,6 +82,7 @@ func TestIntegerSquareRoot(t *testing.T) {
 
 	for _, testVals := range tt {
 		require.Equal(t, testVals.root, math.IntegerSquareRoot(testVals.number))
+		require.Equal(t, testVals.root, math.CachedSquareRoot(testVals.number))
 	}
 }
 
@@ -164,6 +165,35 @@ func BenchmarkIntegerSquareRootAbove52Bits(b *testing.B) {
 	val := uint64(1 << 62)
 	for i := 0; i < b.N; i++ {
 		require.Equal(b, uint64(1<<31), math.IntegerSquareRoot(val))
+	}
+}
+
+func BenchmarkSquareRootEffectiveBalance(b *testing.B) {
+	val := uint64(1 << 62)
+	for i := 0; i < b.N; i++ {
+		require.Equal(b, uint64(1<<31), math.CachedSquareRoot(val))
+	}
+}
+
+func BenchmarkSquareRootBabylonian(b *testing.B) {
+	//Start with 700K validators' effective balance
+	val := uint64(22400000000000000)
+	for i := 0; i < b.N; i++ {
+		sqr := math.CachedSquareRoot(val)
+		require.Equal(b, true, sqr^2 <= val)
+		require.Equal(b, true, (sqr+1)*(sqr+1) > val)
+		val += 10_000_000_000
+	}
+}
+
+func BenchmarkSquareRootOldWay(b *testing.B) {
+	//Start with 700K validators' effective balance
+	val := uint64(22400000000000000)
+	for i := 0; i < b.N; i++ {
+		sqr := math.IntegerSquareRoot(val)
+		require.Equal(b, true, sqr^2 <= val)
+		require.Equal(b, true, (sqr+1)*(sqr+1) > val)
+		val += 10_000_000_000
 	}
 }
 
