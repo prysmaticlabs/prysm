@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -213,12 +212,9 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 	proposerIndex := make([]byte, 8)
 	_, err = rand.Read(proposerIndex)
 	require.NoError(t, err)
-	blobData := make([]byte, 131072)
-	_, err = rand.Read(blobData)
+	blob := make([]byte, 131072)
+	_, err = rand.Read(blob)
 	require.NoError(t, err)
-	blob := &enginev1.Blob{
-		Data: blobData,
-	}
 	kzgCommitment := make([]byte, 48)
 	_, err = rand.Read(kzgCommitment)
 	require.NoError(t, err)
