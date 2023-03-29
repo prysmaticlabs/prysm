@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -61,7 +61,7 @@ func IsOptimistic(
 	ctx context.Context,
 	stateId []byte,
 	optimisticModeFetcher blockchain.OptimisticModeFetcher,
-	stateFetcher statefetcher.Fetcher,
+	stateFetcher lookup.Stater,
 	chainInfo blockchain.ChainInfoFetcher,
 	database db.ReadOnlyDatabase,
 ) (bool, error) {
@@ -97,7 +97,7 @@ func IsOptimistic(
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
 			if parseErr != nil {
 				// ID format does not match any valid options.
-				e := statefetcher.NewStateIdParseError(parseErr)
+				e := lookup.NewStateIdParseError(parseErr)
 				return true, &e
 			}
 			fcp := chainInfo.FinalizedCheckpt()
@@ -146,7 +146,7 @@ func isStateRootOptimistic(
 	ctx context.Context,
 	stateId []byte,
 	optimisticModeFetcher blockchain.OptimisticModeFetcher,
-	stateFetcher statefetcher.Fetcher,
+	stateFetcher lookup.Stater,
 	chainInfo blockchain.ChainInfoFetcher,
 	database db.ReadOnlyDatabase,
 ) (bool, error) {

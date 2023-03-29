@@ -3,7 +3,7 @@ package helpers
 import (
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,10 +15,10 @@ func PrepareStateFetchGRPCError(err error) error {
 	if errors.Is(err, stategen.ErrNoDataForSlot) {
 		return status.Errorf(codes.NotFound, "lacking historical data needed to fulfill request")
 	}
-	if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
+	if stateNotFoundErr, ok := err.(*lookup.StateNotFoundError); ok {
 		return status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
 	}
-	if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
+	if parseErr, ok := err.(*lookup.StateIdParseError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 	}
 	return status.Errorf(codes.Internal, "Invalid state ID: %v", err)
