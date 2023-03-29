@@ -61,7 +61,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		return nil, nil
 	}
 	finalizedHash := s.cfg.ForkChoiceStore.FinalizedPayloadBlockHash()
-	justifiedHash := s.cfg.ForkChoiceStore.JustifiedPayloadBlockHash()
+	justifiedHash, err := s.cfg.ForkChoiceStore.UnrealizedJustifiedPayloadBlockHash()
+	if err != nil {
+		log.WithError(err).Error("Could not get unrealized justified payload block hash")
+		justifiedHash = finalizedHash
+	}
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      headPayload.BlockHash(),
 		SafeBlockHash:      justifiedHash[:],

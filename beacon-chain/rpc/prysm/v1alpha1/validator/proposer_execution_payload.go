@@ -115,31 +115,23 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 	if err != nil {
 		return nil, err
 	}
-	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-	finalizedRoot := bytesutil.ToBytes32(st.FinalizedCheckpoint().Root)
-	if finalizedRoot != [32]byte{} { // finalized root could be zeros before the first finalized block.
-		finalizedBlock, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
+
+	finalizedBlockHash := [32]byte{}
+	justifiedBlockHash := [32]byte{}
+	// Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
+	if st.Version() >= version.Altair {
+		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
+		justifiedBlockHash, err = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
 		if err != nil {
-			return nil, err
-		}
-		if err := consensusblocks.BeaconBlockIsNil(finalizedBlock); err != nil {
-			return nil, err
-		}
-		switch finalizedBlock.Version() {
-		case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
-		default:
-			finalizedPayload, err := finalizedBlock.Block().Body().Execution()
-			if err != nil {
-				return nil, err
-			}
-			finalizedBlockHash = finalizedPayload.BlockHash()
+			log.WithError(err).Error("Could not get unrealized justified payload block hash")
+			justifiedBlockHash = finalizedBlockHash // Don't fail block proposal if we can't get the justified block hash.
 		}
 	}
 
 	f := &enginev1.ForkchoiceState{
 		HeadBlockHash:      parentHash,
-		SafeBlockHash:      finalizedBlockHash,
-		FinalizedBlockHash: finalizedBlockHash,
+		SafeBlockHash:      justifiedBlockHash[:],
+		FinalizedBlockHash: finalizedBlockHash[:],
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {

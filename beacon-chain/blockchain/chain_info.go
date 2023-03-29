@@ -96,6 +96,8 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
+	UnrealizedJustifiedPayloadBlockHash() ([32]byte, error)
+	FinalizedBlockHash() [32]byte
 	InForkchoice([32]byte) bool
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
