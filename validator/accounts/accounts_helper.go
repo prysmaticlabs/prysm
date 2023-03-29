@@ -207,8 +207,7 @@ func FilterExitAccountsFromUserInput(
 		"Please navigate to the following website and make sure you understand the current implications " +
 		"of a voluntary exit before making the final decision:"
 	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator/#withdrawal-delay-warning")
-	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the end " +
-		"of the page from the above URL"
+	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the above URL"
 	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
 	resp, err := prompt.ValidatePrompt(r, promptText, func(input string) error {
 		return prompt.ValidatePhrase(input, ExitPassphrase)
