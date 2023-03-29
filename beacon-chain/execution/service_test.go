@@ -210,14 +210,14 @@ func TestFollowBlock_OK(t *testing.T) {
 
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
-	baseHeight := testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
+	baseHeight := testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
 	// process follow_distance blocks
 	for i := 0; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
 		testAcc.Backend.Commit()
 	}
 	// set current height
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
+	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time
 
 	h, err := web3Service.followedBlockHeight(context.Background())
 	require.NoError(t, err)
@@ -229,8 +229,8 @@ func TestFollowBlock_OK(t *testing.T) {
 		testAcc.Backend.Commit()
 	}
 	// set current height
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
+	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time
 
 	h, err = web3Service.followedBlockHeight(context.Background())
 	require.NoError(t, err)
