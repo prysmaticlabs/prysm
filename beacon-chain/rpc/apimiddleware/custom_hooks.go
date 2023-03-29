@@ -270,6 +270,16 @@ type capellaPublishBlindedBlockRequestJson struct {
 	Signature    string                         `json:"signature" hex:"true"`
 }
 
+type denebPublishBlockContentRequestJson struct {
+	SignedBlock        *SignedBeaconBlockDenebContainerJson `json:"signed_block"`
+	SignedBlobSidecars []*SignedBlobSidecarContainerJson    `json:"signed_blob_sidecars"`
+}
+
+type denebPublishBlindedBlockContentRequestJson struct {
+	SignedBlindedBlock        *SignedBlindedBeaconBlockDenebContainerJson `json:"signed_blinded_block"`
+	SignedBlindedBlobSidecars []*SignedBlindedBlobSidecarContainerJson    `json:"signed_blinded_blob_sidecars"`
+}
+
 // setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
 // We don't know which version of the block got posted, but we can determine it from the slot.
 // We know that blocks of all versions have a Message field with a Slot field,
@@ -303,8 +313,10 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		endpoint.PostRequest = &SignedBeaconBlockAltairContainerJson{}
 	} else if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockBellatrixContainerJson{}
-	} else {
+	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockCapellaContainerJson{}
+	} else {
+		endpoint.PostRequest = &SignedBeaconBlockContentsDenebContainerJson{}
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
@@ -352,11 +364,11 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		return nil
 	}
 
-	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockDenebContainerJson); ok {
+	if blockContent, ok := endpoint.PostRequest.(*SignedBeaconBlockContentsDenebContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &capellaPublishBlockRequestJson{
-			CapellaBlock: block.Message,
-			Signature:    block.Signature,
+		actualPostReq := &denebPublishBlockContentRequestJson{
+			SignedBlock:        blockContent.SignedBlock,
+			SignedBlobSidecars: blockContent.SignedBlobSidecars,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -397,8 +409,10 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		endpoint.PostRequest = &SignedBeaconBlockAltairContainerJson{}
 	} else if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		endpoint.PostRequest = &SignedBlindedBeaconBlockBellatrixContainerJson{}
-	} else {
+	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
 		endpoint.PostRequest = &SignedBlindedBeaconBlockCapellaContainerJson{}
+	} else {
+		endpoint.PostRequest = &SignedBlindedBlockContentsDenebContainerJson{}
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
@@ -441,6 +455,15 @@ func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.Respo
 		actualPostReq := &capellaPublishBlindedBlockRequestJson{
 			CapellaBlock: block.Message,
 			Signature:    block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if blockContent, ok := endpoint.PostRequest.(*SignedBlindedBlockContentsDenebContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &denebPublishBlindedBlockContentRequestJson{
+			SignedBlindedBlock:        blockContent.SignedBlindedBlock,
+			SignedBlindedBlobSidecars: blockContent.SignedBlindedBlobSidecars,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -588,7 +611,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
 			Finalized:           respContainer.Finalized,
 		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_Deneb.String())):
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
 		actualRespContainer = &denebBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &SignedBeaconBlockDenebContainerJson{
@@ -657,7 +680,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
 			Finalized:           respContainer.Finalized,
 		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_Deneb.String())):
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
 		actualRespContainer = &denebBlindedBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &SignedBlindedBeaconBlockDenebContainerJson{
@@ -730,7 +753,7 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 			Version: respContainer.Version,
 			Data:    respContainer.Data.CapellaState,
 		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_Deneb.String())):
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
 		actualRespContainer = &denebStateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.DenebState,
@@ -766,6 +789,11 @@ type capellaProduceBlockResponseJson struct {
 	Data    *BeaconBlockCapellaJson `json:"data"`
 }
 
+type denebProduceBlockResponseJson struct {
+	Version string                `json:"version" enum:"true"`
+	Data    *BeaconBlockDenebJson `json:"data"`
+}
+
 type bellatrixProduceBlindedBlockResponseJson struct {
 	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockBellatrixJson `json:"data"`
@@ -774,6 +802,11 @@ type bellatrixProduceBlindedBlockResponseJson struct {
 type capellaProduceBlindedBlockResponseJson struct {
 	Version string                         `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockCapellaJson `json:"data"`
+}
+
+type denebProduceBlindedBlockResponseJson struct {
+	Version string                       `json:"version" enum:"true"`
+	Data    *BlindedBeaconBlockDenebJson `json:"data"`
 }
 
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
@@ -804,7 +837,11 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 			Version: respContainer.Version,
 			Data:    respContainer.Data.CapellaBlock,
 		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_Deneb.String())):
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
+		actualRespContainer = &denebProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.DenebBlock,
+		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
@@ -843,6 +880,11 @@ func serializeProducedBlindedBlock(response interface{}) (apimiddleware.RunDefau
 		actualRespContainer = &capellaProduceBlindedBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.CapellaBlock,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
+		actualRespContainer = &denebProduceBlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.DenebBlock,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
