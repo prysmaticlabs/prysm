@@ -171,7 +171,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 				Slot:            blk.Slot,
 				BlockParentRoot: blk.ParentRoot,
 				ProposerIndex:   blk.ProposerIndex,
-				Blob:            b,
+				Blob:            b.Data,
 				KzgCommitment:   commitments[i][:],
 				KzgProof:        proofs[i][:],
 			}

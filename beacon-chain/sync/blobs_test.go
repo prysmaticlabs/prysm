@@ -108,10 +108,8 @@ func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slo
 }
 
 func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.BlobSidecar {
-	blob := &enginev1.Blob{
-		Data: make([]byte, fieldparams.BlobSize),
-	}
-	binary.LittleEndian.PutUint64(blob.Data, uint64(index))
+	blob := make([]byte, fieldparams.BlobSize)
+	binary.LittleEndian.PutUint64(blob, uint64(index))
 	sc := &ethpb.BlobSidecar{
 		BlockRoot:       root[:],
 		Index:           uint64(index),
