@@ -13,16 +13,16 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.v1alpha1;
+package ethereum.eth.v2;
 
 import "proto/eth/ext/options.proto";
 
-option csharp_namespace = "Ethereum.Eth.v1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1;eth";
+option csharp_namespace = "Ethereum.Eth.V2";
+option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/v2;eth";
 option java_multiple_files = true;
 option java_outer_classname = "BlobsProto";
-option java_package = "org.ethereum.eth.v1alpha1";
-option php_namespace = "Ethereum\\Eth\\v1alpha1";
+option java_package = "org.ethereum.eth.v2";
+option php_namespace = "Ethereum\\Eth\\v2";
 
 message BlobSidecars {
     repeated BlobSidecar sidecars = 1;
