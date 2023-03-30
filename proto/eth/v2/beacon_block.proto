@@ -474,7 +474,8 @@ message BeaconBlockBodyCapella {
 }
 
 message BeaconBlockContentsDeneb {
-    BeaconBlockDeneb
+    BeaconBlockDeneb block = 1
+    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }
 
 message BeaconBlockDeneb {
