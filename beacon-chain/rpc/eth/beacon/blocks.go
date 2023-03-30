@@ -864,7 +864,7 @@ func (bs *Server) getBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySign
 				}
 				sig := blk.Signature()
 				return &ethpbv2.BlockResponseV2{
-					Version: ethpbv2.Version_Deneb,
+					Version: ethpbv2.Version_DENEB,
 					Data: &ethpbv2.SignedBeaconBlockContainer{
 						Message:   &ethpbv2.SignedBeaconBlockContainer_DenebBlock{DenebBlock: v2Blk},
 						Signature: sig[:],
@@ -894,7 +894,7 @@ func (bs *Server) getBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySign
 	}
 	sig := blk.Signature()
 	return &ethpbv2.BlockResponseV2{
-		Version: ethpbv2.Version_Deneb,
+		Version: ethpbv2.Version_DENEB,
 		Data: &ethpbv2.SignedBeaconBlockContainer{
 			Message:   &ethpbv2.SignedBeaconBlockContainer_DenebBlock{DenebBlock: v2Blk},
 			Signature: sig[:],
@@ -1137,7 +1137,7 @@ func (bs *Server) getSSZBlockDeneb(ctx context.Context, blk interfaces.ReadOnlyS
 					return nil, errors.Wrapf(err, "could not marshal block into SSZ")
 				}
 				return &ethpbv2.SSZContainer{
-					Version:             ethpbv2.Version_Deneb,
+					Version:             ethpbv2.Version_DENEB,
 					ExecutionOptimistic: isOptimistic,
 					Data:                sszData,
 				}, nil
@@ -1171,7 +1171,7 @@ func (bs *Server) getSSZBlockDeneb(ctx context.Context, blk interfaces.ReadOnlyS
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
 	}
-	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_Deneb, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
+	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_DENEB, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
 }
 
 func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.BeaconBlock, sig []byte) error {
