@@ -789,9 +789,9 @@ type capellaProduceBlockResponseJson struct {
 	Data    *BeaconBlockCapellaJson `json:"data"`
 }
 
-type denebProduceBlockResponseJson struct {
-	Version string                `json:"version" enum:"true"`
-	Data    *BeaconBlockDenebJson `json:"data"`
+type denebProduceBlockContentsResponseJson struct {
+	Version string                        `json:"version" enum:"true"`
+	Data    *BeaconBlockContentsDenebJson `json:"data"`
 }
 
 type bellatrixProduceBlindedBlockResponseJson struct {
@@ -804,9 +804,9 @@ type capellaProduceBlindedBlockResponseJson struct {
 	Data    *BlindedBeaconBlockCapellaJson `json:"data"`
 }
 
-type denebProduceBlindedBlockResponseJson struct {
-	Version string                       `json:"version" enum:"true"`
-	Data    *BlindedBeaconBlockDenebJson `json:"data"`
+type denebProduceBlindedBlockContentsResponseJson struct {
+	Version string                               `json:"version" enum:"true"`
+	Data    *BlindedBeaconBlockContentsDenebJson `json:"data"`
 }
 
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
@@ -838,9 +838,9 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 			Data:    respContainer.Data.CapellaBlock,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
-		actualRespContainer = &denebProduceBlockResponseJson{
+		actualRespContainer = &denebProduceBlockContentsResponseJson{
 			Version: respContainer.Version,
-			Data:    respContainer.Data.DenebBlock,
+			Data:    respContainer.Data.DenebBlockContents,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
@@ -882,9 +882,9 @@ func serializeProducedBlindedBlock(response interface{}) (apimiddleware.RunDefau
 			Data:    respContainer.Data.CapellaBlock,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
-		actualRespContainer = &denebProduceBlindedBlockResponseJson{
+		actualRespContainer = &denebProduceBlindedBlockContentsResponseJson{
 			Version: respContainer.Version,
-			Data:    respContainer.Data.DenebBlock,
+			Data:    respContainer.Data.DenebBlockContents,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))

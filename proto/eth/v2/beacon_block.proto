@@ -55,7 +55,7 @@ message BeaconBlockContainerV2 {
     BeaconBlockAltair altair_block = 2;
     BeaconBlockBellatrix bellatrix_block = 3;
     BeaconBlockCapella capella_block = 4; 
-    BeaconBlockDeneb deneb_block = 5;
+    BeaconBlockDeneb deneb_block_contents = 5;
   }
 }
 
@@ -471,6 +471,10 @@ message BeaconBlockBodyCapella {
 
   // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
   repeated  SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+}
+
+message BeaconBlockContentsDeneb {
+    BeaconBlockDeneb
 }
 
 message BeaconBlockDeneb {

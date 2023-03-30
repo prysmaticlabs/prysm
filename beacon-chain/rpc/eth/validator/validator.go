@@ -375,6 +375,19 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
+	denebBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockDenebToV2(denebBlock.Deneb.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_DENEB,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_CapellaBlock{CapellaBlock: block},
+			},
+		}, nil
+	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 

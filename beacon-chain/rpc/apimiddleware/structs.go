@@ -409,19 +409,19 @@ type SignedBlindedBeaconBlockContainerJson struct {
 }
 
 type BeaconBlockContainerV2Json struct {
-	Phase0Block    *BeaconBlockJson          `json:"phase0_block"`
-	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
-	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
-	CapellaBlock   *BeaconBlockCapellaJson   `json:"capella_block"`
-	DenebBlock     *BeaconBlockDenebJson     `json:"deneb_block"`
+	Phase0Block        *BeaconBlockJson              `json:"phase0_block"`
+	AltairBlock        *BeaconBlockAltairJson        `json:"altair_block"`
+	BellatrixBlock     *BeaconBlockBellatrixJson     `json:"bellatrix_block"`
+	CapellaBlock       *BeaconBlockCapellaJson       `json:"capella_block"`
+	DenebBlockContents *BeaconBlockContentsDenebJson `json:"deneb_block_contents"`
 }
 
 type BlindedBeaconBlockContainerJson struct {
-	Phase0Block    *BeaconBlockJson                 `json:"phase0_block"`
-	AltairBlock    *BeaconBlockAltairJson           `json:"altair_block"`
-	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
-	CapellaBlock   *BlindedBeaconBlockCapellaJson   `json:"capella_block"`
-	DenebBlock     *BlindedBeaconBlockDenebJson     `json:"deneb_block"`
+	Phase0Block        *BeaconBlockJson                     `json:"phase0_block"`
+	AltairBlock        *BeaconBlockAltairJson               `json:"altair_block"`
+	BellatrixBlock     *BlindedBeaconBlockBellatrixJson     `json:"bellatrix_block"`
+	CapellaBlock       *BlindedBeaconBlockCapellaJson       `json:"capella_block"`
+	DenebBlockContents *BlindedBeaconBlockContentsDenebJson `json:"deneb_block_contents"`
 }
 
 type SignedBeaconBlockAltairContainerJson struct {
