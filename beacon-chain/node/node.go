@@ -52,11 +52,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/prometheus"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
 	"github.com/prysmaticlabs/prysm/v4/runtime/prereqs"
@@ -784,6 +786,51 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 
 	maxMsgSize := b.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+
+	if err := b.db.SaveBlobSidecar(b.cliCtx.Context, []*eth.BlobSidecar{
+		{
+			BlockRoot:       bytesutil.PadTo([]byte("blockroot"), 32),
+			Index:           0,
+			Slot:            10,
+			BlockParentRoot: bytesutil.PadTo([]byte("blockparentroot"), 32),
+			ProposerIndex:   666,
+			Blob:            bytesutil.PadTo([]byte("blob0"), field_params.BlobSize),
+			KzgCommitment:   bytesutil.PadTo([]byte("kzgcommitment"), 48),
+			KzgProof:        bytesutil.PadTo([]byte("kzgproof"), 48),
+		},
+		{
+			BlockRoot:       bytesutil.PadTo([]byte("blockroot"), 32),
+			Index:           1,
+			Slot:            10,
+			BlockParentRoot: bytesutil.PadTo([]byte("blockparentroot"), 32),
+			ProposerIndex:   666,
+			Blob:            bytesutil.PadTo([]byte("blob1"), field_params.BlobSize),
+			KzgCommitment:   bytesutil.PadTo([]byte("kzgcommitment"), 48),
+			KzgProof:        bytesutil.PadTo([]byte("kzgproof"), 48),
+		},
+		{
+			BlockRoot:       bytesutil.PadTo([]byte("blockroot"), 32),
+			Index:           2,
+			Slot:            10,
+			BlockParentRoot: bytesutil.PadTo([]byte("blockparentroot"), 32),
+			ProposerIndex:   666,
+			Blob:            bytesutil.PadTo([]byte("blob2"), field_params.BlobSize),
+			KzgCommitment:   bytesutil.PadTo([]byte("kzgcommitment"), 48),
+			KzgProof:        bytesutil.PadTo([]byte("kzgproof"), 48),
+		},
+		{
+			BlockRoot:       bytesutil.PadTo([]byte("blockroot"), 32),
+			Index:           3,
+			Slot:            10,
+			BlockParentRoot: bytesutil.PadTo([]byte("blockparentroot"), 32),
+			ProposerIndex:   666,
+			Blob:            bytesutil.PadTo([]byte("blob3"), field_params.BlobSize),
+			KzgCommitment:   bytesutil.PadTo([]byte("kzgcommitment"), 48),
+			KzgProof:        bytesutil.PadTo([]byte("kzgproof"), 48),
+		},
+	}); err != nil {
+		return err
+	}
 
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
