@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"context"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -76,11 +78,19 @@ func IsOptimistic(
 		if fcp == nil {
 			return true, errors.New("received nil finalized checkpoint")
 		}
+		// Special genesis case in the event our checkpoint root is a zerohash.
+		if bytes.Equal(fcp.Root, params.BeaconConfig().ZeroHash[:]) {
+			return false, nil
+		}
 		return optimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(fcp.Root))
 	case "justified":
 		jcp := chainInfo.CurrentJustifiedCheckpt()
 		if jcp == nil {
 			return true, errors.New("received nil justified checkpoint")
+		}
+		// Special genesis case in the event our checkpoint root is a zerohash.
+		if bytes.Equal(jcp.Root, params.BeaconConfig().ZeroHash[:]) {
+			return false, nil
 		}
 		return optimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(jcp.Root))
 	default:

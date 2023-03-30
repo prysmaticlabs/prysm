@@ -402,7 +402,10 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	}
 
 	if ss == nil {
-		return true, errInvalidNilSummary
+		ss, err = s.recoverStateSummary(ctx, root)
+		if err != nil {
+			return true, err
+		}
 	}
 	validatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
 	if err != nil {
@@ -428,7 +431,10 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return false, err
 	}
 	if lastValidated == nil {
-		return false, errInvalidNilSummary
+		lastValidated, err = s.recoverStateSummary(ctx, root)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	if ss.Slot > lastValidated.Slot {
@@ -475,4 +481,19 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 // SetGenesisTime sets the genesis time of beacon chain.
 func (s *Service) SetGenesisTime(t time.Time) {
 	s.genesisTime = t
+}
+
+func (s *Service) recoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
+	if s.cfg.BeaconDB.HasBlock(ctx, blockRoot) {
+		b, err := s.cfg.BeaconDB.Block(ctx, blockRoot)
+		if err != nil {
+			return nil, err
+		}
+		summary := &ethpb.StateSummary{Slot: b.Block().Slot(), Root: blockRoot[:]}
+		if err := s.cfg.BeaconDB.SaveStateSummary(ctx, summary); err != nil {
+			return nil, err
+		}
+		return summary, nil
+	}
+	return nil, errBlockDoesNotExist
 }
