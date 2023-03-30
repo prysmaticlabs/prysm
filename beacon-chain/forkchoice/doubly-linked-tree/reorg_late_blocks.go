@@ -47,8 +47,8 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 		return
 	}
 
-	// Do not reorg on epoch boundaries
-	if (head.slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+	// Do not reorg on the first slot after an epoch boundary
+	if (head.slot+1)%params.BeaconConfig().SlotsPerEpoch == 1 {
 		return
 	}
 	// Only reorg blocks that arrive late
