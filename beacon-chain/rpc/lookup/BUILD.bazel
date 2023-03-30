@@ -2,9 +2,12 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["fetcher.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/statefetcher",
-    visibility = ["//beacon-chain:__subpackages__"],
+    srcs = [
+        "blocker.go",
+        "stater.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup",
+    visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/db:go_default_library",
@@ -12,6 +15,7 @@ go_library(
         "//beacon-chain/state/stategen:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//time/slots:go_default_library",
@@ -22,11 +26,15 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["fetcher_test.go"],
+    srcs = [
+        "blocker_test.go",
+        "stater_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
+        "//beacon-chain/rpc/testutil:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/stategen/mock:go_default_library",

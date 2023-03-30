@@ -668,9 +668,7 @@ message ValidatorPerformanceRequest {
     repeated uint64 indices = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
 }
 
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 message ValidatorPerformanceResponse {
-    option deprecated = true;
     // A list of validator effective balances mapped 1-to-1 with the request's
     // public keys.
     repeated uint64 current_effective_balances = 1;
