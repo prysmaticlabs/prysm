@@ -264,7 +264,8 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 
 	// Get previous randao.
 	st = st.Copy()
-	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
+	headRoot := s.headRoot()
+	st, err := transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot[:], slot)
 	if err != nil {
 		log.WithError(err).Error("Could not process slots to get payload attribute")
 		return false, emptyAttri, 0

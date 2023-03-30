@@ -170,7 +170,11 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpbv1.Attes
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, req.Attestation_1.Data.Slot)
+	headRoot, err := bs.ChainInfoFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
+	}
+	headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Attestation_1.Data.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 	}
@@ -226,7 +230,11 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, req.SignedHeader_1.Message.Slot)
+	headRoot, err := bs.ChainInfoFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
+	}
+	headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.SignedHeader_1.Message.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 	}
@@ -284,7 +292,11 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get epoch from message: %v", err)
 	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, s)
+	headRoot, err := bs.ChainInfoFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
+	}
+	headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, s)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 	}
