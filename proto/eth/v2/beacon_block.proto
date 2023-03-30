@@ -18,6 +18,7 @@ package ethereum.eth.v2;
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
+import "proto/eth/v2/blobs.proto";
 import "proto/eth/v2/version.proto";
 import "proto/eth/v2/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
@@ -55,8 +56,13 @@ message BeaconBlockContainerV2 {
     BeaconBlockAltair altair_block = 2;
     BeaconBlockBellatrix bellatrix_block = 3;
     BeaconBlockCapella capella_block = 4; 
-    BeaconBlockDeneb deneb_block = 5;
+    BeaconBlockDenebAndBlobs deneb_block = 5;
   }
+}
+
+message BeaconBlockDenebAndBlobs {
+    BeaconBlockDeneb block = 1;
+    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }
 
 message SignedBeaconBlockContainer {
