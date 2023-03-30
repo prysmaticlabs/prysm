@@ -1,8 +1,8 @@
 package depositsnapshot
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -10,6 +10,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -223,9 +224,9 @@ func merkleRootFromBranch(leaf [32]byte, branch [][32]byte, index uint64) [32]by
 	for i, l := range branch {
 		ithBit := (index >> i) & 0x1
 		if ithBit == 1 {
-			root = sha256.Sum256(append(l[:], root[:]...))
+			root = hash.Hash(append(l[:], root[:]...))
 		} else {
-			root = sha256.Sum256(append(root[:], l[:]...))
+			root = hash.Hash(append(root[:], l[:]...))
 		}
 	}
 	return root
@@ -377,4 +378,9 @@ func TestInvalidSnapshot(t *testing.T) {
 	}
 	_, err := fromSnapshot(invalidSnapshot)
 	require.ErrorContains(t, "snapshot root is invalid", err)
+}
+
+func TestEmptyTree(t *testing.T) {
+	tree := newDepositTree()
+	require.Equal(t, fmt.Sprintf("%x", tree.getRoot()), "d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e")
 }

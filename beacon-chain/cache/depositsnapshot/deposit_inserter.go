@@ -27,7 +27,7 @@ var (
 type DepositInserter interface {
 	InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error
 	InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer)
-	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64)
+	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error
 }
 
 // InsertDeposit into the database. If deposit or block number are nil
@@ -61,6 +61,16 @@ func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum ui
 	// exist for the pubkey , it is simply added to the map.
 	pubkey := bytesutil.ToBytes48(d.Data.PublicKey)
 	c.depositsByKey[pubkey] = append(c.depositsByKey[pubkey], depCtr)
+
+	depositDataRoot, err := d.Data.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	err = c.finalizedDeposits.Deposits.pushLeaf(depositDataRoot)
+	if err != nil {
+		return err
+	}
+
 	historicalDepositsCount.Inc()
 	return nil
 }
@@ -85,7 +95,7 @@ func (c *Cache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.Depos
 }
 
 // InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
-func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) {
+func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
 	defer span.End()
 	c.depositsLock.Lock()
@@ -97,7 +107,7 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	// Don't insert into finalized trie if there is no deposit to
 	// insert.
 	if len(c.deposits) == 0 {
-		return
+		return nil
 	}
 	// In the event we have less deposits than we need to
 	// finalize we finalize till the index on which we do have it.
@@ -108,30 +118,17 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	// ignore it.
 	if int(eth1DepositIndex) < insertIndex {
 		fmt.Println("Anything")
-		return
+		return nil
 	}
-	for _, d := range c.deposits {
-		if d.Index <= c.finalizedDeposits.MerkleTrieIndex {
-			continue
-		}
-		if d.Index > eth1DepositIndex {
-			break
-		}
-		depHash, err := d.Deposit.Data.HashTreeRoot()
-		if err != nil {
-			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
-			return
-		}
-		err = depositTrie.Insert(depHash[:], insertIndex)
-		if err != nil {
-			log.WithError(err).Error("Could not insert deposit hash")
-			return
-		}
-		insertIndex++
+	tree, err := depositTrie.tree.Finalize(uint64(eth1DepositIndex), DepositContractDepth)
+	if err != nil {
+		return err
 	}
+	depositTrie.tree = tree
 
 	c.finalizedDeposits = &FinalizedDeposits{
 		Deposits:        depositTrie,
 		MerkleTrieIndex: eth1DepositIndex,
 	}
+	return nil
 }

@@ -1056,3 +1056,11 @@ func makeDepositProof() [][]byte {
 	}
 	return proof
 }
+
+func TestEmptyTree(t *testing.T) {
+	finalizedDepositsTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err)
+	v, err := finalizedDepositsTrie.HashTreeRoot()
+	require.NoError(t, err)
+	fmt.Printf("%x", v)
+}

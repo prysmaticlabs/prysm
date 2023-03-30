@@ -82,6 +82,7 @@ func GenerateTrieFromItems(items [][]byte, depth uint64) (*SparseMerkleTrie, err
 		fmt.Printf("Transformed %#x\n", leaves[i])
 		arr := bytesutil.ToBytes32(leaves[i])
 		transformedLeaves[i] = arr[:]
+		fmt.Printf("Original leaf hash: %x\n", transformedLeaves[i])
 	}
 	layers[0] = transformedLeaves
 	for i := uint64(0); i < depth; i++ {

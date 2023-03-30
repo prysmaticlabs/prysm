@@ -1,6 +1,8 @@
 package depositsnapshot
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
@@ -166,6 +168,7 @@ type LeafNode struct {
 
 // GetRoot returns the root of the Merkle tree.
 func (l *LeafNode) GetRoot() [32]byte {
+	fmt.Printf("Leaf hash %x\n", l.hash)
 	return l.hash
 }
 
