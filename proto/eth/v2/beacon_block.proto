@@ -18,6 +18,7 @@ package ethereum.eth.v2;
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
+import "proto/eth/v2/blobs.proto";
 import "proto/eth/v2/version.proto";
 import "proto/eth/v2/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
@@ -474,7 +475,7 @@ message BeaconBlockBodyCapella {
 }
 
 message BeaconBlockContentsDeneb {
-    BeaconBlockDeneb block = 1
+    BeaconBlockDeneb block = 1;
     repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }
 
