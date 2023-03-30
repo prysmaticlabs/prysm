@@ -187,3 +187,18 @@ func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, enc
 	}
 	return sidecars, nil
 }
+
+func SendBlobsByRangeRequest(ctx context.Context, ci blockchain.ForkFetcher, p2pApi p2p.SenderEncoder, pid peer.ID, req *pb.BlobSidecarsByRangeRequest) ([]*pb.BlobSidecar, error) {
+	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRangeName, slots.ToEpoch(ci.CurrentSlot()))
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("topic", topic).Debug("Sending blob by range request")
+	stream, err := p2pApi.Send(ctx, req, topic, pid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeStream(stream, log)
+
+	return readChunkEncodedBlobs(stream, ci, p2pApi.Encoding())
+}
