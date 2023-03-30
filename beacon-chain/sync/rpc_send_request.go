@@ -4,10 +4,12 @@ import (
 	"context"
 	"io"
 
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -132,27 +134,56 @@ func SendBeaconBlocksByRootRequest(
 
 func SendBlobSidecarByRoot(
 	ctx context.Context, ci blockchain.ChainInfoFetcher, p2pApi p2p.P2P, pid peer.ID,
-	req p2ptypes.BlobSidecarsByRootReq,
+	req *p2ptypes.BlobSidecarsByRootReq,
 ) ([]*pb.BlobSidecar, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRootName, slots.ToEpoch(ci.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
+	log.WithField("topic", topic).Debug("Sending blob sidecar request")
 	stream, err := p2pApi.Send(ctx, req, topic, pid)
 	if err != nil {
 		return nil, err
 	}
 	defer closeStream(stream, log)
 
-	sidecars := make([]*pb.BlobSidecar, 0, len(req))
+	return readChunkEncodedBlobs(stream, ci, p2pApi.Encoding())
+}
 
-	max := params.BeaconNetworkConfig().MaxRequestBlobsSidecars * params.BeaconConfig().MaxBlobsPerBlock
-	for i := 0; i < len(req); i++ {
-		// Exit if peer sends more than MAX_REQUEST_BLOBS_SIDECARS.
-		if uint64(i) >= max {
+var ErrBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
+
+func readChunkEncodedBlobs(stream network.Stream, ff blockchain.ForkFetcher, encoding encoder.NetworkEncoding) ([]*pb.BlobSidecar, error) {
+	decode := encoding.DecodeWithMaxLength
+	max := int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars)
+	var (
+		code uint8
+		msg  string
+		err  error
+	)
+	sidecars := make([]*pb.BlobSidecar, 0)
+	for i := 0; i < max; i++ {
+		code, msg, err = ReadStatusCode(stream, encoding)
+		if err != nil {
 			break
 		}
-		// TODO: Read sidecar
+		if code != 0 {
+			return nil, errors.Wrap(ErrBlobChunkedReadFailure, msg)
+		}
+		// TODO: we should add some code to switch on the fork version to determine deserialization type
+		// punting to rush this out to unblock testing.
+		_, err = readContextFromStream(stream, ff)
+		if err != nil {
+			return nil, errors.Wrap(err, "error reading chunk context bytes from stream")
+		}
+
+		sc := &pb.BlobSidecar{}
+		if err := decode(stream, sc); err != nil {
+			return nil, errors.Wrap(err, "failed to decode the protobuf-encoded BlobSidecar message from RPC chunk stream")
+		}
+		sidecars = append(sidecars, sc)
+	}
+	if !errors.Is(err, io.EOF) {
+		return nil, err
 	}
 	return sidecars, nil
 }

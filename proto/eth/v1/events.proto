@@ -159,6 +159,6 @@ message EventPayloadAttributeV2 {
         // The version N must match the payload attributes for the hard fork matching version.
         // The beacon API encoded object must have equivalent fields to its counterpart in execution-apis with two differences:
         // 1) snake_case identifiers must be used rather than camelCase; 2) integers must be encoded as quoted decimals rather than big-endian hex.
-        engine.v1.PayloadAttributesV2 payload_attributes_v2 = 8;
+        engine.v1.PayloadAttributesV2 payload_attributes = 8;
   }
 }

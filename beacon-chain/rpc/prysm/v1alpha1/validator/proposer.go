@@ -52,14 +52,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 
 	// process attestations and update head in forkchoice
-	vs.ForkFetcher.ForkChoicer().Lock()
-	vs.HeadUpdater.UpdateHead(ctx, vs.ForkFetcher.CurrentSlot())
-	headRoot := vs.ForkFetcher.ForkChoicer().CachedHeadRoot()
-	parentRoot := vs.ForkFetcher.ForkChoicer().GetProposerHead()
+	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
+	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	if parentRoot != headRoot {
 		blockchain.LateBlockAttemptedReorgCount.Inc()
 	}
-	vs.ForkFetcher.ForkChoicer().Unlock()
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
@@ -173,7 +171,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 				Slot:            blk.Slot,
 				BlockParentRoot: blk.ParentRoot,
 				ProposerIndex:   blk.ProposerIndex,
-				Blob:            b,
+				Blob:            b.Data,
 				KzgCommitment:   commitments[i][:],
 				KzgProof:        proofs[i][:],
 			}
@@ -337,9 +335,16 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, req *ethpb.Gene
 		if !ok {
 			return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
 		}
-		for _, sidecar := range b.Deneb.Blobs {
+		scs := make([]*ethpb.BlobSidecar, len(b.Deneb.Blobs))
+		for i, sidecar := range b.Deneb.Blobs {
+			scs[i] = sidecar.Message
 			if err := vs.P2P.BroadcastBlob(ctx, sidecar.Message.Index, sidecar); err != nil {
 				return nil, errors.Wrap(err, "could not broadcast blob sidecar")
+			}
+		}
+		if len(scs) > 0 {
+			if err := vs.BeaconDB.SaveBlobSidecar(ctx, scs); err != nil {
+				return nil, errors.Wrap(err, "could not save blob sidecar")
 			}
 		}
 	}

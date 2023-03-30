@@ -108,13 +108,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 
 	// Verify that the parent block is in forkchoice
-	if !s.ForkChoicer().HasNode(b.ParentRoot()) {
+	if !s.cfg.ForkChoiceStore.HasNode(b.ParentRoot()) {
 		return ErrNotDescendantOfFinalized
 	}
 
 	// Save current justified and finalized epochs for future use.
-	currStoreJustifiedEpoch := s.ForkChoicer().JustifiedCheckpoint().Epoch
-	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch
+	currStoreJustifiedEpoch := s.cfg.ForkChoiceStore.JustifiedCheckpoint().Epoch
+	currStoreFinalizedEpoch := s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch
 	preStateFinalizedEpoch := preState.FinalizedCheckpoint().Epoch
 	preStateJustifiedEpoch := preState.CurrentJustifiedCheckpoint().Epoch
 
@@ -187,18 +187,18 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}()
 	}
 
-	justified := s.ForkChoicer().JustifiedCheckpoint()
+	justified := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	start := time.Now()
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
 	if blockRoot != headRoot {
-		receivedWeight, err := s.ForkChoicer().Weight(blockRoot)
+		receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
 		}
-		headWeight, err := s.ForkChoicer().Weight(headRoot)
+		headWeight, err := s.cfg.ForkChoiceStore.Weight(headRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", headRoot)).Warn("could not determine node weight")
 		}
@@ -252,7 +252,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 
 	// Save finalized check point to db and more.
 	postStateFinalizedEpoch := postState.FinalizedCheckpoint().Epoch
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	if finalized.Epoch > currStoreFinalizedEpoch || (finalized.Epoch == postStateFinalizedEpoch && finalized.Epoch > preStateFinalizedEpoch) {
 		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
 			return err
@@ -576,7 +576,7 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {
-			s.ForkChoicer().InsertSlashedIndex(ctx, primitives.ValidatorIndex(index))
+			s.cfg.ForkChoiceStore.InsertSlashedIndex(ctx, primitives.ValidatorIndex(index))
 		}
 	}
 }

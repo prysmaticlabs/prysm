@@ -16,7 +16,6 @@ syntax = "proto3";
 package ethereum.eth.v1alpha1;
 
 import "proto/eth/ext/options.proto";
-import "proto/engine/v1/execution_engine.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1;eth";
@@ -35,7 +34,7 @@ message BlobSidecar {
         uint64 slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
         bytes block_parent_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
         uint64 proposer_index = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-        ethereum.engine.v1.Blob blob = 6;
+        bytes blob = 6 [(ethereum.eth.ext.ssz_size) = "blob.size"];
         bytes kzg_commitment = 7 [(ethereum.eth.ext.ssz_size) = "48"];
         bytes kzg_proof = 8 [(ethereum.eth.ext.ssz_size) = "48"];
 }
