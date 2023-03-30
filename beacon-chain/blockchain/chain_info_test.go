@@ -583,6 +583,25 @@ func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
 
 }
 
+func TestService_IsOptimisticForRoot_StateSummaryRecovered(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	ctx := context.Background()
+	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: [32]byte{'b'}}}
+	c.head = &head{root: params.BeaconConfig().ZeroHash}
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 10
+	br, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b)
+	_, err = c.IsOptimisticForRoot(ctx, br)
+	assert.NoError(t, err)
+	summ, err := beaconDB.StateSummary(ctx, br)
+	assert.NoError(t, err)
+	assert.NotNil(t, summ)
+	assert.Equal(t, 10, int(summ.Slot))
+	assert.DeepEqual(t, br[:], summ.Root)
+}
+
 func TestService_IsFinalized(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
