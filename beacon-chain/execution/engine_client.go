@@ -28,6 +28,21 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
+)
+
+var (
+	supportedEngineEndpoints = []string{
+		NewPayloadMethod,
+		NewPayloadMethodV2,
+		ForkchoiceUpdatedMethod,
+		ForkchoiceUpdatedMethodV2,
+		GetPayloadMethod,
+		GetPayloadMethodV2,
+		ExchangeTransitionConfigurationMethod,
+		GetPayloadBodiesByHashV1,
+		GetPayloadBodiesByRangeV1,
+	}
 )
 
 const (
@@ -53,6 +68,8 @@ const (
 	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
 	// GetPayloadBodiesByRangeV1 v1 request string for JSON-RPC.
 	GetPayloadBodiesByRangeV1 = "engine_getPayloadBodiesByRangeV1"
+	// ExchangeCapabilities request string for JSON-RPC.
+	ExchangeCapabilities = "engine_exchangeCapabilities"
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
 	defaultEngineTimeout = time.Second
 )
@@ -276,6 +293,23 @@ func (s *Service) ExchangeTransitionConfiguration(
 		)
 	}
 	return nil
+}
+
+func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
+	if !features.Get().EnableOptionalEngineMethods {
+		return nil, errors.New("optional engine methods not enabled")
+	}
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeCapabilities")
+	defer span.End()
+
+	result := &pb.ExchangeCapabilities{}
+	err := s.rpcClient.CallContext(ctx, &result, ExchangeCapabilities, supportedEngineEndpoints)
+
+	var methodNames []string
+	for _, v := range result.GetSupportedMethods() {
+		methodNames = append(methodNames, string(v))
+	}
+	return methodNames, handleRPCError(err)
 }
 
 // GetTerminalBlockHash returns the valid terminal block hash based on total difficulty.
