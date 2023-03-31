@@ -11,10 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // Blobs is an HTTP handler for Beacon API getBlobs.
@@ -67,8 +69,17 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 		}
 		root = jcp.Root
 	default:
-		if len(blockId) == 32 {
-			root = []byte(blockId)
+		if bytesutil.IsHex([]byte(blockId)) {
+			var err error
+			root, err = hexutil.Decode(blockId)
+			if err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: errors.Wrap(err, "could not decode block ID into hex").Error(),
+					Code:    http.StatusInternalServerError,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
 		} else {
 			slot, err := strconv.ParseUint(blockId, 10, 64)
 			if err != nil {
@@ -79,10 +90,10 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 				network.WriteError(w, errJson)
 				return
 			}
-			/*denebStart, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+			denebStart, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 			if err != nil {
 				errJson := &network.DefaultErrorJson{
-					Message: "could not calculate Deneb start slot",
+					Message: errors.Wrap(err, "could not calculate Deneb start slot").Error(),
 					Code:    http.StatusInternalServerError,
 				}
 				network.WriteError(w, errJson)
@@ -95,7 +106,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 				}
 				network.WriteError(w, errJson)
 				return
-			}*/
+			}
 			sidecars, err = s.BeaconDB.BlobSidecarsBySlot(r.Context(), primitives.Slot(slot), indices...)
 			if err != nil {
 				errJson := &network.DefaultErrorJson{
