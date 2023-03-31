@@ -369,9 +369,9 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		return nil
 	}
 
-	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockDenebContainerJson); ok {
+	if blockContent, ok := endpoint.PostRequest.(*SignedBeaconBlockContentsDenebContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &denebPublishBlockRequestJson{
+		actualPostReq := &denebPublishBlockContentRequestJson{
 			DenebBlock: block.Message,
 			Signature:  block.Signature,
 		}
