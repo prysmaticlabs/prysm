@@ -107,6 +107,8 @@ func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams
 }
 
 func (m *mockKeymanager) SimulateAccountChanges(newKeys [][fieldparams.BLSPubkeyLength]byte) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	m.accountsChangedFeed.Send(newKeys)
 }
 
