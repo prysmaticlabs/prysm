@@ -382,6 +382,8 @@ message BlindedBeaconBlockBodyDeneb {
 
   // BLS To Execution Changes: signed messages to change withdrawal credentials [New in Capella]
   repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+
+  repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
 }
 
 message BeaconBlockBodyAltair {
