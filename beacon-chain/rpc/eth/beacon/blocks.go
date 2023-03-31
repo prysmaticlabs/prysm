@@ -222,6 +222,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 		if err := bs.submitCapellaBlock(ctx, blkContainer.CapellaBlock, req.Signature); err != nil {
 			return nil, err
 		}
+
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unsupported block container type %T", blkContainer)
 	}

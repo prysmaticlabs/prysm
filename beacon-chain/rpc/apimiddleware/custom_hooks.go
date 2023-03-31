@@ -295,19 +295,36 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
 	s := struct {
-		Message struct {
-			Slot string
-		}
+		Slot string
 	}{}
 
 	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
 	}
-	if err := json.Unmarshal(buf, &s); err != nil {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read slot from body")
+
+	typeParseMap := make(map[string]json.RawMessage)
+	if err := json.Unmarshal(buf, &typeParseMap); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not parse object")
 	}
-	slot, err := strconv.ParseUint(s.Message.Slot, 10, 64)
+	if val, ok := typeParseMap["message"]; ok {
+		if err := json.Unmarshal(val, &s); err != nil {
+			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal field 'message' ")
+		}
+	} else if val, ok := typeParseMap["signed_block"]; ok {
+		temp := struct {
+			Message struct {
+				Slot string
+			}
+		}{}
+		if err := json.Unmarshal(val, &temp); err != nil {
+			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal field 'signed_block' ")
+		}
+		s.Slot = temp.Message.Slot
+	} else {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, fmt.Sprintf("object: %v is not a known signed block type", typeParseMap))
+	}
+	slot, err := strconv.ParseUint(s.Slot, 10, 64)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
@@ -372,8 +389,8 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 	if blockContent, ok := endpoint.PostRequest.(*SignedBeaconBlockContentsDenebContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &denebPublishBlockContentRequestJson{
-			DenebBlock: block.Message,
-			Signature:  block.Signature,
+			SignedBlock:        blockContent.SignedBlock,
+			SignedBlobSidecars: blockContent.SignedBlobSidecars,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
