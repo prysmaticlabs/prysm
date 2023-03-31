@@ -201,28 +201,31 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
-func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBlockContainer) (*emptypb.Empty, error) {
+func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBlockContainerPayload) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
-	switch blkContainer := req.Message.(type) {
+	switch blkContainer := req.SignedBlock.Message.(type) {
 	case *ethpbv2.SignedBeaconBlockContainer_Phase0Block:
-		if err := bs.submitPhase0Block(ctx, blkContainer.Phase0Block, req.Signature); err != nil {
+		if err := bs.submitPhase0Block(ctx, blkContainer.Phase0Block, req.SignedBlock.Signature); err != nil {
 			return nil, err
 		}
 	case *ethpbv2.SignedBeaconBlockContainer_AltairBlock:
-		if err := bs.submitAltairBlock(ctx, blkContainer.AltairBlock, req.Signature); err != nil {
+		if err := bs.submitAltairBlock(ctx, blkContainer.AltairBlock, req.SignedBlock.Signature); err != nil {
 			return nil, err
 		}
 	case *ethpbv2.SignedBeaconBlockContainer_BellatrixBlock:
-		if err := bs.submitBellatrixBlock(ctx, blkContainer.BellatrixBlock, req.Signature); err != nil {
+		if err := bs.submitBellatrixBlock(ctx, blkContainer.BellatrixBlock, req.SignedBlock.Signature); err != nil {
 			return nil, err
 		}
 	case *ethpbv2.SignedBeaconBlockContainer_CapellaBlock:
-		if err := bs.submitCapellaBlock(ctx, blkContainer.CapellaBlock, req.Signature); err != nil {
+		if err := bs.submitCapellaBlock(ctx, blkContainer.CapellaBlock, req.SignedBlock.Signature); err != nil {
 			return nil, err
 		}
-
+	case *ethpbv2.SignedBeaconBlockContainer_CapellaBlock:
+		if err := bs.submitCapellaBlock(ctx, blkContainer.CapellaBlock, req.SignedBlock.Signature); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unsupported block container type %T", blkContainer)
 	}
@@ -1168,6 +1171,27 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 	}
 
 	return bs.submitBlock(ctx, root, wrappedCapellaBlk)
+}
+
+func (bs *Server) submitDenebBlockcontents(ctx context.Context, capellaBlk *ethpbv2.BeaconBlockDenebAndBlobs, sig []byte) error {
+	v1alpha1Blk, err := migration.CapellaToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockCapella{Message: capellaBlk, Signature: sig})
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+	}
+	wrappedCapellaBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
+	}
+
+	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_BlindedCapella{
+			BlindedCapella: b,
+		},
+	})
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
+	}
+	return nil
 }
 
 func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.ReadOnlySignedBeaconBlock) error {

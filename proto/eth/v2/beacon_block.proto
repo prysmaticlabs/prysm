@@ -56,7 +56,7 @@ message BeaconBlockContainerV2 {
     BeaconBlockAltair altair_block = 2;
     BeaconBlockBellatrix bellatrix_block = 3;
     BeaconBlockCapella capella_block = 4; 
-    BeaconBlockDenebAndBlobs deneb_block = 5;
+    BeaconBlockDeneb deneb_block = 5;
   }
 }
 
@@ -66,62 +66,9 @@ message BeaconBlockDenebAndBlobs {
 }
 
 message SignedBeaconBlockContainerPayload {
-    GenericSignedBeaconBlock signed_block = 1;
+    SignedBeaconBlockContainer signed_block = 1;
     optional SignedBlobSidecars signed_blobs = 2;
 }
-
-message GenericSignedBeaconBlock {
-    oneof block {
-        // Representing a signed, phase 0 beacon block.
-        SignedBeaconBlock phase0 = 1;
-
-        // Representing a signed, post-Altair fork beacon block.
-        SignedBeaconBlockAltair altair = 2;
-
-        // Representing a signed, post-Bellatrix fork beacon block.
-        SignedBeaconBlockBellatrix bellatrix = 3;
-
-        // Representing a signed, post-Bellatrix fork blinded beacon block.
-        SignedBlindedBeaconBlockBellatrix blinded_bellatrix = 4;
-
-        // Representing a signed, post-Capella fork beacon block.
-        SignedBeaconBlockCapella capella = 5;
-
-        // Representing a signed, post-Capella fork blinded beacon block.
-        SignedBlindedBeaconBlockCapella blinded_capella = 6;
-
-        SignedBeaconBlockDenebAndBlobs Deneb  = 7;
-
-        SignedBlindedBeaconBlockDeneb blinded_Deneb  = 8;
-    }
-}
-
-message GenericBeaconBlock {
-    oneof block {
-        // Representing a phase 0 beacon block.
-        BeaconBlock phase0 = 1;
-
-        // Representing a post-Altair fork beacon block.
-        BeaconBlockAltair altair = 2;
-
-        // Representing a post-Bellatrix fork beacon block.
-        BeaconBlockBellatrix bellatrix = 3;
-
-        // Representing a post-Bellatrix fork blinded beacon block.
-        BlindedBeaconBlockBellatrix blinded_bellatrix = 4;
-
-        // Representing a post-Capella fork beacon block.
-        BeaconBlockCapella capella = 5;
-
-        // Representing a post-Capella fork blinded beacon block.
-        BlindedBeaconBlockCapella blinded_capella = 6;
-
-        BeaconBlockDenebAndBlobs Deneb  = 7;
-
-        BlindedBeaconBlockDeneb blinded_Deneb  = 8;
-    }
-}
-
 
 message SignedBeaconBlockContainer {
   oneof message {
