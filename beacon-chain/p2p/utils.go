@@ -60,6 +60,17 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		if err != nil {
 			return nil, err
 		}
+		if cfg.StaticPeerID {
+			rawbytes, err := priv.Raw()
+			if err != nil {
+				return nil, err
+			}
+			dst := make([]byte, hex.EncodedLen(len(rawbytes)))
+			hex.Encode(dst, rawbytes)
+			if err := file.WriteFile(defaultKeyPath, dst); err != nil {
+				return nil, err
+			}
+		}
 		return ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 	}
 	if defaultKeysExist && privateKeyPath == "" {
