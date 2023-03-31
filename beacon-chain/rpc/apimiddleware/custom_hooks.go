@@ -270,6 +270,11 @@ type capellaPublishBlindedBlockRequestJson struct {
 	Signature    string                         `json:"signature" hex:"true"`
 }
 
+type denebPublishBlockRequestJson struct {
+	DenebBlock *BeaconBlockDenebJson `json:"deneb_block"`
+	Signature  string                `json:"signature" hex:"true"`
+}
+
 type denebPublishBlockContentRequestJson struct {
 	SignedBlock        *SignedBeaconBlockDenebContainerJson `json:"signed_block"`
 	SignedBlobSidecars []*SignedBlobSidecarContainerJson    `json:"signed_blob_sidecars"`
@@ -364,11 +369,11 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		return nil
 	}
 
-	if blockContent, ok := endpoint.PostRequest.(*SignedBeaconBlockContentsDenebContainerJson); ok {
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockDenebContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &denebPublishBlockContentRequestJson{
-			SignedBlock:        blockContent.SignedBlock,
-			SignedBlobSidecars: blockContent.SignedBlobSidecars,
+		actualPostReq := &denebPublishBlockRequestJson{
+			DenebBlock: block.Message,
+			Signature:  block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil

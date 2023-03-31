@@ -377,14 +377,14 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	}
 	denebBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
 	if ok {
-		block, err := migration.V1Alpha1BeaconBlockDenebToV2(denebBlock.Deneb.Block)
+		blockAndBlobs, err := migration.V1Alpha1BeaconBlockDenebAndBlobsToV2(denebBlock.Deneb)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
 		return &ethpbv2.ProduceBlockResponseV2{
 			Version: ethpbv2.Version_DENEB,
 			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block: &ethpbv2.BeaconBlockContainerV2_DenebBlockContents{DenebBlockContents: denebBlock},
+				Block: &ethpbv2.BeaconBlockContainerV2_DenebBlock{DenebBlock: blockAndBlobs},
 			},
 		}, nil
 	}
@@ -479,6 +479,11 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 			Version: ethpbv2.Version_CAPELLA,
 			Data:    sszBlock,
 		}, nil
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	if ok {
+		// TODO: ssz support for blobcontents is an ongoing discussion.
+		return nil, status.Error(codes.Unimplemented, "Feature for blobcontents ssz is not implemented yet.")
 	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }

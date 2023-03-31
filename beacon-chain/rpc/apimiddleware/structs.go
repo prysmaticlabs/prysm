@@ -413,7 +413,7 @@ type BeaconBlockContainerV2Json struct {
 	AltairBlock        *BeaconBlockAltairJson        `json:"altair_block"`
 	BellatrixBlock     *BeaconBlockBellatrixJson     `json:"bellatrix_block"`
 	CapellaBlock       *BeaconBlockCapellaJson       `json:"capella_block"`
-	DenebBlockContents *BeaconBlockContentsDenebJson `json:"deneb_block_contents"`
+	DenebBlockContents *BeaconBlockContentsDenebJson `json:"deneb_block"`
 }
 
 type BlindedBeaconBlockContainerJson struct {
@@ -421,7 +421,7 @@ type BlindedBeaconBlockContainerJson struct {
 	AltairBlock        *BeaconBlockAltairJson               `json:"altair_block"`
 	BellatrixBlock     *BlindedBeaconBlockBellatrixJson     `json:"bellatrix_block"`
 	CapellaBlock       *BlindedBeaconBlockCapellaJson       `json:"capella_block"`
-	DenebBlockContents *BlindedBeaconBlockContentsDenebJson `json:"deneb_block_contents"`
+	DenebBlockContents *BlindedBeaconBlockContentsDenebJson `json:"deneb_block"`
 }
 
 type SignedBeaconBlockAltairContainerJson struct {
