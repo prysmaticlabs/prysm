@@ -28,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"google.golang.org/grpc"
 )
 
 var (
