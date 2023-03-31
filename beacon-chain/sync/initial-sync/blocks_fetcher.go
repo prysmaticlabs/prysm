@@ -305,7 +305,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		p := peers[i]
 		blocks, err := f.requestBlocks(ctx, req, p)
 		if err != nil {
-			log.WithError(err).Debug("Could not request blocks by range from peer id = %s", p)
+			log.WithField("peer", p).WithError(err).Debug("Could not request blocks by range from peer")
 			continue
 		}
 		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
@@ -356,7 +356,7 @@ func (f *blocksFetcher) fetchBlobsForResponse(ctx context.Context, resp *fetchRe
 	defer span.End()
 
 	req, err := blobRequestsForBlocks(resp.blocks)
-	if err != nil {
+	if err != nil || req == nil {
 		return err
 	}
 	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
