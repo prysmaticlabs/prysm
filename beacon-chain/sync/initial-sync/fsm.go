@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
@@ -42,12 +43,14 @@ type stateMachineManager struct {
 // stateMachine holds a state of a single block processing FSM.
 // Each FSM allows deterministic state transitions: State(S) x Event(E) -> Actions (A), State(S').
 type stateMachine struct {
-	smm     *stateMachineManager
-	start   primitives.Slot
-	state   stateID
-	pid     peer.ID
-	blocks  []interfaces.ReadOnlySignedBeaconBlock
-	updated time.Time
+	smm      *stateMachineManager
+	start    primitives.Slot
+	state    stateID
+	pid      peer.ID
+	blocks   []interfaces.ReadOnlySignedBeaconBlock
+	blobMap  map[[32]byte][]*ethpb.BlobSidecar
+	blobsPid peer.ID
+	updated  time.Time
 }
 
 // eventHandlerFn is an event handler function's signature.

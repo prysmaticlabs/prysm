@@ -3,15 +3,18 @@ package initialsync
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -131,7 +134,7 @@ func (s *Service) processFetchedData(
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	// Use Batch Block Verify to process and verify batches directly.
-	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.cfg.Chain.ReceiveBlockBatch); err != nil {
+	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.cfg.Chain.ReceiveBlockBatch, data.blobMap); err != nil {
 		log.WithError(err).Warn("Skip processing batched blocks")
 	}
 }
@@ -247,8 +250,12 @@ func (s *Service) processBlock(
 	return blockReceiver(ctx, blk, blkRoot)
 }
 
+var ErrMissingBlobsForBlockCommitments = errors.New("blobs unavailable for processing block with kzg commitments")
+var ErrMisalignedIndices = errors.New("unexpected ordering of blobs for block")
+var ErrBlobCommitmentMismatch = errors.New("kzg_commitment in blob does not match block")
+
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []interfaces.ReadOnlySignedBeaconBlock, bFunc batchBlockReceiverFn) error {
+	blks []interfaces.ReadOnlySignedBeaconBlock, bFunc batchBlockReceiverFn, blobs map[[32]byte][]*ethpb.BlobSidecar) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -287,8 +294,50 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			return err
 		}
 		blockRoots[i] = blkRoot
+		// TODO: This blob processing should be moved down into blocks_fetcher.go so that we can
+		// try other peers if we get blobs that don't match the block commitments.
+		denebB, err := b.PbDenebBlock()
+		if err != nil {
+			if errors.Is(err, blocks.ErrUnsupportedGetter) {
+				// expected for pre-deneb blocks
+				continue
+			}
+			return errors.Wrapf(err, "unexpected error when checking if block root=%#x is post-deneb", blkRoot)
+		}
+		kcs := denebB.GetBlock().GetBody().BlobKzgCommitments
+		if len(kcs) == 0 {
+			continue
+		}
+		bblobs := blobs[blkRoot]
+		if len(bblobs) != len(kcs) {
+			return errors.Wrapf(ErrMissingBlobsForBlockCommitments, "block root %#x, %d commitments, %d blobs", blkRoot, len(kcs), len(bblobs))
+		}
+		// make sure commitments match
+		for ci, kc := range kcs {
+			blobi := bblobs[ci]
+			if blobi.Index != uint64(i) {
+				return errors.Wrapf(ErrMisalignedIndices, "block root %#x, block commitment %#x, offset %d, blob commitment %#x, Index=%d",
+					blkRoot, kc, ci, blobi.KzgCommitment, blobi.Index)
+			}
+			if bytesutil.ToBytes48(kc) != bytesutil.ToBytes48(blobi.KzgCommitment) {
+				return errors.Wrapf(ErrBlobCommitmentMismatch, "block root %#x, Index %d, block commitment=%#x, blob commitment=%#x",
+					blkRoot, ci, kc, blobi.KzgCommitment)
+			}
+		}
 	}
-	return bFunc(ctx, blks, blockRoots)
+	for _, root := range blockRoots {
+		scs, has := blobs[root]
+		if !has {
+			continue
+		}
+		if err := s.cfg.DB.SaveBlobSidecar(ctx, scs); err != nil {
+			return errors.Wrapf(err, "failed to save blobs for block %#x", root)
+		}
+	}
+	if err := bFunc(ctx, blks, blockRoots); err != nil {
+		return err
+	}
+	return nil
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.

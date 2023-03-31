@@ -449,19 +449,20 @@ func TestService_processBlockBatch(t *testing.T) {
 			currBlockRoot = blk1Root
 		}
 
-		// Process block normally.
-		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
+		cbnormal := func(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
-		})
+		}
+		// Process block normally.
+		err = s.processBatchedBlocks(ctx, genesis, batch, cbnormal, nil)
 		assert.NoError(t, err)
 
-		// Duplicate processing should trigger error.
-		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
+		cbnil := func(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
-		})
+		}
+
+		// Duplicate processing should trigger error.
+		err = s.processBatchedBlocks(ctx, genesis, batch, cbnil, nil)
 		assert.ErrorContains(t, "block is already processed", err)
 
 		var badBatch2 []interfaces.ReadOnlySignedBeaconBlock
@@ -474,19 +475,12 @@ func TestService_processBlockBatch(t *testing.T) {
 		}
 
 		// Bad batch should fail because it is non linear
-		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
-			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
-			return nil
-		})
+		err = s.processBatchedBlocks(ctx, genesis, badBatch2, cbnil, nil)
 		expectedSubErr := "expected linear block list"
 		assert.ErrorContains(t, expectedSubErr, err)
 
 		// Continue normal processing, should proceed w/o errors.
-		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
-			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
-			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
-			return nil
-		})
+		err = s.processBatchedBlocks(ctx, genesis, batch2, cbnormal, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, primitives.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
