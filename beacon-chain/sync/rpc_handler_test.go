@@ -52,5 +52,5 @@ func (rt *rpcHandlerTest) testHandler(nh network.StreamHandler, rh rpcHandler, r
 		require.ErrorIs(rt.t, err, rt.err)
 	}
 
-	w.RequireDoneBeforeCancel(rt.t, ctx)
+	w.RequireDoneBeforeCancel(ctx, rt.t)
 }

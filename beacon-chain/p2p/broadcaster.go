@@ -154,13 +154,13 @@ func (s *Service) BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.
 	}
 
 	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
-	go s.broadcastBlob(ctx, subnet, blob, forkDigest)
+	go s.broadcastBlobBackground(ctx, subnet, blob, forkDigest)
 
 	return nil
 }
 
-func (s *Service) broadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar, forkDigest [4]byte) {
-	ctx, span := trace.StartSpan(ctx, "p2p.broadcastBlob")
+func (s *Service) broadcastBlobBackground(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar, forkDigest [4]byte) {
+	_, span := trace.StartSpan(ctx, "p2p.broadcastBlob")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
