@@ -83,7 +83,7 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethp
 		epoch = slots.ToEpoch(slot)
 	case *ethpb.ListValidatorsRequest_Genesis:
 		if stateValidators, err = c.stateValidatorsProvider.GetStateValidatorsForSlot(ctx, 0, pubkeys, in.Indices, statuses); err != nil {
-			return nil, errors.Wrapf(err, "failed to get state validators for slot `0`")
+			return nil, errors.Wrapf(err, "failed to get genesis state validators")
 		}
 		epoch = 0
 	case nil:
