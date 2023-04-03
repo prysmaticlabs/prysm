@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -74,7 +75,10 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					return errors.Wrap(err, "failed to match withdrawals root")
 				}
 				// If we can't get the builder value, just use local block.
-				if builderValue.Cmp(localValue) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
+				fraction := big.NewFloat(params.BeaconConfig().BuildBidFraction)
+				builderValueWithFraction := new(big.Float).SetInt(builderValue)
+				builderValueWithFraction.Mul(builderValueWithFraction, fraction)
+				if builderValueWithFraction.Cmp(new(big.Float).SetInt(localValue)) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
 					blk.SetBlinded(true)
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
@@ -83,8 +87,9 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					}
 				}
 				log.WithFields(logrus.Fields{
-					"localValue":   localValue,
-					"builderValue": builderValue,
+					"localValue":               localValue,
+					"builderValue":             builderValue,
+					"builderValueWithFraction": builderValueWithFraction,
 				}).Warn("Proposer: using local execution payload because higher value")
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.

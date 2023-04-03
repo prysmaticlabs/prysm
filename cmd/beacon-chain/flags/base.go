@@ -27,6 +27,11 @@ var (
 		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
 		Value: 8,
 	}
+	BuildBidFraction = &cli.Float64Flag{
+		Name:  "builder-bid-fraction",
+		Usage: "Fraction to multiple builder bid value with. Use builder bid if (builder_bid * bid_fraction) > local block value",
+		Value: 1,
+	}
 	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
 	ExecutionEngineEndpoint = &cli.StringFlag{
 		Name:  "execution-endpoint",
