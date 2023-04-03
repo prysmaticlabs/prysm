@@ -29,9 +29,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestServer_setExecutionData(t *testing.T) {
+	hook := logTest.NewGlobal()
+
 	ctx := context.Background()
 	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 0
@@ -183,11 +186,28 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Builder configured. Local block has higher value", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(3)}
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(2)}
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
+
+		require.LogsContain(t, hook, "builderValue*100=100 localValue=2 localValueWithBoost*100=200")
+	})
+	t.Run("Builder configured. Local block and boost has higher value", func(t *testing.T) {
+		cfg := params.BeaconConfig().Copy()
+		cfg.LocalBlockValueBoost = 1 // Boost 1%.
+		params.OverrideBeaconConfig(cfg)
+
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(1)}
+		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
+
+		require.LogsContain(t, hook, "builderValue*100=100 localValue=1 localValueWithBoost*100=101")
 	})
 	t.Run("Builder configured. Builder returns fault. Use local block", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())

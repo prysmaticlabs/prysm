@@ -92,12 +92,10 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 						return nil
 					}
 				}
-				localValueWithBoost.Div(localValueWithBoost, big.NewInt(100))
-				builderValue.Div(builderValue, big.NewInt(100))
 				log.WithFields(logrus.Fields{
-					"localValue":          localValue,
-					"localValueWithBoost": localValueWithBoost,
-					"builderValue":        builderValue,
+					"localValue":              localValue,
+					"localValueWithBoost*100": localValueWithBoost,
+					"builderValue*100":        builderValue,
 				}).Warn("Proposer: using local execution payload because higher value")
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.
@@ -330,7 +328,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.ReadOnly
 func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil  /* genesis val root */)
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
