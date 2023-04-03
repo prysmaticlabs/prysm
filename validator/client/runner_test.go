@@ -206,9 +206,14 @@ func TestKeyReload_ActiveKey(t *testing.T) {
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
 	go func() {
-		km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
+		for {
+			if km.accountsChangedFeed != nil {
+				km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
 
-		cancel()
+				cancel()
+				break
+			}
+		}
 	}()
 	run(ctx, v)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
@@ -222,9 +227,13 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
 	go func() {
-		km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
-
-		cancel()
+		for {
+			if km.accountsChangedFeed != nil {
+				km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
+				cancel()
+				break
+			}
+		}
 	}()
 	run(ctx, v)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
