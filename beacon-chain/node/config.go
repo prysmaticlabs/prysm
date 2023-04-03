@@ -67,9 +67,9 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if cliCtx.IsSet(flags.BuildBidFraction.Name) {
+	if cliCtx.IsSet(flags.LocalBlockValueBoost.Name) {
 		c := params.BeaconConfig().Copy()
-		c.BuildBidFraction = cliCtx.Float64(flags.BuildBidFraction.Name)
+		c.LocalBlockValueBoost = cliCtx.Uint64(flags.LocalBlockValueBoost.Name)
 		if err := params.SetActive(c); err != nil {
 			return err
 		}

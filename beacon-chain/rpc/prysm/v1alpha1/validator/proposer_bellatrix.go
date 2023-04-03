@@ -74,11 +74,13 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				if err != nil {
 					return errors.Wrap(err, "failed to match withdrawals root")
 				}
+
+				localValueWithBoost := big.NewInt(0)
+				boost := big.NewInt(int64(params.BeaconConfig().LocalBlockValueBoost))
+				localValueWithBoost.Mul(localValue, boost)
+
 				// If we can't get the builder value, just use local block.
-				fraction := big.NewFloat(params.BeaconConfig().BuildBidFraction)
-				builderValueWithFraction := new(big.Float).SetInt(builderValue)
-				builderValueWithFraction.Mul(builderValueWithFraction, fraction)
-				if builderValueWithFraction.Cmp(new(big.Float).SetInt(localValue)) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
+				if builderValue.Cmp(localValueWithBoost) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
 					blk.SetBlinded(true)
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
@@ -87,9 +89,9 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					}
 				}
 				log.WithFields(logrus.Fields{
-					"localValue":               localValue,
-					"builderValue":             builderValue,
-					"builderValueWithFraction": builderValueWithFraction,
+					"localValue":          localValue,
+					"localValueWithBoost": localValueWithBoost,
+					"builderValue":        builderValue,
 				}).Warn("Proposer: using local execution payload because higher value")
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.
@@ -322,7 +324,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.ReadOnly
 func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil /* genesis val root */)
+		nil  /* genesis val root */)
 	if err != nil {
 		return err
 	}
