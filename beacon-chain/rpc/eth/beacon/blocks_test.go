@@ -623,15 +623,6 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 	})
 
 	t.Run("Capella", func(t *testing.T) {
-		t.Skip("This test needs Capella fork version configured properly")
-
-		// INFO: This code block can be removed once Capella
-		// fork epoch is set to a value other than math.MaxUint64
-		cfg := params.BeaconConfig()
-		cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch + 1000
-		cfg.ForkVersionSchedule[bytesutil.ToBytes4(cfg.CapellaForkVersion)] = cfg.BellatrixForkEpoch + 1000
-		params.OverrideBeaconConfig(cfg)
-
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
