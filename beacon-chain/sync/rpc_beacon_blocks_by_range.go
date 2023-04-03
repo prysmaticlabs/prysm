@@ -132,6 +132,7 @@ func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch,
 			blinded = append(blinded, b.ReadOnlySignedBeaconBlock)
 			continue
 		}
+		log.WithField("derp", "preb").WithField("slot", b.Block().Slot()).Warn("writing pre-bellatrix block")
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			return chunkErr
@@ -153,6 +154,7 @@ func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch,
 		if b.IsBlinded() {
 			continue
 		}
+		log.WithField("derp", "postb").WithField("slot", b.Block().Slot()).Warn("writing blinded block")
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			return chunkErr

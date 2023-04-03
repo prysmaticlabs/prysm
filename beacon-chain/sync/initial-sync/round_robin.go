@@ -259,48 +259,29 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
-	firstBlock := blks[0]
-	blkRoot, err := firstBlock.Block().HashTreeRoot()
-	if err != nil {
-		return err
-	}
-	headSlot := s.cfg.Chain.HeadSlot()
-	for headSlot >= firstBlock.Block().Slot() && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
-		if len(blks) == 1 {
-			return fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, firstBlock.Block().Slot(), blkRoot, errBlockAlreadyProcessed)
-		}
-		blks = blks[1:]
-		firstBlock = blks[0]
-		blkRoot, err = firstBlock.Block().HashTreeRoot()
-		if err != nil {
-			return err
-		}
-	}
-	s.logBatchSyncStatus(genesis, blks, blkRoot)
-	parentRoot := firstBlock.Block().ParentRoot()
-	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
-		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
-	}
-	blockRoots := make([][32]byte, len(blks))
-	//blockRoots[0] = blkRoot
-	var lastSlot primitives.Slot
-	var lastRoot *[32]byte
-	for i := 0; i < len(blks); i++ {
+	blockRoots := make([][32]byte, 0)
+	unprocessed := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
+	for i := range blks {
 		b := blks[i]
-		if lastRoot != nil {
-			parent := b.Block().ParentRoot()
-			if parent != *lastRoot {
-				return fmt.Errorf("expected linear block list with parent root of %#x (slot %d) but received %#x (slot %d)",
-					blockRoots[i-1][:], lastSlot, b.Block().ParentRoot(), b.Block().Slot())
-			}
-			lastRoot = &parent
-			lastSlot = b.Block().Slot()
-		}
-		blkRoot, err := b.Block().HashTreeRoot()
+		root, err := b.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
-		blockRoots[i] = blkRoot
+		if s.isProcessedBlock(ctx, b, root) {
+			continue
+		}
+		if len(blockRoots) > 0 {
+			max := len(blockRoots) - 1
+			proot := blockRoots[max]
+			if proot != b.Block().ParentRoot() {
+				pblock := unprocessed[max]
+				return fmt.Errorf("expected linear block list with parent root of %#x (slot %d) but received %#x (slot %d)",
+					proot, pblock.Block().Slot(), b.Block().ParentRoot(), b.Block().Slot())
+			}
+		}
+		blockRoots = append(blockRoots, root)
+		unprocessed = append(unprocessed, b)
+
 		// TODO: This blob processing should be moved down into blocks_fetcher.go so that we can
 		// try other peers if we get blobs that don't match the block commitments.
 		denebB, err := b.PbDenebBlock()
@@ -309,29 +290,43 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 				// expected for pre-deneb blocks
 				continue
 			}
-			return errors.Wrapf(err, "unexpected error when checking if block root=%#x is post-deneb", blkRoot)
+			return errors.Wrapf(err, "unexpected error when checking if block root=%#x is post-deneb", root)
 		}
 		kcs := denebB.GetBlock().GetBody().BlobKzgCommitments
 		if len(kcs) == 0 {
 			continue
 		}
-		bblobs := blobs[blkRoot]
+		bblobs := blobs[root]
 		if len(bblobs) != len(kcs) {
-			return errors.Wrapf(ErrMissingBlobsForBlockCommitments, "block root %#x, %d commitments, %d blobs", blkRoot, len(kcs), len(bblobs))
+			return errors.Wrapf(ErrMissingBlobsForBlockCommitments, "block root %#x, %d commitments, %d blobs", root, len(kcs), len(bblobs))
 		}
 		// make sure commitments match
 		for ci, kc := range kcs {
 			blobi := bblobs[ci]
 			if blobi.Index != uint64(i) {
 				return errors.Wrapf(ErrMisalignedIndices, "block root %#x, block commitment %#x, offset %d, blob commitment %#x, Index=%d",
-					blkRoot, kc, ci, blobi.KzgCommitment, blobi.Index)
+					root, kc, ci, blobi.KzgCommitment, blobi.Index)
 			}
 			if bytesutil.ToBytes48(kc) != bytesutil.ToBytes48(blobi.KzgCommitment) {
 				return errors.Wrapf(ErrBlobCommitmentMismatch, "block root %#x, Index %d, block commitment=%#x, blob commitment=%#x",
-					blkRoot, ci, kc, blobi.KzgCommitment)
+					root, ci, kc, blobi.KzgCommitment)
 			}
 		}
 	}
+
+	if len(unprocessed) == 0 {
+		maxIncoming := blks[len(blks)-1]
+		maxRoot, err := maxIncoming.Block().HashTreeRoot()
+		if err != nil {
+			log.Errorf("TODO: use ROBlock so this kind of silly error handling isn't needed")
+		}
+		headSlot := s.cfg.Chain.HeadSlot()
+		return fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, maxIncoming.Block().Slot(), maxRoot, errBlockAlreadyProcessed)
+	}
+	if !s.cfg.Chain.HasBlock(ctx, blockRoots[0]) {
+		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, blockRoots[0], unprocessed[0].Block().Slot())
+	}
+	s.logBatchSyncStatus(genesis, unprocessed, blockRoots[0])
 	for _, root := range blockRoots {
 		scs, has := blobs[root]
 		if !has {
@@ -341,7 +336,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			return errors.Wrapf(err, "failed to save blobs for block %#x", root)
 		}
 	}
-	if err := bFunc(ctx, blks, blockRoots); err != nil {
+	if err := bFunc(ctx, unprocessed, blockRoots); err != nil {
 		return err
 	}
 	return nil
