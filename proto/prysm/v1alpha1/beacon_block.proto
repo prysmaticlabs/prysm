@@ -50,7 +50,7 @@ message GenericSignedBeaconBlock {
 
         SignedBeaconBlockDenebAndBlobs Deneb  = 7;
 
-        SignedBlindedBeaconBlockDeneb blinded_Deneb  = 8;
+        SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
 }
 

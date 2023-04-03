@@ -117,7 +117,14 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 			Block: &eth.GenericSignedBeaconBlock_Capella{Capella: pb.(*eth.SignedBeaconBlockCapella)},
 		}, nil
 	case version.Deneb:
-		// TODO(TT): Add Deneb support.
+		if b.IsBlinded() {
+			return &eth.GenericSignedBeaconBlock{
+				Block: &eth.GenericSignedBeaconBlock_Blinded_Deneb{BlindedCapella: pb.(*eth.SignedBlindedBeaconBlockCapella)},
+			}, nil
+		}
+		return &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Capella{Capella: pb.(*eth.SignedBeaconBlockCapella)},
+		}, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}

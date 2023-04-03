@@ -222,8 +222,8 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 		if err := bs.submitCapellaBlock(ctx, blkContainer.CapellaBlock, req.SignedBlock.Signature); err != nil {
 			return nil, err
 		}
-	case *ethpbv2.SignedBeaconBlockContainer_CapellaBlock:
-		if err := bs.submitCapellaBlock(ctx, blkContainer.CapellaBlock, req.SignedBlock.Signature); err != nil {
+	case *ethpbv2.SignedBeaconBlockContainer_DenebBlock:
+		if err := bs.submitDenebBlockcontents(ctx, blkContainer.CapellaBlock, req.SignedBlock.Signature); err != nil {
 			return nil, err
 		}
 	default:
@@ -1173,7 +1173,7 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 	return bs.submitBlock(ctx, root, wrappedCapellaBlk)
 }
 
-func (bs *Server) submitDenebBlockcontents(ctx context.Context, capellaBlk *ethpbv2.BeaconBlockDenebAndBlobs, sig []byte) error {
+func (bs *Server) submitDenebBlockcontents(ctx context.Context, denebBlkContents *ethpbv2.BeaconBlockDenebAndBlobs, sig []byte) error {
 	v1alpha1Blk, err := migration.CapellaToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockCapella{Message: capellaBlk, Signature: sig})
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
