@@ -32,7 +32,7 @@ func newUnblinder(b interfaces.SignedBeaconBlock, builder builder.BlockBuilder) 
 }
 
 func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
-	if !u.b.IsBlinded() {
+	if !u.b.IsBlinded() || !u.builder.Configured() || u.version < version.Bellatrix {
 		return u.b, nil
 	}
 	if u.b.Version() != u.version {
@@ -41,9 +41,6 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 			version.String(u.version),
 			version.String(u.b.Version()),
 		)
-	}
-	if !u.builder.Configured() || u.version < version.Bellatrix {
-		return u.b, nil
 	}
 
 	agg, err := u.b.Block().Body().SyncAggregate()
