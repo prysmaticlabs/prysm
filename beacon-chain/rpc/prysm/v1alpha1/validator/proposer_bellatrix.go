@@ -75,9 +75,13 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					return errors.Wrap(err, "failed to match withdrawals root")
 				}
 
-				localValueWithBoost := big.NewInt(0)
-				boost := big.NewInt(int64(params.BeaconConfig().LocalBlockValueBoost))
-				localValueWithBoost.Mul(localValue, boost)
+				// Use builder payload if the following in true:
+				// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
+				builderValue.Mul(builderValue, big.NewInt(100))
+
+				localValueWithBoost := big.NewInt(100)
+				localValueWithBoost = localValueWithBoost.Add(localValueWithBoost, big.NewInt(int64(params.BeaconConfig().LocalBlockValueBoost)))
+				localValueWithBoost.Mul(localValue, localValueWithBoost)
 
 				// If we can't get the builder value, just use local block.
 				if builderValue.Cmp(localValueWithBoost) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
@@ -88,6 +92,8 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 						return nil
 					}
 				}
+				localValueWithBoost.Div(localValueWithBoost, big.NewInt(100))
+				builderValue.Div(builderValue, big.NewInt(100))
 				log.WithFields(logrus.Fields{
 					"localValue":          localValue,
 					"localValueWithBoost": localValueWithBoost,
