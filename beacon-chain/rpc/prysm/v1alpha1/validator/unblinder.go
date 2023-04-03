@@ -48,11 +48,11 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 
 	agg, err := u.b.Block().Body().SyncAggregate()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get sync aggregate")
 	}
 	h, err := u.b.Block().Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get execution")
 	}
 	parentRoot := u.b.Block().ParentRoot()
 	stateRoot := u.b.Block().StateRoot()
@@ -90,15 +90,15 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 
 	payload, err := u.builder.SubmitBlindedBlock(ctx, sb)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not submit blinded block")
 	}
 	headerRoot, err := h.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get header root")
 	}
 	payloadRoot, err := payload.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get payload root")
 	}
 	if headerRoot != payloadRoot {
 		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
@@ -107,7 +107,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 
 	agg, err = sb.Block().Body().SyncAggregate()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get sync aggregate")
 	}
 	parentRoot = sb.Block().ParentRoot()
 	stateRoot = sb.Block().StateRoot()
@@ -121,7 +121,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	}
 	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not create signed block")
 	}
 	wb.SetSlot(sb.Block().Slot())
 	wb.SetProposerIndex(sb.Block().ProposerIndex())
