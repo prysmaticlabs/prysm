@@ -71,6 +71,7 @@ type mockKeymanager struct {
 	lock                sync.RWMutex
 	keysMap             map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey
 	fetchNoKeys         bool
+	EventFeedSetCh      chan bool
 	accountsChangedFeed *event.Feed
 }
 
@@ -107,8 +108,6 @@ func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams
 }
 
 func (m *mockKeymanager) SimulateAccountChanges(newKeys [][fieldparams.BLSPubkeyLength]byte) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
 	m.accountsChangedFeed.Send(newKeys)
 }
 
