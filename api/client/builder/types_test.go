@@ -1079,7 +1079,7 @@ func TestBuilderBidUnmarshalUint256(t *testing.T) {
 	require.NoError(t, expectedValue.UnmarshalText([]byte(base10)))
 	r := &ExecHeaderResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testBuilderBid), r))
-	//require.Equal(t, expectedValue, r.Data.Message.Value)
+	// require.Equal(t, expectedValue, r.Data.Message.Value)
 	marshaled := r.Data.Message.Value.String()
 	require.Equal(t, base10, marshaled)
 	require.Equal(t, 0, expectedValue.Cmp(r.Data.Message.Value.Int))

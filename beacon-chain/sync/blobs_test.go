@@ -135,7 +135,7 @@ func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream net
 	code, _, err := ReadStatusCode(stream, encoding)
 	require.NoError(t, err)
 	require.Equal(t, r.code, code, "unexpected response code")
-	//require.Equal(t, r.message, msg, "unexpected error message")
+	// require.Equal(t, r.message, msg, "unexpected error message")
 	if code != responseCodeSuccess {
 		return
 	}
@@ -185,9 +185,7 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, fun
 		block, bsc := generateTestBlockWithSidecars(t, parentRoot, bs, maxBlobs)
 		root, err := block.Block.HashTreeRoot()
 		require.NoError(t, err)
-		for _, sc := range bsc {
-			sidecars = append(sidecars, sc)
-		}
+		sidecars = append(sidecars, bsc...)
 		util.SaveBlock(t, context.Background(), d, block)
 		parentRoot = root
 	}

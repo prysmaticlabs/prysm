@@ -175,6 +175,6 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 }
 
 // GetBlobsBundle --
-func (e *EngineClient) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
+func (e *EngineClient) GetBlobsBundle(context.Context, [8]byte) (*pb.BlobsBundle, error) {
 	return e.BlobsBundle, nil
 }

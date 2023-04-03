@@ -28,7 +28,7 @@ func blobRootRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
 	return &req
 }
 
-func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSidecar, req interface{}) []*expectedBlobChunk {
+func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSidecar, _ interface{}) []*expectedBlobChunk {
 	var expect []*expectedBlobChunk
 	blockOffset := 0
 	if len(scs) == 0 {
