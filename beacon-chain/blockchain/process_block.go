@@ -717,7 +717,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 	}
-	lastRoot, lastState := transition.LastCachedPair()
+	lastRoot, lastState := transition.LastCachedState()
 	if lastState == nil {
 		lastRoot, lastState = headRoot[:], headState
 	}

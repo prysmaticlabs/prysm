@@ -74,8 +74,8 @@ func UpdateNextSlotCache(ctx context.Context, root []byte, state state.BeaconSta
 	return nil
 }
 
-// LastCachedPair returns the last cached state and root in the cache
-func LastCachedPair() ([]byte, state.BeaconState) {
+// LastCachedState returns the last cached state and root in the cache
+func LastCachedState() ([]byte, state.BeaconState) {
 	nsc.Lock()
 	defer nsc.Unlock()
 	if nsc.lastState == nil {

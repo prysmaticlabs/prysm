@@ -21,7 +21,7 @@ func TestTrailingSlotState_RoundTrip(t *testing.T) {
 	s = transition.NextSlotState(r)
 	require.Equal(t, primitives.Slot(1), s.Slot())
 
-	lastRoot, lastState := transition.LastCachedPair()
+	lastRoot, lastState := transition.LastCachedState()
 	require.DeepEqual(t, r, lastRoot)
 	require.Equal(t, s.Slot(), lastState.Slot())
 
@@ -29,7 +29,7 @@ func TestTrailingSlotState_RoundTrip(t *testing.T) {
 	s = transition.NextSlotState(r)
 	require.Equal(t, primitives.Slot(2), s.Slot())
 
-	lastRoot, lastState = transition.LastCachedPair()
+	lastRoot, lastState = transition.LastCachedState()
 	require.DeepEqual(t, r, lastRoot)
 	require.Equal(t, s.Slot(), lastState.Slot())
 }
