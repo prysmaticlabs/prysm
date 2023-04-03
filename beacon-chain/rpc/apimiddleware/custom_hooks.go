@@ -240,9 +240,17 @@ func wrapSignedContributionAndProofsArray(
 	return true, nil
 }
 
+type phase0PublishBlockContainerPayloadRequestJson struct {
+	SignedBlock *phase0PublishBlockRequestJson `json:"signed_block"`
+}
+
 type phase0PublishBlockRequestJson struct {
 	Phase0Block *BeaconBlockJson `json:"phase0_block"`
 	Signature   string           `json:"signature" hex:"true"`
+}
+
+type altairPublishBlockContainerPayloadRequestJson struct {
+	SignedBlock *altairPublishBlockRequestJson `json:"signed_block"`
 }
 
 type altairPublishBlockRequestJson struct {
@@ -250,9 +258,17 @@ type altairPublishBlockRequestJson struct {
 	Signature   string                 `json:"signature" hex:"true"`
 }
 
+type bellatrixPublishBlockContainerPayloadRequestJson struct {
+	SignedBlock *bellatrixPublishBlockRequestJson `json:"signed_block"`
+}
+
 type bellatrixPublishBlockRequestJson struct {
 	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
 	Signature      string                    `json:"signature" hex:"true"`
+}
+
+type capellaPublishBlockContainerPayloadRequestJson struct {
+	SignedBlock *capellaPublishBlockRequestJson `json:"signed_block"`
 }
 
 type capellaPublishBlockRequestJson struct {
@@ -260,26 +276,27 @@ type capellaPublishBlockRequestJson struct {
 	Signature    string                  `json:"signature" hex:"true"`
 }
 
+// TODO: add wrapper for blinded bellatrix
+
 type bellatrixPublishBlindedBlockRequestJson struct {
 	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
 	Signature      string                           `json:"signature" hex:"true"`
 }
 
+// TODO: add wrapper for blinded capella
+
 type capellaPublishBlindedBlockRequestJson struct {
 	CapellaBlock *BlindedBeaconBlockCapellaJson `json:"capella_block"`
 	Signature    string                         `json:"signature" hex:"true"`
 }
-
+type denebPublishBlockContentContainerPayloadRequestJson struct {
+	SignedBlock        *denebPublishBlockRequestJson     `json:"signed_block"`
+	SignedBlobSidecars []*SignedBlobSidecarContainerJson `json:"signed_blob_sidecars"`
+}
 type denebPublishBlockRequestJson struct {
 	DenebBlock *BeaconBlockDenebJson `json:"deneb_block"`
 	Signature  string                `json:"signature" hex:"true"`
 }
-
-type denebPublishBlockContentRequestJson struct {
-	SignedBlock        *SignedBeaconBlockDenebContainerJson `json:"signed_block"`
-	SignedBlobSidecars []*SignedBlobSidecarContainerJson    `json:"signed_blob_sidecars"`
-}
-
 type denebPublishBlindedBlockContentRequestJson struct {
 	SignedBlindedBlock        *SignedBlindedBeaconBlockDenebContainerJson `json:"signed_blinded_block"`
 	SignedBlindedBlobSidecars []*SignedBlindedBlobSidecarContainerJson    `json:"signed_blinded_blob_sidecars"`
@@ -351,36 +368,44 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &phase0PublishBlockRequestJson{
-			Phase0Block: block.Message,
-			Signature:   block.Signature,
+		actualPostReq := &phase0PublishBlockContainerPayloadRequestJson{
+			SignedBlock: &phase0PublishBlockRequestJson{
+				Phase0Block: block.Message,
+				Signature:   block.Signature,
+			},
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockAltairContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &altairPublishBlockRequestJson{
-			AltairBlock: block.Message,
-			Signature:   block.Signature,
+		actualPostReq := &altairPublishBlockContainerPayloadRequestJson{
+			SignedBlock: &altairPublishBlockRequestJson{
+				AltairBlock: block.Message,
+				Signature:   block.Signature,
+			},
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockBellatrixContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &bellatrixPublishBlockRequestJson{
-			BellatrixBlock: block.Message,
-			Signature:      block.Signature,
+		actualPostReq := &bellatrixPublishBlockContainerPayloadRequestJson{
+			SignedBlock: &bellatrixPublishBlockRequestJson{
+				BellatrixBlock: block.Message,
+				Signature:      block.Signature,
+			},
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockCapellaContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &capellaPublishBlockRequestJson{
-			CapellaBlock: block.Message,
-			Signature:    block.Signature,
+		actualPostReq := &capellaPublishBlockContainerPayloadRequestJson{
+			SignedBlock: &capellaPublishBlockRequestJson{
+				CapellaBlock: block.Message,
+				Signature:    block.Signature,
+			},
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -388,8 +413,11 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 
 	if blockContent, ok := endpoint.PostRequest.(*SignedBeaconBlockContentsDenebContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &denebPublishBlockContentRequestJson{
-			SignedBlock:        blockContent.SignedBlock,
+		actualPostReq := &denebPublishBlockContentContainerPayloadRequestJson{
+			SignedBlock: &denebPublishBlockRequestJson{
+				DenebBlock: blockContent.SignedBlock.Message,
+				Signature:  blockContent.SignedBlock.Signature,
+			},
 			SignedBlobSidecars: blockContent.SignedBlobSidecars,
 		}
 		endpoint.PostRequest = actualPostReq

@@ -39,7 +39,7 @@ type GenericSignedBeaconBlock struct {
 	//	*GenericSignedBeaconBlock_Capella
 	//	*GenericSignedBeaconBlock_BlindedCapella
 	//	*GenericSignedBeaconBlock_Deneb
-	//	*GenericSignedBeaconBlock_Blinded_Deneb
+	//	*GenericSignedBeaconBlock_BlindedDeneb
 	Block isGenericSignedBeaconBlock_Block `protobuf_oneof:"block"`
 }
 
@@ -131,9 +131,9 @@ func (x *GenericSignedBeaconBlock) GetDeneb() *SignedBeaconBlockDenebAndBlobs {
 	return nil
 }
 
-func (x *GenericSignedBeaconBlock) GetBlinded_Deneb() *SignedBlindedBeaconBlockDeneb {
-	if x, ok := x.GetBlock().(*GenericSignedBeaconBlock_Blinded_Deneb); ok {
-		return x.Blinded_Deneb
+func (x *GenericSignedBeaconBlock) GetBlindedDeneb() *SignedBlindedBeaconBlockDeneb {
+	if x, ok := x.GetBlock().(*GenericSignedBeaconBlock_BlindedDeneb); ok {
+		return x.BlindedDeneb
 	}
 	return nil
 }
@@ -170,8 +170,8 @@ type GenericSignedBeaconBlock_Deneb struct {
 	Deneb *SignedBeaconBlockDenebAndBlobs `protobuf:"bytes,7,opt,name=Deneb,proto3,oneof"`
 }
 
-type GenericSignedBeaconBlock_Blinded_Deneb struct {
-	Blinded_Deneb *SignedBlindedBeaconBlockDeneb `protobuf:"bytes,8,opt,name=blinded_Deneb,json=blindedDeneb,proto3,oneof"`
+type GenericSignedBeaconBlock_BlindedDeneb struct {
+	BlindedDeneb *SignedBlindedBeaconBlockDeneb `protobuf:"bytes,8,opt,name=blinded_deneb,json=blindedDeneb,proto3,oneof"`
 }
 
 func (*GenericSignedBeaconBlock_Phase0) isGenericSignedBeaconBlock_Block() {}
@@ -188,7 +188,7 @@ func (*GenericSignedBeaconBlock_BlindedCapella) isGenericSignedBeaconBlock_Block
 
 func (*GenericSignedBeaconBlock_Deneb) isGenericSignedBeaconBlock_Block() {}
 
-func (*GenericSignedBeaconBlock_Blinded_Deneb) isGenericSignedBeaconBlock_Block() {}
+func (*GenericSignedBeaconBlock_BlindedDeneb) isGenericSignedBeaconBlock_Block() {}
 
 type GenericBeaconBlock struct {
 	state         protoimpl.MessageState
@@ -3750,7 +3750,7 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_rawDesc = []byte{
 	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63,
 	0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x41, 0x6e, 0x64, 0x42,
 	0x6c, 0x6f, 0x62, 0x73, 0x48, 0x00, 0x52, 0x05, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x12, 0x5b, 0x0a,
-	0x0d, 0x62, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x5f, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x18, 0x08,
+	0x0d, 0x62, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x5f, 0x64, 0x65, 0x6e, 0x65, 0x62, 0x18, 0x08,
 	0x20, 0x01, 0x28, 0x0b, 0x32, 0x34, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
 	0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x69, 0x67,
 	0x6e, 0x65, 0x64, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e,
@@ -4783,7 +4783,7 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_depIdxs = []int32{
 	29,  // 4: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.capella:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockCapella
 	32,  // 5: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.blinded_capella:type_name -> ethereum.eth.v1alpha1.SignedBlindedBeaconBlockCapella
 	24,  // 6: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.Deneb:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockDenebAndBlobs
-	35,  // 7: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.blinded_Deneb:type_name -> ethereum.eth.v1alpha1.SignedBlindedBeaconBlockDeneb
+	35,  // 7: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.blinded_deneb:type_name -> ethereum.eth.v1alpha1.SignedBlindedBeaconBlockDeneb
 	2,   // 8: ethereum.eth.v1alpha1.GenericBeaconBlock.phase0:type_name -> ethereum.eth.v1alpha1.BeaconBlock
 	4,   // 9: ethereum.eth.v1alpha1.GenericBeaconBlock.altair:type_name -> ethereum.eth.v1alpha1.BeaconBlockAltair
 	19,  // 10: ethereum.eth.v1alpha1.GenericBeaconBlock.bellatrix:type_name -> ethereum.eth.v1alpha1.BeaconBlockBellatrix
@@ -5493,7 +5493,7 @@ func file_proto_prysm_v1alpha1_beacon_block_proto_init() {
 		(*GenericSignedBeaconBlock_Capella)(nil),
 		(*GenericSignedBeaconBlock_BlindedCapella)(nil),
 		(*GenericSignedBeaconBlock_Deneb)(nil),
-		(*GenericSignedBeaconBlock_Blinded_Deneb)(nil),
+		(*GenericSignedBeaconBlock_BlindedDeneb)(nil),
 	}
 	file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[1].OneofWrappers = []interface{}{
 		(*GenericBeaconBlock_Phase0)(nil),

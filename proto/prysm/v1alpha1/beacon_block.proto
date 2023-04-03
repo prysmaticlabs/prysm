@@ -48,8 +48,10 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Capella fork blinded beacon block.
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
+        // Representing a signed, post-Deneb fork beacon block content
         SignedBeaconBlockDenebAndBlobs Deneb  = 7;
 
+        // Representing a signed, post-Deneb fork beacon block content
         SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
 }
@@ -79,6 +81,8 @@ message GenericBeaconBlock {
         BlindedBeaconBlockDeneb blinded_Deneb  = 8;
     }
 }
+
+
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlock {

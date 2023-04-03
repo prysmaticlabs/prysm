@@ -24,6 +24,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -223,7 +224,11 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, err
 		}
 	case *ethpbv2.SignedBeaconBlockContainer_DenebBlock:
-		if err := bs.submitDenebBlockcontents(ctx, blkContainer.CapellaBlock, req.SignedBlock.Signature); err != nil {
+		signedBlock := &ethpbv2.SignedBeaconBlockDeneb{
+			Message:   req.SignedBlock.GetDenebBlock(),
+			Signature: req.SignedBlock.Signature,
+		}
+		if err := bs.submitDenebBlockcontents(ctx, &ethpbv2.SignedBeaconBlockDenebAndBlobs{SignedBlock: signedBlock, SignedBlobSidecars: req.SignedBlobSidecars}); err != nil {
 			return nil, err
 		}
 	default:
@@ -1173,19 +1178,26 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 	return bs.submitBlock(ctx, root, wrappedCapellaBlk)
 }
 
-func (bs *Server) submitDenebBlockcontents(ctx context.Context, denebBlkContents *ethpbv2.BeaconBlockDenebAndBlobs, sig []byte) error {
-	v1alpha1Blk, err := migration.CapellaToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockCapella{Message: capellaBlk, Signature: sig})
+func (bs *Server) submitDenebBlockcontents(ctx context.Context, denebBlkContents *ethpbv2.SignedBeaconBlockDenebAndBlobs) error {
+	v1alpha1Blk, err := migration.DenebToV1Alpha1SignedBlock(denebBlkContents.SignedBlock)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedCapellaBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
+	wrappedDenebBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
-
+	signedDeneb, err := wrappedDenebBlk.PbDenebBlock()
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not retrieve deneb block")
+	}
+	v1alpha1Blobs, err := migration.V2SignedBlobSidecarsToV1Alpha1(denebBlkContents.SignedBlobSidecars)
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not prepare blobs")
+	}
 	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_BlindedCapella{
-			BlindedCapella: b,
+		Block: &eth.GenericSignedBeaconBlock_Deneb{
+			Deneb: &eth.SignedBeaconBlockDenebAndBlobs{Block: signedDeneb, Blobs: v1alpha1Blobs},
 		},
 	})
 	if err != nil {

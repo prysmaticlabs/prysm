@@ -327,6 +327,7 @@ func generateSignedBeaconBlock(
 
 	// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
 	// Only broadcasting the attestation to one node also helps test slashing propagation.
+	// TODO: debeb block contents will be broken here
 	wb, err := blocks.NewSignedBeaconBlock(signedBlk)
 	if err != nil {
 		return nil, err

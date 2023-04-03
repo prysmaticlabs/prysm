@@ -173,6 +173,26 @@ func V1Alpha1BeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.BeaconBlockD
 	return v2BlocknBlobs, nil
 }
 
+// V2SignedBlobSidecarsToV1Alpha1 converts a signed ethv2 blob sidecar to a signed v1alpha1 blob sidecar
+func V2SignedBlobSidecarsToV1Alpha1(blobSidecars []*ethpbv2.SignedBlobSidecar) ([]*ethpbalpha.SignedBlobSidecar, error) {
+	v1Alpha1Blobs := make([]*ethpbalpha.SignedBlobSidecar, len(blobSidecars))
+	for index := range blobSidecars {
+		marshaledBlob, err := proto.Marshal(blobSidecars[index])
+		if err != nil {
+			return nil, errors.Wrap(err, "could not marshal blob")
+		}
+		v1Alpha1Blob := &ethpbalpha.SignedBlobSidecar{}
+		if err := proto.Unmarshal(marshaledBlob, v1Alpha1Blob); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blob")
+		}
+		if v1Alpha1Blob.Message == nil || len(v1Alpha1Blob.Signature) == 0 {
+			return nil, errors.New("ethV2 SignedBlobSidecar unmarshalling resulted in an empty v1Alpha1 SignedBlobSidecar")
+		}
+		v1Alpha1Blobs[index] = v1Alpha1Blob
+	}
+	return v1Alpha1Blobs, nil
+}
+
 // V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded converts a v1alpha1 Blinded Bellatrix beacon block to a v2 Blinded Bellatrix block.
 func V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockBellatrix) (*ethpbv2.BlindedBeaconBlockBellatrix, error) {
 	marshaledBlk, err := proto.Marshal(v1alpha1Block)
