@@ -317,7 +317,9 @@ func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
 			unsupported = append(unsupported, s1)
 		}
 	}
-	log.Warnf("Please update, detected the following unsupported engine methods: %s", unsupported)
+	if len(unsupported) != 0 {
+		log.Warnf("Please update, detected the following unsupported engine methods: %s", unsupported)
+	}
 	return result.SupportedMethods, handleRPCError(err)
 }
 
