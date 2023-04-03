@@ -2164,7 +2164,7 @@ func TestFillMissingBlockPayloadId_DiffSlotExitEarly(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	require.NoError(t, service.fillMissingBlockPayloadId(ctx), 0)
+	require.NoError(t, service.lateBlockTasks(ctx), 0)
 }
 
 // Helper function to simulate the block being on time or delayed for proposer
