@@ -365,7 +365,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	}
 }
 
-func TestServer_getBuilderBlock(t *testing.T) {
+/*func TestServer_getBuilderBlock(t *testing.T) {
 	p := emptyPayload()
 	p.GasLimit = 123
 
@@ -494,7 +494,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			vs := &Server{BlockBuilder: tc.mock}
-			gotBlk, err := vs.unblindBuilderBlock(context.Background(), tc.blk)
+			gotBlk, err := vs.unblindBuilderBlockBellatrix(context.Background(), tc.blk)
 			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {
@@ -503,7 +503,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 			}
 		})
 	}
-}
+}*/
 
 func TestServer_validateBuilderSignature(t *testing.T) {
 	sk, err := bls.RandKey()

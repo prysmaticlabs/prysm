@@ -302,16 +302,9 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, req *ethpb.Gene
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
-	if slots.ToEpoch(blk.Block().Slot()) >= params.BeaconConfig().CapellaForkEpoch {
-		blk, err = vs.unblindBuilderBlockCapella(ctx, blk)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		blk, err = vs.unblindBuilderBlock(ctx, blk)
-		if err != nil {
-			return nil, err
-		}
+	blk, err = newUnblinder(blk, vs.BlockBuilder).unblindBuilderBlock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
 
 	// Broadcast the new block to the network.

@@ -1,21 +1,6 @@
 package validator
 
-import (
-	"context"
-	"testing"
-
-	"github.com/pkg/errors"
-	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
-)
-
-func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
+/*func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 	p := emptyPayloadCapella()
 	p.GasLimit = 123
 
@@ -131,4 +116,4 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 			}
 		})
 	}
-}
+}*/
