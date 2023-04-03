@@ -304,11 +304,21 @@ func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
 	result := &pb.ExchangeCapabilities{}
 	err := s.rpcClient.CallContext(ctx, &result, ExchangeCapabilities, supportedEngineEndpoints)
 
-	var methodNames []string
-	for _, v := range result.GetSupportedMethods() {
-		methodNames = append(methodNames, string(v))
+	var unsupported []string
+	for _, s1 := range supportedEngineEndpoints {
+		supported := false
+		for _, s2 := range result.SupportedMethods {
+			if s1 == s2 {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			unsupported = append(unsupported, s1)
+		}
 	}
-	return methodNames, handleRPCError(err)
+	log.Warnf("Please update, detected the following unsupported engine methods: %s", unsupported)
+	return result.SupportedMethods, handleRPCError(err)
 }
 
 // GetTerminalBlockHash returns the valid terminal block hash based on total difficulty.

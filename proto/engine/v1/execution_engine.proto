@@ -179,5 +179,5 @@ message Blob {
 }
 
 message ExchangeCapabilities {
-	repeated bytes supported_methods = 1;
+	repeated string supported_methods = 1;
 }

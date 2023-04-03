@@ -2320,3 +2320,75 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 		}
 	})
 }
+
+func Test_ExchangeCapabilities(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableOptionalEngineMethods: true,
+	})
+	defer resetFn()
+	t.Run("empty response works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			exchangeCapabilities := &pb.ExchangeCapabilities{}
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  exchangeCapabilities,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.ExchangeCapabilities(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+	t.Run("list of items", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			exchangeCapabilities := &pb.ExchangeCapabilities{
+				SupportedMethods: []string{"A", "B", "C"},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  exchangeCapabilities,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.ExchangeCapabilities(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 3, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+}
