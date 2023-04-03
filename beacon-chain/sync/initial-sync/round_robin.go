@@ -282,12 +282,19 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
 	}
 	blockRoots := make([][32]byte, len(blks))
-	blockRoots[0] = blkRoot
-	for i := 1; i < len(blks); i++ {
+	//blockRoots[0] = blkRoot
+	var lastSlot primitives.Slot
+	var lastRoot *[32]byte
+	for i := 0; i < len(blks); i++ {
 		b := blks[i]
-		if b.Block().ParentRoot() != blockRoots[i-1] {
-			return fmt.Errorf("expected linear block list with parent root of %#x but received %#x",
-				blockRoots[i-1][:], b.Block().ParentRoot())
+		if lastRoot != nil {
+			parent := b.Block().ParentRoot()
+			if parent != *lastRoot {
+				return fmt.Errorf("expected linear block list with parent root of %#x (slot %d) but received %#x (slot %d)",
+					blockRoots[i-1][:], lastSlot, b.Block().ParentRoot(), b.Block().Slot())
+			}
+			lastRoot = &parent
+			lastSlot = b.Block().Slot()
 		}
 		blkRoot, err := b.Block().HashTreeRoot()
 		if err != nil {

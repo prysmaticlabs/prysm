@@ -158,19 +158,25 @@ func (bb *blockRangeBatcher) Next(ctx context.Context, stream libp2pcore.Stream)
 
 	// make slice with extra +1 capacity in case we want to grow it to also hold the genesis block
 	rob := make([]blocks.ROBlock, len(blks), len(blks)+1)
-	goff := 0 // offset for genesis value
-	if nb.start == 0 {
-		gb, err := bb.genesisBlock(ctx)
-		if err != nil {
-			return blockBatch{err: errors.Wrap(err, "could not retrieve genesis block")}, false
+	/*
+		goff := 0 // offset for genesis value
+		if nb.start == 0 {
+			gb, err := bb.genesisBlock(ctx)
+			if err != nil {
+				return blockBatch{err: errors.Wrap(err, "could not retrieve genesis block")}, false
+			}
+			rob = append(rob, blocks.ROBlock{}) // grow the slice to its capacity to hold the genesis block
+			rob[0] = gb
+			goff = 1
 		}
-		rob = append(rob, blocks.ROBlock{}) // grow the slice to its capacity to hold the genesis block
-		rob[0] = gb
-		goff = 1
-	}
+		for i := 0; i < len(blks); i++ {
+			rob[goff+i] = blocks.NewROBlock(blks[i], roots[i])
+		}
+	*/
 	for i := 0; i < len(blks); i++ {
-		rob[goff+i] = blocks.NewROBlock(blks[i], roots[i])
+		rob[i] = blocks.NewROBlock(blks[i], roots[i])
 	}
+
 	// Filter and sort our retrieved blocks, so that
 	// we only return valid sets of blocks.
 	rob = sortedUniqueBlocks(rob)
