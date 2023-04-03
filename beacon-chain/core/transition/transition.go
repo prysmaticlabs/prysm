@@ -152,7 +152,7 @@ func ProcessSlotsUsingNextSlotCache(
 		parentState = nextSlotState
 	}
 	if parentState.Slot() == slot {
-		return nextSlotState, nil
+		return parentState, nil
 	}
 
 	var err error
