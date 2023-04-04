@@ -66,10 +66,12 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				}
 				localValue := v.Uint64()
 				v, err = builderPayload.Value()
+				var builderValue uint64
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+				} else {
+					builderValue = v.Uint64()
 				}
-				builderValue := v.Uint64()
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
@@ -328,7 +330,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.ReadOnly
 func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil /* genesis val root */)
+		nil  /* genesis val root */)
 	if err != nil {
 		return err
 	}
