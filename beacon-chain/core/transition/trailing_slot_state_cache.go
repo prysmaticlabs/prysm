@@ -41,12 +41,10 @@ func NextSlotState(root []byte) state.BeaconState {
 	defer nsc.Unlock()
 	if bytes.Equal(root, nsc.lastRoot) {
 		nextSlotCacheHit.Inc()
-		// TODO: think if it's safe to return without a copy
 		return nsc.lastState.Copy()
 	}
 	if bytes.Equal(root, nsc.prevRoot) {
 		nextSlotCacheHit.Inc()
-		// TODO: think if it's safe to return without a copy
 		return nsc.prevState.Copy()
 	}
 	nextSlotCacheMiss.Inc()
