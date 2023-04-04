@@ -5,15 +5,19 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 type nextSlotCache struct {
-	sync.RWMutex
-	root  []byte
-	state state.BeaconState
+	sync.Mutex
+	prevRoot  []byte
+	lastRoot  []byte
+	prevState state.BeaconState
+	lastState state.BeaconState
 }
 
 var (
@@ -29,19 +33,22 @@ var (
 	})
 )
 
-// NextSlotState returns the saved state if the input root matches the root in `nextSlotCache`. Returns nil otherwise.
-// This is useful to check before processing slots. With a cache hit, it will return last processed state with slot plus
-// one advancement.
-func NextSlotState(_ context.Context, root []byte) (state.BeaconState, error) {
-	nsc.RLock()
-	defer nsc.RUnlock()
-	if !bytes.Equal(root, nsc.root) || bytes.Equal(root, []byte{}) {
-		nextSlotCacheMiss.Inc()
-		return nil, nil
+// NextSlotState returns the saved state for the given blockroot.
+// It returns the last updated state if it matches. Otherwise it returns the previously
+// updated state if it matches its root. If no root matches it returns nil
+func NextSlotState(root []byte) state.BeaconState {
+	nsc.Lock()
+	defer nsc.Unlock()
+	if bytes.Equal(root, nsc.lastRoot) {
+		nextSlotCacheHit.Inc()
+		return nsc.lastState.Copy()
 	}
-	nextSlotCacheHit.Inc()
-	// Returning copied state.
-	return nsc.state.Copy(), nil
+	if bytes.Equal(root, nsc.prevRoot) {
+		nextSlotCacheHit.Inc()
+		return nsc.prevState.Copy()
+	}
+	nextSlotCacheMiss.Inc()
+	return nil
 }
 
 // UpdateNextSlotCache updates the `nextSlotCache`. It saves the input state after advancing the state slot by 1
@@ -52,13 +59,25 @@ func UpdateNextSlotCache(ctx context.Context, root []byte, state state.BeaconSta
 	copied := state.Copy()
 	copied, err := ProcessSlots(ctx, copied, copied.Slot()+1)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not process slots")
 	}
 
 	nsc.Lock()
 	defer nsc.Unlock()
 
-	nsc.root = root
-	nsc.state = copied
+	nsc.prevRoot = nsc.lastRoot
+	nsc.prevState = nsc.lastState
+	nsc.lastRoot = bytesutil.SafeCopyBytes(root)
+	nsc.lastState = copied
 	return nil
+}
+
+// LastCachedState returns the last cached state and root in the cache
+func LastCachedState() ([]byte, state.BeaconState) {
+	nsc.Lock()
+	defer nsc.Unlock()
+	if nsc.lastState == nil {
+		return nil, nil
+	}
+	return bytesutil.SafeCopyBytes(nsc.lastRoot), nsc.lastState.Copy()
 }
