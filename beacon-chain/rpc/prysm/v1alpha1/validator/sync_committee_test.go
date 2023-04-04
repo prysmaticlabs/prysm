@@ -8,7 +8,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -82,9 +81,6 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 }
 
 func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
-	transition.SkipSlotCache.Disable()
-	defer transition.SkipSlotCache.Enable()
-
 	server := &Server{
 		HeadFetcher: &mock.ChainService{
 			SyncCommitteeIndices: []primitives.CommitteeIndex{0},

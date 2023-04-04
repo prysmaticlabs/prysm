@@ -19,10 +19,6 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-func init() {
-	transition.SkipSlotCache.Disable()
-}
-
 type Config struct {
 	BlocksCount int `json:"blocks_count"`
 }

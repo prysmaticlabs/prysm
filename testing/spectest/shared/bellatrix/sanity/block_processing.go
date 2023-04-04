@@ -23,10 +23,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func init() {
-	transition.SkipSlotCache.Disable()
-}
-
 // RunBlockProcessingTest executes "sanity/blocks" tests.
 func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 	require.NoError(t, utils.SetConfig(t, config))

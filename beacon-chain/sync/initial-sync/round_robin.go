@@ -9,7 +9,6 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -38,8 +37,6 @@ type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.ReadOnlySi
 func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	transition.SkipSlotCache.Disable()
-	defer transition.SkipSlotCache.Enable()
 
 	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
 

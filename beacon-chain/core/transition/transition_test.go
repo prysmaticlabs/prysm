@@ -27,10 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-func init() {
-	transition.SkipSlotCache.Disable()
-}
-
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	base := &ethpb.BeaconState{
 		Slot: 5,
@@ -507,7 +503,6 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 }
 
 func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
-	transition.SkipSlotCache.Disable()
 	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.AltairForkEpoch = 5
@@ -542,7 +537,6 @@ func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
 }
 
 func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
-	transition.SkipSlotCache.Disable()
 	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.AltairForkEpoch = 5
@@ -578,7 +572,6 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 }
 
 func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
-	transition.SkipSlotCache.Disable()
 	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig().Copy()
 	conf.BellatrixForkEpoch = 5
@@ -615,7 +608,6 @@ func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
 }
 
 func TestProcessSlots_ThroughBellatrixEpoch(t *testing.T) {
-	transition.SkipSlotCache.Disable()
 	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.BellatrixForkEpoch = 5

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -18,10 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
-
-func init() {
-	transition.SkipSlotCache.Disable()
-}
 
 // Run executes "forkchoice"  and "sync" test.
 func Run(t *testing.T, config string, fork int) {

@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
@@ -1024,7 +1023,6 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.BeaconConfig())
-	transition.SkipSlotCache.Disable()
 
 	ctx := context.Background()
 	slot := primitives.Slot(0)
@@ -1667,7 +1665,6 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.BeaconConfig())
-	transition.SkipSlotCache.Disable()
 
 	t.Run("altair", func(t *testing.T) {
 		validatorCount := uint64(32)

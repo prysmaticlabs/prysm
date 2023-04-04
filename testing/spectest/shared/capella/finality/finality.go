@@ -18,10 +18,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func init() {
-	transition.SkipSlotCache.Disable()
-}
-
 type Config struct {
 	BlocksCount int `json:"blocks_count"`
 }

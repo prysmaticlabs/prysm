@@ -322,7 +322,6 @@ func TestServer_GetBeaconBlock_Bellatrix(t *testing.T) {
 func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
-	transition.SkipSlotCache.Disable()
 
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig().Copy()

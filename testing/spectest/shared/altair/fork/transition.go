@@ -19,10 +19,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func init() {
-	transition.SkipSlotCache.Disable()
-}
-
 type ForkConfig struct {
 	PostFork    string `json:"post_fork"`
 	ForkEpoch   int    `json:"fork_epoch"`

@@ -11,8 +11,6 @@ import (
 )
 
 func TestGenesisBeaconState_1000(t *testing.T) {
-	SkipSlotCache.Disable()
-	defer SkipSlotCache.Enable()
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
 	deposits := make([]*ethpb.Deposit, 300000)
@@ -33,8 +31,6 @@ func TestGenesisBeaconState_1000(t *testing.T) {
 }
 
 func TestOptimizedGenesisBeaconState_1000(t *testing.T) {
-	SkipSlotCache.Disable()
-	defer SkipSlotCache.Enable()
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
 	var genesisTime uint64
@@ -56,8 +52,6 @@ func TestOptimizedGenesisBeaconState_1000(t *testing.T) {
 }
 
 func TestIsValidGenesisState_100000(_ *testing.T) {
-	SkipSlotCache.Disable()
-	defer SkipSlotCache.Enable()
 	fuzzer := fuzz.NewWithSeed(0)
 	fuzzer.NilChance(0.1)
 	var chainStartDepositCount, currentTime uint64

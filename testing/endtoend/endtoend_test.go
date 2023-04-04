@@ -25,7 +25,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -51,10 +50,6 @@ const (
 	// errGeneralCode is used to represent the string value for all general process errors.
 	errGeneralCode = "exit status 1"
 )
-
-func init() {
-	transition.SkipSlotCache.Disable()
-}
 
 // testRunner abstracts E2E test configuration and running.
 type testRunner struct {

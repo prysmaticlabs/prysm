@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/capella"
 	e "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch"
@@ -199,49 +198,8 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 		return nil, err
 	}
 
-	highestSlot := state.Slot()
-	key, err := cacheKey(ctx, state)
-	if err != nil {
-		return nil, err
-	}
-
-	// Restart from cached value, if one exists.
-	cachedState, err := SkipSlotCache.Get(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-
-	if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() < slot {
-		highestSlot = cachedState.Slot()
-		state = cachedState
-	}
-	if err := SkipSlotCache.MarkInProgress(key); errors.Is(err, cache.ErrAlreadyInProgress) {
-		cachedState, err = SkipSlotCache.Get(ctx, key)
-		if err != nil {
-			return nil, err
-		}
-		if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() < slot {
-			highestSlot = cachedState.Slot()
-			state = cachedState
-		}
-	} else if err != nil {
-		return nil, err
-	}
-	defer func() {
-		SkipSlotCache.MarkNotInProgress(key)
-	}()
-
+	var err error
 	for state.Slot() < slot {
-		if ctx.Err() != nil {
-			tracing.AnnotateError(span, ctx.Err())
-			// Cache last best value.
-			if highestSlot < state.Slot() {
-				if SkipSlotCache.Put(ctx, key, state); err != nil {
-					log.WithError(err).Error("Failed to put skip slot cache value")
-				}
-			}
-			return nil, ctx.Err()
-		}
 		state, err = ProcessSlot(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -292,10 +250,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 				return nil, err
 			}
 		}
-	}
-
-	if highestSlot < state.Slot() {
-		SkipSlotCache.Put(ctx, key, state)
 	}
 
 	return state, nil
