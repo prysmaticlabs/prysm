@@ -60,21 +60,29 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					return errors.Wrap(err, "failed to get execution payload")
 				}
 				// Compare payload values between local and builder. Default to the local value if it is higher.
-				localValue, err := localPayload.Value()
+				v, err := localPayload.Value()
 				if err != nil {
 					return errors.Wrap(err, "failed to get local payload value")
 				}
-				builderValue, err := builderPayload.Value()
+				localValue := v.Uint64()
+				v, err = builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
 				}
+				builderValue := v.Uint64()
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
 					return errors.Wrap(err, "failed to match withdrawals root")
 				}
+
+				// Use builder payload if the following in true:
+				// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
+				boost := params.BeaconConfig().LocalBlockValueBoost
+				higherValueBuilder := builderValue*100 > localValue*(100+boost)
+
 				// If we can't get the builder value, just use local block.
-				if builderValue.Cmp(localValue) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
+				if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
 					blk.SetBlinded(true)
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
@@ -82,10 +90,13 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 						return nil
 					}
 				}
-				log.WithFields(logrus.Fields{
-					"localValue":   localValue,
-					"builderValue": builderValue,
-				}).Warn("Proposer: using local execution payload because higher value")
+				if !higherValueBuilder {
+					log.WithFields(logrus.Fields{
+						"localGweiValue":       localValue,
+						"localBoostPercentage": 100 + boost,
+						"builderGweiValue":     builderValue,
+					}).Warn("Proposer: using local execution payload because higher value")
+				}
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.
 				blk.SetBlinded(true)

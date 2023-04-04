@@ -452,6 +452,9 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+	assert.Equal(t, true, ok)
 }
 
 func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
@@ -526,6 +529,9 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+	assert.Equal(t, true, ok)
 }
 
 func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
@@ -633,6 +639,9 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1ProposerSlashingToV1Alpha1(slashing), pendingSlashings[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
+	assert.Equal(t, true, ok)
 }
 
 func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
@@ -695,6 +704,13 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 
 	_, err = s.SubmitProposerSlashing(ctx, slashing)
 	require.NoError(t, err)
+	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, migration.V1ProposerSlashingToV1Alpha1(slashing), pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
+	assert.Equal(t, true, ok)
 }
 
 func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {

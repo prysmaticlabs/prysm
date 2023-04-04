@@ -190,7 +190,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpbv1.Attes
 		return nil, status.Errorf(codes.Internal, "Could not insert attester slashing into pool: %v", err)
 	}
 	if !features.Get().DisableBroadcastSlashings {
-		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+		if err := bs.Broadcaster.Broadcast(ctx, alphaSlashing); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}
@@ -250,7 +250,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 		return nil, status.Errorf(codes.Internal, "Could not insert proposer slashing into pool: %v", err)
 	}
 	if !features.Get().DisableBroadcastSlashings {
-		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+		if err := bs.Broadcaster.Broadcast(ctx, alphaSlashing); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}
