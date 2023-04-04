@@ -265,17 +265,18 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 	if err != nil {
 		return err
 	}
-	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head root")
-	}
 	// advance the headstate
-	headState, err := transition.ProcessSlotsUsingNextSlotCache(s.Ctx, st, headRoot, s.ChainInfoFetcher.CurrentSlot()+1)
+	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
 	if err != nil {
 		return err
 	}
 
 	headBlock, err := s.HeadFetcher.HeadBlock(s.Ctx)
+	if err != nil {
+		return err
+	}
+
+	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
 	if err != nil {
 		return err
 	}
