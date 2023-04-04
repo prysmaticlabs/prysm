@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/blob"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
@@ -211,6 +212,12 @@ func (s *Service) Start() {
 		ReplayerBuilder:       ch,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
+
+	blobServer := &blob.Server{
+		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		BeaconDB:         s.cfg.BeaconDB,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blobs/{block_id}", blobServer.Blobs)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,

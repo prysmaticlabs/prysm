@@ -139,7 +139,7 @@ func (_ *FakeP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Att
 }
 
 // BroadcastBlob -- fake.
-func (p *FakeP2P) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
+func (p *FakeP2P) BroadcastBlob(context.Context, uint64, *ethpb.SignedBlobSidecar) error {
 	return nil
 }
 

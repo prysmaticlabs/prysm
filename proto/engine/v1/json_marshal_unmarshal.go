@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -31,9 +30,9 @@ func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
 // eth_getBlockByNumber endpoints via JSON-RPC.
 type ExecutionBlock struct {
 	Version int
-	gethtypes.Header
+	gethTypes.Header
 	Hash            common.Hash              `json:"hash"`
-	Transactions    []*gethtypes.Transaction `json:"transactions"`
+	Transactions    []*gethTypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
 }
@@ -60,7 +59,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 
 func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	type transactionsJson struct {
-		Transactions []*gethtypes.Transaction `json:"transactions"`
+		Transactions []*gethTypes.Transaction `json:"transactions"`
 	}
 	type withdrawalsJson struct {
 		Withdrawals []*withdrawalJSON `json:"withdrawals"`
@@ -689,9 +688,7 @@ func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
 	blobs := make([]gethTypes.Blob, len(b.Blobs))
 	for i, b1 := range b.Blobs {
 		var blob [params.FieldElementsPerBlob * 32]byte
-		for i2, b2 := range b1.Data {
-			blob[i2] = b2
-		}
+		copy(blob[:], b1.Data)
 		blobs[i] = blob
 	}
 
@@ -719,9 +716,7 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 	blobs := make([]*Blob, len(dec.Blobs))
 	for i1, b1 := range dec.Blobs {
 		b := make([]byte, params.FieldElementsPerBlob*32)
-		for i2, b2 := range b1 {
-			b[i2] = b2
-		}
+		copy(b, b1[:])
 		blobs[i1] = &Blob{Data: bytesutil.SafeCopyBytes(b)}
 	}
 	e.Blobs = blobs

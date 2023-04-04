@@ -46,7 +46,7 @@ func (w *Waiter) RequireDoneAfter(t *testing.T, timeout time.Duration) {
 	}
 }
 
-func (w *Waiter) RequireDoneBeforeCancel(t *testing.T, ctx context.Context) {
+func (w *Waiter) RequireDoneBeforeCancel(ctx context.Context, t *testing.T) {
 	select {
 	case <-w.c:
 		return

@@ -170,7 +170,7 @@ func (p *TestP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Att
 	return nil
 }
 
-func (p *TestP2P) BroadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar) error {
+func (p *TestP2P) BroadcastBlob(context.Context, uint64, *ethpb.SignedBlobSidecar) error {
 	p.BroadcastCalled = true
 	return nil
 }

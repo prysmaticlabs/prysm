@@ -391,10 +391,7 @@ func ValidateBlobKzgs(ctx context.Context, body interfaces.ReadOnlyBeaconBlockBo
 	if err != nil {
 		return errors.Wrap(err, "could not get transactions from payload")
 	}
-	if err := eth.VerifyKZGCommitmentsAgainstTransactions(txs, kzgs); err != nil {
-		return err
-	}
-	return nil
+	return eth.VerifyKZGCommitmentsAgainstTransactions(txs, kzgs)
 }
 
 // This calls altair block operations.

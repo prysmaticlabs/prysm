@@ -77,15 +77,15 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 		return
 	}
 
-	//msgSlot := msg.Slot
-	//slotTime := time.Unix(int64(v.genesisTime+uint64(msgSlot)*params.BeaconConfig().SecondsPerSlot), 0)
-	//log.WithFields(logrus.Fields{
+	// msgSlot := msg.Slot
+	// slotTime := time.Unix(int64(v.genesisTime+uint64(msgSlot)*params.BeaconConfig().SecondsPerSlot), 0)
+	// log.WithFields(logrus.Fields{
 	//	"slot":               msg.Slot,
 	//	"slotStartTime":      slotTime,
 	//	"timeSinceSlotStart": time.Since(slotTime),
 	//	"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
 	//	"validatorIndex":     msg.ValidatorIndex,
-	//}).Info("Submitted new sync message")
+	// }).Info("Submitted new sync message")
 	atomic.AddUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 1)
 }
 
@@ -170,9 +170,9 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 			return
 		}
 
-		//contributionSlot := contributionAndProof.Contribution.Slot
-		//slotTime := time.Unix(int64(v.genesisTime+uint64(contributionSlot)*params.BeaconConfig().SecondsPerSlot), 0)
-		//log.WithFields(logrus.Fields{
+		// contributionSlot := contributionAndProof.Contribution.Slot
+		// slotTime := time.Unix(int64(v.genesisTime+uint64(contributionSlot)*params.BeaconConfig().SecondsPerSlot), 0)
+		// log.WithFields(logrus.Fields{
 		//	"slot":               contributionAndProof.Contribution.Slot,
 		//	"slotStartTime":      slotTime,
 		//	"timeSinceSlotStart": time.Since(slotTime),
@@ -180,7 +180,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		//	"subcommitteeIndex":  contributionAndProof.Contribution.SubcommitteeIndex,
 		//	"aggregatorIndex":    contributionAndProof.AggregatorIndex,
 		//	"bitsCount":          contributionAndProof.Contribution.AggregationBits.Count(),
-		//}).Info("Submitted new sync contribution and proof")
+		// }).Info("Submitted new sync contribution and proof")
 	}
 }
 

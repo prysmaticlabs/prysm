@@ -279,7 +279,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	return nil
 }
 
-func (_ *Service) dedupRoots(roots [][32]byte) [][32]byte {
+func (*Service) dedupRoots(roots [][32]byte) [][32]byte {
 	newRoots := make([][32]byte, 0, len(roots))
 	rootMap := make(map[[32]byte]bool, len(roots))
 	for i, r := range roots {
