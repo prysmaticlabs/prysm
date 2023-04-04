@@ -509,7 +509,44 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 	})
 
 	t.Run("Deneb", func(t *testing.T) {
-		// TODO: add test for deneb block here
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlockDeneb()
+		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		beaconChainServer := &Server{
+			BeaconDB:         beaconDB,
+			BlockReceiver:    c,
+			ChainInfoFetcher: c,
+			BlockNotifier:    c.BlockNotifier(),
+			Broadcaster:      mockp2p.NewTestP2P(t),
+			HeadFetcher:      c,
+		}
+		req := util.NewBeaconBlockDeneb()
+		req.Block.Slot = 5
+		req.Block.ParentRoot = bsRoot[:]
+		v2Block, err := migration.V1Alpha1BeaconBlockDenebToV2(req.Block)
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, beaconDB, req)
+		blockReq := &ethpbv2.SignedBeaconBlockContainerPayload{
+			SignedBlock: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_DenebBlock{DenebBlock: v2Block},
+				Signature: req.Signature,
+			},
+			SignedBlobSidecars: []*ethpbv2.SignedBlobSidecar{},
+		}
+		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
 	})
 }
 

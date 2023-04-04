@@ -1252,3 +1252,5 @@ func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.N
 	require.NoError(tb, db.SaveBlock(ctx, wsb))
 	return wsb
 }
+
+func SaveSidecar(tb assertions.AssertionTestingTB, ctx context.Context)
