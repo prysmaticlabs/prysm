@@ -72,6 +72,16 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 
+	result, err = bs.getBlindedBlockDeneb(ctx, blk)
+	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
+		return result, nil
+	}
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
+	}
+
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
 

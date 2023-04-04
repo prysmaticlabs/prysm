@@ -507,6 +507,10 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
 	})
+
+	t.Run("Deneb", func(t *testing.T) {
+		// TODO: add test for deneb block here
+	})
 }
 
 func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
