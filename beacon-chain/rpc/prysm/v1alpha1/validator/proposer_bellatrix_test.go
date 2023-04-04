@@ -29,9 +29,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestServer_setExecutionData(t *testing.T) {
+	hook := logTest.NewGlobal()
+
 	ctx := context.Background()
 	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 0
@@ -138,6 +141,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
+		builderValue := bytesutil.ReverseByteOrder(big.NewInt(1e9).Bytes())
 		bid := &ethpb.BuilderBidCapella{
 			Header: &v1.ExecutionPayloadHeaderCapella{
 				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
@@ -154,7 +158,7 @@ func TestServer_setExecutionData(t *testing.T) {
 				WithdrawalsRoot:  wr[:],
 			},
 			Pubkey: sk.PublicKey().Marshal(),
-			Value:  bytesutil.PadTo([]byte{1}, 32),
+			Value:  bytesutil.PadTo(builderValue, 32),
 		}
 		d := params.BeaconConfig().DomainApplicationBuilder
 		domain, err := signing.ComputeDomain(d, nil, nil)
@@ -183,11 +187,28 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Builder configured. Local block has higher value", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(3)}
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(2 * 1e9)}
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
+
+		require.LogsContain(t, hook, "builderGweiValue=1000000000 localBoostPercentage=100 localGweiValue=2000000000")
+	})
+	t.Run("Builder configured. Local block and boost has higher value", func(t *testing.T) {
+		cfg := params.BeaconConfig().Copy()
+		cfg.LocalBlockValueBoost = 1 // Boost 1%.
+		params.OverrideBeaconConfig(cfg)
+
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(1e9)}
+		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
+
+		require.LogsContain(t, hook, "builderGweiValue=1000000000 localBoostPercentage=101 localGweiValue=1000000000")
 	})
 	t.Run("Builder configured. Builder returns fault. Use local block", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
