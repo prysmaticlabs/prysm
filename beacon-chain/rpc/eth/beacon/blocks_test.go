@@ -378,9 +378,11 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: v1Block.Block},
-			Signature: v1Block.Signature,
+		blockReq := &ethpbv2.SignedBeaconBlockContainerPayload{
+			SignedBlock: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: v1Block.Block},
+				Signature: v1Block.Signature,
+			},
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -416,9 +418,11 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: v2Block},
-			Signature: req.Signature,
+		blockReq := &ethpbv2.SignedBeaconBlockContainerPayload{
+			SignedBlock: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: v2Block},
+				Signature: req.Signature,
+			},
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -454,9 +458,11 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Block},
-			Signature: req.Signature,
+		blockReq := &ethpbv2.SignedBeaconBlockContainerPayload{
+			SignedBlock: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Block},
+				Signature: req.Signature,
+			},
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -492,9 +498,11 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockCapellaToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_CapellaBlock{CapellaBlock: v2Block},
-			Signature: req.Signature,
+		blockReq := &ethpbv2.SignedBeaconBlockContainerPayload{
+			SignedBlock: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_CapellaBlock{CapellaBlock: v2Block},
+				Signature: req.Signature,
+			},
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
