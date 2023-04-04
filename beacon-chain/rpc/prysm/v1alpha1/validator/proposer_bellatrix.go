@@ -90,11 +90,13 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 						return nil
 					}
 				}
-				log.WithFields(logrus.Fields{
-					"localGweiValue":       localValue,
-					"localBoostPercentage": 100 + boost,
-					"builderGweiValue":     builderValue,
-				}).Warn("Proposer: using local execution payload because higher value")
+				if !higherValueBuilder {
+					log.WithFields(logrus.Fields{
+						"localGweiValue":       localValue,
+						"localBoostPercentage": 100 + boost,
+						"builderGweiValue":     builderValue,
+					}).Warn("Proposer: using local execution payload because higher value")
+				}
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.
 				blk.SetBlinded(true)
