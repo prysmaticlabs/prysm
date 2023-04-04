@@ -69,6 +69,15 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.New("block.Block is nil")
 	}
 
+	// Broadcast the block on a feed to notify other services in the beacon node
+	// of a received block (even if it does not process correctly through a state transition).
+	s.cfg.blockNotifier.BlockFeed().Send(&feed.Event{
+		Type: blockfeed.ReceivedBlock,
+		Data: &blockfeed.ReceivedBlockData{
+			SignedBlock: blk,
+		},
+	})
+
 	if features.Get().EnableSlasher {
 		// Feed the block header to slasher if enabled. This action
 		// is done in the background to avoid adding more load to this critical code path.
@@ -197,15 +206,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		"proposerIndex":      blk.Block().ProposerIndex(),
 		"graffiti":           string(graffiti[:]),
 	}).Debug("Received block")
-
-	// Broadcast the block on a feed to notify other services in the beacon node
-	// of a received block (even if it does not process correctly through a state transition).
-	s.cfg.blockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.ReceivedBlock,
-		Data: &blockfeed.ReceivedBlockData{
-			SignedBlock: blk,
-		},
-	})
 
 	blockVerificationGossipSummary.Observe(float64(prysmTime.Since(receivedTime).Milliseconds()))
 	return pubsub.ValidationAccept, nil
