@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
@@ -63,6 +64,13 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		isCanonical: s.cfg.chain.IsCanonical,
 		ticker:      ticker,
 	}
+
+	log.WithField("start-slot", m.StartSlot).WithField("count", m.Count).Warn("BeaconBlocksByRangeRequest")
+	log.
+		WithField("start", batcher.start).
+		WithField("end", batcher.end).
+		WithField("size", batcher.size).
+		Warn("batcher")
 
 	// prevRoot is used to ensure that returned chains are strictly linear for singular steps
 	// by comparing the previous root of the block in the list with the current block's parent.
@@ -127,6 +135,13 @@ func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch,
 	for _, b := range batch.Sequence() {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
+		}
+		checkr, err := b.Block().HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		if b.Root() != checkr {
+			return fmt.Errorf("ROBlock has the wrong root for block at slot %d", b.Block().Slot())
 		}
 		if b.IsBlinded() {
 			blinded = append(blinded, b.ReadOnlySignedBeaconBlock)

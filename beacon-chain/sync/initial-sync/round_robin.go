@@ -323,8 +323,8 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		headSlot := s.cfg.Chain.HeadSlot()
 		return fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, maxIncoming.Block().Slot(), maxRoot, errBlockAlreadyProcessed)
 	}
-	if !s.cfg.Chain.HasBlock(ctx, blockRoots[0]) {
-		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, blockRoots[0], unprocessed[0].Block().Slot())
+	if !s.cfg.Chain.HasBlock(ctx, unprocessed[0].Block().ParentRoot()) {
+		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, unprocessed[0].Block().ParentRoot(), unprocessed[0].Block().Slot())
 	}
 	s.logBatchSyncStatus(genesis, unprocessed, blockRoots[0])
 	for _, root := range blockRoots {
