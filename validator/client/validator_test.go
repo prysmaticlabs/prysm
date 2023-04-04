@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -86,6 +87,10 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldp
 	for pubKey := range m.keysMap {
 		keys = append(keys, pubKey)
 	}
+	comparator := func(i, j int) bool {
+		return string(keys[i][:]) < string(keys[j][:])
+	}
+	sort.Slice(keys, comparator)
 	return keys, nil
 }
 
