@@ -35,6 +35,7 @@ type ExecutionBlock struct {
 	Transactions    []*gethTypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
+	ExcessDataGas   []byte                   `json:"excessDataGas"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -86,11 +87,10 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		return errors.New("expected `totalDifficulty` field in JSON response")
 	}
 
-	rawWithdrawals, ok := decoded["withdrawals"]
-	if !ok || rawWithdrawals == nil {
+	rawWithdrawals, hasW := decoded["withdrawals"]
+	if !hasW || rawWithdrawals == nil {
 		e.Version = version.Bellatrix
 	} else {
-		e.Version = version.Capella
 		j := &withdrawalsJson{}
 		if err := json.Unmarshal(enc, j); err != nil {
 			return err
@@ -103,6 +103,14 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 			}
 		}
 		e.Withdrawals = ws
+
+		exDG, hasExDG := decoded["excessDataGas"]
+		if hasExDG && exDG != nil {
+			e.ExcessDataGas, err = hexutil.Decode(exDG.(string))
+			e.Version = version.Deneb
+		} else {
+			e.Version = version.Capella
+		}
 	}
 
 	rawTxList, ok := decoded["transactions"]
