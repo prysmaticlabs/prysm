@@ -303,7 +303,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		// make sure commitments match
 		for ci, kc := range kcs {
 			blobi := bblobs[ci]
-			if blobi.Index != uint64(i) {
+			if blobi.Index != uint64(ci) {
 				return errors.Wrapf(ErrMisalignedIndices, "block root %#x, block commitment %#x, offset %d, blob commitment %#x, Index=%d",
 					root, kc, ci, blobi.KzgCommitment, blobi.Index)
 			}

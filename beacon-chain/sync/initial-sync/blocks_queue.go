@@ -358,8 +358,10 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 
 		send := func() (stateID, error) {
 			data := &blocksQueueFetchedData{
-				pid:    m.pid,
-				blocks: m.blocks,
+				pid:      m.pid,
+				blocks:   m.blocks,
+				blobMap:  m.blobMap,
+				blobsPid: m.blobsPid,
 			}
 			select {
 			case <-ctx.Done():
