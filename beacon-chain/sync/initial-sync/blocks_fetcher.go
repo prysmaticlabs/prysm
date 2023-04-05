@@ -315,38 +315,37 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 }
 
 func blobRequestsForBlocks(blocks []interfaces.ReadOnlySignedBeaconBlock) (*p2ppb.BlobSidecarsByRangeRequest, error) {
+	log.WithField("block-len", len(blocks)).Warn("blobRequestsForBlocks 1")
 	if len(blocks) == 0 {
 		return nil, nil
 	}
-	// Get commitments for the last block in the list - assumes list is sorted in ascending order.
-	denebBlock, err := blocks[len(blocks)-1].PbBlindedDenebBlock()
-	if err != nil {
-		// If the last block is not a deneb block, there are no deneb blocks in the batch.
-		if errors.Is(err, btypes.ErrUnsupportedGetter) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	// By default handle edge case where we only see one deneb block, at the end of the slice.
+
 	req := &p2ppb.BlobSidecarsByRangeRequest{
-		StartSlot: denebBlock.GetBlock().Slot,
-		Count:     1,
-	}
-	// Loop through the blocks, looking for the earliest deneb block in the slice.
-	for _, bl := range blocks {
-		dblock, err := bl.PbBlindedDenebBlock()
-		// it's not a deneb block so skip it
-		if err != nil && errors.Is(err, btypes.ErrUnsupportedGetter) {
-			continue
-		}
-		// Break on the first deneb block, assuming all blocks in between are also deneb.
-		// StartSlot begins set to the slot at the end of the slice,
-		// use that to compute the count and overwrite with new start slot.
-		req.Count = uint64(req.StartSlot - dblock.GetBlock().Slot)
-		req.StartSlot = dblock.GetBlock().Slot
-		break
+		StartSlot: 0,
+		Count:     0,
 	}
 
+	// Loop through the blocks, looking for the earliest deneb block in the slice.
+	for i, bl := range blocks {
+		commits, err := bl.Block().Body().BlobKzgCommitments()
+		if err != nil {
+			if errors.Is(err, btypes.ErrUnsupportedGetter) {
+				continue
+			}
+			return nil, err
+		}
+		if len(commits) == 0 {
+			continue
+		}
+		if req.Count == 0 {
+			req.StartSlot = bl.Block().Slot()
+		}
+		req.Count = uint64(len(blocks) - i)
+		break
+	}
+	if req.Count == 0 {
+		return nil, nil
+	}
 	return req, nil
 }
 
