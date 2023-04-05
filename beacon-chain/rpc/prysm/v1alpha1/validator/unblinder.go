@@ -15,7 +15,6 @@ import (
 )
 
 type unblinder struct {
-	version int
 	b       interfaces.SignedBeaconBlock
 	builder builder.BlockBuilder
 }
@@ -25,22 +24,17 @@ func newUnblinder(b interfaces.SignedBeaconBlock, builder builder.BlockBuilder) 
 		return nil, err
 	}
 	return &unblinder{
-		version: b.Version(),
 		b:       b,
 		builder: builder,
 	}, nil
 }
 
 func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
-	if !u.b.IsBlinded() || !u.builder.Configured() || u.version < version.Bellatrix {
+	if !u.b.IsBlinded() || u.b.Version() < version.Bellatrix {
 		return u.b, nil
 	}
-	if u.b.Version() != u.version {
-		return nil, fmt.Errorf(
-			"unblinder is configured for version %s, but block has version %s",
-			version.String(u.version),
-			version.String(u.b.Version()),
-		)
+	if u.b.IsBlinded() && !u.builder.Configured() {
+		return nil, errors.New("builder not configured")
 	}
 
 	agg, err := u.b.Block().Body().SyncAggregate()
@@ -155,7 +149,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 }
 
 func (u *unblinder) blindedProtoBlock() (proto.Message, error) {
-	switch u.version {
+	switch u.b.Version() {
 	case version.Bellatrix:
 		return &ethpb.SignedBlindedBeaconBlockBellatrix{
 			Block: &ethpb.BlindedBeaconBlockBellatrix{
@@ -169,12 +163,12 @@ func (u *unblinder) blindedProtoBlock() (proto.Message, error) {
 			},
 		}, nil
 	default:
-		return nil, fmt.Errorf("invalid version %s", version.String(u.version))
+		return nil, fmt.Errorf("invalid version %s", version.String(u.b.Version()))
 	}
 }
 
 func (u *unblinder) protoBlock() (proto.Message, error) {
-	switch u.version {
+	switch u.b.Version() {
 	case version.Bellatrix:
 		return &ethpb.SignedBeaconBlockBellatrix{
 			Block: &ethpb.BeaconBlockBellatrix{
@@ -188,6 +182,6 @@ func (u *unblinder) protoBlock() (proto.Message, error) {
 			},
 		}, nil
 	default:
-		return nil, fmt.Errorf("invalid version %s", version.String(u.version))
+		return nil, fmt.Errorf("invalid version %s", version.String(u.b.Version()))
 	}
 }
