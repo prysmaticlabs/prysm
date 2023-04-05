@@ -562,7 +562,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadDeneb: emptyPayloadDeneb()},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -578,6 +578,12 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		req := util.NewBlindedBeaconBlockDeneb()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().DenebForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
+		transactionsRoot, err := ssz.TransactionsRoot([][]byte{})
+		require.NoError(t, err)
+		req.Block.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		req.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
@@ -901,5 +907,22 @@ func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
 		Transactions:  make([][]byte, 0),
 		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 		ExtraData:     make([]byte, 0),
+	}
+}
+
+func emptyPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
+	return &enginev1.ExecutionPayloadDeneb{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
+		ExtraData:     make([]byte, 0),
+		ExcessDataGas: make([]byte, 32),
 	}
 }
