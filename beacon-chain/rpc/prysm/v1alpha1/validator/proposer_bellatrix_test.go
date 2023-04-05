@@ -63,6 +63,7 @@ func TestServer_setExecutionData(t *testing.T) {
 	vs := &Server{
 		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: big.NewInt(0)},
 		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
+		FinalizationFetcher:    &blockchainTest.ChainService{},
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}

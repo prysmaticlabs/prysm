@@ -587,3 +587,13 @@ func (s *ChainService) ProposerBoost() [32]byte {
 	}
 	return [32]byte{}
 }
+
+// FinalizedBlockHash mocks the same method in the chain service
+func (s *ChainService) FinalizedBlockHash() [32]byte {
+	return [32]byte{}
+}
+
+// UnrealizedJustifiedPayloadBlockHash mocks the same method in the chain service
+func (s *ChainService) UnrealizedJustifiedPayloadBlockHash() ([32]byte, error) {
+	return [32]byte{}, nil
+}

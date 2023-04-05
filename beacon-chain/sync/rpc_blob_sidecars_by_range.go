@@ -20,7 +20,7 @@ import (
 
 type BlobSidecarProcessor func(sidecar *pb.BlobSidecar) error
 
-func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, stream libp2pcore.Stream, tw uint64) (uint64, error) {
+func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, stream libp2pcore.Stream) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
 	defer span.End()
 	var writes uint64
@@ -92,7 +92,7 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 	for batch, ok = batcher.Next(ctx, stream); ok; batch, ok = batcher.Next(ctx, stream) {
 		batchStart := time.Now()
 		rpcBlobsByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
-		writes, err := s.streamBlobBatch(ctx, batch, stream, totalWrites)
+		writes, err := s.streamBlobBatch(ctx, batch, stream)
 		if err != nil {
 			return err
 		}

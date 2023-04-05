@@ -103,7 +103,7 @@ func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.Transi
 	return nil
 }
 
-func (m *engineMock) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
+func (m *engineMock) GetBlobsBundle(context.Context, [8]byte) (*pb.BlobsBundle, error) {
 	return nil, nil
 }
 

@@ -173,7 +173,7 @@ func TestBlobsByRangeValidation(t *testing.T) {
 		name    string
 		current types.Slot
 		req     *ethpb.BlobSidecarsByRangeRequest
-		//chain := defaultMockChain(t)
+		// chain := defaultMockChain(t)
 
 		start types.Slot
 		end   types.Slot
