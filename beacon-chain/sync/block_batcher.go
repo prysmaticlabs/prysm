@@ -51,6 +51,9 @@ func filterCanonical(ctx context.Context, blks []blocks.ROBlock, prevRoot *[32]b
 func sortedUniqueBlocks(blks []blocks.ROBlock) []blocks.ROBlock {
 	// Remove duplicate blocks received
 	sort.Sort(blocks.ROBlockSlice(blks))
+	if len(blks) < 2 {
+		return blks
+	}
 	u := 0
 	for i := 1; i < len(blks); i++ {
 		if blks[i].Root() != blks[u].Root() {
