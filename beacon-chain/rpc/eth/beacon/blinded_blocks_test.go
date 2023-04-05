@@ -11,6 +11,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -407,7 +408,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, Payload: emptyPayload()},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -423,6 +424,9 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		req := util.NewBlindedBeaconBlockBellatrix()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
+		transactionsRoot, err := ssz.TransactionsRoot([][]byte{})
+		require.NoError(t, err)
+		req.Block.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
@@ -455,7 +459,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella()},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -471,6 +475,12 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		req := util.NewBlindedBeaconBlockCapella()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
+		transactionsRoot, err := ssz.TransactionsRoot([][]byte{})
+		require.NoError(t, err)
+		req.Block.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		req.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
@@ -580,10 +590,12 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		p := emptyPayload()
+		p.Transactions = transactions
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, Payload: p},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -651,10 +663,13 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		p := emptyPayloadCapella()
+		p.Transactions = transactions
+		p.Withdrawals = withdrawals
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: p},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -686,4 +701,35 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
 	})
+}
+
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		ExtraData:     make([]byte, 0),
+	}
+}
+
+func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
+	return &enginev1.ExecutionPayloadCapella{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
+		ExtraData:     make([]byte, 0),
+	}
 }
