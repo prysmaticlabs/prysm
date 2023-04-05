@@ -140,7 +140,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	log.WithFields(logrus.Fields{
 		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
 		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
-		"gasUsed":      h.GasUsed,
+		"gasUsed":      h.GasUsed(),
 		"slot":         u.b.Block().Slot(),
 		"txs":          len(txs),
 	}).Info("Retrieved full payload from builder")
