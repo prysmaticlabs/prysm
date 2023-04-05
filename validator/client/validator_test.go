@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -85,6 +86,11 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldp
 	for pubKey := range m.keysMap {
 		keys = append(keys, pubKey)
 	}
+	comparator := func(i, j int) bool {
+		return string(keys[i][:]) < string(keys[j][:])
+	}
+	sort.Slice(keys, comparator)
+	fmt.Printf("fetched keys: %v \n", keys)
 	return keys, nil
 }
 
@@ -933,7 +939,7 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 		{Status: ethpb.ValidatorStatus_ACTIVE},
 		{Status: ethpb.ValidatorStatus_EXITED},
 	}
-
+	fmt.Printf("request keys: %v \n", request.PublicKeys)
 	client.EXPECT().MultipleValidatorStatus(
 		gomock.Any(), // ctx
 		request,      // request

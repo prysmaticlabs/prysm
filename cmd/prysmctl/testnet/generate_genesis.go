@@ -251,7 +251,7 @@ func setGlobalParams() error {
 	return params.SetActive(cfg.Copy())
 }
 
-func generateGenesis(ctx context.Context) (*ethpb.BeaconState, error) {
+func generateGenesis(ctx context.Context) (genesisState *ethpb.BeaconState, err error) {
 	genesisTime := generateGenesisStateFlags.GenesisTime
 	numValidators := generateGenesisStateFlags.NumValidators
 	depositJsonFile := generateGenesisStateFlags.DepositJsonFile
@@ -266,22 +266,26 @@ func generateGenesis(ctx context.Context) (*ethpb.BeaconState, error) {
 			return nil, err
 		}
 		defer func() {
-			if err := inputJSON.Close(); err != nil {
+			if err = inputJSON.Close(); err != nil {
 				log.WithError(err).Printf("Could not close file %s", depositJsonFile)
 			}
 		}()
 		log.Printf("Generating genesis state from input JSON deposit data %s", depositJsonFile)
-		return genesisStateFromJSONValidators(ctx, inputJSON, genesisTime)
-	}
-	if numValidators == 0 {
-		return nil, fmt.Errorf(
-			"expected --num-validators > 0 to have been provided",
-		)
-	}
-	// If no JSON input is specified, we create the state deterministically from interop keys.
-	genesisState, _, err := interop.GenerateGenesisState(ctx, genesisTime, numValidators)
-	if err != nil {
-		return nil, err
+		genesisState, err = genesisStateFromJSONValidators(ctx, inputJSON, genesisTime)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if numValidators == 0 {
+			return nil, fmt.Errorf(
+				"expected --num-validators > 0 to have been provided",
+			)
+		}
+		// If no JSON input is specified, we create the state deterministically from interop keys.
+		genesisState, _, err = interop.GenerateGenesisState(ctx, genesisTime, numValidators)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if overrideEth1Data {
 		log.Print("Overriding Eth1Data with data from execution client")
