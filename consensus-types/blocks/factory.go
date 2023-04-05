@@ -323,6 +323,10 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		if err != nil {
 			return nil, err
 		}
+		commitments, err := b.Body().BlobKzgCommitments()
+		if err != nil {
+			return nil, err
+		}
 		fullBlock = &eth.SignedBeaconBlockDeneb{
 			Block: &eth.BeaconBlockDeneb{
 				Slot:          b.Slot(),
@@ -341,6 +345,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					SyncAggregate:         syncAgg,
 					ExecutionPayload:      p,
 					BlsToExecutionChanges: blsToExecutionChanges,
+					BlobKzgCommitments:    commitments,
 				},
 			},
 			Signature: sig[:],
