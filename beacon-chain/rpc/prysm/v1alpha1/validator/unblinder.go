@@ -15,44 +15,35 @@ import (
 )
 
 type unblinder struct {
-	version int
 	b       interfaces.SignedBeaconBlock
 	builder builder.BlockBuilder
 }
 
-func newUnblinder(b interfaces.SignedBeaconBlock, builder builder.BlockBuilder) *unblinder {
+func newUnblinder(b interfaces.SignedBeaconBlock, builder builder.BlockBuilder) (*unblinder, error) {
+	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
+		return nil, err
+	}
 	return &unblinder{
-		version: b.Version(),
 		b:       b,
 		builder: builder,
-	}
+	}, nil
 }
 
 func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
-	if err := consensusblocks.BeaconBlockIsNil(u.b); err != nil {
-		return nil, err
-	}
-	if !u.b.IsBlinded() {
+	if !u.b.IsBlinded() || u.b.Version() < version.Bellatrix {
 		return u.b, nil
 	}
-	if u.b.Version() != u.version {
-		return nil, fmt.Errorf(
-			"unblinder is configured for version %s, but block has version %s",
-			version.String(u.version),
-			version.String(u.b.Version()),
-		)
-	}
-	if !u.builder.Configured() {
-		return u.b, nil
+	if u.b.IsBlinded() && !u.builder.Configured() {
+		return nil, errors.New("builder not configured")
 	}
 
 	agg, err := u.b.Block().Body().SyncAggregate()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get sync aggregate")
 	}
 	h, err := u.b.Block().Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get execution")
 	}
 	parentRoot := u.b.Block().ParentRoot()
 	stateRoot := u.b.Block().StateRoot()
@@ -60,7 +51,10 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	graffiti := u.b.Block().Body().Graffiti()
 	sig := u.b.Signature()
 
-	psb := u.protoBlindedBlock()
+	psb, err := u.blindedProtoBlock()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get blinded proto block")
+	}
 	sb, err := consensusblocks.NewSignedBeaconBlock(psb)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create signed block")
@@ -87,15 +81,15 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 
 	payload, err := u.builder.SubmitBlindedBlock(ctx, sb)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not submit blinded block")
 	}
 	headerRoot, err := h.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get header root")
 	}
 	payloadRoot, err := payload.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get payload root")
 	}
 	if headerRoot != payloadRoot {
 		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
@@ -104,11 +98,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 
 	agg, err = sb.Block().Body().SyncAggregate()
 	if err != nil {
-		return nil, err
-	}
-	h, err = sb.Block().Body().Execution()
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get sync aggregate")
 	}
 	parentRoot = sb.Block().ParentRoot()
 	stateRoot = sb.Block().StateRoot()
@@ -116,10 +106,13 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	graffiti = sb.Block().Body().Graffiti()
 	sig = sb.Signature()
 
-	bb := u.protoBlock()
+	bb, err := u.protoBlock()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get proto block")
+	}
 	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not create signed block")
 	}
 	wb.SetSlot(sb.Block().Slot())
 	wb.SetProposerIndex(sb.Block().ProposerIndex())
@@ -136,7 +129,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	if err = wb.SetSyncAggregate(agg); err != nil {
 		return nil, errors.Wrap(err, "could not set sync aggregate")
 	}
-	if err = sb.SetExecution(h); err != nil {
+	if err = wb.SetExecution(payload); err != nil {
 		return nil, errors.Wrap(err, "could not set execution")
 	}
 
@@ -155,48 +148,52 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	return wb, nil
 }
 
-func (u *unblinder) protoBlindedBlock() proto.Message {
-	switch u.version {
+func (u *unblinder) blindedProtoBlock() (proto.Message, error) {
+	switch u.b.Version() {
 	case version.Bellatrix:
 		return &ethpb.SignedBlindedBeaconBlockBellatrix{
 			Block: &ethpb.BlindedBeaconBlockBellatrix{
 				Body: &ethpb.BlindedBeaconBlockBodyBellatrix{},
 			},
-		}
+		}, nil
 	case version.Capella:
 		return &ethpb.SignedBlindedBeaconBlockCapella{
 			Block: &ethpb.BlindedBeaconBlockCapella{
 				Body: &ethpb.BlindedBeaconBlockBodyCapella{},
 			},
-		}
-	default:
+		}, nil
+	case version.Deneb:
 		return &ethpb.SignedBlindedBeaconBlockDeneb{
 			Block: &ethpb.BlindedBeaconBlockDeneb{
 				Body: &ethpb.BlindedBeaconBlockBodyDeneb{},
 			},
-		}
+		}, nil
+	default:
+		return nil, fmt.Errorf("invalid version %s", version.String(u.b.Version()))
 	}
 }
 
-func (u *unblinder) protoBlock() proto.Message {
-	switch u.version {
+func (u *unblinder) protoBlock() (proto.Message, error) {
+	switch u.b.Version() {
 	case version.Bellatrix:
 		return &ethpb.SignedBeaconBlockBellatrix{
 			Block: &ethpb.BeaconBlockBellatrix{
 				Body: &ethpb.BeaconBlockBodyBellatrix{},
 			},
-		}
+		}, nil
 	case version.Capella:
 		return &ethpb.SignedBeaconBlockCapella{
 			Block: &ethpb.BeaconBlockCapella{
 				Body: &ethpb.BeaconBlockBodyCapella{},
 			},
-		}
-	default:
+		}, nil
+	case version.Deneb:
 		return &ethpb.SignedBeaconBlockDeneb{
 			Block: &ethpb.BeaconBlockDeneb{
 				Body: &ethpb.BeaconBlockBodyDeneb{},
 			},
-		}
+		}, nil
+	default:
+		return nil, fmt.Errorf("invalid version %s", version.String(u.b.Version()))
 	}
 }

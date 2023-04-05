@@ -302,7 +302,11 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, req *ethpb.Gene
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
-	blk, err = newUnblinder(blk, vs.BlockBuilder).unblindBuilderBlock(ctx)
+	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create unblinder")
+	}
+	blk, err = unblinder.unblindBuilderBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
