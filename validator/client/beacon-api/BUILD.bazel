@@ -66,6 +66,7 @@ go_test(
     srcs = [
         "activation_test.go",
         "attestation_data_test.go",
+        "beacon_api_beacon_chain_client_test.go",
         "beacon_api_helpers_test.go",
         "beacon_api_node_client_test.go",
         "beacon_api_validator_client_test.go",
