@@ -21,7 +21,7 @@ func (s *Service) sendRecentBeaconBlocksAndBlobsRequest(ctx context.Context, blo
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	var requestBlobs map[[32]byte]int
+	requestBlobs := make(map[[32]byte]int)
 	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.chain, s.cfg.p2p, id, blockRoots, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
