@@ -172,7 +172,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			BidCapella: sBid,
 		}
-		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		chain := &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New(), Genesis: time.Now(), Block: wb}
 		vs.ForkFetcher = chain
