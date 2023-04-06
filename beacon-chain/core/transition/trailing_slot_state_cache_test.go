@@ -13,12 +13,12 @@ import (
 func TestTrailingSlotState_RoundTrip(t *testing.T) {
 	ctx := context.Background()
 	r := []byte{'a'}
-	s := transition.NextSlotState(r)
+	s := transition.NextSlotState(r, 0)
 	require.Equal(t, nil, s)
 
 	s, _ = util.DeterministicGenesisState(t, 1)
 	require.NoError(t, transition.UpdateNextSlotCache(ctx, r, s))
-	s = transition.NextSlotState(r)
+	s = transition.NextSlotState(r, 1)
 	require.Equal(t, primitives.Slot(1), s.Slot())
 
 	lastRoot, lastState := transition.LastCachedState()
@@ -26,7 +26,7 @@ func TestTrailingSlotState_RoundTrip(t *testing.T) {
 	require.Equal(t, s.Slot(), lastState.Slot())
 
 	require.NoError(t, transition.UpdateNextSlotCache(ctx, r, s))
-	s = transition.NextSlotState(r)
+	s = transition.NextSlotState(r, 2)
 	require.Equal(t, primitives.Slot(2), s.Slot())
 
 	lastRoot, lastState = transition.LastCachedState()
