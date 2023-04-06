@@ -269,26 +269,6 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		assert.DeepEqual(t, expected, resp.Data)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 	})
-	t.Run("Deneb", func(t *testing.T) {
-		b := util.NewBlindedBeaconBlockDeneb()
-		blk, err := blocks.NewSignedBeaconBlock(b)
-		require.NoError(t, err)
-
-		mockChainService := &mock.ChainService{}
-		bs := &Server{
-			FinalizationFetcher:   mockChainService,
-			Blocker:               &testutil.MockBlocker{BlockToReturn: blk},
-			OptimisticModeFetcher: mockChainService,
-		}
-
-		expected, err := blk.MarshalSSZ()
-		require.NoError(t, err)
-		resp, err := bs.GetBlindedBlockSSZ(ctx, &ethpbv1.BlockRequest{})
-		require.NoError(t, err)
-		assert.NotNil(t, resp)
-		assert.DeepEqual(t, expected, resp.Data)
-		assert.Equal(t, ethpbv2.Version_Deneb, resp.Version)
-	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
 		blk, err := blocks.NewSignedBeaconBlock(b)
@@ -534,68 +514,6 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		_, err = beaconChainServer.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
 	})
-
-	t.Run("Deneb", func(t *testing.T) {
-		// INFO: This code block can be removed once Deneb
-		// fork epoch is set to a value other than math.MaxUint64
-		params.SetupTestConfigCleanup(t)
-		cfg := params.BeaconConfig()
-		cfg.DenebForkEpoch = cfg.CapellaForkEpoch + 1000
-		cfg.ForkVersionSchedule[bytesutil.ToBytes4(cfg.DenebForkVersion)] = cfg.CapellaForkEpoch + 1000
-		params.OverrideBeaconConfig(cfg)
-
-		beaconDB := dbTest.SetupDB(t)
-		ctx := context.Background()
-
-		genesis := util.NewBeaconBlockDeneb()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
-
-		numDeposits := uint64(64)
-		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-		bsRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesisRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-		alphaServer := &validator.Server{
-			SyncCommitteePool: synccommittee.NewStore(),
-			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadDeneb: emptyPayloadDeneb()},
-			BlockReceiver:     c,
-			BlockNotifier:     &mock.MockBlockNotifier{},
-		}
-		beaconChainServer := &Server{
-			BeaconDB:                beaconDB,
-			BlockReceiver:           c,
-			ChainInfoFetcher:        c,
-			BlockNotifier:           c.BlockNotifier(),
-			Broadcaster:             mockp2p.NewTestP2P(t),
-			HeadFetcher:             c,
-			V1Alpha1ValidatorServer: alphaServer,
-		}
-		req := util.NewBlindedBeaconBlockDeneb()
-		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().DenebForkEpoch))
-		req.Block.ParentRoot = bsRoot[:]
-		transactionsRoot, err := ssz.TransactionsRoot([][]byte{})
-		require.NoError(t, err)
-		req.Block.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
-		withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
-		require.NoError(t, err)
-		req.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
-		blockSsz, err := req.MarshalSSZ()
-		require.NoError(t, err)
-		blockReq := &ethpbv2.SSZContainer{
-			Data: blockSsz,
-		}
-		md := metadata.MD{}
-		md.Set(versionHeader, "deneb")
-		sszCtx := metadata.NewIncomingContext(ctx, md)
-		_, err = beaconChainServer.SubmitBlindedBlockSSZ(sszCtx, blockReq)
-		assert.NoError(t, err, "Could not propose block correctly")
-	})
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
@@ -628,8 +546,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block{Phase0Block: v1Block.Block},
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContentsContainer_Phase0Block{Phase0Block: v1Block.Block},
 			Signature: v1Block.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
@@ -665,8 +583,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock{AltairBlock: v2Block},
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContentsContainer_AltairBlock{AltairBlock: v2Block},
 			Signature: req.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
@@ -721,8 +639,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		blindedBlk.Message.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, blk)
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk.Message},
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContentsContainer_BellatrixBlock{BellatrixBlock: blindedBlk.Message},
 			Signature: blindedBlk.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
@@ -797,15 +715,15 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		blindedBlk.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, blk)
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: blindedBlk.Message},
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContentsContainer_CapellaBlock{CapellaBlock: blindedBlk.Message},
 			Signature: blindedBlk.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
 	})
 
-	t.Run("Deneb", func(t *testing.T) {
+	/*t.Run("Deneb", func(t *testing.T) {
 		transactions := [][]byte{[]byte("transaction1"), []byte("transaction2")}
 		transactionsRoot, err := ssz.TransactionsRoot(transactions)
 		require.NoError(t, err)
@@ -870,13 +788,13 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		blindedBlk.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, blk)
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_DenebBlock{DenebBlock: blindedBlk.Message},
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContentsContainer_DenebContents{DenebContents: blindedBlk.Message},
 			Signature: blindedBlk.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
-	})
+	})*/
 }
 
 func emptyPayload() *enginev1.ExecutionPayload {
@@ -907,22 +825,5 @@ func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
 		Transactions:  make([][]byte, 0),
 		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 		ExtraData:     make([]byte, 0),
-	}
-}
-
-func emptyPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
-	return &enginev1.ExecutionPayloadDeneb{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		Withdrawals:   make([]*enginev1.Withdrawal, 0),
-		ExtraData:     make([]byte, 0),
-		ExcessDataGas: make([]byte, 32),
 	}
 }

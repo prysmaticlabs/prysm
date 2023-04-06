@@ -18,6 +18,7 @@ package ethereum.eth.v2;
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
+import "proto/eth/v2/blobs.proto";
 import "proto/eth/v2/version.proto";
 import "proto/eth/v2/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
@@ -89,6 +90,29 @@ message SignedBlindedBeaconBlockContainer {
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
     BlindedBeaconBlockCapella capella_block = 4;
     BlindedBeaconBlockDeneb deneb_block = 5;
+  }
+
+  // 96 byte BLS signature from the validator that produced this block.
+  bytes signature = 6 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BlindedBeaconBlockContentsContainer {
+  oneof block {
+    v1.BeaconBlock phase0_block = 1;
+    BeaconBlockAltair altair_block = 2;
+    BlindedBeaconBlockBellatrix bellatrix_block = 3;
+    BlindedBeaconBlockCapella capella_block = 4;
+    BlindedBeaconBlockContentsDeneb deneb_contents = 5;
+  }
+}
+
+message SignedBlindedBeaconBlockContentsContainer {
+  oneof message {
+    v1.BeaconBlock phase0_block = 1;
+    BeaconBlockAltair altair_block = 2;
+    BlindedBeaconBlockBellatrix bellatrix_block = 3;
+    BlindedBeaconBlockCapella capella_block = 4;
+    BlindedBeaconBlockContentsDeneb deneb_contents = 5;
   }
 
   // 96 byte BLS signature from the validator that produced this block.
@@ -532,4 +556,9 @@ message BeaconBlockBodyDeneb {
 
   // At most MAX_BLOBS_PER_BLOCK. New in Deneb network upgrade.
   repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
+}
+
+message BlindedBeaconBlockContentsDeneb {
+  BlindedBeaconBlockDeneb blinded_block = 1;
+  BlindedBlobSidecars blinded_blob_sidecars = 2;
 }
