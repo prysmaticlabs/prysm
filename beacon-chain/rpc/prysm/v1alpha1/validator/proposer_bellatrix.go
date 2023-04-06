@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -68,7 +69,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				v, err = builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-					break
+					v = big.NewInt(0)                                                        // Default to local if can't get builder value.
 				}
 				builderValue := v.Uint64()
 
