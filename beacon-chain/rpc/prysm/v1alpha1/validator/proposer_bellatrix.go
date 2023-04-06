@@ -66,10 +66,11 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				}
 				localValue := v.Uint64()
 				v, err = builderPayload.Value()
-				var builderValue uint64
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-				} else {
+				}
+				var builderValue uint64
+				if v != nil {
 					builderValue = v.Uint64()
 				}
 
