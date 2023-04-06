@@ -88,6 +88,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					blk.SetBlinded(true)
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
+						blk.SetBlinded(false)
 					} else {
 						return nil
 					}
@@ -104,12 +105,12 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				blk.SetBlinded(true)
 				if err := blk.SetExecution(builderPayload); err != nil {
 					log.WithError(err).Warn("Proposer: failed to set builder payload")
+					blk.SetBlinded(false)
 				} else {
 					return nil
 				}
 			}
 		}
-
 	}
 
 	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
