@@ -68,11 +68,10 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				v, err = builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+					break
 				}
-				var builderValue uint64
-				if v != nil {
-					builderValue = v.Uint64()
-				}
+				builderValue := v.Uint64()
+
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
 					return errors.Wrap(err, "failed to match withdrawals root")
@@ -334,7 +333,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.ReadOnly
 func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil /* genesis val root */)
+		nil  /* genesis val root */)
 	if err != nil {
 		return err
 	}
