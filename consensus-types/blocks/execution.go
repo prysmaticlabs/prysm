@@ -160,8 +160,8 @@ func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// ExcessiveDataGas --
-func (e executionPayload) ExcessiveDataGas() ([]byte, error) {
+// ExcessDataGas --
+func (e executionPayload) ExcessDataGas() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -326,8 +326,8 @@ func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// ExcessiveDataGas --
-func (e executionPayloadHeader) ExcessiveDataGas() ([]byte, error) {
+// ExcessDataGas --
+func (e executionPayloadHeader) ExcessDataGas() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -521,7 +521,7 @@ func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-func (e executionPayloadCapella) ExcessiveDataGas() ([]byte, error) {
+func (e executionPayloadCapella) ExcessDataGas() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -687,7 +687,7 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
-func (e executionPayloadHeaderCapella) ExcessiveDataGas() ([]byte, error) {
+func (e executionPayloadHeaderCapella) ExcessDataGas() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -762,7 +762,7 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	if err != nil {
 		return nil, err
 	}
-	excessDataGas, err := payload.ExcessiveDataGas()
+	excessDataGas, err := payload.ExcessDataGas()
 	if err != nil {
 		return nil, err
 	}
@@ -986,7 +986,7 @@ func (e executionPayloadHeaderDeneb) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
-func (e executionPayloadHeaderDeneb) ExcessiveDataGas() ([]byte, error) {
+func (e executionPayloadHeaderDeneb) ExcessDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 
@@ -1151,7 +1151,7 @@ func (e executionPayloadDeneb) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-func (e executionPayloadDeneb) ExcessiveDataGas() ([]byte, error) {
+func (e executionPayloadDeneb) ExcessDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 

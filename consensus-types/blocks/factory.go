@@ -228,6 +228,8 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		wrappedPayload, wrapErr = WrappedExecutionPayload(p)
 	case *enginev1.ExecutionPayloadCapella:
 		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p, big.NewInt(0))
+	case *enginev1.ExecutionPayloadDeneb:
+		wrappedPayload, wrapErr = WrappedExecutionPayloadDeneb(p, big.NewInt(0))
 	default:
 		return nil, fmt.Errorf("%T is not a type of execution payload", p)
 	}
@@ -312,6 +314,38 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					SyncAggregate:         syncAgg,
 					ExecutionPayload:      p,
 					BlsToExecutionChanges: blsToExecutionChanges,
+				},
+			},
+			Signature: sig[:],
+		}
+	case *enginev1.ExecutionPayloadDeneb:
+		blsToExecutionChanges, err := b.Body().BLSToExecutionChanges()
+		if err != nil {
+			return nil, err
+		}
+		commitments, err := b.Body().BlobKzgCommitments()
+		if err != nil {
+			return nil, err
+		}
+		fullBlock = &eth.SignedBeaconBlockDeneb{
+			Block: &eth.BeaconBlockDeneb{
+				Slot:          b.Slot(),
+				ProposerIndex: b.ProposerIndex(),
+				ParentRoot:    parentRoot[:],
+				StateRoot:     stateRoot[:],
+				Body: &eth.BeaconBlockBodyDeneb{
+					RandaoReveal:          randaoReveal[:],
+					Eth1Data:              b.Body().Eth1Data(),
+					Graffiti:              graffiti[:],
+					ProposerSlashings:     b.Body().ProposerSlashings(),
+					AttesterSlashings:     b.Body().AttesterSlashings(),
+					Attestations:          b.Body().Attestations(),
+					Deposits:              b.Body().Deposits(),
+					VoluntaryExits:        b.Body().VoluntaryExits(),
+					SyncAggregate:         syncAgg,
+					ExecutionPayload:      p,
+					BlsToExecutionChanges: blsToExecutionChanges,
+					BlobKzgCommitments:    commitments,
 				},
 			},
 			Signature: sig[:],

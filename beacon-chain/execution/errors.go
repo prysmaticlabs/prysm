@@ -36,4 +36,7 @@ var (
 	ErrNilResponse = errors.New("nil response")
 	// ErrRequestTooLarge when the request is too large
 	ErrRequestTooLarge = errors.New("request too large")
+	// ErrUnknownExecutionDataType is an internal error when an execution payload type is unrecognized,
+	// making type conversions impossible to do correctly.
+	ErrUnknownExecutionDataType = errors.New("unknown execution data type")
 )
