@@ -6,9 +6,12 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -524,13 +527,22 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		alphaServer := &validator.Server{
+			SyncCommitteePool: synccommittee.NewStore(),
+			P2P:               &mockp2p.MockBroadcaster{},
+			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockReceiver:     c,
+			BeaconDB:          beaconDB,
+			BlockNotifier:     &mock.MockBlockNotifier{},
+		}
 		beaconChainServer := &Server{
-			BeaconDB:         beaconDB,
-			BlockReceiver:    c,
-			ChainInfoFetcher: c,
-			BlockNotifier:    c.BlockNotifier(),
-			Broadcaster:      mockp2p.NewTestP2P(t),
-			HeadFetcher:      c,
+			BeaconDB:                beaconDB,
+			V1Alpha1ValidatorServer: alphaServer,
+			BlockReceiver:           c,
+			ChainInfoFetcher:        c,
+			BlockNotifier:           c.BlockNotifier(),
+			Broadcaster:             mockp2p.NewTestP2P(t),
+			HeadFetcher:             c,
 		}
 		req := util.NewBeaconBlockDeneb()
 		req.Block.Slot = 5
@@ -538,12 +550,18 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockDenebToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
+		blobreq := util.NewBlobSidecar()
+		blobreq.Message.Slot = 5
+		blobreq.Message.BlockParentRoot = bsRoot[:]
+		v2Blobs, err := migration.V1Alpha1SignedBlobSidecarsToV2([]*ethpbalpha.SignedBlobSidecar{blobreq})
+		require.NoError(t, err)
+		//require.NoError(t, beaconDB.SaveBlobSidecar(ctx, []*ethpbalpha.BlobSidecar{blobreq.Message}))
 		blockReq := &ethpbv2.SignedBeaconBlockContainerPayload{
 			SignedBlock: &ethpbv2.SignedBeaconBlockContainer{
 				Message:   &ethpbv2.SignedBeaconBlockContainer_DenebBlock{DenebBlock: v2Block},
 				Signature: req.Signature,
 			},
-			SignedBlobSidecars: []*ethpbv2.SignedBlobSidecar{},
+			SignedBlobSidecars: v2Blobs,
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -709,6 +727,10 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
+	})
+
+	t.Run("Deneb", func(t *testing.T) {
+		// TODO: BLOCKED UNTIL SSZ IS FIGURED OUT
 	})
 }
 

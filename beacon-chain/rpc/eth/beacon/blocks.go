@@ -1193,7 +1193,7 @@ func (bs *Server) submitDenebBlockcontents(ctx context.Context, denebBlkContents
 	}
 	v1alpha1Blobs, err := migration.V2SignedBlobSidecarsToV1Alpha1(denebBlkContents.SignedBlobSidecars)
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not prepare blobs")
+		return status.Errorf(codes.InvalidArgument, "Could not prepare blobs: %v", err)
 	}
 	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Deneb{

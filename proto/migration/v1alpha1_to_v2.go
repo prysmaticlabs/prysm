@@ -159,6 +159,23 @@ func V1Alpha1BeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.BeaconBlockDeneb) (*
 	return v2Block, nil
 }
 
+// V1Alpha1SignedBlobSidecarsToV2 converts an array of signed v1alpha1 blob sidecar to a v2
+func V1Alpha1SignedBlobSidecarsToV2(v1alpha1Blobsidecars []*ethpbalpha.SignedBlobSidecar) ([]*ethpbv2.SignedBlobSidecar, error) {
+	v2blobs := make([]*ethpbv2.SignedBlobSidecar, len(v1alpha1Blobsidecars))
+	for index, v1Blob := range v1alpha1Blobsidecars {
+		marshaledBlob, err := proto.Marshal(v1Blob)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not marshal blobsidecar")
+		}
+		v2Blob := &ethpbv2.SignedBlobSidecar{}
+		if err := proto.Unmarshal(marshaledBlob, v2Blob); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blobsidecar")
+		}
+		v2blobs[index] = v2Blob
+	}
+	return v2blobs, nil
+}
+
 // V1Alpha1BeaconBlockDenebAndBlobsToV2 converts a v1alpha1 Deneb beacon block and blobs to a v2
 // Deneb block.
 func V1Alpha1BeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.BeaconBlockDenebAndBlobs) (*ethpbv2.BeaconBlockDenebAndBlobs, error) {
