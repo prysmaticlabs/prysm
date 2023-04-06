@@ -334,7 +334,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.ReadOnly
 func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil  /* genesis val root */)
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
