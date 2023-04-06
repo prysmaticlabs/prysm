@@ -50,7 +50,7 @@ ssz_gen_marshal(
         "SignedBlindedBeaconBlockDeneb",
         "BlsToExecutionChange",
         "SignedBlsToExecutionChange",
-        "BlindedBlobSidecars",
+        "SignedBlindedBlobSidecar",
         "BlindedBlobSidecar",
     ],
 )

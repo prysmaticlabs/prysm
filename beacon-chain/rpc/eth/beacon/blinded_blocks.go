@@ -153,23 +153,23 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 
 	switch blkContainer := req.Message.(type) {
 	case *ethpbv2.SignedBlindedBeaconBlockContentsContainer_DenebContents:
-		/*if err := bs.submitBlindedDenebBlock(ctx, blkContainer.DenebContents, req.Signature); err != nil {
+		if err := bs.submitBlindedDenebContents(ctx, blkContainer.DenebContents); err != nil {
 			return nil, err
-		}*/
+		}
 	case *ethpbv2.SignedBlindedBeaconBlockContentsContainer_CapellaBlock:
-		if err := bs.submitBlindedCapellaBlock(ctx, blkContainer.CapellaBlock, req.Signature); err != nil {
+		if err := bs.submitBlindedCapellaBlock(ctx, blkContainer.CapellaBlock.Message, blkContainer.CapellaBlock.Signature); err != nil {
 			return nil, err
 		}
 	case *ethpbv2.SignedBlindedBeaconBlockContentsContainer_BellatrixBlock:
-		if err := bs.submitBlindedBellatrixBlock(ctx, blkContainer.BellatrixBlock, req.Signature); err != nil {
+		if err := bs.submitBlindedBellatrixBlock(ctx, blkContainer.BellatrixBlock.Message, blkContainer.BellatrixBlock.Signature); err != nil {
 			return nil, err
 		}
 	case *ethpbv2.SignedBlindedBeaconBlockContentsContainer_Phase0Block:
-		if err := bs.submitPhase0Block(ctx, blkContainer.Phase0Block, req.Signature); err != nil {
+		if err := bs.submitPhase0Block(ctx, blkContainer.Phase0Block.Block, blkContainer.Phase0Block.Signature); err != nil {
 			return nil, err
 		}
 	case *ethpbv2.SignedBlindedBeaconBlockContentsContainer_AltairBlock:
-		if err := bs.submitAltairBlock(ctx, blkContainer.AltairBlock, req.Signature); err != nil {
+		if err := bs.submitAltairBlock(ctx, blkContainer.AltairBlock.Message, blkContainer.AltairBlock.Signature); err != nil {
 			return nil, err
 		}
 	default:
@@ -685,21 +685,25 @@ func (bs *Server) submitBlindedCapellaBlock(ctx context.Context, blindedCapellaB
 	return nil
 }
 
-/*func (bs *Server) submitBlindedDenebBlock(ctx context.Context, blindedDenebBlk *ethpbv2.BlindedBeaconBlockDeneb, sig []byte) error {
-	b, err := migration.BlindedDenebToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockDeneb{
-		Message:   blindedDenebBlk,
-		Signature: sig,
+func (bs *Server) submitBlindedDenebContents(ctx context.Context, blindedDenebContents *ethpbv2.SignedBlindedBeaconBlockContentsDeneb) error {
+	blk, err := migration.BlindedDenebToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockDeneb{
+		Message:   blindedDenebContents.BlindedBlock.Message,
+		Signature: blindedDenebContents.BlindedBlock.Signature,
 	})
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
+	blobs := migration.BlindedBlobsToV1Alpha1SignedBlobs(blindedDenebContents.BlindedBlobSidecars)
 	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Blinded_Deneb{
-			Blinded_Deneb: b,
+			Blinded_Deneb: &eth.SignedBlindedBeaconBlockDenebAndBlobs{
+				Block: blk,
+				Blobs: blobs,
+			},
 		},
 	})
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
 	}
 	return nil
-}*/
+}

@@ -24,8 +24,9 @@ option java_outer_classname = "BlobsProto";
 option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
 
-message BlindedBlobSidecars {
-  repeated BlindedBlobSidecar sidecars = 1 [(ethereum.eth.ext.ssz_max) = "4"];
+message SignedBlindedBlobSidecar {
+  BlindedBlobSidecar message = 1 [(ethereum.eth.ext.ssz_max) = "4"];
+  bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
 message BlindedBlobSidecar {
