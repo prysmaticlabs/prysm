@@ -179,10 +179,14 @@ func (s *Service) prunePostBlockOperationPools(ctx context.Context, blk interfac
 		return errors.Wrap(err, "could not process BLSToExecutionChanges")
 	}
 
-	//  Mark attester slashings as seen so we don't include same ones in future blocks.
+	// Mark slashings as seen so we don't include same ones in future blocks.
 	for _, as := range blk.Block().Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
 	}
+	for _, ps := range blk.Block().Body().ProposerSlashings() {
+		s.cfg.SlashingPool.MarkIncludedProposerSlashing(ps)
+	}
+
 	return nil
 }
 
