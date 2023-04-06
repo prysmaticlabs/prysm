@@ -52,7 +52,8 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 		if err != nil {
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
-		} else {
+		}
+		if builderPayload != nil && err == nil {
 			switch {
 			case blk.Version() >= version.Capella:
 				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
@@ -73,7 +74,6 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				if v != nil {
 					builderValue = v.Uint64()
 				}
-
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
 					return errors.Wrap(err, "failed to match withdrawals root")
@@ -158,6 +158,9 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 	if bid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
+	}
+	if signedBid.Version() != b.Version() {
+		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d", signedBid.Version(), b.Version())
 	}
 
 	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
