@@ -352,6 +352,13 @@ func (bs *Server) StreamChainHead(_ *emptypb.Empty, stream ethpb.BeaconChain_Str
 	for {
 		select {
 		case stateEvent := <-stateChannel:
+			// In the event our node is in sync mode
+			// we do not send the chainhead to the caller
+			// due to the possibility of deadlocks when retrieving
+			// all the chain related data.
+			if bs.SyncChecker.Syncing() {
+				continue
+			}
 			if stateEvent.Type == statefeed.BlockProcessed {
 				res, err := bs.chainHeadRetrieval(stream.Context())
 				if err != nil {
