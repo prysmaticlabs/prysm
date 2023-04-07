@@ -12,49 +12,16 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
-	eg, egctx := errgroup.WithContext(ctx)
-	var deposits []*ethpb.Deposit
-	var atts []*ethpb.Attestation
-
-	eg.Go(func() error {
-		// Pack ETH1 deposits which have not been included in the beacon chain.
-		localDeposits, err := vs.deposits(egctx, head, eth1Data)
-		if err != nil {
-			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
-		}
-		// if the original context is cancelled, then cancel this routine too
-		select {
-		case <-egctx.Done():
-			return egctx.Err()
-		default:
-		}
-		deposits = localDeposits
-		return nil
-	})
-
-	eg.Go(func() error {
-		// Pack aggregated attestations which have not been included in the beacon chain.
-		localAtts, err := vs.packAttestations(egctx, head)
-		if err != nil {
-			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
-		}
-		// if the original context is cancelled, then cancel this routine too
-		select {
-		case <-egctx.Done():
-			return egctx.Err()
-		default:
-		}
-		atts = localAtts
-		return nil
-	})
-
-	return deposits, atts, eg.Wait()
+func (vs *Server) packDeposit(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, error) {
+	d, err := vs.deposits(ctx, head, eth1Data)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+	}
+	return d, nil
 }
 
 // deposits returns a list of pending deposits that are ready for inclusion in the next beacon
