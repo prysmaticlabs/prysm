@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"fmt"
+
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
@@ -71,6 +73,10 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 		obtainedCtx = digest[:]
 	}
 
+	log.
+		WithField("version", blk.Version()).
+		WithField("ctx", fmt.Sprintf("%#x", obtainedCtx)).
+		Warn("writing block to stream")
 	if err := writeContextToStream(obtainedCtx, stream, chain); err != nil {
 		return err
 	}
@@ -151,6 +157,11 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p
 		return nil, err
 	}
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
+	log.
+		WithField("slot", blk.Block().Slot()).
+		WithField("rpc-ctx", fmt.Sprintf("%#x", rpcCtx)).
+		WithField("version", blk.Version()).
+		Warn("reading response chunk")
 	return blk, err
 }
 
