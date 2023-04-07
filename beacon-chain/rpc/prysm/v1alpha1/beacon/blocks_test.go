@@ -555,6 +555,9 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 			Block: &ethpb.BeaconBlockContainer_BlindedCapellaBlock{BlindedCapellaBlock: blindedProto}}
 		runListBlocksGenesis(t, wrapped, blkContainer)
 	})
+	t.Run("deneb block", func(t *testing.T) {
+		// TODO: add case for deneb
+	})
 }
 
 func runListBlocksGenesis(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {

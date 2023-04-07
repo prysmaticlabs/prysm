@@ -327,6 +327,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 // This is particularly useful for using the values from API calls.
 func BeaconBlockContainerToSignedBeaconBlock(obj *eth.BeaconBlockContainer) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	switch obj.Block.(type) {
+	// TODO:missing blinded deneb block
 	//case *eth.BeaconBlockContainer_BlindedDeneb:
 	//	return NewSignedBeaconBlock(obj.GetBlindedCapellaBlock())
 	case *eth.BeaconBlockContainer_DenebBlock:

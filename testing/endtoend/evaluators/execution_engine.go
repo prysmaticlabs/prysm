@@ -41,6 +41,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		case *v2.SignedBlindedBeaconBlockContainer_CapellaBlock:
 			headSlot = uint64(hb.CapellaBlock.Slot)
 		default:
+			// TODO: add case for deneb
 			return errors.New("no valid block type retrieved")
 		}
 		currEpoch := slots.ToEpoch(primitives.Slot(headSlot))
