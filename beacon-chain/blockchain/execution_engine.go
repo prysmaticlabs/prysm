@@ -37,7 +37,7 @@ type notifyForkchoiceUpdateArg struct {
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkchoiceUpdateArg) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkchoiceUpdateArg, proposingSlot primitives.Slot) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
@@ -125,12 +125,12 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				headState: st,
 				headRoot:  r,
 				headBlock: b.Block(),
-			})
+			}, proposingSlot)
 			if err != nil {
 				return nil, err // Returning err because it's recursive here.
 			}
 
-			if err := s.saveHead(ctx, r, b, st); err != nil {
+			if err := s.saveHead(ctx, r, b, st, proposingSlot); err != nil {
 				log.WithError(err).Error("could not save head after pruning invalid blocks")
 			}
 

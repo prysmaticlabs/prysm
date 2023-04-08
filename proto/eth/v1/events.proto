@@ -53,6 +53,8 @@ message EventHead {
 
   // Information about optimistic sync.
   bool execution_optimistic = 7;
+
+    uint64 proposing_slot = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
 }
 
 message EventBlock {

@@ -477,7 +477,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 		headRoot:  lastBR,
 		headBlock: lastB.Block(),
 	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
+	if _, err := s.notifyForkchoiceUpdate(ctx, arg, s.CurrentSlot()+1); err != nil {
 		return err
 	}
 	return s.saveHeadNoDB(ctx, lastB, lastBR, preState)
@@ -713,7 +713,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		headState: headState,
 		headRoot:  headRoot,
 		headBlock: headBlock.Block(),
-	})
+	}, s.CurrentSlot()+1)
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 	}

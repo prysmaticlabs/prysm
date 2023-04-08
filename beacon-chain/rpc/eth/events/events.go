@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -220,7 +221,11 @@ func (s *Server) handleStateEvents(
 			return streamData(stream, HeadTopic, head)
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if err := s.streamPayloadAttributes(stream); err != nil {
+			head, ok := event.Data.(*ethpb.EventHead)
+			if !ok {
+				return nil
+			}
+			if err := s.streamPayloadAttributes(stream, head.ProposingSlot); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
@@ -228,7 +233,7 @@ func (s *Server) handleStateEvents(
 		return nil
 	case statefeed.MissedSlot:
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if err := s.streamPayloadAttributes(stream); err != nil {
+			if err := s.streamPayloadAttributes(stream, s.ChainInfoFetcher.CurrentSlot()+1); err != nil {
 				log.WithError(err).Error("Unable to obtain stream payload attributes")
 			}
 			return nil
@@ -260,13 +265,13 @@ func (s *Server) handleStateEvents(
 // streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
 // parent_ fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
-func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
+func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer, proposingSlot types.Slot) error {
 	st, err := s.HeadFetcher.HeadState(s.Ctx)
 	if err != nil {
 		return err
 	}
 	// advance the headstate
-	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
+	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, proposingSlot)
 	if err != nil {
 		return err
 	}

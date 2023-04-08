@@ -70,12 +70,12 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 		headState: headState,
 		headRoot:  newHeadRoot,
 		headBlock: headBlock.Block(),
-	})
+	}, proposingSlot)
 	if err != nil {
 		return errors.Wrap(err, "could not notify forkchoice update")
 	}
 
-	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
+	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState, proposingSlot); err != nil {
 		log.WithError(err).Error("could not save head")
 	}
 

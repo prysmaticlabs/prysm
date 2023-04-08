@@ -42,7 +42,7 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
-	return s.saveHead(ctx, headRoot, headBlock, headState)
+	return s.saveHead(ctx, headRoot, headBlock, headState, headState.Slot()+1)
 }
 
 // This defines the current chain service's view of head.
@@ -55,7 +55,7 @@ type head struct {
 // This saves head info to the local service cache, it also saves the
 // new head root to the DB.
 // Caller of the method MUST aqcuire a lock on forkchoice.
-func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock interfaces.ReadOnlySignedBeaconBlock, headState state.BeaconState) error {
+func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock interfaces.ReadOnlySignedBeaconBlock, headState state.BeaconState, proposingSlot primitives.Slot) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
 
@@ -162,7 +162,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot[:], newHeadRoot[:]); err != nil {
+		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot[:], newHeadRoot[:], proposingSlot); err != nil {
 			log.WithError(err).Error("Could not notify event feed of new chain head")
 		}
 	}()
@@ -314,6 +314,7 @@ func (s *Service) notifyNewHeadEvent(
 	newHeadState state.BeaconState,
 	newHeadStateRoot,
 	newHeadRoot []byte,
+	proposingSlot primitives.Slot,
 ) error {
 	previousDutyDependentRoot := s.originBlockRoot[:]
 	currentDutyDependentRoot := s.originBlockRoot[:]
@@ -357,6 +358,7 @@ func (s *Service) notifyNewHeadEvent(
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
 			ExecutionOptimistic:       isOptimistic,
+			ProposingSlot:             proposingSlot,
 		},
 	})
 	return nil
