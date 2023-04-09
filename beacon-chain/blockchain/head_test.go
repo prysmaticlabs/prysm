@@ -35,7 +35,7 @@ func TestSaveHead_Same(t *testing.T) {
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 1)
-	require.NoError(t, service.saveHead(context.Background(), r, b, st))
+	require.NoError(t, service.saveHead(context.Background(), r, b, st, b.Block().Slot()))
 	assert.Equal(t, primitives.Slot(0), service.headSlot(), "Head did not stay the same")
 	assert.Equal(t, r, service.headRoot(), "Head did not stay the same")
 }
@@ -77,7 +77,7 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
-	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState, wsb.Block().Slot()))
 
 	assert.Equal(t, primitives.Slot(1), service.HeadSlot(), "Head did not change")
 
@@ -132,7 +132,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
-	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState, wsb.Block().Slot()))
 
 	assert.Equal(t, primitives.Slot(1), service.HeadSlot(), "Head did not change")
 
@@ -164,7 +164,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		}
 		newHeadStateRoot := [32]byte{2}
 		newHeadRoot := [32]byte{3}
-		err := srv.notifyNewHeadEvent(context.Background(), 1, bState, newHeadStateRoot[:], newHeadRoot[:])
+		err := srv.notifyNewHeadEvent(context.Background(), 1, bState, newHeadStateRoot[:], newHeadRoot[:], bState.Slot())
 		require.NoError(t, err)
 		events := notifier.ReceivedEvents()
 		require.Equal(t, 1, len(events))
@@ -199,7 +199,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 
 		newHeadStateRoot := [32]byte{2}
 		newHeadRoot := [32]byte{3}
-		err = srv.notifyNewHeadEvent(context.Background(), epoch2Start, bState, newHeadStateRoot[:], newHeadRoot[:])
+		err = srv.notifyNewHeadEvent(context.Background(), epoch2Start, bState, newHeadStateRoot[:], newHeadRoot[:], bState.Slot())
 		require.NoError(t, err)
 		events := notifier.ReceivedEvents()
 		require.Equal(t, 1, len(events))
@@ -213,6 +213,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			EpochTransition:           true,
 			PreviousDutyDependentRoot: genesisRoot[:],
 			CurrentDutyDependentRoot:  make([]byte, 32),
+			ProposingSlot:             bState.Slot(),
 		}
 		require.DeepSSZEqual(t, wanted, eventHead)
 	})
@@ -252,7 +253,7 @@ func TestRetrieveHead_ReadOnly(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
-	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState, wsb.Block().Slot()))
 
 	rOnlyState, err := service.HeadStateReadOnly(ctx)
 	require.NoError(t, err)

@@ -25,7 +25,7 @@ func TestHeadSlot_DataRace(t *testing.T) {
 	wait := make(chan struct{})
 	go func() {
 		defer close(wait)
-		require.NoError(t, s.saveHead(context.Background(), [32]byte{}, b, st))
+		require.NoError(t, s.saveHead(context.Background(), [32]byte{}, b, st, b.Block().Slot()))
 	}()
 	s.HeadSlot()
 	<-wait
@@ -43,8 +43,7 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, 1)
 	go func() {
 		defer close(wait)
-		require.NoError(t, s.saveHead(context.Background(), [32]byte{}, b, st))
-
+		require.NoError(t, s.saveHead(context.Background(), [32]byte{}, b, st, b.Block().Slot()))
 	}()
 	_, err = s.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -65,8 +64,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, 1)
 	go func() {
 		defer close(wait)
-		require.NoError(t, s.saveHead(context.Background(), [32]byte{}, b, st))
-
+		require.NoError(t, s.saveHead(context.Background(), [32]byte{}, b, st, b.Block().Slot()))
 	}()
 	_, err = s.HeadBlock(context.Background())
 	require.NoError(t, err)
@@ -87,8 +85,7 @@ func TestHeadState_DataRace(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(context.Background(), st, root))
 	go func() {
 		defer close(wait)
-		require.NoError(t, s.saveHead(context.Background(), [32]byte{}, b, st))
-
+		require.NoError(t, s.saveHead(context.Background(), [32]byte{}, b, st, b.Block().Slot()))
 	}()
 	_, err = s.HeadState(context.Background())
 	require.NoError(t, err)

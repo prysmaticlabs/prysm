@@ -89,7 +89,7 @@ func Test_NotifyForkchoiceUpdate_GetPayloadAttrErrorCanContinue(t *testing.T) {
 	}
 
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 0, [8]byte{}, [32]byte{})
-	got, err := service.notifyForkchoiceUpdate(ctx, arg)
+	got, err := service.notifyForkchoiceUpdate(ctx, arg, b.Slot())
 	require.NoError(t, err)
 	require.DeepEqual(t, got, pid) // We still get a payload ID even though the state is bad. This means it returns until the end.
 }
@@ -248,7 +248,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				headRoot:  tt.headRoot,
 				headBlock: tt.blk,
 			}
-			_, err = service.notifyForkchoiceUpdate(ctx, arg)
+			_, err = service.notifyForkchoiceUpdate(ctx, arg, tt.blk.Slot())
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 				if tt.errString == ErrInvalidPayload.Error() {
@@ -334,7 +334,7 @@ func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
 		headBlock: wbd.Block(),
 		headRoot:  brd,
 	}
-	_, err = service.notifyForkchoiceUpdate(ctx, a)
+	_, err = service.notifyForkchoiceUpdate(ctx, a, wbd.Block().Slot())
 	require.Equal(t, true, IsInvalidBlock(err))
 	require.Equal(t, brd, InvalidBlockRoot(err))
 	require.Equal(t, brd, InvalidAncestorRoots(err)[0])
@@ -477,7 +477,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 		headBlock: wbg.Block(),
 		headRoot:  brg,
 	}
-	_, err = service.notifyForkchoiceUpdate(ctx, a)
+	_, err = service.notifyForkchoiceUpdate(ctx, a, wbg.Block().Slot())
 	require.Equal(t, true, IsInvalidBlock(err))
 	require.Equal(t, brf, InvalidBlockRoot(err))
 
