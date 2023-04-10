@@ -10,6 +10,7 @@ import (
 type Config struct {
 	NoDiscovery         bool
 	EnableUPnP          bool
+	StaticPeerID        bool
 	StaticPeers         []string
 	BootstrapNodeAddr   []string
 	Discv5BootStrapAddr []string

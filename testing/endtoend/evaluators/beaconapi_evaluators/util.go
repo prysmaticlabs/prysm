@@ -32,7 +32,11 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 		return err
 	}
 	if httpResp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request failed with response code: %d", httpResp.StatusCode)
+		var body interface{}
+		if err := json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
+			return err
+		}
+		return fmt.Errorf("request failed with response code: %d with response body %s", httpResp.StatusCode, body)
 	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
@@ -63,7 +67,11 @@ func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeId
 		return nil, err
 	}
 	if rsp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request failed with response code: %d", rsp.StatusCode)
+		var body interface{}
+		if err := json.NewDecoder(rsp.Body).Decode(&body); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("request failed with response code: %d with response body %s", rsp.StatusCode, body)
 	}
 	defer closeBody(rsp.Body)
 	body, err := io.ReadAll(rsp.Body)
@@ -100,7 +108,11 @@ func doMiddlewareJSONPostRequest(template string, requestPath string, beaconNode
 		return err
 	}
 	if httpResp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request failed with response code: %d", httpResp.StatusCode)
+		var body interface{}
+		if err := json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
+			return err
+		}
+		return fmt.Errorf("request failed with response code: %d with response body %s", httpResp.StatusCode, body)
 	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
