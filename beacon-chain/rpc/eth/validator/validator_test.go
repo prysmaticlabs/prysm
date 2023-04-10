@@ -93,7 +93,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			StatesBySlot: map[primitives.Slot]state.BeaconState{
 				0:                                   bs,
 				params.BeaconConfig().SlotsPerEpoch: nextEpochState,
@@ -198,7 +198,7 @@ func TestGetAttesterDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			StateFetcher:          &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
@@ -258,7 +258,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -297,7 +297,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -337,7 +337,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
+			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -377,7 +377,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -414,7 +414,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -469,7 +469,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 	mockChainService := &mockChain.ChainService{Genesis: genesisTime}
 	vs := &Server{
-		StateFetcher:          &testutil.MockFetcher{BeaconState: st},
+		Stater:                &testutil.MockStater{BeaconState: st},
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:           mockChainService,
 		HeadFetcher:           mockChainService,
@@ -611,7 +611,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot}
 		vs := &Server{
-			StateFetcher:          &testutil.MockFetcher{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
+			Stater:                &testutil.MockStater{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           mockChainService,
 			HeadFetcher:           mockChainService,
@@ -665,7 +665,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 			State: state,
 		}
 		vs := &Server{
-			StateFetcher:          &testutil.MockFetcher{BeaconState: st},
+			Stater:                &testutil.MockStater{BeaconState: st},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           mockChainService,
 			HeadFetcher:           mockChainService,
@@ -1033,6 +1033,7 @@ func TestProduceBlockV2(t *testing.T) {
 			TimeFetcher:            mockChainService,
 			HeadFetcher:            mockChainService,
 			OptimisticModeFetcher:  mockChainService,
+			FinalizationFetcher:    mockChainService,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          mockChainService,
 			ForkFetcher:            mockChainService,
@@ -1280,6 +1281,7 @@ func TestProduceBlockV2(t *testing.T) {
 			BlockReceiver:          mockChainService,
 			ForkFetcher:            mockChainService,
 			ForkchoiceFetcher:      mockChainService,
+			FinalizationFetcher:    mockChainService,
 			ChainStartFetcher:      mockExecutionChain,
 			Eth1InfoFetcher:        mockExecutionChain,
 			Eth1BlockFetcher:       mockExecutionChain,
@@ -1413,20 +1415,21 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 
 		mockChainService := &mockChain.ChainService{State: bs, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       mockChainService,
-			SyncChecker:       &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:     mockChainService,
-			TimeFetcher:       mockChainService,
-			ForkFetcher:       mockChainService,
-			ForkchoiceFetcher: mockChainService,
-			ChainStartFetcher: &mockExecution.Chain{},
-			Eth1InfoFetcher:   &mockExecution.Chain{},
-			Eth1BlockFetcher:  &mockExecution.Chain{},
-			MockEth1Votes:     true,
-			AttPool:           attestations.NewPool(),
-			SlashingsPool:     slashings.NewPool(),
-			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db, doublylinkedtree.New()),
+			HeadFetcher:         mockChainService,
+			SyncChecker:         &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:       mockChainService,
+			TimeFetcher:         mockChainService,
+			ForkFetcher:         mockChainService,
+			ForkchoiceFetcher:   mockChainService,
+			FinalizationFetcher: mockChainService,
+			ChainStartFetcher:   &mockExecution.Chain{},
+			Eth1InfoFetcher:     &mockExecution.Chain{},
+			Eth1BlockFetcher:    &mockExecution.Chain{},
+			MockEth1Votes:       true,
+			AttPool:             attestations.NewPool(),
+			SlashingsPool:       slashings.NewPool(),
+			ExitPool:            voluntaryexits.NewPool(),
+			StateGen:            stategen.New(db, doublylinkedtree.New()),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -2033,6 +2036,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			BlockReceiver:          mockChainService,
 			ForkFetcher:            mockChainService,
 			ForkchoiceFetcher:      mockChainService,
+			FinalizationFetcher:    mockChainService,
 			ChainStartFetcher:      &mockExecution.Chain{},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
@@ -3545,6 +3549,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			BlockReceiver:          mockChainService,
 			ForkFetcher:            mockChainService,
 			ForkchoiceFetcher:      mockChainService,
+			FinalizationFetcher:    mockChainService,
 			ChainStartFetcher:      &mockExecution.Chain{},
 			Eth1InfoFetcher:        &mockExecution.Chain{},
 			Eth1BlockFetcher:       &mockExecution.Chain{},
@@ -5021,7 +5026,7 @@ func TestGetLiveness(t *testing.T) {
 
 	server := &Server{
 		HeadFetcher: &mockChain.ChainService{State: headSt},
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			// We configure states for last slots of an epoch
 			StatesBySlot: map[primitives.Slot]state.BeaconState{
 				params.BeaconConfig().SlotsPerEpoch - 1:   oldSt,

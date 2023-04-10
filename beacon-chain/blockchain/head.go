@@ -403,6 +403,19 @@ func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]b
 			}
 			saveOrphanedAttCount.Inc()
 		}
+		for _, as := range orphanedBlk.Block().Body().AttesterSlashings() {
+			if err := s.cfg.SlashingPool.InsertAttesterSlashing(ctx, s.headStateReadOnly(ctx), as); err != nil {
+				log.WithError(err).Error("Could not insert reorg attester slashing")
+			}
+		}
+		for _, vs := range orphanedBlk.Block().Body().ProposerSlashings() {
+			if err := s.cfg.SlashingPool.InsertProposerSlashing(ctx, s.headStateReadOnly(ctx), vs); err != nil {
+				log.WithError(err).Error("Could not insert reorg proposer slashing")
+			}
+		}
+		for _, v := range orphanedBlk.Block().Body().VoluntaryExits() {
+			s.cfg.ExitPool.InsertVoluntaryExit(v)
+		}
 		if orphanedBlk.Version() >= version.Capella {
 			changes, err := orphanedBlk.Block().Body().BLSToExecutionChanges()
 			if err != nil {
