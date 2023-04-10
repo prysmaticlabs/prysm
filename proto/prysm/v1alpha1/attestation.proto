@@ -84,3 +84,14 @@ message Checkpoint {
     // Block root of the checkpoint references.
     bytes root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 }
+
+message BeaconCommitteeSelection {
+    // Validator index is the index of the validator making the aggregate request.
+    uint64 validator_index = 1  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+
+    // Slot is the slot for which the validator is possibly aggregating.
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+
+    // Selection proof is the slot signature required to calculate whether the validator is an aggregator.
+    bytes selection_proof = 3 [(ethereum.eth.ext.ssz_size) = "96"];
+}

@@ -121,6 +121,7 @@ ssz_gen_marshal(
         "SignedBLSToExecutionChange",
         "BuilderBid",
         "BuilderBidCapella",
+        "BeaconCommitteeSelection",
     ],
 )
 
