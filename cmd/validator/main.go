@@ -183,7 +183,6 @@ func main() {
 			log.WithError(err).Error("Cannot update data directory")
 		}
 
-		runtime.GOMAXPROCS(runtime.NumCPU())
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
