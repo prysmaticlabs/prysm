@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	runtimeDebug "runtime/debug"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
