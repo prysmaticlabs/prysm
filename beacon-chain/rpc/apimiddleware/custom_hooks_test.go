@@ -425,7 +425,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Altair", func(t *testing.T) {
 		slot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
@@ -440,7 +440,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockAltairJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
@@ -482,7 +482,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 func TestPreparePublishedBlock(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SignedBeaconBlockContainerJson{
+			PostRequest: &SignedBeaconBlockJson{
 				Message: &BeaconBlockJson{
 					Body: &BeaconBlockBodyJson{},
 				},
@@ -496,7 +496,7 @@ func TestPreparePublishedBlock(t *testing.T) {
 
 	t.Run("Altair", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SignedBeaconBlockAltairContainerJson{
+			PostRequest: &SignedBeaconBlockAltairJson{
 				Message: &BeaconBlockAltairJson{
 					Body: &BeaconBlockBodyAltairJson{},
 				},
@@ -551,7 +551,7 @@ func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Altair", func(t *testing.T) {
 		slot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
@@ -566,7 +566,7 @@ func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockAltairJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
@@ -581,14 +581,14 @@ func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(SignedBlindedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBlindedBeaconBlockBellatrixJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 }
 
 func TestPreparePublishedBlindedBlock(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SignedBeaconBlockContainerJson{
+			PostRequest: &SignedBeaconBlockJson{
 				Message: &BeaconBlockJson{
 					Body: &BeaconBlockBodyJson{},
 				},
@@ -602,7 +602,7 @@ func TestPreparePublishedBlindedBlock(t *testing.T) {
 
 	t.Run("Altair", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SignedBeaconBlockAltairContainerJson{
+			PostRequest: &SignedBeaconBlockAltairJson{
 				Message: &BeaconBlockAltairJson{
 					Body: &BeaconBlockBodyAltairJson{},
 				},
@@ -616,7 +616,7 @@ func TestPreparePublishedBlindedBlock(t *testing.T) {
 
 	t.Run("Bellatrix", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SignedBlindedBeaconBlockBellatrixContainerJson{
+			PostRequest: &SignedBlindedBeaconBlockBellatrixJson{
 				Message: &BlindedBeaconBlockBellatrixJson{
 					Body: &BlindedBeaconBlockBodyBellatrixJson{},
 				},

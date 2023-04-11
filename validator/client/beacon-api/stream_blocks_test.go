@@ -121,7 +121,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 			expectedErrorMessage: "failed to get signed %s block",
 			conversionError:      errors.New("foo"),
 			generateData: func(consensusVersion string) []byte {
-				blockBytes, err := json.Marshal(apimiddleware.SignedBeaconBlockContainerJson{Signature: "0x01"})
+				blockBytes, err := json.Marshal(apimiddleware.SignedBeaconBlockJson{Signature: "0x01"})
 				require.NoError(t, err)
 				return blockBytes
 			},
@@ -130,7 +130,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 			name:                 "signature decoding failed",
 			expectedErrorMessage: "failed to decode %s block signature `foo`",
 			generateData: func(consensusVersion string) []byte {
-				blockBytes, err := json.Marshal(apimiddleware.SignedBeaconBlockContainerJson{Signature: "foo"})
+				blockBytes, err := json.Marshal(apimiddleware.SignedBeaconBlockJson{Signature: "foo"})
 				require.NoError(t, err)
 				return blockBytes
 			},
@@ -205,7 +205,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			phase0BeaconBlock1 := test_helpers.GenerateJsonPhase0BeaconBlock()
 			phase0BeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockContainerJson{
+			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockJson{
 				Message:   phase0BeaconBlock1,
 				Signature: "0x01",
 			}
@@ -243,7 +243,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			phase0BeaconBlock2 := test_helpers.GenerateJsonPhase0BeaconBlock()
 			phase0BeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockContainerJson{
+			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockJson{
 				Message:   phase0BeaconBlock2,
 				Signature: "0x02",
 			}
@@ -369,7 +369,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			altairBeaconBlock1 := test_helpers.GenerateJsonAltairBeaconBlock()
 			altairBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockAltairContainerJson{
+			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockAltairJson{
 				Message:   altairBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -407,7 +407,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			altairBeaconBlock2 := test_helpers.GenerateJsonAltairBeaconBlock()
 			altairBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockAltairContainerJson{
+			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockAltairJson{
 				Message:   altairBeaconBlock2,
 				Signature: "0x02",
 			}

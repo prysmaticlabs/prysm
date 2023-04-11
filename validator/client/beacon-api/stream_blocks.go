@@ -85,7 +85,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 
 	switch signedBlockResponseJson.Version {
 	case "phase0":
-		jsonPhase0Block := apimiddleware.SignedBeaconBlockContainerJson{}
+		jsonPhase0Block := apimiddleware.SignedBeaconBlockJson{}
 		if err := decoder.Decode(&jsonPhase0Block); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed phase0 block response json")
 		}
@@ -110,7 +110,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = phase0Block.Slot
 
 	case "altair":
-		jsonAltairBlock := apimiddleware.SignedBeaconBlockAltairContainerJson{}
+		jsonAltairBlock := apimiddleware.SignedBeaconBlockAltairJson{}
 		if err := decoder.Decode(&jsonAltairBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed altair block response json")
 		}

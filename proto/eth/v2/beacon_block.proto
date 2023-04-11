@@ -546,6 +546,6 @@ message BeaconBlockBodyDeneb {
 }
 
 message SignedBlindedBeaconBlockContentsDeneb {
-  SignedBlindedBeaconBlockDeneb blinded_block = 1;
-  repeated SignedBlindedBlobSidecar blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+  SignedBlindedBeaconBlockDeneb signed_blinded_block = 1;
+  repeated SignedBlindedBlobSidecar signed_blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }
