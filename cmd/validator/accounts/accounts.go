@@ -166,6 +166,7 @@ var Commands = &cli.Command{
 				flags.GrpcRetryDelayFlag,
 				flags.ExitAllFlag,
 				flags.ForceExitFlag,
+				flags.VoluntaryExitJSONOutputPath,
 				features.Mainnet,
 				features.PraterTestnet,
 				features.SepoliaTestnet,
