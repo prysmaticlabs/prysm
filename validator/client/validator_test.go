@@ -77,8 +77,6 @@ type mockKeymanager struct {
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
 	keys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	if m.fetchNoKeys {
 		m.fetchNoKeys = false
