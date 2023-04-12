@@ -9,6 +9,7 @@ go_library(
         "bazel.go",
         "bellatrix.go",
         "bellatrix_state.go",
+        "blob.go",
         "block.go",
         "capella_block.go",
         "capella_state.go",

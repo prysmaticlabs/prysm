@@ -11,6 +11,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -107,6 +108,27 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		require.Equal(t, true, ok)
 		assert.DeepEqual(t, expected, capellaBlock.CapellaBlock)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		b := util.NewBlindedBeaconBlockDeneb()
+		blk, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{}
+		bs := &Server{
+			FinalizationFetcher:   mockChainService,
+			Blocker:               &testutil.MockBlocker{BlockToReturn: blk},
+			OptimisticModeFetcher: mockChainService,
+		}
+
+		expected, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(b.Block)
+		require.NoError(t, err)
+		resp, err := bs.GetBlindedBlock(ctx, &ethpbv1.BlockRequest{})
+		require.NoError(t, err)
+		capellaBlock, ok := resp.Data.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_DenebBlock)
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, expected, capellaBlock.DenebBlock)
+		assert.Equal(t, ethpbv2.Version_Deneb, resp.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
@@ -407,7 +429,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, Payload: emptyPayload()},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -423,6 +445,9 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		req := util.NewBlindedBeaconBlockBellatrix()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
+		transactionsRoot, err := ssz.TransactionsRoot([][]byte{})
+		require.NoError(t, err)
+		req.Block.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
@@ -455,7 +480,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella()},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -471,6 +496,12 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		req := util.NewBlindedBeaconBlockCapella()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
+		transactionsRoot, err := ssz.TransactionsRoot([][]byte{})
+		require.NoError(t, err)
+		req.Block.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		req.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
@@ -515,9 +546,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block{Phase0Block: v1Block.Block},
-			Signature: v1Block.Signature,
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_Phase0Block{Phase0Block: v1Block},
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -549,12 +579,11 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		req := util.NewBeaconBlockAltair()
 		req.Block.Slot = 5
 		req.Block.ParentRoot = bsRoot[:]
-		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
+		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2Signed(req)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock{AltairBlock: v2Block},
-			Signature: req.Signature,
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_AltairBlock{AltairBlock: v2Block},
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -580,10 +609,12 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		p := emptyPayload()
+		p.Transactions = transactions
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, Payload: p},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -606,9 +637,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		blindedBlk.Message.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, blk)
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk.Message},
-			Signature: blindedBlk.Signature,
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_BellatrixBlock{BellatrixBlock: blindedBlk},
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -651,10 +681,13 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		p := emptyPayloadCapella()
+		p.Transactions = transactions
+		p.Withdrawals = withdrawals
 		alphaServer := &validator.Server{
 			SyncCommitteePool: synccommittee.NewStore(),
 			P2P:               &mockp2p.MockBroadcaster{},
-			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: p},
 			BlockReceiver:     c,
 			BlockNotifier:     &mock.MockBlockNotifier{},
 		}
@@ -679,11 +712,131 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		blindedBlk.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 		util.SaveBlock(t, ctx, beaconDB, blk)
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: blindedBlk.Message},
-			Signature: blindedBlk.Signature,
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_CapellaBlock{CapellaBlock: blindedBlk},
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
 	})
+
+	t.Run("Deneb", func(t *testing.T) {
+		t.Skip("TODO: Skipping this test because we don't have a way to unblind blobs yet.")
+		transactions := [][]byte{[]byte("transaction1"), []byte("transaction2")}
+		transactionsRoot, err := ssz.TransactionsRoot(transactions)
+		require.NoError(t, err)
+
+		withdrawals := []*enginev1.Withdrawal{
+			{
+				Index:          1,
+				ValidatorIndex: 1,
+				Address:        bytesutil.PadTo([]byte("address1"), 20),
+				Amount:         1,
+			},
+			{
+				Index:          2,
+				ValidatorIndex: 2,
+				Address:        bytesutil.PadTo([]byte("address2"), 20),
+				Amount:         2,
+			},
+		}
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, 16)
+		require.NoError(t, err)
+
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := util.NewBeaconBlockDeneb().Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		p := emptyPayloadDeneb()
+		p.Transactions = transactions
+		p.Withdrawals = withdrawals
+		alphaServer := &validator.Server{
+			SyncCommitteePool: synccommittee.NewStore(),
+			P2P:               &mockp2p.MockBroadcaster{},
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadDeneb: p},
+			BlockReceiver:     c,
+			BlockNotifier:     &mock.MockBlockNotifier{},
+		}
+		beaconChainServer := &Server{
+			BeaconDB:                beaconDB,
+			BlockReceiver:           c,
+			ChainInfoFetcher:        c,
+			BlockNotifier:           c.BlockNotifier(),
+			Broadcaster:             mockp2p.NewTestP2P(t),
+			V1Alpha1ValidatorServer: alphaServer,
+		}
+
+		blindedBlk := util.NewBlindedBeaconBlockDenebV2()
+		blindedBlk.Message.Slot = 5
+		blindedBlk.Message.ParentRoot = bsRoot[:]
+		blindedBlk.Message.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
+		blindedBlk.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
+		sidecar := util.NewSignedBlindedBlobSidecarV2()
+		sidecar.Message.Slot = 5
+
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_DenebContents{
+				DenebContents: &ethpbv2.SignedBlindedBeaconBlockContentsDeneb{
+					SignedBlindedBlock:        blindedBlk,
+					SignedBlindedBlobSidecars: []*ethpbv2.SignedBlindedBlobSidecar{sidecar},
+				}},
+		}
+		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
+		assert.NoError(t, err)
+	})
+}
+
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		ExtraData:     make([]byte, 0),
+	}
+}
+
+func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
+	return &enginev1.ExecutionPayloadCapella{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
+		ExtraData:     make([]byte, 0),
+	}
+}
+
+func emptyPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
+	return &enginev1.ExecutionPayloadDeneb{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
+		ExtraData:     make([]byte, 0),
+		ExcessDataGas: make([]byte, 32),
+	}
 }

@@ -18,6 +18,7 @@ package ethereum.eth.v2;
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
+import "proto/eth/v2/blobs.proto";
 import "proto/eth/v2/version.proto";
 import "proto/eth/v2/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
@@ -93,6 +94,16 @@ message SignedBlindedBeaconBlockContainer {
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 6 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message SignedBlindedBeaconBlockContentsContainer {
+  oneof message {
+    v1.SignedBeaconBlock phase0_block = 1;
+    SignedBeaconBlockAltair altair_block = 2;
+    SignedBlindedBeaconBlockBellatrix bellatrix_block = 3;
+    SignedBlindedBeaconBlockCapella capella_block = 4;
+    SignedBlindedBeaconBlockContentsDeneb deneb_contents = 5;
+  }
 }
 
 message SignedBeaconBlockBellatrix {
@@ -382,6 +393,8 @@ message BlindedBeaconBlockBodyDeneb {
 
   // BLS To Execution Changes: signed messages to change withdrawal credentials [New in Capella]
   repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+
+  repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
 }
 
 message BeaconBlockBodyAltair {
@@ -530,4 +543,9 @@ message BeaconBlockBodyDeneb {
 
   // At most MAX_BLOBS_PER_BLOCK. New in Deneb network upgrade.
   repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
+}
+
+message SignedBlindedBeaconBlockContentsDeneb {
+  SignedBlindedBeaconBlockDeneb signed_blinded_block = 1;
+  repeated SignedBlindedBlobSidecar signed_blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }

@@ -62,7 +62,7 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 	case *eth.SignedBeaconBlockDeneb:
 		return initSignedBlockFromProtoDeneb(b)
 	case *eth.GenericSignedBeaconBlock_Blinded_Deneb:
-		return initBlindedSignedBlockFromProtoDeneb(b.Blinded_Deneb)
+		return initBlindedSignedBlockFromProtoDeneb(b.Blinded_Deneb.Block)
 	case *eth.SignedBlindedBeaconBlockDeneb:
 		return initBlindedSignedBlockFromProtoDeneb(b)
 	default:
@@ -104,7 +104,7 @@ func NewBeaconBlock(i interface{}) (interfaces.ReadOnlyBeaconBlock, error) {
 	case *eth.BeaconBlockDeneb:
 		return initBlockFromProtoDeneb(b)
 	case *eth.GenericBeaconBlock_Blinded_Deneb:
-		return initBlindedBlockFromProtoDeneb(b.Blinded_Deneb)
+		return initBlindedBlockFromProtoDeneb(b.Blinded_Deneb.Block)
 	case *eth.BlindedBeaconBlockDeneb:
 		return initBlindedBlockFromProtoDeneb(b)
 	default:

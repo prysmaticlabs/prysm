@@ -114,7 +114,7 @@ type BlockHeaderResponseJson struct {
 }
 
 type BlockResponseJson struct {
-	Data *SignedBeaconBlockContainerJson `json:"data"`
+	Data *SignedBeaconBlockJson `json:"data"`
 }
 
 type BlockV2ResponseJson struct {
@@ -366,7 +366,7 @@ type BlockRootContainerJson struct {
 	Root string `json:"root" hex:"true"`
 }
 
-type SignedBeaconBlockContainerJson struct {
+type SignedBeaconBlockJson struct {
 	Message   *BeaconBlockJson `json:"message"`
 	Signature string           `json:"signature" hex:"true"`
 }
@@ -408,6 +408,14 @@ type SignedBlindedBeaconBlockContainerJson struct {
 	Signature      string                           `json:"signature" hex:"true"`
 }
 
+type SignedBlindedBeaconBlockContentsContainerJson struct {
+	Phase0Block    *SignedBeaconBlockJson                     `json:"phase0_block"`
+	AltairBlock    *SignedBeaconBlockAltairJson               `json:"altair_block"`
+	BellatrixBlock *SignedBlindedBeaconBlockBellatrixJson     `json:"bellatrix_block"`
+	CapellaBlock   *SignedBlindedBeaconBlockCapellaJson       `json:"capella_block"`
+	DenebContents  *SignedBlindedBeaconBlockContentsDenebJson `json:"deneb_contents"`
+}
+
 type BeaconBlockContainerV2Json struct {
 	Phase0Block    *BeaconBlockJson          `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
@@ -424,39 +432,60 @@ type BlindedBeaconBlockContainerJson struct {
 	DenebBlock     *BlindedBeaconBlockDenebJson     `json:"deneb_block"`
 }
 
-type SignedBeaconBlockAltairContainerJson struct {
+type SignedBeaconBlockAltairJson struct {
 	Message   *BeaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
 }
 
-type SignedBeaconBlockBellatrixContainerJson struct {
+type SignedBeaconBlockBellatrixJson struct {
 	Message   *BeaconBlockBellatrixJson `json:"message"`
 	Signature string                    `json:"signature" hex:"true"`
 }
 
-type SignedBeaconBlockCapellaContainerJson struct {
+type SignedBeaconBlockCapellaJson struct {
 	Message   *BeaconBlockCapellaJson `json:"message"`
 	Signature string                  `json:"signature" hex:"true"`
 }
 
-type SignedBeaconBlockDenebContainerJson struct {
+type SignedBeaconBlockDenebJson struct {
 	Message   *BeaconBlockDenebJson `json:"message"`
 	Signature string                `json:"signature" hex:"true"`
 }
 
-type SignedBlindedBeaconBlockBellatrixContainerJson struct {
+type SignedBlindedBeaconBlockBellatrixJson struct {
 	Message   *BlindedBeaconBlockBellatrixJson `json:"message"`
 	Signature string                           `json:"signature" hex:"true"`
 }
 
-type SignedBlindedBeaconBlockCapellaContainerJson struct {
+type SignedBlindedBeaconBlockCapellaJson struct {
 	Message   *BlindedBeaconBlockCapellaJson `json:"message"`
 	Signature string                         `json:"signature" hex:"true"`
 }
 
-type SignedBlindedBeaconBlockDenebContainerJson struct {
+type SignedBlindedBeaconBlockContentsDenebJson struct {
+	SignedBlindedBlock        *SignedBlindedBeaconBlockDenebJson `json:"signed_blinded_block"`
+	SignedBlindedBlobSidecars []*SignedBlindedBlobSidecarJson    `json:"signed_blinded_blob_sidecars"`
+}
+
+type SignedBlindedBeaconBlockDenebJson struct {
 	Message   *BlindedBeaconBlockDenebJson `json:"message"`
 	Signature string                       `json:"signature" hex:"true"`
+}
+
+type SignedBlindedBlobSidecarJson struct {
+	Message   *BlindedBlobSidecarJson `json:"message"`
+	Signature string                  `json:"signature" hex:"true"`
+}
+
+type BlindedBlobSidecarJson struct {
+	BlockRoot       string `json:"block_root" hex:"true"`
+	Index           string `json:"index"`
+	Slot            string `json:"slot"`
+	BlockParentRoot string `json:"block_parent_root" hex:"true"`
+	ProposerIndex   string `json:"proposer_index"`
+	BlobRoot        string `json:"blob_root" hex:"true"`
+	KzgCommitment   string `json:"kzg_commitment" hex:"true"`
+	KzgProof        string `json:"kzg_proof" hex:"true"`
 }
 
 type BeaconBlockAltairJson struct {

@@ -140,7 +140,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	log.WithFields(logrus.Fields{
 		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
 		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
-		"gasUsed":      h.GasUsed,
+		"gasUsed":      h.GasUsed(),
 		"slot":         u.b.Block().Slot(),
 		"txs":          len(txs),
 	}).Info("Retrieved full payload from builder")
@@ -162,6 +162,12 @@ func (u *unblinder) blindedProtoBlock() (proto.Message, error) {
 				Body: &ethpb.BlindedBeaconBlockBodyCapella{},
 			},
 		}, nil
+	case version.Deneb:
+		return &ethpb.SignedBlindedBeaconBlockDeneb{
+			Block: &ethpb.BlindedBeaconBlockDeneb{
+				Body: &ethpb.BlindedBeaconBlockBodyDeneb{},
+			},
+		}, nil
 	default:
 		return nil, fmt.Errorf("invalid version %s", version.String(u.b.Version()))
 	}
@@ -179,6 +185,12 @@ func (u *unblinder) protoBlock() (proto.Message, error) {
 		return &ethpb.SignedBeaconBlockCapella{
 			Block: &ethpb.BeaconBlockCapella{
 				Body: &ethpb.BeaconBlockBodyCapella{},
+			},
+		}, nil
+	case version.Deneb:
+		return &ethpb.SignedBeaconBlockDeneb{
+			Block: &ethpb.BeaconBlockDeneb{
+				Body: &ethpb.BeaconBlockBodyDeneb{},
 			},
 		}, nil
 	default:
