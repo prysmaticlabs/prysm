@@ -532,13 +532,15 @@ func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = params.BeaconConfig().AltairForkEpoch + 1
+	cfg.CapellaForkEpoch = params.BeaconConfig().BellatrixForkEpoch + 1
+	cfg.DenebForkEpoch = params.BeaconConfig().CapellaForkEpoch + 1
 	params.OverrideBeaconConfig(cfg)
 
 	endpoint := &apimiddleware.Endpoint{}
 	s := struct {
 		Message struct {
 			Slot string
-		}
+		} `json:"message"`
 	}{}
 	t.Run("Phase 0", func(t *testing.T) {
 		s.Message = struct{ Slot string }{Slot: "0"}
@@ -583,6 +585,51 @@ func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		assert.Equal(t, reflect.TypeOf(SignedBlindedBeaconBlockBellatrixJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
+	t.Run("Capella", func(t *testing.T) {
+		slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+		require.NoError(t, err)
+		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(SignedBlindedBeaconBlockCapellaJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		slot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+		require.NoError(t, err)
+		denebS := struct {
+			SignedBlindedBlock struct {
+				Message struct {
+					Slot string
+				} `json:"message"`
+			} `json:"signed_blinded_block"`
+		}{}
+		denebS.SignedBlindedBlock = struct {
+			Message struct {
+				Slot string
+			} `json:"message"`
+		}{
+			Message: struct {
+				Slot string
+			}{Slot: strconv.FormatUint(uint64(slot), 10)},
+		}
+		j, err := json.Marshal(denebS)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(SignedBlindedBeaconBlockContentsDenebJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
 }
 
 func TestPreparePublishedBlindedBlock(t *testing.T) {
@@ -596,7 +643,7 @@ func TestPreparePublishedBlindedBlock(t *testing.T) {
 		}
 		errJson := preparePublishedBlindedBlock(endpoint, nil, nil)
 		require.Equal(t, true, errJson == nil)
-		_, ok := endpoint.PostRequest.(*phase0PublishBlockRequestJson)
+		_, ok := endpoint.PostRequest.(*phase0PublishBlindedBlockRequestJson)
 		assert.Equal(t, true, ok)
 	})
 
@@ -610,7 +657,7 @@ func TestPreparePublishedBlindedBlock(t *testing.T) {
 		}
 		errJson := preparePublishedBlindedBlock(endpoint, nil, nil)
 		require.Equal(t, true, errJson == nil)
-		_, ok := endpoint.PostRequest.(*altairPublishBlockRequestJson)
+		_, ok := endpoint.PostRequest.(*altairPublishBlindedBlockRequestJson)
 		assert.Equal(t, true, ok)
 	})
 
@@ -625,6 +672,35 @@ func TestPreparePublishedBlindedBlock(t *testing.T) {
 		errJson := preparePublishedBlindedBlock(endpoint, nil, nil)
 		require.Equal(t, true, errJson == nil)
 		_, ok := endpoint.PostRequest.(*bellatrixPublishBlindedBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &SignedBlindedBeaconBlockCapellaJson{
+				Message: &BlindedBeaconBlockCapellaJson{
+					Body: &BlindedBeaconBlockBodyCapellaJson{},
+				},
+			},
+		}
+		errJson := preparePublishedBlindedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
+		_, ok := endpoint.PostRequest.(*capellaPublishBlindedBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+
+	t.Run("Deneb", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &SignedBlindedBeaconBlockContentsDenebJson{
+				SignedBlindedBlock: &SignedBlindedBeaconBlockDenebJson{
+					Message: &BlindedBeaconBlockDenebJson{},
+				},
+				SignedBlindedBlobSidecars: []*SignedBlindedBlobSidecarJson{},
+			},
+		}
+		errJson := preparePublishedBlindedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
+		_, ok := endpoint.PostRequest.(*denebPublishBlindedBlockRequestJson)
 		assert.Equal(t, true, ok)
 	})
 

@@ -783,8 +783,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
 			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_DenebContents{
 				DenebContents: &ethpbv2.SignedBlindedBeaconBlockContentsDeneb{
-					BlindedBlock:        blindedBlk,
-					BlindedBlobSidecars: []*ethpbv2.SignedBlindedBlobSidecar{sidecar},
+					SignedBlindedBlock:        blindedBlk,
+					SignedBlindedBlobSidecars: []*ethpbv2.SignedBlindedBlobSidecar{sidecar},
 				}},
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)

@@ -374,16 +374,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
 	s := struct {
-		Message struct {
-			Slot string
-		}
-	}{}
-	denebS := struct {
-		SignedBlindedBlock struct {
-			Message struct {
-				Slot string
-			}
-		} `json:"signed_blinded_block"`
+		Slot string
 	}{}
 
 	buf, err := io.ReadAll(req.Body)
@@ -391,23 +382,28 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
 	}
 
-	isDeneb := false
-	if err = json.Unmarshal(buf, &s); err != nil {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read slot from body")
+	typeParseMap := make(map[string]json.RawMessage)
+	if err = json.Unmarshal(buf, &typeParseMap); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not parse object")
 	}
-	if s.Message.Slot == "" {
-		if err = json.Unmarshal(buf, &denebS); err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read slot from body")
+	if val, ok := typeParseMap["message"]; ok {
+		if err = json.Unmarshal(val, &s); err != nil {
+			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal field 'message' ")
 		}
-		isDeneb = true
-	}
-
-	var slot uint64
-	if isDeneb {
-		slot, err = strconv.ParseUint(denebS.SignedBlindedBlock.Message.Slot, 10, 64)
+	} else if val, ok = typeParseMap["signed_blinded_block"]; ok {
+		temp := struct {
+			Message struct {
+				Slot string
+			}
+		}{}
+		if err = json.Unmarshal(val, &temp); err != nil {
+			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal field 'signed_block' ")
+		}
+		s.Slot = temp.Message.Slot
 	} else {
-		slot, err = strconv.ParseUint(s.Message.Slot, 10, 64)
+		return false, apimiddleware.InternalServerErrorWithMessage(err, fmt.Sprintf("object: %v is not a known signed block type", typeParseMap))
 	}
+	slot, err := strconv.ParseUint(s.Slot, 10, 64)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}

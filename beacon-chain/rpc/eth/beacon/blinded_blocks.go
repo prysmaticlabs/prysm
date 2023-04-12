@@ -153,7 +153,6 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 
 	switch blkContainer := req.Message.(type) {
 	case *ethpbv2.SignedBlindedBeaconBlockContentsContainer_DenebContents:
-		log.Warn(blkContainer.DenebContents.SignedBlindedBlobSidecars)
 		if err := bs.submitBlindedDenebContents(ctx, blkContainer.DenebContents); err != nil {
 			return nil, err
 		}
