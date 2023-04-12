@@ -671,9 +671,7 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 		for {
 			select {
 			case <-ticker.C():
-				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
-					log.WithError(err).Error("Could not fill missing payload ID")
-				}
+				s.lateBlockTasks(ctx)
 
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting routine")
@@ -683,11 +681,13 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 	}()
 }
 
-// fillMissingBlockPayloadId is called 4 seconds into the slot and calls FCU if we are proposing next slot
-// and the cache has been missed
-func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
+// lateBlockTasks  is called 4 seconds into the slot and performs tasks
+// related to late blocks. It emits a MissedSlot state feed event.
+// It calls FCU and sets the right attributes if we are proposing next slot
+// it also updates the next slot cache to deal with skipped slots.
+func (s *Service) lateBlockTasks(ctx context.Context) {
 	if s.CurrentSlot() == s.HeadSlot() {
-		return nil
+		return
 	}
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.MissedSlot,
@@ -697,21 +697,31 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
 	if !has || id != [8]byte{} {
-		return nil
+		return
 	}
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
 		s.headLock.RUnlock()
-		return err
+		log.WithError(err).Debug("could not perform late block tasks: failed to retrieve head block")
+		return
 	}
-	headState := s.headState(ctx)
 	headRoot := s.headRoot()
+	headState := s.headState(ctx)
 	s.headLock.RUnlock()
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
 		headRoot:  headRoot,
 		headBlock: headBlock.Block(),
 	})
-	return err
+	if err != nil {
+		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
+	}
+	lastRoot, lastState := transition.LastCachedState()
+	if lastState == nil {
+		lastRoot, lastState = headRoot[:], headState
+	}
+	if err = transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
+		log.WithError(err).Debug("could not update next slot state cache")
+	}
 }
