@@ -455,7 +455,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockBellatrixJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Capella", func(t *testing.T) {
 		params.SetupTestConfigCleanup(t)
@@ -475,7 +475,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockCapellaContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockCapellaJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 }
 
@@ -510,7 +510,7 @@ func TestPreparePublishedBlock(t *testing.T) {
 
 	t.Run("Bellatrix", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SignedBeaconBlockBellatrixContainerJson{
+			PostRequest: &SignedBeaconBlockBellatrixJson{
 				Message: &BeaconBlockBellatrixJson{
 					Body: &BeaconBlockBodyBellatrixJson{},
 				},

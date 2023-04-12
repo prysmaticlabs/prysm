@@ -437,17 +437,17 @@ type SignedBeaconBlockAltairJson struct {
 	Signature string                 `json:"signature" hex:"true"`
 }
 
-type SignedBeaconBlockBellatrixContainerJson struct {
+type SignedBeaconBlockBellatrixJson struct {
 	Message   *BeaconBlockBellatrixJson `json:"message"`
 	Signature string                    `json:"signature" hex:"true"`
 }
 
-type SignedBeaconBlockCapellaContainerJson struct {
+type SignedBeaconBlockCapellaJson struct {
 	Message   *BeaconBlockCapellaJson `json:"message"`
 	Signature string                  `json:"signature" hex:"true"`
 }
 
-type SignedBeaconBlockDenebContainerJson struct {
+type SignedBeaconBlockDenebJson struct {
 	Message   *BeaconBlockDenebJson `json:"message"`
 	Signature string                `json:"signature" hex:"true"`
 }

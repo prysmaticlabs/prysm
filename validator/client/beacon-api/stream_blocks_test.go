@@ -533,7 +533,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			bellatrixBeaconBlock1 := test_helpers.GenerateJsonBellatrixBeaconBlock()
 			bellatrixBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockBellatrixContainerJson{
+			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockBellatrixJson{
 				Message:   bellatrixBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -571,7 +571,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			bellatrixBeaconBlock2 := test_helpers.GenerateJsonBellatrixBeaconBlock()
 			bellatrixBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockBellatrixContainerJson{
+			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockBellatrixJson{
 				Message:   bellatrixBeaconBlock2,
 				Signature: "0x02",
 			}
@@ -697,7 +697,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			capellaBeaconBlock1 := test_helpers.GenerateJsonCapellaBeaconBlock()
 			capellaBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockCapellaContainerJson{
+			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockCapellaJson{
 				Message:   capellaBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -735,7 +735,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			capellaBeaconBlock2 := test_helpers.GenerateJsonCapellaBeaconBlock()
 			capellaBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockCapellaContainerJson{
+			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockCapellaJson{
 				Message:   capellaBeaconBlock2,
 				Signature: "0x02",
 			}

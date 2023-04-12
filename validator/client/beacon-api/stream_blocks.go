@@ -135,7 +135,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = altairBlock.Slot
 
 	case "bellatrix":
-		jsonBellatrixBlock := apimiddleware.SignedBeaconBlockBellatrixContainerJson{}
+		jsonBellatrixBlock := apimiddleware.SignedBeaconBlockBellatrixJson{}
 		if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed bellatrix block response json")
 		}
@@ -160,7 +160,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = bellatrixBlock.Slot
 
 	case "capella":
-		jsonCapellaBlock := apimiddleware.SignedBeaconBlockCapellaContainerJson{}
+		jsonCapellaBlock := apimiddleware.SignedBeaconBlockCapellaJson{}
 		if err := decoder.Decode(&jsonCapellaBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed capella block response json")
 		}
