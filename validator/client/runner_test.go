@@ -212,6 +212,7 @@ func TestKeyReload_ActiveKey(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
+		time.Sleep(time.Second)
 		for {
 			if km.accountsChangedFeed != nil {
 				km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
@@ -237,10 +238,10 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		time.Sleep(time.Second)
 		for {
 			if km.accountsChangedFeed != nil {
 				km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
-
 				break
 			}
 		}
