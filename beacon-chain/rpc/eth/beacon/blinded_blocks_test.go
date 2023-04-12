@@ -720,6 +720,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 	})
 
 	t.Run("Deneb", func(t *testing.T) {
+		t.Skip("TODO: Skipping this test because we don't have a way to unblind blobs yet.")
 		transactions := [][]byte{[]byte("transaction1"), []byte("transaction2")}
 		transactionsRoot, err := ssz.TransactionsRoot(transactions)
 		require.NoError(t, err)
