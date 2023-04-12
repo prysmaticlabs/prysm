@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -205,17 +206,23 @@ func TestKeyReload_ActiveKey(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
 		for {
 			if km.accountsChangedFeed != nil {
 				km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
 
-				cancel()
 				break
 			}
 		}
+		cancel()
 	}()
 	run(ctx, v)
+	wg.Wait()
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
 	// We expect that WaitForActivation will only be called once,
 	// at the very beginning, and not after account changes.
@@ -226,16 +233,21 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for {
 			if km.accountsChangedFeed != nil {
 				km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
-				cancel()
+
 				break
 			}
 		}
+		cancel()
 	}()
 	run(ctx, v)
+	wg.Wait()
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
 	assert.Equal(t, 2, v.WaitForActivationCalled)
 }
