@@ -1,4 +1,4 @@
-package testing
+package interop
 
 import (
 	"fmt"
@@ -79,7 +79,7 @@ const DefaultCliqueSigner = "0x0000000000000000000000000000000000000000000000000
 // DefaultTestnetGenesis creates a genesis.json for eth1 clients with a set of defaults suitable for ephemeral testnets,
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be
 // customized as desired.
-func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) core.Genesis {
+func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *core.Genesis {
 	ttd, ok := big.NewInt(0).SetString(clparams.BeaconConfig().TerminalTotalDifficulty, 10)
 	if !ok {
 		panic(fmt.Sprintf("unable to parse TerminalTotalDifficulty as an integer = %s", clparams.BeaconConfig().TerminalTotalDifficulty))
@@ -124,7 +124,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) cor
 	if err != nil {
 		panic(fmt.Sprintf("unable to decode DefaultCliqueSigner, with error %v", err.Error()))
 	}
-	return core.Genesis{
+	return &core.Genesis{
 		Config:     cc,
 		Nonce:      0, // overridden for authorized signer votes in clique, so we should leave it empty?
 		Timestamp:  genesisTime,
