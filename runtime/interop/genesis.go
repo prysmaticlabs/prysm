@@ -1,4 +1,4 @@
-package testing
+package interop
 
 import (
 	"fmt"
@@ -67,6 +67,7 @@ var DefaultDepositContractStorage = map[string]string{
 var bigz = big.NewInt(0)
 var minerBalance = big.NewInt(0)
 
+// DefaultCliqueSigner is the testnet miner (clique signer) address encoded in the special way EIP-225 requires.
 // EIP-225 assigns a special meaning to the `extra-data` field in the block header for clique chains.
 // In a clique chain, this field contains one secp256k1 "miner" signature. This allows other nodes to
 // verify that the block was signed by an authorized signer, in place of the typical PoW verification.
@@ -76,10 +77,10 @@ var minerBalance = big.NewInt(0)
 // The following value is for the key used by the e2e test "miner" node.
 const DefaultCliqueSigner = "0x0000000000000000000000000000000000000000000000000000000000000000878705ba3f8bc32fcf7f4caa1a35e72af65cf7660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
-// DefaultTestnetGenesis creates a genesis.json for eth1 clients with a set of defaults suitable for ephemeral testnets,
+// GethTestnetGenesis creates a genesis.json for eth1 clients with a set of defaults suitable for ephemeral testnets,
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be
 // customized as desired.
-func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) core.Genesis {
+func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *core.Genesis {
 	ttd, ok := big.NewInt(0).SetString(clparams.BeaconConfig().TerminalTotalDifficulty, 10)
 	if !ok {
 		panic(fmt.Sprintf("unable to parse TerminalTotalDifficulty as an integer = %s", clparams.BeaconConfig().TerminalTotalDifficulty))
@@ -124,7 +125,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) cor
 	if err != nil {
 		panic(fmt.Sprintf("unable to decode DefaultCliqueSigner, with error %v", err.Error()))
 	}
-	return core.Genesis{
+	return &core.Genesis{
 		Config:     cc,
 		Nonce:      0, // overridden for authorized signer votes in clique, so we should leave it empty?
 		Timestamp:  genesisTime,
