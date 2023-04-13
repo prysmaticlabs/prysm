@@ -508,6 +508,17 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	return node.payloadHash
 }
 
+// UnrealizedJustifiedPayloadBlockHash returns the hash of the payload at the unrealized justified checkpoint
+func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() ([32]byte, error) {
+	root := f.store.unrealizedJustifiedCheckpoint.Root
+	node, ok := f.store.nodeByRoot[root]
+	if !ok || node == nil {
+		// This should not happen
+		return [32]byte{}, ErrNilNode
+	}
+	return node.payloadHash, nil
+}
+
 // ForkChoiceDump returns a full dump of forkchoice.
 func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, error) {
 	jc := &v1.Checkpoint{

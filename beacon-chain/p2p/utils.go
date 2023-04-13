@@ -49,23 +49,43 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, keyPath)
 	privateKeyPath := cfg.PrivateKey
 
+	// PrivateKey cli flag takes highest precedence.
+	if privateKeyPath != "" {
+		return privKeyFromFile(cfg.PrivateKey)
+	}
+
 	_, err := os.Stat(defaultKeyPath)
 	defaultKeysExist := !os.IsNotExist(err)
 	if err != nil && defaultKeysExist {
 		return nil, err
 	}
-
-	if privateKeyPath == "" && !defaultKeysExist {
-		priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+	// Default keys have the next highest precendence, if they exist.
+	if defaultKeysExist {
+		return privKeyFromFile(defaultKeyPath)
+	}
+	// There are no keys on the filesystem, so we need to generate one.
+	priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	// If the StaticPeerID flag is set, save the generated key as the default
+	// key, so that it will be used by default on the next node start.
+	if cfg.StaticPeerID {
+		rawbytes, err := priv.Raw()
 		if err != nil {
 			return nil, err
 		}
-		return ecdsaprysm.ConvertFromInterfacePrivKey(priv)
+		dst := make([]byte, hex.EncodedLen(len(rawbytes)))
+		hex.Encode(dst, rawbytes)
+		if err := file.WriteFile(defaultKeyPath, dst); err != nil {
+			return nil, err
+		}
+		log.Infof("Wrote network key to file")
+		// Read the key from the defaultKeyPath file just written
+		// for the strongest guarantee that the next start will be the same as this one.
+		return privKeyFromFile(defaultKeyPath)
 	}
-	if defaultKeysExist && privateKeyPath == "" {
-		privateKeyPath = defaultKeyPath
-	}
-	return privKeyFromFile(privateKeyPath)
+	return ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 }
 
 // Retrieves a p2p networking private key from a file path.

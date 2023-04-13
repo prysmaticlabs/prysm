@@ -3,110 +3,144 @@ package beacon_api
 import (
 	"context"
 	"net/http"
+	"reflect"
+	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 )
 
 type beaconApiBeaconChainClient struct {
-	fallbackClient  iface.BeaconChainClient
-	jsonRestHandler jsonRestHandler
+	fallbackClient          iface.BeaconChainClient
+	jsonRestHandler         jsonRestHandler
+	stateValidatorsProvider stateValidatorsProvider
 }
 
-func (c beaconApiBeaconChainClient) ListAttestations(ctx context.Context, in *ethpb.ListAttestationsRequest) (*ethpb.ListAttestationsResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ListAttestations(ctx, in)
+func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*apimiddleware.BlockHeaderResponseJson, error) {
+	blockHeader := apimiddleware.BlockHeaderResponseJson{}
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
+		return nil, errors.Wrap(err, "failed to get head block header")
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.ListAttestations is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	if blockHeader.Data == nil || blockHeader.Data.Header == nil {
+		return nil, errors.New("block header data is nil")
+	}
+
+	if blockHeader.Data.Header.Message == nil {
+		return nil, errors.New("block header message is nil")
+	}
+
+	return &blockHeader, nil
 }
 
-func (c beaconApiBeaconChainClient) ListIndexedAttestations(ctx context.Context, in *ethpb.ListIndexedAttestationsRequest) (*ethpb.ListIndexedAttestationsResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ListIndexedAttestations(ctx, in)
+func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.Empty) (*ethpb.ChainHead, error) {
+	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
+
+	finalityCheckpoints := apimiddleware.StateFinalityCheckpointResponseJson{}
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &finalityCheckpoints); err != nil {
+		return nil, errors.Wrapf(err, "failed to query %s", endpoint)
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.ListIndexedAttestations is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-// Deprecated: Do not use.
-func (c beaconApiBeaconChainClient) StreamAttestations(ctx context.Context, in *empty.Empty) (ethpb.BeaconChain_StreamAttestationsClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.StreamAttestations(ctx, in)
+	if finalityCheckpoints.Data == nil {
+		return nil, errors.New("finality checkpoints data is nil")
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.StreamAttestations is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-// Deprecated: Do not use.
-func (c beaconApiBeaconChainClient) StreamIndexedAttestations(ctx context.Context, in *empty.Empty) (ethpb.BeaconChain_StreamIndexedAttestationsClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.StreamIndexedAttestations(ctx, in)
+	if finalityCheckpoints.Data.Finalized == nil {
+		return nil, errors.New("finalized checkpoint is nil")
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.StreamIndexedAttestations is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-func (c beaconApiBeaconChainClient) AttestationPool(ctx context.Context, in *ethpb.AttestationPoolRequest) (*ethpb.AttestationPoolResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.AttestationPool(ctx, in)
+	finalizedEpoch, err := strconv.ParseUint(finalityCheckpoints.Data.Finalized.Epoch, 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse finalized epoch `%s`", finalityCheckpoints.Data.Finalized.Epoch)
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.AttestationPool is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-func (c beaconApiBeaconChainClient) ListBeaconBlocks(ctx context.Context, in *ethpb.ListBlocksRequest) (*ethpb.ListBeaconBlocksResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ListBeaconBlocks(ctx, in)
+	finalizedSlot, err := slots.EpochStart(primitives.Epoch(finalizedEpoch))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get first slot for epoch `%d`", finalizedEpoch)
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.ListBeaconBlocks is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-// Deprecated: Do not use.
-func (c beaconApiBeaconChainClient) StreamBlocks(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconChain_StreamBlocksClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.StreamBlocks(ctx, in)
+	finalizedRoot, err := hexutil.Decode(finalityCheckpoints.Data.Finalized.Root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode finalized checkpoint root `%s`", finalityCheckpoints.Data.Finalized.Root)
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.StreamBlocks is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-// Deprecated: Do not use.
-func (c beaconApiBeaconChainClient) StreamChainHead(ctx context.Context, in *empty.Empty) (ethpb.BeaconChain_StreamChainHeadClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.StreamChainHead(ctx, in)
+	if finalityCheckpoints.Data.CurrentJustified == nil {
+		return nil, errors.New("current justified checkpoint is nil")
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.StreamChainHead is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, in *empty.Empty) (*ethpb.ChainHead, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetChainHead(ctx, in)
+	justifiedEpoch, err := strconv.ParseUint(finalityCheckpoints.Data.CurrentJustified.Epoch, 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse current justified checkpoint epoch `%s`", finalityCheckpoints.Data.CurrentJustified.Epoch)
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetChainHead is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-func (c beaconApiBeaconChainClient) ListBeaconCommittees(ctx context.Context, in *ethpb.ListCommitteesRequest) (*ethpb.BeaconCommittees, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ListBeaconCommittees(ctx, in)
+	justifiedSlot, err := slots.EpochStart(primitives.Epoch(justifiedEpoch))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get first slot for epoch `%d`", justifiedEpoch)
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.ListBeaconCommittees is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	justifiedRoot, err := hexutil.Decode(finalityCheckpoints.Data.CurrentJustified.Root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode current justified checkpoint root `%s`", finalityCheckpoints.Data.CurrentJustified.Root)
+	}
+
+	if finalityCheckpoints.Data.PreviousJustified == nil {
+		return nil, errors.New("previous justified checkpoint is nil")
+	}
+
+	previousJustifiedEpoch, err := strconv.ParseUint(finalityCheckpoints.Data.PreviousJustified.Epoch, 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse previous justified checkpoint epoch `%s`", finalityCheckpoints.Data.PreviousJustified.Epoch)
+	}
+
+	previousJustifiedSlot, err := slots.EpochStart(primitives.Epoch(previousJustifiedEpoch))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get first slot for epoch `%d`", previousJustifiedEpoch)
+	}
+
+	previousJustifiedRoot, err := hexutil.Decode(finalityCheckpoints.Data.PreviousJustified.Root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode previous justified checkpoint root `%s`", finalityCheckpoints.Data.PreviousJustified.Root)
+	}
+
+	blockHeader, err := c.getHeadBlockHeaders(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get head block headers")
+	}
+
+	headSlot, err := strconv.ParseUint(blockHeader.Data.Header.Message.Slot, 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse head block slot `%s`", blockHeader.Data.Header.Message.Slot)
+	}
+
+	headEpoch := slots.ToEpoch(primitives.Slot(headSlot))
+
+	headBlockRoot, err := hexutil.Decode(blockHeader.Data.Root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode head block root `%s`", blockHeader.Data.Root)
+	}
+
+	return &ethpb.ChainHead{
+		HeadSlot:                   primitives.Slot(headSlot),
+		HeadEpoch:                  headEpoch,
+		HeadBlockRoot:              headBlockRoot,
+		FinalizedSlot:              finalizedSlot,
+		FinalizedEpoch:             primitives.Epoch(finalizedEpoch),
+		FinalizedBlockRoot:         finalizedRoot,
+		JustifiedSlot:              justifiedSlot,
+		JustifiedEpoch:             primitives.Epoch(justifiedEpoch),
+		JustifiedBlockRoot:         justifiedRoot,
+		PreviousJustifiedSlot:      previousJustifiedSlot,
+		PreviousJustifiedEpoch:     primitives.Epoch(previousJustifiedEpoch),
+		PreviousJustifiedBlockRoot: previousJustifiedRoot,
+		OptimisticStatus:           blockHeader.ExecutionOptimistic,
+	}, nil
 }
 
 func (c beaconApiBeaconChainClient) ListValidatorBalances(ctx context.Context, in *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
@@ -119,30 +153,158 @@ func (c beaconApiBeaconChainClient) ListValidatorBalances(ctx context.Context, i
 }
 
 func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethpb.ListValidatorsRequest) (*ethpb.Validators, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ListValidators(ctx, in)
+	pageSize := in.PageSize
+
+	// We follow the gRPC behavior here, which returns a maximum of 250 results when pageSize == 0
+	if pageSize == 0 {
+		pageSize = 250
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.ListValidators is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
+	var pageToken uint64
+	var err error
 
-func (c beaconApiBeaconChainClient) GetValidator(ctx context.Context, in *ethpb.GetValidatorRequest) (*ethpb.Validator, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetValidator(ctx, in)
+	if in.PageToken != "" {
+		if pageToken, err = strconv.ParseUint(in.PageToken, 10, 64); err != nil {
+			return nil, errors.Wrapf(err, "failed to parse page token `%s`", in.PageToken)
+		}
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetValidator is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-func (c beaconApiBeaconChainClient) GetValidatorActiveSetChanges(ctx context.Context, in *ethpb.GetValidatorActiveSetChangesRequest) (*ethpb.ActiveSetChanges, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetValidatorActiveSetChanges(ctx, in)
+	var statuses []string
+	if in.Active {
+		statuses = []string{"active"}
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetValidatorActiveSetChanges is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	pubkeys := make([]string, len(in.PublicKeys))
+	for idx, pubkey := range in.PublicKeys {
+		pubkeys[idx] = hexutil.Encode(pubkey)
+	}
+
+	var stateValidators *apimiddleware.StateValidatorsResponseJson
+	var epoch primitives.Epoch
+
+	switch queryFilter := in.QueryFilter.(type) {
+	case *ethpb.ListValidatorsRequest_Epoch:
+		slot, err := slots.EpochStart(queryFilter.Epoch)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get first slot for epoch `%d`", queryFilter.Epoch)
+		}
+		if stateValidators, err = c.stateValidatorsProvider.GetStateValidatorsForSlot(ctx, slot, pubkeys, in.Indices, statuses); err != nil {
+			return nil, errors.Wrapf(err, "failed to get state validators for slot `%d`", slot)
+		}
+		epoch = slots.ToEpoch(slot)
+	case *ethpb.ListValidatorsRequest_Genesis:
+		if stateValidators, err = c.stateValidatorsProvider.GetStateValidatorsForSlot(ctx, 0, pubkeys, in.Indices, statuses); err != nil {
+			return nil, errors.Wrapf(err, "failed to get genesis state validators")
+		}
+		epoch = 0
+	case nil:
+		if stateValidators, err = c.stateValidatorsProvider.GetStateValidatorsForHead(ctx, pubkeys, in.Indices, statuses); err != nil {
+			return nil, errors.Wrap(err, "failed to get head state validators")
+		}
+
+		blockHeader, err := c.getHeadBlockHeaders(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get head block headers")
+		}
+
+		slot, err := strconv.ParseUint(blockHeader.Data.Header.Message.Slot, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse header slot `%s`", blockHeader.Data.Header.Message.Slot)
+		}
+
+		epoch = slots.ToEpoch(primitives.Slot(slot))
+	default:
+		return nil, errors.Errorf("unsupported query filter type `%v`", reflect.TypeOf(queryFilter))
+	}
+
+	if stateValidators.Data == nil {
+		return nil, errors.New("state validators data is nil")
+	}
+
+	start := pageToken * uint64(pageSize)
+	if start > uint64(len(stateValidators.Data)) {
+		start = uint64(len(stateValidators.Data))
+	}
+
+	end := start + uint64(pageSize)
+	if end > uint64(len(stateValidators.Data)) {
+		end = uint64(len(stateValidators.Data))
+	}
+
+	validators := make([]*ethpb.Validators_ValidatorContainer, end-start)
+	for idx := start; idx < end; idx++ {
+		stateValidator := stateValidators.Data[idx]
+
+		if stateValidator.Validator == nil {
+			return nil, errors.Errorf("state validator at index `%d` is nil", idx)
+		}
+
+		pubkey, err := hexutil.Decode(stateValidator.Validator.PublicKey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode validator pubkey `%s`", stateValidator.Validator.PublicKey)
+		}
+
+		withdrawalCredentials, err := hexutil.Decode(stateValidator.Validator.WithdrawalCredentials)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode validator withdrawal credentials `%s`", stateValidator.Validator.WithdrawalCredentials)
+		}
+
+		effectiveBalance, err := strconv.ParseUint(stateValidator.Validator.EffectiveBalance, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator effective balance `%s`", stateValidator.Validator.EffectiveBalance)
+		}
+
+		validatorIndex, err := strconv.ParseUint(stateValidator.Index, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator index `%s`", stateValidator.Index)
+		}
+
+		activationEligibilityEpoch, err := strconv.ParseUint(stateValidator.Validator.ActivationEligibilityEpoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator activation eligibility epoch `%s`", stateValidator.Validator.ActivationEligibilityEpoch)
+		}
+
+		activationEpoch, err := strconv.ParseUint(stateValidator.Validator.ActivationEpoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator activation epoch `%s`", stateValidator.Validator.ActivationEpoch)
+		}
+
+		exitEpoch, err := strconv.ParseUint(stateValidator.Validator.ExitEpoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator exit epoch `%s`", stateValidator.Validator.ExitEpoch)
+		}
+
+		withdrawableEpoch, err := strconv.ParseUint(stateValidator.Validator.WithdrawableEpoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator withdrawable epoch `%s`", stateValidator.Validator.WithdrawableEpoch)
+		}
+
+		validators[idx-start] = &ethpb.Validators_ValidatorContainer{
+			Index: primitives.ValidatorIndex(validatorIndex),
+			Validator: &ethpb.Validator{
+				PublicKey:                  pubkey,
+				WithdrawalCredentials:      withdrawalCredentials,
+				EffectiveBalance:           effectiveBalance,
+				Slashed:                    stateValidator.Validator.Slashed,
+				ActivationEligibilityEpoch: primitives.Epoch(activationEligibilityEpoch),
+				ActivationEpoch:            primitives.Epoch(activationEpoch),
+				ExitEpoch:                  primitives.Epoch(exitEpoch),
+				WithdrawableEpoch:          primitives.Epoch(withdrawableEpoch),
+			},
+		}
+	}
+
+	var nextPageToken string
+	if end < uint64(len(stateValidators.Data)) {
+		nextPageToken = strconv.FormatUint(pageToken+1, 10)
+	}
+
+	return &ethpb.Validators{
+		TotalSize:     int32(len(stateValidators.Data)),
+		Epoch:         epoch,
+		ValidatorList: validators,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 func (c beaconApiBeaconChainClient) GetValidatorQueue(ctx context.Context, in *empty.Empty) (*ethpb.ValidatorQueue, error) {
@@ -163,15 +325,6 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 	panic("beaconApiBeaconChainClient.GetValidatorPerformance is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
 }
 
-func (c beaconApiBeaconChainClient) ListValidatorAssignments(ctx context.Context, in *ethpb.ListValidatorAssignmentsRequest) (*ethpb.ValidatorAssignments, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ListValidatorAssignments(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.ListValidatorAssignments is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
 func (c beaconApiBeaconChainClient) GetValidatorParticipation(ctx context.Context, in *ethpb.GetValidatorParticipationRequest) (*ethpb.ValidatorParticipationResponse, error) {
 	if c.fallbackClient != nil {
 		return c.fallbackClient.GetValidatorParticipation(ctx, in)
@@ -181,52 +334,6 @@ func (c beaconApiBeaconChainClient) GetValidatorParticipation(ctx context.Contex
 	panic("beaconApiBeaconChainClient.GetValidatorParticipation is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
 }
 
-func (c beaconApiBeaconChainClient) GetBeaconConfig(ctx context.Context, in *empty.Empty) (*ethpb.BeaconConfig, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetBeaconConfig(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetBeaconConfig is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-// Deprecated: Do not use.
-func (c beaconApiBeaconChainClient) StreamValidatorsInfo(ctx context.Context) (ethpb.BeaconChain_StreamValidatorsInfoClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.StreamValidatorsInfo(ctx)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.StreamValidatorsInfo is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-func (c beaconApiBeaconChainClient) SubmitAttesterSlashing(ctx context.Context, in *ethpb.AttesterSlashing) (*ethpb.SubmitSlashingResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.SubmitAttesterSlashing(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.SubmitAttesterSlashing is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-func (c beaconApiBeaconChainClient) SubmitProposerSlashing(ctx context.Context, in *ethpb.ProposerSlashing) (*ethpb.SubmitSlashingResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.SubmitProposerSlashing(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.SubmitProposerSlashing is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
-func (c beaconApiBeaconChainClient) GetIndividualVotes(ctx context.Context, in *ethpb.IndividualVotesRequest) (*ethpb.IndividualVotesRespond, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetIndividualVotes(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetIndividualVotes is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
-}
-
 func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duration, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
@@ -234,7 +341,8 @@ func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duratio
 	}
 
 	return &beaconApiBeaconChainClient{
-		jsonRestHandler: jsonRestHandler,
-		fallbackClient:  fallbackClient,
+		jsonRestHandler:         jsonRestHandler,
+		fallbackClient:          fallbackClient,
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 	}
 }

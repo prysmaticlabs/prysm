@@ -110,5 +110,6 @@ docker_push(
 go_binary(
     name = "prysmctl",
     embed = [":go_default_library"],
+    gotags = ["noMainnetGenesis"],
     visibility = ["//visibility:public"],
 )

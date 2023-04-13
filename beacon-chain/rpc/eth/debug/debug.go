@@ -19,7 +19,7 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZ")
 	defer span.End()
 
-	state, err := ds.StateFetcher.State(ctx, req.StateId)
+	state, err := ds.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -37,11 +37,11 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateV2")
 	defer span.End()
 
-	beaconSt, err := ds.StateFetcher.State(ctx, req.StateId)
+	beaconSt, err := ds.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, ds.OptimisticModeFetcher, ds.StateFetcher, ds.ChainInfoFetcher, ds.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, ds.OptimisticModeFetcher, ds.Stater, ds.ChainInfoFetcher, ds.BeaconDB)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -114,7 +114,7 @@ func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.BeaconSt
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZV2")
 	defer span.End()
 
-	st, err := ds.StateFetcher.State(ctx, req.StateId)
+	st, err := ds.Stater.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -166,7 +166,5 @@ func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (
 
 // GetForkChoice returns a dump fork choice store.
 func (ds *Server) GetForkChoice(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceDump, error) {
-	ds.ForkFetcher.ForkChoicer().RLock()
-	defer ds.ForkFetcher.ForkChoicer().RUnlock()
-	return ds.ForkFetcher.ForkChoicer().ForkChoiceDump(ctx)
+	return ds.ForkchoiceFetcher.ForkChoiceDump(ctx)
 }

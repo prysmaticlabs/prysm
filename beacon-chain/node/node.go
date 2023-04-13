@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	apigateway "github.com/prysmaticlabs/prysm/v4/api/gateway"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
@@ -148,6 +149,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return nil, err
 	}
+	configureFastSSZHashingAlgorithm()
 
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
@@ -252,12 +254,13 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering RPC Service")
-	if err := beacon.registerRPCService(); err != nil {
+	router := mux.NewRouter()
+	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering GRPC Gateway Service")
-	if err := beacon.registerGRPCGateway(); err != nil {
+	if err := beacon.registerGRPCGateway(router); err != nil {
 		return nil, err
 	}
 
@@ -541,6 +544,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		HostAddress:       cliCtx.String(cmd.P2PHost.Name),
 		HostDNS:           cliCtx.String(cmd.P2PHostDNS.Name),
 		PrivateKey:        cliCtx.String(cmd.P2PPrivKey.Name),
+		StaticPeerID:      cliCtx.Bool(cmd.P2PStaticID.Name),
 		MetaDataDir:       cliCtx.String(cmd.P2PMetadata.Name),
 		TCPPort:           cliCtx.Uint(cmd.P2PTCPPort.Name),
 		UDPPort:           cliCtx.Uint(cmd.P2PUDPPort.Name),
@@ -739,7 +743,7 @@ func (b *BeaconNode) registerSlasherService() error {
 	return b.services.RegisterService(slasherSrv)
 }
 
-func (b *BeaconNode) registerRPCService() error {
+func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -804,10 +808,10 @@ func (b *BeaconNode) registerRPCService() error {
 		PeerManager:                   p2pService,
 		MetadataProvider:              p2pService,
 		ChainInfoFetcher:              chainService,
-		HeadUpdater:                   chainService,
 		HeadFetcher:                   chainService,
 		CanonicalFetcher:              chainService,
 		ForkFetcher:                   chainService,
+		ForkchoiceFetcher:             chainService,
 		FinalizationFetcher:           chainService,
 		BlockReceiver:                 chainService,
 		AttestationReceiver:           chainService,
@@ -835,6 +839,7 @@ func (b *BeaconNode) registerRPCService() error {
 		MaxMsgSize:                    maxMsgSize,
 		ProposerIdsCache:              b.proposerIdsCache,
 		BlockBuilder:                  b.fetchBuilderService(),
+		Router:                        router,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -863,7 +868,7 @@ func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	return b.services.RegisterService(service)
 }
 
-func (b *BeaconNode) registerGRPCGateway() error {
+func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	if b.cliCtx.Bool(flags.DisableGRPCGateway.Name) {
 		return nil
 	}
@@ -889,6 +894,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	}
 
 	opts := []apigateway.Option{
+		apigateway.WithRouter(router),
 		apigateway.WithGatewayAddr(gatewayAddress),
 		apigateway.WithRemoteAddr(selfAddress),
 		apigateway.WithPbHandlers(muxs),
