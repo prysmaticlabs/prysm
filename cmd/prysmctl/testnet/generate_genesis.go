@@ -255,7 +255,7 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 
 	gen := &core.Genesis{}
 	if f.GethGenesisJsonIn != "" {
-		gbytes, err := os.ReadFile(f.GethGenesisJsonIn)
+		gbytes, err := os.ReadFile(f.GethGenesisJsonIn) // #nosec G304
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read %s", f.GethGenesisJsonIn)
 		}
