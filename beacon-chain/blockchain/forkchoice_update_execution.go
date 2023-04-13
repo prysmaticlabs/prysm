@@ -18,7 +18,7 @@ import (
 
 func (s *Service) isNewProposer(slot primitives.Slot) bool {
 	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
-	return ok
+	return ok || features.Get().PrepareAllPayloads
 }
 
 func (s *Service) isNewHead(r [32]byte) bool {

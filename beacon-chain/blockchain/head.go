@@ -89,13 +89,13 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	newHeadSlot := headBlock.Block().Slot()
 	newStateRoot := headBlock.Block().StateRoot()
 
-	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	r, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get old head root")
 	}
 	oldHeadRoot := bytesutil.ToBytes32(r)
 	if headBlock.Block().ParentRoot() != oldHeadRoot {
+		// A chain re-org occurred, so we fire an event notifying the rest of the services.
 		commonRoot, forkSlot, err := s.cfg.ForkChoiceStore.CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
 			log.WithError(err).Error("Could not find common ancestor root")

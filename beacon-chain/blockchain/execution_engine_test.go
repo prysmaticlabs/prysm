@@ -17,6 +17,7 @@ import (
 	bstate "github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -822,6 +823,31 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+}
+
+func Test_GetPayloadAttribute_PrepareAllPayloads(t *testing.T) {
+	ctx := context.Background()
+	resetCfg := features.InitWithReset(&features.Flags{
+		PrepareAllPayloads: true,
+	})
+	defer resetCfg()
+
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+
+	hook := logTest.NewGlobal()
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, 0)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, primitives.ValidatorIndex(0), vId)
+	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
+	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 }
 
 func Test_GetPayloadAttributeV2(t *testing.T) {
