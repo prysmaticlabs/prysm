@@ -245,12 +245,12 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 			return nil, err
 		}
 		opts = append(opts, interop.WithDepositData(dds, roots))
-	}
-
-	if nv == 0 {
-		return nil, fmt.Errorf(
-			"expected --num-validators > 0 or --deposit-json-file to have been provided",
-		)
+	} else {
+		if nv == 0 {
+			return nil, fmt.Errorf(
+				"expected --num-validators > 0 or --deposit-json-file to have been provided",
+			)
+		}
 	}
 
 	gen := &core.Genesis{}
