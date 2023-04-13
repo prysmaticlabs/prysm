@@ -66,6 +66,10 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.R
 	randaoReveal := b.Block().Body().RandaoReveal()
 	graffiti := b.Block().Body().Graffiti()
 	sig := b.Signature()
+	blsToExecChange, err := b.Block().Body().BLSToExecutionChanges()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get bls to execution changes")
+	}
 	sb := &ethpb.SignedBlindedBeaconBlockCapella{
 		Block: &ethpb.BlindedBeaconBlockCapella{
 			Slot:          b.Block().Slot(),
@@ -83,6 +87,7 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.R
 				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
 				SyncAggregate:          agg,
 				ExecutionPayloadHeader: header,
+				BlsToExecutionChanges:  blsToExecChange,
 			},
 		},
 		Signature: sig[:],
@@ -122,16 +127,17 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.R
 			ParentRoot:    sb.Block.ParentRoot,
 			StateRoot:     sb.Block.StateRoot,
 			Body: &ethpb.BeaconBlockBodyCapella{
-				RandaoReveal:      sb.Block.Body.RandaoReveal,
-				Eth1Data:          sb.Block.Body.Eth1Data,
-				Graffiti:          sb.Block.Body.Graffiti,
-				ProposerSlashings: sb.Block.Body.ProposerSlashings,
-				AttesterSlashings: sb.Block.Body.AttesterSlashings,
-				Attestations:      sb.Block.Body.Attestations,
-				Deposits:          sb.Block.Body.Deposits,
-				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
-				SyncAggregate:     agg,
-				ExecutionPayload:  capellaPayload,
+				RandaoReveal:          sb.Block.Body.RandaoReveal,
+				Eth1Data:              sb.Block.Body.Eth1Data,
+				Graffiti:              sb.Block.Body.Graffiti,
+				ProposerSlashings:     sb.Block.Body.ProposerSlashings,
+				AttesterSlashings:     sb.Block.Body.AttesterSlashings,
+				Attestations:          sb.Block.Body.Attestations,
+				Deposits:              sb.Block.Body.Deposits,
+				VoluntaryExits:        sb.Block.Body.VoluntaryExits,
+				SyncAggregate:         agg,
+				ExecutionPayload:      capellaPayload,
+				BlsToExecutionChanges: blsToExecChange,
 			},
 		},
 		Signature: sb.Signature,

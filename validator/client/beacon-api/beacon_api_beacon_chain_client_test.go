@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -14,7 +15,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestListValidators(t *testing.T) {
@@ -575,5 +578,350 @@ func TestListValidators(t *testing.T) {
 				assert.DeepEqual(t, expectedValidators, validators)
 			})
 		}
+	})
+}
+
+func TestGetChainHead(t *testing.T) {
+	const finalityCheckpointsEndpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
+	const headBlockHeadersEndpoint = "/eth/v1/beacon/headers/head"
+
+	generateValidFinalityCheckpointsResponse := func() apimiddleware.StateFinalityCheckpointResponseJson {
+		return apimiddleware.StateFinalityCheckpointResponseJson{
+			Data: &apimiddleware.StateFinalityCheckpointResponse_StateFinalityCheckpointJson{
+				PreviousJustified: &apimiddleware.CheckpointJson{
+					Epoch: "1",
+					Root:  hexutil.Encode([]byte{2}),
+				},
+				CurrentJustified: &apimiddleware.CheckpointJson{
+					Epoch: "3",
+					Root:  hexutil.Encode([]byte{4}),
+				},
+				Finalized: &apimiddleware.CheckpointJson{
+					Epoch: "5",
+					Root:  hexutil.Encode([]byte{6}),
+				},
+			},
+		}
+	}
+
+	t.Run("fails to get finality checkpoints", func(t *testing.T) {
+		testCases := []struct {
+			name                                string
+			generateFinalityCheckpointsResponse func() apimiddleware.StateFinalityCheckpointResponseJson
+			finalityCheckpointsError            error
+			expectedError                       string
+		}{
+			{
+				name:                     "query failed",
+				finalityCheckpointsError: errors.New("foo error"),
+				expectedError:            fmt.Sprintf("failed to query %s: foo error", finalityCheckpointsEndpoint),
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					return apimiddleware.StateFinalityCheckpointResponseJson{}
+				},
+			},
+			{
+				name:          "nil finality checkpoints data",
+				expectedError: "finality checkpoints data is nil",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data = nil
+					return validResponse
+				},
+			},
+			{
+				name:          "nil finalized checkpoint",
+				expectedError: "finalized checkpoint is nil",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.Finalized = nil
+					return validResponse
+				},
+			},
+			{
+				name:          "invalid finalized epoch",
+				expectedError: "failed to parse finalized epoch `foo`",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.Finalized.Epoch = "foo"
+					return validResponse
+				},
+			},
+			{
+				name:          "failed to get first slot of finalized epoch",
+				expectedError: fmt.Sprintf("failed to get first slot for epoch `%d`", uint64(math.MaxUint64)),
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.Finalized.Epoch = strconv.FormatUint(uint64(math.MaxUint64), 10)
+					return validResponse
+				},
+			},
+			{
+				name:          "invalid finalized root",
+				expectedError: "failed to decode finalized checkpoint root `bar`",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.Finalized.Root = "bar"
+					return validResponse
+				},
+			},
+			{
+				name:          "nil current justified checkpoint",
+				expectedError: "current justified checkpoint is nil",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.CurrentJustified = nil
+					return validResponse
+				},
+			},
+			{
+				name:          "nil current justified epoch",
+				expectedError: "failed to parse current justified checkpoint epoch `foo`",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.CurrentJustified.Epoch = "foo"
+					return validResponse
+				},
+			},
+			{
+				name:          "failed to get first slot of current justified epoch",
+				expectedError: fmt.Sprintf("failed to get first slot for epoch `%d`", uint64(math.MaxUint64)),
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.CurrentJustified.Epoch = strconv.FormatUint(uint64(math.MaxUint64), 10)
+					return validResponse
+				},
+			},
+			{
+				name:          "invalid current justified root",
+				expectedError: "failed to decode current justified checkpoint root `bar`",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.CurrentJustified.Root = "bar"
+					return validResponse
+				},
+			},
+			{
+				name:          "nil previous justified checkpoint",
+				expectedError: "previous justified checkpoint is nil",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.PreviousJustified = nil
+					return validResponse
+				},
+			},
+			{
+				name:          "nil previous justified epoch",
+				expectedError: "failed to parse previous justified checkpoint epoch `foo`",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.PreviousJustified.Epoch = "foo"
+					return validResponse
+				},
+			},
+			{
+				name:          "failed to get first slot of previous justified epoch",
+				expectedError: fmt.Sprintf("failed to get first slot for epoch `%d`", uint64(math.MaxUint64)),
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.PreviousJustified.Epoch = strconv.FormatUint(uint64(math.MaxUint64), 10)
+					return validResponse
+				},
+			},
+			{
+				name:          "invalid previous justified root",
+				expectedError: "failed to decode previous justified checkpoint root `bar`",
+				generateFinalityCheckpointsResponse: func() apimiddleware.StateFinalityCheckpointResponseJson {
+					validResponse := generateValidFinalityCheckpointsResponse()
+					validResponse.Data.PreviousJustified.Root = "bar"
+					return validResponse
+				},
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				ctx := context.Background()
+
+				finalityCheckpointsResponse := apimiddleware.StateFinalityCheckpointResponseJson{}
+				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+				jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
+					nil,
+					testCase.finalityCheckpointsError,
+				).SetArg(
+					2,
+					testCase.generateFinalityCheckpointsResponse(),
+				)
+
+				beaconChainClient := beaconApiBeaconChainClient{jsonRestHandler: jsonRestHandler}
+				_, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
+				assert.ErrorContains(t, testCase.expectedError, err)
+			})
+		}
+	})
+
+	generateValidBlockHeadersResponse := func() apimiddleware.BlockHeaderResponseJson {
+		return apimiddleware.BlockHeaderResponseJson{
+			Data: &apimiddleware.BlockHeaderContainerJson{
+				Root: hexutil.Encode([]byte{7}),
+				Header: &apimiddleware.BeaconBlockHeaderContainerJson{
+					Message: &apimiddleware.BeaconBlockHeaderJson{
+						Slot: "8",
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("fails to get head block headers", func(t *testing.T) {
+		testCases := []struct {
+			name                             string
+			generateHeadBlockHeadersResponse func() apimiddleware.BlockHeaderResponseJson
+			headBlockHeadersError            error
+			expectedError                    string
+		}{
+			{
+				name:                  "query failed",
+				headBlockHeadersError: errors.New("foo error"),
+				expectedError:         "failed to get head block header",
+				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+					return apimiddleware.BlockHeaderResponseJson{}
+				},
+			},
+			{
+				name:          "nil block header data",
+				expectedError: "block header data is nil",
+				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+					validResponse := generateValidBlockHeadersResponse()
+					validResponse.Data = nil
+					return validResponse
+				},
+			},
+			{
+				name:          "nil block header data header",
+				expectedError: "block header data is nil",
+				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+					validResponse := generateValidBlockHeadersResponse()
+					validResponse.Data.Header = nil
+					return validResponse
+				},
+			},
+			{
+				name:          "nil block header message",
+				expectedError: "block header message is nil",
+				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+					validResponse := generateValidBlockHeadersResponse()
+					validResponse.Data.Header.Message = nil
+					return validResponse
+				},
+			},
+			{
+				name:          "invalid message slot",
+				expectedError: "failed to parse head block slot `foo`",
+				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+					validResponse := generateValidBlockHeadersResponse()
+					validResponse.Data.Header.Message.Slot = "foo"
+					return validResponse
+				},
+			},
+
+			{
+				name:          "invalid root",
+				expectedError: "failed to decode head block root `bar`",
+				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+					validResponse := generateValidBlockHeadersResponse()
+					validResponse.Data.Root = "bar"
+					return validResponse
+				},
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				ctx := context.Background()
+
+				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+				finalityCheckpointsResponse := apimiddleware.StateFinalityCheckpointResponseJson{}
+				jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
+					nil,
+					nil,
+				).SetArg(
+					2,
+					generateValidFinalityCheckpointsResponse(),
+				)
+
+				headBlockHeadersResponse := apimiddleware.BlockHeaderResponseJson{}
+				jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
+					nil,
+					testCase.headBlockHeadersError,
+				).SetArg(
+					2,
+					testCase.generateHeadBlockHeadersResponse(),
+				)
+
+				beaconChainClient := beaconApiBeaconChainClient{jsonRestHandler: jsonRestHandler}
+				_, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
+				assert.ErrorContains(t, testCase.expectedError, err)
+			})
+		}
+	})
+
+	t.Run("returns a valid chain head", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		ctx := context.Background()
+
+		jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+		finalityCheckpointsResponse := apimiddleware.StateFinalityCheckpointResponseJson{}
+		jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
+			nil,
+			nil,
+		).SetArg(
+			2,
+			generateValidFinalityCheckpointsResponse(),
+		)
+
+		headBlockHeadersResponse := apimiddleware.BlockHeaderResponseJson{}
+		jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
+			nil,
+			nil,
+		).SetArg(
+			2,
+			generateValidBlockHeadersResponse(),
+		)
+
+		expectedPreviousJustifiedSlot, err := slots.EpochStart(1)
+		require.NoError(t, err)
+
+		expectedCurrentJustifiedSlot, err := slots.EpochStart(3)
+		require.NoError(t, err)
+
+		expectedFinalizedSlot, err := slots.EpochStart(5)
+		require.NoError(t, err)
+
+		expectedChainHead := &ethpb.ChainHead{
+			PreviousJustifiedEpoch:     1,
+			PreviousJustifiedBlockRoot: []byte{2},
+			PreviousJustifiedSlot:      expectedPreviousJustifiedSlot,
+			JustifiedEpoch:             3,
+			JustifiedBlockRoot:         []byte{4},
+			JustifiedSlot:              expectedCurrentJustifiedSlot,
+			FinalizedEpoch:             5,
+			FinalizedBlockRoot:         []byte{6},
+			FinalizedSlot:              expectedFinalizedSlot,
+			HeadBlockRoot:              []byte{7},
+			HeadSlot:                   8,
+			HeadEpoch:                  slots.ToEpoch(8),
+		}
+
+		beaconChainClient := beaconApiBeaconChainClient{jsonRestHandler: jsonRestHandler}
+		chainHead, err := beaconChainClient.GetChainHead(ctx, &emptypb.Empty{})
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedChainHead, chainHead)
 	})
 }
