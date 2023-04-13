@@ -13,7 +13,7 @@ var versionToString = map[int]string{
 	Phase0:    "phase0",
 	Altair:    "altair",
 	Bellatrix: "bellatrix",
-	Capella:   "cappella",
+	Capella:   "capella",
 }
 
 // stringToVersion and allVersions are populated in init()
