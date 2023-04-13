@@ -27,7 +27,7 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = capellaBlock
 
-	jsonCapellaBlock := &apimiddleware.SignedBeaconBlockCapellaContainerJson{
+	jsonCapellaBlock := &apimiddleware.SignedBeaconBlockCapellaJson{
 		Signature: hexutil.Encode(capellaBlock.Capella.Signature),
 		Message: &apimiddleware.BeaconBlockCapellaJson{
 			ParentRoot:    hexutil.Encode(capellaBlock.Capella.Block.ParentRoot),

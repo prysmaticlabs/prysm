@@ -49,7 +49,7 @@ message GenericSignedBeaconBlock {
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
         // Representing a signed, post-Deneb fork beacon block content
-        SignedBeaconBlockDenebAndBlobs Deneb  = 7;
+        SignedBeaconBlockDenebAndBlobs deneb  = 7;
 
         // Representing a signed, post-Deneb fork beacon block content
         SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
@@ -76,13 +76,11 @@ message GenericBeaconBlock {
         // Representing a post-Capella fork blinded beacon block.
         BlindedBeaconBlockCapella blinded_capella = 6;
 
-        BeaconBlockDenebAndBlobs Deneb  = 7;
+        BeaconBlockDenebAndBlobs deneb  = 7;
 
-        BlindedBeaconBlockDeneb blinded_Deneb  = 8;
+        BlindedBeaconBlockDenebAndBlobs blinded_deneb  = 8;
     }
 }
-
-
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlock {
@@ -650,6 +648,15 @@ message BlindedBeaconBlockBodyCapella {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 }
 
+message SignedBlindedBeaconBlockDenebAndBlobs {
+    SignedBlindedBeaconBlockDeneb block = 1;
+    repeated SignedBlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
+message BlindedBeaconBlockDenebAndBlobs {
+    BlindedBeaconBlockDeneb block = 1;
+    repeated BlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
 
 message SignedBlindedBeaconBlockDeneb {
     // The unsigned blinded beacon block itself.

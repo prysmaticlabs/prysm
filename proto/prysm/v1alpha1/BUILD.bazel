@@ -134,6 +134,9 @@ ssz_gen_marshal(
         "BlobSidecar",
         "SignedBlobSidecar",
         "BlobIdentifier",
+        "BlindedBlobSidecars",
+        "BlindedBlobSidecar",
+        "SignedBlindedBlobSidecar",
     ],
 )
 

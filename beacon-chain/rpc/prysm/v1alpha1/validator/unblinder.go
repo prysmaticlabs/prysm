@@ -50,6 +50,10 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	randaoReveal := u.b.Block().Body().RandaoReveal()
 	graffiti := u.b.Block().Body().Graffiti()
 	sig := u.b.Signature()
+	blsToExecChanges, err := u.b.Block().Body().BLSToExecutionChanges()
+	if err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
+		return nil, errors.Wrap(err, "could not get bls to execution changes")
+	}
 
 	psb, err := u.blindedProtoBlock()
 	if err != nil {
@@ -75,6 +79,9 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 		return nil, errors.Wrap(err, "could not set sync aggregate")
 	}
 	sb.SetSignature(sig[:])
+	if err = sb.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
+		return nil, errors.Wrap(err, "could not set bls to execution changes")
+	}
 	if err = sb.SetExecution(h); err != nil {
 		return nil, errors.Wrap(err, "could not set execution")
 	}
@@ -105,6 +112,10 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	randaoReveal = sb.Block().Body().RandaoReveal()
 	graffiti = sb.Block().Body().Graffiti()
 	sig = sb.Signature()
+	blsToExecChanges, err = sb.Block().Body().BLSToExecutionChanges()
+	if err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
+		return nil, errors.Wrap(err, "could not get bls to execution changes")
+	}
 
 	bb, err := u.protoBlock()
 	if err != nil {
@@ -129,6 +140,9 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	if err = wb.SetSyncAggregate(agg); err != nil {
 		return nil, errors.Wrap(err, "could not set sync aggregate")
 	}
+	if err = wb.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
+		return nil, errors.Wrap(err, "could not set bls to execution changes")
+	}
 	if err = wb.SetExecution(payload); err != nil {
 		return nil, errors.Wrap(err, "could not set execution")
 	}
@@ -140,7 +154,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	log.WithFields(logrus.Fields{
 		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
 		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
-		"gasUsed":      h.GasUsed,
+		"gasUsed":      h.GasUsed(),
 		"slot":         u.b.Block().Slot(),
 		"txs":          len(txs),
 	}).Info("Retrieved full payload from builder")
@@ -162,6 +176,12 @@ func (u *unblinder) blindedProtoBlock() (proto.Message, error) {
 				Body: &ethpb.BlindedBeaconBlockBodyCapella{},
 			},
 		}, nil
+	case version.Deneb:
+		return &ethpb.SignedBlindedBeaconBlockDeneb{
+			Block: &ethpb.BlindedBeaconBlockDeneb{
+				Body: &ethpb.BlindedBeaconBlockBodyDeneb{},
+			},
+		}, nil
 	default:
 		return nil, fmt.Errorf("invalid version %s", version.String(u.b.Version()))
 	}
@@ -179,6 +199,12 @@ func (u *unblinder) protoBlock() (proto.Message, error) {
 		return &ethpb.SignedBeaconBlockCapella{
 			Block: &ethpb.BeaconBlockCapella{
 				Body: &ethpb.BeaconBlockBodyCapella{},
+			},
+		}, nil
+	case version.Deneb:
+		return &ethpb.SignedBeaconBlockDeneb{
+			Block: &ethpb.BeaconBlockDeneb{
+				Body: &ethpb.BeaconBlockBodyDeneb{},
 			},
 		}, nil
 	default:

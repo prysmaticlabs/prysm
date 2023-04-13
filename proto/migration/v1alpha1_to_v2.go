@@ -26,6 +26,19 @@ func V1Alpha1BeaconBlockAltairToV2(v1alpha1Block *ethpbalpha.BeaconBlockAltair) 
 	return v2Block, nil
 }
 
+// V1Alpha1BeaconBlockAltairToV2Signed converts a v1alpha1 Altair signed beacon block to a v2 Altair block.
+func V1Alpha1BeaconBlockAltairToV2Signed(v1alpha1Block *ethpbalpha.SignedBeaconBlockAltair) (*ethpbv2.SignedBeaconBlockAltair, error) {
+	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2Block := &ethpbv2.SignedBeaconBlockAltair{}
+	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
 // AltairToV1Alpha1SignedBlock converts a v2 SignedBeaconBlockAltair proto to a v1alpha1 proto.
 func AltairToV1Alpha1SignedBlock(altairBlk *ethpbv2.SignedBeaconBlockAltair) (*ethpbalpha.SignedBeaconBlockAltair, error) {
 	marshaledBlk, err := proto.Marshal(altairBlk)
@@ -1228,6 +1241,27 @@ func V1Alpha1SignedBLSToExecChangeToV2(alphaChange *ethpbalpha.SignedBLSToExecut
 			ToExecutionAddress: bytesutil.SafeCopyBytes(alphaChange.Message.ToExecutionAddress),
 		},
 		Signature: bytesutil.SafeCopyBytes(alphaChange.Signature),
+	}
+	return result
+}
+
+// BlindedBlobsToV1Alpha1SignedBlobs converts an array of v2 SignedBlindedBlobSidecar objects to its v1alpha1 equivalent.
+func BlindedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.SignedBlindedBlobSidecar) []*ethpbalpha.SignedBlindedBlobSidecar {
+	result := make([]*ethpbalpha.SignedBlindedBlobSidecar, len(sidecars))
+	for i, sc := range sidecars {
+		result[i] = &ethpbalpha.SignedBlindedBlobSidecar{
+			Message: &ethpbalpha.BlindedBlobSidecar{
+				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
+				Index:           sc.Message.Index,
+				Slot:            sc.Message.Slot,
+				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
+				ProposerIndex:   sc.Message.ProposerIndex,
+				BlobRoot:        bytesutil.SafeCopyBytes(sc.Message.BlobRoot),
+				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
+				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
+			},
+			Signature: bytesutil.SafeCopyBytes(sc.Signature),
+		}
 	}
 	return result
 }

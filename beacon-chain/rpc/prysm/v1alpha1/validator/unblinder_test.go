@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
@@ -175,6 +176,24 @@ func Test_unblindBuilderBlock(t *testing.T) {
 				b := util.NewBlindedBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
+				b.Block.Body.BlsToExecutionChanges = []*eth.SignedBLSToExecutionChange{
+					{
+						Message: &eth.BLSToExecutionChange{
+							ValidatorIndex:     123,
+							FromBlsPubkey:      []byte{'a'},
+							ToExecutionAddress: []byte{'a'},
+						},
+						Signature: []byte("sig123"),
+					},
+					{
+						Message: &eth.BLSToExecutionChange{
+							ValidatorIndex:     456,
+							FromBlsPubkey:      []byte{'b'},
+							ToExecutionAddress: []byte{'b'},
+						},
+						Signature: []byte("sig456"),
+					},
+				}
 				txRoot, err := ssz.TransactionsRoot([][]byte{})
 				require.NoError(t, err)
 				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*v1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
@@ -204,6 +223,24 @@ func Test_unblindBuilderBlock(t *testing.T) {
 				b := util.NewBeaconBlockCapella()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
+				b.Block.Body.BlsToExecutionChanges = []*eth.SignedBLSToExecutionChange{
+					{
+						Message: &eth.BLSToExecutionChange{
+							ValidatorIndex:     123,
+							FromBlsPubkey:      []byte{'a'},
+							ToExecutionAddress: []byte{'a'},
+						},
+						Signature: []byte("sig123"),
+					},
+					{
+						Message: &eth.BLSToExecutionChange{
+							ValidatorIndex:     456,
+							FromBlsPubkey:      []byte{'b'},
+							ToExecutionAddress: []byte{'b'},
+						},
+						Signature: []byte("sig456"),
+					},
+				}
 				b.Block.Body.ExecutionPayload = pCapella
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)

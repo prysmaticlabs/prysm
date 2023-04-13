@@ -184,27 +184,27 @@ var file_proto_eth_service_beacon_chain_service_proto_rawDesc = []byte{
 	0x82, 0xd3, 0xe4, 0x93, 0x02, 0x2c, 0x12, 0x2a, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61,
 	0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f,
 	0x68, 0x65, 0x61, 0x64, 0x65, 0x72, 0x73, 0x2f, 0x7b, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x69,
-	0x64, 0x7d, 0x12, 0x84, 0x01, 0x0a, 0x0b, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x42, 0x6c, 0x6f,
-	0x63, 0x6b, 0x12, 0x32, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
-	0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f,
-	0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x50,
-	0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x29,
-	0x82, 0xd3, 0xe4, 0x93, 0x02, 0x23, 0x22, 0x1e, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61,
-	0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f,
-	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x3a, 0x01, 0x2a, 0x12, 0x76, 0x0a, 0x0e, 0x53, 0x75, 0x62,
-	0x6d, 0x69, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x12, 0x1d, 0x2e, 0x65, 0x74,
-	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x53,
-	0x5a, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f,
-	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70,
-	0x74, 0x79, 0x22, 0x2d, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x27, 0x22, 0x22, 0x2f, 0x69, 0x6e, 0x74,
-	0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61,
-	0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x2f, 0x73, 0x73, 0x7a, 0x3a, 0x01,
-	0x2a, 0x12, 0x93, 0x01, 0x0a, 0x12, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x42, 0x6c, 0x69, 0x6e,
-	0x64, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x32, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
-	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65,
-	0x64, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a, 0x16, 0x2e, 0x67,
+	0x64, 0x7d, 0x12, 0x7d, 0x0a, 0x0b, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x42, 0x6c, 0x6f, 0x63,
+	0x6b, 0x12, 0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
+	0x2e, 0x76, 0x32, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e,
+	0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a, 0x16,
+	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
+	0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x29, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x23, 0x22, 0x1e,
+	0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31,
+	0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x3a, 0x01,
+	0x2a, 0x12, 0x76, 0x0a, 0x0e, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
+	0x53, 0x53, 0x5a, 0x12, 0x1d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65,
+	0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x53, 0x5a, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e,
+	0x65, 0x72, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x2d, 0x82, 0xd3, 0xe4, 0x93,
+	0x02, 0x27, 0x22, 0x22, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74,
+	0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63,
+	0x6b, 0x73, 0x2f, 0x73, 0x73, 0x7a, 0x3a, 0x01, 0x2a, 0x12, 0x9b, 0x01, 0x0a, 0x12, 0x53, 0x75,
+	0x62, 0x6d, 0x69, 0x74, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
+	0x12, 0x3a, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
+	0x76, 0x32, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64,
+	0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x65,
+	0x6e, 0x74, 0x73, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a, 0x16, 0x2e, 0x67,
 	0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45,
 	0x6d, 0x70, 0x74, 0x79, 0x22, 0x31, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x2b, 0x22, 0x26, 0x2f, 0x69,
 	0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62,
@@ -434,54 +434,54 @@ var file_proto_eth_service_beacon_chain_service_proto_rawDesc = []byte{
 }
 
 var file_proto_eth_service_beacon_chain_service_proto_goTypes = []interface{}{
-	(*empty.Empty)(nil),                           // 0: google.protobuf.Empty
-	(*v1.StateRequest)(nil),                       // 1: ethereum.eth.v1.StateRequest
-	(*v1.StateValidatorsRequest)(nil),             // 2: ethereum.eth.v1.StateValidatorsRequest
-	(*v1.StateValidatorRequest)(nil),              // 3: ethereum.eth.v1.StateValidatorRequest
-	(*v1.ValidatorBalancesRequest)(nil),           // 4: ethereum.eth.v1.ValidatorBalancesRequest
-	(*v1.StateCommitteesRequest)(nil),             // 5: ethereum.eth.v1.StateCommitteesRequest
-	(*v2.StateSyncCommitteesRequest)(nil),         // 6: ethereum.eth.v2.StateSyncCommitteesRequest
-	(*v2.RandaoRequest)(nil),                      // 7: ethereum.eth.v2.RandaoRequest
-	(*v1.BlockHeadersRequest)(nil),                // 8: ethereum.eth.v1.BlockHeadersRequest
-	(*v1.BlockRequest)(nil),                       // 9: ethereum.eth.v1.BlockRequest
-	(*v2.SignedBeaconBlockContainerPayload)(nil),  // 10: ethereum.eth.v2.SignedBeaconBlockContainerPayload
-	(*v2.SSZContainer)(nil),                       // 11: ethereum.eth.v2.SSZContainer
-	(*v2.SignedBlindedBeaconBlockContainer)(nil),  // 12: ethereum.eth.v2.SignedBlindedBeaconBlockContainer
-	(*v2.BlockRequestV2)(nil),                     // 13: ethereum.eth.v2.BlockRequestV2
-	(*v1.AttestationsPoolRequest)(nil),            // 14: ethereum.eth.v1.AttestationsPoolRequest
-	(*v1.SubmitAttestationsRequest)(nil),          // 15: ethereum.eth.v1.SubmitAttestationsRequest
-	(*v1.AttesterSlashing)(nil),                   // 16: ethereum.eth.v1.AttesterSlashing
-	(*v1.ProposerSlashing)(nil),                   // 17: ethereum.eth.v1.ProposerSlashing
-	(*v1.SignedVoluntaryExit)(nil),                // 18: ethereum.eth.v1.SignedVoluntaryExit
-	(*v2.SubmitBLSToExecutionChangesRequest)(nil), // 19: ethereum.eth.v2.SubmitBLSToExecutionChangesRequest
-	(*v2.SubmitPoolSyncCommitteeSignatures)(nil),  // 20: ethereum.eth.v2.SubmitPoolSyncCommitteeSignatures
-	(*v1.GenesisResponse)(nil),                    // 21: ethereum.eth.v1.GenesisResponse
-	(*v1.WeakSubjectivityResponse)(nil),           // 22: ethereum.eth.v1.WeakSubjectivityResponse
-	(*v1.StateRootResponse)(nil),                  // 23: ethereum.eth.v1.StateRootResponse
-	(*v1.StateForkResponse)(nil),                  // 24: ethereum.eth.v1.StateForkResponse
-	(*v1.StateFinalityCheckpointResponse)(nil),    // 25: ethereum.eth.v1.StateFinalityCheckpointResponse
-	(*v1.StateValidatorsResponse)(nil),            // 26: ethereum.eth.v1.StateValidatorsResponse
-	(*v1.StateValidatorResponse)(nil),             // 27: ethereum.eth.v1.StateValidatorResponse
-	(*v1.ValidatorBalancesResponse)(nil),          // 28: ethereum.eth.v1.ValidatorBalancesResponse
-	(*v1.StateCommitteesResponse)(nil),            // 29: ethereum.eth.v1.StateCommitteesResponse
-	(*v2.StateSyncCommitteesResponse)(nil),        // 30: ethereum.eth.v2.StateSyncCommitteesResponse
-	(*v2.RandaoResponse)(nil),                     // 31: ethereum.eth.v2.RandaoResponse
-	(*v1.BlockHeadersResponse)(nil),               // 32: ethereum.eth.v1.BlockHeadersResponse
-	(*v1.BlockHeaderResponse)(nil),                // 33: ethereum.eth.v1.BlockHeaderResponse
-	(*v1.BlockRootResponse)(nil),                  // 34: ethereum.eth.v1.BlockRootResponse
-	(*v1.BlockResponse)(nil),                      // 35: ethereum.eth.v1.BlockResponse
-	(*v1.BlockSSZResponse)(nil),                   // 36: ethereum.eth.v1.BlockSSZResponse
-	(*v2.BlockResponseV2)(nil),                    // 37: ethereum.eth.v2.BlockResponseV2
-	(*v2.BlindedBlockResponse)(nil),               // 38: ethereum.eth.v2.BlindedBlockResponse
-	(*v1.BlockAttestationsResponse)(nil),          // 39: ethereum.eth.v1.BlockAttestationsResponse
-	(*v1.AttestationsPoolResponse)(nil),           // 40: ethereum.eth.v1.AttestationsPoolResponse
-	(*v1.AttesterSlashingsPoolResponse)(nil),      // 41: ethereum.eth.v1.AttesterSlashingsPoolResponse
-	(*v1.ProposerSlashingPoolResponse)(nil),       // 42: ethereum.eth.v1.ProposerSlashingPoolResponse
-	(*v1.VoluntaryExitsPoolResponse)(nil),         // 43: ethereum.eth.v1.VoluntaryExitsPoolResponse
-	(*v2.BLSToExecutionChangesPoolResponse)(nil),  // 44: ethereum.eth.v2.BLSToExecutionChangesPoolResponse
-	(*v1.ForkScheduleResponse)(nil),               // 45: ethereum.eth.v1.ForkScheduleResponse
-	(*v1.SpecResponse)(nil),                       // 46: ethereum.eth.v1.SpecResponse
-	(*v1.DepositContractResponse)(nil),            // 47: ethereum.eth.v1.DepositContractResponse
+	(*empty.Empty)(nil),                                  // 0: google.protobuf.Empty
+	(*v1.StateRequest)(nil),                              // 1: ethereum.eth.v1.StateRequest
+	(*v1.StateValidatorsRequest)(nil),                    // 2: ethereum.eth.v1.StateValidatorsRequest
+	(*v1.StateValidatorRequest)(nil),                     // 3: ethereum.eth.v1.StateValidatorRequest
+	(*v1.ValidatorBalancesRequest)(nil),                  // 4: ethereum.eth.v1.ValidatorBalancesRequest
+	(*v1.StateCommitteesRequest)(nil),                    // 5: ethereum.eth.v1.StateCommitteesRequest
+	(*v2.StateSyncCommitteesRequest)(nil),                // 6: ethereum.eth.v2.StateSyncCommitteesRequest
+	(*v2.RandaoRequest)(nil),                             // 7: ethereum.eth.v2.RandaoRequest
+	(*v1.BlockHeadersRequest)(nil),                       // 8: ethereum.eth.v1.BlockHeadersRequest
+	(*v1.BlockRequest)(nil),                              // 9: ethereum.eth.v1.BlockRequest
+	(*v2.SignedBeaconBlockContainer)(nil),                // 10: ethereum.eth.v2.SignedBeaconBlockContainer
+	(*v2.SSZContainer)(nil),                              // 11: ethereum.eth.v2.SSZContainer
+	(*v2.SignedBlindedBeaconBlockContentsContainer)(nil), // 12: ethereum.eth.v2.SignedBlindedBeaconBlockContentsContainer
+	(*v2.BlockRequestV2)(nil),                            // 13: ethereum.eth.v2.BlockRequestV2
+	(*v1.AttestationsPoolRequest)(nil),                   // 14: ethereum.eth.v1.AttestationsPoolRequest
+	(*v1.SubmitAttestationsRequest)(nil),                 // 15: ethereum.eth.v1.SubmitAttestationsRequest
+	(*v1.AttesterSlashing)(nil),                          // 16: ethereum.eth.v1.AttesterSlashing
+	(*v1.ProposerSlashing)(nil),                          // 17: ethereum.eth.v1.ProposerSlashing
+	(*v1.SignedVoluntaryExit)(nil),                       // 18: ethereum.eth.v1.SignedVoluntaryExit
+	(*v2.SubmitBLSToExecutionChangesRequest)(nil),        // 19: ethereum.eth.v2.SubmitBLSToExecutionChangesRequest
+	(*v2.SubmitPoolSyncCommitteeSignatures)(nil),         // 20: ethereum.eth.v2.SubmitPoolSyncCommitteeSignatures
+	(*v1.GenesisResponse)(nil),                           // 21: ethereum.eth.v1.GenesisResponse
+	(*v1.WeakSubjectivityResponse)(nil),                  // 22: ethereum.eth.v1.WeakSubjectivityResponse
+	(*v1.StateRootResponse)(nil),                         // 23: ethereum.eth.v1.StateRootResponse
+	(*v1.StateForkResponse)(nil),                         // 24: ethereum.eth.v1.StateForkResponse
+	(*v1.StateFinalityCheckpointResponse)(nil),           // 25: ethereum.eth.v1.StateFinalityCheckpointResponse
+	(*v1.StateValidatorsResponse)(nil),                   // 26: ethereum.eth.v1.StateValidatorsResponse
+	(*v1.StateValidatorResponse)(nil),                    // 27: ethereum.eth.v1.StateValidatorResponse
+	(*v1.ValidatorBalancesResponse)(nil),                 // 28: ethereum.eth.v1.ValidatorBalancesResponse
+	(*v1.StateCommitteesResponse)(nil),                   // 29: ethereum.eth.v1.StateCommitteesResponse
+	(*v2.StateSyncCommitteesResponse)(nil),               // 30: ethereum.eth.v2.StateSyncCommitteesResponse
+	(*v2.RandaoResponse)(nil),                            // 31: ethereum.eth.v2.RandaoResponse
+	(*v1.BlockHeadersResponse)(nil),                      // 32: ethereum.eth.v1.BlockHeadersResponse
+	(*v1.BlockHeaderResponse)(nil),                       // 33: ethereum.eth.v1.BlockHeaderResponse
+	(*v1.BlockRootResponse)(nil),                         // 34: ethereum.eth.v1.BlockRootResponse
+	(*v1.BlockResponse)(nil),                             // 35: ethereum.eth.v1.BlockResponse
+	(*v1.BlockSSZResponse)(nil),                          // 36: ethereum.eth.v1.BlockSSZResponse
+	(*v2.BlockResponseV2)(nil),                           // 37: ethereum.eth.v2.BlockResponseV2
+	(*v2.BlindedBlockResponse)(nil),                      // 38: ethereum.eth.v2.BlindedBlockResponse
+	(*v1.BlockAttestationsResponse)(nil),                 // 39: ethereum.eth.v1.BlockAttestationsResponse
+	(*v1.AttestationsPoolResponse)(nil),                  // 40: ethereum.eth.v1.AttestationsPoolResponse
+	(*v1.AttesterSlashingsPoolResponse)(nil),             // 41: ethereum.eth.v1.AttesterSlashingsPoolResponse
+	(*v1.ProposerSlashingPoolResponse)(nil),              // 42: ethereum.eth.v1.ProposerSlashingPoolResponse
+	(*v1.VoluntaryExitsPoolResponse)(nil),                // 43: ethereum.eth.v1.VoluntaryExitsPoolResponse
+	(*v2.BLSToExecutionChangesPoolResponse)(nil),         // 44: ethereum.eth.v2.BLSToExecutionChangesPoolResponse
+	(*v1.ForkScheduleResponse)(nil),                      // 45: ethereum.eth.v1.ForkScheduleResponse
+	(*v1.SpecResponse)(nil),                              // 46: ethereum.eth.v1.SpecResponse
+	(*v1.DepositContractResponse)(nil),                   // 47: ethereum.eth.v1.DepositContractResponse
 }
 var file_proto_eth_service_beacon_chain_service_proto_depIdxs = []int32{
 	0,  // 0: ethereum.eth.service.BeaconChain.GetGenesis:input_type -> google.protobuf.Empty
@@ -497,9 +497,9 @@ var file_proto_eth_service_beacon_chain_service_proto_depIdxs = []int32{
 	7,  // 10: ethereum.eth.service.BeaconChain.GetRandao:input_type -> ethereum.eth.v2.RandaoRequest
 	8,  // 11: ethereum.eth.service.BeaconChain.ListBlockHeaders:input_type -> ethereum.eth.v1.BlockHeadersRequest
 	9,  // 12: ethereum.eth.service.BeaconChain.GetBlockHeader:input_type -> ethereum.eth.v1.BlockRequest
-	10, // 13: ethereum.eth.service.BeaconChain.SubmitBlock:input_type -> ethereum.eth.v2.SignedBeaconBlockContainerPayload
+	10, // 13: ethereum.eth.service.BeaconChain.SubmitBlock:input_type -> ethereum.eth.v2.SignedBeaconBlockContainer
 	11, // 14: ethereum.eth.service.BeaconChain.SubmitBlockSSZ:input_type -> ethereum.eth.v2.SSZContainer
-	12, // 15: ethereum.eth.service.BeaconChain.SubmitBlindedBlock:input_type -> ethereum.eth.v2.SignedBlindedBeaconBlockContainer
+	12, // 15: ethereum.eth.service.BeaconChain.SubmitBlindedBlock:input_type -> ethereum.eth.v2.SignedBlindedBeaconBlockContentsContainer
 	11, // 16: ethereum.eth.service.BeaconChain.SubmitBlindedBlockSSZ:input_type -> ethereum.eth.v2.SSZContainer
 	9,  // 17: ethereum.eth.service.BeaconChain.GetBlockRoot:input_type -> ethereum.eth.v1.BlockRequest
 	9,  // 18: ethereum.eth.service.BeaconChain.GetBlock:input_type -> ethereum.eth.v1.BlockRequest
@@ -619,9 +619,9 @@ type BeaconChainClient interface {
 	GetRandao(ctx context.Context, in *v2.RandaoRequest, opts ...grpc.CallOption) (*v2.RandaoResponse, error)
 	ListBlockHeaders(ctx context.Context, in *v1.BlockHeadersRequest, opts ...grpc.CallOption) (*v1.BlockHeadersResponse, error)
 	GetBlockHeader(ctx context.Context, in *v1.BlockRequest, opts ...grpc.CallOption) (*v1.BlockHeaderResponse, error)
-	SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContainerPayload, opts ...grpc.CallOption) (*empty.Empty, error)
+	SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContainer, opts ...grpc.CallOption) (*empty.Empty, error)
 	SubmitBlockSSZ(ctx context.Context, in *v2.SSZContainer, opts ...grpc.CallOption) (*empty.Empty, error)
-	SubmitBlindedBlock(ctx context.Context, in *v2.SignedBlindedBeaconBlockContainer, opts ...grpc.CallOption) (*empty.Empty, error)
+	SubmitBlindedBlock(ctx context.Context, in *v2.SignedBlindedBeaconBlockContentsContainer, opts ...grpc.CallOption) (*empty.Empty, error)
 	SubmitBlindedBlockSSZ(ctx context.Context, in *v2.SSZContainer, opts ...grpc.CallOption) (*empty.Empty, error)
 	GetBlockRoot(ctx context.Context, in *v1.BlockRequest, opts ...grpc.CallOption) (*v1.BlockRootResponse, error)
 	// Deprecated: Do not use.
@@ -775,7 +775,7 @@ func (c *beaconChainClient) GetBlockHeader(ctx context.Context, in *v1.BlockRequ
 	return out, nil
 }
 
-func (c *beaconChainClient) SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContainerPayload, opts ...grpc.CallOption) (*empty.Empty, error) {
+func (c *beaconChainClient) SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContainer, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/SubmitBlock", in, out, opts...)
 	if err != nil {
@@ -793,7 +793,7 @@ func (c *beaconChainClient) SubmitBlockSSZ(ctx context.Context, in *v2.SSZContai
 	return out, nil
 }
 
-func (c *beaconChainClient) SubmitBlindedBlock(ctx context.Context, in *v2.SignedBlindedBeaconBlockContainer, opts ...grpc.CallOption) (*empty.Empty, error) {
+func (c *beaconChainClient) SubmitBlindedBlock(ctx context.Context, in *v2.SignedBlindedBeaconBlockContentsContainer, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/SubmitBlindedBlock", in, out, opts...)
 	if err != nil {
@@ -1027,9 +1027,9 @@ type BeaconChainServer interface {
 	GetRandao(context.Context, *v2.RandaoRequest) (*v2.RandaoResponse, error)
 	ListBlockHeaders(context.Context, *v1.BlockHeadersRequest) (*v1.BlockHeadersResponse, error)
 	GetBlockHeader(context.Context, *v1.BlockRequest) (*v1.BlockHeaderResponse, error)
-	SubmitBlock(context.Context, *v2.SignedBeaconBlockContainerPayload) (*empty.Empty, error)
+	SubmitBlock(context.Context, *v2.SignedBeaconBlockContainer) (*empty.Empty, error)
 	SubmitBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error)
-	SubmitBlindedBlock(context.Context, *v2.SignedBlindedBeaconBlockContainer) (*empty.Empty, error)
+	SubmitBlindedBlock(context.Context, *v2.SignedBlindedBeaconBlockContentsContainer) (*empty.Empty, error)
 	SubmitBlindedBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error)
 	GetBlockRoot(context.Context, *v1.BlockRequest) (*v1.BlockRootResponse, error)
 	// Deprecated: Do not use.
@@ -1100,13 +1100,13 @@ func (*UnimplementedBeaconChainServer) ListBlockHeaders(context.Context, *v1.Blo
 func (*UnimplementedBeaconChainServer) GetBlockHeader(context.Context, *v1.BlockRequest) (*v1.BlockHeaderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlockHeader not implemented")
 }
-func (*UnimplementedBeaconChainServer) SubmitBlock(context.Context, *v2.SignedBeaconBlockContainerPayload) (*empty.Empty, error) {
+func (*UnimplementedBeaconChainServer) SubmitBlock(context.Context, *v2.SignedBeaconBlockContainer) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitBlock not implemented")
 }
 func (*UnimplementedBeaconChainServer) SubmitBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitBlockSSZ not implemented")
 }
-func (*UnimplementedBeaconChainServer) SubmitBlindedBlock(context.Context, *v2.SignedBlindedBeaconBlockContainer) (*empty.Empty, error) {
+func (*UnimplementedBeaconChainServer) SubmitBlindedBlock(context.Context, *v2.SignedBlindedBeaconBlockContentsContainer) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitBlindedBlock not implemented")
 }
 func (*UnimplementedBeaconChainServer) SubmitBlindedBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error) {
@@ -1418,7 +1418,7 @@ func _BeaconChain_GetBlockHeader_Handler(srv interface{}, ctx context.Context, d
 }
 
 func _BeaconChain_SubmitBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.SignedBeaconBlockContainerPayload)
+	in := new(v2.SignedBeaconBlockContainer)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1430,7 +1430,7 @@ func _BeaconChain_SubmitBlock_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/ethereum.eth.service.BeaconChain/SubmitBlock",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).SubmitBlock(ctx, req.(*v2.SignedBeaconBlockContainerPayload))
+		return srv.(BeaconChainServer).SubmitBlock(ctx, req.(*v2.SignedBeaconBlockContainer))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1454,7 +1454,7 @@ func _BeaconChain_SubmitBlockSSZ_Handler(srv interface{}, ctx context.Context, d
 }
 
 func _BeaconChain_SubmitBlindedBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.SignedBlindedBeaconBlockContainer)
+	in := new(v2.SignedBlindedBeaconBlockContentsContainer)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1466,7 +1466,7 @@ func _BeaconChain_SubmitBlindedBlock_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/ethereum.eth.service.BeaconChain/SubmitBlindedBlock",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).SubmitBlindedBlock(ctx, req.(*v2.SignedBlindedBeaconBlockContainer))
+		return srv.(BeaconChainServer).SubmitBlindedBlock(ctx, req.(*v2.SignedBlindedBeaconBlockContentsContainer))
 	}
 	return interceptor(ctx, in, info, handler)
 }

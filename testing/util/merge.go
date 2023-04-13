@@ -45,6 +45,11 @@ func NewBlobSidecar() *ethpb.SignedBlobSidecar {
 	return HydrateSignedBlobSidecar(&ethpb.SignedBlobSidecar{})
 }
 
+// NewBlindedBeaconBlockDenebV2 creates a blinded beacon block with minimum marshalable fields.
+func NewBlindedBeaconBlockDenebV2() *v2.SignedBlindedBeaconBlockDeneb {
+	return HydrateV2SignedBlindedBeaconBlockDeneb(&v2.SignedBlindedBeaconBlockDeneb{})
+}
+
 // NewBlindedBeaconBlockDeneb creates a blinded beacon block with minimum marshalable fields.
 func NewBlindedBeaconBlockDeneb() *ethpb.SignedBlindedBeaconBlockDeneb {
 	return HydrateSignedBlindedBeaconBlockDeneb(&ethpb.SignedBlindedBeaconBlockDeneb{})
