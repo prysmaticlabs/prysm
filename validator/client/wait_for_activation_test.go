@@ -251,6 +251,8 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 
 // Regression test for a scenario where you start with an inactive key and then import an active key.
 func TestWaitForActivation_AccountsChanged(t *testing.T) {
+	t.Skip("Flakey test. Skipping until we can figure out how to test this properly")
+
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

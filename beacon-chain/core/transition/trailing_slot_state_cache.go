@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
@@ -36,14 +37,14 @@ var (
 // NextSlotState returns the saved state for the given blockroot.
 // It returns the last updated state if it matches. Otherwise it returns the previously
 // updated state if it matches its root. If no root matches it returns nil
-func NextSlotState(root []byte) state.BeaconState {
+func NextSlotState(root []byte, wantedSlot types.Slot) state.BeaconState {
 	nsc.Lock()
 	defer nsc.Unlock()
-	if bytes.Equal(root, nsc.lastRoot) {
+	if bytes.Equal(root, nsc.lastRoot) && nsc.lastState.Slot() <= wantedSlot {
 		nextSlotCacheHit.Inc()
 		return nsc.lastState.Copy()
 	}
-	if bytes.Equal(root, nsc.prevRoot) {
+	if bytes.Equal(root, nsc.prevRoot) && nsc.prevState.Slot() <= wantedSlot {
 		nextSlotCacheHit.Inc()
 		return nsc.prevState.Copy()
 	}
