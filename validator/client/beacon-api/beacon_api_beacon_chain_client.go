@@ -23,13 +23,124 @@ type beaconApiBeaconChainClient struct {
 	stateValidatorsProvider stateValidatorsProvider
 }
 
-func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, in *empty.Empty) (*ethpb.ChainHead, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetChainHead(ctx, in)
+func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*apimiddleware.BlockHeaderResponseJson, error) {
+	blockHeader := apimiddleware.BlockHeaderResponseJson{}
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
+		return nil, errors.Wrap(err, "failed to get head block header")
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetChainHead is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	if blockHeader.Data == nil || blockHeader.Data.Header == nil {
+		return nil, errors.New("block header data is nil")
+	}
+
+	if blockHeader.Data.Header.Message == nil {
+		return nil, errors.New("block header message is nil")
+	}
+
+	return &blockHeader, nil
+}
+
+func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.Empty) (*ethpb.ChainHead, error) {
+	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
+
+	finalityCheckpoints := apimiddleware.StateFinalityCheckpointResponseJson{}
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &finalityCheckpoints); err != nil {
+		return nil, errors.Wrapf(err, "failed to query %s", endpoint)
+	}
+
+	if finalityCheckpoints.Data == nil {
+		return nil, errors.New("finality checkpoints data is nil")
+	}
+
+	if finalityCheckpoints.Data.Finalized == nil {
+		return nil, errors.New("finalized checkpoint is nil")
+	}
+
+	finalizedEpoch, err := strconv.ParseUint(finalityCheckpoints.Data.Finalized.Epoch, 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse finalized epoch `%s`", finalityCheckpoints.Data.Finalized.Epoch)
+	}
+
+	finalizedSlot, err := slots.EpochStart(primitives.Epoch(finalizedEpoch))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get first slot for epoch `%d`", finalizedEpoch)
+	}
+
+	finalizedRoot, err := hexutil.Decode(finalityCheckpoints.Data.Finalized.Root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode finalized checkpoint root `%s`", finalityCheckpoints.Data.Finalized.Root)
+	}
+
+	if finalityCheckpoints.Data.CurrentJustified == nil {
+		return nil, errors.New("current justified checkpoint is nil")
+	}
+
+	justifiedEpoch, err := strconv.ParseUint(finalityCheckpoints.Data.CurrentJustified.Epoch, 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse current justified checkpoint epoch `%s`", finalityCheckpoints.Data.CurrentJustified.Epoch)
+	}
+
+	justifiedSlot, err := slots.EpochStart(primitives.Epoch(justifiedEpoch))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get first slot for epoch `%d`", justifiedEpoch)
+	}
+
+	justifiedRoot, err := hexutil.Decode(finalityCheckpoints.Data.CurrentJustified.Root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode current justified checkpoint root `%s`", finalityCheckpoints.Data.CurrentJustified.Root)
+	}
+
+	if finalityCheckpoints.Data.PreviousJustified == nil {
+		return nil, errors.New("previous justified checkpoint is nil")
+	}
+
+	previousJustifiedEpoch, err := strconv.ParseUint(finalityCheckpoints.Data.PreviousJustified.Epoch, 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse previous justified checkpoint epoch `%s`", finalityCheckpoints.Data.PreviousJustified.Epoch)
+	}
+
+	previousJustifiedSlot, err := slots.EpochStart(primitives.Epoch(previousJustifiedEpoch))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get first slot for epoch `%d`", previousJustifiedEpoch)
+	}
+
+	previousJustifiedRoot, err := hexutil.Decode(finalityCheckpoints.Data.PreviousJustified.Root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode previous justified checkpoint root `%s`", finalityCheckpoints.Data.PreviousJustified.Root)
+	}
+
+	blockHeader, err := c.getHeadBlockHeaders(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get head block headers")
+	}
+
+	headSlot, err := strconv.ParseUint(blockHeader.Data.Header.Message.Slot, 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse head block slot `%s`", blockHeader.Data.Header.Message.Slot)
+	}
+
+	headEpoch := slots.ToEpoch(primitives.Slot(headSlot))
+
+	headBlockRoot, err := hexutil.Decode(blockHeader.Data.Root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode head block root `%s`", blockHeader.Data.Root)
+	}
+
+	return &ethpb.ChainHead{
+		HeadSlot:                   primitives.Slot(headSlot),
+		HeadEpoch:                  headEpoch,
+		HeadBlockRoot:              headBlockRoot,
+		FinalizedSlot:              finalizedSlot,
+		FinalizedEpoch:             primitives.Epoch(finalizedEpoch),
+		FinalizedBlockRoot:         finalizedRoot,
+		JustifiedSlot:              justifiedSlot,
+		JustifiedEpoch:             primitives.Epoch(justifiedEpoch),
+		JustifiedBlockRoot:         justifiedRoot,
+		PreviousJustifiedSlot:      previousJustifiedSlot,
+		PreviousJustifiedEpoch:     primitives.Epoch(previousJustifiedEpoch),
+		PreviousJustifiedBlockRoot: previousJustifiedRoot,
+		OptimisticStatus:           blockHeader.ExecutionOptimistic,
+	}, nil
 }
 
 func (c beaconApiBeaconChainClient) ListValidatorBalances(ctx context.Context, in *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
@@ -91,17 +202,9 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethp
 			return nil, errors.Wrap(err, "failed to get head state validators")
 		}
 
-		blockHeader := apimiddleware.BlockHeaderResponseJson{}
-		if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
-			return nil, errors.Wrap(err, "failed to get head block header")
-		}
-
-		if blockHeader.Data == nil || blockHeader.Data.Header == nil {
-			return nil, errors.New("block header data is nil")
-		}
-
-		if blockHeader.Data.Header.Message == nil {
-			return nil, errors.New("block header message is nil")
+		blockHeader, err := c.getHeadBlockHeaders(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get head block headers")
 		}
 
 		slot, err := strconv.ParseUint(blockHeader.Data.Header.Message.Slot, 10, 64)
