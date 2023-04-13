@@ -383,7 +383,6 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser,
 	}
 	w.configFilePath = configFilePath
 	return os.Open(configFilePath) // #nosec G304
-
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file

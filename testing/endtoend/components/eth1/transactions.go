@@ -119,7 +119,6 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 			err = backend.SendTransaction(context.Background(), signedTx)
 			return nil
 		})
-
 	}
 	return g.Wait()
 }

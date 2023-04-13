@@ -147,5 +147,4 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		got := fmt.Sprintf("%#x", bb.service.ProposerBoost())
 		require.DeepEqual(t, want, got)
 	}
-
 }

@@ -887,7 +887,6 @@ func (bs *Server) GetIndividualVotes(
 		val, err := st.ValidatorAtIndexReadOnly(index)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator: %v", err)
-
 		}
 		pb := val.PublicKey()
 		votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{
