@@ -269,6 +269,26 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		assert.DeepEqual(t, expected, resp.Data)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		b := util.NewBlindedBeaconBlockDeneb()
+		blk, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{}
+		bs := &Server{
+			FinalizationFetcher:   mockChainService,
+			Blocker:               &testutil.MockBlocker{BlockToReturn: blk},
+			OptimisticModeFetcher: mockChainService,
+		}
+
+		expected, err := blk.MarshalSSZ()
+		require.NoError(t, err)
+		resp, err := bs.GetBlindedBlockSSZ(ctx, &ethpbv1.BlockRequest{})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, expected, resp.Data)
+		assert.Equal(t, ethpbv2.Version_Deneb, resp.Version)
+	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
 		blk, err := blocks.NewSignedBeaconBlock(b)
