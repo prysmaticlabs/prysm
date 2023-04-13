@@ -6,9 +6,9 @@ import (
 )
 
 // Merkleize.go is mostly a directly copy of the same filename from
-// 	https://github.com/protolambda/zssz/blob/master/merkle/merkleize.go.
+// https://github.com/protolambda/zssz/blob/master/merkle/merkleize.go.
 // The reason the method is copied instead of imported is due to us using a
-// a custom hasher interface for a reduced memory footprint when using
+// custom hasher interface for a reduced memory footprint when using
 // 'Merkleize'.
 
 const (

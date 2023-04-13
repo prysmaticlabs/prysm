@@ -22,7 +22,7 @@ import (
 // 2. Open the validator database.
 // 3. Read the JSON file from user input.
 // 4. Call the function which actually imports the data from
-// from the standard slashing protection JSON file into our database.
+// the standard slashing protection JSON file into our database.
 func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	var err error
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
