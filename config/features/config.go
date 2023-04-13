@@ -64,6 +64,7 @@ type Flags struct {
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
 	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
+	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -205,6 +206,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(enableOptionalEngineMethods.Name) {
 		logEnabled(enableOptionalEngineMethods)
 		cfg.EnableOptionalEngineMethods = true
+	}
+	if ctx.IsSet(enableEIP4881.Name) {
+		logEnabled(enableEIP4881)
+		cfg.EnableEIP4881 = true
 	}
 	Init(cfg)
 	return nil
