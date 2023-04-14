@@ -54,6 +54,7 @@ type Chunker interface {
 // where att.source.epoch > e.
 //
 // nolint:dupword
+//
 // Under ideal network conditions, where every target epoch immediately follows its source,
 // min spans for a validator will look as follows:
 //
