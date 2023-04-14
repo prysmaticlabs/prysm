@@ -12,6 +12,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -47,6 +48,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
+	gs := startup.NewGenesisSynchronizer()
 	r := Service{
 		ctx: context.Background(),
 		cfg: &config{
@@ -55,21 +57,16 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 			stateNotifier: chainService.StateNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		chainStarted: abool.New(),
+		chainStarted:  abool.New(),
+		genesisWaiter: gs,
 	}
 
 	topic := "/eth2/%x/beacon_block"
 	go r.registerHandlers()
+	go r.waitForChainStart()
 	time.Sleep(100 * time.Millisecond)
-	i := r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime: time.Now(),
-		},
-	})
-	if i == 0 {
-		t.Fatal("didn't send genesis time to subscribers")
-	}
+
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
@@ -90,6 +87,7 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
+	gs := startup.NewGenesisSynchronizer()
 	r := Service{
 		ctx: context.Background(),
 		cfg: &config{
@@ -100,23 +98,13 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		},
 		chainStarted:        abool.New(),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		genesisWaiter:       gs,
 	}
 
 	go r.registerHandlers()
-	time.Sleep(100 * time.Millisecond)
-	i := r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime: time.Now().Add(2 * time.Second),
-		},
-	})
-	if i == 0 {
-		t.Fatal("didn't send genesis time to subscribers")
-	}
-	require.Equal(t, false, r.chainStarted.IsSet(), "Chainstart was marked prematurely")
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	r.waitForChainStart()
 
-	// wait for chainstart to be sent
-	time.Sleep(3 * time.Second)
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 }
 
@@ -128,6 +116,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	gs := startup.NewGenesisSynchronizer()
 	r := Service{
 		ctx: ctx,
 		cfg: &config{
@@ -138,8 +127,9 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 			blockNotifier: chainService.BlockNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		chainStarted: abool.New(),
-		subHandler:   newSubTopicHandler(),
+		chainStarted:  abool.New(),
+		subHandler:    newSubTopicHandler(),
+		genesisWaiter: gs,
 	}
 	r.initCaches()
 
@@ -148,19 +138,8 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		r.registerHandlers()
 		syncCompleteCh <- true
 	}()
-	for i := 0; i == 0; {
-		assert.NoError(t, ctx.Err())
-		i = r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Initialized,
-			Data: &statefeed.InitializedData{
-				StartTime: time.Now(),
-			},
-		})
-	}
-	for !r.chainStarted.IsSet() {
-		assert.NoError(t, ctx.Err())
-		time.Sleep(time.Millisecond)
-	}
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	r.waitForChainStart()
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 
 	blockChan := make(chan *feed.Event, 1)
@@ -211,6 +190,7 @@ func TestSyncService_StopCleanly(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	gs := startup.NewGenesisSynchronizer()
 	r := Service{
 		ctx:    ctx,
 		cancel: cancel,
@@ -220,21 +200,14 @@ func TestSyncService_StopCleanly(t *testing.T) {
 			stateNotifier: chainService.StateNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		chainStarted: abool.New(),
-		subHandler:   newSubTopicHandler(),
+		chainStarted:  abool.New(),
+		subHandler:    newSubTopicHandler(),
+		genesisWaiter: gs,
 	}
 
 	go r.registerHandlers()
-	time.Sleep(100 * time.Millisecond)
-	i := r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime: time.Now(),
-		},
-	})
-	if i == 0 {
-		t.Fatal("didn't send genesis time to subscribers")
-	}
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	r.waitForChainStart()
 
 	var err error
 	p2p.Digest, err = r.currentForkDigest()
@@ -244,7 +217,7 @@ func TestSyncService_StopCleanly(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 
-	i = r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
+	i := r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Synced,
 		Data: &statefeed.SyncedData{
 			StartTime: time.Now(),

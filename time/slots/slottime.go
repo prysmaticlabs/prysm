@@ -173,6 +173,14 @@ func CurrentSlot(genesisTimeSec uint64) primitives.Slot {
 	return primitives.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
 }
 
+// Duration computes the slot of end relative to start.
+func Duration(start, end time.Time) primitives.Slot {
+	if end.Before(start) {
+		return 0
+	}
+	return primitives.Slot(uint64(end.Unix()-start.Unix()) / params.BeaconConfig().SecondsPerSlot)
+}
+
 // ValidateClock validates a provided slot against the local
 // clock to ensure slots that are unreasonable are returned with
 // an error.

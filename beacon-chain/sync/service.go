@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -139,6 +140,7 @@ type Service struct {
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
+	genesisWaiter                    startup.GenesisWaiter
 }
 
 // NewService initializes new regular sync service.
@@ -164,6 +166,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 	r.initCaches()
 
+	go r.waitForChainStart()
 	go r.registerHandlers()
 	go r.verifierRoutine()
 
@@ -232,8 +235,25 @@ func (s *Service) initCaches() {
 	s.badBlockCache = lruwrpr.New(badBlockSize)
 }
 
+func (s *Service) waitForChainStart() {
+	genesis, err := s.genesisWaiter.WaitForGenesis(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("sync service failed to receive genesis data")
+		return
+	}
+	startTime := genesis.Time()
+	log.WithField("starttime", startTime).Debug("Received state initialized event")
+	// Register respective rpc handlers at state initialized event.
+	s.registerRPCHandlers()
+	// Wait for chainstart in separate routine.
+	if startTime.After(prysmTime.Now()) {
+		time.Sleep(prysmTime.Until(startTime))
+	}
+	log.WithField("starttime", startTime).Debug("Chain started in sync service")
+	s.markForChainStart()
+}
+
 func (s *Service) registerHandlers() {
-	// Wait until chain start.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
@@ -241,25 +261,6 @@ func (s *Service) registerHandlers() {
 		select {
 		case e := <-stateChannel:
 			switch e.Type {
-			case statefeed.Initialized:
-				data, ok := e.Data.(*statefeed.InitializedData)
-				if !ok {
-					log.Error("Event feed data is not type *statefeed.InitializedData")
-					return
-				}
-				startTime := data.StartTime
-				log.WithField("starttime", startTime).Debug("Received state initialized event")
-
-				// Register respective rpc handlers at state initialized event.
-				s.registerRPCHandlers()
-				// Wait for chainstart in separate routine.
-				go func() {
-					if startTime.After(prysmTime.Now()) {
-						time.Sleep(prysmTime.Until(startTime))
-					}
-					log.WithField("starttime", startTime).Debug("Chain started in sync service")
-					s.markForChainStart()
-				}()
 			case statefeed.Synced:
 				_, ok := e.Data.(*statefeed.SyncedData)
 				if !ok {

@@ -10,9 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -243,11 +242,9 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 }
 
 func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
-	genesisValidatorsRoot := params.BeaconConfig().ZeroHash
-
 	// Set head state to nil
 	chainService := &mockChain.ChainService{State: nil}
-	notifier := chainService.StateNotifier()
+	gs := startup.NewGenesisSynchronizer()
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockExecution.Chain{
@@ -255,6 +252,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
+		GenesisWaiter: gs,
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -269,13 +267,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	}()
 	// Simulate a late state initialization event, so that
 	// method is able to handle race condition here.
-	notifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime:             time.Unix(0, 0),
-			GenesisValidatorsRoot: genesisValidatorsRoot[:],
-		},
-	})
+	//require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Unix(0, 0), genesisValidatorsRoot[:])))
 	util.WaitTimeout(wg, time.Second)
 }
 
@@ -284,6 +276,8 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 	chainService := &mockChain.ChainService{}
+	gs := startup.NewGenesisSynchronizer()
+
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockExecution.FaultyExecutionChain{
@@ -291,6 +285,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
+		GenesisWaiter: gs,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -310,15 +305,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = Server.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Initialized,
-			Data: &statefeed.InitializedData{
-				StartTime:             time.Unix(0, 0),
-				GenesisValidatorsRoot: genesisValidatorsRoot[:],
-			},
-		})
-	}
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Unix(0, 0), genesisValidatorsRoot[:])))
 
 	exitRoutine <- true
 	require.LogsContain(t, hook, "Sending genesis time")

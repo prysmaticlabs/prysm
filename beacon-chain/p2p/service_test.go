@@ -15,13 +15,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
@@ -103,29 +101,20 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
-		TCPPort:       2000,
-		UDPPort:       2000,
-		StateNotifier: &mock.MockStateNotifier{},
+		TCPPort: 2000,
+		UDPPort: 2000,
 	}
 	s, err := NewService(context.Background(), cfg)
+	gs := startup.NewGenesisSynchronizer()
+	s.genesisWaiter = gs
 	require.NoError(t, err)
-	s.stateNotifier = &mock.MockStateNotifier{}
 	s.dv5Listener = &mockListener{}
 	exitRoutine := make(chan bool)
 	go func() {
 		s.Start()
 		<-exitRoutine
 	}()
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Initialized,
-			Data: &statefeed.InitializedData{
-				StartTime:             time.Now(),
-				GenesisValidatorsRoot: make([]byte, 32),
-			},
-		})
-	}
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
 	time.Sleep(time.Second * 2)
 	assert.Equal(t, true, s.started, "Expected service to be started")
 	s.Start()
@@ -163,8 +152,8 @@ func TestService_Start_NoDiscoverFlag(t *testing.T) {
 	}
 	s, err := NewService(context.Background(), cfg)
 	require.NoError(t, err)
-
-	s.stateNotifier = &mock.MockStateNotifier{}
+	gs := startup.NewGenesisSynchronizer()
+	s.genesisWaiter = gs
 
 	// required params to addForkEntry in s.forkWatcher
 	s.genesisTime = time.Now()
@@ -181,16 +170,7 @@ func TestService_Start_NoDiscoverFlag(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Initialized,
-			Data: &statefeed.InitializedData{
-				StartTime:             time.Now(),
-				GenesisValidatorsRoot: make([]byte, 32),
-			},
-		})
-	}
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
 
 	time.Sleep(time.Second * 2)
 
@@ -233,7 +213,6 @@ func TestListenForNewNodes(t *testing.T) {
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
-		StateNotifier:       notifier,
 	}
 	for i := 1; i <= 5; i++ {
 		h, pkey, ipAddr := createHost(t, port+i)
@@ -269,6 +248,8 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.TCPPort = 14001
 
 	s, err = NewService(context.Background(), cfg)
+	gs := startup.NewGenesisSynchronizer()
+	s.genesisWaiter = gs
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
@@ -276,16 +257,9 @@ func TestListenForNewNodes(t *testing.T) {
 		<-exitRoutine
 	}()
 	time.Sleep(1 * time.Second)
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Initialized,
-			Data: &statefeed.InitializedData{
-				StartTime:             genesisTime,
-				GenesisValidatorsRoot: genesisValidatorsRoot,
-			},
-		})
-	}
+
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(genesisTime, genesisValidatorsRoot)))
+
 	time.Sleep(4 * time.Second)
 	assert.Equal(t, 5, len(s.host.Network().Peers()), "Not all peers added to peerstore")
 	require.NoError(t, s.Stop())
@@ -329,9 +303,11 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 	defer cancel()
 	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
+	gs := startup.NewGenesisSynchronizer()
+	s.genesisWaiter = gs
 
 	go s.awaitStateInitialized()
-	fd := initializeStateWithForkDigest(ctx, t, s.stateNotifier.StateFeed())
+	fd := initializeStateWithForkDigest(ctx, t, gs)
 
 	assert.Equal(t, 0, len(s.joinedTopics))
 
@@ -358,20 +334,14 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 
 // initializeStateWithForkDigest sets up the state feed initialized event and returns the fork
 // digest associated with that genesis event.
-func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.Feed) [4]byte {
+func initializeStateWithForkDigest(ctx context.Context, t *testing.T, gs startup.GenesisSetter) [4]byte {
 	gt := prysmTime.Now()
 	gvr := bytesutil.PadTo([]byte("genesis validators root"), 32)
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {
 			t.Fatal(ctx.Err())
 		}
-		n = ef.Send(&feed.Event{
-			Type: statefeed.Initialized,
-			Data: &statefeed.InitializedData{
-				StartTime:             gt,
-				GenesisValidatorsRoot: gvr,
-			},
-		})
+		require.NoError(t, gs.SetGenesis(startup.NewGenesis(gt, gvr)))
 	}
 
 	fd, err := forks.CreateForkDigest(gt, gvr)

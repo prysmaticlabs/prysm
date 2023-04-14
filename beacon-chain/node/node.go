@@ -42,6 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
@@ -107,6 +108,7 @@ type BeaconNode struct {
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
 	forkChoicer             forkchoice.ForkChoicer
+	genesisWaiter           startup.GenesisWaiter
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -183,6 +185,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		}
 	}
 
+	synchronizer := startup.NewGenesisSynchronizer()
+	beacon.genesisWaiter = synchronizer
+
 	beacon.forkChoicer = doublylinkedtree.New()
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
@@ -229,7 +234,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering Blockchain Service")
-	if err := beacon.registerBlockchainService(beacon.forkChoicer); err != nil {
+	if err := beacon.registerBlockchainService(beacon.forkChoicer, synchronizer); err != nil {
 		return nil, err
 	}
 
@@ -581,7 +586,7 @@ func (b *BeaconNode) registerAttestationPool() error {
 	return b.services.RegisterService(s)
 }
 
-func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer) error {
+func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs startup.GenesisSetter) error {
 	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -611,6 +616,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer) error 
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
+		blockchain.WithGenesisSetter(gs),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -703,6 +709,7 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		P2P:           b.fetchP2P(),
 		StateNotifier: b,
 		BlockNotifier: b,
+		GenesisWaiter: b.genesisWaiter,
 	})
 	return b.services.RegisterService(is)
 }
@@ -834,6 +841,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		ProposerIdsCache:              b.proposerIdsCache,
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
+		GenesisWaiter:                 b.genesisWaiter,
 	})
 
 	return b.services.RegisterService(rpcService)

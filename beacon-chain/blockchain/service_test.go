@@ -13,8 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
@@ -26,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -460,17 +459,21 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 }
 
 func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
+	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-	service.onExecutionChainStart(context.Background(), time.Now())
-
-	stateEvent := <-stateChannel
-	require.Equal(t, int(stateEvent.Type), statefeed.Initialized)
-	_, ok := stateEvent.Data.(*statefeed.InitializedData)
-	require.Equal(t, true, ok)
+	mgs := &MockGenesisSetter{}
+	service.genesisSetter = mgs
+	gt := time.Now()
+	service.onExecutionChainStart(context.Background(), gt)
+	gs, err := beaconDB.GenesisState(ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, nil, gs)
+	require.Equal(t, 32, len(gs.GenesisValidatorsRoot()))
+	var zero [32]byte
+	require.DeepNotEqual(t, gs.GenesisValidatorsRoot(), zero[:])
+	require.Equal(t, gt, mgs.G.Time())
+	require.DeepEqual(t, gs.GenesisValidatorsRoot(), mgs.G.ValidatorRoot())
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
@@ -561,4 +564,20 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 	op, err := c.cfg.ForkChoiceStore.IsOptimistic(headRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, op)
+}
+
+// MockGenesisSetter satisfies the GenesisSetter interface for testing the conditions where blockchain.Service should
+// call SetGenesis.
+type MockGenesisSetter struct {
+	G   *startup.Genesis
+	Err error
+}
+
+var _ startup.GenesisSetter = &MockGenesisSetter{}
+
+// SetGenesis satisfies the GenesisSetter interface.
+// The value is written to an exported field 'G' so that it can be accessed in tests.
+func (s *MockGenesisSetter) SetGenesis(g *startup.Genesis) error {
+	s.G = g
+	return s.Err
 }

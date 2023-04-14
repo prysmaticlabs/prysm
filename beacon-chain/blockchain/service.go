@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -57,6 +58,7 @@ type Service struct {
 	initSyncBlocks        map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
 	wsVerifier            *WeakSubjectivityVerifier
+	genesisSetter         startup.GenesisSetter
 }
 
 // config options for the service.
@@ -236,13 +238,9 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not verify initial checkpoint provided for chain sync")
 	}
 
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime:             s.genesisTime,
-			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
-		},
-	})
+	if err := s.genesisSetter.SetGenesis(startup.NewGenesis(s.genesisTime, saved.GenesisValidatorsRoot())); err != nil {
+		return errors.Wrap(err, "failed to initialize blockchain service")
+	}
 
 	return nil
 }
@@ -359,15 +357,9 @@ func (s *Service) onExecutionChainStart(ctx context.Context, genesisTime time.Ti
 	}
 	go slots.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
 
-	// We send out a state initialized event to the rest of the services
-	// running in the beacon node.
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime:             genesisTime,
-			GenesisValidatorsRoot: initializedState.GenesisValidatorsRoot(),
-		},
-	})
+	if err := s.genesisSetter.SetGenesis(startup.NewGenesis(genesisTime, initializedState.GenesisValidatorsRoot())); err != nil {
+		log.WithError(err).Fatal("failed to initialize blockchain service from execution start event")
+	}
 }
 
 // initializes the state and genesis block of the beacon chain to persistent storage
