@@ -40,8 +40,8 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	// ErrUnsupportedField means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	result, err = getBlindedBlockAltair(blk)
@@ -49,8 +49,8 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	// ErrUnsupportedField means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	result, err = bs.getBlindedBlockBellatrix(ctx, blk)
@@ -58,8 +58,8 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	// ErrUnsupportedField means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	result, err = bs.getBlindedBlockCapella(ctx, blk)
@@ -67,8 +67,8 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	// ErrUnsupportedField means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 
@@ -95,8 +95,8 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	// ErrUnsupportedField means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	result, err = getSSZBlockAltair(blk)
@@ -104,8 +104,8 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	// ErrUnsupportedField means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	result, err = bs.getBlindedSSZBlockBellatrix(ctx, blk)
@@ -113,8 +113,8 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	// ErrUnsupportedField means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	result, err = bs.getBlindedSSZBlockCapella(ctx, blk)
@@ -122,8 +122,8 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	// ErrUnsupportedField means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -277,8 +277,8 @@ func getBlindedBlockAltair(blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.B
 func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
-		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		// ErrUnsupportedField means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedField) {
 			if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 				if blindedBellatrixBlk == nil {
 					return nil, errNilBlock
@@ -347,8 +347,8 @@ func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.R
 func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.BlindedBlockResponse, error) {
 	capellaBlk, err := blk.PbCapellaBlock()
 	if err != nil {
-		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		// ErrUnsupportedField means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedField) {
 			if blindedCapellaBlk, err := blk.PbBlindedCapellaBlock(); err == nil {
 				if blindedCapellaBlk == nil {
 					return nil, errNilBlock
@@ -417,8 +417,8 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Rea
 func (bs *Server) getBlindedSSZBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
-		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		// ErrUnsupportedField means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedField) {
 			if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 				if blindedBellatrixBlk == nil {
 					return nil, errNilBlock
@@ -492,8 +492,8 @@ func (bs *Server) getBlindedSSZBlockBellatrix(ctx context.Context, blk interface
 func (bs *Server) getBlindedSSZBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
 	capellaBlk, err := blk.PbCapellaBlock()
 	if err != nil {
-		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		// ErrUnsupportedField means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedField) {
 			if blindedCapellaBlk, err := blk.PbBlindedCapellaBlock(); err == nil {
 				if blindedCapellaBlk == nil {
 					return nil, errNilBlock

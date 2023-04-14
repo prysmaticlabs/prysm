@@ -37,24 +37,6 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 		return nil, errors.New("builder not configured")
 	}
 
-	agg, err := u.b.Block().Body().SyncAggregate()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get sync aggregate")
-	}
-	h, err := u.b.Block().Body().Execution()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution")
-	}
-	parentRoot := u.b.Block().ParentRoot()
-	stateRoot := u.b.Block().StateRoot()
-	randaoReveal := u.b.Block().Body().RandaoReveal()
-	graffiti := u.b.Block().Body().Graffiti()
-	sig := u.b.Signature()
-	blsToExecChanges, err := u.b.Block().Body().BLSToExecutionChanges()
-	if err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
-		return nil, errors.Wrap(err, "could not get bls to execution changes")
-	}
-
 	psb, err := u.blindedProtoBlock()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get blinded proto block")
@@ -63,24 +45,12 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create signed block")
 	}
-	sb.SetSlot(u.b.Block().Slot())
-	sb.SetProposerIndex(u.b.Block().ProposerIndex())
-	sb.SetParentRoot(parentRoot[:])
-	sb.SetStateRoot(stateRoot[:])
-	sb.SetRandaoReveal(randaoReveal[:])
-	sb.SetEth1Data(u.b.Block().Body().Eth1Data())
-	sb.SetGraffiti(graffiti[:])
-	sb.SetProposerSlashings(u.b.Block().Body().ProposerSlashings())
-	sb.SetAttesterSlashings(u.b.Block().Body().AttesterSlashings())
-	sb.SetAttestations(u.b.Block().Body().Attestations())
-	sb.SetDeposits(u.b.Block().Body().Deposits())
-	sb.SetVoluntaryExits(u.b.Block().Body().VoluntaryExits())
-	if err = sb.SetSyncAggregate(agg); err != nil {
-		return nil, errors.Wrap(err, "could not set sync aggregate")
+	if err = copyBlockData(u.b, sb); err != nil {
+		return nil, errors.Wrap(err, "could not copy block data")
 	}
-	sb.SetSignature(sig[:])
-	if err = sb.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
-		return nil, errors.Wrap(err, "could not set bls to execution changes")
+	h, err := u.b.Block().Body().Execution()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get execution")
 	}
 	if err = sb.SetExecution(h); err != nil {
 		return nil, errors.Wrap(err, "could not set execution")
@@ -103,20 +73,6 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 			"%#x != %#x", headerRoot, payloadRoot)
 	}
 
-	agg, err = sb.Block().Body().SyncAggregate()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get sync aggregate")
-	}
-	parentRoot = sb.Block().ParentRoot()
-	stateRoot = sb.Block().StateRoot()
-	randaoReveal = sb.Block().Body().RandaoReveal()
-	graffiti = sb.Block().Body().Graffiti()
-	sig = sb.Signature()
-	blsToExecChanges, err = sb.Block().Body().BLSToExecutionChanges()
-	if err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
-		return nil, errors.Wrap(err, "could not get bls to execution changes")
-	}
-
 	bb, err := u.protoBlock()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get proto block")
@@ -125,23 +81,8 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create signed block")
 	}
-	wb.SetSlot(sb.Block().Slot())
-	wb.SetProposerIndex(sb.Block().ProposerIndex())
-	wb.SetParentRoot(parentRoot[:])
-	wb.SetStateRoot(stateRoot[:])
-	wb.SetRandaoReveal(randaoReveal[:])
-	wb.SetEth1Data(sb.Block().Body().Eth1Data())
-	wb.SetGraffiti(graffiti[:])
-	wb.SetProposerSlashings(sb.Block().Body().ProposerSlashings())
-	wb.SetAttesterSlashings(sb.Block().Body().AttesterSlashings())
-	wb.SetAttestations(sb.Block().Body().Attestations())
-	wb.SetDeposits(sb.Block().Body().Deposits())
-	wb.SetVoluntaryExits(sb.Block().Body().VoluntaryExits())
-	if err = wb.SetSyncAggregate(agg); err != nil {
-		return nil, errors.Wrap(err, "could not set sync aggregate")
-	}
-	if err = wb.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
-		return nil, errors.Wrap(err, "could not set bls to execution changes")
+	if err = copyBlockData(sb, wb); err != nil {
+		return nil, errors.Wrap(err, "could not copy block data")
 	}
 	if err = wb.SetExecution(payload); err != nil {
 		return nil, errors.Wrap(err, "could not set execution")
@@ -160,6 +101,44 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	}).Info("Retrieved full payload from builder")
 
 	return wb, nil
+}
+
+func copyBlockData(src interfaces.SignedBeaconBlock, dst interfaces.SignedBeaconBlock) error {
+	agg, err := src.Block().Body().SyncAggregate()
+	if err != nil {
+		return errors.Wrap(err, "could not get sync aggregate")
+	}
+	parentRoot := src.Block().ParentRoot()
+	stateRoot := src.Block().StateRoot()
+	randaoReveal := src.Block().Body().RandaoReveal()
+	graffiti := src.Block().Body().Graffiti()
+	sig := src.Signature()
+	blsToExecChanges, err := src.Block().Body().BLSToExecutionChanges()
+	if err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedField) {
+		return errors.Wrap(err, "could not get bls to execution changes")
+	}
+
+	dst.SetSlot(src.Block().Slot())
+	dst.SetProposerIndex(src.Block().ProposerIndex())
+	dst.SetParentRoot(parentRoot[:])
+	dst.SetStateRoot(stateRoot[:])
+	dst.SetRandaoReveal(randaoReveal[:])
+	dst.SetEth1Data(src.Block().Body().Eth1Data())
+	dst.SetGraffiti(graffiti[:])
+	dst.SetProposerSlashings(src.Block().Body().ProposerSlashings())
+	dst.SetAttesterSlashings(src.Block().Body().AttesterSlashings())
+	dst.SetAttestations(src.Block().Body().Attestations())
+	dst.SetDeposits(src.Block().Body().Deposits())
+	dst.SetVoluntaryExits(src.Block().Body().VoluntaryExits())
+	if err = dst.SetSyncAggregate(agg); err != nil {
+		return errors.Wrap(err, "could not set sync aggregate")
+	}
+	dst.SetSignature(sig[:])
+	if err = dst.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedField) {
+		return errors.Wrap(err, "could not set bls to execution changes")
+	}
+
+	return nil
 }
 
 func (u *unblinder) blindedProtoBlock() (proto.Message, error) {

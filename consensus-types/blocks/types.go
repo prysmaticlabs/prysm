@@ -28,8 +28,8 @@ const (
 )
 
 var (
-	// ErrUnsupportedGetter is returned when a getter access is not supported for a specific beacon block version.
-	ErrUnsupportedGetter = errors.New("unsupported getter")
+	// ErrUnsupportedField is returned when a getter access is not supported for a specific beacon block version.
+	ErrUnsupportedField = errors.New("unsupported field")
 	// ErrUnsupportedVersion for beacon block methods.
 	ErrUnsupportedVersion = errors.New("unsupported beacon block version")
 	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
@@ -76,5 +76,5 @@ type SignedBeaconBlock struct {
 }
 
 func ErrNotSupported(funcName string, ver int) error {
-	return errors.Wrap(ErrUnsupportedGetter, fmt.Sprintf("%s is not supported for %s", funcName, version.String(ver)))
+	return errors.Wrap(ErrUnsupportedField, fmt.Sprintf("%s is not supported for %s", funcName, version.String(ver)))
 }

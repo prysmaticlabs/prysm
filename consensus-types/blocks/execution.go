@@ -147,17 +147,17 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayload) TransactionsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // Withdrawals --
 func (e executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // WithdrawalsRoot --
 func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // PbBellatrix --
@@ -167,12 +167,12 @@ func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 
 // PbCapella --
 func (executionPayload) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // Value --
 func (executionPayload) Value() (*big.Int, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
@@ -303,7 +303,7 @@ func (e executionPayloadHeader) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeader) Transactions() ([][]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // TransactionsRoot --
@@ -313,27 +313,27 @@ func (e executionPayloadHeader) TransactionsRoot() ([]byte, error) {
 
 // Withdrawals --
 func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // WithdrawalsRoot --
 func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // PbCapella --
 func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // PbBellatrix --
 func (executionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // Value --
 func (executionPayloadHeader) Value() (*big.Int, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // PayloadToHeader converts `payload` into execution payload header format.
@@ -498,7 +498,7 @@ func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayloadCapella) TransactionsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // Withdrawals --
@@ -508,7 +508,7 @@ func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // WithdrawalsRoot --
 func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // PbCapella --
@@ -518,7 +518,7 @@ func (e executionPayloadCapella) PbCapella() (*enginev1.ExecutionPayloadCapella,
 
 // PbBellatrix --
 func (executionPayloadCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // Value --
@@ -655,7 +655,7 @@ func (e executionPayloadHeaderCapella) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeaderCapella) Transactions() ([][]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // TransactionsRoot --
@@ -665,7 +665,7 @@ func (e executionPayloadHeaderCapella) TransactionsRoot() ([]byte, error) {
 
 // Withdrawals --
 func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // WithdrawalsRoot --
@@ -675,12 +675,12 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 
 // PbCapella --
 func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // PbBellatrix --
 func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, ErrUnsupportedField
 }
 
 // Value --
@@ -756,7 +756,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 
 	txs, err := data.Transactions()
 	switch {
-	case errors.Is(err, ErrUnsupportedGetter):
+	case errors.Is(err, ErrUnsupportedField):
 	case err != nil:
 		return false, err
 	default:

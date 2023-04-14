@@ -53,7 +53,7 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())))
 		txs, err := p.Transactions()
 		switch {
-		case errors.Is(err, consensusBlocks.ErrUnsupportedGetter):
+		case errors.Is(err, consensusBlocks.ErrUnsupportedField):
 		case err != nil:
 			return err
 		default:

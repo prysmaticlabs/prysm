@@ -211,16 +211,16 @@ func Test_executionPayload_Pb(t *testing.T) {
 	assert.DeepEqual(t, payload.Proto(), pb)
 
 	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, blocks.ErrUnsupportedField)
 }
 
 func Test_executionPayloadHeader_Pb(t *testing.T) {
 	payload := createWrappedPayloadHeader(t)
 	_, err := payload.PbBellatrix()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, blocks.ErrUnsupportedField)
 
 	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, blocks.ErrUnsupportedField)
 }
 
 func Test_executionPayloadCapella_Pb(t *testing.T) {
@@ -230,16 +230,16 @@ func Test_executionPayloadCapella_Pb(t *testing.T) {
 	assert.DeepEqual(t, payload.Proto(), pb)
 
 	_, err = payload.PbBellatrix()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, blocks.ErrUnsupportedField)
 }
 
 func Test_executionPayloadHeaderCapella_Pb(t *testing.T) {
 	payload := createWrappedPayloadHeaderCapella(t)
 	_, err := payload.PbBellatrix()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, blocks.ErrUnsupportedField)
 
 	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, blocks.ErrUnsupportedField)
 }
 
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {

@@ -60,7 +60,7 @@ func IsExecutionBlock(body interfaces.ReadOnlyBeaconBlockBody) (bool, error) {
 	}
 	payload, err := body.Execution()
 	switch {
-	case errors.Is(err, blocks.ErrUnsupportedGetter):
+	case errors.Is(err, blocks.ErrUnsupportedField):
 		return false, nil
 	case err != nil:
 		return false, err
