@@ -31,6 +31,7 @@ func (km *Keymanager) DeleteKeystores(
 	var store *AccountsKeystoreRepresentation
 	var err error
 	deletedKeys := make([][]byte, 0, len(publicKeys))
+	originalKeyLen := len(km.accountsStore.PublicKeys)
 	// 1) Copy the in memory keystore
 	storeCopy := km.accountsStore
 	storeCopy.PrivateKeys = make([][]byte, len(km.accountsStore.PrivateKeys))
@@ -81,17 +82,6 @@ func (km *Keymanager) DeleteKeystores(
 	if len(deletedKeys) == 0 {
 		return statuses, nil
 	}
-	var deletedKeysStr string
-	for i, k := range deletedKeys {
-		if i == 0 {
-			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else if i == len(deletedKeys)-1 {
-			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else {
-			deletedKeysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
-		}
-	}
-
 	// 3) Save the copy to disk
 	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(store, "", "\t")
@@ -103,13 +93,24 @@ func (km *Keymanager) DeleteKeystores(
 	}
 	//
 	// 4) Reinitialize account store from disk
-
-	//// ) Reload keystore Cache
-	//err = km.initializeKeysCachesFromKeystore()
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "failed to initialize key caches")
-	//}
-	////
+	if err := km.initializeAccountKeystore(ctx); err != nil {
+		return nil, errors.New("was not able to re-initialize account keystore from disk.")
+	}
+	// 5) Verify keys are indeed deleted
+	if len(km.accountsStore.PublicKeys) == originalKeyLen || len(km.accountsStore.PublicKeys) != len(storeCopy.PublicKeys) {
+		return nil, errors.New("keys were not successfully deleted in file.")
+	}
+	//
+	var deletedKeysStr string
+	for i, k := range deletedKeys {
+		if i == 0 {
+			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
+		} else if i == len(deletedKeys)-1 {
+			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
+		} else {
+			deletedKeysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
+		}
+	}
 	log.WithFields(logrus.Fields{
 		"publicKeys": deletedKeysStr,
 	}).Info("Successfully deleted validator key(s)")
