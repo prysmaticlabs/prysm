@@ -18,6 +18,7 @@ linters:
     - gosimple
     - gocognit
     - dupword
+    - misspell
 
 linters-settings:
   gocognit:

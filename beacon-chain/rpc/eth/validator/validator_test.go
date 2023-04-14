@@ -2949,6 +2949,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
 			StateGen:          stategen.New(db, doublylinkedtree.New()),
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -3114,6 +3115,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			ExitPool:          voluntaryexits.NewPool(),
 			StateGen:          stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool: synccommittee.NewStore(),
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -3321,6 +3323,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			StateGen:               stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
