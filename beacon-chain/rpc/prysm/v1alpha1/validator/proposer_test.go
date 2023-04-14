@@ -481,6 +481,7 @@ func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, he
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		BeaconDB:               db,
 		BLSChangesPool:         blstoexec.NewPool(),
+		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true},
 	}
 }
 

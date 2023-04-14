@@ -18,6 +18,7 @@ linters:
     - gosimple
     - gocognit
     - whitespace
+    - misspell
 
 linters-settings:
   gocognit:
