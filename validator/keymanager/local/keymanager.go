@@ -256,8 +256,8 @@ func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 }
 
 // CreateAccountsKeystore creates a new keystore holding the provided keys.
-func (km *Keymanager) CreateAccountsKeystore(ctx context.Context, publicKeys [][]byte, privateKeys [][]byte) (*AccountsKeystoreRepresentation, error) {
-	if err := km.CreateOrUpdateInMemoryAccountsStore(ctx, publicKeys, privateKeys); err != nil {
+func (km *Keymanager) CreateAccountsKeystore(ctx context.Context, privateKeys [][]byte, publicKeys [][]byte) (*AccountsKeystoreRepresentation, error) {
+	if err := km.CreateOrUpdateInMemoryAccountsStore(ctx, privateKeys, publicKeys); err != nil {
 		return nil, err
 	}
 	return CreateAccountsKeystoreRepresentation(ctx, km.accountsStore, km.wallet.Password())
@@ -292,7 +292,7 @@ func CreateAccountsKeystoreRepresentation(
 
 // CreateOrUpdateInMemoryAccountsStore will set or update the local accounts store and update the local cache.
 // This function DOES NOT save the accounts store to disk.
-func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, publicKeys [][]byte, privateKeys [][]byte) error {
+func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, privateKeys [][]byte, publicKeys [][]byte) error {
 	if len(privateKeys) != len(publicKeys) {
 		return fmt.Errorf(
 			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),

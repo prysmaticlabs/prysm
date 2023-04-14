@@ -69,7 +69,7 @@ func (km *Keymanager) DeleteKeystores(
 		storeCopy.PublicKeys = append(storeCopy.PublicKeys[:index], storeCopy.PublicKeys[index+1:]...)
 		store, err = CreateAccountsKeystoreRepresentation(ctx, storeCopy, km.wallet.Password())
 		if err != nil {
-			return nil, errors.Wrap(err, "could not rewrite accounts keystore")
+			return nil, errors.Wrap(err, "could not create accounts keystore representation")
 		}
 		//
 		statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
