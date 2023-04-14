@@ -106,7 +106,6 @@ go_test(
     srcs = [
         "aggregator_test.go",
         "assignments_test.go",
-        "attester_mainnet_test.go",
         "attester_test.go",
         "blocks_test.go",
         "exit_test.go",
@@ -122,9 +121,7 @@ go_test(
         "proposer_slashings_test.go",
         "proposer_sync_aggregate_test.go",
         "proposer_test.go",
-        "server_mainnet_test.go",
         "server_test.go",
-        "status_mainnet_test.go",
         "status_test.go",
         "sync_committee_test.go",
         "validator_test.go",
