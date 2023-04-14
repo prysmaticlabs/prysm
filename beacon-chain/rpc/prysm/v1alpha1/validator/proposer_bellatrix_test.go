@@ -69,6 +69,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		FinalizationFetcher:    &blockchainTest.ChainService{},
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true},
 	}
 
 	t.Run("No builder configured. Use local block", func(t *testing.T) {
@@ -116,7 +117,8 @@ func TestServer_setExecutionData(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			BidCapella: sBid,
+			BidCapella:    sBid,
+			HasConfigured: true,
 		}
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 		require.NoError(t, err)
@@ -170,7 +172,8 @@ func TestServer_setExecutionData(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			BidCapella: sBid,
+			BidCapella:    sBid,
+			HasConfigured: true,
 		}
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
@@ -214,7 +217,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			ErrGetHeader: errors.New("fault"),
+			ErrGetHeader:  errors.New("fault"),
+			HasConfigured: true,
 		}
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: big.NewInt(0)}
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))

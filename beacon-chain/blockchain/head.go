@@ -54,7 +54,7 @@ type head struct {
 
 // This saves head info to the local service cache, it also saves the
 // new head root to the DB.
-// Caller of the method MUST aqcuire a lock on forkchoice.
+// Caller of the method MUST acquire a lock on forkchoice.
 func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock interfaces.ReadOnlySignedBeaconBlock, headState state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
