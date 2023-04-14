@@ -256,17 +256,45 @@ func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 }
 
 // CreateAccountsKeystore creates a new keystore holding the provided keys.
-func (km *Keymanager) CreateAccountsKeystore(
+func (km *Keymanager) CreateAccountsKeystore(ctx context.Context, publicKeys [][]byte, privateKeys [][]byte) (*AccountsKeystoreRepresentation, error) {
+	if err := km.CreateOrUpdateInMemoryAccountsStore(ctx, publicKeys, privateKeys); err != nil {
+		return nil, err
+	}
+	return CreateAccountsKeystoreRepresentation(ctx, km.accountsStore, km.wallet.Password())
+}
+
+// CreateAccountsKeystoreRepresentation is a pure function that takes an accountStore and wallet password and returns the encrypted formatted json version for local writing.
+func CreateAccountsKeystoreRepresentation(
 	_ context.Context,
-	privateKeys, publicKeys [][]byte,
+	store *accountStore,
+	walletPW string,
 ) (*AccountsKeystoreRepresentation, error) {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
+	encodedStore, err := json.MarshalIndent(store, "", "\t")
+	if err != nil {
+		return nil, err
+	}
+	cryptoFields, err := encryptor.Encrypt(encodedStore, walletPW)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not encrypt accounts")
+	}
+	return &AccountsKeystoreRepresentation{
+		Crypto:  cryptoFields,
+		ID:      id.String(),
+		Version: encryptor.Version(),
+		Name:    encryptor.Name(),
+	}, nil
+}
+
+// CreateOrUpdateInMemoryAccountsStore will set or update the local accounts store and update the local cache.
+// This function DOES NOT save the accounts store to disk.
+func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, publicKeys [][]byte, privateKeys [][]byte) error {
 	if len(privateKeys) != len(publicKeys) {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),
 		)
 	}
@@ -296,24 +324,11 @@ func (km *Keymanager) CreateAccountsKeystore(
 			km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys, sk)
 		}
 	}
-	err = km.initializeKeysCachesFromKeystore()
+	err := km.initializeKeysCachesFromKeystore()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize keys caches")
+		return errors.Wrap(err, "failed to initialize keys caches")
 	}
-	encodedStore, err := json.MarshalIndent(km.accountsStore, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	cryptoFields, err := encryptor.Encrypt(encodedStore, km.wallet.Password())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not encrypt accounts")
-	}
-	return &AccountsKeystoreRepresentation{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
-	}, nil
+	return nil
 }
 
 func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {

@@ -33,11 +33,9 @@ func (km *Keymanager) DeleteKeystores(
 	deletedKeys := make([][]byte, 0, len(publicKeys))
 	originalKeyLen := len(km.accountsStore.PublicKeys)
 	// 1) Copy the in memory keystore
-	storeCopy := km.accountsStore
-	storeCopy.PrivateKeys = make([][]byte, len(km.accountsStore.PrivateKeys))
-	copy(storeCopy.PrivateKeys, km.accountsStore.PrivateKeys)
-	storeCopy.PublicKeys = make([][]byte, len(km.accountsStore.PublicKeys))
-	copy(storeCopy.PublicKeys, km.accountsStore.PublicKeys)
+	storeCopy := &accountStore{}
+	storeCopy.PrivateKeys = bytesutil.SafeCopy2dBytes(km.accountsStore.PrivateKeys)
+	storeCopy.PublicKeys = bytesutil.SafeCopy2dBytes(km.accountsStore.PublicKeys)
 	//
 	for _, publicKey := range publicKeys {
 		// Check if the key in the request is a duplicate or not found
@@ -69,7 +67,7 @@ func (km *Keymanager) DeleteKeystores(
 
 		storeCopy.PrivateKeys = append(storeCopy.PrivateKeys[:index], storeCopy.PrivateKeys[index+1:]...)
 		storeCopy.PublicKeys = append(storeCopy.PublicKeys[:index], storeCopy.PublicKeys[index+1:]...)
-		store, err = km.CreateAccountsKeystore(ctx, storeCopy.PrivateKeys, storeCopy.PublicKeys)
+		store, err = CreateAccountsKeystoreRepresentation(ctx, storeCopy, km.wallet.Password())
 		if err != nil {
 			return nil, errors.Wrap(err, "could not rewrite accounts keystore")
 		}
@@ -92,7 +90,7 @@ func (km *Keymanager) DeleteKeystores(
 		return nil, errors.Wrap(err, "could not write keystore file for accounts")
 	}
 	//
-	// 4) Reinitialize account store from disk
+	// 4) Reinitialize account store from disk, updating the local store and cache
 	if err := km.initializeAccountKeystore(ctx); err != nil {
 		return nil, errors.New("was not able to re-initialize account keystore from disk.")
 	}
