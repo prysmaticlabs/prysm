@@ -92,11 +92,11 @@ func (km *Keymanager) DeleteKeystores(
 	//
 	// 4) Reinitialize account store from disk, updating the local store and cache
 	if err := km.initializeAccountKeystore(ctx); err != nil {
-		return nil, errors.New("was not able to re-initialize account keystore from disk.")
+		return nil, errors.New("was not able to re-initialize account keystore from disk")
 	}
 	// 5) Verify keys are indeed deleted
 	if len(km.accountsStore.PublicKeys) == originalKeyLen || len(km.accountsStore.PublicKeys) != len(storeCopy.PublicKeys) {
-		return nil, errors.New("keys were not successfully deleted in file.")
+		return nil, errors.New("keys were not successfully deleted in file")
 	}
 	//
 	var deletedKeysStr string

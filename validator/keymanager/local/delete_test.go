@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mohae/deepcopy"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -50,6 +51,18 @@ func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 		require.Equal(t, ethpbservice.DeletedKeystoreStatus_NOT_FOUND, statuses[0].Status)
 		require.Equal(t, ethpbservice.DeletedKeystoreStatus_NOT_FOUND, statuses[1].Status)
 	})
+	t.Run("file write errors should not lead to updated local keystore or cache", func(t *testing.T) {
+		wallet.HasWriteFileError = true
+		accountToRemove := uint64(2)
+		accountPubKey := accounts[accountToRemove]
+		require.NotEqual(t, len(dr.accountsStore.PublicKeys), 0)
+		copyStore, ok := deepcopy.Copy(dr.accountsStore).(*accountStore)
+		require.Equal(t, true, ok)
+		statuses, err := dr.DeleteKeystores(ctx, [][]byte{accountPubKey[:]})
+		require.ErrorContains(t, "could not write keystore file for accounts", err)
+		require.Equal(t, len(statuses), 0)
+		require.DeepEqual(t, dr.accountsStore, copyStore)
+	})
 	t.Run("deletes properly", func(t *testing.T) {
 		accountToRemove := uint64(2)
 		accountPubKey := accounts[accountToRemove]
@@ -83,7 +96,9 @@ func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 		require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
 		require.LogsContain(t, hook, "Successfully deleted validator key(s)")
 	})
+
 	t.Run("returns NOT_ACTIVE status for duplicate public key in request", func(t *testing.T) {
+		fmt.Println(wallet.HasWriteFileError)
 		accountToRemove := uint64(3)
 		accountPubKey := accounts[accountToRemove]
 		statuses, err := dr.DeleteKeystores(ctx, [][]byte{
@@ -127,4 +142,5 @@ func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 		require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
 		require.LogsContain(t, hook, "Successfully deleted validator key(s)")
 	})
+
 }
