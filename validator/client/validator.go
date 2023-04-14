@@ -933,8 +933,12 @@ func (v *validator) logDuties(slot primitives.Slot, duties []*ethpb.DutiesRespon
 				ValidatorNextAttestationSlotGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(duty.AttesterSlot))
 			}
 		}
-		if v.emitAccountMetrics && duty.IsSyncCommittee {
-			ValidatorInSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(1))
+		if v.emitAccountMetrics {
+			if duty.IsSyncCommittee{
+				ValidatorInSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(1))
+			}else{
+				ValidatorInSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(0))
+			}
 		}
 
 		for _, proposerSlot := range duty.ProposerSlots {
