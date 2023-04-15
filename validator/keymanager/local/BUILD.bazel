@@ -67,7 +67,6 @@ go_test(
         "//validator/accounts/testing:go_default_library",
         "//validator/keymanager:go_default_library",
         "@com_github_google_uuid//:go_default_library",
-        "@com_github_mohae_deepcopy//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
     ],

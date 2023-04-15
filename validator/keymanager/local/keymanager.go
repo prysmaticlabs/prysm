@@ -59,6 +59,14 @@ type accountStore struct {
 	PublicKeys  [][]byte `json:"public_keys"`
 }
 
+// Copy creates a deep copy of accountStore
+func (a *accountStore) Copy() *accountStore {
+	storeCopy := &accountStore{}
+	storeCopy.PrivateKeys = bytesutil.SafeCopy2dBytes(a.PrivateKeys)
+	storeCopy.PublicKeys = bytesutil.SafeCopy2dBytes(a.PublicKeys)
+	return storeCopy
+}
+
 // AccountsKeystoreRepresentation defines an internal Prysm representation
 // of validator accounts, encrypted according to the EIP-2334 standard.
 type AccountsKeystoreRepresentation struct {

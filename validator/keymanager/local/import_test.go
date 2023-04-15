@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/mohae/deepcopy"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -239,8 +238,7 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 	})
 	t.Run("file write fails during import", func(t *testing.T) {
 		wallet.HasWriteFileError = true
-		copyStore, ok := deepcopy.Copy(dr.accountsStore).(*accountStore)
-		require.Equal(t, true, ok)
+		copyStore := dr.accountsStore.Copy()
 		keystore1 := createRandomKeystore(t, password)
 		statuses, err := dr.ImportKeystores(
 			ctx,

@@ -9,7 +9,6 @@ import (
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
@@ -41,9 +40,7 @@ func (km *Keymanager) ImportKeystores(
 	statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(keystores))
 	var err error
 	// 1) Copy the in memory keystore
-	storeCopy := &accountStore{}
-	storeCopy.PrivateKeys = bytesutil.SafeCopy2dBytes(km.accountsStore.PrivateKeys)
-	storeCopy.PublicKeys = bytesutil.SafeCopy2dBytes(km.accountsStore.PublicKeys)
+	storeCopy := km.accountsStore.Copy()
 	//
 	totalImported := 0
 	existingPubKeys := make(map[string]bool)
@@ -112,9 +109,7 @@ func (km *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]
 		)
 	}
 	// 1) Copy the in memory keystore
-	storeCopy := &accountStore{}
-	storeCopy.PrivateKeys = bytesutil.SafeCopy2dBytes(km.accountsStore.PrivateKeys)
-	storeCopy.PublicKeys = bytesutil.SafeCopy2dBytes(km.accountsStore.PublicKeys)
+	storeCopy := km.accountsStore.Copy()
 	//
 	// 2) Update store and remove duplicates
 	updateAccountsStoreInMemory(storeCopy, privKeys, pubKeys)

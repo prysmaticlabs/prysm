@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mohae/deepcopy"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -56,8 +55,7 @@ func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 		accountToRemove := uint64(2)
 		accountPubKey := accounts[accountToRemove]
 		require.NotEqual(t, len(dr.accountsStore.PublicKeys), 0)
-		copyStore, ok := deepcopy.Copy(dr.accountsStore).(*accountStore)
-		require.Equal(t, true, ok)
+		copyStore := dr.accountsStore.Copy()
 		statuses, err := dr.DeleteKeystores(ctx, [][]byte{accountPubKey[:]})
 		require.ErrorContains(t, "could not write keystore file for accounts", err)
 		require.Equal(t, len(statuses), 0)
