@@ -48,6 +48,7 @@ common_deps = [
     "//beacon-chain/core/transition:go_default_library",
     "//beacon-chain/db/testing:go_default_library",
     "//beacon-chain/operations/slashings/mock:go_default_library",
+    "//beacon-chain/startup:go_default_library",
     "//beacon-chain/state/stategen/mock:go_default_library",
     "//config/params:go_default_library",
     "//consensus-types/primitives:go_default_library",
