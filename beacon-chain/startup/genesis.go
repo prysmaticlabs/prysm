@@ -60,7 +60,7 @@ func (gt clock) CurrentSlot() types.Slot {
 	return slots.Duration(gt.genesis, gt.now())
 }
 
-// Now provides a value for time.Now() that can be overriden in tests.
+// Now provides a value for time.Now() that can be overridden in tests.
 func (gt clock) Now() time.Time {
 	return gt.now()
 }
