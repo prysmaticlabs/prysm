@@ -188,13 +188,14 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mockChain.ChainService{}
-	Server := &Server{
+	server := &Server{
 		Ctx: ctx,
 		ChainStartFetcher: &mockExecution.FaultyExecutionChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
+		GenesisWaiter: startup.NewGenesisSynchronizer(),
 	}
 
 	exitRoutine := make(chan bool)
@@ -203,7 +204,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		err := Server.WaitForChainStart(&emptypb.Empty{}, mockStream)
+		err := server.WaitForChainStart(&emptypb.Empty{}, mockStream)
 		assert.ErrorContains(tt, "Context canceled", err)
 		<-exitRoutine
 	}(t)

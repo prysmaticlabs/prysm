@@ -172,7 +172,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 
 	genesis, err := vs.GenesisWaiter.WaitForGenesis(vs.Ctx)
 	if err != nil {
-		return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
+		return status.Error(codes.Canceled, "Context canceled")
 	}
 	log.WithField("starttime", genesis.Time()).Debug("Received chain started event")
 	log.Debug("Sending genesis time notification to connected validator clients")
