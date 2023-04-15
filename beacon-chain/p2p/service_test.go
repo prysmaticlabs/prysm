@@ -337,12 +337,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 func initializeStateWithForkDigest(ctx context.Context, t *testing.T, gs startup.GenesisSetter) [4]byte {
 	gt := prysmTime.Now()
 	gvr := bytesutil.PadTo([]byte("genesis validators root"), 32)
-	for n := 0; n == 0; {
-		if ctx.Err() != nil {
-			t.Fatal(ctx.Err())
-		}
-		require.NoError(t, gs.SetGenesis(startup.NewGenesis(gt, gvr)))
-	}
+	require.NoError(t, gs.SetGenesis(startup.NewGenesis(gt, gvr)))
 
 	fd, err := forks.CreateForkDigest(gt, gvr)
 	require.NoError(t, err)
