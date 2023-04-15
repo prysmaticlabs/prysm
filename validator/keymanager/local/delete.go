@@ -3,7 +3,6 @@ package local
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -28,8 +27,6 @@ func (km *Keymanager) DeleteKeystores(
 	// Check for duplicate keys and filter them out.
 	trackedPublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	statuses := make([]*ethpbservice.DeletedKeystoreStatus, 0, len(publicKeys))
-	var store *AccountsKeystoreRepresentation
-	var err error
 	deletedKeys := make([][]byte, 0, len(publicKeys))
 	originalKeyLen := len(km.accountsStore.PublicKeys)
 	// 1) Copy the in memory keystore
@@ -64,36 +61,22 @@ func (km *Keymanager) DeleteKeystores(
 		// 2) Delete the keys from copied in memory keystore
 		deletedPublicKey := storeCopy.PublicKeys[index]
 		deletedKeys = append(deletedKeys, deletedPublicKey)
-
 		storeCopy.PrivateKeys = append(storeCopy.PrivateKeys[:index], storeCopy.PrivateKeys[index+1:]...)
 		storeCopy.PublicKeys = append(storeCopy.PublicKeys[:index], storeCopy.PublicKeys[index+1:]...)
-		store, err = CreateAccountsKeystoreRepresentation(ctx, storeCopy, km.wallet.Password())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not create accounts keystore representation")
-		}
-		//
 		statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
 			Status: ethpbservice.DeletedKeystoreStatus_DELETED,
 		})
 		trackedPublicKeys[bytesutil.ToBytes48(publicKey)] = true
+		//
 	}
 	if len(deletedKeys) == 0 {
 		return statuses, nil
 	}
-	// 3) Save the copy to disk
-	// Write the encoded keystore.
-	encoded, err := json.MarshalIndent(store, "", "\t")
-	if err != nil {
+	//3 & 4) save to disk and re-initializes keystore
+	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return nil, err
 	}
-	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
-		return nil, errors.Wrap(err, "could not write keystore file for accounts")
-	}
 	//
-	// 4) Reinitialize account store from disk, updating the local store and cache
-	if err := km.initializeAccountKeystore(ctx); err != nil {
-		return nil, errors.New("was not able to re-initialize account keystore from disk")
-	}
 	// 5) Verify keys are indeed deleted
 	if len(km.accountsStore.PublicKeys) == originalKeyLen || len(km.accountsStore.PublicKeys) != len(storeCopy.PublicKeys) {
 		return nil, errors.New("keys were not successfully deleted in file")

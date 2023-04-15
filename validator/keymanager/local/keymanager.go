@@ -263,6 +263,26 @@ func (km *Keymanager) CreateAccountsKeystore(ctx context.Context, privateKeys []
 	return CreateAccountsKeystoreRepresentation(ctx, km.accountsStore, km.wallet.Password())
 }
 
+// SaveStoreAndReInitialize saves the store to disk and re-initializes the account keystore from file
+func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accountStore) error {
+	// Save the copy to disk
+	accountsKeystore, err := CreateAccountsKeystoreRepresentation(ctx, store, km.wallet.Password())
+	if err != nil {
+		return err
+
+	}
+	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts); err != nil {
+		return err
+	}
+	//
+	// Reinitialize account store from disk, updating the local store and cache
+	return km.initializeAccountKeystore(ctx)
+}
+
 // CreateAccountsKeystoreRepresentation is a pure function that takes an accountStore and wallet password and returns the encrypted formatted json version for local writing.
 func CreateAccountsKeystoreRepresentation(
 	_ context.Context,
@@ -292,7 +312,7 @@ func CreateAccountsKeystoreRepresentation(
 
 // CreateOrUpdateInMemoryAccountsStore will set or update the local accounts store and update the local cache.
 // This function DOES NOT save the accounts store to disk.
-func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, privateKeys [][]byte, publicKeys [][]byte) error {
+func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, privateKeys, publicKeys [][]byte) error {
 	if len(privateKeys) != len(publicKeys) {
 		return fmt.Errorf(
 			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),
@@ -304,31 +324,35 @@ func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, pri
 			PublicKeys:  publicKeys,
 		}
 	} else {
-		existingPubKeys := make(map[string]bool)
-		existingPrivKeys := make(map[string]bool)
-		for i := 0; i < len(km.accountsStore.PrivateKeys); i++ {
-			existingPrivKeys[string(km.accountsStore.PrivateKeys[i])] = true
-			existingPubKeys[string(km.accountsStore.PublicKeys[i])] = true
-		}
-		// We append to the accounts store keys only
-		// if the private/secret key do not already exist, to prevent duplicates.
-		for i := 0; i < len(privateKeys); i++ {
-			sk := privateKeys[i]
-			pk := publicKeys[i]
-			_, privKeyExists := existingPrivKeys[string(sk)]
-			_, pubKeyExists := existingPubKeys[string(pk)]
-			if privKeyExists || pubKeyExists {
-				continue
-			}
-			km.accountsStore.PublicKeys = append(km.accountsStore.PublicKeys, pk)
-			km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys, sk)
-		}
+		updateAccountsStoreInMemory(km.accountsStore, privateKeys, publicKeys)
 	}
 	err := km.initializeKeysCachesFromKeystore()
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize keys caches")
 	}
 	return nil
+}
+
+func updateAccountsStoreInMemory(store *accountStore, privateKeys, publicKeys [][]byte) {
+	existingPubKeys := make(map[string]bool)
+	existingPrivKeys := make(map[string]bool)
+	for i := 0; i < len(store.PrivateKeys); i++ {
+		existingPrivKeys[string(store.PrivateKeys[i])] = true
+		existingPubKeys[string(store.PublicKeys[i])] = true
+	}
+	// We append to the accounts store keys only
+	// if the private/secret key do not already exist, to prevent duplicates.
+	for i := 0; i < len(privateKeys); i++ {
+		sk := privateKeys[i]
+		pk := publicKeys[i]
+		_, privKeyExists := existingPrivKeys[string(sk)]
+		_, pubKeyExists := existingPubKeys[string(pk)]
+		if privKeyExists || pubKeyExists {
+			continue
+		}
+		store.PublicKeys = append(store.PublicKeys, pk)
+		store.PrivateKeys = append(store.PrivateKeys, sk)
+	}
 }
 
 func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/mohae/deepcopy"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -189,5 +190,66 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 			fmt.Sprintf("incorrect password for key 0x%s", keystores[2].Pubkey),
 			statuses[2].Message,
 		)
+	})
+	t.Run("All fail or duplicated", func(t *testing.T) {
+		// First keystore is normal.
+		keystore1 := createRandomKeystore(t, password)
+		// First Import successfully
+		statuses, err := dr.ImportKeystores(
+			ctx,
+			[]*keymanager.Keystore{keystore1},
+			[]string{password},
+		)
+		require.NoError(t, err)
+		require.Equal(t, len(statuses), 1)
+
+		keystores := make([]*keymanager.Keystore, 0)
+		passwords := make([]string, 0)
+		// Second keystore is a duplicate of the first.
+		keystores = append(keystores, keystore1)
+		passwords = append(passwords, password)
+
+		// Third keystore has a wrong password.
+		keystore3 := createRandomKeystore(t, password)
+		keystores = append(keystores, keystore3)
+		passwords = append(passwords, "foobar")
+
+		statuses, err = dr.ImportKeystores(
+			ctx,
+			keystores,
+			passwords,
+		)
+		require.NoError(t, err)
+		require.Equal(t, len(keystores), len(statuses))
+		require.Equal(
+			t,
+			ethpbservice.ImportedKeystoreStatus_DUPLICATE,
+			statuses[0].Status,
+		)
+		require.Equal(
+			t,
+			ethpbservice.ImportedKeystoreStatus_ERROR,
+			statuses[1].Status,
+		)
+		require.Equal(
+			t,
+			fmt.Sprintf("incorrect password for key 0x%s", keystores[1].Pubkey),
+			statuses[1].Message,
+		)
+	})
+	t.Run("file write fails during import", func(t *testing.T) {
+		wallet.HasWriteFileError = true
+		copyStore, ok := deepcopy.Copy(dr.accountsStore).(*accountStore)
+		require.Equal(t, true, ok)
+		keystore1 := createRandomKeystore(t, password)
+		statuses, err := dr.ImportKeystores(
+			ctx,
+			[]*keymanager.Keystore{keystore1},
+			[]string{password},
+		)
+		require.ErrorContains(t, "could not write keystore file for accounts", err)
+		require.Equal(t, len(statuses), 0)
+		// local copy did not update due to bad file write
+		require.DeepEqual(t, dr.accountsStore, copyStore)
 	})
 }

@@ -34,6 +34,7 @@ func (acm *AccountsCLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet
 		if !ok {
 			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 		}
+
 		accountsKeystore, err := localKm.CreateAccountsKeystore(ctx, make([][]byte, 0), make([][]byte, 0))
 		if err != nil {
 			return nil, err
