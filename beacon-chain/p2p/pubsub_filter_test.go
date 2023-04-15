@@ -335,9 +335,8 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	s, err := NewService(ctx, &Config{})
 	gs := startup.NewGenesisSynchronizer()
-	s.genesisWaiter = gs
+	s, err := NewService(ctx, &Config{GenesisWaiter: gs})
 	require.NoError(t, err)
 
 	require.Equal(t, false, s.isInitialized())

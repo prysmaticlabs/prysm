@@ -168,8 +168,10 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
+	gs := startup.NewGenesisSynchronizer()
 	cfg := &Config{
-		MaxPeers: 30,
+		MaxPeers:      30,
+		GenesisWaiter: gs,
 	}
 	port := 6000
 	var staticPeers []string
@@ -195,8 +197,6 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	cfg.NoDiscovery = true
 	s, err := NewService(context.Background(), cfg)
-	gs := startup.NewGenesisSynchronizer()
-	s.genesisWaiter = gs
 	require.NoError(t, err)
 
 	exitRoutine := make(chan bool)

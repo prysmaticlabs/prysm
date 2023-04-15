@@ -86,17 +86,16 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// Make one service on port 4001.
 	port = 4001
+	gs := startup.NewGenesisSynchronizer()
 	cfg := &Config{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
 		UDPPort:             uint(port),
+		GenesisWaiter:       gs,
 	}
 	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
-
-	gs := startup.NewGenesisSynchronizer()
-	s.genesisWaiter = gs
 
 	exitRoutine := make(chan bool)
 	go func() {

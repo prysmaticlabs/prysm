@@ -100,13 +100,13 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 
+	gs := startup.NewGenesisSynchronizer()
 	cfg := &Config{
-		TCPPort: 2000,
-		UDPPort: 2000,
+		TCPPort:       2000,
+		UDPPort:       2000,
+		GenesisWaiter: gs,
 	}
 	s, err := NewService(context.Background(), cfg)
-	gs := startup.NewGenesisSynchronizer()
-	s.genesisWaiter = gs
 	require.NoError(t, err)
 	s.dv5Listener = &mockListener{}
 	exitRoutine := make(chan bool)
@@ -144,16 +144,16 @@ func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 func TestService_Start_NoDiscoverFlag(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 
+	gs := startup.NewGenesisSynchronizer()
 	cfg := &Config{
 		TCPPort:       2000,
 		UDPPort:       2000,
 		StateNotifier: &mock.MockStateNotifier{},
 		NoDiscovery:   true, // <-- no s.dv5Listener is created
+		GenesisWaiter: gs,
 	}
 	s, err := NewService(context.Background(), cfg)
 	require.NoError(t, err)
-	gs := startup.NewGenesisSynchronizer()
-	s.genesisWaiter = gs
 
 	// required params to addForkEntry in s.forkWatcher
 	s.genesisTime = time.Now()
@@ -209,10 +209,12 @@ func TestListenForNewNodes(t *testing.T) {
 	var listeners []*discover.UDPv5
 	var hosts []host.Host
 	// setup other nodes.
+	gs := startup.NewGenesisSynchronizer()
 	cfg = &Config{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
+		GenesisWaiter:       gs,
 	}
 	for i := 1; i <= 5; i++ {
 		h, pkey, ipAddr := createHost(t, port+i)
@@ -248,8 +250,6 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.TCPPort = 14001
 
 	s, err = NewService(context.Background(), cfg)
-	gs := startup.NewGenesisSynchronizer()
-	s.genesisWaiter = gs
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
@@ -301,10 +301,9 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
-	require.NoError(t, err)
 	gs := startup.NewGenesisSynchronizer()
-	s.genesisWaiter = gs
+	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}, GenesisWaiter: gs})
+	require.NoError(t, err)
 
 	go s.awaitStateInitialized()
 	fd := initializeStateWithForkDigest(ctx, t, gs)

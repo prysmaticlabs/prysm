@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	prysmnetwork "github.com/prysmaticlabs/prysm/v4/network"
@@ -81,7 +80,6 @@ type Service struct {
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
 	activeValidatorCount  uint64
-	genesisWaiter         startup.GenesisWaiter
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -384,7 +382,7 @@ func (s *Service) awaitStateInitialized() {
 	if s.isInitialized() {
 		return
 	}
-	genesis, err := s.genesisWaiter.WaitForGenesis(s.ctx)
+	genesis, err := s.cfg.GenesisWaiter.WaitForGenesis(s.ctx)
 	if err != nil {
 		log.WithError(err).Fatal("failed to receive initial genesis data")
 	}

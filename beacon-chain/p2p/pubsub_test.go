@@ -17,15 +17,14 @@ import (
 )
 
 func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
+	gs := startup.NewGenesisSynchronizer()
 	s, err := NewService(context.Background(), &Config{
 		StateNotifier: &mock.MockStateNotifier{},
+		GenesisWaiter: gs,
 	})
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-
-	gs := startup.NewGenesisSynchronizer()
-	s.genesisWaiter = gs
 
 	go s.awaitStateInitialized()
 	fd := initializeStateWithForkDigest(ctx, t, gs)
