@@ -14,7 +14,7 @@ import (
 )
 
 type nextSlotCache struct {
-	sync.Mutex
+	sync.RWMutex
 	prevRoot  []byte
 	lastRoot  []byte
 	prevState state.BeaconState
@@ -38,8 +38,8 @@ var (
 // It returns the last updated state if it matches. Otherwise it returns the previously
 // updated state if it matches its root. If no root matches it returns nil
 func NextSlotState(root []byte, wantedSlot types.Slot) state.BeaconState {
-	nsc.Lock()
-	defer nsc.Unlock()
+	nsc.RLock()
+	defer nsc.RUnlock()
 	if bytes.Equal(root, nsc.lastRoot) && nsc.lastState.Slot() <= wantedSlot {
 		nextSlotCacheHit.Inc()
 		return nsc.lastState.Copy()
