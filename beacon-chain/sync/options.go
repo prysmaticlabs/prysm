@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 )
 
@@ -133,6 +134,13 @@ func WithSlasherBlockHeadersFeed(slasherBlockHeadersFeed *event.Feed) Option {
 func WithExecutionPayloadReconstructor(r execution.ExecutionPayloadReconstructor) Option {
 	return func(s *Service) error {
 		s.cfg.executionPayloadReconstructor = r
+		return nil
+	}
+}
+
+func WithGenesisWaiter(gs startup.GenesisWaiter) Option {
+	return func(s *Service) error {
+		s.genesisWaiter = gs
 		return nil
 	}
 }

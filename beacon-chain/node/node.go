@@ -693,6 +693,7 @@ func (b *BeaconNode) registerSyncService() error {
 		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
 		regularsync.WithExecutionPayloadReconstructor(web3Service),
+		regularsync.WithGenesisWaiter(b.genesisWaiter),
 	)
 	return b.services.RegisterService(rs)
 }
