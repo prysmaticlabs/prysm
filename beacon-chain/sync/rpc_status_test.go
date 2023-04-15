@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -294,8 +295,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			},
 			beaconDB: db,
 		},
-		ctx:         context.Background(),
-		rateLimiter: newRateLimiter(p1),
+		ctx:           context.Background(),
+		rateLimiter:   newRateLimiter(p1),
+		genesisWaiter: startup.NewGenesisSynchronizer(),
 	}
 	p1.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -307,7 +309,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			},
 			p2p: p2,
 		},
-		rateLimiter: newRateLimiter(p2),
+		rateLimiter:   newRateLimiter(p2),
+		genesisWaiter: startup.NewGenesisSynchronizer(),
 	}
 	p2.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -786,8 +789,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			},
 		},
 
-		ctx:         context.Background(),
-		rateLimiter: newRateLimiter(p1),
+		ctx:           context.Background(),
+		rateLimiter:   newRateLimiter(p1),
+		genesisWaiter: startup.NewGenesisSynchronizer(),
 	}
 
 	r.Start()

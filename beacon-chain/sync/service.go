@@ -166,7 +166,6 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 	r.initCaches()
 
-	go r.waitForChainStart()
 	go r.registerHandlers()
 	go r.verifierRoutine()
 
@@ -175,6 +174,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 
 // Start the regular sync service.
 func (s *Service) Start() {
+	go s.waitForChainStart()
 	s.cfg.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
 	s.cfg.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
 		// no-op
