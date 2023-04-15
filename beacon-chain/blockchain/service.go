@@ -85,6 +85,8 @@ type config struct {
 	ExecutionEngineCaller   execution.EngineCaller
 }
 
+var ErrMissingGenesisSetter = errors.New("blockchain Service initialized without a startup.GenesisSetter")
+
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
@@ -101,6 +103,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		if err := opt(srv); err != nil {
 			return nil, err
 		}
+	}
+	if srv.genesisSetter == nil {
+		return nil, ErrMissingGenesisSetter
 	}
 	var err error
 	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)

@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
@@ -23,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
@@ -39,44 +36,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/protobuf/proto"
 )
-
-type mockBeaconNode struct {
-	stateFeed *event.Feed
-}
-
-// StateFeed mocks the same method in the beacon node.
-func (mbn *mockBeaconNode) StateFeed() *event.Feed {
-	if mbn.stateFeed == nil {
-		mbn.stateFeed = new(event.Feed)
-	}
-	return mbn.stateFeed
-}
-
-type mockBroadcaster struct {
-	broadcastCalled bool
-}
-
-func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
-	mb.broadcastCalled = true
-	return nil
-}
-
-func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
-	mb.broadcastCalled = true
-	return nil
-}
-
-func (mb *mockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
-	mb.broadcastCalled = true
-	return nil
-}
-
-func (mb *mockBroadcaster) BroadcastBLSChanges(_ context.Context, _ []*ethpb.SignedBLSToExecutionChange) {
-}
-
-var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	ctx := context.Background()
@@ -140,6 +100,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+		WithGenesisSetter(startup.NewGenesisSynchronizer()),
 	}
 
 	chainService, err := NewService(ctx, opts...)
@@ -289,14 +250,9 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 }
 
 func TestChainService_InitializeChainInfo(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	ctx := context.Background()
-
 	genesis := util.NewBeaconBlock()
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
-	util.SaveBlock(t, ctx, beaconDB, genesis)
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := util.NewBeaconBlock()
@@ -308,23 +264,18 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
+
+	c, tr := minimalTestService(t, WithFinalizedStateAtStartUp(headState))
+	ctx, beaconDB, stateGen := tr.ctx, tr.db, tr.sg
+
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
 	util.SaveBlock(t, ctx, beaconDB, headBlock)
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
-	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
-	require.NoError(t, err)
-	fc := doublylinkedtree.New()
-	stateGen := stategen.New(beaconDB, fc)
-	c, err := NewService(ctx,
-		WithForkChoiceStore(fc),
-		WithDatabase(beaconDB),
-		WithStateGen(stateGen),
-		WithAttestationService(attSrv),
-		WithStateNotifier(&mock.MockStateNotifier{}),
-		WithFinalizedStateAtStartUp(headState))
-	require.NoError(t, err)
 	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
+
 	require.NoError(t, c.StartFromSavedState(headState))
 	headBlk, err := c.HeadBlock(ctx)
 	require.NoError(t, err)
@@ -344,14 +295,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 }
 
 func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	ctx := context.Background()
-
 	genesis := util.NewBeaconBlock()
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
-	util.SaveBlock(t, ctx, beaconDB, genesis)
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := util.NewBeaconBlock()
@@ -363,27 +309,21 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
+
+	c, tr := minimalTestService(t, WithFinalizedStateAtStartUp(headState))
+	ctx, beaconDB := tr.ctx, tr.db
+
+	util.SaveBlock(t, ctx, beaconDB, genesis)
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
+	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	util.SaveBlock(t, ctx, beaconDB, headBlock)
-	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
-	require.NoError(t, err)
 	ss := &ethpb.StateSummary{
 		Slot: finalizedSlot,
 		Root: headRoot[:],
 	}
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, ss))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: headRoot[:], Epoch: slots.ToEpoch(finalizedSlot)}))
-	fc := doublylinkedtree.New()
-	stateGen := stategen.New(beaconDB, fc)
-	c, err := NewService(ctx,
-		WithForkChoiceStore(fc),
-		WithDatabase(beaconDB),
-		WithStateGen(stateGen),
-		WithAttestationService(attSrv),
-		WithStateNotifier(&mock.MockStateNotifier{}),
-		WithFinalizedStateAtStartUp(headState))
-	require.NoError(t, err)
 
 	require.NoError(t, c.StartFromSavedState(headState))
 	s, err := c.HeadState(ctx)
@@ -522,15 +462,10 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 		EnableStartOptimistic: true,
 	})
 	defer resetFn()
-	beaconDB := testDB.SetupDB(t)
-	ctx := context.Background()
 
 	genesis := util.NewBeaconBlock()
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
-	util.SaveBlock(t, ctx, beaconDB, genesis)
-
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := util.NewBeaconBlock()
 	headBlock.Block.Slot = finalizedSlot
@@ -541,21 +476,17 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
+
+	c, tr := minimalTestService(t, WithFinalizedStateAtStartUp(headState))
+	ctx, beaconDB, stateGen := tr.ctx, tr.db, tr.sg
+
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
 	util.SaveBlock(t, ctx, beaconDB, headBlock)
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
-	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
-	require.NoError(t, err)
-	fc := doublylinkedtree.New()
-	stateGen := stategen.New(beaconDB, fc)
-	c, err := NewService(ctx,
-		WithForkChoiceStore(fc),
-		WithDatabase(beaconDB),
-		WithStateGen(stateGen),
-		WithAttestationService(attSrv),
-		WithStateNotifier(&mock.MockStateNotifier{}),
-		WithFinalizedStateAtStartUp(headState))
+
 	require.NoError(t, err)
 	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
 	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
