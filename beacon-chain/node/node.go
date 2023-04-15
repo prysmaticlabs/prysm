@@ -238,7 +238,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	log.Debugln("Registering Intial Sync Service")
+	log.Debugln("Registering Initial Sync Service")
 	if err := beacon.registerInitialSyncService(); err != nil {
 		return nil, err
 	}
