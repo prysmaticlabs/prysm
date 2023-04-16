@@ -31,7 +31,6 @@ func (km *Keymanager) DeleteKeystores(
 	originalKeyLen := len(km.accountsStore.PublicKeys)
 	// 1) Copy the in memory keystore
 	storeCopy := km.accountsStore.Copy()
-	//
 	for _, publicKey := range publicKeys {
 		// Check if the key in the request is a duplicate or not found
 		if _, ok := trackedPublicKeys[bytesutil.ToBytes48(publicKey)]; ok {
