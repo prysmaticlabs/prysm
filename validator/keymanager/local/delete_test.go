@@ -96,7 +96,6 @@ func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 	})
 
 	t.Run("returns NOT_ACTIVE status for duplicate public key in request", func(t *testing.T) {
-		fmt.Println(wallet.HasWriteFileError)
 		accountToRemove := uint64(3)
 		accountPubKey := accounts[accountToRemove]
 		statuses, err := dr.DeleteKeystores(ctx, [][]byte{
