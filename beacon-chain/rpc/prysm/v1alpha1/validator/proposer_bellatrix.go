@@ -63,19 +63,14 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					return errors.Wrap(err, "failed to get execution payload")
 				}
 				// Compare payload values between local and builder. Default to the local value if it is higher.
-				v, err := localPayload.Value()
+				localValueGwei, err := localPayload.ValueInGwei()
 				if err != nil {
 					return errors.Wrap(err, "failed to get local payload value")
 				}
-				v.Div(v, gweiPerEth)
-				localValue := v.Uint64()
-				v, err = builderPayload.Value()
+				builderValueGwei, err := builderPayload.ValueInGwei()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-					v = big.NewInt(0)                                                        // Default to local if can't get builder value.
 				}
-				v.Div(v, gweiPerEth)
-				builderValue := v.Uint64()
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
@@ -85,7 +80,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				// Use builder payload if the following in true:
 				// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
 				boost := params.BeaconConfig().LocalBlockValueBoost
-				higherValueBuilder := builderValue*100 > localValue*(100+boost)
+				higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
 
 				// If we can't get the builder value, just use local block.
 				if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
@@ -99,9 +94,9 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				}
 				if !higherValueBuilder {
 					log.WithFields(logrus.Fields{
-						"localGweiValue":       localValue,
+						"localGweiValue":       localValueGwei,
 						"localBoostPercentage": boost,
-						"builderGweiValue":     builderValue,
+						"builderGweiValue":     builderValueGwei,
 					}).Warn("Proposer: using local execution payload because higher value")
 				}
 				return blk.SetExecution(localPayload)

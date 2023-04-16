@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -44,7 +45,7 @@ func TestServer_setExecutionData(t *testing.T) {
 
 	beaconDB := dbTest.SetupDB(t)
 	capellaTransitionState, _ := util.DeterministicGenesisStateCapella(t, 1)
-	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&v1.ExecutionPayloadHeaderCapella{BlockNumber: 1}, big.NewInt(0))
+	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&v1.ExecutionPayloadHeaderCapella{BlockNumber: 1}, 0)
 	require.NoError(t, err)
 	require.NoError(t, capellaTransitionState.SetLatestExecutionPayloadHeader(wrappedHeaderCapella))
 	b2pbCapella := util.NewBeaconBlockCapella()
@@ -64,7 +65,7 @@ func TestServer_setExecutionData(t *testing.T) {
 	}}
 	id := &v1.PayloadIDBytes{0x1}
 	vs := &Server{
-		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: big.NewInt(0)},
+		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: 0},
 		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
 		FinalizationFetcher:    &blockchainTest.ChainService{},
 		BeaconDB:               beaconDB,
@@ -190,7 +191,7 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Builder configured. Local block has higher value", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(2 * 1e9)}
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2}
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
@@ -205,7 +206,7 @@ func TestServer_setExecutionData(t *testing.T) {
 
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: big.NewInt(1e9)}
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 1}
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
@@ -220,7 +221,7 @@ func TestServer_setExecutionData(t *testing.T) {
 			ErrGetHeader:  errors.New("fault"),
 			HasConfigured: true,
 		}
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: big.NewInt(0)}
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: 0}
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
@@ -241,7 +242,7 @@ func TestNoWeiOverflow(t *testing.T) {
 
 	beaconDB := dbTest.SetupDB(t)
 	capellaTransitionState, _ := util.DeterministicGenesisStateCapella(t, 1)
-	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&v1.ExecutionPayloadHeaderCapella{BlockNumber: 1}, big.NewInt(0))
+	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&v1.ExecutionPayloadHeaderCapella{BlockNumber: 1}, 0)
 	require.NoError(t, err)
 	require.NoError(t, capellaTransitionState.SetLatestExecutionPayloadHeader(wrappedHeaderCapella))
 	b2pbCapella := util.NewBeaconBlockCapella()
@@ -261,7 +262,7 @@ func TestNoWeiOverflow(t *testing.T) {
 	}}
 	id := &v1.PayloadIDBytes{0x1}
 	vs := &Server{
-		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: big.NewInt(18395081606530051)},
+		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: math.MaxUint64},
 		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
 		FinalizationFetcher:    &blockchainTest.ChainService{},
 		BeaconDB:               beaconDB,
@@ -331,7 +332,7 @@ func TestNoWeiOverflow(t *testing.T) {
 
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3, Withdrawals: withdrawals}, BlockValue: big.NewInt(162927606e9)} // 0.16 ETH
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3, Withdrawals: withdrawals}, BlockValue: 162927606} // 0.16 ETH
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
@@ -687,7 +688,7 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 	})
 	t.Run("could not get builder withdrawals root", func(t *testing.T) {
 		local := &v1.ExecutionPayloadCapella{}
-		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
+		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeader{}
 		h, err := blocks.WrappedExecutionPayloadHeader(header)
@@ -697,10 +698,10 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 	})
 	t.Run("withdrawals mismatch", func(t *testing.T) {
 		local := &v1.ExecutionPayloadCapella{}
-		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
+		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeaderCapella{}
-		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, big.NewInt(0))
+		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, 0)
 		require.NoError(t, err)
 		matched, err := matchingWithdrawalsRoot(p, h)
 		require.NoError(t, err)
@@ -714,13 +715,13 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 			Amount:         3,
 		}}
 		local := &v1.ExecutionPayloadCapella{Withdrawals: wds}
-		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
+		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeaderCapella{}
 		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		header.WithdrawalsRoot = wr[:]
-		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, big.NewInt(0))
+		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, 0)
 		require.NoError(t, err)
 		matched, err := matchingWithdrawalsRoot(p, h)
 		require.NoError(t, err)

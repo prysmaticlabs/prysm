@@ -222,7 +222,10 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 			return nil, handleRPCError(err)
 		}
 
-		return blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value)))
+		v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value))
+		gweiPerEth := big.NewInt(int64(params.BeaconConfig().GweiPerEth))
+		v.Div(v, gweiPerEth)
+		return blocks.WrappedExecutionPayloadCapella(result.Payload, v.Uint64())
 	}
 
 	result := &pb.ExecutionPayload{}
@@ -671,7 +674,7 @@ func fullPayloadFromExecutionBlock(
 		BlockHash:     blockHash[:],
 		Transactions:  txs,
 		Withdrawals:   block.Withdrawals,
-	}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
+	}, 0) // We can't get the block value and don't care about the block value for this instance
 }
 
 // Handles errors received from the RPC server according to the specification.

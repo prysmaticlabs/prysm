@@ -38,7 +38,7 @@ type EngineClient struct {
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
-	BlockValue                  *big.Int
+	BlockValue                  uint64
 }
 
 // NewPayload --

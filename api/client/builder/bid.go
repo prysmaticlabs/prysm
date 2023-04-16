@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -160,8 +161,10 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 // Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	v := bytesutil.ReverseByteOrder(b.p.Value)
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, big.NewInt(0).SetBytes(v))
+	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.p.Value))
+	gweiPerEth := big.NewInt(int64(params.BeaconConfig().GweiPerEth))
+	v.Div(v, gweiPerEth)
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, v.Uint64())
 }
 
 // Version --
