@@ -2751,6 +2751,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
+		v := big.NewInt(1e9) // minimal 1 gwei
 		bid := &ethpbalpha.BuilderBidCapella{
 			Header: &enginev1.ExecutionPayloadHeaderCapella{
 				ParentHash:       make([]byte, fieldparams.RootLength),
@@ -2767,7 +2768,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 				WithdrawalsRoot:  wr[:],
 			},
 			Pubkey: sk.PublicKey().Marshal(),
-			Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+			Value:  bytesutil.PadTo(bytesutil.ReverseByteOrder(v.Bytes()), 32),
 		}
 		d := params.BeaconConfig().DomainApplicationBuilder
 		domain, err := signing.ComputeDomain(d, nil, nil)
