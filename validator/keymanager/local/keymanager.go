@@ -422,3 +422,17 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	fmt.Println("")
 	return nil
 }
+
+func CreatePrintoutOfKeys(keys [][]byte) string {
+	var keysStr string
+	for i, k := range keys {
+		if i == 0 {
+			keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
+		} else if i == len(keys)-1 {
+			keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
+		} else {
+			keysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
+		}
+	}
+	return keysStr
+}

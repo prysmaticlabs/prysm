@@ -12,14 +12,15 @@ import (
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
+	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 // ImportKeystores into the local keymanager from an external source.
 // 1) Copy the in memory keystore
-// 2) Import the keys into copied in memory keystore
+// 2) Update copied keystore with new keys
 // 3) Save the copy to disk
-// 4) Reinitialize account store
+// 4) Reinitialize account store and updating the keymanager
 // 5) Return Statuses
 func (km *Keymanager) ImportKeystores(
 	ctx context.Context,
@@ -39,7 +40,7 @@ func (km *Keymanager) ImportKeystores(
 	var err error
 	// 1) Copy the in memory keystore
 	storeCopy := km.accountsStore.Copy()
-	totalImported := 0
+	importedKeys := make([][]byte, 0)
 	existingPubKeys := make(map[string]bool)
 	for i := 0; i < len(storeCopy.PrivateKeys); i++ {
 		existingPubKeys[string(storeCopy.PublicKeys[i])] = true
@@ -70,16 +71,16 @@ func (km *Keymanager) ImportKeystores(
 		}
 
 		keys[string(pubKeyBytes)] = string(privKeyBytes)
+		importedKeys = append(importedKeys, pubKeyBytes)
 		statuses[i] = &ethpbservice.ImportedKeystoreStatus{
 			Status: ethpbservice.ImportedKeystoreStatus_IMPORTED,
 		}
-		totalImported++
 	}
-	if totalImported == 0 {
+	if len(importedKeys) == 0 {
 		log.Warn("no keys were imported")
 		return statuses, nil
 	}
-	// 2) Import the keys into copied in memory keystore,clear duplicates in existing set
+	// 2) Update copied keystore with new keys,clear duplicates in existing set
 	// duplicates,errored ones are already skipped
 	for pubKey, privKey := range keys {
 		storeCopy.PublicKeys = append(storeCopy.PublicKeys, []byte(pubKey))
@@ -89,6 +90,11 @@ func (km *Keymanager) ImportKeystores(
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return nil, err
 	}
+
+	log.WithFields(logrus.Fields{
+		"publicKeys": CreatePrintoutOfKeys(importedKeys),
+	}).Info("Successfully imported validator key(s)")
+
 	// 5) Return Statuses
 	return statuses, nil
 }

@@ -3,7 +3,6 @@ package local
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -17,7 +16,7 @@ import (
 // 1) Copy the in memory keystore
 // 2) Delete the keys from copied in memory keystore
 // 3) Save the copy to disk
-// 4) Reinitialize account store
+// 4) Reinitialize account store and updating the keymanager
 // 5) Return API response
 func (km *Keymanager) DeleteKeystores(
 	ctx context.Context, publicKeys [][]byte,
@@ -69,18 +68,8 @@ func (km *Keymanager) DeleteKeystores(
 		return nil, err
 	}
 
-	var deletedKeysStr string
-	for i, k := range deletedKeys {
-		if i == 0 {
-			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else if i == len(deletedKeys)-1 {
-			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else {
-			deletedKeysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
-		}
-	}
 	log.WithFields(logrus.Fields{
-		"publicKeys": deletedKeysStr,
+		"publicKeys": CreatePrintoutOfKeys(deletedKeys),
 	}).Info("Successfully deleted validator key(s)")
 	// 5) Return API response
 	return statuses, nil
