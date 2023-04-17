@@ -108,11 +108,11 @@ func (km *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]
 	}
 	// 1) Copy the in memory keystore
 	storeCopy := km.accountsStore.Copy()
-	//
+
 	// 2) Update store and remove duplicates
 	updateAccountsStoreInMemory(storeCopy, privKeys, pubKeys)
-	//
-	//3 & 4) save to disk and re-initializes keystore
+
+	// 3 & 4) save to disk and re-initializes keystore
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return err
 	}
