@@ -260,9 +260,17 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 		if err := json.Unmarshal(gbytes, gen); err != nil {
 			return nil, err
 		}
+		// set timestamps for genesis and shanghai fork
+		gen.Timestamp = f.GenesisTime
+		gen.Config.ShanghaiTime = interop.GethShanghaiTime(f.GenesisTime, params.BeaconConfig())
+		if v > version.Altair {
+			// set ttd to zero so EL goes post-merge immediately
+			gen.Config.TerminalTotalDifficulty = big.NewInt(0)
+		}
 	} else {
 		gen = interop.GethTestnetGenesis(f.GenesisTime, params.BeaconConfig())
 	}
+
 	if f.GethGenesisJsonOut != "" {
 		gbytes, err := json.MarshalIndent(gen, "", "\t")
 		if err != nil {
