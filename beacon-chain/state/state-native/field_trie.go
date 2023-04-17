@@ -1,4 +1,4 @@
-package fieldtrie
+package state_native
 
 import (
 	"reflect"
@@ -18,6 +18,7 @@ var (
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
+	state *BeaconState
 	*sync.RWMutex
 	reference     *stateutil.Reference
 	fieldLayers   [][]*[32]byte
@@ -31,9 +32,10 @@ type FieldTrie struct {
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
+			state:      state,
 			field:      field,
 			dataType:   dataType,
 			reference:  stateutil.NewRef(1),
@@ -43,7 +45,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 		}, nil
 	}
 
-	fieldRoots, err := fieldConverters(field, []uint64{}, elements, true)
+	fieldRoots, err := fieldConverters(state, field, []uint64{}, elements, true)
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +59,12 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 		if err != nil {
 			return nil, err
 		}
+		var l int
+		if field == types.RandaoMixes {
+			l = elements.(*MultiValueRandaoMixes).Len()
+		} else {
+			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
 		return &FieldTrie{
 			fieldLayers: fl,
 			field:       field,
@@ -64,7 +72,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
+			numOfElems:  l,
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
@@ -93,7 +101,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		return f.TrieRoot()
 	}
 
-	fieldRoots, err := fieldConverters(f.field, indices, elements, false)
+	fieldRoots, err := fieldConverters(f.state, f.field, indices, elements, false)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -107,7 +115,13 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		var l int
+		if f.field == types.RandaoMixes {
+			l = elements.(*MultiValueRandaoMixes).Len()
+		} else {
+			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
+		f.numOfElems = l
 		return fieldRoot, nil
 	case types.CompositeArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)

@@ -1,4 +1,4 @@
-package fieldtrie
+package state_native
 
 import (
 	"encoding/binary"
@@ -55,22 +55,29 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 		}
 		length *= comLength
 	}
-	val := reflect.Indirect(reflect.ValueOf(elements))
-	if uint64(val.Len()) > length {
-		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)
+	if field == types.RandaoMixes {
+		l := uint64(elements.(*MultiValueRandaoMixes).Len())
+		if l > length {
+			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), l, length)
+		}
+	} else {
+		val := reflect.Indirect(reflect.ValueOf(elements))
+		if uint64(val.Len()) > length {
+			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)
+		}
 	}
 	return nil
 }
 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func fieldConverters(state *BeaconState, field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
 		return convertBlockRoots(indices, elements, convertAll)
 	case types.StateRoots:
 		return convertStateRoots(indices, elements, convertAll)
 	case types.RandaoMixes:
-		return convertRandaoMixes(indices, elements, convertAll)
+		return convertRandaoMixes(state, indices, elements, convertAll)
 	case types.Eth1DataVotes:
 		return convertEth1DataVotes(indices, elements, convertAll)
 	case types.Validators:
@@ -106,12 +113,12 @@ func convertStateRoots(indices []uint64, elements interface{}, convertAll bool) 
 	}
 }
 
-func convertRandaoMixes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func convertRandaoMixes(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch val := elements.(type) {
 	case [][]byte:
 		return handleByteArrays(val, indices, convertAll)
-	case *customtypes.RandaoMixes:
-		return handle32ByteArrays(val[:], indices, convertAll)
+	case *MultiValueRandaoMixes:
+		return handle32ByteArrays(val.Value(state), indices, convertAll)
 	default:
 		return nil, errors.Errorf("Incorrect type used for randao mixes")
 	}

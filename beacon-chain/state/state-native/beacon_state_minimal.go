@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
@@ -33,7 +32,7 @@ type BeaconState struct {
 	eth1DepositIndex                    uint64
 	validators                          []*ethpb.Validator
 	balances                            []uint64
-	randaoMixes                         *customtypes.RandaoMixes
+	randaoMixes                         *MultiValueRandaoMixes
 	slashings                           []uint64
 	previousEpochAttestations           []*ethpb.PendingAttestation
 	currentEpochAttestations            []*ethpb.PendingAttestation
@@ -54,7 +53,7 @@ type BeaconState struct {
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64
-	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
+	stateFieldLeaves      map[types.FieldIndex]*FieldTrie
 	rebuildTrie           map[types.FieldIndex]bool
 	valMapHandler         *stateutil.ValidatorMapHandler
 	merkleLayers          [][][]byte

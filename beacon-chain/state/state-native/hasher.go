@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -130,11 +131,13 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.Balances.RealPosition()] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	mixes := make([][]byte, len(state.randaoMixes))
+	mixes := make([][]byte, state.randaoMixes.Len())
+	m := state.randaoMixes.Value(state)
 	for i := range mixes {
-		mixes[i] = state.randaoMixes[i][:]
+		mixes[i] = m[i][:]
 	}
 	randaoRootsRoot, err := stateutil.ArraysRoot(mixes, fieldparams.RandaoMixesLength)
+	logrus.Warnf("randao root: %v", randaoRootsRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}

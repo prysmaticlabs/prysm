@@ -7,12 +7,12 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 )
 
-var _ fssz.HashRoot = (RandaoMixes)([fieldparams.RandaoMixesLength][32]byte{})
+var _ fssz.HashRoot = (RandaoMixes)([][32]byte{})
 var _ fssz.Marshaler = (*RandaoMixes)(nil)
 var _ fssz.Unmarshaler = (*RandaoMixes)(nil)
 
 // RandaoMixes represents RANDAO mixes of the beacon state.
-type RandaoMixes [fieldparams.RandaoMixesLength][32]byte
+type RandaoMixes [][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r RandaoMixes) HashTreeRoot() ([32]byte, error) {
@@ -35,7 +35,7 @@ func (r *RandaoMixes) UnmarshalSSZ(buf []byte) error {
 		return fmt.Errorf("expected buffer of length %d received %d", r.SizeSSZ(), len(buf))
 	}
 
-	var roots RandaoMixes
+	roots := RandaoMixes(make([][32]byte, fieldparams.RandaoMixesLength))
 	for i := range roots {
 		copy(roots[i][:], buf[i*32:(i+1)*32])
 	}
@@ -55,7 +55,7 @@ func (r *RandaoMixes) MarshalSSZTo(dst []byte) ([]byte, error) {
 // MarshalSSZ marshals RandaoMixes into a serialized object.
 func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
 	marshalled := make([]byte, fieldparams.RandaoMixesLength*32)
-	for i, r32 := range r {
+	for i, r32 := range *r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
 		}
@@ -73,8 +73,8 @@ func (r *RandaoMixes) Slice() [][]byte {
 	if r == nil {
 		return nil
 	}
-	mixes := make([][]byte, len(r))
-	for i, root := range r {
+	mixes := make([][]byte, len(*r))
+	for i, root := range *r {
 		tmp := root
 		mixes[i] = tmp[:]
 	}

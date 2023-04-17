@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
@@ -20,14 +21,14 @@ import (
 func Test_handlePendingAttestation_OutOfRange(t *testing.T) {
 	items := make([]*ethpb.PendingAttestation, 1)
 	indices := []uint64{3}
-	_, err := handlePendingAttestationSlice(items, indices, false)
+	_, err := state_native.handlePendingAttestationSlice(items, indices, false)
 	assert.ErrorContains(t, "index 3 greater than number of pending attestations 1", err)
 }
 
 func Test_handleEth1DataSlice_OutOfRange(t *testing.T) {
 	items := make([]*ethpb.Eth1Data, 1)
 	indices := []uint64{3}
-	_, err := handleEth1DataSlice(items, indices, false)
+	_, err := state_native.handleEth1DataSlice(items, indices, false)
 	assert.ErrorContains(t, "index 3 greater than number of items in eth1 data slice 1", err)
 
 }
@@ -35,13 +36,13 @@ func Test_handleEth1DataSlice_OutOfRange(t *testing.T) {
 func Test_handleValidatorSlice_OutOfRange(t *testing.T) {
 	vals := make([]*ethpb.Validator, 1)
 	indices := []uint64{3}
-	_, err := handleValidatorSlice(vals, indices, false)
+	_, err := state_native.handleValidatorSlice(vals, indices, false)
 	assert.ErrorContains(t, "index 3 greater than number of validators 1", err)
 }
 
 func TestBalancesSlice_CorrectRoots_All(t *testing.T) {
 	balances := []uint64{5, 2929, 34, 1291, 354305}
-	roots, err := handleBalanceSlice(balances, []uint64{}, true)
+	roots, err := state_native.handleBalanceSlice(balances, []uint64{}, true)
 	assert.NoError(t, err)
 
 	var root1 [32]byte
@@ -58,7 +59,7 @@ func TestBalancesSlice_CorrectRoots_All(t *testing.T) {
 
 func TestBalancesSlice_CorrectRoots_Some(t *testing.T) {
 	balances := []uint64{5, 2929, 34, 1291, 354305}
-	roots, err := handleBalanceSlice(balances, []uint64{2, 3}, false)
+	roots, err := state_native.handleBalanceSlice(balances, []uint64{2, 3}, false)
 	assert.NoError(t, err)
 
 	var root1 [32]byte
@@ -72,7 +73,7 @@ func TestBalancesSlice_CorrectRoots_Some(t *testing.T) {
 }
 
 func TestValidateIndices_CompressedField(t *testing.T) {
-	fakeTrie := &FieldTrie{
+	fakeTrie := &state_native.FieldTrie{
 		RWMutex:     new(sync.RWMutex),
 		reference:   stateutil.NewRef(0),
 		fieldLayers: nil,
@@ -351,7 +352,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			roots, err := fieldConverters(tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
+			roots, err := state_native.fieldConverters(tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
 			if err != nil && tt.errMsg != "" {
 				require.ErrorContains(t, tt.errMsg, err)
 			} else {

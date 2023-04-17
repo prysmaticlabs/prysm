@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -16,6 +17,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 	}
 
 	gvrCopy := b.genesisValidatorsRoot
+	rm := customtypes.RandaoMixes(b.randaoMixes.Value(b))
 
 	switch b.version {
 	case version.Phase0:
@@ -33,7 +35,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validators,
 			Balances:                    b.balances,
-			RandaoMixes:                 b.randaoMixes.Slice(),
+			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashings,
 			PreviousEpochAttestations:   b.previousEpochAttestations,
 			CurrentEpochAttestations:    b.currentEpochAttestations,
@@ -57,7 +59,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validators,
 			Balances:                    b.balances,
-			RandaoMixes:                 b.randaoMixes.Slice(),
+			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashings,
 			PreviousEpochParticipation:  b.previousEpochParticipation,
 			CurrentEpochParticipation:   b.currentEpochParticipation,
@@ -84,7 +86,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validators,
 			Balances:                     b.balances,
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
 			CurrentEpochParticipation:    b.currentEpochParticipation,
@@ -112,7 +114,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validators,
 			Balances:                     b.balances,
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
 			CurrentEpochParticipation:    b.currentEpochParticipation,
@@ -143,6 +145,7 @@ func (b *BeaconState) ToProto() interface{} {
 	defer b.lock.RUnlock()
 
 	gvrCopy := b.genesisValidatorsRoot
+	rm := customtypes.RandaoMixes(b.randaoMixes.Value(b))
 
 	switch b.version {
 	case version.Phase0:
@@ -160,7 +163,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validatorsVal(),
 			Balances:                    b.balancesVal(),
-			RandaoMixes:                 b.randaoMixes.Slice(),
+			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashingsVal(),
 			PreviousEpochAttestations:   b.previousEpochAttestationsVal(),
 			CurrentEpochAttestations:    b.currentEpochAttestationsVal(),
@@ -184,7 +187,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validatorsVal(),
 			Balances:                    b.balancesVal(),
-			RandaoMixes:                 b.randaoMixes.Slice(),
+			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashingsVal(),
 			PreviousEpochParticipation:  b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:   b.currentEpochParticipationVal(),
@@ -211,7 +214,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
 			Balances:                     b.balancesVal(),
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
@@ -239,7 +242,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
 			Balances:                     b.balancesVal(),
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
