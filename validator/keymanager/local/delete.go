@@ -68,7 +68,7 @@ func (km *Keymanager) DeleteKeystores(
 	if len(deletedKeys) == 0 {
 		return statuses, nil
 	}
-	//3 & 4) save to disk and re-initializes keystore
+	// 3 & 4) save to disk and re-initializes keystore
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return nil, err
 	}
