@@ -119,7 +119,7 @@ func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T
 	slashing, s := setupValidAttesterSlashing(t)
 	// Set only one of the  validators as withdrawn
 	vals := s.Validators()
-	vals[0].WithdrawableEpoch = primitives.Epoch(1)
+	vals[1].WithdrawableEpoch = primitives.Epoch(1)
 
 	require.NoError(t, s.SetValidators(vals))
 
