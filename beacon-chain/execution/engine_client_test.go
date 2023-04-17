@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -2342,6 +2343,7 @@ func Test_ExchangeCapabilities(t *testing.T) {
 			require.NoError(t, err)
 		}))
 		ctx := context.Background()
+		logHook := logTest.NewGlobal()
 
 		rpcClient, err := rpc.DialHTTP(srv.URL)
 		require.NoError(t, err)
@@ -2356,6 +2358,7 @@ func Test_ExchangeCapabilities(t *testing.T) {
 		for _, item := range results {
 			require.NotNil(t, item)
 		}
+		assert.LogsContain(t, logHook, "Please update client, detected the following unsupported engine methods:")
 	})
 	t.Run("list of items", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
