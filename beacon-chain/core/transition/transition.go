@@ -147,7 +147,7 @@ func ProcessSlotsUsingNextSlotCache(
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
 	defer span.End()
 
-	nextSlotState := NextSlotState(parentRoot)
+	nextSlotState := NextSlotState(parentRoot, slot)
 	if nextSlotState != nil {
 		parentState = nextSlotState
 	}
