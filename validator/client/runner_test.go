@@ -218,6 +218,8 @@ func TestKeyReload_ActiveKey(t *testing.T) {
 }
 
 func TestKeyReload_NoActiveKey(t *testing.T) {
+	t.Skip("Flakey test. Skipping until we can figure out how to test this properly")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}

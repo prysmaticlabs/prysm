@@ -14,6 +14,9 @@ import (
 // - Validator has registered to use builder (ie called registerBuilder API end point)
 // - Circuit breaker has not been activated (ie the liveness of the chain is healthy)
 func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (bool, error) {
+	if !vs.BlockBuilder.Configured() {
+		return false, nil
+	}
 	activated, err := vs.circuitBreakBuilder(slot)
 	if err != nil {
 		return false, err

@@ -35,7 +35,6 @@ go_library(
         "//testing/endtoend/helpers:go_default_library",
         "//testing/endtoend/params:go_default_library",
         "//testing/endtoend/types:go_default_library",
-        "//testing/util:go_default_library",
         "//validator/keymanager:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",

@@ -59,7 +59,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	if err != nil && defaultKeysExist {
 		return nil, err
 	}
-	// Default keys have the next highest precendence, if they exist.
+	// Default keys have the next highest precedence, if they exist.
 	if defaultKeysExist {
 		return privKeyFromFile(defaultKeyPath)
 	}

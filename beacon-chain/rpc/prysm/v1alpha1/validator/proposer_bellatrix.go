@@ -33,6 +33,8 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 	Help: "The number of get payload misses for validator requests to builder",
 })
 
+var gweiPerEth = big.NewInt(int64(params.BeaconConfig().GweiPerEth))
+
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
@@ -65,12 +67,14 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				if err != nil {
 					return errors.Wrap(err, "failed to get local payload value")
 				}
+				v.Div(v, gweiPerEth)
 				localValue := v.Uint64()
 				v, err = builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
 					v = big.NewInt(0)                                                        // Default to local if can't get builder value.
 				}
+				v.Div(v, gweiPerEth)
 				builderValue := v.Uint64()
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
@@ -96,7 +100,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				if !higherValueBuilder {
 					log.WithFields(logrus.Fields{
 						"localGweiValue":       localValue,
-						"localBoostPercentage": 100 + boost,
+						"localBoostPercentage": boost,
 						"builderGweiValue":     builderValue,
 					}).Warn("Proposer: using local execution payload because higher value")
 				}
