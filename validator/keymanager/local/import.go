@@ -41,7 +41,6 @@ func (km *Keymanager) ImportKeystores(
 	var err error
 	// 1) Copy the in memory keystore
 	storeCopy := km.accountsStore.Copy()
-	//
 	totalImported := 0
 	existingPubKeys := make(map[string]bool)
 	for i := 0; i < len(storeCopy.PrivateKeys); i++ {
