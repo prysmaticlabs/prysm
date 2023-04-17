@@ -64,7 +64,6 @@ func (km *Keymanager) DeleteKeystores(
 			Status: ethpbservice.DeletedKeystoreStatus_DELETED,
 		})
 		trackedPublicKeys[bytesutil.ToBytes48(publicKey)] = true
-		//
 	}
 	if len(deletedKeys) == 0 {
 		return statuses, nil
