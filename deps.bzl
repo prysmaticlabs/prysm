@@ -4061,12 +4061,6 @@ def prysm_deps():
         sum = "h1:264/meVYWt1wFw6Mtn+xwkZkXjID42gNra4rycoiDXI=",
         version = "v2.8.2",
     )
-    go_repository(
-        name = "com_github_wercker_journalhook",
-        importpath = "github.com/wercker/journalhook",
-        sum = "h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=",
-        version = "v0.0.0-20180428041537-5d0a5ae867b3",
-    )
 
     go_repository(
         name = "com_github_willf_bitset",
