@@ -73,12 +73,12 @@ func (km *Keymanager) DeleteKeystores(
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return nil, err
 	}
-	//
+
 	// 5) Verify keys are indeed deleted
 	if len(km.accountsStore.PublicKeys) == originalKeyLen || len(km.accountsStore.PublicKeys) != len(storeCopy.PublicKeys) {
 		return nil, errors.New("keys were not successfully deleted in file")
 	}
-	//
+
 	var deletedKeysStr string
 	for i, k := range deletedKeys {
 		if i == 0 {
