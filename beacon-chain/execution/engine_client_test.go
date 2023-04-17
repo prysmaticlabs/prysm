@@ -259,7 +259,7 @@ func TestClient_HTTP(t *testing.T) {
 
 		v, err := resp.ValueInGwei()
 		require.NoError(t, err)
-		require.DeepEqual(t, uint64(888), v)
+		require.Equal(t, uint64(1236), v)
 	})
 	t.Run(ForkchoiceUpdatedMethod+" VALID status", func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{
@@ -1323,7 +1323,7 @@ func fixtures() map[string]interface{} {
 			GasUsed:       &hexUint,
 			Timestamp:     &hexUint,
 		},
-		BlockValue: "0x11ff",
+		BlockValue: "0x11fffffffff",
 	}
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 	sha3Uncles := bytesutil.PadTo([]byte("sha3Uncles"), fieldparams.RootLength)
