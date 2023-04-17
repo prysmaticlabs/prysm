@@ -2,6 +2,8 @@ module github.com/prysmaticlabs/prysm/v4
 
 go 1.19
 
+replace github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3 => github.com/theraphim/journalhook v0.0.0-20180428041537-5d0a5ae867b3
+
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20221202121132-bd37e8fb1d0d

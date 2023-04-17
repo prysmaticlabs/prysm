@@ -4063,7 +4063,7 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_wercker_journalhook",
-        importpath = "github.com/wercker/journalhook",
+        importpath = "github.com/theraphim/journalhook",
         sum = "h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=",
         version = "v0.0.0-20180428041537-5d0a5ae867b3",
     )
