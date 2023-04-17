@@ -54,7 +54,6 @@ func (km *Keymanager) DeleteKeystores(
 			})
 			continue
 		}
-		//
 		// 2) Delete the keys from copied in memory keystore
 		deletedPublicKey := storeCopy.PublicKeys[index]
 		deletedKeys = append(deletedKeys, deletedPublicKey)
