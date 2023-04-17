@@ -18,6 +18,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -345,6 +346,7 @@ func TestSeenAttesterSlashingIndices(t *testing.T) {
 			seenAttesterSlashingCache: map[uint64]bool{},
 		}
 		r.setAttesterSlashingIndicesSeen(tc.saveIndices1, tc.saveIndices2)
-		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(tc.checkIndices1, tc.checkIndices2))
+		slashedVals := slice.IntersectionUint64(tc.checkIndices1, tc.checkIndices2)
+		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(slashedVals))
 	}
 }

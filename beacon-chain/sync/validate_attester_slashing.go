@@ -47,7 +47,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	if slashedVals == nil {
 		return pubsub.ValidationReject, errNilMessage
 	}
-	if s.hasSeenAttesterSlashingIndices(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices) {
+	if s.hasSeenAttesterSlashingIndices(slashedVals) {
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -79,9 +79,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 }
 
 // Returns true if the node has already received a valid attester slashing with the attesting indices.
-func (s *Service) hasSeenAttesterSlashingIndices(indices1, indices2 []uint64) bool {
-	slashableIndices := slice.IntersectionUint64(indices1, indices2)
-
+func (s *Service) hasSeenAttesterSlashingIndices(slashableIndices []uint64) bool {
 	s.seenAttesterSlashingLock.RLock()
 	defer s.seenAttesterSlashingLock.RUnlock()
 
