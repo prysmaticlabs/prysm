@@ -95,7 +95,6 @@ func (km *Keymanager) ImportKeystores(
 	if len(km.accountsStore.PublicKeys) < len(storeCopy.PublicKeys) {
 		return nil, fmt.Errorf("keys were not imported successfully, expected %d got %d", len(storeCopy.PublicKeys), len(km.accountsStore.PublicKeys))
 	}
-	//
 	// 6) Return Statuses
 	return statuses, nil
 }
