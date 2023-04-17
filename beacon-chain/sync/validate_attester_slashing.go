@@ -43,7 +43,8 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationReject, errWrongMessage
 	}
 
-	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
+	slashedVals := blocks.SlashableAttesterIndices(slashing)
+	if slashedVals == nil {
 		return pubsub.ValidationReject, errNilMessage
 	}
 	if s.hasSeenAttesterSlashingIndices(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices) {
@@ -57,7 +58,6 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
 		return pubsub.ValidationReject, err
 	}
-	slashedVals := blocks.SlashableAttesterIndices(slashing)
 	isSlashable := false
 	for _, v := range slashedVals {
 		val, err := headState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(v))
