@@ -66,6 +66,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		}
 		if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), slots.ToEpoch(headState.Slot())) {
 			isSlashable = true
+			break
 		}
 	}
 	if !isSlashable {
