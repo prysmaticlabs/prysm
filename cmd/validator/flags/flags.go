@@ -231,7 +231,7 @@ var (
 		Usage: "Exit without displaying the confirmation prompt",
 	}
 	VoluntaryExitJSONOutputPath = &cli.StringFlag{
-		Name: "exit-json-output",
+		Name: "exit-json-output-dir",
 		Usage: "The output directory to write voluntary exits as individual unencrypted JSON " +
 			"files. If this flag is provided, voluntary exits will be written to the provided " +
 			"directory and will not be broadcasted.",
