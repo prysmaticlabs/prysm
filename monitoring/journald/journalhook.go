@@ -42,9 +42,7 @@ func stringifyOp(r rune) rune {
 
 func stringifyKey(key string) string {
 	key = strings.Map(stringifyOp, key)
-	if strings.HasPrefix(key, "_") {
-		key = strings.TrimPrefix(key, "_")
-	}
+	key = strings.TrimPrefix(key, "_")
 	return key
 }
 
