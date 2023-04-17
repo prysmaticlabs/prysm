@@ -156,11 +156,9 @@ func ProcessSlotsUsingNextSlotCache(
 	}
 
 	var err error
-	if slot > parentState.Slot() {
-		parentState, err = ProcessSlots(ctx, parentState, slot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process slots")
-		}
+	parentState, err = ProcessSlots(ctx, parentState, slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process slots")
 	}
 	return parentState, nil
 }

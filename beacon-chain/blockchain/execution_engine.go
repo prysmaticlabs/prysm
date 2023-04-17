@@ -265,11 +265,14 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 
 	// Get previous randao.
 	st = st.Copy()
-	headRoot := s.headRoot()
-	st, err := transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot[:], slot)
-	if err != nil {
-		log.WithError(err).Error("Could not process slots to get payload attribute")
-		return false, emptyAttri, 0
+	if slot > st.Slot() {
+		headRoot := s.headRoot()
+		var err error
+		st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot[:], slot)
+		if err != nil {
+			log.WithError(err).Error("Could not process slots to get payload attribute")
+			return false, emptyAttri, 0
+		}
 	}
 	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
