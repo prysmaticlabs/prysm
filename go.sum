@@ -1267,8 +1267,6 @@ github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3 h1:SxrDVSr+oXuT1
 github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3/go.mod h1:qiIimacW5NhVRy8o+YxWo9YrecXqDAKKbL0+sOa0SJ4=
 github.com/wealdtech/go-eth2-wallet-types/v2 v2.8.2 h1:264/meVYWt1wFw6Mtn+xwkZkXjID42gNra4rycoiDXI=
 github.com/wealdtech/go-eth2-wallet-types/v2 v2.8.2/go.mod h1:k6kmiKWSWBTd4OxFifTEkPaBLhZspnO2KFD5XJY9nqg=
-github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3 h1:shC1HB1UogxN5Ech3Yqaaxj1X/P656PPCB4RbojIJqc=
-github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3/go.mod h1:XCsSkdKK4gwBMNrOCZWww0pX6AOt+2gYc5Z6jBRrNVg=
 github.com/willf/bitset v1.1.3/go.mod h1:RjeCKbqT1RxIR/KWY6phxZiaY1IyutSBfGjNPySAYV4=
 github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhemzwFU4jHLhdvlE6uDZjXFejJXr49I=
 github.com/xdg/stringprep v1.0.0/go.mod h1:Jhud4/sHMO4oL310DaZAKk9ZaJ08SJfe+sJh0HrGL1Y=
