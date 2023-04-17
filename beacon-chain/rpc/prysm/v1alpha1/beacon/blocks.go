@@ -346,12 +346,19 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 // StreamChainHead to clients every single time the head block and state of the chain change.
 // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
 func (bs *Server) StreamChainHead(_ *emptypb.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
-	stateChannel := make(chan *feed.Event, 1)
+	stateChannel := make(chan *feed.Event, 4)
 	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 	for {
 		select {
 		case stateEvent := <-stateChannel:
+			// In the event our node is in sync mode
+			// we do not send the chainhead to the caller
+			// due to the possibility of deadlocks when retrieving
+			// all the chain related data.
+			if bs.SyncChecker.Syncing() {
+				continue
+			}
 			if stateEvent.Type == statefeed.BlockProcessed {
 				res, err := bs.chainHeadRetrieval(stream.Context())
 				if err != nil {

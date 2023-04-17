@@ -332,7 +332,7 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	return activePeers >= maxPeers || numOfConns >= maxPeers
 }
 
-// PeersFromStringAddrs convers peer raw ENRs into multiaddrs for p2p.
+// PeersFromStringAddrs converts peer raw ENRs into multiaddrs for p2p.
 func PeersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 	var allAddrs []ma.Multiaddr
 	enodeString, multiAddrString := parseGenericAddrs(addrs)

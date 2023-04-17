@@ -18,6 +18,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -109,6 +110,61 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	assert.Equal(t, true, valid, "Failed Validation")
 	assert.NotNil(t, msg.ValidatorData, "Decoded message was not set on the message validator data")
+}
+
+func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidAttesterSlashing(t)
+	// Set only one of the  validators as withdrawn
+	vals := s.Validators()
+	vals[1].WithdrawableEpoch = primitives.Epoch(1)
+
+	require.NoError(t, s.SetValidators(vals))
+
+	r := &Service{
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			initialSync: &mockSync.Sync{IsSyncing: false},
+		},
+		seenAttesterSlashingCache: make(map[uint64]bool),
+		subHandler:                newSubTopicHandler(),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
+
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
+
+	assert.Equal(t, true, valid, "Rejected Validation")
+
+	// Set all validators as withdrawn.
+	vals = s.Validators()
+	for _, vv := range vals {
+		vv.WithdrawableEpoch = primitives.Epoch(1)
+	}
+
+	require.NoError(t, s.SetValidators(vals))
+	res, err = r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.ErrorContains(t, "none of the validators are slashable", err)
+	invalid := res == pubsub.ValidationReject
+
+	assert.Equal(t, true, invalid, "Passed Validation")
 }
 
 func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
@@ -290,6 +346,7 @@ func TestSeenAttesterSlashingIndices(t *testing.T) {
 			seenAttesterSlashingCache: map[uint64]bool{},
 		}
 		r.setAttesterSlashingIndicesSeen(tc.saveIndices1, tc.saveIndices2)
-		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(tc.checkIndices1, tc.checkIndices2))
+		slashedVals := slice.IntersectionUint64(tc.checkIndices1, tc.checkIndices2)
+		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(slashedVals))
 	}
 }

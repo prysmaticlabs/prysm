@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -29,6 +30,8 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "builder_get_payload_miss_count",
 	Help: "The number of get payload misses for validator requests to builder",
 })
+
+var gweiPerEth = big.NewInt(int64(params.BeaconConfig().GweiPerEth))
 
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
@@ -62,11 +65,14 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to get local payload value")
 				}
+				v.Div(v, gweiPerEth)
 				localValue := v.Uint64()
 				v, err = builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+					v = big.NewInt(0)                                                        // Default to local if can't get builder value.
 				}
+				v.Div(v, gweiPerEth)
 				builderValue := v.Uint64()
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
@@ -84,6 +90,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					blk.SetBlinded(true)
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
+						blk.SetBlinded(false)
 					} else {
 						return nil, nil
 					}
@@ -91,7 +98,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				if !higherValueBuilder {
 					log.WithFields(logrus.Fields{
 						"localGweiValue":       localValue,
-						"localBoostPercentage": 100 + boost,
+						"localBoostPercentage": boost,
 						"builderGweiValue":     builderValue,
 					}).Warn("Proposer: using local execution payload because higher value")
 				}
@@ -100,6 +107,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				blk.SetBlinded(true)
 				if err := blk.SetExecution(builderPayload); err != nil {
 					log.WithError(err).Warn("Proposer: failed to set builder payload")
+					blk.SetBlinded(false)
 				} else {
 					return nil, nil
 				}
@@ -152,6 +160,9 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 	if signedBid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
+	}
+	if signedBid.Version() != b.Version() {
+		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d", signedBid.Version(), b.Version())
 	}
 	bid, err := signedBid.Message()
 	if err != nil {

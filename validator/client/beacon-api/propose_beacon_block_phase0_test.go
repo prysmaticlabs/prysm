@@ -41,7 +41,7 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 				Graffiti:          hexutil.Encode(phase0Block.Phase0.Block.Body.Graffiti),
 				ProposerSlashings: jsonifyProposerSlashings(phase0Block.Phase0.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(phase0Block.Phase0.Block.Body.RandaoReveal),
-				VoluntaryExits:    jsonifySignedVoluntaryExits(phase0Block.Phase0.Block.Body.VoluntaryExits),
+				VoluntaryExits:    JsonifySignedVoluntaryExits(phase0Block.Phase0.Block.Body.VoluntaryExits),
 			},
 		},
 	}

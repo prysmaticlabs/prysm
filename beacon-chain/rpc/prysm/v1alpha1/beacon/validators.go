@@ -503,7 +503,7 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, err
 	}
-	// Get as close as we can to the end of the current epoch without going past the curent slot.
+	// Get as close as we can to the end of the current epoch without going past the current slot.
 	// The above check ensures a future *epoch* isn't requested, but the end slot of the requested epoch could still
 	// be past the current slot. In that case, use the current slot as the best approximation of the requested epoch.
 	// Replayer will make sure the slot ultimately used is canonical.

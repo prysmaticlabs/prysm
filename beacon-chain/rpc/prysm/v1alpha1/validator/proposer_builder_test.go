@@ -6,6 +6,7 @@ import (
 	"time"
 
 	blockchainTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -96,12 +97,23 @@ func TestServer_validatorRegistered(t *testing.T) {
 }
 
 func TestServer_canUseBuilder(t *testing.T) {
-	proposerServer := &Server{}
+	proposerServer := &Server{
+		BlockBuilder: &testing2.MockBuilderService{
+			HasConfigured: false,
+		},
+	}
+	reg, err := proposerServer.canUseBuilder(context.Background(), 0, 0)
+	require.NoError(t, err)
+	require.Equal(t, false, reg)
+	proposerServer.BlockBuilder = &testing2.MockBuilderService{
+		HasConfigured: true,
+	}
+
 	ctx := context.Background()
 
 	proposerServer.ForkchoiceFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
 	proposerServer.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
-	reg, err := proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
+	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 

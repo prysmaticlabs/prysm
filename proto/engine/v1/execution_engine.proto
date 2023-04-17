@@ -220,3 +220,7 @@ message Blob {
 	// Each blob consists of `BLS_FIELD_ELEMENT`(32) multiplies `FIELD_ELEMENTS_PER_BLOB`(4096)
 	bytes data = 1 [(ethereum.eth.ext.ssz_size) = "blob.size"];
 }
+
+message ExchangeCapabilities {
+	repeated string supported_methods = 1;
+}
