@@ -16,11 +16,10 @@ import (
 )
 
 // ImportKeystores into the local keymanager from an external source.
-// protection history in the database.
 // 1) Copy the in memory keystore
 // 2) Import the keys into copied in memory keystore
 // 3) Save the copy to disk
-// 4) Reinitialize account store from disk
+// 4) Reinitialize account store
 // 5) Verify keys are indeed Imported
 // 6) Return Statuses
 func (km *Keymanager) ImportKeystores(

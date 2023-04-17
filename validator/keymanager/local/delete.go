@@ -18,7 +18,7 @@ import (
 // 1) Copy the in memory keystore
 // 2) Delete the keys from copied in memory keystore
 // 3) Save the copy to disk
-// 4) Reinitialize account store from disk
+// 4) Reinitialize account store
 // 5) Verify keys are indeed deleted
 // 6) Return API response
 func (km *Keymanager) DeleteKeystores(

@@ -287,8 +287,13 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 		return err
 	}
 	//
-	// Reinitialize account store from disk, updating the local store and cache
-	return km.initializeAccountKeystore(ctx)
+	// Reinitialize account store and cache
+	km.accountsStore = store
+	err = km.initializeKeysCachesFromKeystore()
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize keys caches")
+	}
+	return err
 }
 
 // CreateAccountsKeystoreRepresentation is a pure function that takes an accountStore and wallet password and returns the encrypted formatted json version for local writing.
