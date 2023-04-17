@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -31,6 +32,8 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "builder_get_payload_miss_count",
 	Help: "The number of get payload misses for validator requests to builder",
 })
+
+var gweiPerEth = big.NewInt(int64(params.BeaconConfig().GweiPerEth))
 
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
@@ -60,43 +63,58 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					return errors.Wrap(err, "failed to get execution payload")
 				}
 				// Compare payload values between local and builder. Default to the local value if it is higher.
-				localValue, err := localPayload.Value()
+				v, err := localPayload.Value()
 				if err != nil {
 					return errors.Wrap(err, "failed to get local payload value")
 				}
-				builderValue, err := builderPayload.Value()
+				v.Div(v, gweiPerEth)
+				localValue := v.Uint64()
+				v, err = builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+					v = big.NewInt(0)                                                        // Default to local if can't get builder value.
 				}
+				v.Div(v, gweiPerEth)
+				builderValue := v.Uint64()
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
 					return errors.Wrap(err, "failed to match withdrawals root")
 				}
+
+				// Use builder payload if the following in true:
+				// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
+				boost := params.BeaconConfig().LocalBlockValueBoost
+				higherValueBuilder := builderValue*100 > localValue*(100+boost)
+
 				// If we can't get the builder value, just use local block.
-				if builderValue.Cmp(localValue) > 0 && withdrawalsMatched { // Builder value is higher and withdrawals match.
+				if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
 					blk.SetBlinded(true)
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
+						blk.SetBlinded(false)
 					} else {
 						return nil
 					}
 				}
-				log.WithFields(logrus.Fields{
-					"localValue":   localValue,
-					"builderValue": builderValue,
-				}).Warn("Proposer: using local execution payload because higher value")
+				if !higherValueBuilder {
+					log.WithFields(logrus.Fields{
+						"localGweiValue":       localValue,
+						"localBoostPercentage": boost,
+						"builderGweiValue":     builderValue,
+					}).Warn("Proposer: using local execution payload because higher value")
+				}
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.
 				blk.SetBlinded(true)
 				if err := blk.SetExecution(builderPayload); err != nil {
 					log.WithError(err).Warn("Proposer: failed to set builder payload")
+					blk.SetBlinded(false)
 				} else {
 					return nil
 				}
 			}
 		}
-
 	}
 
 	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
@@ -136,6 +154,9 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 	if signedBid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
+	}
+	if signedBid.Version() != b.Version() {
+		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d", signedBid.Version(), b.Version())
 	}
 	bid, err := signedBid.Message()
 	if err != nil {

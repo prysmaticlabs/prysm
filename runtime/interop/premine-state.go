@@ -1,4 +1,4 @@
-package util
+package interop
 
 import (
 	"context"
@@ -19,32 +19,52 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
-var errUnsupportedVersion = errors.New("schema version not supported by premineGenesisConfig")
+var errUnsupportedVersion = errors.New("schema version not supported by PremineGenesisConfig")
 
-type premineGenesisConfig struct {
+type PremineGenesisConfig struct {
 	GenesisTime     uint64
 	NVals           uint64
 	PregenesisCreds uint64
 	Version         int          // as in "github.com/prysmaticlabs/prysm/v4/runtime/version"
 	GB              *types.Block // geth genesis block
+	depositEntries  *depositEntries
+}
+
+type depositEntries struct {
+	dds   []*ethpb.Deposit_Data
+	roots [][]byte
+}
+
+type PremineGenesisOpt func(*PremineGenesisConfig)
+
+func WithDepositData(dds []*ethpb.Deposit_Data, roots [][]byte) PremineGenesisOpt {
+	return func(cfg *PremineGenesisConfig) {
+		cfg.depositEntries = &depositEntries{
+			dds:   dds,
+			roots: roots,
+		}
+	}
 }
 
 // NewPreminedGenesis creates a genesis BeaconState at the given fork version, suitable for using as an e2e genesis.
-func NewPreminedGenesis(ctx context.Context, t, nvals, pCreds uint64, version int, gb *types.Block) (state.BeaconState, error) {
-	return (&premineGenesisConfig{
+func NewPreminedGenesis(ctx context.Context, t, nvals, pCreds uint64, version int, gb *types.Block, opts ...PremineGenesisOpt) (state.BeaconState, error) {
+	cfg := &PremineGenesisConfig{
 		GenesisTime:     t,
 		NVals:           nvals,
 		PregenesisCreds: pCreds,
 		Version:         version,
 		GB:              gb,
-	}).prepare(ctx)
+	}
+	for _, o := range opts {
+		o(cfg)
+	}
+	return cfg.prepare(ctx)
 }
 
-func (s *premineGenesisConfig) prepare(ctx context.Context) (state.BeaconState, error) {
+func (s *PremineGenesisConfig) prepare(ctx context.Context) (state.BeaconState, error) {
 	switch s.Version {
 	case version.Phase0, version.Altair, version.Bellatrix:
 	default:
@@ -65,7 +85,7 @@ func (s *premineGenesisConfig) prepare(ctx context.Context) (state.BeaconState, 
 	return st, nil
 }
 
-func (s *premineGenesisConfig) empty() (state.BeaconState, error) {
+func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 	var e state.BeaconState
 	var err error
 	switch s.Version {
@@ -129,7 +149,7 @@ func (s *premineGenesisConfig) empty() (state.BeaconState, error) {
 	return e.Copy(), nil
 }
 
-func (s *premineGenesisConfig) processDeposits(ctx context.Context, g state.BeaconState) error {
+func (s *PremineGenesisConfig) processDeposits(ctx context.Context, g state.BeaconState) error {
 	deposits, err := s.deposits()
 	if err != nil {
 		return err
@@ -147,35 +167,42 @@ func (s *premineGenesisConfig) processDeposits(ctx context.Context, g state.Beac
 	return nil
 }
 
-func (s *premineGenesisConfig) deposits() ([]*ethpb.Deposit, error) {
-	prv, pub, err := s.keys()
-	if err != nil {
-		return nil, err
+func (s *PremineGenesisConfig) deposits() ([]*ethpb.Deposit, error) {
+	if s.depositEntries == nil {
+		prv, pub, err := s.keys()
+		if err != nil {
+			return nil, err
+		}
+		dds, roots, err := DepositDataFromKeysWithExecCreds(prv, pub, s.PregenesisCreds)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not generate deposit data from keys")
+		}
+		s.depositEntries = &depositEntries{
+			dds:   dds,
+			roots: roots,
+		}
 	}
-	items, roots, err := interop.DepositDataFromKeysWithExecCreds(prv, pub, s.PregenesisCreds)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate deposit data from keys")
-	}
-	t, err := trie.GenerateTrieFromItems(roots, params.BeaconConfig().DepositContractTreeDepth)
+
+	t, err := trie.GenerateTrieFromItems(s.depositEntries.roots, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
 	}
-	deposits, err := interop.GenerateDepositsFromData(items, t)
+	deposits, err := GenerateDepositsFromData(s.depositEntries.dds, t)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
 	return deposits, nil
 }
 
-func (s *premineGenesisConfig) keys() ([]bls.SecretKey, []bls.PublicKey, error) {
-	prv, pub, err := interop.DeterministicallyGenerateKeys(0, s.NVals)
+func (s *PremineGenesisConfig) keys() ([]bls.SecretKey, []bls.PublicKey, error) {
+	prv, pub, err := DeterministicallyGenerateKeys(0, s.NVals)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", s.NVals)
 	}
 	return prv, pub, nil
 }
 
-func (s *premineGenesisConfig) setEth1Data(g state.BeaconState) error {
+func (s *PremineGenesisConfig) setEth1Data(g state.BeaconState) error {
 	if err := g.SetEth1DepositIndex(0); err != nil {
 		return err
 	}
@@ -194,7 +221,7 @@ func emptyDepositRoot() ([32]byte, error) {
 	return t.HashTreeRoot()
 }
 
-func (s *premineGenesisConfig) populate(g state.BeaconState) error {
+func (s *PremineGenesisConfig) populate(g state.BeaconState) error {
 	if err := g.SetGenesisTime(s.GenesisTime); err != nil {
 		return err
 	}
@@ -235,7 +262,7 @@ func (s *premineGenesisConfig) populate(g state.BeaconState) error {
 	return s.setEth1Data(g)
 }
 
-func (s *premineGenesisConfig) setGenesisValidatorsRoot(g state.BeaconState) error {
+func (s *PremineGenesisConfig) setGenesisValidatorsRoot(g state.BeaconState) error {
 	vroot, err := stateutil.ValidatorRegistryRoot(g.Validators())
 	if err != nil {
 		return err
@@ -243,7 +270,7 @@ func (s *premineGenesisConfig) setGenesisValidatorsRoot(g state.BeaconState) err
 	return g.SetGenesisValidatorsRoot(vroot[:])
 }
 
-func (s *premineGenesisConfig) setFork(g state.BeaconState) error {
+func (s *PremineGenesisConfig) setFork(g state.BeaconState) error {
 	var pv, cv []byte
 	switch s.Version {
 	case version.Phase0:
@@ -263,7 +290,7 @@ func (s *premineGenesisConfig) setFork(g state.BeaconState) error {
 	return g.SetFork(fork)
 }
 
-func (s *premineGenesisConfig) setInactivityScores(g state.BeaconState) error {
+func (s *PremineGenesisConfig) setInactivityScores(g state.BeaconState) error {
 	if s.Version < version.Altair {
 		return nil
 	}
@@ -281,7 +308,7 @@ func (s *premineGenesisConfig) setInactivityScores(g state.BeaconState) error {
 	return g.SetInactivityScores(scores)
 }
 
-func (s *premineGenesisConfig) setSyncCommittees(g state.BeaconState) error {
+func (s *PremineGenesisConfig) setSyncCommittees(g state.BeaconState) error {
 	if s.Version < version.Altair {
 		return nil
 	}
@@ -299,7 +326,7 @@ type rooter interface {
 	HashTreeRoot() ([32]byte, error)
 }
 
-func (s *premineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
+func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 	var body rooter
 	switch s.Version {
 	case version.Phase0:
@@ -364,7 +391,7 @@ func (s *premineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 	return g.SetLatestBlockHeader(lbh)
 }
 
-func (s *premineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
+func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 	if s.Version < version.Bellatrix {
 		return nil
 	}

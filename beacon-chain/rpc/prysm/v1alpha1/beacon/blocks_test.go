@@ -13,6 +13,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -287,6 +288,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 		OptimisticModeFetcher: &chainMock.ChainService{},
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

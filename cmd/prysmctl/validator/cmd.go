@@ -69,7 +69,7 @@ var (
 var Commands = []*cli.Command{
 	{
 		Name:    "validator",
-		Aliases: []string{"v", "sign"}, // remove sign command should be depreciated but having as backwards compatability.
+		Aliases: []string{"v", "sign"}, // remove sign command should be depreciated but having as backwards compatibility.
 		Usage:   "commands that affect the state of validators such as exiting or withdrawing",
 		Subcommands: []*cli.Command{
 			{
@@ -159,6 +159,7 @@ var Commands = []*cli.Command{
 					flags.GrpcRetryDelayFlag,
 					flags.ExitAllFlag,
 					flags.ForceExitFlag,
+					flags.VoluntaryExitJSONOutputPath,
 					features.Mainnet,
 					features.PraterTestnet,
 					features.SepoliaTestnet,

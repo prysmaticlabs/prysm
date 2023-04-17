@@ -19,8 +19,7 @@ const (
 	Initialized
 	// Synced is sent when the beacon node has completed syncing and is ready to participate in the network.
 	Synced
-	// Reorg is an event sent when the new head state's slot after a block
-	// transition is lower than its previous head state slot value.
+	// Reorg is an event sent when the new head is not a descendant of the previous head.
 	Reorg
 	// FinalizedCheckpoint event.
 	FinalizedCheckpoint
