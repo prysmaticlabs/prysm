@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -32,8 +31,6 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "builder_get_payload_miss_count",
 	Help: "The number of get payload misses for validator requests to builder",
 })
-
-var gweiPerEth = big.NewInt(int64(params.BeaconConfig().GweiPerEth))
 
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
