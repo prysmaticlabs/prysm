@@ -20,8 +20,7 @@ import (
 // 2) Import the keys into copied in memory keystore
 // 3) Save the copy to disk
 // 4) Reinitialize account store
-// 5) Verify keys are indeed Imported
-// 6) Return Statuses
+// 5) Return Statuses
 func (km *Keymanager) ImportKeystores(
 	ctx context.Context,
 	keystores []*keymanager.Keystore,
@@ -90,11 +89,7 @@ func (km *Keymanager) ImportKeystores(
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return nil, err
 	}
-	// 5) Verify keys are indeed Imported
-	if len(km.accountsStore.PublicKeys) < len(storeCopy.PublicKeys) {
-		return nil, fmt.Errorf("keys were not imported successfully, expected %d got %d", len(storeCopy.PublicKeys), len(km.accountsStore.PublicKeys))
-	}
-	// 6) Return Statuses
+	// 5) Return Statuses
 	return statuses, nil
 }
 
@@ -109,7 +104,7 @@ func (km *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]
 	storeCopy := km.accountsStore.Copy()
 
 	// 2) Update store and remove duplicates
-	updateAccountsStoreInMemory(storeCopy, privKeys, pubKeys)
+	updateAccountsStoreKeys(storeCopy, privKeys, pubKeys)
 
 	// 3 & 4) save to disk and re-initializes keystore
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {

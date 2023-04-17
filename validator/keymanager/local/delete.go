@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -19,8 +18,7 @@ import (
 // 2) Delete the keys from copied in memory keystore
 // 3) Save the copy to disk
 // 4) Reinitialize account store
-// 5) Verify keys are indeed deleted
-// 6) Return API response
+// 5) Return API response
 func (km *Keymanager) DeleteKeystores(
 	ctx context.Context, publicKeys [][]byte,
 ) ([]*ethpbservice.DeletedKeystoreStatus, error) {
@@ -28,7 +26,6 @@ func (km *Keymanager) DeleteKeystores(
 	trackedPublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	statuses := make([]*ethpbservice.DeletedKeystoreStatus, 0, len(publicKeys))
 	deletedKeys := make([][]byte, 0, len(publicKeys))
-	originalKeyLen := len(km.accountsStore.PublicKeys)
 	// 1) Copy the in memory keystore
 	storeCopy := km.accountsStore.Copy()
 	for _, publicKey := range publicKeys {
@@ -72,11 +69,6 @@ func (km *Keymanager) DeleteKeystores(
 		return nil, err
 	}
 
-	// 5) Verify keys are indeed deleted
-	if len(km.accountsStore.PublicKeys) == originalKeyLen || len(km.accountsStore.PublicKeys) != len(storeCopy.PublicKeys) {
-		return nil, errors.New("keys were not successfully deleted in file")
-	}
-
 	var deletedKeysStr string
 	for i, k := range deletedKeys {
 		if i == 0 {
@@ -90,6 +82,6 @@ func (km *Keymanager) DeleteKeystores(
 	log.WithFields(logrus.Fields{
 		"publicKeys": deletedKeysStr,
 	}).Info("Successfully deleted validator key(s)")
-	// 6) Return API response
+	// 5) Return API response
 	return statuses, nil
 }

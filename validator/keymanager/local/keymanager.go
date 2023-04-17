@@ -286,8 +286,9 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts); err != nil {
 		return err
 	}
-	//
+
 	// Reinitialize account store and cache
+	// This will update the in-memory information instead of reading from the file itself for safety concerns
 	km.accountsStore = store
 	err = km.initializeKeysCachesFromKeystore()
 	if err != nil {
@@ -337,7 +338,7 @@ func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, pri
 			PublicKeys:  publicKeys,
 		}
 	} else {
-		updateAccountsStoreInMemory(km.accountsStore, privateKeys, publicKeys)
+		updateAccountsStoreKeys(km.accountsStore, privateKeys, publicKeys)
 	}
 	err := km.initializeKeysCachesFromKeystore()
 	if err != nil {
@@ -346,7 +347,7 @@ func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, pri
 	return nil
 }
 
-func updateAccountsStoreInMemory(store *accountStore, privateKeys, publicKeys [][]byte) {
+func updateAccountsStoreKeys(store *accountStore, privateKeys, publicKeys [][]byte) {
 	existingPubKeys := make(map[string]bool)
 	existingPrivKeys := make(map[string]bool)
 	for i := 0; i < len(store.PrivateKeys); i++ {
