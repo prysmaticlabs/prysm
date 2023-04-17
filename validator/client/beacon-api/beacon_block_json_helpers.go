@@ -97,7 +97,8 @@ func jsonifyProposerSlashings(proposerSlashings []*ethpb.ProposerSlashing) []*ap
 	return jsonProposerSlashings
 }
 
-func jsonifySignedVoluntaryExits(voluntaryExits []*ethpb.SignedVoluntaryExit) []*apimiddleware.SignedVoluntaryExitJson {
+// JsonifySignedVoluntaryExits converts an array of voluntary exit structs to a JSON hex string compatible format.
+func JsonifySignedVoluntaryExits(voluntaryExits []*ethpb.SignedVoluntaryExit) []*apimiddleware.SignedVoluntaryExitJson {
 	jsonSignedVoluntaryExits := make([]*apimiddleware.SignedVoluntaryExitJson, len(voluntaryExits))
 	for index, signedVoluntaryExit := range voluntaryExits {
 		jsonSignedVoluntaryExit := &apimiddleware.SignedVoluntaryExitJson{
