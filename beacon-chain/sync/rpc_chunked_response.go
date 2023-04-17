@@ -51,6 +51,14 @@ func WriteBlockChunk(stream libp2pcore.Stream, tor blockchain.TemporalOracle, en
 			return err
 		}
 		obtainedCtx = digest[:]
+	case version.Capella:
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().CapellaForkEpoch, valRoot[:])
+		if err != nil {
+			return err
+		}
+		obtainedCtx = digest[:]
+	default:
+		return errors.Wrapf(ErrUnrecognizedVersion, "block version %d is not recognized", blk.Version())
 	}
 
 	if err := writeContextToStream(obtainedCtx, stream); err != nil {
@@ -138,5 +146,5 @@ func extractBlockDataType(digest []byte, tor blockchain.TemporalOracle) (interfa
 			return blkFunc()
 		}
 	}
-	return nil, errors.New("no valid digest matched")
+	return nil, errors.Wrapf(ErrNoValidDigest, "could not extract block data type, saw digest=%#x, genesis=%v, vr=%#x", digest, tor.GenesisTime(), tor.GenesisValidatorsRoot())
 }

@@ -13,6 +13,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var ErrNoValidDigest = errors.New("no valid digest matched")
+var ErrUnrecognizedVersion = errors.New("cannot determine context bytes for unrecognized object")
+
 var responseCodeSuccess = byte(0x00)
 var responseCodeInvalidRequest = byte(0x01)
 var responseCodeServerError = byte(0x02)

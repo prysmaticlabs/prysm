@@ -155,5 +155,5 @@ func extractMetaDataType(digest []byte, tor blockchain.TemporalOracle) (metadata
 			return mdFunc(), nil
 		}
 	}
-	return nil, errors.New("no valid digest matched")
+	return nil, errors.Wrapf(ErrNoValidDigest, "could not extract metadata type, saw digest=%#x, genesis=%v, vr=%#x", digest, tor.GenesisTime(), tor.GenesisValidatorsRoot())
 }
