@@ -5,10 +5,14 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -39,10 +43,11 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationReject, errWrongMessage
 	}
 
-	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
+	slashedVals := blocks.SlashableAttesterIndices(slashing)
+	if slashedVals == nil {
 		return pubsub.ValidationReject, errNilMessage
 	}
-	if s.hasSeenAttesterSlashingIndices(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices) {
+	if s.hasSeenAttesterSlashingIndices(slashedVals) {
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -53,7 +58,20 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
 		return pubsub.ValidationReject, err
 	}
-
+	isSlashable := false
+	for _, v := range slashedVals {
+		val, err := headState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(v))
+		if err != nil {
+			return pubsub.ValidationIgnore, err
+		}
+		if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), slots.ToEpoch(headState.Slot())) {
+			isSlashable = true
+			break
+		}
+	}
+	if !isSlashable {
+		return pubsub.ValidationReject, errors.Errorf("none of the validators are slashable: %v", slashedVals)
+	}
 	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
@@ -61,9 +79,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 }
 
 // Returns true if the node has already received a valid attester slashing with the attesting indices.
-func (s *Service) hasSeenAttesterSlashingIndices(indices1, indices2 []uint64) bool {
-	slashableIndices := slice.IntersectionUint64(indices1, indices2)
-
+func (s *Service) hasSeenAttesterSlashingIndices(slashableIndices []uint64) bool {
 	s.seenAttesterSlashingLock.RLock()
 	defer s.seenAttesterSlashingLock.RUnlock()
 
