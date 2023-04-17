@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -261,8 +260,10 @@ func TestNoWeiOverflow(t *testing.T) {
 		Amount:         3,
 	}}
 	id := &v1.PayloadIDBytes{0x1}
+	v := big.NewInt(18395081606530051)
+	v = v.Div(v, big.NewInt(10e9))
 	vs := &Server{
-		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: math.MaxUint64},
+		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: v.Uint64()},
 		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
 		FinalizationFetcher:    &blockchainTest.ChainService{},
 		BeaconDB:               beaconDB,
