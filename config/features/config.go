@@ -65,6 +65,8 @@ type Flags struct {
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
 	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
 
+	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -205,6 +207,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(enableOptionalEngineMethods.Name) {
 		logEnabled(enableOptionalEngineMethods)
 		cfg.EnableOptionalEngineMethods = true
+	}
+	if ctx.IsSet(prepareAllPayloads.Name) {
+		logEnabled(prepareAllPayloads)
+		cfg.PrepareAllPayloads = true
 	}
 	Init(cfg)
 	return nil

@@ -37,3 +37,18 @@ func Test_RegisterValidator(t *testing.T) {
 	require.NoError(t, s.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{{Message: &eth.ValidatorRegistrationV1{Pubkey: pubkey[:], FeeRecipient: feeRecipient[:]}}}))
 	assert.Equal(t, true, builder.RegisteredVals[pubkey])
 }
+
+func Test_BuilderMethodsWithouClient(t *testing.T) {
+	s, err := NewService(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, false, s.Configured())
+
+	_, err = s.GetHeader(context.Background(), 0, [32]byte{}, [48]byte{})
+	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
+
+	_, err = s.SubmitBlindedBlock(context.Background(), nil)
+	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
+
+	err = s.RegisterValidator(context.Background(), nil)
+	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
+}

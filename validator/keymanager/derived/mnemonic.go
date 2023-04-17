@@ -20,7 +20,7 @@ type MnemonicGenerator struct {
 	skipMnemonicConfirm bool
 }
 
-// ErrUnsupportedMnemonicLanguage is returned when trying to use an unsupported mnemonic langauge.
+// ErrUnsupportedMnemonicLanguage is returned when trying to use an unsupported mnemonic language.
 var (
 	DefaultMnemonicLanguage        = "english"
 	ErrUnsupportedMnemonicLanguage = errors.New("unsupported mnemonic language")
