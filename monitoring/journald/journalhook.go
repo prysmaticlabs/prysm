@@ -59,11 +59,12 @@ func stringifyEntries(data map[string]interface{}) map[string]string {
 	return entries
 }
 
+// Fire fires an entry into the journal.
 func (hook *JournalHook) Fire(entry *logrus.Entry) error {
 	return journal.Send(entry.Message, severityMap[entry.Level], stringifyEntries(entry.Data))
 }
 
-// `Levels()` returns a slice of `Levels` the hook is fired for.
+// Levels returns a slice of `Levels` the hook is fired for.
 func (hook *JournalHook) Levels() []logrus.Level {
 	return []logrus.Level{
 		logrus.PanicLevel,

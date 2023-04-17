@@ -3,7 +3,7 @@
 package journald
 
 import (
-	"io/ioutil"
+	"io"
 
 	"github.com/coreos/go-systemd/journal"
 	"github.com/sirupsen/logrus"
@@ -16,7 +16,7 @@ func Enable() error {
 		logrus.Warning("Journal not available but user requests we log to it. Ignoring")
 	} else {
 		logrus.AddHook(&JournalHook{})
-		logrus.SetOutput(ioutil.Discard)
+		logrus.SetOutput(io.Discard)
 	}
 	return nil
 }
