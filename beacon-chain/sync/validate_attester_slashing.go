@@ -6,6 +6,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	v "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -50,7 +51,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
+	if _, err := blocks.ProcessAttesterSlashing(ctx, headState, slashing, v.SlashValidator); err != nil {
 		return pubsub.ValidationReject, err
 	}
 

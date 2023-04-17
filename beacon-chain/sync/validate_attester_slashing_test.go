@@ -111,6 +111,49 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	assert.NotNil(t, msg.ValidatorData, "Decoded message was not set on the message validator data")
 }
 
+func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidAttesterSlashing(t)
+	// Set all validators as withdrawn
+	vals := s.Validators()
+	for _, vv := range vals {
+		vv.WithdrawableEpoch = primitives.Epoch(1)
+	}
+	require.NoError(t, s.SetValidators(vals))
+
+	r := &Service{
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			initialSync: &mockSync.Sync{IsSyncing: false},
+		},
+		seenAttesterSlashingCache: make(map[uint64]bool),
+		subHandler:                newSubTopicHandler(),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
+
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.ErrorContains(t, "unable to slash any validator", err)
+	invalid := res == pubsub.ValidationReject
+
+	assert.Equal(t, true, invalid, "Passed Validation")
+}
+
 func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
