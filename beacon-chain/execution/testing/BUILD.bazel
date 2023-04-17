@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "genesis.go",
         "mock_engine_client.go",
         "mock_execution_chain.go",
         "mock_faulty_powchain.go",
@@ -30,9 +29,7 @@ go_library(
         "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
-        "@com_github_ethereum_go_ethereum//core:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
-        "@com_github_ethereum_go_ethereum//params:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
         "@com_github_holiman_uint256//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

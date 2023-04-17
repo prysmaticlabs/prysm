@@ -16,10 +16,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
@@ -88,7 +88,7 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 	}
 
 	gethJsonPath := path.Join(path.Dir(binaryPath), "genesis.json")
-	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
+	gen := interop.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
 	log.Infof("eth1 miner genesis timestamp=%d", e2e.TestParams.Eth1GenesisTime)
 	b, err := json.Marshal(gen)
 	if err != nil {
