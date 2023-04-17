@@ -5,11 +5,14 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
-	v "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -51,10 +54,23 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if _, err := blocks.ProcessAttesterSlashing(ctx, headState, slashing, v.SlashValidator); err != nil {
+	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
 		return pubsub.ValidationReject, err
 	}
-
+	slashedVals := slice.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+	isSlashable := false
+	for _, v := range slashedVals {
+		val, err := headState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(v))
+		if err != nil {
+			return pubsub.ValidationIgnore, err
+		}
+		if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), slots.ToEpoch(headState.Slot())) {
+			isSlashable = true
+		}
+	}
+	if !isSlashable {
+		return pubsub.ValidationReject, errors.Errorf("none of the validators are slashable: %v", slashedVals)
+	}
 	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)
 
 	msg.ValidatorData = slashing // Used in downstream subscriber

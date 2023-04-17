@@ -116,11 +116,10 @@ func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T
 	ctx := context.Background()
 
 	slashing, s := setupValidAttesterSlashing(t)
-	// Set all validators as withdrawn
+	// Set only one of the  validators as withdrawn
 	vals := s.Validators()
-	for _, vv := range vals {
-		vv.WithdrawableEpoch = primitives.Epoch(1)
-	}
+	vals[0].WithdrawableEpoch = primitives.Epoch(1)
+
 	require.NoError(t, s.SetValidators(vals))
 
 	r := &Service{
@@ -148,7 +147,20 @@ func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T
 		},
 	}
 	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
-	assert.ErrorContains(t, "unable to slash any validator", err)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
+
+	assert.Equal(t, true, valid, "Rejected Validation")
+
+	// Set all validators as withdrawn.
+	vals = s.Validators()
+	for _, vv := range vals {
+		vv.WithdrawableEpoch = primitives.Epoch(1)
+	}
+
+	require.NoError(t, s.SetValidators(vals))
+	res, err = r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.ErrorContains(t, "none of the validators are slashable", err)
 	invalid := res == pubsub.ValidationReject
 
 	assert.Equal(t, true, invalid, "Passed Validation")
