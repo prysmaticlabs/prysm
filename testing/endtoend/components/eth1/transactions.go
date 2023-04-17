@@ -116,8 +116,7 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 			if err != nil {
 				return err
 			}
-			err = backend.SendTransaction(context.Background(), signedTx)
-			return nil
+			return backend.SendTransaction(context.Background(), signedTx)
 		})
 
 	}
