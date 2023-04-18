@@ -95,7 +95,7 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	defer c.depositsLock.Unlock()
 
 	depositTrie := c.finalizedDeposits.depositTree
-	insertIndex := int(c.finalizedDeposits.merkleTrieIndex + 1)
+	insertIndex := int(c.finalizedDeposits.MerkleTrieIndex() + 1)
 
 	// Don't insert into finalized trie if there is no deposit to
 	// insert.

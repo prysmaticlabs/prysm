@@ -346,7 +346,12 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		},
 		Index: 3,
 	})
-
+	for _, dep := range finalizedDeposits {
+		root, err := dep.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err)
+		err = dc.finalizedDeposits.depositTree.PushLeaf(root)
+		require.NoError(t, err)
+	}
 	err = dc.InsertFinalizedDeposits(context.Background(), 2)
 	require.NoError(t, err)
 

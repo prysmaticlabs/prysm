@@ -303,7 +303,7 @@ func (_ *ZeroNode) IsFull() bool {
 
 // Finalize marks deposits of the Merkle tree as finalized.
 func (_ *ZeroNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
-	return nil, nil
+	return &ZeroNode{}, nil
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
