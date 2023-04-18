@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -106,10 +107,13 @@ func (s *Service) GetHeader(ctx context.Context, slot primitives.Slot, parentHas
 		getHeaderLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 	if s.c == nil {
+		tracing.AnnotateError(span, ErrNoBuilder)
 		return nil, ErrNoBuilder
 	}
 
-	return s.c.GetHeader(ctx, slot, parentHash, pubKey)
+	h, err := s.c.GetHeader(ctx, slot, parentHash, pubKey)
+	tracing.AnnotateError(span, err)
+	return h, err
 }
 
 // Status retrieves the status of the builder relay network.
