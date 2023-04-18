@@ -60,7 +60,6 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 			log = log.WithField("txCount", len(txs))
 			txsPerSlotCount.Set(float64(len(txs)))
 		}
-
 	}
 	log.Info("Finished applying state transition")
 	return nil

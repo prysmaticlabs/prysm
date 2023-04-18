@@ -214,7 +214,6 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 			"timeFromSendingToProcessingResponse": end,
 			"totalBlocksWithExecutionPayloads":    totalExecutionBlocks,
 		}).Info("Received blocks from peer")
-
 	}
 	return nil
 }

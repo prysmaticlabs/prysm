@@ -425,7 +425,6 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.Hea
 			Error:  error(nil),
 		})
 		headers = append(headers, header)
-
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {
