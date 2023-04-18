@@ -31,21 +31,6 @@ var (
 	})
 )
 
-// DepositFetcher defines a struct which can retrieve deposit information from a store.
-type DepositFetcher interface {
-	AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
-	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
-	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
-	FinalizedDeposits(ctx context.Context) FinalizedDeposits
-	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
-}
-
-type DepositInserter interface {
-	InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error
-	InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer)
-	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error
-}
-
 // FinalizedDeposits stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
 type FinalizedDeposits struct {
@@ -295,7 +280,7 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, lastFinalizedI
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	if dc.finalizedDeposits.Deposits == nil {
+	if dc.finalizedDeposits.Deposits() == nil {
 		return dc.allDeposits(untilBlk)
 	}
 

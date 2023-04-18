@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
@@ -22,7 +23,7 @@ import (
 )
 
 var _ runtime.Service = (*Service)(nil)
-var _ depositcache.DepositFetcher = (*Service)(nil)
+var _ cache.FinalizedFetcher = (*Service)(nil)
 var _ execution.ChainStartFetcher = (*Service)(nil)
 
 // Service spins up an client interoperability service that handles responsibilities such
@@ -148,7 +149,7 @@ func (_ *Service) DepositsNumberAndRootAtHeight(_ context.Context, _ *big.Int) (
 }
 
 // FinalizedDeposits mocks out the deposit cache functionality for interop.
-func (_ *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDeposits {
+func (_ *Service) FinalizedDeposits(_ context.Context) cache.FinalizedDeposits {
 	return nil
 }
 

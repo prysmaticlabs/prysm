@@ -18,7 +18,7 @@ import (
 
 var (
 	pendingDepositsCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacondb_pending_deposits",
+		Name: "beacondb_pending_deposits_eip4881",
 		Help: "The number of pending deposits in the beaconDB in-memory database",
 	})
 )
@@ -29,6 +29,21 @@ type Cache struct {
 	finalizedDeposits FinalizedDeposits
 	depositsByKey     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer
 	depositsLock      sync.RWMutex
+}
+
+func (c *Cache) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Cache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Cache) FinalizedDeposits(ctx context.Context) cache.FinalizedDeposits {
+	//TODO implement me
+	panic("implement me")
 }
 
 // FinalizedDeposits stores the trie of deposits that have been included

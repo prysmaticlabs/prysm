@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -18,7 +19,7 @@ import (
 
 const nilDepositErr = "Ignoring nil deposit insertion"
 
-var _ DepositFetcher = (*DepositCache)(nil)
+var _ cache.DepositFetcher = (*DepositCache)(nil)
 
 func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -432,7 +433,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	require.NoError(t, err, "Could not generate deposit trie")
 	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
-	rootB, err := cachedDeposits.Deposits.HashTreeRoot()
+	rootB, err := cachedDeposits.Deposits().HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, rootA, rootB)
 }
@@ -494,7 +495,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	require.NoError(t, err, "Could not generate deposit trie")
 	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
-	rootB, err := cachedDeposits.Deposits.HashTreeRoot()
+	rootB, err := cachedDeposits.Deposits().HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, rootA, rootB)
 }
@@ -806,13 +807,13 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 
 	// Mimick finalized deposit trie fetch.
 	fd := dc.FinalizedDeposits(context.Background())
-	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex, big.NewInt(14))
-	insertIndex := fd.MerkleTrieIndex + 1
+	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(14))
+	insertIndex := fd.MerkleTrieIndex() + 1
 
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
-		if err = fd.Deposits.Insert(depHash[:], int(insertIndex)); err != nil {
+		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
 		insertIndex++
@@ -822,18 +823,18 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	dc.InsertFinalizedDeposits(context.Background(), 14)
 
 	fd = dc.FinalizedDeposits(context.Background())
-	deps = dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex, big.NewInt(30))
-	insertIndex = fd.MerkleTrieIndex + 1
+	deps = dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(30))
+	insertIndex = fd.MerkleTrieIndex() + 1
 
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
-		if err = fd.Deposits.Insert(depHash[:], int(insertIndex)); err != nil {
+		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
 		insertIndex++
 	}
-	assert.Equal(t, fd.Deposits.NumOfItems(), depositTrie.NumOfItems())
+	assert.Equal(t, fd.Deposits().NumOfItems(), depositTrie.NumOfItems())
 }
 
 func TestPruneProofs_Ok(t *testing.T) {

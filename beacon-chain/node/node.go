@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/slasherkv"
@@ -395,13 +396,13 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	b.db = d
 
 	var depositCache cache.DepositCache
-	if cliCtx.IsSet(features.EnableEip4881.Name) {
-		depositCache = snapshot.EIP4881Cache()
+	if features.Get().EnableEIP4881 {
+		depositCache, err = depositsnapshot.New()
 	} else {
 		depositCache, err = depositcache.New()
-		if err != nil {
-			return errors.Wrap(err, "could not create deposit cache")
-		}
+	}
+	if err != nil {
+		return errors.Wrap(err, "could not create deposit cache")
 	}
 
 	b.depositCache = depositCache

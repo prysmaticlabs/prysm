@@ -17,7 +17,7 @@ import (
 
 var (
 	historicalDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "beacondb_all_deposits",
+		Name: "beacondb_all_deposits_eip4881",
 		Help: "The number of total deposits in the beaconDB in-memory database",
 	})
 	log = logrus.WithField("prefix", "depositcache")

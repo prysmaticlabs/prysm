@@ -944,7 +944,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	}
 	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'}))
 	fDeposits := depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex()), "Finalized deposits not inserted correctly")
 	deps := depositCache.AllDeposits(ctx, big.NewInt(107))
 	for _, d := range deps {
 		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
@@ -985,7 +985,7 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 
 	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'}))
 	fDeposits := depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 5, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	assert.Equal(t, 5, int(fDeposits.MerkleTrieIndex()), "Finalized deposits not inserted correctly")
 
 	deps := depositCache.AllDeposits(ctx, big.NewInt(105))
 	for _, d := range deps {
@@ -995,7 +995,7 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 	// Insert New Finalized State with higher deposit count.
 	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k', '2'}))
 	fDeposits = depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 12, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	assert.Equal(t, 12, int(fDeposits.MerkleTrieIndex()), "Finalized deposits not inserted correctly")
 	deps = depositCache.AllDeposits(ctx, big.NewInt(112))
 	for _, d := range deps {
 		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")

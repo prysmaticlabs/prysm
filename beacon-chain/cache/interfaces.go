@@ -18,12 +18,12 @@ type DepositFetcher interface {
 	AllDepositContainers(ctx context.Context) []*ethpb.DepositContainer
 	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
 	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
-	FinalizedDeposits(ctx context.Context) FinalizedDeposits
-	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
 	InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte)
+	PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
 	PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer
 	PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64)
 	PruneProofs(ctx context.Context, untilDepositIndex int64) error
+	FinalizedFetcher
 }
 
 // DepositInserter defines a struct which can insert deposit information from a store.
@@ -31,6 +31,11 @@ type DepositInserter interface {
 	InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error
 	InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer)
 	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error
+}
+
+type FinalizedFetcher interface {
+	FinalizedDeposits(ctx context.Context) FinalizedDeposits
+	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
 }
 
 type FinalizedDeposits interface {
