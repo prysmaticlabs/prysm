@@ -182,7 +182,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 			validData = false
 		}
 	} else {
-		root, err := s.depositTree4881.HashTreeRoot()
+		root, err := s.getHashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "unable to determine root of deposit trie")
 		}
@@ -235,7 +235,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
-	root, err := s.depositTree4881.HashTreeRoot()
+	root, err := s.getHashTreeRoot()
 	if err != nil { // This should never happen.
 		log.WithError(err).Error("unable to determine root of deposit trie, aborting chain start")
 		return
