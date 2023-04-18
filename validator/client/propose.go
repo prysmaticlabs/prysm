@@ -205,24 +205,10 @@ func ProposeExit(
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
 
-	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
+	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, nodeClient, signer, pubKey)
 	if err != nil {
-		return errors.Wrap(err, "gRPC call to get validator index failed")
+		return errors.Wrap(err, "failed to create signed voluntary exit")
 	}
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "gRPC call to get genesis time failed")
-	}
-	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
-	currentEpoch := primitives.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
-	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
-	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
-	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, currentSlot)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign voluntary exit")
-	}
-
-	signedExit := &ethpb.SignedVoluntaryExit{Exit: exit, Signature: sig}
 	exitResp, err := validatorClient.ProposeExit(ctx, signedExit)
 	if err != nil {
 		return errors.Wrap(err, "failed to propose voluntary exit")
@@ -233,6 +219,36 @@ func ProposeExit(
 	)
 
 	return nil
+}
+
+func CreateSignedVoluntaryExit(
+	ctx context.Context,
+	validatorClient iface.ValidatorClient,
+	nodeClient iface.NodeClient,
+	signer iface.SigningFunc,
+	pubKey []byte,
+) (*ethpb.SignedVoluntaryExit, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.CreateSignedVoluntaryExit")
+	defer span.End()
+
+	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
+	if err != nil {
+		return nil, errors.Wrap(err, "gRPC call to get validator index failed")
+	}
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, errors.Wrap(err, "gRPC call to get genesis time failed")
+	}
+	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
+	currentEpoch := primitives.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
+	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
+	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, currentSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign voluntary exit")
+	}
+
+	return &ethpb.SignedVoluntaryExit{Exit: exit, Signature: sig}, nil
 }
 
 // Sign randao reveal with randao domain and private key.
