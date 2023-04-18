@@ -246,7 +246,6 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	default:
 		return nil, fmt.Errorf("unsupported header version %s", strings.ToLower(v.Version))
 	}
-
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte

@@ -224,7 +224,6 @@ func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primit
 
 // GetAttesterDuties retrieves the attester duties for the given epoch and validatorIndices
 func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
-
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
 		jsonValidatorIndices[index] = strconv.FormatUint(uint64(validatorIndex), 10)

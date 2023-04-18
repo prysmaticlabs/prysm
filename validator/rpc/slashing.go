@@ -42,7 +42,6 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 	return &pb.ExportSlashingProtectionResponse{
 		File: string(encoded),
 	}, nil
-
 }
 
 // ImportSlashingProtection reads an input slashing protection EIP-3076

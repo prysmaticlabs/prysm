@@ -277,7 +277,6 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 	accountsKeystore, err := CreateAccountsKeystoreRepresentation(ctx, store, km.wallet.Password())
 	if err != nil {
 		return err
-
 	}
 	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
 	if err != nil {
