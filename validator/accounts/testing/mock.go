@@ -25,6 +25,7 @@ type Wallet struct {
 	WalletPassword    string
 	UnlockAccounts    bool
 	lock              sync.RWMutex
+	HasWriteFileError bool
 }
 
 // AccountNames --
@@ -57,6 +58,11 @@ func (w *Wallet) Password() string {
 func (w *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
+	if w.HasWriteFileError {
+		// reset the flag to not contaminate other tests
+		w.HasWriteFileError = false
+		return errors.New("could not write keystore file for accounts")
+	}
 	if w.Files[pathName] == nil {
 		w.Files[pathName] = make(map[string][]byte)
 	}

@@ -56,6 +56,7 @@ type AccountsCLIManager struct {
 	filteredPubKeys      []bls.PublicKey
 	rawPubKeys           [][]byte
 	formattedPubKeys     []string
+	exitJSONOutputPath   string
 	walletDir            string
 	walletPassword       string
 	mnemonic             string
