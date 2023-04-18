@@ -61,7 +61,7 @@ func fname(prefix string, vu *detect.VersionedUnmarshaler, slot primitives.Slot,
 
 // DownloadFinalizedData downloads the most recently finalized state, and the block most recently applied to that state.
 // This pair can be used to initialize a new beacon node via checkpoint sync.
-func DownloadFinalizedData(ctx context.Context, client *BeaconAPIClient) (*OriginData, error) {
+func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, error) {
 	sb, err := client.GetState(ctx, IdFinalized)
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func (wsd *WeakSubjectivityData) CheckpointString() string {
 // to obtain the current weak_subjectivity checkpoint.
 // For non-prysm nodes, the same computation will be performed with extra steps,
 // using the head state downloaded from the beacon node api.
-func ComputeWeakSubjectivityCheckpoint(ctx context.Context, client *BeaconAPIClient) (*WeakSubjectivityData, error) {
+func ComputeWeakSubjectivityCheckpoint(ctx context.Context, client *Client) (*WeakSubjectivityData, error) {
 	ws, err := client.GetWeakSubjectivity(ctx)
 	if err != nil {
 		// a 404/405 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
@@ -165,7 +165,7 @@ var errUnsupportedPrysmCheckpointVersion = errors.New("node does not meet minimu
 // - requesting the state at the first slot of the epoch
 // - using hash_tree_root(state.latest_block_header) to compute the block the state integrates
 // - requesting that block by its root
-func computeBackwardsCompatible(ctx context.Context, client *BeaconAPIClient) (*WeakSubjectivityData, error) {
+func computeBackwardsCompatible(ctx context.Context, client *Client) (*WeakSubjectivityData, error) {
 	log.Print("falling back to generic checkpoint derivation, weak_subjectivity API not supported by server")
 	nv, err := client.GetNodeVersion(ctx)
 	if err != nil {
@@ -239,7 +239,7 @@ func computeBackwardsCompatible(ctx context.Context, client *BeaconAPIClient) (*
 
 // this method downloads the head state, which can be used to find the correct chain config
 // and use prysm's helper methods to compute the latest weak subjectivity epoch.
-func getWeakSubjectivityEpochFromHead(ctx context.Context, client *BeaconAPIClient) (primitives.Epoch, error) {
+func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (primitives.Epoch, error) {
 	headBytes, err := client.GetState(ctx, IdHead)
 	if err != nil {
 		return 0, err

@@ -47,7 +47,7 @@ func cliActionDownload(_ *cli.Context) error {
 	f := downloadFlags
 
 	opts := []client.ClientOpt{client.WithTimeout(f.Timeout)}
-	client, err := beacon.NewBeaconAPIClient(downloadFlags.BeaconNodeHost, opts...)
+	client, err := beacon.NewClient(downloadFlags.BeaconNodeHost, opts...)
 	if err != nil {
 		return err
 	}

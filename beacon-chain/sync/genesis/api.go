@@ -13,13 +13,13 @@ import (
 // APIInitializer manages initializing the genesis state and block to prepare the beacon node for syncing.
 // The genesis state is retrieved from the remote beacon node api, using the debug state retrieval endpoint.
 type APIInitializer struct {
-	c *beacon.BeaconAPIClient
+	c *beacon.Client
 }
 
 // NewAPIInitializer creates an APIInitializer, handling the set up of a beacon node api client
 // using the provided host string.
 func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
-	c, err := beacon.NewBeaconAPIClient(beaconNodeHost)
+	c, err := beacon.NewClient(beaconNodeHost)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to parse beacon node url or hostname - %s", beaconNodeHost)
 	}

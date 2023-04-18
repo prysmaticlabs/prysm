@@ -85,18 +85,18 @@ func renderGetBlockPath(id StateOrBlockId) string {
 	return path.Join(getSignedBlockPath, string(id))
 }
 
-// BeaconAPIClient is a wrapper with beacon API functions on the client
-type BeaconAPIClient struct {
+// Client is a wrapper with beacon API functions on the client
+type Client struct {
 	*client.Client
 }
 
-// NewBeaconAPIClient returns a new BeaconAPIClient that includes functions for rest calls to Beacon API.
-func NewBeaconAPIClient(host string, opts ...client.ClientOpt) (*BeaconAPIClient, error) {
+// NewClient returns a new Client that includes functions for rest calls to Beacon API.
+func NewClient(host string, opts ...client.ClientOpt) (*Client, error) {
 	c, err := client.NewClient(host, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return &BeaconAPIClient{c}, nil
+	return &Client{c}, nil
 }
 
 // GetBlock retrieves the SignedBeaconBlock for the given block id.
@@ -104,7 +104,7 @@ func NewBeaconAPIClient(host string, opts ...client.ClientOpt) (*BeaconAPIClient
 // <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
 // The return value contains the ssz-encoded bytes.
-func (c *BeaconAPIClient) GetBlock(ctx context.Context, blockId StateOrBlockId) ([]byte, error) {
+func (c *Client) GetBlock(ctx context.Context, blockId StateOrBlockId) ([]byte, error) {
 	blockPath := renderGetBlockPath(blockId)
 	b, err := c.Get(ctx, blockPath, client.WithSSZEncoding())
 	if err != nil {
@@ -119,7 +119,7 @@ var getBlockRootTpl = idTemplate(getBlockRootPath)
 // Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
 // <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
-func (c *BeaconAPIClient) GetBlockRoot(ctx context.Context, blockId StateOrBlockId) ([32]byte, error) {
+func (c *Client) GetBlockRoot(ctx context.Context, blockId StateOrBlockId) ([32]byte, error) {
 	rootPath := getBlockRootTpl(blockId)
 	b, err := c.Get(ctx, rootPath)
 	if err != nil {
@@ -143,7 +143,7 @@ var getForkTpl = idTemplate(getForkForStatePath)
 // Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
 // <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
-func (c *BeaconAPIClient) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fork, error) {
+func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fork, error) {
 	body, err := c.Get(ctx, getForkTpl(stateId))
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting fork by state id = %s", stateId)
@@ -159,7 +159,7 @@ func (c *BeaconAPIClient) GetFork(ctx context.Context, stateId StateOrBlockId) (
 }
 
 // GetForkSchedule retrieve all forks, past present and future, of which this node is aware.
-func (c *BeaconAPIClient) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, error) {
+func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, error) {
 	body, err := c.Get(ctx, getForkSchedulePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting fork schedule")
@@ -177,7 +177,7 @@ func (c *BeaconAPIClient) GetForkSchedule(ctx context.Context) (forks.OrderedSch
 }
 
 // GetConfigSpec retrieve the current configs of the network used by the beacon node.
-func (c *BeaconAPIClient) GetConfigSpec(ctx context.Context) (*v1.SpecResponse, error) {
+func (c *Client) GetConfigSpec(ctx context.Context) (*v1.SpecResponse, error) {
 	body, err := c.Get(ctx, getConfigSpecPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting configSpecPath")
@@ -212,7 +212,7 @@ func parseNodeVersion(v string) (*NodeVersion, error) {
 
 // GetNodeVersion requests that the beacon node identify information about its implementation in a format
 // similar to a HTTP User-Agent field. ex: Lighthouse/v0.1.5 (Linux x86_64)
-func (c *BeaconAPIClient) GetNodeVersion(ctx context.Context) (*NodeVersion, error) {
+func (c *Client) GetNodeVersion(ctx context.Context) (*NodeVersion, error) {
 	b, err := c.Get(ctx, getNodeVersionPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting node version")
@@ -238,7 +238,7 @@ func renderGetStatePath(id StateOrBlockId) string {
 // <slot>, <hex encoded stateRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
 // The return value contains the ssz-encoded bytes.
-func (c *BeaconAPIClient) GetState(ctx context.Context, stateId StateOrBlockId) ([]byte, error) {
+func (c *Client) GetState(ctx context.Context, stateId StateOrBlockId) ([]byte, error) {
 	statePath := path.Join(getStatePath, string(stateId))
 	b, err := c.Get(ctx, statePath, client.WithSSZEncoding())
 	if err != nil {
@@ -252,7 +252,7 @@ func (c *BeaconAPIClient) GetState(ctx context.Context, stateId StateOrBlockId) 
 // - computes weak subjectivity epoch
 // - finds the highest non-skipped block preceding the epoch
 // - returns the htr of the found block and returns this + the value of state_root from the block
-func (c *BeaconAPIClient) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData, error) {
+func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData, error) {
 	body, err := c.Get(ctx, getWeakSubjectivityPath)
 	if err != nil {
 		return nil, err
@@ -283,7 +283,7 @@ func (c *BeaconAPIClient) GetWeakSubjectivity(ctx context.Context) (*WeakSubject
 
 // SubmitChangeBLStoExecution calls a beacon API endpoint to set the withdrawal addresses based on the given signed messages.
 // If the API responds with something other than OK there will be failure messages associated to the corresponding request message.
-func (c *BeaconAPIClient) SubmitChangeBLStoExecution(ctx context.Context, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
 	u := c.BaseURL().ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -322,7 +322,7 @@ func (c *BeaconAPIClient) SubmitChangeBLStoExecution(ctx context.Context, reques
 
 // GetBLStoExecutionChanges gets all the set withdrawal messages in the node's operation pool.
 // Returns a struct representation of json response.
-func (c *BeaconAPIClient) GetBLStoExecutionChanges(ctx context.Context) (*apimiddleware.BLSToExecutionChangesPoolResponseJson, error) {
+func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*apimiddleware.BLSToExecutionChangesPoolResponseJson, error) {
 	body, err := c.Get(ctx, changeBLStoExecutionPath)
 	if err != nil {
 		return nil, err

@@ -16,22 +16,22 @@ const (
 	feeRecipientPath = "/eth/v1/validator/{pubkey}/feerecipient"
 )
 
-// ValidatorAPIClient is a wrapper with beacon API functions on the client
-type ValidatorAPIClient struct {
+// Client is a wrapper with validator API functions on the client
+type Client struct {
 	*client.Client
 }
 
-// NewValidatorAPIClient returns a new alidatorAPIClient that includes functions for rest calls to keymanager APIs.
-func NewValidatorAPIClient(host string, opts ...client.ClientOpt) (*ValidatorAPIClient, error) {
+// NewClient returns a new Client that includes functions for rest calls to keymanager APIs.
+func NewClient(host string, opts ...client.ClientOpt) (*Client, error) {
 	c, err := client.NewClient(host, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return &ValidatorAPIClient{c}, nil
+	return &Client{c}, nil
 }
 
 // GetListOfValidators gets the currently known validators in hex format on the validator client whether on the web3signer or the local keystores.
-func (c *ValidatorAPIClient) GetListOfValidators(ctx context.Context) ([]string, error) {
+func (c *Client) GetListOfValidators(ctx context.Context) ([]string, error) {
 	localBytes, err := c.Get(ctx, localKeysPath, client.WithTokenAuthorization(c.Token()))
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (c *ValidatorAPIClient) GetListOfValidators(ctx context.Context) ([]string,
 }
 
 // GetListOfFeeRecipients takes a list of validators in hex format and returns an equal length list of fee recipients in hex format.
-func (c *ValidatorAPIClient) GetListOfFeeRecipients(ctx context.Context, validators []string) ([]string, error) {
+func (c *Client) GetListOfFeeRecipients(ctx context.Context, validators []string) ([]string, error) {
 	feeRecipients := make([]string, len(validators))
 	for index, validator := range validators {
 		path := strings.Replace(feeRecipientPath, "{pubkey}", validator, 1)

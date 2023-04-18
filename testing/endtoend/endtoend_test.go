@@ -284,7 +284,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 
-	client, err := beacon.NewBeaconAPIClient(bnAPI)
+	client, err := beacon.NewClient(bnAPI)
 	if err != nil {
 		return err
 	}

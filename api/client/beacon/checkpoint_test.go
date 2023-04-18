@@ -87,7 +87,7 @@ func TestFallbackVersionCheck(t *testing.T) {
 		return res, nil
 	}}
 
-	c, err := NewBeaconAPIClient("http://localhost:3500", client.WithCustomTransport(trans))
+	c, err := NewClient("http://localhost:3500", client.WithCustomTransport(trans))
 	require.NoError(t, err)
 	ctx := context.Background()
 	_, err = ComputeWeakSubjectivityCheckpoint(ctx, c)
@@ -200,7 +200,7 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 		return res, nil
 	}}
 
-	c, err := NewBeaconAPIClient("http://localhost:3500", client.WithCustomTransport(trans))
+	c, err := NewClient("http://localhost:3500", client.WithCustomTransport(trans))
 	require.NoError(t, err)
 
 	wsd, err := ComputeWeakSubjectivityCheckpoint(ctx, c)
@@ -291,7 +291,7 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 		return res, nil
 	}}
 
-	c, err := NewBeaconAPIClient("http://localhost:3500", client.WithCustomTransport(trans))
+	c, err := NewClient("http://localhost:3500", client.WithCustomTransport(trans))
 	require.NoError(t, err)
 
 	wsPub, err := ComputeWeakSubjectivityCheckpoint(ctx, c)
@@ -314,7 +314,7 @@ func TestGetWeakSubjectivityEpochFromHead(t *testing.T) {
 		}
 		return res, nil
 	}}
-	c, err := NewBeaconAPIClient("http://localhost:3500", client.WithCustomTransport(trans))
+	c, err := NewClient("http://localhost:3500", client.WithCustomTransport(trans))
 	require.NoError(t, err)
 	actualEpoch, err := getWeakSubjectivityEpochFromHead(context.Background(), c)
 	require.NoError(t, err)
@@ -450,7 +450,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 
 		return res, nil
 	}}
-	c, err := NewBeaconAPIClient("http://localhost:3500", client.WithCustomTransport(trans))
+	c, err := NewClient("http://localhost:3500", client.WithCustomTransport(trans))
 	require.NoError(t, err)
 	// sanity check before we go through checkpoint
 	// make sure we can download the state and unmarshal it with the VersionedUnmarshaler

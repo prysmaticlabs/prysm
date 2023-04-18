@@ -84,7 +84,7 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 }
 
 func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
-	client, err := beacon.NewBeaconAPIClient(host)
+	client, err := beacon.NewClient(host)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimid
 	return checkIfWithdrawsAreInPool(ctx, client, request)
 }
 
-func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.BeaconAPIClient, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
 	log.Info("Verifying requested withdrawal messages known to node...")
 	poolResponse, err := client.GetBLStoExecutionChanges(ctx)
 	if err != nil {
@@ -184,7 +184,7 @@ func verifyWithdrawalsInPool(c *cli.Context) error {
 	if !c.IsSet(PathFlag.Name) {
 		return fmt.Errorf("no --%s flag value was provided", PathFlag.Name)
 	}
-	client, err := beacon.NewBeaconAPIClient(beaconNodeHost)
+	client, err := beacon.NewClient(beaconNodeHost)
 	if err != nil {
 		return err
 	}

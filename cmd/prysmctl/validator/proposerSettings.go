@@ -46,7 +46,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 		}
 	}
 
-	cl, err := validator.NewValidatorAPIClient(c.String(ValidatorHostFlag.Name), client2.WithTokenAuthentication(c.String(TokenFlag.Name)))
+	cl, err := validator.NewClient(c.String(ValidatorHostFlag.Name), client2.WithTokenAuthentication(c.String(TokenFlag.Name)))
 	if err != nil {
 		return err
 	}

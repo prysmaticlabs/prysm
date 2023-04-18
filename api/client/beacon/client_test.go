@@ -127,7 +127,7 @@ func TestValidHostname(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			cl, err := NewBeaconAPIClient(c.hostArg)
+			cl, err := NewClient(c.hostArg)
 			if c.err != nil {
 				require.ErrorIs(t, err, c.err)
 				return

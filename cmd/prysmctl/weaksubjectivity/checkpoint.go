@@ -47,7 +47,7 @@ func cliActionCheckpoint(_ *cli.Context) error {
 	f := checkpointFlags
 
 	opts := []client.ClientOpt{client.WithTimeout(f.Timeout)}
-	client, err := beacon.NewBeaconAPIClient(checkpointFlags.BeaconNodeHost, opts...)
+	client, err := beacon.NewClient(checkpointFlags.BeaconNodeHost, opts...)
 	if err != nil {
 		return err
 	}
