@@ -301,6 +301,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
 		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutil.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
 			// We return a positive result because failing to set a non-gRPC related header should not cause the gRPC call to fail.
+			//nolint:nilerr
 			return &emptypb.Empty{}, nil
 		}
 		return &emptypb.Empty{}, nil
