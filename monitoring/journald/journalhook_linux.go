@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package journald was copied directly from https://github.com/wercker/journalhook,
 // where this library was previously hosted.
 package journald
