@@ -34,7 +34,7 @@ var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch par
 //	DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
 //	PENDING - validator is in Ethereum's activation queue.
 //	ACTIVE - validator is active.
-//	EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
+//	EXITING - validator has initiated an exit request, or has dropped below the ejection balance and is being kicked out.
 //	EXITED - validator is no longer validating.
 //	SLASHING - validator has been kicked out due to meeting a slashing condition.
 //	UNKNOWN_STATUS - validator does not have a known status in the network.

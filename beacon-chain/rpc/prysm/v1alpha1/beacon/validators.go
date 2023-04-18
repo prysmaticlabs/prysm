@@ -183,7 +183,7 @@ func (bs *Server) ListValidatorBalances(
 }
 
 // ListValidators retrieves the current list of active validators with an optional historical epoch flag to
-// to retrieve validator set in time.
+// retrieve validator set in time.
 func (bs *Server) ListValidators(
 	ctx context.Context,
 	req *ethpb.ListValidatorsRequest,
