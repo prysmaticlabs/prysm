@@ -307,7 +307,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err := json.Unmarshal(rb, ep); err != nil {
 			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
 		}
-		if strings.ToLower(ep.Version) != "bellatrix" {
+		if strings.ToLower(ep.Version) != version.String(version.Bellatrix) {
 			return nil, errors.New("not a bellatrix payload")
 		}
 		p, err := ep.ToProto()
