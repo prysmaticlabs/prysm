@@ -59,7 +59,7 @@ func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum ui
 	if err != nil {
 		return err
 	}
-	err = c.finalizedDeposits.DepositTree.PushLeaf(depositDataRoot)
+	err = c.finalizedDeposits.depositTree.PushLeaf(depositDataRoot)
 	if err != nil {
 		return err
 	}
@@ -94,8 +94,8 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	c.depositsLock.Lock()
 	defer c.depositsLock.Unlock()
 
-	depositTrie := c.finalizedDeposits.DepositTree
-	insertIndex := int(c.finalizedDeposits.MerkleTrieIndex + 1)
+	depositTrie := c.finalizedDeposits.depositTree
+	insertIndex := int(c.finalizedDeposits.merkleTrieIndex + 1)
 
 	// Don't insert into finalized trie if there is no deposit to
 	// insert.
@@ -119,9 +119,9 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	}
 	depositTrie.tree = tree
 
-	c.finalizedDeposits = FinalizedDeposits{
-		DepositTree:     depositTrie,
-		MerkleTrieIndex: eth1DepositIndex,
+	c.finalizedDeposits = finalizedDepositsContainer{
+		depositTree:     depositTrie,
+		merkleTrieIndex: eth1DepositIndex,
 	}
 	return nil
 }

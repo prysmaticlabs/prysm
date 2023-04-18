@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -64,7 +63,7 @@ type config struct {
 	BeaconBlockBuf          int
 	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
-	DepositCache            *depositcache.DepositCache
+	DepositCache            cache.DepositCache
 	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager

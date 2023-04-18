@@ -352,7 +352,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex())
 
 	var deps [][]byte
 	for _, d := range finalizedDeposits {
@@ -364,7 +364,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	require.NoError(t, err, "Could not generate deposit trie")
 	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
-	rootB, err := cachedDeposits.DepositTree.HashTreeRoot()
+	rootB, err := cachedDeposits.Deposits().HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, rootA, rootB)
 }
@@ -409,7 +409,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	for _, deposit := range oldFinalizedDeposits {
 		root, err := deposit.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err)
-		err = dc.finalizedDeposits.DepositTree.PushLeaf(root)
+		err = dc.finalizedDeposits.Deposits().Insert(root[:], 0)
 		require.NoError(t, err)
 	}
 	err = dc.InsertFinalizedDeposits(context.Background(), 1)
@@ -422,8 +422,8 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	require.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex)
-	require.Equal(t, cachedDeposits.DepositTree.NumOfItems(), 2)
+	require.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex())
+	require.Equal(t, cachedDeposits.Deposits().NumOfItems(), 2)
 
 	var deps [][]byte
 	for _, d := range oldFinalizedDeposits {
@@ -436,7 +436,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
 
-	rootB, err := cachedDeposits.DepositTree.HashTreeRoot()
+	rootB, err := cachedDeposits.Deposits().HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, rootA, rootB)
 }
@@ -450,7 +450,7 @@ func TestFinalizedDeposits_HandleZeroDeposits(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(-1), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(-1), cachedDeposits.MerkleTrieIndex())
 }
 
 func TestFinalizedDeposits_HandleSmallerThanExpectedDeposits(t *testing.T) {
@@ -496,7 +496,7 @@ func TestFinalizedDeposits_HandleSmallerThanExpectedDeposits(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex())
 }
 
 func TestFinalizedDeposits_HandleLowerEth1DepositIndex(t *testing.T) {
@@ -576,7 +576,7 @@ func TestFinalizedDeposits_HandleLowerEth1DepositIndex(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(5), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(5), cachedDeposits.MerkleTrieIndex())
 }
 
 func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
@@ -586,7 +586,7 @@ func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
 	finalizedDeposits := dc.finalizedDeposits
 	assert.NotNil(t, finalizedDeposits)
 	assert.NotNil(t, finalizedDeposits.Deposits)
-	assert.Equal(t, int64(-1), finalizedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(-1), finalizedDeposits.merkleTrieIndex)
 }
 
 func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
@@ -758,13 +758,13 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 
 	// Mimick finalized deposit trie fetch.
 	fd := dc.FinalizedDeposits(context.Background())
-	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex, big.NewInt(14))
-	insertIndex := fd.MerkleTrieIndex + 1
+	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(14))
+	insertIndex := fd.MerkleTrieIndex() + 1
 
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
-		if err = fd.DepositTree.Insert(depHash[:], int(insertIndex)); err != nil {
+		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
 		insertIndex++
@@ -777,18 +777,18 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	require.NoError(t, err)
 
 	fd = dc.FinalizedDeposits(context.Background())
-	deps = dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex, big.NewInt(30))
-	insertIndex = fd.MerkleTrieIndex + 1
+	deps = dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(30))
+	insertIndex = fd.MerkleTrieIndex() + 1
 
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
-		if err = fd.DepositTree.Insert(depHash[:], int(insertIndex)); err != nil {
+		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
 		insertIndex++
 	}
-	assert.Equal(t, fd.DepositTree.NumOfItems(), depositTrie.NumOfItems())
+	assert.Equal(t, fd.Deposits().NumOfItems(), depositTrie.NumOfItems())
 }
 
 func TestMin(t *testing.T) {
@@ -821,15 +821,15 @@ func TestMin(t *testing.T) {
 	dc.deposits = finalizedDeposits
 
 	fd := dc.FinalizedDeposits(context.Background())
-	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex, big.NewInt(16))
-	insertIndex := fd.MerkleTrieIndex + 1
+	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(16))
+	insertIndex := fd.MerkleTrieIndex() + 1
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
-		if err = fd.DepositTree.Insert(depHash[:], int(insertIndex)); err != nil {
+		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
-		t.Log(fd.DepositTree.NumOfItems(), deps)
+		t.Log(fd.Deposits().NumOfItems(), deps)
 		insertIndex++
 	}
 

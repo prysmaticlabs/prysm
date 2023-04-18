@@ -94,7 +94,7 @@ type BeaconNode struct {
 	slashingsPool           slashings.PoolManager
 	syncCommitteePool       synccommittee.Pool
 	blsToExecPool           blstoexec.PoolManager
-	depositCache            *depositcache.DepositCache
+	depositCache            cache.DepositCache
 	proposerIdsCache        *cache.ProposerPayloadIDsCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
@@ -768,7 +768,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 	}
 
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
-	var depositFetcher depositcache.DepositFetcher
+	var depositFetcher cache.DepositFetcher
 	var chainStartFetcher execution.ChainStartFetcher
 	if genesisValidators > 0 {
 		var interopService *interopcoldstart.Service

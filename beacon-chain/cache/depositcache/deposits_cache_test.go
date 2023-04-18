@@ -421,7 +421,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex())
 
 	var deps [][]byte
 	for _, d := range finalizedDeposits {
@@ -483,7 +483,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex())
 
 	var deps [][]byte
 	for _, d := range oldFinalizedDeposits {
@@ -508,7 +508,7 @@ func TestFinalizedDeposits_HandleZeroDeposits(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(-1), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(-1), cachedDeposits.MerkleTrieIndex())
 }
 
 func TestFinalizedDeposits_HandleSmallerThanExpectedDeposits(t *testing.T) {
@@ -553,7 +553,7 @@ func TestFinalizedDeposits_HandleSmallerThanExpectedDeposits(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex())
 }
 
 func TestFinalizedDeposits_HandleLowerEth1DepositIndex(t *testing.T) {
@@ -631,7 +631,7 @@ func TestFinalizedDeposits_HandleLowerEth1DepositIndex(t *testing.T) {
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(5), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(5), cachedDeposits.MerkleTrieIndex())
 }
 
 func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {

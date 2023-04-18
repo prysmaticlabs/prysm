@@ -26,7 +26,7 @@ var (
 type Cache struct {
 	pendingDeposits   []*ethpb.DepositContainer
 	deposits          []*ethpb.DepositContainer
-	finalizedDeposits FinalizedDeposits
+	finalizedDeposits finalizedDepositsContainer
 	depositsByKey     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
@@ -41,16 +41,11 @@ func (c *Cache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*eth
 	panic("implement me")
 }
 
-func (c *Cache) FinalizedDeposits(ctx context.Context) cache.FinalizedDeposits {
-	//TODO implement me
-	panic("implement me")
-}
-
-// FinalizedDeposits stores the trie of deposits that have been included
+// finalizedDepositsContainer stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
-type FinalizedDeposits struct {
-	DepositTree     *DepositTree
-	MerkleTrieIndex int64
+type finalizedDepositsContainer struct {
+	depositTree     *DepositTree
+	merkleTrieIndex int64
 }
 
 // New instantiates a new deposit cache
@@ -144,15 +139,15 @@ func (c *Cache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *
 	return uint64(heightIdx), bytesutil.ToBytes32(c.deposits[heightIdx-1].DepositRoot)
 }
 
-func (c *Cache) FinalizedDeposits(ctx context.Context) FinalizedDeposits {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
+func (c *Cache) FinalizedDeposits(ctx context.Context) cache.FinalizedDeposits {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.finalizedDepositsContainer")
 	defer span.End()
 	c.depositsLock.RLock()
 	defer c.depositsLock.RUnlock()
 
-	return FinalizedDeposits{
-		DepositTree:     c.finalizedDeposits.DepositTree,
-		MerkleTrieIndex: c.finalizedDeposits.MerkleTrieIndex,
+	return &finalizedDepositsContainer{
+		depositTree:     c.finalizedDeposits.depositTree,
+		merkleTrieIndex: c.finalizedDeposits.merkleTrieIndex,
 	}
 }
 
@@ -162,7 +157,7 @@ func (c *Cache) NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int
 	c.depositsLock.RLock()
 	defer c.depositsLock.RUnlock()
 
-	if c.finalizedDeposits.DepositTree == nil {
+	if c.finalizedDeposits.depositTree == nil {
 		return c.allDeposits(untilBlk)
 	}
 
@@ -245,17 +240,17 @@ func (c *Cache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, bloc
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(c.pendingDeposits))))
 }
 
-func (fd *FinalizedDeposits) Deposits() cache.MerkleTree {
-	return fd.DepositTree
+func (fd *finalizedDepositsContainer) Deposits() cache.MerkleTree {
+	return fd.depositTree
 }
 
-func (fd *FinalizedDeposits) MerkleTrieIdx() int64 {
-	return fd.MerkleTrieIndex
+func (fd *finalizedDepositsContainer) MerkleTrieIndex() int64 {
+	return fd.merkleTrieIndex
 }
 
-func getFinalizedDeposits(deposits *DepositTree, index int64) FinalizedDeposits {
-	return FinalizedDeposits{
-		DepositTree:     deposits,
-		MerkleTrieIndex: index,
+func getFinalizedDeposits(deposits *DepositTree, index int64) finalizedDepositsContainer {
+	return finalizedDepositsContainer{
+		depositTree:     deposits,
+		merkleTrieIndex: index,
 	}
 }
