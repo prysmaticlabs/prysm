@@ -36,7 +36,7 @@ func IsCurrentPeriodSyncCommittee(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return false, nil
+			return false, err
 		}
 		committee, err := st.CurrentSyncCommittee()
 		if err != nil {
@@ -73,7 +73,7 @@ func IsNextPeriodSyncCommittee(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return false, nil
+			return false, err
 		}
 		committee, err := st.NextSyncCommittee()
 		if err != nil {
@@ -100,7 +100,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 		committee, err := st.CurrentSyncCommittee()
 		if err != nil {
@@ -134,7 +134,7 @@ func NextPeriodSyncSubcommitteeIndices(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 		committee, err := st.NextSyncCommittee()
 		if err != nil {
