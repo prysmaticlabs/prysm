@@ -110,14 +110,13 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 		g.Go(func() error {
 			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, nil, al)
 			if err != nil {
-				return nil
+				return err
 			}
 			signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
 			if err != nil {
-				return nil
+				return err
 			}
-			err = backend.SendTransaction(context.Background(), signedTx)
-			return nil
+			return backend.SendTransaction(context.Background(), signedTx)
 		})
 	}
 	return g.Wait()
