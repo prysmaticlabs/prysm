@@ -261,9 +261,13 @@ func (s *Server) handleStateEvents(
 // This event stream is intended to be used by builders and relays.
 // parent_ fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
 func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
+	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root")
+	}
 	st, err := s.HeadFetcher.HeadState(s.Ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get head state")
 	}
 	// advance the headstate
 	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
@@ -272,11 +276,6 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 	}
 
 	headBlock, err := s.HeadFetcher.HeadBlock(s.Ctx)
-	if err != nil {
-		return err
-	}
-
-	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
 	if err != nil {
 		return err
 	}

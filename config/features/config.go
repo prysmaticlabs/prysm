@@ -66,6 +66,8 @@ type Flags struct {
 	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
 	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
+	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -207,10 +209,14 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableOptionalEngineMethods)
 		cfg.EnableOptionalEngineMethods = true
 	}
-	if ctx.IsSet(enableEIP4881.Name) {
+	if ctx.IsSet(prepareAllPayloads.Name) {
+		logEnabled(prepareAllPayloads)
+		cfg.PrepareAllPayloads = true
+	}
+  if ctx.IsSet(enableEIP4881.Name) {
 		logEnabled(enableEIP4881)
 		cfg.EnableEIP4881 = true
-	}
+  }
 	Init(cfg)
 	return nil
 }

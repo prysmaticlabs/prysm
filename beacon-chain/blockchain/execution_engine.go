@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -258,7 +259,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
-	if !ok { // There's no need to build attribute if there is no proposer for slot.
+	if !ok && !features.Get().PrepareAllPayloads { // There's no need to build attribute if there is no proposer for slot.
 		return false, emptyAttri, 0
 	}
 

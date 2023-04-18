@@ -17,6 +17,7 @@ linters:
     - errcheck
     - gosimple
     - gocognit
+    - misspell
 
 linters-settings:
   gocognit:

@@ -127,7 +127,7 @@ func marshallBeaconBlockPhase0(block *ethpb.SignedBeaconBlock) ([]byte, error) {
 				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
 				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
-				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
+				VoluntaryExits:    JsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 			},
 			ParentRoot:    hexutil.Encode(block.Block.ParentRoot),
 			ProposerIndex: uint64ToString(block.Block.ProposerIndex),
@@ -155,7 +155,7 @@ func marshallBeaconBlockAltair(block *ethpb.SignedBeaconBlockAltair) ([]byte, er
 				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
 				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
-				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
+				VoluntaryExits:    JsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
@@ -183,7 +183,7 @@ func marshallBeaconBlockBellatrix(block *ethpb.SignedBeaconBlockBellatrix) ([]by
 				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
 				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
-				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
+				VoluntaryExits:    JsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
@@ -227,7 +227,7 @@ func marshallBeaconBlockBlindedBellatrix(block *ethpb.SignedBlindedBeaconBlockBe
 				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
 				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
-				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
+				VoluntaryExits:    JsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
@@ -271,7 +271,7 @@ func marshallBeaconBlockCapella(block *ethpb.SignedBeaconBlockCapella) ([]byte, 
 				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
 				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
-				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
+				VoluntaryExits:    JsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
@@ -317,7 +317,7 @@ func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCape
 				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
 				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
-				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
+				VoluntaryExits:    JsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
