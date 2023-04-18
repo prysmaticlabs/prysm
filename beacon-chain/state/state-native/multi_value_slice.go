@@ -9,7 +9,7 @@ import (
 
 type MultiValue[V any, O any] struct {
 	shared     V
-	individual []Value[V, O]
+	individual []*Value[V, O]
 }
 
 type Value[V any, O any] struct {
@@ -18,7 +18,7 @@ type Value[V any, O any] struct {
 }
 
 type MultiValueSlice[V comparable, O comparable] struct {
-	items []MultiValue[V, O]
+	items []*MultiValue[V, O]
 	//participants []O
 	lock sync.RWMutex
 }
@@ -155,7 +155,7 @@ outerLoop:
 		}
 	}
 	if newValue {
-		item.individual = append(item.individual, Value[V, O]{val: val, objs: []O{obj}})
+		item.individual = append(item.individual, &Value[V, O]{val: val, objs: []O{obj}})
 	}
 
 	return nil
@@ -189,9 +189,9 @@ outerLoop:
 type MultiValueRandaoMixes = MultiValueSlice[[32]byte, *BeaconState]
 
 func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
-	items := make([]MultiValue[[32]byte, *BeaconState], fieldparams.RandaoMixesLength)
+	items := make([]*MultiValue[[32]byte, *BeaconState], fieldparams.RandaoMixesLength)
 	for i, b := range mixes {
-		items[i] = MultiValue[[32]byte, *BeaconState]{shared: *(*[32]byte)(b), individual: nil}
+		items[i] = &MultiValue[[32]byte, *BeaconState]{shared: *(*[32]byte)(b), individual: nil}
 	}
 	return &MultiValueRandaoMixes{
 		items: items,

@@ -84,6 +84,7 @@ go_test(
         "getters_validator_test.go",
         "getters_withdrawal_test.go",
         "hasher_test.go",
+        "multi_value_slice_test.go",
         "proofs_test.go",
         "readonly_validator_test.go",
         "references_test.go",

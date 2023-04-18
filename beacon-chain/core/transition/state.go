@@ -9,8 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -221,6 +223,10 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 // EmptyGenesisState returns an empty beacon state object.
 func EmptyGenesisState() (state.BeaconState, error) {
+	mixes := make([][]byte, fieldparams.RandaoMixesLength)
+	for i := range mixes {
+		mixes[i] = bytesutil.PadTo([]byte{}, 32)
+	}
 	st := &ethpb.BeaconState{
 		// Misc fields.
 		Slot: 0,
@@ -229,6 +235,7 @@ func EmptyGenesisState() (state.BeaconState, error) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
+		RandaoMixes: mixes,
 		// Validator registry fields.
 		Validators: []*ethpb.Validator{},
 		Balances:   []uint64{},

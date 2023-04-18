@@ -1,6 +1,8 @@
 package state_native
 
-import customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+import (
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+)
 
 // RandaoMixes of block proposers on the beacon chain.
 func (b *BeaconState) RandaoMixes() [][]byte {
