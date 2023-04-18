@@ -340,7 +340,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err := json.Unmarshal(rb, ep); err != nil {
 			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockCapella response")
 		}
-		if strings.ToLower(ep.Version) != "capella" {
+		if strings.ToLower(ep.Version) != version.String(version.Capella) {
 			return nil, errors.New("not a capella payload")
 		}
 		p, err := ep.ToProto()
