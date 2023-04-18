@@ -873,7 +873,6 @@ func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{
 func finalizerCleanup(b *BeaconState) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
 	for field, v := range b.sharedFieldReferences {
 		v.MinusRef()
 		if b.stateFieldLeaves[field].FieldReference() != nil {
@@ -896,6 +895,5 @@ func finalizerCleanup(b *BeaconState) {
 	for i := range b.stateFieldLeaves {
 		delete(b.stateFieldLeaves, i)
 	}
-
 	state.StateCount.Sub(1)
 }
