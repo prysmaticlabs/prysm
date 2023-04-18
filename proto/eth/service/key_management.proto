@@ -376,6 +376,13 @@ message SetVoluntaryExitRequest {
 }
 
 message SetVoluntaryExitResponse {
-  bytes message = 1;
-  bytes signature = 2;
+  message SignedVoluntaryExit {
+    message VoluntaryExit {
+      string epoch = 1;
+      string validator_index = 2;
+    }
+    VoluntaryExit message = 1;
+    bytes signature = 2;
+  }
+  SignedVoluntaryExit data = 1;
 }
