@@ -364,7 +364,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	require.NoError(t, err, "Could not generate deposit trie")
 	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
-	rootB, err := cachedDeposits.Deposits().HashTreeRoot()
+	rootB, err := cachedDeposits.DepositTree.HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, rootA, rootB)
 }
@@ -409,7 +409,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	for _, deposit := range oldFinalizedDeposits {
 		root, err := deposit.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err)
-		err = dc.finalizedDeposits.Deposits().PushLeaf(root)
+		err = dc.finalizedDeposits.DepositTree.PushLeaf(root)
 		require.NoError(t, err)
 	}
 	err = dc.InsertFinalizedDeposits(context.Background(), 1)
@@ -423,7 +423,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
 	require.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex)
-	require.Equal(t, cachedDeposits.Deposits().NumOfItems(), 2)
+	require.Equal(t, cachedDeposits.DepositTree.NumOfItems(), 2)
 
 	var deps [][]byte
 	for _, d := range oldFinalizedDeposits {
@@ -436,7 +436,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
 
-	rootB, err := cachedDeposits.Deposits().HashTreeRoot()
+	rootB, err := cachedDeposits.DepositTree.HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, rootA, rootB)
 }
@@ -764,7 +764,7 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
-		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
+		if err = fd.DepositTree.Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
 		insertIndex++
@@ -783,12 +783,12 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
-		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
+		if err = fd.DepositTree.Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
 		insertIndex++
 	}
-	assert.Equal(t, fd.Deposits().NumOfItems(), depositTrie.NumOfItems())
+	assert.Equal(t, fd.DepositTree.NumOfItems(), depositTrie.NumOfItems())
 }
 
 func TestMin(t *testing.T) {
@@ -826,10 +826,10 @@ func TestMin(t *testing.T) {
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
-		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
+		if err = fd.DepositTree.Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
-		t.Log(fd.Deposits().NumOfItems(), deps)
+		t.Log(fd.DepositTree.NumOfItems(), deps)
 		insertIndex++
 	}
 
