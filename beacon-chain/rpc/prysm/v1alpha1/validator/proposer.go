@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -82,25 +83,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	sBlk.SetRandaoReveal(req.RandaoReveal)
 	sBlk.SetParentRoot(parentRoot[:])
 
-	// Set eth1 data.
-	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
-	if err != nil {
-		eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
-		log.WithError(err).Error("Could not get eth1data")
-	}
-	sBlk.SetEth1Data(eth1Data)
-
-	// Set deposit and attestation.
-	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
-	if err != nil {
-		sBlk.SetDeposits([]*ethpb.Deposit{})
-		sBlk.SetAttestations([]*ethpb.Attestation{})
-		log.WithError(err).Error("Could not pack deposits and attestations")
-	} else {
-		sBlk.SetDeposits(deposits)
-		sBlk.SetAttestations(atts)
-	}
-
 	// Set proposer index.
 	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
@@ -108,24 +90,55 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
-	// Set slashings.
-	validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
-	sBlk.SetProposerSlashings(validProposerSlashings)
-	sBlk.SetAttesterSlashings(validAttSlashings)
+	// Build consensus fields in background
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-	// Set exits.
-	sBlk.SetVoluntaryExits(vs.getExits(head, req.Slot))
+		// Set eth1 data.
+		eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
+		if err != nil {
+			eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
+			log.WithError(err).Error("Could not get eth1data")
+		}
+		sBlk.SetEth1Data(eth1Data)
 
-	// Set sync aggregate. New in Altair.
-	vs.setSyncAggregate(ctx, sBlk)
+		// Set deposit and attestation.
+		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
+		if err != nil {
+			sBlk.SetDeposits([]*ethpb.Deposit{})
+			sBlk.SetAttestations([]*ethpb.Attestation{})
+			log.WithError(err).Error("Could not pack deposits and attestations")
+		} else {
+			sBlk.SetDeposits(deposits)
+			sBlk.SetAttestations(atts)
+		}
 
-	// Set execution data. New in Bellatrix.
-	if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
+		// Set slashings.
+		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
+		sBlk.SetProposerSlashings(validProposerSlashings)
+		sBlk.SetAttesterSlashings(validAttSlashings)
+
+		// Set exits.
+		sBlk.SetVoluntaryExits(vs.getExits(head, req.Slot))
+
+		// Set sync aggregate. New in Altair.
+		vs.setSyncAggregate(ctx, sBlk)
+
+		// Set bls to execution change. New in Capella.
+		vs.setBlsToExecData(sBlk, head)
+	}()
+
+	wg.Add(1)
+	if err := func() error {
+		defer wg.Done()
+		return vs.setExecutionData(ctx, sBlk, head)
+	}(); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
-	// Set bls to execution change. New in Capella.
-	vs.setBlsToExecData(sBlk, head)
+	wg.Wait() // Wait until block is built via consensus and execution fields.
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
 	if err != nil {
