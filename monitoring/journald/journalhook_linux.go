@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/coreos/go-systemd/journal"
-	logrus "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type JournalHook struct{}
@@ -52,7 +52,6 @@ func stringifyKey(key string) string {
 func stringifyEntries(data map[string]interface{}) map[string]string {
 	entries := make(map[string]string)
 	for k, v := range data {
-
 		key := stringifyKey(k)
 		entries[key] = fmt.Sprint(v)
 	}

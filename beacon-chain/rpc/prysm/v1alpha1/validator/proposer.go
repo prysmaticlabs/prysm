@@ -229,7 +229,6 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 			log.WithError(err).Error("An error occurred while retrieving validator index")
 			return nil, err
 		}
-
 	}
 	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
 	if err != nil {
