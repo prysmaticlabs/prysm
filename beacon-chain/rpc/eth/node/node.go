@@ -228,7 +228,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
 
-// PeerCount retrieves retrieves number of known peers.
+// PeerCount retrieves number of known peers.
 func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerCountResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "node.PeerCount")
 	defer span.End()

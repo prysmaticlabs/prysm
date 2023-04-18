@@ -126,7 +126,7 @@ type WeakSubjectivityData struct {
 }
 
 // CheckpointString returns the standard string representation of a Checkpoint.
-// The format is a a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
+// The format is a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
 // "0x1c35540cac127315fabb6bf29181f2ae0de1a3fc909d2e76ba771e61312cc49a:74888"
 func (wsd *WeakSubjectivityData) CheckpointString() string {
 	return fmt.Sprintf("%#x:%d", wsd.BlockRoot, wsd.Epoch)
