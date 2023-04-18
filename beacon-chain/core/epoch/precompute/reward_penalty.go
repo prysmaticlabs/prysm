@@ -104,7 +104,6 @@ func attestationDelta(pBal *Balance, sqrtActiveCurrentEpoch uint64, v *Validator
 		} else {
 			rewardNumerator := br * (pBal.PrevEpochAttested / effectiveBalanceIncrement)
 			r += rewardNumerator / currentEpochBalance
-
 		}
 	} else {
 		p += br
