@@ -23,13 +23,6 @@ var (
 	log = logrus.WithField("prefix", "depositcache")
 )
 
-// DepositInserter defines a struct which can insert deposit information from a store.
-type DepositInserter interface {
-	InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error
-	InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer)
-	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error
-}
-
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
 func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error {
@@ -66,7 +59,7 @@ func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum ui
 	if err != nil {
 		return err
 	}
-	err = c.finalizedDeposits.Deposits.pushLeaf(depositDataRoot)
+	err = c.finalizedDeposits.Deposits().PushLeaf(depositDataRoot)
 	if err != nil {
 		return err
 	}
@@ -101,7 +94,7 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	c.depositsLock.Lock()
 	defer c.depositsLock.Unlock()
 
-	depositTrie := c.finalizedDeposits.Deposits
+	depositTrie := c.finalizedDeposits.DepositTree
 	insertIndex := int(c.finalizedDeposits.MerkleTrieIndex + 1)
 
 	// Don't insert into finalized trie if there is no deposit to
@@ -127,7 +120,7 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	depositTrie.tree = tree
 
 	c.finalizedDeposits = &FinalizedDeposits{
-		Deposits:        depositTrie,
+		DepositTree:     depositTrie,
 		MerkleTrieIndex: eth1DepositIndex,
 	}
 	return nil

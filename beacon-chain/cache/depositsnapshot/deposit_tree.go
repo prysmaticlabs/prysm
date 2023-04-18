@@ -134,8 +134,8 @@ func (d *depositTree) getRoot() [32]byte {
 	return hash.Hash(append(root[:], enc[:]...))
 }
 
-// pushLeaf adds a new leaf to the tree.
-func (d *depositTree) pushLeaf(leaf [32]byte) error {
+// PushLeaf adds a new leaf to the tree.
+func (d *depositTree) PushLeaf(leaf [32]byte) error {
 	var err error
 	d.tree, err = d.tree.PushLeaf(leaf, DepositContractDepth)
 	if err != nil {

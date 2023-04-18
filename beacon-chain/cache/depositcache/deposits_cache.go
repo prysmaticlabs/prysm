@@ -35,7 +35,7 @@ type DepositFetcher interface {
 	AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
 	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
 	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
-	FinalizedDeposits(ctx context.Context) *FinalizedDeposits
+	FinalizedDeposits(ctx context.Context) FinalizedDeposits
 	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
 }
 

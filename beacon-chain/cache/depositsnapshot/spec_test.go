@@ -249,7 +249,7 @@ func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []t
 	cp, err := fromSnapshot(snapshot)
 	require.NoError(t, err)
 	for _, c := range testCases {
-		err = cp.pushLeaf(c.DepositDataRoot)
+		err = cp.PushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 	}
 	return cp
@@ -260,7 +260,7 @@ func TestDepositCases(t *testing.T) {
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases {
-		err = tree.pushLeaf(c.DepositDataRoot)
+		err = tree.PushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 	}
 }
@@ -272,7 +272,7 @@ func TestRootEquivalence(t *testing.T) {
 	transformed := make([][]byte, 0)
 	depositCount := uint64(0)
 	for _, c := range testCases[:128] {
-		err = tree.pushLeaf(c.DepositDataRoot)
+		err = tree.PushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 		transformed = append(transformed, c.DepositDataRoot[:])
 		depositCount++
@@ -294,7 +294,7 @@ func TestFinalization(t *testing.T) {
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases[:128] {
-		err = tree.pushLeaf(c.DepositDataRoot)
+		err = tree.PushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 	}
 	originalRoot := tree.getRoot()
@@ -331,7 +331,7 @@ func TestFinalization(t *testing.T) {
 	// create a copy of the tree by replaying ALL deposits from nothing
 	fullTreeCopy := newDepositTree()
 	for _, c := range testCases[:128] {
-		err = fullTreeCopy.pushLeaf(c.DepositDataRoot)
+		err = fullTreeCopy.PushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 	}
 	for i := 106; i < 128; i++ {
@@ -345,7 +345,7 @@ func TestSnapshotCases(t *testing.T) {
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases {
-		err = tree.pushLeaf(c.DepositDataRoot)
+		err = tree.PushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 	}
 	for _, c := range testCases {

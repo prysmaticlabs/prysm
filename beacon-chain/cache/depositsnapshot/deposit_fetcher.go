@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/wealdtech/go-bytesutil"
@@ -20,19 +21,10 @@ type Cache struct {
 	depositsLock      sync.RWMutex
 }
 
-// DepositFetcher defines a struct which can retrieve deposit information from a store.
-type DepositFetcher interface {
-	AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
-	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
-	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
-	FinalizedDeposits(ctx context.Context) *FinalizedDeposits
-	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
-}
-
 // FinalizedDeposits stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
 type FinalizedDeposits struct {
-	Deposits        *depositTree
+	DepositTree     *depositTree
 	MerkleTrieIndex int64
 }
 
@@ -46,7 +38,7 @@ func New() (*Cache, error) {
 		pendingDeposits:   []*ethpb.DepositContainer{},
 		deposits:          []*ethpb.DepositContainer{},
 		depositsByKey:     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer{},
-		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
+		finalizedDeposits: getFinalizedDeposits(finalizedDepositsTrie, -1),
 	}, nil
 }
 
@@ -134,7 +126,7 @@ func (c *Cache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits {
 	defer c.depositsLock.RUnlock()
 
 	return &FinalizedDeposits{
-		Deposits:        c.finalizedDeposits.Deposits,
+		DepositTree:     c.finalizedDeposits.DepositTree,
 		MerkleTrieIndex: c.finalizedDeposits.MerkleTrieIndex,
 	}
 }
@@ -182,4 +174,19 @@ func (c *Cache) PruneProofs(ctx context.Context, untilDepositIndex int64) error 
 	}
 
 	return nil
+}
+
+func (fd *FinalizedDeposits) Deposits() cache.MerkleTree {
+	return fd.DepositTree
+}
+
+func (fd *FinalizedDeposits) MerkleTrieIdx() int64 {
+	return fd.MerkleTrieIndex
+}
+
+func getFinalizedDeposits(deposits *depositTree, index int64) *FinalizedDeposits {
+	return &FinalizedDeposits{
+		DepositTree:     deposits,
+		MerkleTrieIndex: index,
+	}
 }
