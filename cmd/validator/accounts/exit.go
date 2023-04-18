@@ -83,6 +83,7 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 		accounts.WithBeaconRPCProvider(beaconRPCProvider),
 		accounts.WithBeaconRESTApiProvider(c.String(flags.BeaconRESTApiProviderFlag.Name)),
 		accounts.WithGRPCHeaders(grpcHeaders),
+		accounts.WithExitJSONOutputPath(c.String(flags.VoluntaryExitJSONOutputPath.Name)),
 	}
 	// Get full set of public keys from the keymanager.
 	validatingPublicKeys, err := km.FetchValidatingPublicKeys(c.Context)
