@@ -640,7 +640,7 @@ func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
 	finalizedDeposits := dc.finalizedDeposits
 	assert.NotNil(t, finalizedDeposits)
 	assert.NotNil(t, finalizedDeposits.Deposits)
-	assert.Equal(t, int64(-1), finalizedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(-1), finalizedDeposits.merkleTrieIndex)
 }
 
 func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {

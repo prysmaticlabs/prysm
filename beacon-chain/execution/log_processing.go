@@ -142,7 +142,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 		return errors.Wrap(err, "unable to determine hashed value of deposit")
 	}
 
-	if err = s.addDepositToTree(depositHash, int(index)); err != nil {
+	if err = s.depositTrie.Insert(depositHash[:], int(index)); err != nil {
 		return err
 	}
 	deposit := &ethpb.Deposit{
@@ -150,7 +150,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 	}
 	// Only generate the proofs during pre-genesis.
 	if !s.chainStartData.Chainstarted {
-		proof, err := s.getMerkleProof(int(index))
+		proof, err := s.depositTrie.MerkleProof(int(index))
 		if err != nil {
 			return errors.Wrap(err, "unable to generate merkle proof for deposit")
 		}
@@ -158,7 +158,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	root, err := s.getHashTreeRoot()
+	root, err := s.depositTrie.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "unable to determine root of deposit trie")
 	}
@@ -169,7 +169,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
-		root, err := s.getHashTreeRoot()
+		root, err := s.depositTrie.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "unable to determine root of deposit trie")
 		}
@@ -182,7 +182,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 			validData = false
 		}
 	} else {
-		root, err := s.getHashTreeRoot()
+		root, err := s.depositTrie.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "unable to determine root of deposit trie")
 		}
@@ -193,7 +193,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 			"eth1Block":       depositLog.BlockNumber,
 			"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
 			"merkleTreeIndex": index,
-		}).Debug("Deposit registered from deposit contract")
+		}).Debug("deposit registered from deposit contract")
 		validDepositsCount.Inc()
 		// Notify users what is going on, from time to time.
 		if !s.chainStartData.Chainstarted {
@@ -228,14 +228,14 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	chainStartTime := time.Unix(int64(genesisTime), 0) // lint:ignore uintcast -- Genesis time wont exceed int64 in your lifetime.
 
 	for i := range s.chainStartData.ChainstartDeposits {
-		proof, err := s.getMerkleProof(i)
+		proof, err := s.depositTrie.MerkleProof(i)
 		if err != nil {
 			log.WithError(err).Error("unable to generate deposit proof")
 		}
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
-	root, err := s.getHashTreeRoot()
+	root, err := s.depositTrie.HashTreeRoot()
 	if err != nil { // This should never happen.
 		log.WithError(err).Error("unable to determine root of deposit trie, aborting chain start")
 		return
@@ -332,7 +332,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
-		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
+		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- deposit index should not exceed int64 in your lifetime.
 	}
 	return nil
 }
@@ -551,10 +551,11 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		return err
 	}
 	eth1Data := &ethpb.ETH1ChainData{
-		CurrentEth1Data:   s.latestEth1Data,
-		ChainstartData:    s.chainStartData,
-		BeaconState:       pbState, // I promise not to mutate it!
-		Trie:              s.depositTrie.ToProto(),
+		CurrentEth1Data: s.latestEth1Data,
+		ChainstartData:  s.chainStartData,
+		BeaconState:     pbState, // I promise not to mutate it!
+		//TODO: Fix
+		//Trie:              s.depositTrie.ToProto(),
 		DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 	}
 	return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)

@@ -119,7 +119,7 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	}
 	depositTrie.tree = tree
 
-	c.finalizedDeposits = &FinalizedDeposits{
+	c.finalizedDeposits = FinalizedDeposits{
 		DepositTree:     depositTrie,
 		MerkleTrieIndex: eth1DepositIndex,
 	}

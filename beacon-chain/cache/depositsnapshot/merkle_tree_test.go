@@ -100,7 +100,7 @@ func Test_fromSnapshotParts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			test := newDepositTree()
+			test := NewDepositTree()
 			for _, leaf := range tt.finalized {
 				err := test.PushLeaf(leaf)
 				require.NoError(t, err)
@@ -165,7 +165,7 @@ func Test_generateProof(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testCases, err := readTestCases()
 			require.NoError(t, err)
-			tree := newDepositTree()
+			tree := NewDepositTree()
 			for _, c := range testCases[:tt.leaves] {
 				err = tree.PushLeaf(c.DepositDataRoot)
 				require.NoError(t, err)

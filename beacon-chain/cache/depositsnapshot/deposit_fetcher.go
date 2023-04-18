@@ -40,9 +40,9 @@ type FinalizedDeposits struct {
 
 // New instantiates a new deposit cache
 func New() (*Cache, error) {
-	finalizedDepositsTrie := newDepositTree()
+	finalizedDepositsTrie := NewDepositTree()
 
-	// finalizedDeposits.MerkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
+	// finalizedDeposits.merkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
 	// Inserting the first item into the trie will set the value of the index to 0.
 	return &Cache{
 		pendingDeposits:   []*ethpb.DepositContainer{},

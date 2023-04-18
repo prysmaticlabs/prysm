@@ -21,6 +21,7 @@ type DepositFetcher interface {
 	FinalizedDeposits(ctx context.Context) FinalizedDeposits
 	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
 	InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte)
+	PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer
 	PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64)
 	PruneProofs(ctx context.Context, untilDepositIndex int64) error
 }
@@ -41,5 +42,5 @@ type MerkleTree interface {
 	HashTreeRoot() ([32]byte, error)
 	NumOfItems() int
 	Insert(item []byte, index int) error
-	PushLeaf(leaf [32]byte) error
+	MerkleProof(index int) ([][]byte, error)
 }

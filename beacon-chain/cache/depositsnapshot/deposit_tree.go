@@ -41,8 +41,8 @@ type executionBlock struct {
 	Depth uint64
 }
 
-// New creates an empty deposit tree.
-func newDepositTree() *DepositTree {
+// NewDepositTree creates an empty deposit tree.
+func NewDepositTree() *DepositTree {
 	var leaves [][32]byte
 	merkle := create(leaves, DepositContractDepth)
 	return &DepositTree{
@@ -105,7 +105,7 @@ func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint
 	return nil
 }
 
-// getProof returns the Deposit tree proof.
+// getProof returns the deposit tree proof.
 func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 	if d.depositCount <= 0 {
 		return [32]byte{}, nil, ErrInvalidMixInLength

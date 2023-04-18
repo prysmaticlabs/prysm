@@ -151,67 +151,27 @@ type Service struct {
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
-	depositTrie             *trie.SparseMerkleTrie
-	depositTree4881         *depositsnapshot.DepositTree
+	depositTrie             cache.MerkleTree
 	chainStartData          *ethpb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         state.BeaconState
 }
 
-func (s *Service) addDepositToTree(item [32]byte, index int) error {
-	if features.Get().EnableEIP4881 {
-		err := s.depositTree4881.PushLeaf(item)
-		if err != nil {
-			return err
-		}
-	} else {
-		err := s.depositTrie.Insert(item[:], index)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Service) getMerkleProof(index int) (proof [][]byte, err error) {
-	if features.Get().EnableEIP4881 {
-		proof, err = s.depositTree4881.MerkleProof(index)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		proof, err = s.depositTrie.MerkleProof(index)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return proof, nil
-}
-
-func (s *Service) getHashTreeRoot() (root [32]byte, err error) {
-	if features.Get().EnableEIP4881 {
-		root, err = s.depositTree4881.HashTreeRoot()
-		if err != nil {
-			return [32]byte{}, err
-		}
-	} else {
-		root, err = s.depositTrie.HashTreeRoot()
-		if err != nil {
-			return [32]byte{}, err
-		}
-	}
-	return root, nil
-}
-
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
-	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-	if err != nil {
-		cancel()
-		return nil, errors.Wrap(err, "could not set up deposit trie")
+	var depositTrie cache.MerkleTree
+	var err error
+	if features.Get().EnableEIP4881 {
+		depositTrie = depositsnapshot.NewDepositTree()
+	} else {
+		depositTrie, err = trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+		if err != nil {
+			cancel()
+			return nil, errors.Wrap(err, "could not set up deposit trie")
+		}
 	}
 	genState, err := transition.EmptyGenesisState()
 	if err != nil {
@@ -862,10 +822,11 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 			ChainstartDeposits: make([]*ethpb.Deposit, 0),
 		}
 		eth1Data = &ethpb.ETH1ChainData{
-			CurrentEth1Data:   s.latestEth1Data,
-			ChainstartData:    s.chainStartData,
-			BeaconState:       pbState,
-			Trie:              s.depositTrie.ToProto(),
+			CurrentEth1Data: s.latestEth1Data,
+			ChainstartData:  s.chainStartData,
+			BeaconState:     pbState,
+			// TODO: Fix
+			//Trie:              s.depositTrie.ToProto(),
 			DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 		}
 		return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
