@@ -142,20 +142,15 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 		return errors.Wrap(err, "unable to determine hashed value of deposit")
 	}
 
-	// Defensive check to validate incoming index.
-	if s.depositTrie.NumOfItems() != int(index) {
-		return errors.Errorf("invalid deposit index received: wanted %d but got %d", s.depositTrie.NumOfItems(), index)
-	}
-	if err = s.depositTrie.Insert(depositHash[:], int(index)); err != nil {
+	if err = s.addDepositToTree(depositHash, int(index)); err != nil {
 		return err
 	}
-
 	deposit := &ethpb.Deposit{
 		Data: depositData,
 	}
 	// Only generate the proofs during pre-genesis.
 	if !s.chainStartData.Chainstarted {
-		proof, err := s.depositTrie.MerkleProof(int(index))
+		proof, err := s.getMerkleProof(int(index))
 		if err != nil {
 			return errors.Wrap(err, "unable to generate merkle proof for deposit")
 		}
@@ -163,7 +158,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	root, err := s.depositTrie.HashTreeRoot()
+	root, err := s.getHashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "unable to determine root of deposit trie")
 	}
@@ -174,7 +169,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
-		root, err := s.depositTrie.HashTreeRoot()
+		root, err := s.getHashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "unable to determine root of deposit trie")
 		}
@@ -187,7 +182,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 			validData = false
 		}
 	} else {
-		root, err := s.depositTrie.HashTreeRoot()
+		root, err := s.depositTree4881.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "unable to determine root of deposit trie")
 		}
@@ -233,14 +228,14 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	chainStartTime := time.Unix(int64(genesisTime), 0) // lint:ignore uintcast -- Genesis time wont exceed int64 in your lifetime.
 
 	for i := range s.chainStartData.ChainstartDeposits {
-		proof, err := s.depositTrie.MerkleProof(i)
+		proof, err := s.getMerkleProof(i)
 		if err != nil {
 			log.WithError(err).Error("unable to generate deposit proof")
 		}
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
-	root, err := s.depositTrie.HashTreeRoot()
+	root, err := s.depositTree4881.HashTreeRoot()
 	if err != nil { // This should never happen.
 		log.WithError(err).Error("unable to determine root of deposit trie, aborting chain start")
 		return

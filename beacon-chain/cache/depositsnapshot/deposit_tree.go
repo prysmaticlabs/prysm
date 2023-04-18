@@ -29,8 +29,8 @@ var (
 	ErrTooManyDeposits = errors.New("number of deposits should not be greater than the capacity of the tree")
 )
 
-// depositTree is the Merkle tree representation of deposits.
-type depositTree struct {
+// DepositTree is the Merkle tree representation of deposits.
+type DepositTree struct {
 	tree                    MerkleTreeNode
 	depositCount            uint64 // number of deposits in the tree, reference implementation calls this mix_in_length.
 	finalizedExecutionBlock executionBlock
@@ -42,10 +42,10 @@ type executionBlock struct {
 }
 
 // New creates an empty deposit tree.
-func newDepositTree() *depositTree {
+func newDepositTree() *DepositTree {
 	var leaves [][32]byte
 	merkle := create(leaves, DepositContractDepth)
-	return &depositTree{
+	return &DepositTree{
 		tree:                    merkle,
 		depositCount:            0,
 		finalizedExecutionBlock: executionBlock{},
@@ -53,7 +53,7 @@ func newDepositTree() *depositTree {
 }
 
 // getSnapshot returns a deposit tree snapshot.
-func (d *depositTree) getSnapshot() (DepositTreeSnapshot, error) {
+func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 	if d.finalizedExecutionBlock == (executionBlock{}) {
 		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
 	}
@@ -65,7 +65,7 @@ func (d *depositTree) getSnapshot() (DepositTreeSnapshot, error) {
 // fromSnapshot returns a deposit tree from a deposit tree snapshot.
 //
 //nolint:unused
-func fromSnapshot(snapshot DepositTreeSnapshot) (*depositTree, error) {
+func fromSnapshot(snapshot DepositTreeSnapshot) (*DepositTree, error) {
 	root, err := snapshot.CalculateRoot()
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (*depositTree, error) {
 	if snapshot.depositCount == 0 {
 		return nil, ErrNoDeposits
 	}
-	return &depositTree{
+	return &DepositTree{
 		tree:                    tree,
 		depositCount:            snapshot.depositCount,
 		finalizedExecutionBlock: snapshot.executionBlock,
@@ -91,7 +91,7 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (*depositTree, error) {
 }
 
 // finalize marks a deposit as finalized.
-func (d *depositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) error {
+func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) error {
 	var blockHash [32]byte
 	copy(blockHash[:], eth1data.BlockHash)
 	d.finalizedExecutionBlock = executionBlock{
@@ -106,7 +106,7 @@ func (d *depositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint
 }
 
 // getProof returns the Deposit tree proof.
-func (d *depositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
+func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 	if d.depositCount <= 0 {
 		return [32]byte{}, nil, ErrInvalidMixInLength
 	}
@@ -125,7 +125,7 @@ func (d *depositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 }
 
 // getRoot returns the root of the deposit tree.
-func (d *depositTree) getRoot() [32]byte {
+func (d *DepositTree) getRoot() [32]byte {
 	var enc [32]byte
 	binary.LittleEndian.PutUint64(enc[:], d.depositCount)
 
@@ -135,7 +135,7 @@ func (d *depositTree) getRoot() [32]byte {
 }
 
 // PushLeaf adds a new leaf to the tree.
-func (d *depositTree) PushLeaf(leaf [32]byte) error {
+func (d *DepositTree) PushLeaf(leaf [32]byte) error {
 	var err error
 	d.tree, err = d.tree.PushLeaf(leaf, DepositContractDepth)
 	if err != nil {
@@ -145,42 +145,19 @@ func (d *depositTree) PushLeaf(leaf [32]byte) error {
 	return nil
 }
 
-func (d *depositTree) Insert(item []byte, index int) error {
+func (d *DepositTree) Insert(item []byte, index int) error {
 	var err error
 	var leaf [32]byte
-	//var deposits uint64
-	var finalizedDeposits [][32]byte
 	copy(leaf[:], item[:32])
-	numItems := d.NumOfItems()
-	if numItems == 0 {
-		finalizedDeposits = append(finalizedDeposits, leaf)
-	} else {
-		_, finalizedDeposits = d.tree.GetFinalized([][32]byte{})
-		finalizedDeposits = append(finalizedDeposits, leaf)
-	}
-	fmt.Println("finalized len", len(finalizedDeposits))
-	treeSnapshot := DepositTreeSnapshot{
-		finalized:      finalizedDeposits,
-		depositRoot:    [32]byte{},
-		depositCount:   uint64(len(finalizedDeposits)) + 1,
-		executionBlock: executionBlock{},
-	}
-	root, err := treeSnapshot.CalculateRoot()
+	err = d.PushLeaf(leaf)
 	if err != nil {
 		return err
 	}
-	treeSnapshot.depositRoot = root
-	tree, err := fromSnapshot(treeSnapshot)
-	if err != nil {
-		return err
-	}
-	d.tree = tree.tree
 	d.depositCount++
-	fmt.Println("Increased: ", d.depositCount)
 	return nil
 }
 
-func (d *depositTree) HashTreeRoot() ([32]byte, error) {
+func (d *DepositTree) HashTreeRoot() ([32]byte, error) {
 	root := d.getRoot()
 	if root == [32]byte{} {
 		return [32]byte{}, errors.New("could not retrieve hash tree root")
@@ -188,7 +165,19 @@ func (d *depositTree) HashTreeRoot() ([32]byte, error) {
 	return root, nil
 }
 
-func (d *depositTree) NumOfItems() int {
+func (d *DepositTree) NumOfItems() int {
 	// TODO: discuss usefulness?
 	return int(d.depositCount)
+}
+
+func (d *DepositTree) MerkleProof(index int) ([][]byte, error) {
+	_, proof, err := d.getProof(uint64(index))
+	if err != nil {
+		return nil, err
+	}
+	byteSlices := make([][]byte, len(proof))
+	for i, p := range proof {
+		byteSlices[i] = p[:]
+	}
+	return byteSlices, nil
 }

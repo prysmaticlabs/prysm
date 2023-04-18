@@ -58,7 +58,7 @@ type DepositCache struct {
 	// Beacon chain deposits in memory.
 	pendingDeposits   []*ethpb.DepositContainer
 	deposits          []*ethpb.DepositContainer
-	finalizedDeposits *FinalizedDeposits
+	finalizedDeposits FinalizedDeposits
 	depositsByKey     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
@@ -76,7 +76,7 @@ func New() (*DepositCache, error) {
 		pendingDeposits:   []*ethpb.DepositContainer{},
 		deposits:          []*ethpb.DepositContainer{},
 		depositsByKey:     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer{},
-		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
+		finalizedDeposits: FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 	}, nil
 }
 
@@ -135,6 +135,7 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*eth
 }
 
 // InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
+// TODO: Add error handling everywhere
 func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
 	defer span.End()
@@ -178,7 +179,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 		insertIndex++
 	}
 
-	dc.finalizedDeposits = &FinalizedDeposits{
+	dc.finalizedDeposits = FinalizedDeposits{
 		Deposits:        depositTrie,
 		MerkleTrieIndex: eth1DepositIndex,
 	}
@@ -269,13 +270,13 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 }
 
 // FinalizedDeposits returns the finalized deposits trie.
-func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits {
+func (dc *DepositCache) FinalizedDeposits(ctx context.Context) FinalizedDeposits {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	return &FinalizedDeposits{
+	return FinalizedDeposits{
 		Deposits:        dc.finalizedDeposits.Deposits.Copy(),
 		MerkleTrieIndex: dc.finalizedDeposits.MerkleTrieIndex,
 	}
@@ -289,7 +290,7 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, lastFinalizedI
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	if dc.finalizedDeposits == nil {
+	if dc.finalizedDeposits.Deposits == nil {
 		return dc.allDeposits(untilBlk)
 	}
 

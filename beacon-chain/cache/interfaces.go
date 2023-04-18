@@ -15,10 +15,14 @@ type DepositCache interface {
 // DepositFetcher defines a struct which can retrieve deposit information from a store.
 type DepositFetcher interface {
 	AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
+	AllDepositContainers(ctx context.Context) []*ethpb.DepositContainer
 	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
 	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
 	FinalizedDeposits(ctx context.Context) FinalizedDeposits
 	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
+	InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte)
+	PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64)
+	PruneProofs(ctx context.Context, untilDepositIndex int64) error
 }
 
 // DepositInserter defines a struct which can insert deposit information from a store.

@@ -6,17 +6,27 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
+)
+
+var (
+	pendingDepositsCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacondb_pending_deposits",
+		Help: "The number of pending deposits in the beaconDB in-memory database",
+	})
 )
 
 type Cache struct {
 	pendingDeposits   []*ethpb.DepositContainer
 	deposits          []*ethpb.DepositContainer
-	finalizedDeposits *FinalizedDeposits
+	finalizedDeposits FinalizedDeposits
 	depositsByKey     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
@@ -24,7 +34,7 @@ type Cache struct {
 // FinalizedDeposits stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
 type FinalizedDeposits struct {
-	DepositTree     *depositTree
+	DepositTree     *DepositTree
 	MerkleTrieIndex int64
 }
 
@@ -119,13 +129,13 @@ func (c *Cache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *
 	return uint64(heightIdx), bytesutil.ToBytes32(c.deposits[heightIdx-1].DepositRoot)
 }
 
-func (c *Cache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits {
+func (c *Cache) FinalizedDeposits(ctx context.Context) FinalizedDeposits {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
 	defer span.End()
 	c.depositsLock.RLock()
 	defer c.depositsLock.RUnlock()
 
-	return &FinalizedDeposits{
+	return FinalizedDeposits{
 		DepositTree:     c.finalizedDeposits.DepositTree,
 		MerkleTrieIndex: c.finalizedDeposits.MerkleTrieIndex,
 	}
@@ -137,7 +147,7 @@ func (c *Cache) NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int
 	c.depositsLock.RLock()
 	defer c.depositsLock.RUnlock()
 
-	if c.finalizedDeposits == nil {
+	if c.finalizedDeposits.DepositTree == nil {
 		return c.allDeposits(untilBlk)
 	}
 
@@ -176,6 +186,50 @@ func (c *Cache) PruneProofs(ctx context.Context, untilDepositIndex int64) error 
 	return nil
 }
 
+// PrunePendingDeposits removes any deposit which is older than the given deposit merkle tree index.
+func (c *Cache) PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64) {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.PrunePendingDeposits")
+	defer span.End()
+
+	if merkleTreeIndex == 0 {
+		log.Debug("Ignoring 0 deposit removal")
+		return
+	}
+
+	c.depositsLock.Lock()
+	defer c.depositsLock.Unlock()
+
+	cleanDeposits := make([]*ethpb.DepositContainer, 0, len(c.pendingDeposits))
+	for _, dp := range c.pendingDeposits {
+		if dp.Index >= merkleTreeIndex {
+			cleanDeposits = append(cleanDeposits, dp)
+		}
+	}
+
+	c.pendingDeposits = cleanDeposits
+	pendingDepositsCount.Set(float64(len(c.pendingDeposits)))
+}
+
+// InsertPendingDeposit into the database. If deposit or block number are nil
+// then this method does nothing.
+func (c *Cache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertPendingDeposit")
+	defer span.End()
+	if d == nil {
+		log.WithFields(logrus.Fields{
+			"block":   blockNum,
+			"deposit": d,
+		}).Debug("Ignoring nil deposit insertion")
+		return
+	}
+	c.depositsLock.Lock()
+	defer c.depositsLock.Unlock()
+	c.pendingDeposits = append(c.pendingDeposits,
+		&ethpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, Index: index, DepositRoot: depositRoot[:]})
+	pendingDepositsCount.Inc()
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(c.pendingDeposits))))
+}
+
 func (fd *FinalizedDeposits) Deposits() cache.MerkleTree {
 	return fd.DepositTree
 }
@@ -184,8 +238,8 @@ func (fd *FinalizedDeposits) MerkleTrieIdx() int64 {
 	return fd.MerkleTrieIndex
 }
 
-func getFinalizedDeposits(deposits *depositTree, index int64) *FinalizedDeposits {
-	return &FinalizedDeposits{
+func getFinalizedDeposits(deposits *DepositTree, index int64) FinalizedDeposits {
+	return FinalizedDeposits{
 		DepositTree:     deposits,
 		MerkleTrieIndex: index,
 	}

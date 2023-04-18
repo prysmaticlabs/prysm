@@ -20,7 +20,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
@@ -29,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
@@ -119,7 +121,7 @@ func (RPCClientEmpty) CallContext(context.Context, interface{}, string, ...inter
 type config struct {
 	depositContractAddr     common.Address
 	beaconDB                db.HeadAccessDatabase
-	depositCache            *depositcache.DepositCache
+	depositCache            cache.DepositCache
 	stateNotifier           statefeed.Notifier
 	stateGen                *stategen.State
 	eth1HeaderReqLimit      uint64
@@ -150,10 +152,56 @@ type Service struct {
 	latestEth1Data          *ethpb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
 	depositTrie             *trie.SparseMerkleTrie
+	depositTree4881         *depositsnapshot.DepositTree
 	chainStartData          *ethpb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         state.BeaconState
+}
+
+func (s *Service) addDepositToTree(item [32]byte, index int) error {
+	if features.Get().EnableEIP4881 {
+		err := s.depositTree4881.PushLeaf(item)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := s.depositTrie.Insert(item[:], index)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) getMerkleProof(index int) (proof [][]byte, err error) {
+	if features.Get().EnableEIP4881 {
+		proof, err = s.depositTree4881.MerkleProof(index)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		proof, err = s.depositTrie.MerkleProof(index)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return proof, nil
+}
+
+func (s *Service) getHashTreeRoot() (root [32]byte, err error) {
+	if features.Get().EnableEIP4881 {
+		root, err = s.depositTree4881.HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+	} else {
+		root, err = s.depositTrie.HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+	}
+	return root, nil
 }
 
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
@@ -370,7 +418,9 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 		// to be included (rather than the last one to be processed). This was most likely
 		// done as the state cannot represent signed integers.
 		actualIndex := int64(currIndex) - 1 // lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
-		s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex)
+		if err = s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex); err != nil {
+			return err
+		}
 
 		// Deposit proofs are only used during state transition and can be safely removed to save space.
 		if err = s.cfg.depositCache.PruneProofs(ctx, actualIndex); err != nil {

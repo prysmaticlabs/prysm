@@ -232,20 +232,20 @@ func merkleRootFromBranch(leaf [32]byte, branch [][32]byte, index uint64) [32]by
 	return root
 }
 
-func checkProof(t *testing.T, tree *depositTree, index uint64) {
+func checkProof(t *testing.T, tree *DepositTree, index uint64) {
 	leaf, proof, err := tree.getProof(index)
 	require.NoError(t, err)
 	calcRoot := merkleRootFromBranch(leaf, proof, index)
 	require.Equal(t, tree.getRoot(), calcRoot)
 }
 
-func compareProof(t *testing.T, tree1, tree2 *depositTree, index uint64) {
+func compareProof(t *testing.T, tree1, tree2 *DepositTree, index uint64) {
 	require.Equal(t, tree1.getRoot(), tree2.getRoot())
 	checkProof(t, tree1, index)
 	checkProof(t, tree2, index)
 }
 
-func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []testCase) *depositTree {
+func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []testCase) *DepositTree {
 	cp, err := fromSnapshot(snapshot)
 	require.NoError(t, err)
 	for _, c := range testCases {

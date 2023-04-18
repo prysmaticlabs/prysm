@@ -59,7 +59,7 @@ func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum ui
 	if err != nil {
 		return err
 	}
-	err = c.finalizedDeposits.Deposits().PushLeaf(depositDataRoot)
+	err = c.finalizedDeposits.DepositTree.PushLeaf(depositDataRoot)
 	if err != nil {
 		return err
 	}
