@@ -693,3 +693,74 @@ func validatePublicKey(pubkey []byte) error {
 	}
 	return nil
 }
+
+// SetVoluntaryExit TBD
+func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVoluntaryExitRequest) (*ethpbservice.SetVoluntaryExitResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+
+	switch {
+	case s.validatorService.ProposerSettings() == nil:
+		s.validatorService.SetProposerSettings(&validatorServiceConfig.ProposerSettings{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+				bytesutil.ToBytes48(validatorKey): {
+					FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient,
+					},
+					BuilderConfig: nil,
+				},
+			},
+			DefaultConfig: nil,
+		})
+	case s.validatorService.ProposerSettings().ProposeConfig == nil:
+		builderConfig := &validatorServiceConfig.BuilderConfig{}
+		settings := s.validatorService.ProposerSettings()
+
+		if settings.DefaultConfig != nil {
+			builderConfig = settings.DefaultConfig.BuilderConfig
+		}
+
+		settings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+			bytesutil.ToBytes48(validatorKey): {
+				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipient: feeRecipient,
+				},
+				BuilderConfig: builderConfig,
+			},
+		}
+
+		s.validatorService.SetProposerSettings(settings)
+	default:
+		proposerOption, found := s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+
+		if found && proposerOption != nil {
+			proposerOption.FeeRecipientConfig = &validatorServiceConfig.FeeRecipientConfig{
+				FeeRecipient: feeRecipient,
+			}
+		} else {
+			settings := s.validatorService.ProposerSettings()
+
+			var builderConfig = &validatorServiceConfig.BuilderConfig{}
+
+			if settings.DefaultConfig != nil {
+				builderConfig = settings.DefaultConfig.BuilderConfig
+			}
+
+			settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &validatorServiceConfig.ProposerOption{
+				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipient: feeRecipient,
+				},
+				BuilderConfig: builderConfig,
+			}
+
+			s.validatorService.SetProposerSettings(settings)
+		}
+	}
+	return resp, nil
+}

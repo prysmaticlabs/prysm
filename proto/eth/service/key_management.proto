@@ -217,6 +217,24 @@ service KeyManagement {
     };
   }
 
+  // SetVoluntaryExit creates and sign a VoluntaryExit object, and publishes it to the Beacon API.
+  //
+  //  Spec page: https://ethereum.github.io/keymanager-APIs/?urls.primaryName=dev#/Voluntary%20Exit/signVoluntaryExit
+  //
+  // HTTP response status codes:
+  //  - 200: Successfully created and signed voluntary exit
+  //  - 400: Bad request, malformed request
+  //  - 401: Unauthorized, no token is found.
+  //  - 403: Forbidden, a token is found but is invalid
+  //  - 404: Path not found
+  //  - 500: Validator internal error
+  rpc SetVoluntaryExit(SetVoluntaryExitRequest) returns (SetVoluntaryExitResponse) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/validator/{pubkey}/voluntary_exit",
+      body: "*"
+    };
+  }
+
 }
 
 message ListKeystoresResponse {
@@ -351,4 +369,13 @@ message SetGasLimitRequest {
 
 message DeleteGasLimitRequest {
   bytes pubkey = 1;
+}
+
+message SetVoluntaryExitRequest {
+  bytes pubkey = 1;
+}
+
+message SetVoluntaryExitResponse {
+  bytes message = 1;
+  bytes signature = 2;
 }

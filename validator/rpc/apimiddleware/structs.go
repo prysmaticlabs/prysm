@@ -100,3 +100,7 @@ type SetGasLimitRequestJson struct {
 type DeleteGasLimitRequestJson struct {
 	Pubkey string `json:"pubkey" hex:"true"`
 }
+
+type SetVoluntaryExitRequestJson struct {
+	Pubkey string `json:"pubkey" hex:"true"`
+}
