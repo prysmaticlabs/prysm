@@ -76,7 +76,6 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 				Signature: to[i].Signature,
 			})
 		}
-
 	}
 	if len(setWithdrawalAddressJsons) == 0 {
 		return setWithdrawalAddressJsons, errors.New("the list of signed requests is empty")
