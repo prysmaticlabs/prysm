@@ -522,10 +522,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 		valMapHandler: b.valMapHandler,
 	}
 
-	/*if err := b.randaoMixes.Copy(b, dst); err != nil {
-		panic("boo")
-	}*/
-
 	switch b.version {
 	case version.Phase0:
 		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
@@ -881,8 +877,6 @@ func finalizerCleanup(b *BeaconState) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	//log.Warn("calling finalizer")
-
 	for field, v := range b.sharedFieldReferences {
 		v.MinusRef()
 		if b.stateFieldLeaves[field].FieldReference() != nil {
@@ -905,8 +899,6 @@ func finalizerCleanup(b *BeaconState) {
 	for i := range b.stateFieldLeaves {
 		delete(b.stateFieldLeaves, i)
 	}
-
-	//b.randaoMixes.Leave(b)
 
 	state.StateCount.Sub(1)
 }
