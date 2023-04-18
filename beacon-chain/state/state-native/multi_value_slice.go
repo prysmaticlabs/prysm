@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/sirupsen/logrus"
 )
 
 type MultiValue[V any, O any] struct {
@@ -71,8 +70,6 @@ func (r *MultiValueSlice[V, O]) Value(obj O) []V {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
-	//logrus.Warnf("fetching value for object %p", &obj)
-
 	v := make([]V, len(r.items))
 	for i, item := range r.items {
 		if item.individual == nil {
@@ -84,7 +81,6 @@ func (r *MultiValueSlice[V, O]) Value(obj O) []V {
 				for _, o := range mv.objs {
 					if o == obj {
 						v[i] = mv.val
-						logrus.Warn("found individual value")
 						found = true
 						break outerLoop
 					}
@@ -95,8 +91,6 @@ func (r *MultiValueSlice[V, O]) Value(obj O) []V {
 			}
 		}
 	}
-
-	//logrus.Warnf("value at 39000: %v", v[39000])
 
 	return v
 }
@@ -127,8 +121,6 @@ func (r *MultiValueSlice[V, O]) At(obj O, i uint64) (V, error) {
 func (r *MultiValueSlice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-
-	//logrus.Warnf("updating value at index %d for object %p to %v", i, &obj, val)
 
 	if i >= uint64(len(r.items)) {
 		return fmt.Errorf("index %d is out of bounds", i)
@@ -163,7 +155,6 @@ outerLoop:
 		}
 	}
 	if newValue {
-		//log.Warnf("setting new value %v at index %d", val, i)
 		item.individual = append(item.individual, Value[V, O]{val: val, objs: []O{obj}})
 	}
 
