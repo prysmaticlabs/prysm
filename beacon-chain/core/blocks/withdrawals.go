@@ -141,7 +141,7 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 //	    next_validator_index = ValidatorIndex((expected_withdrawals[-1].validator_index + 1) % len(state.validators))
 //	    state.next_withdrawal_validator_index = next_validator_index
 //	else:
-//	    # Advance sweep by the max length of the sweep if there was not a full set of withdrawals
+//	    # FillFwd sweep by the max length of the sweep if there was not a full set of withdrawals
 //	    next_index = state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP
 //	    next_validator_index = ValidatorIndex(next_index % len(state.validators))
 //	    state.next_withdrawal_validator_index = next_validator_index
