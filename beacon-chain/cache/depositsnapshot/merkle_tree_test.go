@@ -138,6 +138,7 @@ func Test_fromSnapshotParts(t *testing.T) {
 			recovered, err := fromSnapshot(sShot)
 			require.NoError(t, err)
 			got, err = recovered.HashTreeRoot()
+			require.NoError(t, err)
 			require.Equal(t, want, got)
 		})
 	}

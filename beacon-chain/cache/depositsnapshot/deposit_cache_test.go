@@ -785,6 +785,12 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	deps = dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(30))
 	insertIndex = fd.MerkleTrieIndex() + 1
 
+	for _, dep := range dc.deposits {
+		root, err := dep.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err)
+		err = dc.finalizedDeposits.depositTree.PushLeaf(root)
+		require.NoError(t, err)
+	}
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
