@@ -781,9 +781,9 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData()),
 		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
-		ExcessDataGas:    bytesutil.SafeCopyBytes(excessDataGas),
 		TransactionsRoot: txRoot[:],
 		WithdrawalsRoot:  withdrawalsRoot[:],
+		ExcessDataGas:    bytesutil.SafeCopyBytes(excessDataGas),
 	}, nil
 }
 
