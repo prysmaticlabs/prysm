@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "archived_point.go",
+        "backfill.go",
         "backup.go",
         "blob.go",
         "blocks.go",
@@ -50,6 +51,7 @@ go_library(
         "//io/file:go_default_library",
         "//monitoring/progress:go_default_library",
         "//monitoring/tracing:go_default_library",
+        "//proto/dbval:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "//time:go_default_library",
@@ -75,6 +77,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "archived_point_test.go",
+        "backfill_test.go",
         "backup_test.go",
         "blob_test.go",
         "blocks_test.go",
@@ -110,6 +113,7 @@ go_test(
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//proto/dbval:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/testing:go_default_library",
         "//testing/assert:go_default_library",

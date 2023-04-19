@@ -4,9 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	blocktest "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -21,119 +24,128 @@ type mockBackfillDB struct {
 	saveBackfillBlockRoot     func(ctx context.Context, blockRoot [32]byte) error
 	genesisBlockRoot          func(ctx context.Context) ([32]byte, error)
 	originCheckpointBlockRoot func(ctx context.Context) ([32]byte, error)
-	backfillBlockRoot         func(ctx context.Context) ([32]byte, error)
 	block                     func(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
+	saveBackfillStatus        func(ctx context.Context, status *dbval.BackfillStatus) error
+	backfillStatus            func(context.Context) (*dbval.BackfillStatus, error)
+	status                    *dbval.BackfillStatus
+	err                       error
+	states                    map[[32]byte]state.BeaconState
+	blocks                    map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
 }
 
 var _ BackfillDB = &mockBackfillDB{}
 
-func (db *mockBackfillDB) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	if db.saveBackfillBlockRoot != nil {
-		return db.saveBackfillBlockRoot(ctx, blockRoot)
+func (d *mockBackfillDB) StateOrError(_ context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+	st, ok := d.states[blockRoot]
+	if !ok {
+		return nil, db.ErrNotFoundState
 	}
-	return errEmptyMockDBMethod
+	return st, nil
 }
 
-func (db *mockBackfillDB) GenesisBlockRoot(ctx context.Context) ([32]byte, error) {
-	if db.genesisBlockRoot != nil {
-		return db.genesisBlockRoot(ctx)
+func (d *mockBackfillDB) SaveBackfillStatus(ctx context.Context, status *dbval.BackfillStatus) error {
+	if d.saveBackfillStatus != nil {
+		return d.saveBackfillStatus(ctx, status)
+	}
+	d.status = status
+	return nil
+}
+
+func (d *mockBackfillDB) BackfillStatus(ctx context.Context) (*dbval.BackfillStatus, error) {
+	if d.backfillStatus != nil {
+		return d.backfillStatus(ctx)
+	}
+	return d.status, nil
+}
+
+func (d *mockBackfillDB) GenesisBlockRoot(ctx context.Context) ([32]byte, error) {
+	if d.genesisBlockRoot != nil {
+		return d.genesisBlockRoot(ctx)
 	}
 	return [32]byte{}, errEmptyMockDBMethod
 }
 
-func (db *mockBackfillDB) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error) {
-	if db.originCheckpointBlockRoot != nil {
-		return db.originCheckpointBlockRoot(ctx)
+func (d *mockBackfillDB) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error) {
+	if d.originCheckpointBlockRoot != nil {
+		return d.originCheckpointBlockRoot(ctx)
 	}
 	return [32]byte{}, errEmptyMockDBMethod
 }
 
-func (db *mockBackfillDB) BackfillBlockRoot(ctx context.Context) ([32]byte, error) {
-	if db.backfillBlockRoot != nil {
-		return db.backfillBlockRoot(ctx)
+func (d *mockBackfillDB) Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+	if d.block != nil {
+		return d.block(ctx, blockRoot)
 	}
-	return [32]byte{}, errEmptyMockDBMethod
+	b, ok := d.blocks[blockRoot]
+	if !ok {
+		return nil, db.ErrNotFound
+	}
+	return b, nil
 }
 
-func (db *mockBackfillDB) Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-	if db.block != nil {
-		return db.block(ctx, blockRoot)
+func (d *mockBackfillDB) SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock) error {
+	if d.blocks == nil {
+		d.blocks = make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock)
 	}
-	return nil, errEmptyMockDBMethod
+	r, err := signed.Block().HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	d.blocks[r] = signed
+	return nil
 }
 
 func TestSlotCovered(t *testing.T) {
 	cases := []struct {
 		name   string
 		slot   primitives.Slot
-		status *Status
+		status *StatusUpdater
 		result bool
 	}{
 		{
-			name:   "below start true",
-			status: &Status{start: 1},
+			name:   "genesis true",
+			status: &StatusUpdater{bs: &dbval.BackfillStatus{LowSlot: 10}},
 			slot:   0,
 			result: true,
 		},
 		{
 			name:   "above end true",
-			status: &Status{end: 1},
+			status: &StatusUpdater{bs: &dbval.BackfillStatus{LowSlot: 1}},
 			slot:   2,
 			result: true,
 		},
 		{
 			name:   "equal end true",
-			status: &Status{end: 1},
+			status: &StatusUpdater{bs: &dbval.BackfillStatus{LowSlot: 1}},
 			slot:   1,
 			result: true,
 		},
 		{
-			name:   "equal start true",
-			status: &Status{start: 2},
-			slot:   2,
-			result: true,
-		},
-		{
-			name:   "between false",
-			status: &Status{start: 1, end: 3},
-			slot:   2,
-			result: false,
-		},
-		{
 			name:   "genesisSync always true",
-			status: &Status{genesisSync: true},
+			status: &StatusUpdater{genesisSync: true},
 			slot:   100,
 			result: true,
 		},
 	}
 	for _, c := range cases {
-		result := c.status.SlotCovered(c.slot)
-		require.Equal(t, c.result, result)
+		t.Run(c.name, func(t *testing.T) {
+			result := c.status.AvailableBlock(c.slot)
+			require.Equal(t, c.result, result)
+		})
 	}
 }
 
-func TestAdvance(t *testing.T) {
+func TestStatusUpdater_FillBack(t *testing.T) {
 	ctx := context.Background()
-	saveBackfillBuf := make([][32]byte, 0)
-	mdb := &mockBackfillDB{
-		saveBackfillBlockRoot: func(ctx context.Context, root [32]byte) error {
-			saveBackfillBuf = append(saveBackfillBuf, root)
-			return nil
-		},
-	}
-	s := &Status{end: 100, store: mdb}
-	var root [32]byte
-	copy(root[:], []byte{0x23, 0x23})
-	require.NoError(t, s.Advance(ctx, 90, root))
-	require.Equal(t, root, saveBackfillBuf[0])
-	not := s.SlotCovered(95)
-	require.Equal(t, false, not)
-
-	// this should still be len 1 after failing to advance
-	require.Equal(t, 1, len(saveBackfillBuf))
-	require.ErrorIs(t, s.Advance(ctx, s.end+1, root), ErrAdvancePastOrigin)
-	// this has an element in it from the previous test, there shouldn't be an additional one
-	require.Equal(t, 1, len(saveBackfillBuf))
+	mdb := &mockBackfillDB{}
+	s := &StatusUpdater{bs: &dbval.BackfillStatus{LowSlot: 100}, store: mdb}
+	b, err := setupTestBlock(90)
+	require.NoError(t, err)
+	rob, err := blocks.NewROBlock(b)
+	require.NoError(t, err)
+	_, err = s.fillBack(ctx, []blocks.ROBlock{rob})
+	require.NoError(t, err)
+	require.Equal(t, true, s.AvailableBlock(95))
 }
 
 func goodBlockRoot(root [32]byte) func(ctx context.Context) ([32]byte, error) {
@@ -171,7 +183,7 @@ func TestReload(t *testing.T) {
 		name     string
 		db       BackfillDB
 		err      error
-		expected *Status
+		expected *StatusUpdater
 	}{
 		/*{
 			name: "origin not found, implying genesis sync ",
@@ -180,7 +192,7 @@ func TestReload(t *testing.T) {
 				originCheckpointBlockRoot: func(ctx context.Context) ([32]byte, error) {
 					return [32]byte{}, db.ErrNotFoundOriginBlockRoot
 				}},
-			expected: &Status{genesisSync: true},
+			expected: &StatusUpdater{genesisSync: true},
 		},
 		{
 			name: "genesis not found error",
@@ -318,7 +330,7 @@ func TestReload(t *testing.T) {
 			err: derp,
 		},*/
 		{
-			name: "complete happy path",
+			name: "legacy recovery",
 			db: &mockBackfillDB{
 				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
@@ -331,18 +343,15 @@ func TestReload(t *testing.T) {
 					}
 					return nil, errors.New("not derp")
 				},
-				backfillBlockRoot: goodBlockRoot(backfillRoot),
+				backfillStatus: func(context.Context) (*dbval.BackfillStatus, error) { return nil, db.ErrNotFound },
 			},
 			err:      derp,
-			expected: &Status{genesisSync: false, start: backfillSlot, end: originSlot},
+			expected: &StatusUpdater{genesisSync: false, bs: &dbval.BackfillStatus{LowSlot: uint64(originSlot)}},
 		},
 	}
 
 	for _, c := range cases {
-		s := &Status{
-			store: c.db,
-		}
-		err := s.Reload(ctx)
+		s, err := NewUpdater(ctx, c.db)
 		if err != nil {
 			require.ErrorIs(t, err, c.err)
 			continue
@@ -352,7 +361,6 @@ func TestReload(t *testing.T) {
 			continue
 		}
 		require.Equal(t, c.expected.genesisSync, s.genesisSync)
-		require.Equal(t, c.expected.start, s.start)
-		require.Equal(t, c.expected.end, s.end)
+		require.Equal(t, c.expected.bs.LowSlot, s.bs.LowSlot)
 	}
 }
