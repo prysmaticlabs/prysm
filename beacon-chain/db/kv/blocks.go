@@ -70,25 +70,6 @@ func (s *Store) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	return root, err
 }
 
-// BackfillBlockRoot keeps track of the highest block available before the OriginCheckpointBlockRoot
-func (s *Store) BackfillBlockRoot(ctx context.Context) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.BackfillBlockRoot")
-	defer span.End()
-
-	var root [32]byte
-	err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		rootSlice := bkt.Get(backfillBlockRootKey)
-		if len(rootSlice) == 0 {
-			return ErrNotFoundBackfillBlockRoot
-		}
-		root = bytesutil.ToBytes32(rootSlice)
-		return nil
-	})
-
-	return root, err
-}
-
 // HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.
 func (s *Store) HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadBlock")
@@ -414,17 +395,6 @@ func (s *Store) SaveOriginCheckpointBlockRoot(ctx context.Context, blockRoot [32
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(originCheckpointBlockRootKey, blockRoot[:])
-	})
-}
-
-// SaveBackfillBlockRoot is used to keep track of the most recently backfilled block root when
-// the node was initialized via checkpoint sync.
-func (s *Store) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBackfillBlockRoot")
-	defer span.End()
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(blocksBucket)
-		return bucket.Put(backfillBlockRootKey, blockRoot[:])
 	})
 }
 

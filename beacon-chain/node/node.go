@@ -209,6 +209,18 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := bfs.Reload(ctx); err != nil {
 		return nil, errors.Wrap(err, "backfill status initialization error")
 	}
+	bf, err := backfill.NewService(ctx,
+		backfill.WithGenesisWaiter(beacon.genesisWaiter),
+		backfill.WithStatusUpdater(bfs),
+		backfill.WithBackfillDB(beacon.db),
+		backfill.WithP2P(beacon.fetchP2P()),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "backfill service initialization error")
+	}
+	if err := beacon.services.RegisterService(bf); err != nil {
+		return nil, errors.Wrap(err, "error registering backfill service")
+	}
 
 	log.Debugln("Starting State Gen")
 	if err := beacon.startStateGen(ctx, bfs, beacon.forkChoicer); err != nil {
@@ -496,7 +508,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status, fc forkchoice.ForkChoicer) error {
+func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.StatusUpdater, fc forkchoice.ForkChoicer) error {
 	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs)}
 	sg := stategen.New(b.db, fc, opts...)
 

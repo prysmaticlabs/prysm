@@ -50,7 +50,7 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
-	backfillStatus          *backfill.Status
+	backfillStatus          *backfill.StatusUpdater
 	migrationLock           *sync.Mutex
 	fc                      forkchoice.ForkChoicer
 }
@@ -77,7 +77,7 @@ type finalizedInfo struct {
 // StateGenOption is a functional option for controlling the initialization of a *State value
 type StateGenOption func(*State)
 
-func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
+func WithBackfillStatus(bfs *backfill.StatusUpdater) StateGenOption {
 	return func(sg *State) {
 		sg.backfillStatus = bfs
 	}
