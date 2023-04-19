@@ -750,15 +750,15 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(12, b.balances)
 	case types.RandaoMixes:
-		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
-			if err != nil {
-				return [32]byte{}, err
-			}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
+		//if b.rebuildTrie[field] {
+		err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
+		if err != nil {
+			return [32]byte{}, err
 		}
-		return b.recomputeFieldTrie(13, b.randaoMixes)
+		delete(b.rebuildTrie, field)
+		return b.stateFieldLeaves[field].TrieRoot()
+		//}
+		//return b.recomputeFieldTrie(13, b.randaoMixes)
 	case types.Slashings:
 		return ssz.SlashingsRoot(b.slashings)
 	case types.PreviousEpochAttestations:
