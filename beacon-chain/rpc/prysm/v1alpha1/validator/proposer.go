@@ -130,11 +130,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	wg.Add(1)
-	if err := func() error {
-		defer wg.Done()
-		return vs.setExecutionData(ctx, sBlk, head)
-	}(); err != nil {
+	if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
