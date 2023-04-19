@@ -313,6 +313,26 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.DeepEqual(t, ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943"), withdrawals[0].Address)
 		assert.Equal(t, uint64(1), withdrawals[0].Amount)
 	})
+	t.Run("mismatched versions, expected bellatrix got capella", func(t *testing.T) {
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayloadCapella)), // send a Capella payload
+					Request:    r.Clone(ctx),
+				}, nil
+			}),
+		}
+		c := &Client{
+			hc:      hc,
+			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+		}
+		sbbb, err := blocks.NewSignedBeaconBlock(testSignedBlindedBeaconBlockBellatrix(t))
+		require.NoError(t, err)
+		_, err = c.SubmitBlindedBlock(ctx, sbbb)
+		require.ErrorContains(t, "not a bellatrix payload", err)
+	})
 	t.Run("not blinded", func(t *testing.T) {
 		sbb, err := blocks.NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: &eth.BeaconBlockBellatrix{Body: &eth.BeaconBlockBodyBellatrix{}}})
 		require.NoError(t, err)
