@@ -171,6 +171,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
+			state:      f.state,
 			field:      f.field,
 			dataType:   f.dataType,
 			reference:  stateutil.NewRef(1),
@@ -185,6 +186,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 		copy(dstFieldTrie[i], layer)
 	}
 	return &FieldTrie{
+		state:       f.state,
 		fieldLayers: dstFieldTrie,
 		field:       f.field,
 		dataType:    f.dataType,
@@ -209,6 +211,7 @@ func (f *FieldTrie) Length() uint64 {
 func (f *FieldTrie) TransferTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
+			state:      f.state,
 			field:      f.field,
 			dataType:   f.dataType,
 			reference:  stateutil.NewRef(1),
@@ -219,6 +222,7 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 	}
 	f.isTransferred = true
 	nTrie := &FieldTrie{
+		state:       f.state,
 		fieldLayers: f.fieldLayers,
 		field:       f.field,
 		dataType:    f.dataType,
