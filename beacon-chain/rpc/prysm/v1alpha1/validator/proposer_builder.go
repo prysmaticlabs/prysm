@@ -7,18 +7,25 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // Returns true if builder (ie outsourcing block construction) can be used. Both conditions have to meet:
 // - Validator has registered to use builder (ie called registerBuilder API end point)
 // - Circuit breaker has not been activated (ie the liveness of the chain is healthy)
 func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.canUseBuilder")
+	defer span.End()
+
 	if !vs.BlockBuilder.Configured() {
 		return false, nil
 	}
 	activated, err := vs.circuitBreakBuilder(slot)
+	span.AddAttributes(trace.BoolAttribute("circuitBreakerActivated", activated))
 	if err != nil {
+		tracing.AnnotateError(span, err)
 		return false, err
 	}
 	if activated {

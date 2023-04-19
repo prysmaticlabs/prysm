@@ -284,7 +284,6 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 		v, err := headState.ValidatorAtIndexReadOnly(i)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator: %v", err)
-
 		}
 		info, err := is.generateValidatorInfo(pubKey, v, headState, epoch)
 		if err != nil {
