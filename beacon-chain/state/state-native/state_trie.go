@@ -854,7 +854,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]
 	})
-	root, err := fTrie.RecomputeTrie(b.dirtyIndices[index], elements)
+	root, err := fTrie.RecomputeTrie(b, b.dirtyIndices[index], elements)
 	if err != nil {
 		return [32]byte{}, err
 	}

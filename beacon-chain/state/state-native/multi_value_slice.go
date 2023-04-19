@@ -140,7 +140,7 @@ outerLoop:
 	return nil
 }
 
-/*func (r *MultiValueSlice[V, O]) Leave(obj O) {
+/*func (r *MultiValueSlice[V, O]) Detach(obj O) {
 	//log.Warnf("participants: %d", len(r.participants))
 	for pi, p := range r.participants {
 		if p == obj {

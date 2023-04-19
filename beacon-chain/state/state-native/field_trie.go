@@ -18,7 +18,6 @@ var (
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
-	state *BeaconState
 	*sync.RWMutex
 	reference     *stateutil.Reference
 	fieldLayers   [][]*[32]byte
@@ -35,7 +34,6 @@ type FieldTrie struct {
 func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
-			state:      state,
 			field:      field,
 			dataType:   dataType,
 			reference:  stateutil.NewRef(1),
@@ -66,7 +64,6 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
 		return &FieldTrie{
-			state:       state,
 			fieldLayers: fl,
 			field:       field,
 			dataType:    dataType,
@@ -77,7 +74,6 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
-			state:       state,
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
 			dataType:    dataType,
@@ -95,7 +91,7 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 // RecomputeTrie rebuilds the affected branches in the trie according to the provided
 // changed indices and elements. This recomputes the trie according to the particular
 // field the trie is based on.
-func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]byte, error) {
+func (f *FieldTrie) RecomputeTrie(state *BeaconState, indices []uint64, elements interface{}) ([32]byte, error) {
 	f.Lock()
 	defer f.Unlock()
 	var fieldRoot [32]byte
@@ -103,7 +99,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		return f.TrieRoot()
 	}
 
-	fieldRoots, err := fieldConverters(f.state, f.field, indices, elements, false)
+	fieldRoots, err := fieldConverters(state, f.field, indices, elements, false)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -171,7 +167,6 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
-			state:      f.state,
 			field:      f.field,
 			dataType:   f.dataType,
 			reference:  stateutil.NewRef(1),
@@ -186,7 +181,6 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 		copy(dstFieldTrie[i], layer)
 	}
 	return &FieldTrie{
-		state:       f.state,
 		fieldLayers: dstFieldTrie,
 		field:       f.field,
 		dataType:    f.dataType,
@@ -211,7 +205,6 @@ func (f *FieldTrie) Length() uint64 {
 func (f *FieldTrie) TransferTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
-			state:      f.state,
 			field:      f.field,
 			dataType:   f.dataType,
 			reference:  stateutil.NewRef(1),
@@ -222,7 +215,6 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 	}
 	f.isTransferred = true
 	nTrie := &FieldTrie{
-		state:       f.state,
 		fieldLayers: f.fieldLayers,
 		field:       f.field,
 		dataType:    f.dataType,
