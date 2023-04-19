@@ -593,3 +593,9 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 		require.Equal(t, true, matched)
 	})
 }
+
+func TestEmptyTransactionsRoot(t *testing.T) {
+	r, err := ssz.TransactionsRoot([][]byte{})
+	require.NoError(t, err)
+	require.DeepEqual(t, r, emptyTransactionsRoot)
+}

@@ -133,7 +133,6 @@ func (s *Service) processSlashings(blk interfaces.ReadOnlyBeaconBlock) {
 					"SourceEpoch2":       slashing.Attestation_2.Data.Source.Epoch,
 					"TargetEpoch2":       slashing.Attestation_2.Data.Target.Epoch,
 				}).Info("Attester slashing was included")
-
 			}
 		}
 	}

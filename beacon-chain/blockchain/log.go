@@ -66,7 +66,9 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 		if err != nil {
 			return err
 		}
-		log = log.WithField("blobCount", len(k))
+		if len(k) > 0 {
+			log = log.WithField("blobCommitmentCount", len(k))
+		}
 	}
 	log.Info("Finished applying state transition")
 	return nil

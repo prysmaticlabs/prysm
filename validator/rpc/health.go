@@ -19,6 +19,7 @@ import (
 func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) (*validatorpb.NodeConnectionResponse, error) {
 	syncStatus, err := s.syncChecker.Syncing(ctx)
 	if err != nil || s.validatorService.Status() != nil {
+		//nolint:nilerr
 		return &validatorpb.NodeConnectionResponse{
 			GenesisTime:        0,
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,

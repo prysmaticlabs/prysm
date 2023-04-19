@@ -188,7 +188,7 @@ func Mod64(a, b uint64) (uint64, error) {
 	return val, nil
 }
 
-// Int returns the integer value of the uint64 argument. If there is an overlow, then an error is
+// Int returns the integer value of the uint64 argument. If there is an overflow, then an error is
 // returned.
 func Int(u uint64) (int, error) {
 	if u > stdmath.MaxInt {
@@ -208,7 +208,6 @@ func AddInt(i ...int) (int, error) {
 		}
 
 		sum += ii
-
 	}
 	return sum, nil
 }

@@ -117,11 +117,21 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 			Block: &eth.GenericSignedBeaconBlock_Capella{Capella: pb.(*eth.SignedBeaconBlockCapella)},
 		}, nil
 	case version.Deneb:
-		// TODO(TT): Add Deneb support.
+		if b.IsBlinded() {
+			return &eth.GenericSignedBeaconBlock{
+				Block: &eth.GenericSignedBeaconBlock_Blinded_Deneb{Blinded_Deneb: &eth.SignedBlindedBeaconBlockDenebAndBlobs{
+					Block: pb.(*eth.SignedBlindedBeaconBlockDeneb),
+				}},
+			}, nil
+		}
+		return &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockDenebAndBlobs{
+				Block: pb.(*eth.SignedBeaconBlockDeneb),
+			}},
+		}, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}
-	return nil, errIncorrectBlockVersion
 }
 
 // PbPhase0Block returns the underlying protobuf object.
