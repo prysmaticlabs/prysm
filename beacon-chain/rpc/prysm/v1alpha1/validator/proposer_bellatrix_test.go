@@ -325,7 +325,8 @@ func TestNoWeiOverflow(t *testing.T) {
 	vs.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 	vs.TimeFetcher = chain
 	vs.HeadFetcher = chain
-	require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+	_, err = vs.setExecutionData(context.Background(), blk, capellaTransitionState)
+	require.NoError(t, err)
 	e, err := blk.Block().Body().Execution()
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
@@ -338,7 +339,8 @@ func TestNoWeiOverflow(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3, Withdrawals: withdrawals}, BlockValue: big.NewInt(162927606e9)} // 0.16 ETH
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		_, err = vs.setExecutionData(context.Background(), blk, capellaTransitionState)
+		require.NoError(t, err)
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block

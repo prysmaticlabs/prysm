@@ -103,10 +103,6 @@ func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.Transi
 	return nil
 }
 
-func (m *engineMock) GetBlobsBundle(context.Context, [8]byte) (*pb.BlobsBundle, error) {
-	return nil, nil
-}
-
 func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlock, error) {
 	b, ok := m.powBlocks[bytesutil.ToBytes32(hash.Bytes())]
 	if !ok {

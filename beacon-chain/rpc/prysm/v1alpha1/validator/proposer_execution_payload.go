@@ -74,18 +74,11 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		payload, blobsBundle, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
-			if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-				sc, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, pid)
-				if err != nil {
-					return nil, nil, errors.Wrap(err, "could not get blobs bundle from execution client")
-				}
-				return payload, sc, nil
-			}
-			return payload, nil, nil
+			return payload, blobsBundle, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
 			return nil, nil, errors.Wrap(err, "could not get cached payload from execution client")
@@ -189,19 +182,12 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 	if payloadID == nil {
 		return nil, nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	payload, blobsBundle, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, nil, err
 	}
 	warnIfFeeRecipientDiffers(payload, feeRecipient)
-	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
-		sc, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, *payloadID)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not get blobs bundle from execution client")
-		}
-		return payload, sc, nil
-	}
-	return payload, nil, nil
+	return payload, blobsBundle, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not

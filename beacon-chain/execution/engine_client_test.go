@@ -75,7 +75,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := srv.GetPayload(ctx, payloadId, 1)
+		resp, _, err := srv.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
 		resPb, err := resp.PbBellatrix()
 		require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		resPb, err := resp.PbCapella()
 		require.NoError(t, err)
@@ -203,7 +203,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.GetPayload(ctx, payloadId, 1)
+		resp, _, err := client.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
 		pb, err := resp.PbBellatrix()
 		require.NoError(t, err)
@@ -247,7 +247,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		pb, err := resp.PbCapella()
 		require.NoError(t, err)
