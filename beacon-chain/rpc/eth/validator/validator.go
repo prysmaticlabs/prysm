@@ -533,9 +533,9 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	if optimistic {
 		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
 	}
-	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
-		blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(bellatrixBlock.BlindedBellatrix)
+		blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2Blinded(bellatrixBlock.Bellatrix)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
@@ -546,9 +546,35 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
-	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	blindedBellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
-		blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(capellaBlock.BlindedCapella)
+		blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlock.BlindedBellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blk},
+			},
+		}, nil
+	}
+	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	if ok {
+		blk, err := migration.V1Alpha1BeaconBlockCapellaToV2Blinded(capellaBlock.Capella)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_CAPELLA,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: blk},
+			},
+		}, nil
+	}
+	blindedCapellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	if ok {
+		blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(blindedCapellaBlock.BlindedCapella)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
