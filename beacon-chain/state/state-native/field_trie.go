@@ -66,6 +66,7 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
 		return &FieldTrie{
+			state:       state,
 			fieldLayers: fl,
 			field:       field,
 			dataType:    dataType,
@@ -76,6 +77,7 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
+			state:       state,
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
 			dataType:    dataType,
