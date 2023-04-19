@@ -1,3 +1,4 @@
+//nolint:dupword
 /*
 Package leakybucket implements a scalable leaky bucket algorithm.
 
