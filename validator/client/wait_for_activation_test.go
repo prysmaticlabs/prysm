@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/v4/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	mock2 "github.com/stretchr/testify/mock"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
 )
@@ -251,8 +253,6 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 
 // Regression test for a scenario where you start with an inactive key and then import an active key.
 func TestWaitForActivation_AccountsChanged(t *testing.T) {
-	t.Skip("Flakey test. Skipping until we can figure out how to test this properly")
-
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -299,9 +299,15 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		activeClientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 		validatorClient.EXPECT().WaitForActivation(
 			gomock.Any(),
-			&ethpb.ValidatorActivationRequest{
-				PublicKeys: [][]byte{inactivePubKey[:], activePubKey[:]},
-			},
+			mock2.MatchedBy(func(req *ethpb.ValidatorActivationRequest) bool {
+				found := 0
+				for _, pk := range req.PublicKeys {
+					if bytes.Equal(pk, activePubKey[:]) || bytes.Equal(pk, inactivePubKey[:]) {
+						found++
+					}
+				}
+				return found == 2
+			}),
 		).Return(activeClientStream, nil)
 		activeClientStream.EXPECT().Recv().Return(
 			activeResp,
