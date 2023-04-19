@@ -874,5 +874,4 @@ func (s *Store) isStateValidatorMigrationOver() (bool, error) {
 		return returnFlag, err
 	}
 	return returnFlag, nil
-
 }

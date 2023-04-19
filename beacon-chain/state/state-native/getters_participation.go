@@ -57,7 +57,6 @@ func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, er
 	}
 
 	return stateutil.UnrealizedCheckpointBalances(cp, pp, b.validators, currentEpoch)
-
 }
 
 // currentEpochParticipationVal corresponding to participation bits on the beacon chain.

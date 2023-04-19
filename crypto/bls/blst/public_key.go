@@ -92,7 +92,6 @@ func (p *PublicKey) Equals(p2 common.PublicKey) bool {
 
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
-
 	agg := new(blstAggregatePublicKey)
 	// No group check here since it is checked at decompression time
 	agg.Add(p.p, false)

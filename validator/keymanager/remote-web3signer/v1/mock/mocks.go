@@ -620,7 +620,6 @@ func MockForkInfo() *v1.ForkInfo {
 		},
 		GenesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 	}
-
 }
 
 // MockAttestation is a mock implementation of the Attestation.
