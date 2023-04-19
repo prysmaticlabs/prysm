@@ -109,9 +109,9 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				}
 				span.AddAttributes(
 					trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
-					trace.Int64Attribute("localGweiValue", int64(localValue)),     // lint:ignore uintcast -- This is OK for tracing.
-					trace.Int64Attribute("localBoostPercentage", int64(boost)),    // lint:ignore uintcast -- This is OK for tracing.
-					trace.Int64Attribute("builderGweiValue", int64(builderValue)), // lint:ignore uintcast -- This is OK for tracing.
+					trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
+					trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
+					trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
 				)
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.
