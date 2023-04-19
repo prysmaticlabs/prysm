@@ -1,19 +1,20 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -48,7 +49,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
@@ -56,9 +56,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		return err
 	}
 
-	// Handle post block operations such as attestations and exits.
-	if err := s.handlePostBlockOperations(blockCopy.Block()); err != nil {
-		return err
+	// Handle post block operations such as pruning exits and bls messages if incoming block is the head
+	if err := s.prunePostBlockOperationPools(ctx, blockCopy, blockRoot); err != nil {
+		log.WithError(err).Error("Could not prune canonical objects from pool ")
 	}
 
 	// Have we been finalizing? Should we start saving hot states to db?
@@ -67,12 +67,12 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	}
 
 	// Reports on block and fork choice metrics.
-	cp := s.ForkChoicer().FinalizedCheckpoint()
+	cp := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
-	cp = s.ForkChoicer().JustifiedCheckpoint()
+	cp = s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	justified := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		log.WithError(err).Error("Unable to log block sync status")
@@ -123,7 +123,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		cp := s.ForkChoicer().FinalizedCheckpoint()
+		cp := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 		finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
@@ -131,7 +131,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -152,34 +152,49 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
 func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
-	s.ForkChoicer().Lock()
-	defer s.ForkChoicer().Unlock()
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
-func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) error {
+// prunePostBlockOperationPools only runs on new head otherwise should return a nil.
+func (s *Service) prunePostBlockOperationPools(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, root [32]byte) error {
+	headRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return err
+	}
+	// By comparing the current headroot, that has already gone through forkchoice,
+	// we can assume that if equal the current block root is canonical.
+	if !bytes.Equal(headRoot, root[:]) {
+		return nil
+	}
+
 	// Mark block exits as seen so we don't include same ones in future blocks.
-	for _, e := range b.Body().VoluntaryExits() {
+	for _, e := range blk.Block().Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
 	// Mark block BLS changes as seen so we don't include same ones in future blocks.
-	if err := s.handleBlockBLSToExecChanges(b); err != nil {
+	if err := s.markIncludedBlockBLSToExecChanges(blk.Block()); err != nil {
 		return errors.Wrap(err, "could not process BLSToExecutionChanges")
 	}
 
-	//  Mark attester slashings as seen so we don't include same ones in future blocks.
-	for _, as := range b.Body().AttesterSlashings() {
+	// Mark slashings as seen so we don't include same ones in future blocks.
+	for _, as := range blk.Block().Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
 	}
+	for _, ps := range blk.Block().Body().ProposerSlashings() {
+		s.cfg.SlashingPool.MarkIncludedProposerSlashing(ps)
+	}
+
 	return nil
 }
 
-func (s *Service) handleBlockBLSToExecChanges(blk interfaces.ReadOnlyBeaconBlock) error {
-	if blk.Version() < version.Capella {
+func (s *Service) markIncludedBlockBLSToExecChanges(headBlock interfaces.ReadOnlyBeaconBlock) error {
+	if headBlock.Version() < version.Capella {
 		return nil
 	}
-	changes, err := blk.Body().BLSToExecutionChanges()
+	changes, err := headBlock.Body().BLSToExecutionChanges()
 	if err != nil {
 		return errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}
@@ -196,7 +211,7 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality primitives.Epoch
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}

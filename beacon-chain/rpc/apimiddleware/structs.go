@@ -3,9 +3,9 @@ package apimiddleware
 import (
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 )
 
 //----------------
@@ -1158,6 +1158,47 @@ type EventChainReorgJson struct {
 	NewHeadState        string `json:"new_head_state" hex:"true"`
 	Epoch               string `json:"epoch"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
+}
+
+type EventPayloadAttributeStreamV1Json struct {
+	Version string `json:"version"`
+	Data    *EventPayloadAttributeV1Json
+}
+
+type EventPayloadAttributeStreamV2Json struct {
+	Version string                       `json:"version"`
+	Data    *EventPayloadAttributeV2Json `json:"data"`
+}
+
+type EventPayloadAttributeV1Json struct {
+	ProposerIndex     string                   `json:"proposer_index"`
+	ProposalSlot      string                   `json:"proposal_slot"`
+	ParentBlockNumber string                   `json:"parent_block_number"`
+	ParentBlockRoot   string                   `json:"parent_block_root" hex:"true"`
+	ParentBlockHash   string                   `json:"parent_block_hash" hex:"true"`
+	PayloadAttributes *PayloadAttributesV1Json `json:"payload_attributes"`
+}
+
+type EventPayloadAttributeV2Json struct {
+	ProposerIndex     string                   `json:"proposer_index"`
+	ProposalSlot      string                   `json:"proposal_slot"`
+	ParentBlockNumber string                   `json:"parent_block_number"`
+	ParentBlockRoot   string                   `json:"parent_block_root" hex:"true"`
+	ParentBlockHash   string                   `json:"parent_block_hash" hex:"true"`
+	PayloadAttributes *PayloadAttributesV2Json `json:"payload_attributes"`
+}
+
+type PayloadAttributesV1Json struct {
+	Timestamp             string `json:"timestamp"`
+	Random                string `json:"prev_randao" hex:"true"`
+	SuggestedFeeRecipient string `json:"suggested_fee_recipient" hex:"true"`
+}
+
+type PayloadAttributesV2Json struct {
+	Timestamp             string            `json:"timestamp"`
+	Random                string            `json:"prev_randao" hex:"true"`
+	SuggestedFeeRecipient string            `json:"suggested_fee_recipient" hex:"true"`
+	Withdrawals           []*WithdrawalJson `json:"withdrawals"`
 }
 
 // ---------------

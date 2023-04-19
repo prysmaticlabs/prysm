@@ -29,7 +29,7 @@ import "proto/eth/v2/sync_committee.proto";
 import "proto/eth/v2/withdrawals.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
-option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/service";
+option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/service";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconChainServiceProto";
 option java_package = "org.ethereum.eth.service";

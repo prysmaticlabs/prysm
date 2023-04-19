@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -224,14 +224,6 @@ func (f *ForkChoice) HighestReceivedBlockSlot() primitives.Slot {
 		return 0
 	}
 	return f.store.highestReceivedNode.slot
-}
-
-// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
-func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
-	if f.store.highestReceivedNode == nil {
-		return [32]byte{}
-	}
-	return f.store.highestReceivedNode.root
 }
 
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch

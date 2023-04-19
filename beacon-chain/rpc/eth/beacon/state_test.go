@@ -5,18 +5,18 @@ import (
 	"testing"
 	"time"
 
-	chainMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	eth2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	eth2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -83,7 +83,7 @@ func TestGetStateRoot(t *testing.T) {
 
 	chainService := &chainMock.ChainService{}
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconStateRoot: stateRoot[:],
 			BeaconState:     fakeState,
 		},
@@ -94,7 +94,7 @@ func TestGetStateRoot(t *testing.T) {
 	}
 
 	resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
-		StateId: make([]byte, 0),
+		StateId: []byte("head"),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -111,7 +111,7 @@ func TestGetStateRoot(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconStateRoot: stateRoot[:],
 				BeaconState:     fakeState,
 			},
@@ -121,7 +121,7 @@ func TestGetStateRoot(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -145,7 +145,7 @@ func TestGetStateRoot(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconStateRoot: stateRoot[:],
 				BeaconState:     fakeState,
 			},
@@ -155,7 +155,7 @@ func TestGetStateRoot(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -179,7 +179,7 @@ func TestGetStateFork(t *testing.T) {
 
 	chainService := &chainMock.ChainService{}
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: fakeState,
 		},
 		HeadFetcher:           chainService,
@@ -189,7 +189,7 @@ func TestGetStateFork(t *testing.T) {
 	}
 
 	resp, err := server.GetStateFork(ctx, &eth.StateRequest{
-		StateId: make([]byte, 0),
+		StateId: []byte("head"),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -209,7 +209,7 @@ func TestGetStateFork(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -218,7 +218,7 @@ func TestGetStateFork(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -242,7 +242,7 @@ func TestGetStateFork(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -251,7 +251,7 @@ func TestGetStateFork(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -282,7 +282,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 	chainService := &chainMock.ChainService{}
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: fakeState,
 		},
 		HeadFetcher:           chainService,
@@ -292,7 +292,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	}
 
 	resp, err := server.GetFinalityCheckpoints(ctx, &eth.StateRequest{
-		StateId: make([]byte, 0),
+		StateId: []byte("head"),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -314,7 +314,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -323,7 +323,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -347,7 +347,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -356,7 +356,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -388,7 +388,7 @@ func TestGetRandao(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	chainService := &chainMock.ChainService{}
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: st,
 		},
 		HeadFetcher:           chainService,
@@ -398,22 +398,22 @@ func TestGetRandao(t *testing.T) {
 	}
 
 	t.Run("no epoch requested", func(t *testing.T) {
-		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0)})
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head")})
 		require.NoError(t, err)
 		assert.DeepEqual(t, mixCurrent, resp.Data.Randao)
 	})
 	t.Run("current epoch requested", func(t *testing.T) {
-		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochCurrent})
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head"), Epoch: &epochCurrent})
 		require.NoError(t, err)
 		assert.DeepEqual(t, mixCurrent, resp.Data.Randao)
 	})
 	t.Run("old epoch requested", func(t *testing.T) {
-		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochOld})
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head"), Epoch: &epochOld})
 		require.NoError(t, err)
 		assert.DeepEqual(t, mixOld, resp.Data.Randao)
 	})
 	t.Run("head state below `EpochsPerHistoricalVector`", func(t *testing.T) {
-		server.StateFetcher = &testutil.MockFetcher{
+		server.Stater = &testutil.MockStater{
 			BeaconState: headSt,
 		}
 		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head")})
@@ -441,7 +441,7 @@ func TestGetRandao(t *testing.T) {
 
 		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -450,7 +450,7 @@ func TestGetRandao(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -473,7 +473,7 @@ func TestGetRandao(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
@@ -482,7 +482,7 @@ func TestGetRandao(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)

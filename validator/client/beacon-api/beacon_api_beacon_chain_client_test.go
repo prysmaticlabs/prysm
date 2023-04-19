@@ -1,0 +1,579 @@
+package beacon_api
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"math"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
+)
+
+func TestListValidators(t *testing.T) {
+	const blockHeaderEndpoint = "/eth/v1/beacon/headers/head"
+
+	t.Run("invalid token", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		ctx := context.Background()
+
+		beaconChainClient := beaconApiBeaconChainClient{}
+		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+			PageToken: "foo",
+		})
+		assert.ErrorContains(t, "failed to parse page token `foo`", err)
+	})
+
+	t.Run("query filter epoch overflow", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		ctx := context.Background()
+
+		beaconChainClient := beaconApiBeaconChainClient{}
+		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
+				Epoch: math.MaxUint64,
+			},
+		})
+		assert.ErrorContains(t, fmt.Sprintf("failed to get first slot for epoch `%d`", uint64(math.MaxUint64)), err)
+	})
+
+	t.Run("fails to get validators for epoch filter", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		ctx := context.Background()
+
+		stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+		stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			nil,
+			errors.New("foo error"),
+		)
+
+		beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
+				Epoch: 0,
+			},
+		})
+		assert.ErrorContains(t, "failed to get state validators for slot `0`: foo error", err)
+	})
+
+	t.Run("fails to get validators for genesis filter", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		ctx := context.Background()
+
+		stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+		stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			nil,
+			errors.New("bar error"),
+		)
+
+		beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+			QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
+		})
+		assert.ErrorContains(t, "failed to get genesis state validators: bar error", err)
+	})
+
+	t.Run("fails to get validators for nil filter", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		ctx := context.Background()
+
+		stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+		stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			nil,
+			errors.New("foo error"),
+		)
+
+		beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+			QueryFilter: nil,
+		})
+		assert.ErrorContains(t, "failed to get head state validators: foo error", err)
+	})
+
+	t.Run("fails to get latest block header for nil filter", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		ctx := context.Background()
+
+		stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+		stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			nil,
+			nil,
+		)
+
+		jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+		jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, blockHeaderEndpoint, gomock.Any()).Return(
+			nil,
+			errors.New("bar error"),
+		)
+
+		beaconChainClient := beaconApiBeaconChainClient{
+			stateValidatorsProvider: stateValidatorsProvider,
+			jsonRestHandler:         jsonRestHandler,
+		}
+		_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+			QueryFilter: nil,
+		})
+		assert.ErrorContains(t, "failed to get head block header: bar error", err)
+	})
+
+	t.Run("fails to read block header response", func(t *testing.T) {
+		testCases := []struct {
+			name                string
+			expectedError       string
+			blockHeaderResponse apimiddleware.BlockHeaderResponseJson
+		}{
+			{
+				name: "nil data",
+				blockHeaderResponse: apimiddleware.BlockHeaderResponseJson{
+					Data: nil,
+				},
+				expectedError: "block header data is nil",
+			},
+			{
+				name: "nil data header",
+				blockHeaderResponse: apimiddleware.BlockHeaderResponseJson{
+					Data: &apimiddleware.BlockHeaderContainerJson{
+						Header: nil,
+					},
+				},
+				expectedError: "block header data is nil",
+			},
+			{
+				name: "nil message",
+				blockHeaderResponse: apimiddleware.BlockHeaderResponseJson{
+					Data: &apimiddleware.BlockHeaderContainerJson{
+						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
+							Message: nil,
+						},
+					},
+				},
+				expectedError: "block header message is nil",
+			},
+			{
+				name: "invalid header slot",
+				blockHeaderResponse: apimiddleware.BlockHeaderResponseJson{
+					Data: &apimiddleware.BlockHeaderContainerJson{
+						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
+							Message: &apimiddleware.BeaconBlockHeaderJson{
+								Slot: "foo",
+							},
+						},
+					},
+				},
+				expectedError: "failed to parse header slot `foo`",
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				ctx := context.Background()
+
+				stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+				stateValidatorsProvider.EXPECT().GetStateValidatorsForHead(ctx, gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					nil,
+					nil,
+				)
+
+				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+				jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, blockHeaderEndpoint, gomock.Any()).Return(
+					nil,
+					nil,
+				).SetArg(
+					2,
+					testCase.blockHeaderResponse,
+				)
+
+				beaconChainClient := beaconApiBeaconChainClient{
+					stateValidatorsProvider: stateValidatorsProvider,
+					jsonRestHandler:         jsonRestHandler,
+				}
+				_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+					QueryFilter: nil,
+				})
+				assert.ErrorContains(t, testCase.expectedError, err)
+			})
+		}
+	})
+
+	t.Run("fails to get validators for genesis filter", func(t *testing.T) {
+		generateValidStateValidatorsResponse := func() *apimiddleware.StateValidatorsResponseJson {
+			return &apimiddleware.StateValidatorsResponseJson{
+				Data: []*apimiddleware.ValidatorContainerJson{
+					{
+						Index: "1",
+						Validator: &apimiddleware.ValidatorJson{
+							PublicKey:                  hexutil.Encode([]byte{3}),
+							WithdrawalCredentials:      hexutil.Encode([]byte{4}),
+							EffectiveBalance:           "5",
+							Slashed:                    true,
+							ActivationEligibilityEpoch: "6",
+							ActivationEpoch:            "7",
+							ExitEpoch:                  "8",
+							WithdrawableEpoch:          "9",
+						},
+					},
+				},
+			}
+		}
+
+		testCases := []struct {
+			name                            string
+			generateStateValidatorsResponse func() *apimiddleware.StateValidatorsResponseJson
+			expectedError                   string
+		}{
+			{
+				name: "nil validator",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Validator = nil
+					return validatorsResponse
+				},
+				expectedError: "state validator at index `0` is nil",
+			},
+			{
+				name: "invalid pubkey",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Validator.PublicKey = "foo"
+					return validatorsResponse
+				},
+				expectedError: "failed to decode validator pubkey `foo`",
+			},
+			{
+				name: "invalid withdrawal credentials",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Validator.WithdrawalCredentials = "bar"
+					return validatorsResponse
+				},
+				expectedError: "failed to decode validator withdrawal credentials `bar`",
+			},
+			{
+				name: "invalid effective balance",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Validator.EffectiveBalance = "foo"
+					return validatorsResponse
+				},
+				expectedError: "failed to parse validator effective balance `foo`",
+			},
+			{
+				name: "invalid validator index",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Index = "bar"
+					return validatorsResponse
+				},
+				expectedError: "failed to parse validator index `bar`",
+			},
+			{
+				name: "invalid activation eligibility epoch",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Validator.ActivationEligibilityEpoch = "foo"
+					return validatorsResponse
+				},
+				expectedError: "failed to parse validator activation eligibility epoch `foo`",
+			},
+			{
+				name: "invalid activation epoch",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Validator.ActivationEpoch = "bar"
+					return validatorsResponse
+				},
+				expectedError: "failed to parse validator activation epoch `bar`",
+			},
+			{
+				name: "invalid exit epoch",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Validator.ExitEpoch = "foo"
+					return validatorsResponse
+				},
+				expectedError: "failed to parse validator exit epoch `foo`",
+			},
+			{
+				name: "invalid withdrawable epoch",
+				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validatorsResponse := generateValidStateValidatorsResponse()
+					validatorsResponse.Data[0].Validator.WithdrawableEpoch = "bar"
+					return validatorsResponse
+				},
+				expectedError: "failed to parse validator withdrawable epoch `bar`",
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				ctx := context.Background()
+
+				stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+				stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					testCase.generateStateValidatorsResponse(),
+					nil,
+				)
+
+				beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+				_, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+					QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
+				})
+				assert.ErrorContains(t, testCase.expectedError, err)
+			})
+		}
+	})
+
+	t.Run("correctly returns the expected validators", func(t *testing.T) {
+		generateValidStateValidatorsResponse := func() *apimiddleware.StateValidatorsResponseJson {
+			return &apimiddleware.StateValidatorsResponseJson{
+				Data: []*apimiddleware.ValidatorContainerJson{
+					{
+						Index: "1",
+						Validator: &apimiddleware.ValidatorJson{
+							PublicKey:                  hexutil.Encode([]byte{2}),
+							WithdrawalCredentials:      hexutil.Encode([]byte{3}),
+							EffectiveBalance:           "4",
+							Slashed:                    true,
+							ActivationEligibilityEpoch: "5",
+							ActivationEpoch:            "6",
+							ExitEpoch:                  "7",
+							WithdrawableEpoch:          "8",
+						},
+					},
+					{
+						Index: "9",
+						Validator: &apimiddleware.ValidatorJson{
+							PublicKey:                  hexutil.Encode([]byte{10}),
+							WithdrawalCredentials:      hexutil.Encode([]byte{11}),
+							EffectiveBalance:           "12",
+							Slashed:                    false,
+							ActivationEligibilityEpoch: "13",
+							ActivationEpoch:            "14",
+							ExitEpoch:                  "15",
+							WithdrawableEpoch:          "16",
+						},
+					},
+				},
+			}
+		}
+
+		testCases := []struct {
+			name                                string
+			generateJsonStateValidatorsResponse func() *apimiddleware.StateValidatorsResponseJson
+			generateProtoValidatorsResponse     func() *ethpb.Validators
+			pubkeys                             [][]byte
+			pubkeyStrings                       []string
+			indices                             []primitives.ValidatorIndex
+			statuses                            []string
+			pageSize                            int32
+			pageToken                           string
+		}{
+			{
+				name: "page size 0",
+				generateJsonStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+					validValidatorsResponse := generateValidStateValidatorsResponse()
+
+					// Generate more than 250 validators, but expect only 250 to be returned
+					validators := make([]*apimiddleware.ValidatorContainerJson, 267)
+					for idx := 0; idx < len(validators); idx++ {
+						validators[idx] = validValidatorsResponse.Data[0]
+					}
+
+					validatorsResponse := &apimiddleware.StateValidatorsResponseJson{
+						Data: validators,
+					}
+
+					return validatorsResponse
+				},
+				generateProtoValidatorsResponse: func() *ethpb.Validators {
+					validators := make([]*ethpb.Validators_ValidatorContainer, 250)
+					for idx := 0; idx < len(validators); idx++ {
+						validators[idx] = &ethpb.Validators_ValidatorContainer{
+							Index: 1,
+							Validator: &ethpb.Validator{
+								PublicKey:                  []byte{2},
+								WithdrawalCredentials:      []byte{3},
+								EffectiveBalance:           4,
+								Slashed:                    true,
+								ActivationEligibilityEpoch: 5,
+								ActivationEpoch:            6,
+								ExitEpoch:                  7,
+								WithdrawableEpoch:          8,
+							},
+						}
+					}
+
+					return &ethpb.Validators{
+						ValidatorList: validators,
+						TotalSize:     267,
+						Epoch:         0,
+						NextPageToken: "1",
+					}
+				},
+				pubkeys:       [][]byte{},
+				pubkeyStrings: make([]string, 0),
+				indices:       []primitives.ValidatorIndex{},
+				statuses:      nil,
+				pageSize:      0,
+				pageToken:     "",
+			},
+			{
+				name:                                "pageSize==1 and pageToken==0",
+				generateJsonStateValidatorsResponse: generateValidStateValidatorsResponse,
+				generateProtoValidatorsResponse: func() *ethpb.Validators {
+					return &ethpb.Validators{
+						ValidatorList: []*ethpb.Validators_ValidatorContainer{
+							{
+								Index: 1,
+								Validator: &ethpb.Validator{
+									PublicKey:                  []byte{2},
+									WithdrawalCredentials:      []byte{3},
+									EffectiveBalance:           4,
+									Slashed:                    true,
+									ActivationEligibilityEpoch: 5,
+									ActivationEpoch:            6,
+									ExitEpoch:                  7,
+									WithdrawableEpoch:          8,
+								},
+							},
+						},
+						TotalSize:     2,
+						Epoch:         0,
+						NextPageToken: "1",
+					}
+				},
+				pageSize:  1,
+				pageToken: "0",
+			},
+			{
+				name:                                "pageSize==2 and pageToken==0",
+				generateJsonStateValidatorsResponse: generateValidStateValidatorsResponse,
+				generateProtoValidatorsResponse: func() *ethpb.Validators {
+					return &ethpb.Validators{
+						ValidatorList: []*ethpb.Validators_ValidatorContainer{
+							{
+								Index: 1,
+								Validator: &ethpb.Validator{
+									PublicKey:                  []byte{2},
+									WithdrawalCredentials:      []byte{3},
+									EffectiveBalance:           4,
+									Slashed:                    true,
+									ActivationEligibilityEpoch: 5,
+									ActivationEpoch:            6,
+									ExitEpoch:                  7,
+									WithdrawableEpoch:          8,
+								},
+							},
+							{
+								Index: 9,
+								Validator: &ethpb.Validator{
+									PublicKey:                  []byte{10},
+									WithdrawalCredentials:      []byte{11},
+									EffectiveBalance:           12,
+									Slashed:                    false,
+									ActivationEligibilityEpoch: 13,
+									ActivationEpoch:            14,
+									ExitEpoch:                  15,
+									WithdrawableEpoch:          16,
+								},
+							},
+						},
+						TotalSize:     2,
+						Epoch:         0,
+						NextPageToken: "",
+					}
+				},
+				pageSize:  2,
+				pageToken: "0",
+			},
+			{
+				name:                                "pageSize==1 and pageToken==1",
+				generateJsonStateValidatorsResponse: generateValidStateValidatorsResponse,
+				generateProtoValidatorsResponse: func() *ethpb.Validators {
+					return &ethpb.Validators{
+						ValidatorList: []*ethpb.Validators_ValidatorContainer{
+							{
+								Index: 9,
+								Validator: &ethpb.Validator{
+									PublicKey:                  []byte{10},
+									WithdrawalCredentials:      []byte{11},
+									EffectiveBalance:           12,
+									Slashed:                    false,
+									ActivationEligibilityEpoch: 13,
+									ActivationEpoch:            14,
+									ExitEpoch:                  15,
+									WithdrawableEpoch:          16,
+								},
+							},
+						},
+						TotalSize:     2,
+						Epoch:         0,
+						NextPageToken: "",
+					}
+				},
+				pageSize:  1,
+				pageToken: "1",
+			},
+			{
+				name:                                "pageSize==1 and pageToken==2",
+				generateJsonStateValidatorsResponse: generateValidStateValidatorsResponse,
+				generateProtoValidatorsResponse: func() *ethpb.Validators {
+					return &ethpb.Validators{
+						ValidatorList: []*ethpb.Validators_ValidatorContainer{},
+						TotalSize:     2,
+						Epoch:         0,
+						NextPageToken: "",
+					}
+				},
+				pageSize:  1,
+				pageToken: "2",
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.name, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				ctx := context.Background()
+
+				stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+				stateValidatorsProvider.EXPECT().GetStateValidatorsForSlot(ctx, primitives.Slot(0), make([]string, 0), []primitives.ValidatorIndex{}, nil).Return(
+					testCase.generateJsonStateValidatorsResponse(),
+					nil,
+				)
+
+				beaconChainClient := beaconApiBeaconChainClient{stateValidatorsProvider: stateValidatorsProvider}
+				validators, err := beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+					QueryFilter: &ethpb.ListValidatorsRequest_Genesis{},
+					PublicKeys:  [][]byte{},
+					Indices:     []primitives.ValidatorIndex{},
+					Active:      false,
+					PageSize:    testCase.pageSize,
+					PageToken:   testCase.pageToken,
+				})
+				require.NoError(t, err)
+				require.NotNil(t, validators)
+
+				expectedValidators := testCase.generateProtoValidatorsResponse()
+				assert.DeepEqual(t, expectedValidators, validators)
+			})
+		}
+	})
+}

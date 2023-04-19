@@ -5,18 +5,18 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	blockchainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -28,7 +28,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		fakeState, err := util.NewBeaconState()
 		require.NoError(t, err)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -37,7 +37,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -46,7 +46,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateAltair(t, 1)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -55,7 +55,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -64,7 +64,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -73,7 +73,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -82,7 +82,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 	t.Run("Capella", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateCapella(t, 1)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -91,7 +91,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -108,7 +108,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
@@ -117,7 +117,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -141,7 +141,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 		}
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 			HeadFetcher:           chainService,
@@ -150,7 +150,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
-			StateId: make([]byte, 0),
+			StateId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -165,7 +165,7 @@ func TestGetBeaconStateSSZ(t *testing.T) {
 	require.NoError(t, err)
 
 	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: fakeState,
 		},
 	}
@@ -186,7 +186,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 		}
@@ -205,7 +205,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 		}
@@ -224,7 +224,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 		}
@@ -243,7 +243,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 
 		server := &Server{
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: fakeState,
 			},
 		}
@@ -293,7 +293,13 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 	}
 
 	t.Run("optimistic head", func(t *testing.T) {
-		chainService := &blockchainmock.ChainService{Optimistic: true}
+		chainService := &blockchainmock.ChainService{
+			Optimistic:      true,
+			OptimisticRoots: make(map[[32]byte]bool),
+		}
+		for _, sr := range expectedSlotsAndRoots {
+			chainService.OptimisticRoots[sr.Root] = true
+		}
 		server := &Server{
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
@@ -320,7 +326,7 @@ func TestServer_GetForkChoice(t *testing.T) {
 	fRoot := [32]byte{'a'}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 2, Root: fRoot}
 	require.NoError(t, store.UpdateFinalizedCheckpoint(fc))
-	bs := &Server{ForkFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
+	bs := &Server{ForkchoiceFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
 	res, err := bs.GetForkChoice(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
 	require.Equal(t, primitives.Epoch(2), res.FinalizedCheckpoint.Epoch, "Did not get wanted finalized epoch")

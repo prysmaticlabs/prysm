@@ -6,7 +6,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -143,6 +143,11 @@ var (
 		Name:  "p2p-priv-key",
 		Usage: "The file containing the private key to use in communications with other peers.",
 		Value: "",
+	}
+	P2PStaticID = &cli.BoolFlag{
+		Name:  "p2p-static-id",
+		Usage: "Enables the peer id of the node to be fixed by saving the generated network key to the default key path.",
+		Value: false,
 	}
 	// P2PMetadata defines a flag to specify the location of the peer metadata file.
 	P2PMetadata = &cli.StringFlag{

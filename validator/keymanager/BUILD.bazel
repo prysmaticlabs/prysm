@@ -6,7 +6,7 @@ go_library(
         "constants.go",
         "types.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/validator/keymanager",
+    importpath = "github.com/prysmaticlabs/prysm/v4/validator/keymanager",
     visibility = [
         "//cmd:__subpackages__",
         "//testing/endtoend/components:__subpackages__",
@@ -32,7 +32,6 @@ go_test(
         "//testing/require:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/local:go_default_library",
-        "//validator/keymanager/remote:go_default_library",
         "//validator/keymanager/remote-web3signer:go_default_library",
     ],
 )

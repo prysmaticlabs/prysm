@@ -7,12 +7,12 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/io/prompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/urfave/cli/v2"
 )
 
@@ -117,13 +117,6 @@ func ConstructCLIManagerOpts(cliCtx *cli.Context, keymanagerKind keymanager.Kind
 			cliOpts = append(cliOpts, accounts.WithMnemonic25thWord(mnemonicPassphrase))
 		}
 	}
-	if keymanagerKind == keymanager.Remote {
-		opts, err := userprompt.InputRemoteKeymanagerConfig(cliCtx)
-		if err != nil {
-			return []accounts.Option{}, errors.Wrap(err, "could not input remote keymanager config")
-		}
-		cliOpts = append(cliOpts, accounts.WithKeymanagerOpts(opts))
-	}
 	if keymanagerKind == keymanager.Web3Signer {
 		return []accounts.Option{}, errors.New("web3signer keymanager does not require persistent wallets.")
 	}
@@ -139,7 +132,6 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 		Items: []string{
 			wallet.KeymanagerKindSelections[keymanager.Local],
 			wallet.KeymanagerKindSelections[keymanager.Derived],
-			wallet.KeymanagerKindSelections[keymanager.Remote],
 			wallet.KeymanagerKindSelections[keymanager.Web3Signer],
 		},
 	}

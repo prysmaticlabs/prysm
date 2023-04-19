@@ -7,9 +7,9 @@ import (
 	"crypto/sha256"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/math"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 )
 
 var (
@@ -23,8 +23,6 @@ var (
 	ErrInvalidIndex = errors.New("index should be greater than finalizedDeposits - 1")
 	// ErrNoDeposits occurs when the number of deposits is 0.
 	ErrNoDeposits = errors.New("number of deposits should be greater than 0")
-	// ErrNoFinalizedDeposits occurs when the number of finalized deposits is 0.
-	ErrNoFinalizedDeposits = errors.New("number of finalized deposits should be greater than 0")
 	// ErrTooManyDeposits occurs when the number of deposits exceeds the capacity of the tree.
 	ErrTooManyDeposits = errors.New("number of deposits should not be greater than the capacity of the tree")
 )
@@ -62,7 +60,7 @@ func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
 	}
 	var finalized [][32]byte
-	depositCount, _ := d.tree.GetFinalized(finalized)
+	depositCount, finalized := d.tree.GetFinalized(finalized)
 	return fromTreeParts(finalized, depositCount, d.finalizedExecutionBlock)
 }
 
@@ -119,9 +117,6 @@ func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 		return [32]byte{}, nil, ErrInvalidMixInLength
 	}
 	finalizedDeposits, _ := d.tree.GetFinalized([][32]byte{})
-	if finalizedDeposits == 0 {
-		return [32]byte{}, nil, ErrNoFinalizedDeposits
-	}
 	if finalizedDeposits != 0 {
 		finalizedDeposits = finalizedDeposits - 1
 	}
