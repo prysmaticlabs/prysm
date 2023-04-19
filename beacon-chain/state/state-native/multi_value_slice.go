@@ -19,35 +19,16 @@ type Value[V any, O any] struct {
 
 type MultiValueSlice[V comparable, O comparable] struct {
 	items []*MultiValue[V, O]
-	//participants []O
-	lock sync.RWMutex
+	lock  sync.RWMutex
 }
 
 func (r *MultiValueSlice[V, O]) Len() int {
 	return len(r.items)
 }
 
-/*func (r *MultiValueSlice[V, O]) Copy(src O, dst O) error {
+func (r *MultiValueSlice[V, O]) Copy(src O, dst O) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-
-	if src == dst {
-		return errors.New("source and destination are the same object")
-	}
-	srcFound := false
-	for _, p := range r.participants {
-		if dst == p {
-			return errors.New("destination object already participates in the slice")
-		}
-		if src == p {
-			srcFound = true
-		}
-	}
-	if !srcFound {
-		return errors.New("source object does not participate in the slice")
-	}
-
-	r.participants = append(r.participants, dst)
 
 	for _, item := range r.items {
 		if item.individual != nil {
@@ -62,9 +43,7 @@ func (r *MultiValueSlice[V, O]) Len() int {
 			}
 		}
 	}
-
-	return nil
-}*/
+}
 
 func (r *MultiValueSlice[V, O]) Value(obj O) []V {
 	r.lock.RLock()
@@ -195,6 +174,5 @@ func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
 	}
 	return &MultiValueRandaoMixes{
 		items: items,
-		//participants: []*BeaconState{participant},
 	}
 }

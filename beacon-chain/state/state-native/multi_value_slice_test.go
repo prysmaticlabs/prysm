@@ -11,10 +11,13 @@ import (
 )
 
 func TestCorrectness(t *testing.T) {
-	var mixesArray [fieldparams.RandaoMixesLength][32]byte
 	m1_0 := bytesutil.ToBytes32([]byte("m1_0"))
 	m2_0 := bytesutil.ToBytes32([]byte("m2_0"))
+	m1_1 := bytesutil.ToBytes32([]byte("m1_1"))
+
+	var mixesArray [fieldparams.RandaoMixesLength][32]byte
 	mixesArray[0] = m1_0
+	mixesArray[1] = m1_1
 	mixesSlice := make([][]byte, len(mixesArray))
 	for i := range mixesArray {
 		mixesSlice[i] = mixesArray[i][:]
@@ -31,11 +34,54 @@ func TestCorrectness(t *testing.T) {
 	m, err = st1.RandaoMixAtIndex(0)
 	require.NoError(t, err)
 	assert.DeepEqual(t, m1_0[:], m)
-	v = st1.RandaoMixes()
-	assert.DeepEqual(t, m1_0[:], v[0])
 	m, err = st2.RandaoMixAtIndex(0)
 	require.NoError(t, err)
 	assert.DeepEqual(t, m2_0[:], m)
+	v = st1.RandaoMixes()
+	assert.DeepEqual(t, m1_0[:], v[0])
 	v = st2.RandaoMixes()
 	assert.DeepEqual(t, m2_0[:], v[0])
+	m, err = st1.RandaoMixAtIndex(1)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m1_1[:], m)
+	m, err = st2.RandaoMixAtIndex(1)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m1_1[:], m)
+
+	st3 := st2.Copy()
+	m, err = st1.RandaoMixAtIndex(0)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m1_0[:], m)
+	m, err = st2.RandaoMixAtIndex(0)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m2_0[:], m)
+	m, err = st3.RandaoMixAtIndex(0)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m2_0[:], m)
+	v = st1.RandaoMixes()
+	assert.DeepEqual(t, m1_0[:], v[0])
+	v = st2.RandaoMixes()
+	assert.DeepEqual(t, m2_0[:], v[0])
+	v = st3.RandaoMixes()
+	assert.DeepEqual(t, m2_0[:], v[0])
+	m, err = st1.RandaoMixAtIndex(1)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m1_1[:], m)
+	m, err = st2.RandaoMixAtIndex(1)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m1_1[:], m)
+	m, err = st3.RandaoMixAtIndex(1)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m1_1[:], m)
+
+	require.NoError(t, st3.UpdateRandaoMixesAtIndex(0, m1_0))
+	m, err = st1.RandaoMixAtIndex(0)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m1_0[:], m)
+	m, err = st2.RandaoMixAtIndex(0)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m2_0[:], m)
+	m, err = st3.RandaoMixAtIndex(0)
+	require.NoError(t, err)
+	assert.DeepEqual(t, m1_0[:], m)
 }

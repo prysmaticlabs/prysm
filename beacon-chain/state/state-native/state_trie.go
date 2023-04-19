@@ -521,6 +521,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 		valMapHandler: b.valMapHandler,
 	}
 
+	b.randaoMixes.Copy(b, dst)
+
 	switch b.version {
 	case version.Phase0:
 		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
