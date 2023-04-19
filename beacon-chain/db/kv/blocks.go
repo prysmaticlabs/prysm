@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
@@ -549,9 +550,26 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.Val
 		if enc == nil {
 			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
 		}
-		return decode(ctx, enc, reg)
+		if err := decode(ctx, enc, reg); err != nil {
+			return err
+		}
+		if timeStampExpired(reg.Timestamp) {
+			if err := bkt.Delete(bytesutil.Uint64ToBytesBigEndian(uint64(id))); err != nil {
+				return err
+			}
+			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
+		}
+		return nil
 	})
 	return reg, err
+}
+
+func timeStampExpired(ts uint64) bool {
+	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch) * 3)
+	if time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix() {
+		return true
+	}
+	return false
 }
 
 // SaveRegistrationsByValidatorIDs saves the validator registrations for validator ids.

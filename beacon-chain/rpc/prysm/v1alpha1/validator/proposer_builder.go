@@ -39,6 +39,7 @@ func (vs *Server) validatorRegistered(ctx context.Context, id primitives.Validat
 	case err != nil:
 		return false, err
 	}
+
 	return true, nil
 }
 
