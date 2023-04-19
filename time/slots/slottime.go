@@ -98,6 +98,16 @@ func EpochStart(epoch primitives.Epoch) (primitives.Slot, error) {
 	return slot, nil
 }
 
+// UnsafeEpochStart is a version of EpochStart that panics if there is an overflow. It can be safely used by code
+// that first guarantees epoch <= MaxSafeEpoch.
+func UnsafeEpochStart(epoch primitives.Epoch) primitives.Slot {
+	es, err := EpochStart(epoch)
+	if err != nil {
+		panic(err)
+	}
+	return es
+}
+
 // EpochEnd returns the last slot number of the
 // current epoch.
 func EpochEnd(epoch primitives.Epoch) (primitives.Slot, error) {
@@ -257,4 +267,9 @@ func SecondsSinceSlotStart(s primitives.Slot, genesisTime, timeStamp uint64) (ui
 // the start of the current slot
 func TimeIntoSlot(genesisTime uint64) time.Duration {
 	return time.Since(StartTime(genesisTime, CurrentSlot(genesisTime)))
+}
+
+// MaxSafeEpoch gives the largest epoch value that can be safely converted to a slot.
+func MaxSafeEpoch() primitives.Epoch {
+	return primitives.Epoch(math.MaxUint64 / uint64(params.BeaconConfig().SlotsPerEpoch))
 }

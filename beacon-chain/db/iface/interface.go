@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/backup"
+	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -61,7 +62,7 @@ type ReadOnlyDatabase interface {
 
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
-	BackfillBlockRoot(ctx context.Context) ([32]byte, error)
+	BackfillStatus(context.Context) (*dbval.BackfillStatus, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -116,7 +117,7 @@ type HeadAccessDatabase interface {
 
 	// initialization method needed for origin checkpoint sync
 	SaveOrigin(ctx context.Context, serState, serBlock []byte) error
-	SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	SaveBackfillStatus(context.Context, *dbval.BackfillStatus) error
 }
 
 // SlasherDatabase interface for persisting data related to detecting slashable offenses on Ethereum.

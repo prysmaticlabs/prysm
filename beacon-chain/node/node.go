@@ -205,9 +205,21 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	bfs := backfill.NewStatus(beacon.db)
-	if err := bfs.Reload(ctx); err != nil {
+	log.Debugln("Registering P2P Service")
+	if err := beacon.registerP2P(cliCtx); err != nil {
+		return nil, err
+	}
+
+	bfs, err := backfill.NewUpdater(ctx, beacon.db)
+	if err != nil {
 		return nil, errors.Wrap(err, "backfill status initialization error")
+	}
+	bf, err := backfill.NewService(ctx, bfs, beacon.clockWaiter, beacon.fetchP2P())
+	if err != nil {
+		return nil, errors.Wrap(err, "error initializing backfill service")
+	}
+	if err := beacon.services.RegisterService(bf); err != nil {
+		return nil, errors.Wrap(err, "error registering backfill service")
 	}
 
 	log.Debugln("Starting State Gen")
@@ -217,11 +229,6 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 				"state bundled in the application. You must provide the --%s or --%s flag to load "+
 				"a genesis block/state for this network.", "genesis-state", "genesis-beacon-api-url")
 		}
-		return nil, err
-	}
-
-	log.Debugln("Registering P2P Service")
-	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
 	}
 
@@ -501,8 +508,8 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status, fc forkchoice.ForkChoicer) error {
-	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs)}
+func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.StatusUpdater, fc forkchoice.ForkChoicer) error {
+	opts := []stategen.StateGenOption{stategen.WithAvailableBlocker(bfs)}
 	sg := stategen.New(b.db, fc, opts...)
 
 	cp, err := b.db.FinalizedCheckpoint(ctx)
