@@ -20,11 +20,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
@@ -35,12 +37,19 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 
 var gweiPerEth = big.NewInt(int64(params.BeaconConfig().GweiPerEth))
 
+// emptyTransactionsRoot represents the returned value of ssz.TransactionsRoot([][]byte{}) and
+// can be used as a constant to avoid recomputing this value in every call.
+var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225}
+
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
 func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, headState state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
+	defer span.End()
+
 	idx := blk.Block().ProposerIndex()
 	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
@@ -48,6 +57,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 	}
 
 	canUseBuilder, err := vs.canUseBuilder(ctx, slot, idx)
+	span.AddAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
 	if err != nil {
 		log.WithError(err).Warn("Proposer: failed to check if builder can be used")
 	} else if canUseBuilder {
@@ -79,6 +89,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
+					tracing.AnnotateError(span, err)
 					return errors.Wrap(err, "failed to match withdrawals root")
 				}
 
@@ -104,6 +115,12 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 						"builderGweiValue":     builderValue,
 					}).Warn("Proposer: using local execution payload because higher value")
 				}
+				span.AddAttributes(
+					trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
+					trace.Int64Attribute("localGweiValue", int64(localValue)),     // lint:ignore uintcast -- This is OK for tracing.
+					trace.Int64Attribute("localBoostPercentage", int64(boost)),    // lint:ignore uintcast -- This is OK for tracing.
+					trace.Int64Attribute("builderGweiValue", int64(builderValue)), // lint:ignore uintcast -- This is OK for tracing.
+				)
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.
 				blk.SetBlinded(true)
@@ -127,6 +144,9 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
 func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPayloadHeaderFromBuilder")
+	defer span.End()
+
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil, errors.New("can't get payload header from builder before bellatrix epoch")
 	}
@@ -171,10 +191,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
 
-	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
-	if err != nil {
-		return nil, err
-	}
 	header, err := bid.Header()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid header")
@@ -183,7 +199,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get transaction root")
 	}
-	if bytesutil.ToBytes32(txRoot) == emptyRoot {
+	if bytesutil.ToBytes32(txRoot) == emptyTransactionsRoot {
 		return nil, errors.New("builder returned header with an empty tx root")
 	}
 
@@ -208,6 +224,13 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		"builderPubKey": fmt.Sprintf("%#x", bid.Pubkey()),
 		"blockHash":     fmt.Sprintf("%#x", header.BlockHash()),
 	}).Info("Received header with bid")
+
+	span.AddAttributes(
+		trace.StringAttribute("value", v.String()),
+		trace.StringAttribute("builderPubKey", fmt.Sprintf("%#x", bid.Pubkey())),
+		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),
+	)
+
 	return header, nil
 }
 
