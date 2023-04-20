@@ -2271,6 +2271,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
 			StateGen:          stategen.New(db, doublylinkedtree.New()),
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -2379,6 +2380,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			ExitPool:          voluntaryexits.NewPool(),
 			StateGen:          stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool: synccommittee.NewStore(),
+			BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -3073,6 +3075,13 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 		_, err = v1Server.ProduceBlindedBlock(ctx, req)
 		require.ErrorContains(t, " block was not a supported blinded block type", err)
+	})
+	t.Run("builder not configured", func(t *testing.T) {
+		v1Server := &Server{
+			V1Alpha1Server: &v1alpha1validator.Server{BlockBuilder: &builderTest.MockBuilderService{HasConfigured: false}},
+		}
+		_, err := v1Server.ProduceBlindedBlock(context.Background(), nil)
+		require.ErrorContains(t, "Block builder not configured", err)
 	})
 }
 
