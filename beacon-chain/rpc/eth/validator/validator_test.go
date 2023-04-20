@@ -2920,7 +2920,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.DeepEqual(t, expectedBits, blk.Body.SyncAggregate.SyncCommitteeBits)
 		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
 	})
-	t.Run("Unsupported Block Type", func(t *testing.T) {
+	t.Run("full block", func(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
@@ -3056,7 +3056,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			BlockBuilder: &builderTest.MockBuilderService{
-				HasConfigured: false,
+				HasConfigured: true,
 			},
 		}
 
@@ -3074,7 +3074,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			Graffiti:     graffiti[:],
 		}
 		_, err = v1Server.ProduceBlindedBlock(ctx, req)
-		require.ErrorContains(t, " block was not a supported blinded block type", err)
+		require.ErrorContains(t, "Prepared beacon block is not blinded", err)
 	})
 	t.Run("builder not configured", func(t *testing.T) {
 		v1Server := &Server{
@@ -3911,6 +3911,7 @@ func TestProduceBlindedBlock_SyncNotReady(t *testing.T) {
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		V1Alpha1Server:        &v1alpha1validator.Server{BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true}},
 	}
 	_, err = vs.ProduceBlindedBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
