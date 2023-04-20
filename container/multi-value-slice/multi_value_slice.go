@@ -16,7 +16,7 @@ type Value[V any] struct {
 	objs []uintptr
 }
 
-type Slice[V comparable, O comparable] struct {
+type Slice[V comparable, O any] struct {
 	Items []*MultiValue[V]
 	lock  sync.RWMutex
 }
