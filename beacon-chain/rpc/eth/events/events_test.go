@@ -400,6 +400,15 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			Data:  genericResponse,
 		}
 
+		headData := &ethpb.EventHead{
+			Slot:                      8,
+			Block:                     make([]byte, 32),
+			State:                     make([]byte, 32),
+			EpochTransition:           true,
+			PreviousDutyDependentRoot: make([]byte, 32),
+			CurrentDutyDependentRoot:  make([]byte, 32),
+			ExecutionOptimistic:       true,
+		}
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
@@ -408,7 +417,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			shouldReceive: wantedMessage,
 			itemToSend: &feed.Event{
 				Type: statefeed.NewHead,
-				Data: wantedPayload,
+				Data: headData,
 			},
 			feed: srv.StateNotifier.StateFeed(),
 		})
