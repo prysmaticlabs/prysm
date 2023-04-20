@@ -1049,7 +1049,7 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			BlockBuilder: &builderTest.MockBuilderService{
-				HasConfigured: true,
+				HasConfigured: false,
 			},
 		}
 
@@ -1120,9 +1120,6 @@ func TestProduceBlockV2(t *testing.T) {
 			Graffiti:     graffiti[:],
 		}
 		v1Server.V1Alpha1Server.BeaconDB = db
-		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
-			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
-
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
 
@@ -1294,7 +1291,7 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			BlockBuilder: &builderTest.MockBuilderService{
-				HasConfigured: true,
+				HasConfigured: false,
 			},
 		}
 
@@ -1365,9 +1362,6 @@ func TestProduceBlockV2(t *testing.T) {
 			Graffiti:     graffiti[:],
 		}
 		v1Server.V1Alpha1Server.BeaconDB = db
-		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
-			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
-
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
 
@@ -2923,6 +2917,162 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 		assert.DeepEqual(t, expectedBits, blk.Body.SyncAggregate.SyncCommitteeBits)
 		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
+	})
+	t.Run("Unsupported Block Type", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig().Copy()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		params.OverrideBeaconConfig(bc)
+
+		beaconState, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.UpdateRandaoMixesAtIndex(2, bytesutil.PadTo([]byte("prev_randao"), 32)))
+
+		vals := beaconState.Validators()
+		creds0 := make([]byte, 32)
+		creds0[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		copy(creds0[state_native.ETH1AddressOffset:], "address0")
+		vals[0].WithdrawalCredentials = creds0
+		vals[0].EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		creds1 := make([]byte, 32)
+		creds1[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		copy(creds1[state_native.ETH1AddressOffset:], "address1")
+		vals[1].WithdrawalCredentials = creds1
+		vals[1].EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		require.NoError(t, beaconState.SetValidators(vals))
+		balances := beaconState.Balances()
+		balances[0] += 123
+		balances[1] += 123
+		require.NoError(t, beaconState.SetBalances(balances))
+		withdrawals := []*enginev1.Withdrawal{
+			{
+				Index:          0,
+				ValidatorIndex: 0,
+				Address:        bytesutil.PadTo([]byte("address0"), 20),
+				Amount:         123,
+			},
+			{
+				Index:          1,
+				ValidatorIndex: 1,
+				Address:        bytesutil.PadTo([]byte("address1"), 20),
+				Amount:         123,
+			},
+		}
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, 2)
+		require.NoError(t, err)
+
+		payloadHeader, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:   bytesutil.PadTo([]byte("parent_hash"), 32),
+			FeeRecipient: bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:    bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot: bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:    bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:   bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:  123,
+			GasLimit:     123,
+			GasUsed:      123,
+			// State time at slot 65
+			Timestamp:     780,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			// Must be equal to payload.ParentHash
+			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
+			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
+			WithdrawalsRoot:  withdrawalsRoot[:],
+		}, big.NewInt(0))
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
+
+		payload := &enginev1.ExecutionPayloadCapella{
+			// Must be equal to payloadHeader.BlockHash
+			ParentHash:   bytesutil.PadTo([]byte("equal_hash"), 32),
+			FeeRecipient: bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:    bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot: bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:    bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:   bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:  123,
+			GasLimit:     123,
+			GasUsed:      123,
+			// State time at slot 65
+			Timestamp:     780,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			BlockHash:     bytesutil.PadTo([]byte("block_hash"), 32),
+			Transactions:  [][]byte{[]byte("transaction1"), []byte("transaction2")},
+			Withdrawals:   withdrawals,
+		}
+
+		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		var payloadIdBytes enginev1.PayloadIDBytes
+		copy(payloadIdBytes[:], "payload_id")
+		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:], ForkChoiceStore: doublylinkedtree.New()}
+		mockExecutionChain := &mockExecution.Chain{}
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
+				OverrideValidHash:       bytesutil.ToBytes32([]byte("parent_hash")),
+				PayloadIDBytes:          &payloadIdBytes,
+				ExecutionPayloadCapella: payload,
+			},
+			BeaconDB:               db,
+			TimeFetcher:            mockChainService,
+			HeadFetcher:            mockChainService,
+			OptimisticModeFetcher:  mockChainService,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          mockChainService,
+			ForkFetcher:            mockChainService,
+			ForkchoiceFetcher:      mockChainService,
+			FinalizationFetcher:    mockChainService,
+			ChainStartFetcher:      mockExecutionChain,
+			Eth1InfoFetcher:        mockExecutionChain,
+			Eth1BlockFetcher:       mockExecutionChain,
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: false,
+			},
+		}
+
+		v1Server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			V1Alpha1Server:        v1Alpha1Server,
+			OptimisticModeFetcher: &mockChain.ChainService{},
+		}
+		randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		_, err = v1Server.ProduceBlindedBlock(ctx, req)
+		require.ErrorContains(t, " block was not a supported blinded block type", err)
 	})
 }
 

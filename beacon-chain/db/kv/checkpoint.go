@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -55,22 +56,7 @@ func (s *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
 	defer span.End()
 
-	enc, err := encode(ctx, checkpoint)
-	if err != nil {
-		return err
-	}
-	hasStateSummary := s.HasStateSummary(ctx, bytesutil.ToBytes32(checkpoint.Root))
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(checkpointBucket)
-		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-		if !(hasStateInDB || hasStateSummary) {
-			log.Warnf("Recovering state summary for justified root: %#x", bytesutil.Trunc(checkpoint.Root))
-			if err := recoverStateSummary(ctx, tx, checkpoint.Root); err != nil {
-				return errors.Wrapf(errMissingStateForCheckpoint, "could not save justified checkpoint, finalized root: %#x", bytesutil.Trunc(checkpoint.Root))
-			}
-		}
-		return bucket.Put(justifiedCheckpointKey, enc)
-	})
+	return s.saveCheckpoint(ctx, justifiedCheckpointKey, checkpoint)
 }
 
 // SaveFinalizedCheckpoint saves finalized checkpoint in beacon chain.
@@ -80,10 +66,11 @@ func (s *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 
 	enc, err := encode(ctx, checkpoint)
 	if err != nil {
+		tracing.AnnotateError(span, err)
 		return err
 	}
 	hasStateSummary := s.HasStateSummary(ctx, bytesutil.ToBytes32(checkpoint.Root))
-	return s.db.Update(func(tx *bolt.Tx) error {
+	err = s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
 		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
 		if !(hasStateInDB || hasStateSummary) {
@@ -98,6 +85,33 @@ func (s *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 
 		return s.updateFinalizedBlockRoots(ctx, tx, checkpoint)
 	})
+	tracing.AnnotateError(span, err)
+	return err
+}
+
+func (s *Store) saveCheckpoint(ctx context.Context, key []byte, checkpoint *ethpb.Checkpoint) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.saveCheckpoint")
+	defer span.End()
+
+	enc, err := encode(ctx, checkpoint)
+	if err != nil {
+		tracing.AnnotateError(span, err)
+		return err
+	}
+	hasStateSummary := s.HasStateSummary(ctx, bytesutil.ToBytes32(checkpoint.Root))
+	err = s.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(checkpointBucket)
+		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+		if !(hasStateInDB || hasStateSummary) {
+			log.WithField("root", fmt.Sprintf("%#x", bytesutil.Trunc(checkpoint.Root))).Warn("Recovering state summary")
+			if err := recoverStateSummary(ctx, tx, checkpoint.Root); err != nil {
+				return errMissingStateForCheckpoint
+			}
+		}
+		return bucket.Put(key, enc)
+	})
+	tracing.AnnotateError(span, err)
+	return err
 }
 
 // Recovers and saves state summary for a given root if the root has a block in the DB.
