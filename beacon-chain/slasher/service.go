@@ -204,7 +204,6 @@ func (s *Service) waitForChainInitialization() {
 			return
 		}
 	}
-
 }
 
 func (s *Service) waitForSync(genesisTime time.Time) {

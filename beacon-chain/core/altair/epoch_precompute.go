@@ -208,7 +208,7 @@ func ProcessEpochParticipation(
 }
 
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
-// This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
+// This is an optimized version by passing in precomputed validator attesting records and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(
 	beaconState state.BeaconState,
 	bal *precompute.Balance,
@@ -265,7 +265,7 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
 	increment := cfg.EffectiveBalanceIncrement
 	factor := cfg.BaseRewardFactor
-	baseRewardMultiplier := increment * factor / math.IntegerSquareRoot(bal.ActiveCurrentEpoch)
+	baseRewardMultiplier := increment * factor / math.CachedSquareRoot(bal.ActiveCurrentEpoch)
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 
 	// Modified in Altair and Bellatrix.

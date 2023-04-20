@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["genesis.go"],
+    srcs = [
+        "genesis.go",
+        "genesis_mainnet.go",
+    ],
     embedsrcs = ["mainnet.ssz.snappy"],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/genesis",
     visibility = ["//beacon-chain/db:__subpackages__"],

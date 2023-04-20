@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -2153,6 +2154,7 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 }
 
 func TestFillMissingBlockPayloadId_DiffSlotExitEarly(t *testing.T) {
+	logHook := logTest.NewGlobal()
 	fc := doublylinkedtree.New()
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -2164,7 +2166,30 @@ func TestFillMissingBlockPayloadId_DiffSlotExitEarly(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	require.NoError(t, service.fillMissingBlockPayloadId(ctx), 0)
+	service.lateBlockTasks(ctx)
+	require.LogsDoNotContain(t, logHook, "could not perform late block tasks")
+}
+
+func TestFillMissingBlockPayloadId_PrepareAllPayloads(t *testing.T) {
+	logHook := logTest.NewGlobal()
+	resetCfg := features.InitWithReset(&features.Flags{
+		PrepareAllPayloads: true,
+	})
+	defer resetCfg()
+
+	fc := doublylinkedtree.New()
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	opts := []Option{
+		WithForkChoiceStore(fc),
+		WithStateGen(stategen.New(beaconDB, fc)),
+	}
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	service.lateBlockTasks(ctx)
+	require.LogsDoNotContain(t, logHook, "could not perform late block tasks")
 }
 
 // Helper function to simulate the block being on time or delayed for proposer

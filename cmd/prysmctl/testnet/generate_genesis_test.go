@@ -1,8 +1,6 @@
 package testnet
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -18,13 +16,10 @@ func Test_genesisStateFromJSONValidators(t *testing.T) {
 	jsonData := createGenesisDepositData(t, numKeys)
 	jsonInput, err := json.Marshal(jsonData)
 	require.NoError(t, err)
-	ctx := context.Background()
-	genesisState, err := genesisStateFromJSONValidators(
-		ctx, bytes.NewReader(jsonInput), 0, /* genesis time defaults to time.Now() */
-	)
+	_, dds, err := depositEntriesFromJSON(jsonInput)
 	require.NoError(t, err)
-	for i, val := range genesisState.Validators {
-		assert.DeepEqual(t, fmt.Sprintf("%#x", val.PublicKey), jsonData[i].PubKey)
+	for i := range dds {
+		assert.DeepEqual(t, fmt.Sprintf("%#x", dds[i].PublicKey), jsonData[i].PubKey)
 	}
 }
 

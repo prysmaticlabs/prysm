@@ -12,6 +12,7 @@ import (
 
 // ProcessSyncCommitteeUpdates  processes sync client committee updates for the beacon state.
 //
+// nolint:dupword
 // Spec code:
 // def process_sync_committee_updates(state: BeaconState) -> None:
 //
@@ -45,6 +46,7 @@ func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconSt
 
 // ProcessParticipationFlagUpdates processes participation flag updates by rotating current to previous.
 //
+// nolint:dupword
 // Spec code:
 // def process_participation_flag_updates(state: BeaconState) -> None:
 //

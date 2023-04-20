@@ -465,6 +465,7 @@ func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, he
 		ChainStartFetcher:     &mockExecution.Chain{},
 		Eth1InfoFetcher:       &mockExecution.Chain{},
 		Eth1BlockFetcher:      &mockExecution.Chain{},
+		FinalizationFetcher:   mockChainService,
 		ForkFetcher:           mockChainService,
 		ForkchoiceFetcher:     mockChainService,
 		MockEth1Votes:         true,
@@ -480,6 +481,7 @@ func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, he
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		BeaconDB:               db,
 		BLSChangesPool:         blstoexec.NewPool(),
+		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true},
 	}
 }
 

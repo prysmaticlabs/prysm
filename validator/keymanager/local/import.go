@@ -3,7 +3,6 @@ package local
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -13,10 +12,16 @@ import (
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
+	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 // ImportKeystores into the local keymanager from an external source.
+// 1) Copy the in memory keystore
+// 2) Update copied keystore with new keys
+// 3) Save the copy to disk
+// 4) Reinitialize account store and updating the keymanager
+// 5) Return Statuses
 func (km *Keymanager) ImportKeystores(
 	ctx context.Context,
 	keystores []*keymanager.Keystore,
@@ -33,7 +38,13 @@ func (km *Keymanager) ImportKeystores(
 	keys := map[string]string{}
 	statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(keystores))
 	var err error
-
+	// 1) Copy the in memory keystore
+	storeCopy := km.accountsStore.Copy()
+	importedKeys := make([][]byte, 0)
+	existingPubKeys := make(map[string]bool)
+	for i := 0; i < len(storeCopy.PrivateKeys); i++ {
+		existingPubKeys[string(storeCopy.PublicKeys[i])] = true
+	}
 	for i := 0; i < len(keystores); i++ {
 		var privKeyBytes []byte
 		var pubKeyBytes []byte
@@ -49,52 +60,67 @@ func (km *Keymanager) ImportKeystores(
 			log.Error(err)
 		}
 		// if key exists prior to being added then output log that duplicate key was found
-		if _, ok := keys[string(pubKeyBytes)]; ok {
+		_, isDuplicateInArray := keys[string(pubKeyBytes)]
+		_, isDuplicateInExisting := existingPubKeys[string(pubKeyBytes)]
+		if isDuplicateInArray || isDuplicateInExisting {
 			log.Warnf("Duplicate key in import will be ignored: %#x", pubKeyBytes)
 			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
 				Status: ethpbservice.ImportedKeystoreStatus_DUPLICATE,
 			}
 			continue
 		}
+
 		keys[string(pubKeyBytes)] = string(privKeyBytes)
+		importedKeys = append(importedKeys, pubKeyBytes)
 		statuses[i] = &ethpbservice.ImportedKeystoreStatus{
 			Status: ethpbservice.ImportedKeystoreStatus_IMPORTED,
 		}
 	}
-	privKeys := make([][]byte, 0)
-	pubKeys := make([][]byte, 0)
+	if len(importedKeys) == 0 {
+		log.Warn("no keys were imported")
+		return statuses, nil
+	}
+	// 2) Update copied keystore with new keys,clear duplicates in existing set
+	// duplicates,errored ones are already skipped
 	for pubKey, privKey := range keys {
-		pubKeys = append(pubKeys, []byte(pubKey))
-		privKeys = append(privKeys, []byte(privKey))
+		storeCopy.PublicKeys = append(storeCopy.PublicKeys, []byte(pubKey))
+		storeCopy.PrivateKeys = append(storeCopy.PrivateKeys, []byte(privKey))
+	}
+	//3 & 4) save to disk and re-initializes keystore
+	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
+		return nil, err
 	}
 
-	// Write the accounts to disk into a single keystore.
-	accountsKeystore, err := km.CreateAccountsKeystore(ctx, privKeys, pubKeys)
-	if err != nil {
-		return nil, err
-	}
-	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts); err != nil {
-		return nil, err
-	}
+	log.WithFields(logrus.Fields{
+		"publicKeys": CreatePrintoutOfKeys(importedKeys),
+	}).Info("Successfully imported validator key(s)")
+
+	// 5) Return Statuses
 	return statuses, nil
 }
 
 // ImportKeypairs directly into the keymanager.
 func (km *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]byte) error {
-	// Write the accounts to disk into a single keystore.
-	accountsKeystore, err := km.CreateAccountsKeystore(ctx, privKeys, pubKeys)
-	if err != nil {
-		return errors.Wrap(err, "could not import account keypairs")
+	if len(privKeys) != len(pubKeys) {
+		return fmt.Errorf(
+			"number of private keys and public keys is not equal: %d != %d", len(privKeys), len(pubKeys),
+		)
 	}
-	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
-	if err != nil {
-		return errors.Wrap(err, "could not marshal accounts keystore into JSON")
+	// 1) Copy the in memory keystore
+	storeCopy := km.accountsStore.Copy()
+
+	// 2) Update store and remove duplicates
+	updateAccountsStoreKeys(storeCopy, privKeys, pubKeys)
+
+	// 3 & 4) save to disk and re-initializes keystore
+	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
+		return err
 	}
-	return km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
+	// 5) verify if store was not updated
+	if len(km.accountsStore.PublicKeys) < len(storeCopy.PublicKeys) {
+		return fmt.Errorf("keys were not imported successfully, expected %d got %d", len(storeCopy.PublicKeys), len(km.accountsStore.PublicKeys))
+	}
+	return nil
 }
 
 // Retrieves the private key and public key from an EIP-2335 keystore file

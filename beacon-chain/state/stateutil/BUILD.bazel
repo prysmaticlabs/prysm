@@ -20,17 +20,7 @@ go_library(
         "validator_root.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil",
-    visibility = [
-        "//beacon-chain:__subpackages__",
-        "//proto/migration:__subpackages__",
-        "//proto/prysm/v1alpha1:__subpackages__",
-        "//proto/testing:__subpackages__",
-        "//slasher:__subpackages__",
-        "//testing:__subpackages__",
-        "//tools/blocktree:__pkg__",
-        "//tools/pcli:__pkg__",
-        "//validator/client:__pkg__",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/transition/stateutils:go_default_library",
         "//config/fieldparams:go_default_library",

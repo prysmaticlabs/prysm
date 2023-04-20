@@ -70,6 +70,7 @@ func (s *Server) registerBeaconClient() error {
 func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validatorpb.BeaconStatusResponse, error) {
 	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
+		//nolint:nilerr
 		return &validatorpb.BeaconStatusResponse{
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
 			Connected:          false,
