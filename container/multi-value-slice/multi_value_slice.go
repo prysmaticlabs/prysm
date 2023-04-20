@@ -6,14 +6,14 @@ import (
 	"sync"
 )
 
-type MultiValue[V any] struct {
-	Shared     V
-	Individual []*Value[V]
-}
-
 type Value[V any] struct {
 	val  V
 	objs []uintptr
+}
+
+type MultiValue[V any] struct {
+	Shared     V
+	Individual []*Value[V]
 }
 
 type Slice[V comparable, O any] struct {
