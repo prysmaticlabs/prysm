@@ -125,11 +125,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 	// Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 	if st.Version() >= version.Altair {
 		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
-		justifiedBlockHash, err = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
-		if err != nil {
-			log.WithError(err).Error("Could not get unrealized justified payload block hash")
-			justifiedBlockHash = finalizedBlockHash // Don't fail block proposal if we can't get the justified block hash.
-		}
+		justifiedBlockHash = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
 	}
 
 	f := &enginev1.ForkchoiceState{
