@@ -1185,7 +1185,7 @@ type EventPayloadAttributeV2Json struct {
 	ParentBlockNumber string                   `json:"parent_block_number"`
 	ParentBlockRoot   string                   `json:"parent_block_root" hex:"true"`
 	ParentBlockHash   string                   `json:"parent_block_hash" hex:"true"`
-	PayloadAttributes *PayloadAttributesV2Json `json:"payload_attributes_v2"`
+	PayloadAttributes *PayloadAttributesV2Json `json:"payload_attributes"`
 }
 
 type PayloadAttributesV1Json struct {

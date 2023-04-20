@@ -195,7 +195,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 
 // NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
 func NewWalletForWeb3Signer() *Wallet {
-	// wallet is just a temporary wallet for web3 signer used to call intialize keymanager.
+	// wallet is just a temporary wallet for web3 signer used to call initialize keymanager.
 	return &Wallet{
 		walletDir:      "",
 		accountsPath:   "",
@@ -383,7 +383,6 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser,
 	}
 	w.configFilePath = configFilePath
 	return os.Open(configFilePath) // #nosec G304
-
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file

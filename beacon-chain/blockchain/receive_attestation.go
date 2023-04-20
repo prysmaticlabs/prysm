@@ -56,7 +56,7 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 	if err != nil {
 		return err
 	}
-	r, err := s.ancestor(ctx, a.Data.BeaconBlockRoot, targetSlot)
+	r, err := s.Ancestor(ctx, a.Data.BeaconBlockRoot, targetSlot)
 	if err != nil {
 		return err
 	}
@@ -100,17 +100,15 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-pat.C():
-				s.ForkChoicer().Lock()
 				s.UpdateHead(s.ctx, s.CurrentSlot()+1)
-				s.ForkChoicer().Unlock()
 			case <-st.C():
-				s.ForkChoicer().Lock()
-				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+				s.cfg.ForkChoiceStore.Lock()
+				if err := s.cfg.ForkChoiceStore.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("could not process new slot")
 				}
+				s.cfg.ForkChoiceStore.Unlock()
 
 				s.UpdateHead(s.ctx, s.CurrentSlot())
-				s.ForkChoicer().Unlock()
 			}
 		}
 	}()
@@ -120,7 +118,8 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 // The caller of this function MUST hold a lock in forkchoice
 func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
 	start := time.Now()
-
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
 	disparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	if !features.Get().DisableReorgLateBlocks {
@@ -134,6 +133,10 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not compute head from new attestations")
+		// Fallback to our current head root in the event of a failure.
+		s.headLock.RLock()
+		newHeadRoot = s.headRoot()
+		s.headLock.RUnlock()
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 

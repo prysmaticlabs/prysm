@@ -28,7 +28,6 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 		}
 		if enableDebugRPCEndpoints {
 			v1AlphaRegistrations = append(v1AlphaRegistrations, ethpbalpha.RegisterDebugHandler)
-
 		}
 		v1AlphaMux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
@@ -60,7 +59,6 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 		}
 		if enableDebugRPCEndpoints {
 			ethRegistrations = append(ethRegistrations, ethpbservice.RegisterBeaconDebugHandler)
-
 		}
 		ethMux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{

@@ -139,6 +139,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			vs := &Server{
 				ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr, ExecutionPayload: &pb.ExecutionPayload{}},
 				HeadFetcher:            &chainMock.ChainService{State: tt.st},
+				FinalizationFetcher:    &chainMock.ChainService{},
 				BeaconDB:               beaconDB,
 				ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			}
@@ -221,6 +222,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 			ExecutionPayload: payload,
 		},
 		HeadFetcher:            &chainMock.ChainService{State: transitionSt},
+		FinalizationFetcher:    &chainMock.ChainService{},
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}

@@ -30,6 +30,20 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var (
+	supportedEngineEndpoints = []string{
+		NewPayloadMethod,
+		NewPayloadMethodV2,
+		ForkchoiceUpdatedMethod,
+		ForkchoiceUpdatedMethodV2,
+		GetPayloadMethod,
+		GetPayloadMethodV2,
+		ExchangeTransitionConfigurationMethod,
+		GetPayloadBodiesByHashV1,
+		GetPayloadBodiesByRangeV1,
+	}
+)
+
 const (
 	// NewPayloadMethod v1 request string for JSON-RPC.
 	NewPayloadMethod = "engine_newPayloadV1"
@@ -53,6 +67,8 @@ const (
 	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
 	// GetPayloadBodiesByRangeV1 v1 request string for JSON-RPC.
 	GetPayloadBodiesByRangeV1 = "engine_getPayloadBodiesByRangeV1"
+	// ExchangeCapabilities request string for JSON-RPC.
+	ExchangeCapabilities = "engine_exchangeCapabilities"
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
 	defaultEngineTimeout = time.Second
 )
@@ -276,6 +292,35 @@ func (s *Service) ExchangeTransitionConfiguration(
 		)
 	}
 	return nil
+}
+
+func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
+	if !features.Get().EnableOptionalEngineMethods {
+		return nil, errors.New("optional engine methods not enabled")
+	}
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeCapabilities")
+	defer span.End()
+
+	result := &pb.ExchangeCapabilities{}
+	err := s.rpcClient.CallContext(ctx, &result, ExchangeCapabilities, supportedEngineEndpoints)
+
+	var unsupported []string
+	for _, s1 := range supportedEngineEndpoints {
+		supported := false
+		for _, s2 := range result.SupportedMethods {
+			if s1 == s2 {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			unsupported = append(unsupported, s1)
+		}
+	}
+	if len(unsupported) != 0 {
+		log.Warnf("Please update client, detected the following unsupported engine methods: %s", unsupported)
+	}
+	return result.SupportedMethods, handleRPCError(err)
 }
 
 // GetTerminalBlockHash returns the valid terminal block hash based on total difficulty.

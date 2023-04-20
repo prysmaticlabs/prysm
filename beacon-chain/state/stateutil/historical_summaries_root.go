@@ -26,11 +26,7 @@ func HistoricalSummariesRoot(summaries []*ethpb.HistoricalSummary) ([32]byte, er
 		roots[i] = r
 	}
 
-	summariesRoot, err := ssz.BitwiseMerkleize(
-		roots,
-		uint64(len(roots)),
-		fieldparams.HistoricalRootsLength,
-	)
+	summariesRoot, err := ssz.BitwiseMerkleize(roots, uint64(len(roots)), fieldparams.HistoricalRootsLength)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute historical summaries merkleization")
 	}

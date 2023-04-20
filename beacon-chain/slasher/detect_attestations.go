@@ -84,7 +84,6 @@ func (s *Service) detectAllAttesterSlashings(
 	args *chunkUpdateArgs,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
-
 	// Map of updated chunks by chunk index, which will be saved at the end.
 	updatedChunks := make(map[uint64]Chunker)
 	groupedAtts := s.groupByChunkIndex(attestations)

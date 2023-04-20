@@ -110,14 +110,21 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block",
 	}
-	EnableOptionalEngineMethods = &cli.BoolFlag{
+	enableOptionalEngineMethods = &cli.BoolFlag{
 		Name:  "enable-optional-engine-methods",
 		Usage: "Enables the optional engine methods",
+	}
+	prepareAllPayloads = &cli.BoolFlag{
+		Name:  "prepare-all-payloads",
+		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
-var devModeFlags = []cli.Flag{}
+var devModeFlags = []cli.Flag{
+	enableVerboseSigVerification,
+	enableOptionalEngineMethods,
+}
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
@@ -155,7 +162,8 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
-	EnableOptionalEngineMethods,
+	enableOptionalEngineMethods,
+	prepareAllPayloads,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

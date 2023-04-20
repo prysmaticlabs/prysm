@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -62,6 +63,13 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.MaxBuilderEpochMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
 		c.MaxBuilderEpochMissedSlots = primitives.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	if cliCtx.IsSet(flags.LocalBlockValueBoost.Name) {
+		c := params.BeaconConfig().Copy()
+		c.LocalBlockValueBoost = cliCtx.Uint64(flags.LocalBlockValueBoost.Name)
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -188,4 +196,8 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+
 		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
 	return params.SetActive(c)
+}
+
+func configureFastSSZHashingAlgorithm() {
+	fastssz.EnableVectorizedHTR = true
 }

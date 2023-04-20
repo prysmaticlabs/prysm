@@ -113,7 +113,6 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 	if v.emitAccountMetrics {
 		ValidatorAggSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
-
 }
 
 // Signs input slot with domain selection proof. This is used to create the signature for aggregator selection.

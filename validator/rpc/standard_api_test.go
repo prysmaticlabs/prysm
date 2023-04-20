@@ -23,8 +23,8 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
 	mock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
@@ -758,7 +758,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
+			mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
 
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.args)
@@ -791,7 +791,7 @@ func TestServer_ListFeeRecipientByPubKey_BeaconNodeError(t *testing.T) {
 	require.NoError(t, err)
 
 	ctrl := gomock.NewController(t)
-	mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
+	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
 
 	mockValidatorClient.EXPECT().GetFeeRecipientByPubKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("custom error"))
 
@@ -815,7 +815,7 @@ func TestServer_ListFeeRecipientByPubKey_NoFeeRecipientSet(t *testing.T) {
 	require.NoError(t, err)
 
 	ctrl := gomock.NewController(t)
-	mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
+	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
 
 	mockValidatorClient.EXPECT().GetFeeRecipientByPubKey(gomock.Any(), gomock.Any()).Return(nil, nil)
 
@@ -860,7 +860,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	beaconClient := mock2.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
@@ -1208,7 +1208,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	beaconClient := mock2.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
