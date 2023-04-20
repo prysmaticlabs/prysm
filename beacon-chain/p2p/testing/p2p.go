@@ -272,7 +272,7 @@ func (p *TestP2P) AddConnectionHandler(f, _ func(ctx context.Context, id peer.ID
 
 				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				if err := f(ctx, conn.RemotePeer()); err != nil {
-					logrus.WithError(err).Error("Could not send succesful hello rpc request")
+					logrus.WithError(err).Error("Could not send successful hello rpc request")
 					if err := p.Disconnect(conn.RemotePeer()); err != nil {
 						logrus.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
 					}

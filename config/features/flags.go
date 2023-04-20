@@ -114,6 +114,10 @@ var (
 		Name:  "enable-optional-engine-methods",
 		Usage: "Enables the optional engine methods",
 	}
+	prepareAllPayloads = &cli.BoolFlag{
+		Name:  "prepare-all-payloads",
+		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -159,6 +163,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
+	prepareAllPayloads,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
