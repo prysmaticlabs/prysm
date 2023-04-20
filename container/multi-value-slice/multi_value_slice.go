@@ -149,6 +149,9 @@ outerLoop:
 }
 
 func (r *Slice[V, O]) Detach(obj O) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	p := reflect.ValueOf(obj).Elem().Addr().Pointer()
 
 	for _, item := range r.Items {
