@@ -584,33 +584,15 @@ func (s *Store) SaveRegistrationsByValidatorIDs(ctx context.Context, ids []primi
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(registrationBucket)
-		// create a request map for easier lookup
-		requestMap := make(map[uint64][]byte)
 		for i, id := range ids {
 			enc, err := encode(ctx, regs[i])
 			if err != nil {
 				return err
 			}
-			requestMap[uint64(id)] = enc
-		}
-
-		// loop through keys in bucket
-		// if it's part of the requestMap add it
-		// if it's not part of the requestMap delete it
-		bkt.ForEach(func(k, v []byte) error {
-			value, ok := requestMap[bytesutil.BytesToUint64BigEndian(k)]
-			// Maybe needs to validate the datetime on the request...
-			if ok {
-				if err := bkt.Put(k, value); err != nil {
-					return err
-				}
-			} else {
-				if err := bkt.Delete(k); err != nil {
-					return err
-				}
+			if err := bkt.Put(bytesutil.Uint64ToBytesBigEndian(uint64(id)), enc); err != nil {
+				return err
 			}
-			return nil
-		})
+		}
 		return nil
 	})
 }

@@ -29,17 +29,13 @@ func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx p
 
 // validatorRegistered returns true if validator with index `id` was previously registered in the database.
 func (vs *Server) validatorRegistered(ctx context.Context, id primitives.ValidatorIndex) (bool, error) {
-	if vs.BeaconDB == nil {
-		return false, errors.New("nil beacon db")
-	}
-	_, err := vs.BeaconDB.RegistrationByValidatorID(ctx, id)
+	_, err := vs.BlockBuilder.RegistrationByValidatorID(ctx, id)
 	switch {
 	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
 		return false, nil
 	case err != nil:
 		return false, err
 	}
-
 	return true, nil
 }
 

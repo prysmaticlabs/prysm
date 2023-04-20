@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -25,6 +26,7 @@ type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error)
 	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error)
 	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
+	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
 	Configured() bool
 }
 
@@ -37,10 +39,11 @@ type config struct {
 
 // Service defines a service that provides a client for interacting with the beacon chain and MEV relay network.
 type Service struct {
-	cfg    *config
-	c      builder.BuilderClient
-	ctx    context.Context
-	cancel context.CancelFunc
+	cfg               *config
+	c                 builder.BuilderClient
+	ctx               context.Context
+	cancel            context.CancelFunc
+	registrationCache *cache.RegistrationCache
 }
 
 // NewService instantiates a new service.
@@ -137,6 +140,9 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 
 	idxs := make([]primitives.ValidatorIndex, 0)
 	msgs := make([]*ethpb.ValidatorRegistrationV1, 0)
+
+	indexToRegistration := make(map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1)
+
 	valid := make([]*ethpb.SignedValidatorRegistrationV1, 0)
 	for i := 0; i < len(reg); i++ {
 		r := reg[i]
@@ -155,7 +161,28 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		return errors.Wrap(err, "could not register validator(s)")
 	}
 
-	return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, idxs, msgs)
+	if len(indexToRegistration) != len(msgs) {
+		return errors.New("ids and registrations must be the same length")
+	}
+	if s.registrationCache != nil {
+		s.registrationCache.UpdateIndexToRegisteredMap(indexToRegistration)
+		return nil
+	} else {
+		return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, idxs, msgs)
+	}
+}
+
+// RegistrationByValidatorID returns either the values from the cache or db.
+func (s *Service) RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
+	if s.cfg == nil || s.cfg.beaconDB == nil {
+		return nil, errors.New("nil beacon db")
+	}
+
+	if s.registrationCache != nil {
+		return s.registrationCache.GetRegistrationByIndex(id)
+	} else {
+		return s.cfg.beaconDB.RegistrationByValidatorID(ctx, id)
+	}
 }
 
 // Configured returns true if the user has configured a builder client.
