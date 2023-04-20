@@ -897,5 +897,6 @@ func finalizerCleanup(b *BeaconState) {
 	for i := range b.stateFieldLeaves {
 		delete(b.stateFieldLeaves, i)
 	}
+	b.randaoMixes.Detach(b)
 	state.StateCount.Sub(1)
 }
