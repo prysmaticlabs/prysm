@@ -880,7 +880,6 @@ func finalizerCleanup(b *BeaconState) {
 		if b.stateFieldLeaves[field].FieldReference() != nil {
 			b.stateFieldLeaves[field].FieldReference().MinusRef()
 		}
-
 	}
 	for i := range b.dirtyFields {
 		delete(b.dirtyFields, i)

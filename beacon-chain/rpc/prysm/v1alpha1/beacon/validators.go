@@ -183,7 +183,7 @@ func (bs *Server) ListValidatorBalances(
 }
 
 // ListValidators retrieves the current list of active validators with an optional historical epoch flag to
-// to retrieve validator set in time.
+// retrieve validator set in time.
 func (bs *Server) ListValidators(
 	ctx context.Context,
 	req *ethpb.ListValidatorsRequest,
@@ -887,7 +887,6 @@ func (bs *Server) GetIndividualVotes(
 		val, err := st.ValidatorAtIndexReadOnly(index)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator: %v", err)
-
 		}
 		pb := val.PublicKey()
 		votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{

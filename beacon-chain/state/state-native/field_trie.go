@@ -85,7 +85,6 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
 	}
-
 }
 
 // RecomputeTrie rebuilds the affected branches in the trie according to the provided

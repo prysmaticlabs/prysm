@@ -560,7 +560,6 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 		ForkChoiceNodes:               nodes,
 	}
 	return resp, nil
-
 }
 
 // SetBalancesByRooter sets the balanceByRoot handler in forkchoice
