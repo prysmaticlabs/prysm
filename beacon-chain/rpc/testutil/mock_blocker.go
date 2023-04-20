@@ -22,6 +22,7 @@ func (m *MockBlocker) Block(_ context.Context, b []byte) (interfaces.ReadOnlySig
 	}
 	slotNumber, parseErr := strconv.ParseUint(string(b), 10, 64)
 	if parseErr != nil {
+		//nolint:nilerr
 		return m.BlockToReturn, nil
 	}
 	return m.SlotBlockMap[primitives.Slot(slotNumber)], nil

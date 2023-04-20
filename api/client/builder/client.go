@@ -246,7 +246,6 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	default:
 		return nil, fmt.Errorf("unsupported header version %s", strings.ToLower(v.Version))
 	}
-
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
@@ -308,6 +307,9 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err := json.Unmarshal(rb, ep); err != nil {
 			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
 		}
+		if strings.ToLower(ep.Version) != version.String(version.Bellatrix) {
+			return nil, errors.New("not a bellatrix payload")
+		}
 		p, err := ep.ToProto()
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not extract proto message from payload")
@@ -337,6 +339,9 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		ep := &ExecPayloadResponseCapella{}
 		if err := json.Unmarshal(rb, ep); err != nil {
 			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockCapella response")
+		}
+		if strings.ToLower(ep.Version) != version.String(version.Capella) {
+			return nil, errors.New("not a capella payload")
 		}
 		p, err := ep.ToProto()
 		if err != nil {

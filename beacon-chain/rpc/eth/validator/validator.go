@@ -559,7 +559,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
-	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+	return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("block was not a supported blinded block type, validator may not be registered if using a relay. received: %T", v1alpha1resp.Block))
 }
 
 // ProduceBlindedBlockSSZ requests the beacon node to produce a valid unsigned blinded beacon block,

@@ -151,7 +151,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		indexes[i] = index
 	}
 
-	// Get validators liveness for the the last epoch.
+	// Get validators liveness for the last epoch.
 	// We request a state 1 epoch ago. We are guaranteed to have currentEpoch > 2
 	// since we assume that we are not in phase0.
 	previousEpoch := currentEpoch - 1
