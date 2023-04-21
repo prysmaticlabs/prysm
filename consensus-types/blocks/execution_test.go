@@ -300,7 +300,7 @@ func createWrappedPayloadCapella(t testing.TB) interfaces.ExecutionData {
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
 		Withdrawals:   make([]*enginev1.Withdrawal, 0),
-	}, 10)
+	}, 0)
 	require.NoError(t, err)
 	return payload
 }
@@ -322,7 +322,7 @@ func createWrappedPayloadHeaderCapella(t testing.TB) interfaces.ExecutionData {
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
-	}, 11)
+	}, 0)
 	require.NoError(t, err)
 	return payload
 }

@@ -23,6 +23,7 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -239,9 +240,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		}
 
 		v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value))
-		gweiPerEth := big.NewInt(int64(params.BeaconConfig().GweiPerEth))
-		v.Div(v, gweiPerEth)
-		return blocks.WrappedExecutionPayloadCapella(result.Payload, v.Uint64())
+		return blocks.WrappedExecutionPayloadCapella(result.Payload, math.WeiToGwei(v))
 	}
 
 	result := &pb.ExecutionPayload{}
