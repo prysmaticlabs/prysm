@@ -218,7 +218,7 @@ func WeiToGwei(v *big.Int) uint64 {
 	if v == nil {
 		return 0
 	}
-	gweiPerEth := big.NewInt(10e9)
+	gweiPerEth := big.NewInt(1e9)
 	v.Div(v, gweiPerEth)
 	return v.Uint64()
 }
