@@ -57,7 +57,7 @@ type Getter interface {
 	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	JustifiedPayloadBlockHash() [32]byte
-	UnrealizedJustifiedPayloadBlockHash() ([32]byte, error)
+	UnrealizedJustifiedPayloadBlockHash() [32]byte
 	NodeCount() int
 	HighestReceivedBlockSlot() primitives.Slot
 	ReceivedBlocksLastEpoch() (uint64, error)
