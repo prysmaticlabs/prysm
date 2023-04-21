@@ -699,11 +699,33 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
 	}
-
-	validatorKey := req.Pubkey
-	if err := validatePublicKey(validatorKey); err != nil {
+	if err := validatePublicKey(req.Pubkey); err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
+	if s.wallet == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, err
+	}
+	req.
+	apimiddleware2.HandleQueryParameters(req, []apimiddleware2.QueryParam)
+	km.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       nil,
+		SigningRoot:     nil,
+		SignatureDomain: nil,
+		Object:          nil,
+		SigningSlot:     0,
+	})
 
-	return resp, nil
+	return &ethpbservice.SetVoluntaryExitResponse{
+		Data: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit{
+			Message: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit_VoluntaryExit{
+				Epoch:          req,
+				ValidatorIndex: "",
+			},
+			Signature: nil,
+		},
+	}, nil
 }

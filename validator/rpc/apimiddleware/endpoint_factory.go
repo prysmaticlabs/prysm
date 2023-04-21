@@ -50,6 +50,7 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 		endpoint.DeleteRequest = &DeleteGasLimitRequestJson{}
 	case "/eth/v1/validator/{pubkey}/voluntary_exit":
 		endpoint.PostRequest = &SetVoluntaryExitRequestJson{}
+		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
 	default:
 		return nil, errors.New("invalid path")
 	}
