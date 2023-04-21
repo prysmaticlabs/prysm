@@ -58,12 +58,15 @@ func WithNower(n Nower) ClockOpt {
 
 // NewClock constructs a genesis value, providing the ability to override the
 func NewClock(t time.Time, vr []byte, opts ...ClockOpt) *Clock {
-	g := &Clock{
+	c := &Clock{
 		t:  t,
 		vr: vr,
 	}
 	for _, o := range opts {
-		o(g)
+		o(c)
 	}
-	return g
+	if c.now == nil {
+		c.now = time.Now
+	}
+	return c
 }
