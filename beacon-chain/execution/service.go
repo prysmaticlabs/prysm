@@ -750,7 +750,12 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		return nil
 	}
 	var err error
-	s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
+	if features.Get().EnableEIP4881 {
+		s.depositTrie, err = depositsnapshot.CreateTreeFromSnapshotProto(eth1DataInDB.DepositSnapshot)
+
+	} else {
+		s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
+	}
 	if err != nil {
 		return err
 	}
@@ -821,12 +826,27 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 			ChainstartDeposits: make([]*ethpb.Deposit, 0),
 		}
 		eth1Data = &ethpb.ETH1ChainData{
-			CurrentEth1Data: s.latestEth1Data,
-			ChainstartData:  s.chainStartData,
-			BeaconState:     pbState,
-			// TODO: Fix
-			//Trie:              s.depositTrie.ToProto(),
+			CurrentEth1Data:   s.latestEth1Data,
+			ChainstartData:    s.chainStartData,
+			BeaconState:       pbState,
 			DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
+		}
+		if features.Get().EnableEIP4881 {
+			trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+			if !ok {
+				return errors.New("deposit trie was not SparseMerkleTrie")
+			}
+			snapshot, err := trie.GetSnapshot()
+			if err != nil {
+				return err
+			}
+			eth1Data.DepositSnapshot = snapshot.ToProto()
+		} else {
+			trie, ok := s.depositTrie.(*trie.SparseMerkleTrie)
+			if !ok {
+				return errors.New("deposit trie was not SparseMerkleTrie")
+			}
+			eth1Data.Trie = trie.ToProto()
 		}
 		return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
 	}

@@ -52,8 +52,8 @@ func NewDepositTree() *DepositTree {
 	}
 }
 
-// getSnapshot returns a deposit tree snapshot.
-func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
+// GetSnapshot returns a deposit tree snapshot.
+func (d *DepositTree) GetSnapshot() (DepositTreeSnapshot, error) {
 	if d.finalizedExecutionBlock == (executionBlock{}) {
 		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
 	}

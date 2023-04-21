@@ -13,13 +13,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -551,12 +554,27 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		return err
 	}
 	eth1Data := &ethpb.ETH1ChainData{
-		CurrentEth1Data: s.latestEth1Data,
-		ChainstartData:  s.chainStartData,
-		BeaconState:     pbState, // I promise not to mutate it!
-		//TODO: Fix
-		//Trie:              s.depositTrie.ToProto(),
+		CurrentEth1Data:   s.latestEth1Data,
+		ChainstartData:    s.chainStartData,
+		BeaconState:       pbState, // I promise not to mutate it!
 		DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
+	}
+	if features.Get().EnableEIP4881 {
+		trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+		if !ok {
+			return errors.New("deposit trie was not SparseMerkleTrie")
+		}
+		snapshot, err := trie.GetSnapshot()
+		if err != nil {
+			return err
+		}
+		eth1Data.DepositSnapshot = snapshot.ToProto()
+	} else {
+		trie, ok := s.depositTrie.(*trie.SparseMerkleTrie)
+		if !ok {
+			return errors.New("deposit trie was not SparseMerkleTrie")
+		}
+		eth1Data.Trie = trie.ToProto()
 	}
 	return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
 }
