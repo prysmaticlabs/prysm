@@ -2580,6 +2580,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			BlockBuilder: &builderTest.MockBuilderService{
 				HasConfigured: true,
 				Bid:           sBid,
+				Cfg:           &builderTest.Config{BeaconDB: db},
 			},
 			FinalizationFetcher: &mockChain.ChainService{
 				FinalizedCheckPoint: &ethpbalpha.Checkpoint{
@@ -2658,7 +2659,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t,
 			db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{idx},
-				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Pubkey: make([]byte, 48)}}))
+				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Timestamp: uint64(time.Now().Unix()), Pubkey: make([]byte, 48)}}))
 
 		req := &ethpbv1.ProduceBlockRequest{
 			Slot:         params.BeaconConfig().SlotsPerEpoch + 1,
@@ -2805,6 +2806,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			BlockBuilder: &builderTest.MockBuilderService{
 				HasConfigured: true,
 				BidCapella:    sBid,
+				Cfg:           &builderTest.Config{BeaconDB: db},
 			},
 			FinalizationFetcher: &mockChain.ChainService{
 				FinalizedCheckPoint: &ethpbalpha.Checkpoint{
@@ -2883,7 +2885,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t,
 			db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{idx},
-				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Pubkey: make([]byte, 48)}}))
+				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Timestamp: uint64(time.Now().Unix()), Pubkey: make([]byte, 48)}}))
 
 		req := &ethpbv1.ProduceBlockRequest{
 			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
