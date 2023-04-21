@@ -831,15 +831,13 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 			DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 		}
 		if features.Get().EnableEIP4881 {
-			trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
-			if !ok {
-				return errors.New("deposit trie was not SparseMerkleTrie")
+			eth1Data.DepositSnapshot = &ethpb.DepositSnapshot{
+				Finalized:      make([][]byte, 0),
+				DepositRoot:    genState.Eth1Data().DepositRoot,
+				ExecutionHash:  genState.Eth1Data().BlockHash,
+				DepositCount:   genState.Eth1Data().DepositCount,
+				ExecutionDepth: params.BeaconConfig().DepositContractTreeDepth,
 			}
-			snapshot, err := trie.GetSnapshot()
-			if err != nil {
-				return err
-			}
-			eth1Data.DepositSnapshot = snapshot.ToProto()
 		} else {
 			trie, ok := s.depositTrie.(*trie.SparseMerkleTrie)
 			if !ok {
