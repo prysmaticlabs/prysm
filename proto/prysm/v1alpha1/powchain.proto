@@ -25,7 +25,7 @@ message ETH1ChainData {
 
 // DepositSnapshot represents an EIP-4881 deposit snapshot
 message DepositSnapshot {
-    repeated TrieLayer finalized = 1;
+    repeated bytes finalized = 1;
     bytes deposit_root = 2;
     uint64 deposit_count = 3;
     bytes execution_hash = 4;
