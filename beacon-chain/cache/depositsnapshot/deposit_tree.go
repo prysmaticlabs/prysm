@@ -153,7 +153,6 @@ func (d *DepositTree) Insert(item []byte, index int) error {
 	if err != nil {
 		return err
 	}
-	//d.depositCount++
 	return nil
 }
 

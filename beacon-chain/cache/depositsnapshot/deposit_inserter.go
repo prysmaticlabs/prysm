@@ -54,16 +54,6 @@ func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum ui
 	// exist for the pubkey , it is simply added to the map.
 	pubkey := bytesutil.ToBytes48(d.Data.PublicKey)
 	c.depositsByKey[pubkey] = append(c.depositsByKey[pubkey], depCtr)
-
-	depositDataRoot, err := d.Data.HashTreeRoot()
-	if err != nil {
-		return err
-	}
-	err = c.finalizedDeposits.depositTree.PushLeaf(depositDataRoot)
-	if err != nil {
-		return err
-	}
-
 	historicalDepositsCount.Inc()
 	return nil
 }
