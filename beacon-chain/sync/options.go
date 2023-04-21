@@ -138,9 +138,9 @@ func WithExecutionPayloadReconstructor(r execution.ExecutionPayloadReconstructor
 	}
 }
 
-func WithGenesisWaiter(gs startup.GenesisWaiter) Option {
+func WithClockWaiter(cw startup.ClockWaiter) Option {
 	return func(s *Service) error {
-		s.genesisWaiter = gs
+		s.clockWaiter = cw
 		return nil
 	}
 }

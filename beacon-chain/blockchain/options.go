@@ -165,9 +165,9 @@ func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
 	}
 }
 
-func WithGenesisSetter(gs startup.GenesisSetter) Option {
+func WithClockSetter(gs startup.ClockSetter) Option {
 	return func(s *Service) error {
-		s.genesisSetter = gs
+		s.clockSetter = gs
 		return nil
 	}
 }

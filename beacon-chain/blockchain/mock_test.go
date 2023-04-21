@@ -12,12 +12,12 @@ import (
 func testServiceOptsWithDB(t *testing.T) []Option {
 	beaconDB := testDB.SetupDB(t)
 	fcs := doublylinkedtree.New()
-	gs := startup.NewGenesisSynchronizer()
+	cs := startup.NewClockSynchronizer()
 	return []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
-		WithGenesisSetter(gs),
+		WithClockSetter(cs),
 	}
 }
 
@@ -25,6 +25,6 @@ func testServiceOptsWithDB(t *testing.T) []Option {
 // in your code path. this is a lightweight way to satisfy the stategen/beacondb
 // initialization requirements w/o the overhead of db init.
 func testServiceOptsNoDB() []Option {
-	gs := startup.NewGenesisSynchronizer()
-	return []Option{WithGenesisSetter(gs)}
+	cs := startup.NewClockSynchronizer()
+	return []Option{WithClockSetter(cs)}
 }

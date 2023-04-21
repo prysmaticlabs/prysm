@@ -140,7 +140,7 @@ type Service struct {
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
-	genesisWaiter                    startup.GenesisWaiter
+	clockWaiter                      startup.ClockWaiter
 }
 
 // NewService initializes new regular sync service.
@@ -236,12 +236,12 @@ func (s *Service) initCaches() {
 }
 
 func (s *Service) waitForChainStart() {
-	genesis, err := s.genesisWaiter.WaitForGenesis(s.ctx)
+	clock, err := s.clockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("sync service failed to receive genesis data")
 		return
 	}
-	startTime := genesis.Time()
+	startTime := clock.GenesisTime()
 	log.WithField("starttime", startTime).Debug("Received state initialized event")
 	// Register respective rpc handlers at state initialized event.
 	s.registerRPCHandlers()

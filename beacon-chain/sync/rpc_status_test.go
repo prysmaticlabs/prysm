@@ -295,9 +295,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			},
 			beaconDB: db,
 		},
-		ctx:           context.Background(),
-		rateLimiter:   newRateLimiter(p1),
-		genesisWaiter: startup.NewGenesisSynchronizer(),
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
+		clockWaiter: startup.NewClockSynchronizer(),
 	}
 	p1.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -309,8 +309,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			},
 			p2p: p2,
 		},
-		rateLimiter:   newRateLimiter(p2),
-		genesisWaiter: startup.NewGenesisSynchronizer(),
+		rateLimiter: newRateLimiter(p2),
+		clockWaiter: startup.NewClockSynchronizer(),
 	}
 	p2.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -789,9 +789,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			},
 		},
 
-		ctx:           context.Background(),
-		rateLimiter:   newRateLimiter(p1),
-		genesisWaiter: startup.NewGenesisSynchronizer(),
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
+		clockWaiter: startup.NewClockSynchronizer(),
 	}
 
 	r.Start()

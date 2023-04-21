@@ -121,7 +121,7 @@ type Config struct {
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
 	Router                        *mux.Router
-	GenesisWaiter                 startup.GenesisWaiter
+	ClockWaiter                   startup.ClockWaiter
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -248,7 +248,7 @@ func (s *Service) Start() {
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 		BlockBuilder:           s.cfg.BlockBuilder,
 		BLSChangesPool:         s.cfg.BLSChangesPool,
-		GenesisWaiter:          s.cfg.GenesisWaiter,
+		ClockWaiter:            s.cfg.ClockWaiter,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:            s.cfg.HeadFetcher,

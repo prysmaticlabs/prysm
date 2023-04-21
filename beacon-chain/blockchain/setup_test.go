@@ -63,7 +63,7 @@ type testServiceRequirements struct {
 	fcs     forkchoice.ForkChoicer
 	sg      *stategen.State
 	notif   statefeed.Notifier
-	gs      *startup.GenesisSynchronizer
+	cs      *startup.ClockSynchronizer
 	attPool attestations.Pool
 	attSrv  *attestations.Service
 	blsPool *blstoexec.Pool
@@ -77,7 +77,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 	sg := stategen.New(beaconDB, fcs)
 	notif := &mockBeaconNode{}
 	fcs.SetBalancesByRooter(sg.ActiveNonSlashedBalancesByRoot)
-	gs := startup.NewGenesisSynchronizer()
+	cs := startup.NewClockSynchronizer()
 	attPool := attestations.NewPool()
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{Pool: attPool})
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		fcs:     fcs,
 		sg:      sg,
 		notif:   notif,
-		gs:      gs,
+		cs:      cs,
 		attPool: attPool,
 		attSrv:  attSrv,
 		blsPool: blsPool,
@@ -100,7 +100,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		WithStateNotifier(req.notif),
 		WithStateGen(req.sg),
 		WithForkChoiceStore(req.fcs),
-		WithGenesisSetter(req.gs),
+		WithClockSetter(req.cs),
 		WithAttestationPool(req.attPool),
 		WithAttestationService(req.attSrv),
 		WithBLSToExecPool(req.blsPool),

@@ -108,7 +108,7 @@ type BeaconNode struct {
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
 	forkChoicer             forkchoice.ForkChoicer
-	genesisWaiter           startup.GenesisWaiter
+	clockWaiter             startup.ClockWaiter
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -185,8 +185,8 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		}
 	}
 
-	synchronizer := startup.NewGenesisSynchronizer()
-	beacon.genesisWaiter = synchronizer
+	synchronizer := startup.NewClockSynchronizer()
+	beacon.clockWaiter = synchronizer
 
 	beacon.forkChoicer = doublylinkedtree.New()
 	depositAddress, err := execution.DepositContractAddress()
@@ -553,7 +553,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		StateNotifier:     b,
 		DB:                b.db,
-		GenesisWaiter:     b.genesisWaiter,
+		ClockWaiter:       b.clockWaiter,
 	})
 	if err != nil {
 		return err
@@ -587,7 +587,7 @@ func (b *BeaconNode) registerAttestationPool() error {
 	return b.services.RegisterService(s)
 }
 
-func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs startup.GenesisSetter) error {
+func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs startup.ClockSetter) error {
 	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -617,7 +617,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs sta
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
-		blockchain.WithGenesisSetter(gs),
+		blockchain.WithClockSetter(gs),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -694,7 +694,7 @@ func (b *BeaconNode) registerSyncService() error {
 		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
 		regularsync.WithExecutionPayloadReconstructor(web3Service),
-		regularsync.WithGenesisWaiter(b.genesisWaiter),
+		regularsync.WithClockWaiter(b.clockWaiter),
 	)
 	return b.services.RegisterService(rs)
 }
@@ -711,7 +711,7 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		P2P:           b.fetchP2P(),
 		StateNotifier: b,
 		BlockNotifier: b,
-		GenesisWaiter: b.genesisWaiter,
+		ClockWaiter:   b.clockWaiter,
 	})
 	return b.services.RegisterService(is)
 }
@@ -843,7 +843,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		ProposerIdsCache:              b.proposerIdsCache,
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
-		GenesisWaiter:                 b.genesisWaiter,
+		ClockWaiter:                   b.clockWaiter,
 	})
 
 	return b.services.RegisterService(rpcService)

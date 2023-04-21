@@ -29,5 +29,5 @@ type Config struct {
 	DenyListCIDR        []string
 	StateNotifier       statefeed.Notifier
 	DB                  db.ReadOnlyDatabase
-	GenesisWaiter       startup.GenesisWaiter
+	ClockWaiter         startup.ClockWaiter
 }

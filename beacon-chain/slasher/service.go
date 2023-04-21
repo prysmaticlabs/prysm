@@ -39,8 +39,8 @@ type ServiceConfig struct {
 	SlashingPoolInserter    slashings.PoolInserter
 	HeadStateFetcher        blockchain.HeadFetcher
 	SyncChecker             sync.Checker
-	GenesisWaiter           startup.GenesisWaiter
-	GenesisSetter           startup.GenesisSetter
+	ClockWaiter             startup.ClockWaiter
+	ClockSetter             startup.ClockSetter
 }
 
 // SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
@@ -174,11 +174,11 @@ func (_ *Service) Status() error {
 }
 
 func (s *Service) waitForChainInitialization() {
-	genesis, err := s.serviceCfg.GenesisWaiter.WaitForGenesis(s.ctx)
+	clock, err := s.serviceCfg.ClockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not receive chain start notification")
 	}
-	s.genesisTime = genesis.Time()
+	s.genesisTime = clock.GenesisTime()
 	log.WithField("genesisTime", s.genesisTime).Info(
 		"Slasher received chain initialization event",
 	)

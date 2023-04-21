@@ -48,7 +48,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 	r := Service{
 		ctx: context.Background(),
 		cfg: &config{
@@ -57,8 +57,8 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 			stateNotifier: chainService.StateNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		chainStarted:  abool.New(),
-		genesisWaiter: gs,
+		chainStarted: abool.New(),
+		clockWaiter:  gs,
 	}
 
 	topic := "/eth2/%x/beacon_block"
@@ -66,7 +66,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	go r.waitForChainStart()
 	time.Sleep(100 * time.Millisecond)
 
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
@@ -87,7 +87,7 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 	r := Service{
 		ctx: context.Background(),
 		cfg: &config{
@@ -98,11 +98,11 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		},
 		chainStarted:        abool.New(),
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
-		genesisWaiter:       gs,
+		clockWaiter:         gs,
 	}
 
 	go r.registerHandlers()
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 	r.waitForChainStart()
 
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
@@ -116,7 +116,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 	r := Service{
 		ctx: ctx,
 		cfg: &config{
@@ -127,9 +127,9 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 			blockNotifier: chainService.BlockNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		chainStarted:  abool.New(),
-		subHandler:    newSubTopicHandler(),
-		genesisWaiter: gs,
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+		clockWaiter:  gs,
 	}
 	r.initCaches()
 
@@ -138,7 +138,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		r.registerHandlers()
 		syncCompleteCh <- true
 	}()
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 	r.waitForChainStart()
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 
@@ -190,7 +190,7 @@ func TestSyncService_StopCleanly(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 	r := Service{
 		ctx:    ctx,
 		cancel: cancel,
@@ -200,13 +200,13 @@ func TestSyncService_StopCleanly(t *testing.T) {
 			stateNotifier: chainService.StateNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		chainStarted:  abool.New(),
-		subHandler:    newSubTopicHandler(),
-		genesisWaiter: gs,
+		chainStarted: abool.New(),
+		subHandler:   newSubTopicHandler(),
+		clockWaiter:  gs,
 	}
 
 	go r.registerHandlers()
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 	r.waitForChainStart()
 
 	var err error

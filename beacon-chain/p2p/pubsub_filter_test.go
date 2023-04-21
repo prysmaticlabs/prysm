@@ -335,15 +335,15 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	gs := startup.NewGenesisSynchronizer()
-	s, err := NewService(ctx, &Config{GenesisWaiter: gs})
+	cs := startup.NewClockSynchronizer()
+	s, err := NewService(ctx, &Config{ClockWaiter: cs})
 	require.NoError(t, err)
 
 	require.Equal(t, false, s.isInitialized())
 
 	go s.awaitStateInitialized()
 
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(prysmTime.Now(), bytesutil.PadTo([]byte("genesis"), 32))))
+	require.NoError(t, cs.SetClock(startup.NewClock(prysmTime.Now(), bytesutil.PadTo([]byte("genesis"), 32))))
 
 	time.Sleep(50 * time.Millisecond)
 

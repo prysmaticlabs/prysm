@@ -382,12 +382,12 @@ func (s *Service) awaitStateInitialized() {
 	if s.isInitialized() {
 		return
 	}
-	genesis, err := s.cfg.GenesisWaiter.WaitForGenesis(s.ctx)
+	clock, err := s.cfg.ClockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Fatal("failed to receive initial genesis data")
 	}
-	s.genesisTime = genesis.Time()
-	s.genesisValidatorsRoot = genesis.ValidatorRoot()
+	s.genesisTime = clock.GenesisTime()
+	s.genesisValidatorsRoot = clock.GenesisValidatorsRoot()
 	_, err = s.currentForkDigest() // initialize fork digest cache
 	if err != nil {
 		log.WithError(err).Error("Could not initialize fork digest")

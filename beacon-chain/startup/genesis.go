@@ -7,78 +7,58 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// Clock abstracts important time-related concerns in the beacon chain:
-// - provides a time.Now() construct that can be overridden in tests
-// - synchronization point for code that needs to know the genesis time
-// - CurrentSlot: convenience conversion for current time -> slot
-//   - support backwards compatibility with the TimeFetcher interface
-type Clock interface {
-	CurrentSlot() types.Slot
-	Now() time.Time
-}
-
-// Nower is a function that can return the current time. This will be time.Now by default, but can be overridden for tests.
+// Nower is a function that can return the current time.
+// In Clock, Now() will use time.Now by default, but a Nower can be set using WithNower in NewClock
+// to customize the return value for Now() in tests.
 type Nower func() time.Time
 
-// Genesis represents the genesis time and validator root.
-// Genesis also provides a relative concept of chain time via the Clock interface.
-type Genesis struct {
+// Clock abstracts important time-related concerns in the beacon chain:
+//   - provides a time.Now() construct that can be overridden in tests
+//   - GenesisTime() to know the genesis time or use genesis time determination as a syncronization point.
+//   - CurrentSlot: convenience conversion for current time -> slot
+//     (support backwards compatibility with the TimeFetcher interface)
+//   - GenesisValidatorsRoot: is determined at the same point as genesis time and is needed by some of the same code,
+//     so it is also bundled for convenience.
+type Clock struct {
 	t   time.Time
 	vr  []byte
 	now Nower
 }
 
-func (g *Genesis) Time() time.Time {
+// GenesisTime returns the genesis timestamp.
+func (g *Clock) GenesisTime() time.Time {
 	return g.t
 }
 
-func (g *Genesis) ValidatorRoot() []byte {
+// GenesisValidatorsRoot returns the genesis state validator root
+func (g *Clock) GenesisValidatorsRoot() []byte {
 	return g.vr
 }
 
-// Clock returns an instance of the Clock interface, using the genesis time used to construct the Genesis value.
-func (g *Genesis) Clock() Clock {
-	now := g.now
-	if now == nil {
-		now = time.Now
-	}
-	return &clock{
-		genesis: g.t,
-		now:     now,
-	}
-}
-
-// clock is a type that fulfills the TimeFetcher interface. This can be used in a number of places where
-// blockchain.ChainInfoFetcher has historically been used.
-type clock struct {
-	genesis time.Time
-	now     Nower
-}
-
-// CurrentSlot returns the current slot relative to the time.Time value clock embeds.
-func (gt clock) CurrentSlot() types.Slot {
-	return slots.Duration(gt.genesis, gt.now())
+// CurrentSlot returns the current slot relative to the time.Time value that Clock embeds.
+func (g *Clock) CurrentSlot() types.Slot {
+	return slots.Duration(g.t, g.now())
 }
 
 // Now provides a value for time.Now() that can be overridden in tests.
-func (gt clock) Now() time.Time {
-	return gt.now()
+func (g *Clock) Now() time.Time {
+	return g.now()
 }
 
 // ClockOpt is a functional option to change the behavior of a clock value made by NewClock.
 // It is primarily intended as a way to inject an alternate time.Now() callback (WithNow) for testing.
-type GenesisOpt func(*Genesis)
+type ClockOpt func(*Clock)
 
 // WithNower allows tests in particular to inject an alternate implementation of time.Now (vs using system time)
-func WithNower(n Nower) GenesisOpt {
-	return func(g *Genesis) {
+func WithNower(n Nower) ClockOpt {
+	return func(g *Clock) {
 		g.now = n
 	}
 }
 
-// NewGenesis constructs a genesis value, providing the ability to override the
-func NewGenesis(t time.Time, vr []byte, opts ...GenesisOpt) *Genesis {
-	g := &Genesis{
+// NewClock constructs a genesis value, providing the ability to override the
+func NewClock(t time.Time, vr []byte, opts ...ClockOpt) *Clock {
+	g := &Clock{
 		t:  t,
 		vr: vr,
 	}

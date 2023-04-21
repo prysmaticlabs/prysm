@@ -100,11 +100,11 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 
-	gs := startup.NewGenesisSynchronizer()
+	cs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		TCPPort:       2000,
-		UDPPort:       2000,
-		GenesisWaiter: gs,
+		TCPPort:     2000,
+		UDPPort:     2000,
+		ClockWaiter: cs,
 	}
 	s, err := NewService(context.Background(), cfg)
 	require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 		s.Start()
 		<-exitRoutine
 	}()
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 	time.Sleep(time.Second * 2)
 	assert.Equal(t, true, s.started, "Expected service to be started")
 	s.Start()
@@ -144,13 +144,13 @@ func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 func TestService_Start_NoDiscoverFlag(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 
-	gs := startup.NewGenesisSynchronizer()
+	cs := startup.NewClockSynchronizer()
 	cfg := &Config{
 		TCPPort:       2000,
 		UDPPort:       2000,
 		StateNotifier: &mock.MockStateNotifier{},
 		NoDiscovery:   true, // <-- no s.dv5Listener is created
-		GenesisWaiter: gs,
+		ClockWaiter:   cs,
 	}
 	s, err := NewService(context.Background(), cfg)
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestService_Start_NoDiscoverFlag(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 
 	time.Sleep(time.Second * 2)
 
@@ -209,12 +209,12 @@ func TestListenForNewNodes(t *testing.T) {
 	var listeners []*discover.UDPv5
 	var hosts []host.Host
 	// setup other nodes.
-	gs := startup.NewGenesisSynchronizer()
+	cs := startup.NewClockSynchronizer()
 	cfg = &Config{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
-		GenesisWaiter:       gs,
+		ClockWaiter:         cs,
 	}
 	for i := 1; i <= 5; i++ {
 		h, pkey, ipAddr := createHost(t, port+i)
@@ -258,7 +258,7 @@ func TestListenForNewNodes(t *testing.T) {
 	}()
 	time.Sleep(1 * time.Second)
 
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(genesisTime, genesisValidatorsRoot)))
+	require.NoError(t, cs.SetClock(startup.NewClock(genesisTime, genesisValidatorsRoot)))
 
 	time.Sleep(4 * time.Second)
 	assert.Equal(t, 5, len(s.host.Network().Peers()), "Not all peers added to peerstore")
@@ -301,8 +301,8 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	gs := startup.NewGenesisSynchronizer()
-	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}, GenesisWaiter: gs})
+	gs := startup.NewClockSynchronizer()
+	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}, ClockWaiter: gs})
 	require.NoError(t, err)
 
 	go s.awaitStateInitialized()
@@ -333,10 +333,10 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 
 // initializeStateWithForkDigest sets up the state feed initialized event and returns the fork
 // digest associated with that genesis event.
-func initializeStateWithForkDigest(ctx context.Context, t *testing.T, gs startup.GenesisSetter) [4]byte {
+func initializeStateWithForkDigest(ctx context.Context, t *testing.T, gs startup.ClockSetter) [4]byte {
 	gt := prysmTime.Now()
 	gvr := bytesutil.PadTo([]byte("genesis validators root"), 32)
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(gt, gvr)))
+	require.NoError(t, gs.SetClock(startup.NewClock(gt, gvr)))
 
 	fd, err := forks.CreateForkDigest(gt, gvr)
 	require.NoError(t, err)

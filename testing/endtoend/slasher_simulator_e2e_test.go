@@ -88,7 +88,7 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	gen := mockstategen.NewMockService()
 	gen.AddStateForRoot(beaconState, [32]byte{})
 
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 	sim, err := slashersimulator.New(ctx, &slashersimulator.ServiceConfig{
 		Params:                      simulatorParams,
 		Database:                    slasherDB,
@@ -99,8 +99,8 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 		PrivateKeysByValidatorIndex: privKeys,
 		SlashingsPool:               &mockslashings.PoolMock{},
 		SyncChecker:                 mockSyncChecker{},
-		GenesisWaiter:               gs,
-		GenesisSetter:               gs,
+		ClockWaiter:                 gs,
+		ClockSetter:                 gs,
 	})
 	require.NoError(t, err)
 	sim.Start()

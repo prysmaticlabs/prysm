@@ -41,7 +41,7 @@ func TestService_StartStop_ChainInitialized(t *testing.T) {
 		State: beaconState,
 		Slot:  &currentSlot,
 	}
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 	srv, err := New(context.Background(), &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
 		BeaconBlockHeadersFeed:  new(event.Feed),
@@ -49,12 +49,12 @@ func TestService_StartStop_ChainInitialized(t *testing.T) {
 		Database:                slasherDB,
 		HeadStateFetcher:        mockChain,
 		SyncChecker:             &mockSync.Sync{IsSyncing: false},
-		GenesisWaiter:           gs,
+		ClockWaiter:             gs,
 	})
 	require.NoError(t, err)
 	go srv.Start()
 	time.Sleep(time.Millisecond * 100)
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 	time.Sleep(time.Millisecond * 100)
 	srv.attsSlotTicker = &slots.SlotTicker{}
 	srv.blocksSlotTicker = &slots.SlotTicker{}

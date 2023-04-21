@@ -195,7 +195,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
-		GenesisWaiter: startup.NewGenesisSynchronizer(),
+		ClockWaiter:   startup.NewClockSynchronizer(),
 	}
 
 	exitRoutine := make(chan bool)
@@ -245,7 +245,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	// Set head state to nil
 	chainService := &mockChain.ChainService{State: nil}
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockExecution.Chain{
@@ -253,7 +253,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
-		GenesisWaiter: gs,
+		ClockWaiter:   gs,
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -268,7 +268,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	}()
 	// Simulate a late state initialization event, so that
 	// method is able to handle race condition here.
-	//require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Unix(0, 0), genesisValidatorsRoot[:])))
+	//require.NoError(t, gs.SetClock(startup.NewClock(time.Unix(0, 0), genesisValidatorsRoot[:])))
 	util.WaitTimeout(wg, time.Second)
 }
 
@@ -277,7 +277,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 	chainService := &mockChain.ChainService{}
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 
 	Server := &Server{
 		Ctx: context.Background(),
@@ -286,7 +286,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
-		GenesisWaiter: gs,
+		ClockWaiter:   gs,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -306,7 +306,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Unix(0, 0), genesisValidatorsRoot[:])))
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Unix(0, 0), genesisValidatorsRoot[:])))
 
 	exitRoutine <- true
 	require.LogsContain(t, hook, "Sending genesis time")

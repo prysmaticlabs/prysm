@@ -86,13 +86,13 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// Make one service on port 4001.
 	port = 4001
-	gs := startup.NewGenesisSynchronizer()
+	gs := startup.NewClockSynchronizer()
 	cfg := &Config{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
 		UDPPort:             uint(port),
-		GenesisWaiter:       gs,
+		ClockWaiter:         gs,
 	}
 	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	}()
 	time.Sleep(50 * time.Millisecond)
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(6 * discoveryWaitTime)

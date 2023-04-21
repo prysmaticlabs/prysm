@@ -168,10 +168,10 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
-	gs := startup.NewGenesisSynchronizer()
+	cs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		MaxPeers:      30,
-		GenesisWaiter: gs,
+		MaxPeers:    30,
+		ClockWaiter: cs,
 	}
 	port := 6000
 	var staticPeers []string
@@ -205,7 +205,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		<-exitRoutine
 	}()
 	time.Sleep(50 * time.Millisecond)
-	require.NoError(t, gs.SetGenesis(startup.NewGenesis(time.Now(), make([]byte, 32))))
+	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
 	time.Sleep(4 * time.Second)
 	ps := s.host.Network().Peers()
 	assert.Equal(t, 5, len(ps), "Not all peers added to peerstore")

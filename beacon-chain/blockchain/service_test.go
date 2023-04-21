@@ -100,7 +100,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-		WithGenesisSetter(startup.NewGenesisSynchronizer()),
+		WithClockSetter(startup.NewClockSynchronizer()),
 	}
 
 	chainService, err := NewService(ctx, opts...)
@@ -402,8 +402,8 @@ func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
-	mgs := &MockGenesisSetter{}
-	service.genesisSetter = mgs
+	mgs := &MockClockSetter{}
+	service.clockSetter = mgs
 	gt := time.Now()
 	service.onExecutionChainStart(context.Background(), gt)
 	gs, err := beaconDB.GenesisState(ctx)
@@ -412,8 +412,8 @@ func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	require.Equal(t, 32, len(gs.GenesisValidatorsRoot()))
 	var zero [32]byte
 	require.DeepNotEqual(t, gs.GenesisValidatorsRoot(), zero[:])
-	require.Equal(t, gt, mgs.G.Time())
-	require.DeepEqual(t, gs.GenesisValidatorsRoot(), mgs.G.ValidatorRoot())
+	require.Equal(t, gt, mgs.G.GenesisTime())
+	require.DeepEqual(t, gs.GenesisValidatorsRoot(), mgs.G.GenesisValidatorsRoot())
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
@@ -497,18 +497,18 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 	require.Equal(t, true, op)
 }
 
-// MockGenesisSetter satisfies the GenesisSetter interface for testing the conditions where blockchain.Service should
+// MockClockSetter satisfies the ClockSetter interface for testing the conditions where blockchain.Service should
 // call SetGenesis.
-type MockGenesisSetter struct {
-	G   *startup.Genesis
+type MockClockSetter struct {
+	G   *startup.Clock
 	Err error
 }
 
-var _ startup.GenesisSetter = &MockGenesisSetter{}
+var _ startup.ClockSetter = &MockClockSetter{}
 
-// SetGenesis satisfies the GenesisSetter interface.
+// SetGenesis satisfies the ClockSetter interface.
 // The value is written to an exported field 'G' so that it can be accessed in tests.
-func (s *MockGenesisSetter) SetGenesis(g *startup.Genesis) error {
+func (s *MockClockSetter) SetClock(g *startup.Clock) error {
 	s.G = g
 	return s.Err
 }

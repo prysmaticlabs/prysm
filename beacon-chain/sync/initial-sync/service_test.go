@@ -36,7 +36,7 @@ func TestService_InitStartStop(t *testing.T) {
 	tests := []struct {
 		name         string
 		assert       func()
-		setGenesis   func() *startup.Genesis
+		setGenesis   func() *startup.Clock
 		chainService func() *mock.ChainService
 	}{
 		{
@@ -61,8 +61,8 @@ func TestService_InitStartStop(t *testing.T) {
 					ValidatorsRoot: [32]byte{},
 				}
 			},
-			setGenesis: func() *startup.Genesis {
-				return startup.NewGenesis(time.Unix(4113849600, 0), make([]byte, 32))
+			setGenesis: func() *startup.Clock {
+				return startup.NewClock(time.Unix(4113849600, 0), make([]byte, 32))
 			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Genesis time has not arrived - not syncing")
@@ -84,8 +84,8 @@ func TestService_InitStartStop(t *testing.T) {
 					ValidatorsRoot: [32]byte{},
 				}
 			},
-			setGenesis: func() *startup.Genesis {
-				return startup.NewGenesis(time.Now().Add(-5*time.Minute), make([]byte, 32))
+			setGenesis: func() *startup.Clock {
+				return startup.NewClock(time.Now().Add(-5*time.Minute), make([]byte, 32))
 			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Chain started within the last epoch - not syncing")
@@ -110,9 +110,9 @@ func TestService_InitStartStop(t *testing.T) {
 					ValidatorsRoot: [32]byte{},
 				}
 			},
-			setGenesis: func() *startup.Genesis {
+			setGenesis: func() *startup.Clock {
 				futureSlot := primitives.Slot(27354)
-				return startup.NewGenesis(makeGenesisTime(futureSlot), make([]byte, 32))
+				return startup.NewClock(makeGenesisTime(futureSlot), make([]byte, 32))
 			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Starting initial chain sync...")
@@ -140,17 +140,17 @@ func TestService_InitStartStop(t *testing.T) {
 				mc = tt.chainService()
 			}
 			// Initialize feed
-			gs := startup.NewGenesisSynchronizer()
+			gs := startup.NewClockSynchronizer()
 			s := NewService(ctx, &Config{
 				P2P:           p,
 				Chain:         mc,
-				GenesisWaiter: gs,
+				ClockWaiter:   gs,
 				StateNotifier: &mock.MockStateNotifier{},
 			})
 			time.Sleep(500 * time.Millisecond)
 			assert.NotNil(t, s)
 			if tt.setGenesis != nil {
-				require.NoError(t, gs.SetGenesis(tt.setGenesis()))
+				require.NoError(t, gs.SetClock(tt.setGenesis()))
 			}
 
 			wg := &sync.WaitGroup{}
@@ -177,11 +177,11 @@ func TestService_InitStartStop(t *testing.T) {
 
 func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
-	newService := func(ctx context.Context, mc *mock.ChainService) (*Service, *startup.GenesisSynchronizer) {
-		gs := startup.NewGenesisSynchronizer()
+	newService := func(ctx context.Context, mc *mock.ChainService) (*Service, *startup.ClockSynchronizer) {
+		cs := startup.NewClockSynchronizer()
 		ctx, cancel := context.WithCancel(ctx)
 		s := &Service{
-			cfg:          &Config{Chain: mc, StateNotifier: mc.StateNotifier(), GenesisWaiter: gs},
+			cfg:          &Config{Chain: mc, StateNotifier: mc.StateNotifier(), ClockWaiter: cs},
 			ctx:          ctx,
 			cancel:       cancel,
 			synced:       abool.New(),
@@ -189,7 +189,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 			genesisChan:  make(chan time.Time),
 		}
-		return s, gs
+		return s, cs
 	}
 
 	t.Run("no state and context close", func(t *testing.T) {
@@ -238,7 +238,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		rg := func() time.Time { return gt.Add(time.Second * 12) }
 		go func() {
 			time.AfterFunc(200*time.Millisecond, func() {
-				require.NoError(t, gs.SetGenesis(startup.NewGenesis(expectedGenesisTime, make([]byte, 32), startup.WithNower(rg))))
+				require.NoError(t, gs.SetClock(startup.NewClock(expectedGenesisTime, make([]byte, 32), startup.WithNower(rg))))
 			})
 		}()
 
@@ -269,7 +269,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			time.AfterFunc(500*time.Millisecond, func() {
-				require.NoError(t, gs.SetGenesis(startup.NewGenesis(expectedGenesisTime, make([]byte, 32))))
+				require.NoError(t, gs.SetClock(startup.NewClock(expectedGenesisTime, make([]byte, 32))))
 			})
 			s.Start()
 			wg.Done()

@@ -40,7 +40,7 @@ type Config struct {
 	Chain         blockchainService
 	StateNotifier statefeed.Notifier
 	BlockNotifier blockfeed.Notifier
-	GenesisWaiter startup.GenesisWaiter
+	ClockWaiter   startup.ClockWaiter
 }
 
 // Service service.
@@ -74,26 +74,26 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 // Start the initial sync service.
 func (s *Service) Start() {
 	log.Info("Waiting for state to be initialized")
-	genesis, err := s.cfg.GenesisWaiter.WaitForGenesis(s.ctx)
+	clock, err := s.cfg.ClockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("initial-sync failed to receive startup event")
 		return
 	}
 	log.Info("Received state initialized event")
 
-	gt := genesis.Time()
+	gt := clock.GenesisTime()
 	if gt.IsZero() {
 		log.Debug("Exiting Initial Sync Service")
 		return
 	}
 	if gt.After(prysmTime.Now()) {
 		s.markSynced(gt)
-		log.WithField("genesisTime", genesis).Info("Genesis time has not arrived - not syncing")
+		log.WithField("genesisTime", gt).Info("Genesis time has not arrived - not syncing")
 		return
 	}
-	currentSlot := genesis.Clock().CurrentSlot()
+	currentSlot := clock.CurrentSlot()
 	if slots.ToEpoch(currentSlot) == 0 {
-		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
+		log.WithField("genesisTime", gt).Info("Chain started within the last epoch - not syncing")
 		s.markSynced(gt)
 		return
 	}

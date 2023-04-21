@@ -73,7 +73,7 @@ type Server struct {
 	ExecutionEngineCaller  execution.EngineCaller
 	BlockBuilder           builder.BlockBuilder
 	BLSChangesPool         blstoexec.PoolManager
-	GenesisWaiter          startup.GenesisWaiter
+	ClockWaiter            startup.ClockWaiter
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -170,16 +170,16 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		return stream.Send(res)
 	}
 
-	genesis, err := vs.GenesisWaiter.WaitForGenesis(vs.Ctx)
+	clock, err := vs.ClockWaiter.WaitForClock(vs.Ctx)
 	if err != nil {
 		return status.Error(codes.Canceled, "Context canceled")
 	}
-	log.WithField("starttime", genesis.Time()).Debug("Received chain started event")
+	log.WithField("starttime", clock.GenesisTime()).Debug("Received chain started event")
 	log.Debug("Sending genesis time notification to connected validator clients")
 	res := &ethpb.ChainStartResponse{
 		Started:               true,
-		GenesisTime:           uint64(genesis.Time().Unix()),
-		GenesisValidatorsRoot: genesis.ValidatorRoot(),
+		GenesisTime:           uint64(clock.GenesisTime().Unix()),
+		GenesisValidatorsRoot: clock.GenesisValidatorsRoot(),
 	}
 	return stream.Send(res)
 }

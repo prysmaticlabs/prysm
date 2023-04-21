@@ -6,31 +6,31 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ErrGenesisSet = errors.New("refusing to change genesis after it is set")
+var ErrClockSet = errors.New("refusing to change clock after it is set")
 
-type GenesisSynchronizer struct {
+type ClockSynchronizer struct {
 	ready chan struct{}
-	g     *Genesis
+	g     *Clock
 }
 
-type GenesisWaiter interface {
-	WaitForGenesis(context.Context) (*Genesis, error)
+type ClockWaiter interface {
+	WaitForClock(context.Context) (*Clock, error)
 }
 
-type GenesisSetter interface {
-	SetGenesis(g *Genesis) error
+type ClockSetter interface {
+	SetClock(g *Clock) error
 }
 
-func (w *GenesisSynchronizer) SetGenesis(g *Genesis) error {
+func (w *ClockSynchronizer) SetClock(g *Clock) error {
 	if w.g != nil {
-		return errors.Wrapf(ErrGenesisSet, "when SetGenesis called, Genesis already set to time=%d", w.g.Time().Unix())
+		return errors.Wrapf(ErrClockSet, "when SetClock called, Clock already set to time=%d", w.g.GenesisTime().Unix())
 	}
 	w.g = g
 	close(w.ready)
 	return nil
 }
 
-func (w *GenesisSynchronizer) WaitForGenesis(ctx context.Context) (*Genesis, error) {
+func (w *ClockSynchronizer) WaitForClock(ctx context.Context) (*Clock, error) {
 	select {
 	case <-w.ready:
 		return w.g, nil
@@ -39,8 +39,8 @@ func (w *GenesisSynchronizer) WaitForGenesis(ctx context.Context) (*Genesis, err
 	}
 }
 
-func NewGenesisSynchronizer() *GenesisSynchronizer {
-	return &GenesisSynchronizer{
+func NewClockSynchronizer() *ClockSynchronizer {
+	return &ClockSynchronizer{
 		ready: make(chan struct{}),
 	}
 }

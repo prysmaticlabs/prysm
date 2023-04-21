@@ -35,8 +35,8 @@ type ServiceConfig struct {
 	SlashingsPool               slashings.PoolManager
 	PrivateKeysByValidatorIndex map[primitives.ValidatorIndex]bls.SecretKey
 	SyncChecker                 sync.Checker
-	GenesisWaiter               startup.GenesisWaiter
-	GenesisSetter               startup.GenesisSetter
+	ClockWaiter                 startup.ClockWaiter
+	ClockSetter                 startup.ClockSetter
 }
 
 // Parameters for a slasher simulator.
@@ -96,8 +96,8 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 		StateGen:                srvConfig.StateGen,
 		SlashingPoolInserter:    srvConfig.SlashingsPool,
 		SyncChecker:             srvConfig.SyncChecker,
-		GenesisWaiter:           srvConfig.GenesisWaiter,
-		GenesisSetter:           srvConfig.GenesisSetter,
+		ClockWaiter:             srvConfig.ClockWaiter,
+		ClockSetter:             srvConfig.ClockSetter,
 	})
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (s *Simulator) Start() {
 	// for slasher to pick up a genesis time.
 	time.Sleep(time.Second)
 	s.genesisTime = time.Now()
-	if err := s.srvConfig.GenesisSetter.SetGenesis(startup.NewGenesis(s.genesisTime, make([]byte, 32))); err != nil {
+	if err := s.srvConfig.ClockSetter.SetClock(startup.NewClock(s.genesisTime, make([]byte, 32))); err != nil {
 		panic(err)
 	}
 
