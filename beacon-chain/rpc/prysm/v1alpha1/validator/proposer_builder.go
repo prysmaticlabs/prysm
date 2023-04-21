@@ -37,6 +37,9 @@ func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx p
 
 // validatorRegistered returns true if validator with index `id` was previously registered in the database.
 func (vs *Server) validatorRegistered(ctx context.Context, id primitives.ValidatorIndex) (bool, error) {
+	if vs.BlockBuilder == nil {
+		return false, nil
+	}
 	_, err := vs.BlockBuilder.RegistrationByValidatorID(ctx, id)
 	switch {
 	case errors.Is(err, kv.ErrNotFoundFeeRecipient), errors.Is(err, cache.ErrNotFoundRegistration):

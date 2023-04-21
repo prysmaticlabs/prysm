@@ -555,9 +555,7 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.Val
 			return err
 		}
 		if timeStampExpired(reg.Timestamp) {
-			if err := bkt.Delete(bytesutil.Uint64ToBytesBigEndian(uint64(id))); err != nil {
-				return err
-			}
+			// don't delete in bucket, db will eventually be removed.
 			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
 		}
 		return nil

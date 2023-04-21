@@ -6,6 +6,7 @@ import (
 	"time"
 
 	blockchainTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
@@ -71,22 +72,28 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 }
 
 func TestServer_validatorRegistered(t *testing.T) {
-	proposerServer := &Server{}
+	b, err := builder.NewService(context.Background())
+	require.NoError(t, err)
+	proposerServer := &Server{
+		BlockBuilder: b,
+	}
 	ctx := context.Background()
 
 	reg, err := proposerServer.validatorRegistered(ctx, 0)
 	require.ErrorContains(t, "nil beacon db", err)
 	require.Equal(t, false, reg)
-
-	proposerServer.BeaconDB = dbTest.SetupDB(t)
+	db := dbTest.SetupDB(t)
+	realBuilder, err := builder.NewService(context.Background(), builder.WithDatabase(db))
+	require.NoError(t, err)
+	proposerServer.BlockBuilder = realBuilder
 	reg, err = proposerServer.validatorRegistered(ctx, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 
 	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
-	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0, 1},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}, {FeeRecipient: f, Pubkey: p}}))
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0, 1},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}, {FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}}))
 
 	reg, err = proposerServer.validatorRegistered(ctx, 0)
 	require.NoError(t, err)
