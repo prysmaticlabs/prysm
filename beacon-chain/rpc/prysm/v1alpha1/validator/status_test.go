@@ -71,13 +71,10 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 func TestValidatorStatus_Deposited(t *testing.T) {
 	ctx := context.Background()
 
-	pubKey1 := pubKey(1)
-	depData := &ethpb.Deposit_Data{
-		Amount:                params.BeaconConfig().MaxEffectiveBalance,
-		PublicKey:             pubKey1,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
-	}
+	deps, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	pubKey1 := keys[0].PublicKey().Marshal()
+	depData := deps[0].Data
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
@@ -95,14 +92,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
-		Validators: []*ethpb.Validator{
-			{
-				PublicKey:                  pubKey1,
-				ActivationEligibilityEpoch: 1,
-			},
-		},
-	})
+	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	vs := &Server{
 		DepositFetcher: depositCache,
