@@ -482,7 +482,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlock")
 	defer span.End()
 
-	if !vs.V1Alpha1Server.BlockBuilder.Configured() {
+	if !vs.BlockBuilder.Configured() {
 		return nil, status.Error(codes.Internal, "Block builder not configured")
 	}
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
@@ -671,7 +671,7 @@ func (vs *Server) PrepareBeaconProposer(
 	var validatorIndices []primitives.ValidatorIndex
 	newRecipients := make([]*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
-		f, err := vs.V1Alpha1Server.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
+		f, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
 		switch {
 		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
 			newRecipients = append(newRecipients, r)
@@ -694,7 +694,7 @@ func (vs *Server) PrepareBeaconProposer(
 		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
 		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
 	}
-	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
 	}
 	log.WithFields(log.Fields{
@@ -708,7 +708,7 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistration")
 	defer span.End()
 
-	if vs.V1Alpha1Server.BlockBuilder == nil || !vs.V1Alpha1Server.BlockBuilder.Configured() {
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not register block builder: %v", builder.ErrNoBuilder)
 	}
 	var registrations []*ethpbalpha.SignedValidatorRegistrationV1
@@ -728,7 +728,7 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "Validator registration request is empty")
 	}
 
-	if err := vs.V1Alpha1Server.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
+	if err := vs.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
 	}
 
@@ -905,7 +905,11 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator status: %v", err)
 		}
 		pubkey := val.PublicKey()
-		vs.V1Alpha1Server.AssignValidatorToSubnet(pubkey[:], v1ValidatorStatusToV1Alpha1(valStatus))
+		v1alpha1Req := &ethpbalpha.AssignValidatorToSubnetRequest{PublicKey: pubkey[:], Status: v1ValidatorStatusToV1Alpha1(valStatus)}
+		_, err = vs.V1Alpha1Server.AssignValidatorToSubnet(ctx, v1alpha1Req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not assign validator to subnet")
+		}
 	}
 
 	return &emptypb.Empty{}, nil
@@ -1001,7 +1005,13 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	if msgs == nil {
 		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
 	}
-	aggregatedSig, bits, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubcommitteeIndex, req.BeaconBlockRoot)
+	v1alpha1Req := &ethpbalpha.AggregatedSigAndAggregationBitsRequest{
+		Msgs:      msgs,
+		Slot:      req.Slot,
+		SubnetId:  req.SubcommitteeIndex,
+		BlockRoot: req.BeaconBlockRoot,
+	}
+	v1alpha1Resp, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
 	}
@@ -1009,8 +1019,8 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 		Slot:              req.Slot,
 		BeaconBlockRoot:   req.BeaconBlockRoot,
 		SubcommitteeIndex: req.SubcommitteeIndex,
-		AggregationBits:   bits,
-		Signature:         aggregatedSig,
+		AggregationBits:   v1alpha1Resp.Bits,
+		Signature:         v1alpha1Resp.AggregatedSig,
 	}
 
 	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
