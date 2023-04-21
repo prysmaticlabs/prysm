@@ -40,7 +40,6 @@ type ServiceConfig struct {
 	HeadStateFetcher        blockchain.HeadFetcher
 	SyncChecker             sync.Checker
 	ClockWaiter             startup.ClockWaiter
-	ClockSetter             startup.ClockSetter
 }
 
 // SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.

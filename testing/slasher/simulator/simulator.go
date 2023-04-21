@@ -97,7 +97,6 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 		SlashingPoolInserter:    srvConfig.SlashingsPool,
 		SyncChecker:             srvConfig.SyncChecker,
 		ClockWaiter:             srvConfig.ClockWaiter,
-		ClockSetter:             srvConfig.ClockSetter,
 	})
 	if err != nil {
 		return nil, err
