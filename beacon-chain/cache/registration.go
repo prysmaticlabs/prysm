@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -56,6 +57,11 @@ func (regCache *RegistrationCache) UpdateIndexToRegisteredMap(m map[primitives.V
 	regCache.RLock()
 	defer regCache.RUnlock()
 	for key, value := range m {
-		regCache.indexToRegistration[key] = value
+		regCache.indexToRegistration[key] = &ethpb.ValidatorRegistrationV1{
+			Pubkey:       bytesutil.SafeCopyBytes(value.Pubkey),
+			FeeRecipient: bytesutil.SafeCopyBytes(value.FeeRecipient),
+			GasLimit:     value.GasLimit,
+			Timestamp:    value.Timestamp,
+		}
 	}
 }

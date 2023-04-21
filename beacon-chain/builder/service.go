@@ -142,6 +142,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		return ErrNoBuilder
 	}
 
+	// should be removed if db is removed
 	idxs := make([]primitives.ValidatorIndex, 0)
 	msgs := make([]*ethpb.ValidatorRegistrationV1, 0)
 
@@ -160,6 +161,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		idxs = append(idxs, nx)
 		msgs = append(msgs, r.Message)
 		valid = append(valid, r)
+		indexToRegistration[nx] = r.Message
 	}
 	if err := s.c.RegisterValidator(ctx, valid); err != nil {
 		return errors.Wrap(err, "could not register validator(s)")
