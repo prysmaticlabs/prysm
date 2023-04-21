@@ -14,7 +14,7 @@ type Nower func() time.Time
 
 // Clock abstracts important time-related concerns in the beacon chain:
 //   - provides a time.Now() construct that can be overridden in tests
-//   - GenesisTime() to know the genesis time or use genesis time determination as a syncronization point.
+//   - GenesisTime() to know the genesis time or use genesis time determination as a synchronization point.
 //   - CurrentSlot: convenience conversion for current time -> slot
 //     (support backwards compatibility with the TimeFetcher interface)
 //   - GenesisValidatorsRoot: is determined at the same point as genesis time and is needed by some of the same code,
