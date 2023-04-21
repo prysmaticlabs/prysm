@@ -101,6 +101,14 @@ func TestServer_validatorRegistered(t *testing.T) {
 	reg, err = proposerServer.validatorRegistered(ctx, 1)
 	require.NoError(t, err)
 	require.Equal(t, true, reg)
+
+	// add a case for an index with an expired timestamp
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{3},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: 2, Pubkey: p}}))
+	reg, err = proposerServer.validatorRegistered(ctx, 3)
+	require.NoError(t, err)
+	require.Equal(t, false, reg)
+
 }
 
 func TestServer_canUseBuilder(t *testing.T) {
@@ -112,9 +120,6 @@ func TestServer_canUseBuilder(t *testing.T) {
 	reg, err := proposerServer.canUseBuilder(context.Background(), 0, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
-	proposerServer.BlockBuilder = &testing2.MockBuilderService{
-		HasConfigured: true,
-	}
 
 	ctx := context.Background()
 
@@ -123,20 +128,21 @@ func TestServer_canUseBuilder(t *testing.T) {
 	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
+	db := dbTest.SetupDB(t)
 
-	reg, err = proposerServer.validatorRegistered(ctx, 0)
-	require.ErrorContains(t, "nil beacon db", err)
-	require.Equal(t, false, reg)
+	proposerServer.BlockBuilder = &testing2.MockBuilderService{
+		HasConfigured: true,
+		Cfg:           &testing2.Config{BeaconDB: db},
+	}
 
-	proposerServer.BeaconDB = dbTest.SetupDB(t)
 	reg, err = proposerServer.canUseBuilder(ctx, 1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 
 	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
-	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}}))
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}}))
 
 	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots-1, 0)
 	require.NoError(t, err)

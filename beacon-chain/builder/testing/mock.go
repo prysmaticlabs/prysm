@@ -70,9 +70,12 @@ func (s *MockBuilderService) GetHeader(ctx context.Context, slot primitives.Slot
 }
 
 // RegistrationByValidatorID returns either the values from the cache or db.
-func (s *MockBuilderService) RegistrationByValidatorID(_ context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
+func (s *MockBuilderService) RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
 	if s.RegistrationCache != nil {
 		return s.RegistrationCache.GetRegistrationByIndex(id)
+	}
+	if s.Cfg.BeaconDB != nil {
+		return s.Cfg.BeaconDB.RegistrationByValidatorID(ctx, id)
 	}
 	return nil, cache.ErrNotFoundRegistration
 }
