@@ -566,10 +566,7 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.Val
 
 func timeStampExpired(ts uint64) bool {
 	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
-	if time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix() {
-		return true
-	}
-	return false
+	return time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix()
 }
 
 // SaveRegistrationsByValidatorIDs saves the validator registrations for validator ids.

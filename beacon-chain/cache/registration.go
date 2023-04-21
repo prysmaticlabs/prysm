@@ -41,10 +41,7 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 
 func timeStampExpired(ts uint64) bool {
 	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
-	if time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix() {
-		return true
-	}
-	return false
+	return time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix()
 }
 
 // UpdateIndexToRegisteredMap adds or updates values in the cache based on the argument.
