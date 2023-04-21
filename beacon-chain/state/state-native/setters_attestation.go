@@ -44,7 +44,7 @@ func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestatio
 }
 
 // AppendCurrentEpochAttestations for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -74,7 +74,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 }
 
 // AppendPreviousEpochAttestations for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
