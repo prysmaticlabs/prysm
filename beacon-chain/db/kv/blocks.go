@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -567,10 +567,12 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.Val
 
 func timeStampExpired(ts uint64) bool {
 	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
-	if ts > math.MaxInt64 {
+	// safely convert unint64 to int64
+	t, err := strconv.ParseInt(fmt.Sprint(ts), 10, 64)
+	if err != nil {
 		return false
 	}
-	return time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix()
+	return time.Unix(t, 0).Add(expiryDuration).Unix() < time.Now().Unix()
 }
 
 // SaveRegistrationsByValidatorIDs saves the validator registrations for validator ids.

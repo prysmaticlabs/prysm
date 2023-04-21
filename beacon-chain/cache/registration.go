@@ -1,7 +1,8 @@
 package cache
 
 import (
-	"math"
+	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -42,10 +43,12 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 
 func timeStampExpired(ts uint64) bool {
 	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
-	if ts > math.MaxInt64 {
+	// safely convert unint64 to int64
+	t, err := strconv.ParseInt(fmt.Sprint(ts), 10, 64)
+	if err != nil {
 		return false
 	}
-	return time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix()
+	return time.Unix(t, 0).Add(expiryDuration).Unix() < time.Now().Unix()
 }
 
 // UpdateIndexToRegisteredMap adds or updates values in the cache based on the argument.
