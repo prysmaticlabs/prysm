@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -566,6 +567,9 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.Val
 
 func timeStampExpired(ts uint64) bool {
 	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
+	if ts > math.MaxInt64 {
+		return false
+	}
 	return time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix()
 }
 

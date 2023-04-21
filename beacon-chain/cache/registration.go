@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"math"
 	"sync"
 	"time"
 
@@ -41,6 +42,9 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 
 func timeStampExpired(ts uint64) bool {
 	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
+	if ts > math.MaxInt64 {
+		return false
+	}
 	return time.Unix(int64(ts), 0).Add(expiryDuration).Unix() < time.Now().Unix()
 }
 
