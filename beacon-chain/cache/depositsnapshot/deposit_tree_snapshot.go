@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	protodb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 var (
@@ -62,4 +63,37 @@ func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock exe
 	}
 	snapshot.depositRoot = root
 	return snapshot, nil
+}
+
+// ToProto converts the underlying trie into its corresponding
+// proto object
+func (ds *DepositTreeSnapshot) ToProto() *protodb.DepositSnapshot {
+	trie := &protodb.DepositSnapshot{
+		Finalized:      make([][]byte, len(ds.finalized)),
+		DepositRoot:    ds.depositRoot[:],
+		DepositCount:   ds.depositCount,
+		ExecutionHash:  ds.executionBlock.Hash[:],
+		ExecutionDepth: ds.executionBlock.Depth,
+	}
+	for i, _ := range ds.finalized {
+		trie.Finalized[i] = bytesutil.SafeCopyBytes(ds.finalized[i][:])
+	}
+	return trie
+}
+
+func DepositTreeFromSnapshotProto(snapshotProto *protodb.DepositSnapshot) (*DepositTree, error) {
+	finalized := make([][32]byte, len(snapshotProto.Finalized))
+	for i, _ := range snapshotProto.Finalized {
+		finalized[i] = bytesutil.ToBytes32(snapshotProto.Finalized[i])
+	}
+	snapshot := DepositTreeSnapshot{
+		finalized:    finalized,
+		depositRoot:  bytesutil.ToBytes32(snapshotProto.DepositRoot),
+		depositCount: snapshotProto.DepositCount,
+		executionBlock: executionBlock{
+			Hash:  bytesutil.ToBytes32(snapshotProto.ExecutionHash),
+			Depth: snapshotProto.ExecutionDepth,
+		},
+	}
+	return fromSnapshot(snapshot)
 }
