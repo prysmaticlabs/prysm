@@ -246,7 +246,6 @@ func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
 			return err
 		}
 		*e.Result.(*types.HeaderInfo) = types.HeaderInfo{Number: h.Number, Time: h.Time, Hash: h.Hash()}
-
 	}
 	return nil
 }

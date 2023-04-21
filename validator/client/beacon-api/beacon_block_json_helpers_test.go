@@ -508,7 +508,7 @@ func TestBeaconBlockJsonHelpers_JsonifySignedVoluntaryExits(t *testing.T) {
 		},
 	}
 
-	result := jsonifySignedVoluntaryExits(input)
+	result := JsonifySignedVoluntaryExits(input)
 	assert.DeepEqual(t, expectedResult, result)
 }
 

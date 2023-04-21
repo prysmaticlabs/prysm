@@ -108,13 +108,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 
 	// Verify that the parent block is in forkchoice
-	if !s.ForkChoicer().HasNode(b.ParentRoot()) {
+	if !s.cfg.ForkChoiceStore.HasNode(b.ParentRoot()) {
 		return ErrNotDescendantOfFinalized
 	}
 
 	// Save current justified and finalized epochs for future use.
-	currStoreJustifiedEpoch := s.ForkChoicer().JustifiedCheckpoint().Epoch
-	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch
+	currStoreJustifiedEpoch := s.cfg.ForkChoiceStore.JustifiedCheckpoint().Epoch
+	currStoreFinalizedEpoch := s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch
 	preStateFinalizedEpoch := preState.FinalizedCheckpoint().Epoch
 	preStateJustifiedEpoch := preState.CurrentJustifiedCheckpoint().Epoch
 
@@ -187,18 +187,18 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}()
 	}
 
-	justified := s.ForkChoicer().JustifiedCheckpoint()
+	justified := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	start := time.Now()
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
 	if blockRoot != headRoot {
-		receivedWeight, err := s.ForkChoicer().Weight(blockRoot)
+		receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
 		}
-		headWeight, err := s.ForkChoicer().Weight(headRoot)
+		headWeight, err := s.cfg.ForkChoiceStore.Weight(headRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", headRoot)).Warn("could not determine node weight")
 		}
@@ -252,7 +252,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 
 	// Save finalized check point to db and more.
 	postStateFinalizedEpoch := postState.FinalizedCheckpoint().Epoch
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	if finalized.Epoch > currStoreFinalizedEpoch || (finalized.Epoch == postStateFinalizedEpoch && finalized.Epoch > preStateFinalizedEpoch) {
 		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
 			return err
@@ -283,7 +283,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()
-
 	}
 	defer reportAttestationInclusion(b)
 	if err := s.handleEpochBoundary(ctx, postState); err != nil {
@@ -576,7 +575,7 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {
-			s.ForkChoicer().InsertSlashedIndex(ctx, primitives.ValidatorIndex(index))
+			s.cfg.ForkChoiceStore.InsertSlashedIndex(ctx, primitives.ValidatorIndex(index))
 		}
 	}
 }
@@ -671,12 +670,7 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 		for {
 			select {
 			case <-ticker.C():
-				s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-					Type: statefeed.MissedSlot,
-				})
-				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
-					log.WithError(err).Error("Could not fill missing payload ID")
-				}
+				s.lateBlockTasks(ctx)
 
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting routine")
@@ -686,34 +680,47 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 	}()
 }
 
-// fillMissingBlockPayloadId is called 4 seconds into the slot and calls FCU if we are proposing next slot
-// and the cache has been missed
-func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
-	s.ForkChoicer().RLock()
-	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
-	s.ForkChoicer().RUnlock()
-	if s.CurrentSlot() == highestReceivedSlot {
-		return nil
+// lateBlockTasks  is called 4 seconds into the slot and performs tasks
+// related to late blocks. It emits a MissedSlot state feed event.
+// It calls FCU and sets the right attributes if we are proposing next slot
+// it also updates the next slot cache to deal with skipped slots.
+func (s *Service) lateBlockTasks(ctx context.Context) {
+	if s.CurrentSlot() == s.HeadSlot() {
+		return
 	}
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.MissedSlot,
+	})
+
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-	if !has || id != [8]byte{} {
-		return nil
+	if (!has && !features.Get().PrepareAllPayloads) || id != [8]byte{} {
+		return
 	}
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
 		s.headLock.RUnlock()
-		return err
+		log.WithError(err).Debug("could not perform late block tasks: failed to retrieve head block")
+		return
 	}
-	headState := s.headState(ctx)
 	headRoot := s.headRoot()
+	headState := s.headState(ctx)
 	s.headLock.RUnlock()
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
 		headRoot:  headRoot,
 		headBlock: headBlock.Block(),
 	})
-	return err
+	if err != nil {
+		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
+	}
+	lastRoot, lastState := transition.LastCachedState()
+	if lastState == nil {
+		lastRoot, lastState = headRoot[:], headState
+	}
+	if err = transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
+		log.WithError(err).Debug("could not update next slot state cache")
+	}
 }

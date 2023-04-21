@@ -49,14 +49,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 
 	// process attestations and update head in forkchoice
-	vs.ForkFetcher.ForkChoicer().Lock()
-	vs.HeadUpdater.UpdateHead(ctx, vs.ForkFetcher.CurrentSlot())
-	headRoot := vs.ForkFetcher.ForkChoicer().CachedHeadRoot()
-	parentRoot := vs.ForkFetcher.ForkChoicer().GetProposerHead()
+	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
+	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	if parentRoot != headRoot {
 		blockchain.LateBlockAttemptedReorgCount.Inc()
 	}
-	vs.ForkFetcher.ForkChoicer().Unlock()
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
@@ -231,7 +229,6 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 			log.WithError(err).Error("An error occurred while retrieving validator index")
 			return nil, err
 		}
-
 	}
 	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
 	if err != nil {

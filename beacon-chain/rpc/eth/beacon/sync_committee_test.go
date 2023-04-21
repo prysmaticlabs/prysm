@@ -161,18 +161,20 @@ func TestListSyncCommittees(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
-	chainService := &mock.ChainService{}
+	stSlot := st.Slot()
+	chainService := &mock.ChainService{Slot: &stSlot}
 	s := &Server{
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
 		},
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: st,
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
+		ChainInfoFetcher:      chainService,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{StateId: stRoot[:]}
 	resp, err := s.ListSyncCommittees(ctx, req)
@@ -205,18 +207,20 @@ func TestListSyncCommittees(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &mock.ChainService{Optimistic: true}
+		stSlot := st.Slot()
+		chainService := &mock.ChainService{Optimistic: true, Slot: &stSlot}
 		s := &Server{
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
@@ -234,22 +238,25 @@ func TestListSyncCommittees(t *testing.T) {
 
 		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
 		require.NoError(t, err)
+		stSlot := st.Slot()
 		chainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			Slot: &stSlot,
 		}
 		s := &Server{
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
@@ -302,7 +309,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
 		},
-		StateFetcher: &futureSyncMockFetcher{
+		Stater: &futureSyncMockFetcher{
 			BeaconState: st,
 		},
 		HeadFetcher:           chainService,
@@ -310,7 +317,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
-	req := &ethpbv2.StateSyncCommitteesRequest{}
+	req := &ethpbv2.StateSyncCommitteesRequest{StateId: []byte("head")}
 	epoch := 2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	req.Epoch = &epoch
 	_, err := s.ListSyncCommittees(ctx, req)
