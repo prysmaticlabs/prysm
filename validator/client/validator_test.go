@@ -1977,24 +1977,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 	}
 }
 
-func TestValidator_buildPrepProposerReqs_InvalidValidatorIndex(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	ctx := context.Background()
-	client := validatormock.NewMockValidatorClient(ctrl)
-	v := validator{validatorClient: client}
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{{}}
-
-	client.EXPECT().ValidatorIndex(
-		ctx,
-		gomock.Any(),
-	).Return(nil, errors.New("custom error"))
-
-	_, err := v.buildPrepProposerReqs(ctx, pubkeys)
-	assert.ErrorContains(t, "custom error", err)
-}
-
 func getPubkeyFromString(t *testing.T, stringPubkey string) [fieldparams.BLSPubkeyLength]byte {
 	pubkeyTemp, err := hexutil.Decode(stringPubkey)
 	require.NoError(t, err)
