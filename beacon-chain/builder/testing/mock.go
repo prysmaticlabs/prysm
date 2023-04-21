@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -23,6 +24,7 @@ type MockBuilderService struct {
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
 	BidCapella            *ethpb.SignedBuilderBidCapella
+	RegistrationCache     *cache.RegistrationCache
 	ErrGetHeader          error
 	ErrRegisterValidator  error
 }
@@ -58,6 +60,14 @@ func (s *MockBuilderService) GetHeader(ctx context.Context, slot primitives.Slot
 		return nil, errors.Wrap(err, "could not wrap capella bid")
 	}
 	return w, s.ErrGetHeader
+}
+
+// RegistrationByValidatorID returns either the values from the cache or db.
+func (s *MockBuilderService) RegistrationByValidatorID(_ context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
+	if s.RegistrationCache != nil {
+		return s.RegistrationCache.GetRegistrationByIndex(id)
+	}
+	return nil, cache.ErrNotFoundRegistration
 }
 
 // RegisterValidator for mocking.
