@@ -333,10 +333,9 @@ func (vs *Server) validatorStatus(
 			if vs.DepositFetcher == nil {
 				log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit.")
 			} else {
-				// Check if there was a deposit deposit.
-				d, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+				// Check if there was a deposit.
+				_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 				if eth1BlockNumBigInt != nil {
-					resp.Status = depositStatus(d.Data.Amount)
 					resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 				}
 			}
