@@ -83,7 +83,7 @@ func readFirstChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetche
 	if code != 0 {
 		return nil, errors.New(errMsg)
 	}
-	rpcCtx, err := readContextFromStream(stream, chain)
+	rpcCtx, err := readContextFromStream(stream)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p
 		return nil, errors.New(errMsg)
 	}
 	// No-op for now with the rpc context.
-	rpcCtx, err := readContextFromStream(stream, chain)
+	rpcCtx, err := readContextFromStream(stream)
 	if err != nil {
 		return nil, err
 	}
