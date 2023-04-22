@@ -1,7 +1,6 @@
 package blocks_test
 
 import (
-	"math/big"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -105,11 +104,11 @@ func TestWrapExecutionPayloadCapella(t *testing.T) {
 			Amount:         77,
 		}},
 	}
-	payload, err := blocks.WrappedExecutionPayloadCapella(data, big.NewInt(10))
+	payload, err := blocks.WrappedExecutionPayloadCapella(data, 10)
 	require.NoError(t, err)
-	v, err := payload.Value()
+	v, err := payload.ValueInGwei()
 	require.NoError(t, err)
-	assert.DeepEqual(t, big.NewInt(10), v)
+	assert.Equal(t, uint64(10), v)
 
 	assert.DeepEqual(t, data, payload.Proto())
 }
@@ -132,12 +131,12 @@ func TestWrapExecutionPayloadHeaderCapella(t *testing.T) {
 		TransactionsRoot: []byte("transactionsroot"),
 		WithdrawalsRoot:  []byte("withdrawalsroot"),
 	}
-	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data, big.NewInt(10))
+	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data, 10)
 	require.NoError(t, err)
 
-	v, err := payload.Value()
+	v, err := payload.ValueInGwei()
 	require.NoError(t, err)
-	assert.DeepEqual(t, big.NewInt(10), v)
+	assert.Equal(t, uint64(10), v)
 
 	assert.DeepEqual(t, data, payload.Proto())
 
@@ -151,22 +150,22 @@ func TestWrapExecutionPayloadHeaderCapella(t *testing.T) {
 }
 
 func TestWrapExecutionPayloadCapella_IsNil(t *testing.T) {
-	_, err := blocks.WrappedExecutionPayloadCapella(nil, big.NewInt(0))
+	_, err := blocks.WrappedExecutionPayloadCapella(nil, 0)
 	require.Equal(t, blocks.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadCapella{GasUsed: 54}
-	payload, err := blocks.WrappedExecutionPayloadCapella(data, big.NewInt(0))
+	payload, err := blocks.WrappedExecutionPayloadCapella(data, 0)
 	require.NoError(t, err)
 
 	assert.Equal(t, false, payload.IsNil())
 }
 
 func TestWrapExecutionPayloadHeaderCapella_IsNil(t *testing.T) {
-	_, err := blocks.WrappedExecutionPayloadHeaderCapella(nil, big.NewInt(0))
+	_, err := blocks.WrappedExecutionPayloadHeaderCapella(nil, 0)
 	require.Equal(t, blocks.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadHeaderCapella{GasUsed: 54}
-	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data, big.NewInt(0))
+	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data, 0)
 	require.NoError(t, err)
 
 	assert.Equal(t, false, payload.IsNil())
@@ -301,7 +300,7 @@ func createWrappedPayloadCapella(t testing.TB) interfaces.ExecutionData {
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
 		Withdrawals:   make([]*enginev1.Withdrawal, 0),
-	}, big.NewInt(10))
+	}, 0)
 	require.NoError(t, err)
 	return payload
 }
@@ -323,7 +322,7 @@ func createWrappedPayloadHeaderCapella(t testing.TB) interfaces.ExecutionData {
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
-	}, big.NewInt(11))
+	}, 0)
 	require.NoError(t, err)
 	return payload
 }

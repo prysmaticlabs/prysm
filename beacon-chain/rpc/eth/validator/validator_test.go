@@ -1226,7 +1226,7 @@ func TestProduceBlockV2(t *testing.T) {
 			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
 			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
 			WithdrawalsRoot:  withdrawalsRoot[:],
-		}, big.NewInt(0))
+		}, 0)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
 
@@ -2782,7 +2782,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		fcs.SetGenesisTime(uint64(ti.Unix()))
 		mockChainService := &mockChain.ChainService{Slot: &chainSlot, Genesis: ti, State: beaconState, Root: parentRoot[:], ForkChoiceStore: fcs, Block: wfb}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller:  &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: big.NewInt(0)},
+			ExecutionEngineCaller:  &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: 0},
 			BeaconDB:               db,
 			ForkFetcher:            mockChainService,
 			ForkchoiceFetcher:      mockChainService,
@@ -2990,7 +2990,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
 			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
 			WithdrawalsRoot:  withdrawalsRoot[:],
-		}, big.NewInt(0))
+		}, 0)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
 
