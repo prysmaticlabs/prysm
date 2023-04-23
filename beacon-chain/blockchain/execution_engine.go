@@ -70,7 +70,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
+	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot, arg.headRoot[:])
 
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
@@ -251,8 +251,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
-func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot) (bool, payloadattribute.Attributer, primitives.ValidatorIndex) {
-	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
+func (s *Service) getPayloadAttribute(ctx context.Context, headState state.BeaconState, slot primitives.Slot, headRoot []byte) (bool, payloadattribute.Attributer, primitives.ValidatorIndex) {
+	emptyAttri := payloadattribute.EmptyWithVersion(headState.Version())
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
 	if !ok && !features.Get().PrepareAllPayloads { // There's no need to build attribute if there is no proposer for slot.
@@ -260,17 +260,16 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	}
 
 	// Get previous randao.
-	st = st.Copy()
-	if slot > st.Slot() {
-		headRoot := s.headRoot()
+	headState = headState.Copy()
+	if slot > headState.Slot() {
 		var err error
-		st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot[:], slot)
+		headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, slot)
 		if err != nil {
 			log.WithError(err).Error("Could not process slots to get payload attribute")
 			return false, emptyAttri, 0
 		}
 	}
-	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	prevRando, err := helpers.RandaoMix(headState, time.CurrentEpoch(headState))
 	if err != nil {
 		log.WithError(err).Error("Could not get randao mix to get payload attribute")
 		return false, emptyAttri, 0
@@ -305,9 +304,9 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	}
 
 	var attr payloadattribute.Attributer
-	switch st.Version() {
+	switch headState.Version() {
 	case version.Capella:
-		withdrawals, err := st.ExpectedWithdrawals()
+		withdrawals, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
 			return false, emptyAttri, 0
@@ -333,7 +332,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			return false, emptyAttri, 0
 		}
 	default:
-		log.WithField("version", st.Version()).Error("Could not get payload attribute due to unknown state version")
+		log.WithField("version", headState.Version()).Error("Could not get payload attribute due to unknown state version")
 		return false, emptyAttri, 0
 	}
 
