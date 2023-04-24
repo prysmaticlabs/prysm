@@ -49,6 +49,7 @@ go_library(
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/logs:go_default_library",
+        "//math:go_default_library",
         "//monitoring/clientstats:go_default_library",
         "//monitoring/tracing:go_default_library",
         "//network:go_default_library",
