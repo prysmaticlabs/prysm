@@ -58,3 +58,19 @@ func TestRegistrationCache(t *testing.T) {
 		require.Equal(t, string(reg.Pubkey), string(pubkey))
 	})
 }
+
+func Test_RegistrationTimeStampExpired(t *testing.T) {
+	// expiration set at 3 epochs
+	t.Run("expired registration", func(t *testing.T) {
+		overExpirationPadTime := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*4) // 4 epochs
+		ts := uint64(time.Now().Add(-1 * overExpirationPadTime).Unix())
+		isExpired := RegistrationTimeStampExpired(ts)
+		require.Equal(t, true, isExpired)
+	})
+	t.Run("is not expired registration", func(t *testing.T) {
+		overExpirationPadTime := time.Second * time.Duration((params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3)-5) // 3 epochs -5 seconds
+		ts := uint64(time.Now().Add(-1 * overExpirationPadTime).Unix())
+		isExpired := RegistrationTimeStampExpired(ts)
+		require.Equal(t, false, isExpired)
+	})
+}

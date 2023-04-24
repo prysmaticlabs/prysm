@@ -1,8 +1,7 @@
 package cache
 
 import (
-	"fmt"
-	"strconv"
+	"math/big"
 	"sync"
 	"time"
 
@@ -35,20 +34,19 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 	if !ok {
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
-	if timeStampExpired(v.Timestamp) {
+	if RegistrationTimeStampExpired(v.Timestamp) {
+		regCache.Lock()
+		defer regCache.Unlock()
 		delete(regCache.indexToRegistration, id)
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
 	return v, nil
 }
 
-func timeStampExpired(ts uint64) bool {
+func RegistrationTimeStampExpired(ts uint64) bool {
 	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
 	// safely convert unint64 to int64
-	t, err := strconv.ParseInt(fmt.Sprint(ts), 10, 64)
-	if err != nil {
-		return false
-	}
+	t := new(big.Int).SetUint64(ts).Int64()
 	return time.Unix(t, 0).Add(expiryDuration).Unix() < time.Now().Unix()
 }
 

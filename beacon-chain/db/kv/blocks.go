@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strconv"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -554,23 +553,13 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.Val
 		if err := decode(ctx, enc, reg); err != nil {
 			return err
 		}
-		if timeStampExpired(reg.Timestamp) {
+		if cache.RegistrationTimeStampExpired(reg.Timestamp) {
 			// don't delete in bucket, db will eventually be removed.
 			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
 		}
 		return nil
 	})
 	return reg, err
-}
-
-func timeStampExpired(ts uint64) bool {
-	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
-	// safely convert unint64 to int64
-	t, err := strconv.ParseInt(fmt.Sprint(ts), 10, 64)
-	if err != nil {
-		return false
-	}
-	return time.Unix(t, 0).Add(expiryDuration).Unix() < time.Now().Unix()
 }
 
 // SaveRegistrationsByValidatorIDs saves the validator registrations for validator ids.
