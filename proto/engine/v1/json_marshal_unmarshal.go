@@ -683,7 +683,7 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 
 type blobBundleJSON struct {
 	Commitments []gethTypes.KZGCommitment `json:"commitments"`
-	Proofs      [][48]byte                `json:"proofs"`
+	Proofs      []gethTypes.KZGProof      `json:"proofs"`
 	Blobs       []gethTypes.Blob          `json:"blobs"`
 }
 

@@ -79,8 +79,8 @@ type engineMock struct {
 	payloadStatus   error
 }
 
-func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, error) {
-	return nil, nil
+func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error) {
+	return nil, nil, nil
 }
 func (m *engineMock) GetPayloadV2(context.Context, [8]byte) (*pb.ExecutionPayloadCapella, error) {
 	return nil, nil

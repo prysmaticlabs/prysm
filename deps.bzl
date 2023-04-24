@@ -340,6 +340,13 @@ def prysm_deps():
         version = "v0.1.0",
     )
     go_repository(
+        name = "com_github_bits_and_blooms_bitset",
+        importpath = "github.com/bits-and-blooms/bitset",
+        sum = "h1:NpE8frKRLGHIcEzkR+gZhiioW1+WbYV6fKwD6ZIpQT8=",
+        version = "v1.5.0",
+    )
+
+    go_repository(
         name = "com_github_bketelsen_crypt",
         importpath = "github.com/bketelsen/crypt",
         sum = "h1:w/jqZtC9YD4DS/Vp9GhWfWcCpuAL58oTnLoI8vE9YHU=",
@@ -607,8 +614,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_consensys_gnark_crypto",
         importpath = "github.com/consensys/gnark-crypto",
-        sum = "h1:llSLg4o9EgH3SrXky+Q5BqEYqV76NGKo07K5Ps2pIKo=",
-        version = "v0.9.1-0.20230105202408-1a7a29904a7c",
+        sum = "h1:zRh22SR7o4K35SoNqouS9J/TKHTyU2QWaj5ldehyXtA=",
+        version = "v0.10.0",
     )
 
     go_repository(
@@ -675,7 +682,6 @@ def prysm_deps():
         sum = "h1:p1EgwI/C7NhT0JmVkwCD2ZBK8j4aeHQX2pMHHBfMQ6w=",
         version = "v2.0.2",
     )
-
     go_repository(
         name = "com_github_crate_crypto_go_ipa",
         importpath = "github.com/crate-crypto/go-ipa",
@@ -683,11 +689,12 @@ def prysm_deps():
         version = "v0.0.0-20220523130400-f11357ae11c7",
     )
     go_repository(
-        name = "com_github_crate_crypto_go_proto_danksharding_crypto",
-        importpath = "github.com/crate-crypto/go-proto-danksharding-crypto",
-        sum = "h1:o56BCoIbxTDYKYjZXnVRnVzRs7nnf/WLSghPJcNUDgo=",
-        version = "v0.0.0-20230314235044-15ed9c470195",
+        name = "com_github_crate_crypto_go_kzg_4844",
+        importpath = "github.com/crate-crypto/go-kzg-4844",
+        sum = "h1:2PXr2wKBNTmSsoYLCmaNg5Z6uQUf7LiUAsnDbTfq+0M=",
+        version = "v0.1.0",
     )
+
     go_repository(
         name = "com_github_creack_pty",
         importpath = "github.com/creack/pty",
@@ -988,8 +995,8 @@ def prysm_deps():
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
         replace = "github.com/mdehoog/go-ethereum",
-        sum = "h1:Zxwp6I9DxV9fAtqJLC9No25Xh/SNQETeQ4DuclZZA94=",
-        version = "v1.10.19-0.20230322143632-22f9817975d2",
+        sum = "h1:o+C9qzIVKZE8a0+CQhgU0M/hfEaRd+uxqsrvEPLsl2g=",
+        version = "v1.10.19-0.20230424164545-6f54b68a31de",
     )
     go_repository(
         name = "com_github_evanphx_json_patch",
@@ -4877,8 +4884,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:MUK/U/4lj1t1oPg0HfuXDN/Z1wv31ZJ/YcPiGccS4DU=",
-        version = "v0.5.0",
+        sum = "h1:MVltZSvRTcU2ljQOhs94SXPftV6DCNnZViHeQps87pQ=",
+        version = "v0.6.0",
     )
     go_repository(
         name = "org_golang_x_term",
