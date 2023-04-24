@@ -29,17 +29,19 @@ func NewRegistrationCache() *RegistrationCache {
 // GetRegistrationByIndex returns the registration by index in the cache and also removes items in the cache if expired.
 func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
 	regCache.RLock()
-	defer regCache.RUnlock()
 	v, ok := regCache.indexToRegistration[id]
 	if !ok {
+		defer regCache.RUnlock()
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
 	if RegistrationTimeStampExpired(v.Timestamp) {
+		regCache.RUnlock()
 		regCache.Lock()
 		defer regCache.Unlock()
 		delete(regCache.indexToRegistration, id)
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
+	defer regCache.RUnlock()
 	return v, nil
 }
 
