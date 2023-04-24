@@ -54,8 +54,8 @@ func timeStampExpired(ts uint64) bool {
 
 // UpdateIndexToRegisteredMap adds or updates values in the cache based on the argument.
 func (regCache *RegistrationCache) UpdateIndexToRegisteredMap(m map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1) {
-	regCache.RLock()
-	defer regCache.RUnlock()
+	regCache.Lock()
+	defer regCache.Unlock()
 	for key, value := range m {
 		regCache.indexToRegistration[key] = &ethpb.ValidatorRegistrationV1{
 			Pubkey:       bytesutil.SafeCopyBytes(value.Pubkey),
