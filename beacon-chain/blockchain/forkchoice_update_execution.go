@@ -49,21 +49,22 @@ func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.Beaco
 }
 
 // fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
-func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) error {
+// it returns true if the new head is updated
+func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) (bool, error) {
 	isNewHead := s.isNewHead(newHeadRoot)
 	if !isNewHead {
-		return nil
+		return false, nil
 	}
 	isNewProposer := s.isNewProposer(proposingSlot)
 	if isNewProposer && !features.Get().DisableReorgLateBlocks {
 		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
-			return nil
+			return false, nil
 		}
 	}
 	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get forkchoice update argument")
-		return nil
+		return false, nil
 	}
 
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
@@ -72,7 +73,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 		headBlock: headBlock.Block(),
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not notify forkchoice update")
+		return false, errors.Wrap(err, "could not notify forkchoice update")
 	}
 
 	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
@@ -83,7 +84,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	if err := s.pruneAttsFromPool(headBlock); err != nil {
 		log.WithError(err).Error("could not prune attestations from pool")
 	}
-	return nil
+	return true, nil
 }
 
 // shouldOverrideFCU checks whether the incoming block is still subject to being
