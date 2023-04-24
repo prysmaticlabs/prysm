@@ -1449,6 +1449,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
+				client.EXPECT().ValidatorStatus(
+					ctx,
+					&ethpb.ValidatorStatusRequest{PublicKey: keys[0][:]}).Return(
+					&ethpb.ValidatorStatusResponse{
+						Status: ethpb.ValidatorStatus_ACTIVE,
+					})
 				client.EXPECT().ValidatorIndex(
 					ctx, // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
