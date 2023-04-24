@@ -413,7 +413,7 @@ func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	var zero [32]byte
 	require.DeepNotEqual(t, gs.GenesisValidatorsRoot(), zero[:])
 	require.Equal(t, gt, mgs.G.GenesisTime())
-	require.DeepEqual(t, gs.GenesisValidatorsRoot(), mgs.G.GenesisValidatorsRoot())
+	require.Equal(t, bytesutil.ToBytes32(gs.GenesisValidatorsRoot()), mgs.G.GenesisValidatorsRoot())
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
