@@ -59,6 +59,7 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	wsVerifier            *WeakSubjectivityVerifier
 	clockSetter           startup.ClockSetter
+	clockWaiter           startup.ClockWaiter
 }
 
 // config options for the service.
@@ -128,8 +129,8 @@ func (s *Service) Start() {
 			log.Fatal(err)
 		}
 	}
-	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
-	s.fillMissingPayloadIDRoutine(s.ctx, s.cfg.StateNotifier.StateFeed())
+	s.spawnProcessAttestationsRoutine()
+	s.spawnLateBlockTasksLoop()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.

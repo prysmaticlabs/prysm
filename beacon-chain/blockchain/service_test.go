@@ -100,7 +100,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-		WithClockSetter(startup.NewClockSynchronizer()),
+		WithClockSynchronizer(startup.NewClockSynchronizer()),
 	}
 
 	chainService, err := NewService(ctx, opts...)

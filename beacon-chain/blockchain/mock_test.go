@@ -17,7 +17,7 @@ func testServiceOptsWithDB(t *testing.T) []Option {
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
-		WithClockSetter(cs),
+		WithClockSynchronizer(cs),
 	}
 }
 
@@ -26,5 +26,5 @@ func testServiceOptsWithDB(t *testing.T) []Option {
 // initialization requirements w/o the overhead of db init.
 func testServiceOptsNoDB() []Option {
 	cs := startup.NewClockSynchronizer()
-	return []Option{WithClockSetter(cs)}
+	return []Option{WithClockSynchronizer(cs)}
 }

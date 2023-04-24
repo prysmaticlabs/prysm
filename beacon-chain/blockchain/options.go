@@ -165,9 +165,10 @@ func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
 	}
 }
 
-func WithClockSetter(gs startup.ClockSetter) Option {
+func WithClockSynchronizer(gs *startup.ClockSynchronizer) Option {
 	return func(s *Service) error {
 		s.clockSetter = gs
+		s.clockWaiter = gs
 		return nil
 	}
 }

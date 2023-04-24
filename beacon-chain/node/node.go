@@ -587,7 +587,7 @@ func (b *BeaconNode) registerAttestationPool() error {
 	return b.services.RegisterService(s)
 }
 
-func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs startup.ClockSetter) error {
+func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *startup.ClockSynchronizer) error {
 	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -617,7 +617,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs sta
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
-		blockchain.WithClockSetter(gs),
+		blockchain.WithClockSynchronizer(gs),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
