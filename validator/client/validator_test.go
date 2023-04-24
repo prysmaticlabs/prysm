@@ -1998,10 +1998,10 @@ func getFeeRecipientFromString(t *testing.T, stringFeeRecipient string) common.A
 }
 
 func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
-	// pubkey1 => feeRecipient1 (already in `v.activeValidatorIndex`)
-	// pubkey2 => feeRecipient2 (NOT in `v.activeValidatorIndex`, index found by beacon node)
-	// pubkey3 => feeRecipient3 (NOT in `v.activeValidatorIndex`, index NOT found by beacon node)
-	// pubkey4 => Nothing (already in `v.activeValidatorIndex`)
+	// pubkey1 => feeRecipient1 (already in `v.validatorIndex`)
+	// pubkey2 => feeRecipient2 (NOT in `v.validatorIndex`, index found by beacon node)
+	// pubkey3 => feeRecipient3 (NOT in `v.validatorIndex`, index NOT found by beacon node)
+	// pubkey4 => Nothing (already in `v.validatorIndex`)
 
 	// Public keys
 	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
@@ -2083,10 +2083,10 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 }
 
 func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
-	// pubkey1 => feeRecipient1 (already in `v.activeValidatorIndex`)
-	// pubkey2 => feeRecipient2 (NOT in `v.activeValidatorIndex`, index found by beacon node)
-	// pubkey3 => feeRecipient3 (NOT in `v.activeValidatorIndex`, index NOT found by beacon node)
-	// pubkey4 => Nothing (already in `v.activeValidatorIndex`)
+	// pubkey1 => feeRecipient1 (already in `v.validatorIndex`)
+	// pubkey2 => feeRecipient2 (NOT in `v.validatorIndex`, index found by beacon node)
+	// pubkey3 => feeRecipient3 (NOT in `v.validatorIndex`, index NOT found by beacon node)
+	// pubkey4 => Nothing (already in `v.validatorIndex`)
 
 	// Public keys
 	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")

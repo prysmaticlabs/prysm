@@ -1041,16 +1041,26 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		_, ok := v.pubkeyToValidatorIndex[k]
 		// Get validator index from RPC server if not found.
 		if !ok {
-			i, ok, err := v.activeValidatorIndex(ctx, k)
+			i, ok, err := v.validatorIndex(ctx, k)
 			if err != nil {
 				return nil, err
 			}
-
 			if !ok { // Nothing we can do if RPC server doesn't have validator index.
 				continue
 			}
-
 			v.pubkeyToValidatorIndex[k] = i
+		}
+		status, err := v.validatorClient.ValidatorStatus(ctx, &ethpb.ValidatorStatusRequest{PublicKey: k[:]})
+		if err != nil {
+			return nil, err
+		}
+		// skip registration creation if validator is not active status
+		if status.Status != ethpb.ValidatorStatus_ACTIVE {
+			log.WithFields(logrus.Fields{
+				"publickey": hexutil.Encode(k[:]),
+				"status":    status.Status.String(),
+			}).Debugf("skipping non active status key.")
+			continue
 		}
 		filteredKeys = append(filteredKeys, k)
 	}
@@ -1059,7 +1069,6 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 
 func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
 	var prepareProposerReqs []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
-
 	for _, k := range pubkeys {
 		// Default case: Define fee recipient to burn address
 		var feeRecipient common.Address
@@ -1094,13 +1103,12 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 
 			if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
 				log.WithFields(logrus.Fields{
-					"activeValidatorIndex": validatorIndex,
-					"feeRecipient":         feeRecipient,
+					"validatorIndex": validatorIndex,
+					"feeRecipient":   feeRecipient,
 				}).Warn("Fee recipient is burn address")
 			}
 		}
 	}
-
 	return prepareProposerReqs, nil
 }
 
@@ -1177,7 +1185,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 	return signedValRegRegs, nil
 }
 
-func (v *validator) activeValidatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool, error) {
+func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool, error) {
 	resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
 	switch {
 	case status.Code(err) == codes.NotFound:
@@ -1186,17 +1194,6 @@ func (v *validator) activeValidatorIndex(ctx context.Context, pubkey [fieldparam
 		return 0, false, nil
 	case err != nil:
 		return 0, false, err
-	}
-	status, err := v.validatorClient.ValidatorStatus(ctx, &ethpb.ValidatorStatusRequest{PublicKey: pubkey[:]})
-	if err != nil {
-		return 0, false, err
-	}
-	if status.Status != ethpb.ValidatorStatus_ACTIVE {
-		log.WithFields(logrus.Fields{
-			"publickey": hexutil.Encode(pubkey[:]),
-			"status":    status.Status.String(),
-		}).Debugf("skipping non active status key.")
-		return 0, false, nil
 	}
 	return resp.Index, true, nil
 }
