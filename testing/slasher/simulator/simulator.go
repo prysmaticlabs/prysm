@@ -145,7 +145,8 @@ func (s *Simulator) Start() {
 	// for slasher to pick up a genesis time.
 	time.Sleep(time.Second)
 	s.genesisTime = time.Now()
-	if err := s.srvConfig.ClockSetter.SetClock(startup.NewClock(s.genesisTime, make([]byte, 32))); err != nil {
+	var vr [32]byte
+	if err := s.srvConfig.ClockSetter.SetClock(startup.NewClock(s.genesisTime, vr)); err != nil {
 		panic(err)
 	}
 

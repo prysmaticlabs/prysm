@@ -62,7 +62,8 @@ func TestService_InitStartStop(t *testing.T) {
 				}
 			},
 			setGenesis: func() *startup.Clock {
-				return startup.NewClock(time.Unix(4113849600, 0), make([]byte, 32))
+				var vr [32]byte
+				return startup.NewClock(time.Unix(4113849600, 0), vr)
 			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Genesis time has not arrived - not syncing")
@@ -85,7 +86,8 @@ func TestService_InitStartStop(t *testing.T) {
 				}
 			},
 			setGenesis: func() *startup.Clock {
-				return startup.NewClock(time.Now().Add(-5*time.Minute), make([]byte, 32))
+				var vr [32]byte
+				return startup.NewClock(time.Now().Add(-5*time.Minute), vr)
 			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Chain started within the last epoch - not syncing")
@@ -112,7 +114,8 @@ func TestService_InitStartStop(t *testing.T) {
 			},
 			setGenesis: func() *startup.Clock {
 				futureSlot := primitives.Slot(27354)
-				return startup.NewClock(makeGenesisTime(futureSlot), make([]byte, 32))
+				var vr [32]byte
+				return startup.NewClock(makeGenesisTime(futureSlot), vr)
 			},
 			assert: func() {
 				assert.LogsContain(t, hook, "Starting initial chain sync...")
@@ -238,7 +241,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		rg := func() time.Time { return gt.Add(time.Second * 12) }
 		go func() {
 			time.AfterFunc(200*time.Millisecond, func() {
-				require.NoError(t, gs.SetClock(startup.NewClock(expectedGenesisTime, make([]byte, 32), startup.WithNower(rg))))
+				var vr [32]byte
+				require.NoError(t, gs.SetClock(startup.NewClock(expectedGenesisTime, vr, startup.WithNower(rg))))
 			})
 		}()
 
@@ -269,7 +273,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			time.AfterFunc(500*time.Millisecond, func() {
-				require.NoError(t, gs.SetClock(startup.NewClock(expectedGenesisTime, make([]byte, 32))))
+				var vr [32]byte
+				require.NoError(t, gs.SetClock(startup.NewClock(expectedGenesisTime, vr)))
 			})
 			s.Start()
 			wg.Done()

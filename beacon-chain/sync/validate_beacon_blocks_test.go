@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
@@ -79,6 +80,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -122,6 +124,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache: lruwrpr.New(10),
@@ -183,6 +186,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -248,6 +252,7 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -313,6 +318,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -380,6 +386,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -448,6 +455,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -553,6 +561,7 @@ func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing
 			beaconDB:      db,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -604,6 +613,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 			beaconDB:      db,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 		},
 		chainStarted:        abool.New(),
@@ -657,6 +667,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache: lruwrpr.New(10),
@@ -714,6 +725,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache:      lruwrpr.New(10),
@@ -763,6 +775,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 			beaconDB:      db,
 			p2p:           p,
 			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			blockNotifier: chain.BlockNotifier(),
 			attPool:       attestations.NewPool(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
@@ -848,6 +861,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -913,6 +927,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -962,6 +977,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			Epoch: 0,
 		}}
 	r.cfg.chain = chainService
+	r.cfg.clock = startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)
 
 	res, err = r.validateBeaconBlockPubSub(ctx, "", m)
 	require.ErrorContains(t, "unknown parent for block", err)
@@ -1022,6 +1038,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -1126,6 +1143,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 			chain:         chainService,
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -1135,7 +1153,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
+	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)
@@ -1196,6 +1214,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -1207,7 +1226,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
+	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)
@@ -1359,6 +1378,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 			chain:         chainService,
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -1368,7 +1388,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
+	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)

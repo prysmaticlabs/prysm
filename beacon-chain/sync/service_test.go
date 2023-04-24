@@ -26,14 +26,16 @@ import (
 func TestService_StatusZeroEpoch(t *testing.T) {
 	bState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 0})
 	require.NoError(t, err)
+	chain := &mockChain.ChainService{
+		Genesis: time.Now(),
+		State:   bState,
+	}
 	r := &Service{
 		cfg: &config{
 			p2p:         p2ptest.NewTestP2P(t),
 			initialSync: new(mockSync.Sync),
-			chain: &mockChain.ChainService{
-				Genesis: time.Now(),
-				State:   bState,
-			},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		chainStarted: abool.New(),
 	}
@@ -66,7 +68,8 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 	go r.waitForChainStart()
 	time.Sleep(100 * time.Millisecond)
 
-	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
@@ -102,7 +105,8 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 	}
 
 	go r.registerHandlers()
-	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
 	r.waitForChainStart()
 
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
@@ -138,7 +142,8 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		r.registerHandlers()
 		syncCompleteCh <- true
 	}()
-	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
 	r.waitForChainStart()
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 
@@ -206,7 +211,8 @@ func TestSyncService_StopCleanly(t *testing.T) {
 	}
 
 	go r.registerHandlers()
-	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
 	r.waitForChainStart()
 
 	var err error

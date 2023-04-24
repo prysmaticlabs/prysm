@@ -104,7 +104,8 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	}()
 	time.Sleep(50 * time.Millisecond)
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(6 * discoveryWaitTime)

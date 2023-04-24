@@ -52,6 +52,7 @@ type Service struct {
 	chainStarted *abool.AtomicBool
 	counter      *ratecounter.RateCounter
 	genesisChan  chan time.Time
+	clock        *startup.Clock
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
@@ -79,6 +80,7 @@ func (s *Service) Start() {
 		log.WithError(err).Error("initial-sync failed to receive startup event")
 		return
 	}
+	s.clock = clock
 	log.Info("Received state initialized event")
 
 	gt := clock.GenesisTime()

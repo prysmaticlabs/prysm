@@ -4,7 +4,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 )
 
@@ -12,7 +11,7 @@ import (
 const forkDigestLength = 4
 
 // writes peer's current context for the expected payload to the stream.
-func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain.ForkFetcher) error {
+func writeContextToStream(objCtx []byte, stream network.Stream) error {
 	// The rpc context for our v2 methods is the fork-digest of
 	// the relevant payload. We write the associated fork-digest(context)
 	// into the stream for the payload.

@@ -21,7 +21,7 @@ type Nower func() time.Time
 //     so it is also bundled for convenience.
 type Clock struct {
 	t   time.Time
-	vr  []byte
+	vr  [32]byte
 	now Nower
 }
 
@@ -31,13 +31,14 @@ func (g *Clock) GenesisTime() time.Time {
 }
 
 // GenesisValidatorsRoot returns the genesis state validator root
-func (g *Clock) GenesisValidatorsRoot() []byte {
+func (g *Clock) GenesisValidatorsRoot() [32]byte {
 	return g.vr
 }
 
 // CurrentSlot returns the current slot relative to the time.Time value that Clock embeds.
 func (g *Clock) CurrentSlot() types.Slot {
-	return slots.Duration(g.t, g.now())
+	now := g.now()
+	return slots.Duration(g.t, now)
 }
 
 // Now provides a value for time.Now() that can be overridden in tests.
@@ -57,7 +58,7 @@ func WithNower(n Nower) ClockOpt {
 }
 
 // NewClock constructs a genesis value, providing the ability to override the
-func NewClock(t time.Time, vr []byte, opts ...ClockOpt) *Clock {
+func NewClock(t time.Time, vr [32]byte, opts ...ClockOpt) *Clock {
 	c := &Clock{
 		t:  t,
 		vr: vr,

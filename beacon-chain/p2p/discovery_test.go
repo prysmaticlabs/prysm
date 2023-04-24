@@ -205,7 +205,8 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		<-exitRoutine
 	}()
 	time.Sleep(50 * time.Millisecond)
-	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), vr)))
 	time.Sleep(4 * time.Second)
 	ps := s.host.Network().Peers()
 	assert.Equal(t, 5, len(ps), "Not all peers added to peerstore")

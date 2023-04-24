@@ -54,7 +54,8 @@ func TestService_StartStop_ChainInitialized(t *testing.T) {
 	require.NoError(t, err)
 	go srv.Start()
 	time.Sleep(time.Millisecond * 100)
-	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
 	time.Sleep(time.Millisecond * 100)
 	srv.attsSlotTicker = &slots.SlotTicker{}
 	srv.blocksSlotTicker = &slots.SlotTicker{}

@@ -343,7 +343,8 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 
 	go s.awaitStateInitialized()
 
-	require.NoError(t, cs.SetClock(startup.NewClock(prysmTime.Now(), bytesutil.PadTo([]byte("genesis"), 32))))
+	vr := bytesutil.ToBytes32(bytesutil.PadTo([]byte("genesis"), 32))
+	require.NoError(t, cs.SetClock(startup.NewClock(prysmTime.Now(), vr)))
 
 	time.Sleep(50 * time.Millisecond)
 

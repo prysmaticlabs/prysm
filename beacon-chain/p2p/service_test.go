@@ -114,7 +114,8 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 		s.Start()
 		<-exitRoutine
 	}()
-	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), vr)))
 	time.Sleep(time.Second * 2)
 	assert.Equal(t, true, s.started, "Expected service to be started")
 	s.Start()
@@ -170,7 +171,8 @@ func TestService_Start_NoDiscoverFlag(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), make([]byte, 32))))
+	var vr [32]byte
+	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), vr)))
 
 	time.Sleep(time.Second * 2)
 
@@ -187,11 +189,11 @@ func TestListenForNewNodes(t *testing.T) {
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
 	genesisTime := prysmTime.Now()
-	genesisValidatorsRoot := make([]byte, 32)
+	var gvr [32]byte
 	s := &Service{
 		cfg:                   cfg,
 		genesisTime:           genesisTime,
-		genesisValidatorsRoot: genesisValidatorsRoot,
+		genesisValidatorsRoot: gvr[:],
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -223,7 +225,7 @@ func TestListenForNewNodes(t *testing.T) {
 		s := &Service{
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
-			genesisValidatorsRoot: genesisValidatorsRoot,
+			genesisValidatorsRoot: gvr[:],
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
@@ -258,7 +260,7 @@ func TestListenForNewNodes(t *testing.T) {
 	}()
 	time.Sleep(1 * time.Second)
 
-	require.NoError(t, cs.SetClock(startup.NewClock(genesisTime, genesisValidatorsRoot)))
+	require.NoError(t, cs.SetClock(startup.NewClock(genesisTime, gvr)))
 
 	time.Sleep(4 * time.Second)
 	assert.Equal(t, 5, len(s.host.Network().Peers()), "Not all peers added to peerstore")
@@ -335,10 +337,10 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 // digest associated with that genesis event.
 func initializeStateWithForkDigest(ctx context.Context, t *testing.T, gs startup.ClockSetter) [4]byte {
 	gt := prysmTime.Now()
-	gvr := bytesutil.PadTo([]byte("genesis validators root"), 32)
+	gvr := bytesutil.ToBytes32(bytesutil.PadTo([]byte("genesis validators root"), 32))
 	require.NoError(t, gs.SetClock(startup.NewClock(gt, gvr)))
 
-	fd, err := forks.CreateForkDigest(gt, gvr)
+	fd, err := forks.CreateForkDigest(gt, gvr[:])
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // wait for pubsub filter to initialize.

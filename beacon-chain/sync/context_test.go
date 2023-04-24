@@ -31,7 +31,7 @@ func TestContextWrite_NoWrites(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Nothing will be written to the stream
-	assert.NoError(t, writeContextToStream([]byte{}, strm, nil))
+	assert.NoError(t, writeContextToStream([]byte{}, strm))
 	if util.WaitTimeout(wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}

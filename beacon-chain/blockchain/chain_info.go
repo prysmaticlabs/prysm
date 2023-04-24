@@ -85,6 +85,12 @@ type ForkFetcher interface {
 	TimeFetcher
 }
 
+// TemporalOracle is like ForkFetcher minus CurrentFork()
+type TemporalOracle interface {
+	GenesisFetcher
+	TimeFetcher
+}
+
 // CanonicalFetcher retrieves the current chain's canonical information.
 type CanonicalFetcher interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)

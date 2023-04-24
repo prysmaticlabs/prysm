@@ -87,6 +87,7 @@ type config struct {
 	stateGen                      *stategen.State
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed
+	clock                         *startup.Clock
 }
 
 // This defines the interface for interacting with block chain service
@@ -166,15 +167,14 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 	r.initCaches()
 
-	go r.registerHandlers()
-	go r.verifierRoutine()
-
 	return r
 }
 
 // Start the regular sync service.
 func (s *Service) Start() {
-	go s.waitForChainStart()
+	go s.verifierRoutine()
+	go s.registerHandlers()
+
 	s.cfg.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
 	s.cfg.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
 		// no-op
@@ -213,7 +213,7 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
-	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.chain.CurrentSlot()) &&
+	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.clock.CurrentSlot()) &&
 		headEpoch+1 < s.cfg.p2p.Peers().HighestEpoch() {
 		return errors.New("out of sync")
 	}
@@ -241,6 +241,7 @@ func (s *Service) waitForChainStart() {
 		log.WithError(err).Error("sync service failed to receive genesis data")
 		return
 	}
+	s.cfg.clock = clock
 	startTime := clock.GenesisTime()
 	log.WithField("starttime", startTime).Debug("Received state initialized event")
 	// Register respective rpc handlers at state initialized event.
@@ -257,6 +258,7 @@ func (s *Service) registerHandlers() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
+	s.waitForChainStart()
 	for {
 		select {
 		case e := <-stateChannel:
@@ -273,7 +275,7 @@ func (s *Service) registerHandlers() {
 					log.WithError(err).Error("Could not retrieve current fork digest")
 					return
 				}
-				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.chain.GenesisTime().Unix())))
+				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.clock.GenesisTime().Unix())))
 				s.registerSubscribers(currentEpoch, digest)
 				go s.forkWatcher()
 				return
@@ -291,6 +293,10 @@ func (s *Service) registerHandlers() {
 // marks the chain as having started.
 func (s *Service) markForChainStart() {
 	s.chainStarted.Set()
+}
+
+func (s *Service) chainIsStarted() bool {
+	return s.chainStarted.IsSet()
 }
 
 // Checker defines a struct which can verify whether a node is currently
