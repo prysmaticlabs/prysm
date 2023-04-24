@@ -100,7 +100,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		WithStateNotifier(req.notif),
 		WithStateGen(req.sg),
 		WithForkChoiceStore(req.fcs),
-		WithClockSetter(req.cs),
+		WithClockSynchronizer(req.cs),
 		WithAttestationPool(req.attPool),
 		WithAttestationService(req.attSrv),
 		WithBLSToExecPool(req.blsPool),
