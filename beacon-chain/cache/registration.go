@@ -31,7 +31,7 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 	regCache.RLock()
 	v, ok := regCache.indexToRegistration[id]
 	if !ok {
-		defer regCache.RUnlock()
+		regCache.RUnlock()
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
 	if RegistrationTimeStampExpired(v.Timestamp) {
@@ -41,7 +41,7 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 		delete(regCache.indexToRegistration, id)
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
-	defer regCache.RUnlock()
+	regCache.RUnlock()
 	return v, nil
 }
 
