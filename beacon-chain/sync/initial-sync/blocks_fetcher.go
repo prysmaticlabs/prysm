@@ -333,7 +333,7 @@ func (f *blocksFetcher) requestBlocks(
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
-	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.clock, f.p2p, pid, req, nil)
+	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
 
 // requestBlocksByRoot is a wrapper for handling BeaconBlockByRootsReq requests/streams.
@@ -362,7 +362,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	f.rateLimiter.Add(pid.String(), int64(len(*req)))
 	l.Unlock()
 
-	return prysmsync.SendBeaconBlocksByRootRequest(ctx, f.clock, f.p2p, pid, req, nil)
+	return prysmsync.SendBeaconBlocksByRootRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
 
 // waitForBandwidth blocks up until peer's bandwidth is restored.
