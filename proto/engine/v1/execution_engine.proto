@@ -90,9 +90,10 @@ message ExecutionPayloadCapellaWithValue {
 	bytes value = 2;
 }
 
-message ExecutionPayloadDenebWithValue {
+message ExecutionPayloadDenebWithValueAndBlobsBundle {
 	ExecutionPayloadDeneb payload = 1;
 	bytes value = 2;
+	BlobsBundle blobs_bundle = 3;
 }
 
 
@@ -207,10 +208,9 @@ message Withdrawal {
 // Blobs bundle is retrieved through engine-api from the execution layer client.
 // It consists of the necessary components for constructing a blobs sidecar object to gossip through p2p.
 message BlobsBundle {
-	// The block hash of the payload which corresponds to the blobs.
-	bytes block_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	// The KZG commitments of the blobs.
-	repeated bytes kzg_commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "4"];
+	repeated bytes kzg_commitments = 1 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "4"];
+	repeated bytes proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "4"];
 	// The blobs itself.
 	repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "4"];
 }

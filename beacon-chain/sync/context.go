@@ -78,7 +78,6 @@ func rpcContext(stream network.Stream, chain blockchain.ForkFetcher) ([]byte, er
 		return nil, err
 	}
 	return digest[:], nil
-
 }
 
 // Minimal interface for a stream with a protocol.

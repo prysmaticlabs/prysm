@@ -3,10 +3,11 @@ package transition
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
@@ -379,19 +380,15 @@ func ValidateBlobKzgs(ctx context.Context, body interfaces.ReadOnlyBeaconBlockBo
 	if err != nil {
 		return errors.Wrap(err, "could not get execution payload from block")
 	}
-	blkKzgs, err := body.BlobKzgCommitments()
+	kzgs, err := body.BlobKzgCommitments()
 	if err != nil {
 		return errors.Wrap(err, "could not get blob kzg commitments from block")
-	}
-	kzgs := make(eth.KZGCommitmentSequenceImpl, len(blkKzgs))
-	for i := range blkKzgs {
-		kzgs[i] = bytesutil.ToBytes48(blkKzgs[i])
 	}
 	txs, err := payload.Transactions()
 	if err != nil {
 		return errors.Wrap(err, "could not get transactions from payload")
 	}
-	return eth.VerifyKZGCommitmentsAgainstTransactions(txs, kzgs)
+	return VerifyKZGCommitmentsAgainstTransactions(txs, kzgs)
 }
 
 // This calls altair block operations.
@@ -442,4 +439,64 @@ func phase0Operations(
 		return nil, errors.Wrap(err, "could not process deposits")
 	}
 	return b.ProcessVoluntaryExits(ctx, st, signedBeaconBlock.Block().Body().VoluntaryExits())
+}
+
+type VersionedHash [32]byte
+
+const (
+	BlobTxType                      = 3
+	BlobVersionedHashesOffset       = 258 // position of blob_versioned_hashes offset in a serialized blob tx, see TxPeekBlobVersionedHashes
+	BlobCommitmentVersionKZG  uint8 = 0x01
+)
+
+func TxPeekBlobVersionedHashes(tx []byte) ([]VersionedHash, error) {
+	if len(tx) < BlobVersionedHashesOffset+4 {
+		return nil, errors.New("blob tx invalid: too short")
+	}
+	if tx[0] != BlobTxType {
+		return nil, errors.New("invalid blob tx type")
+	}
+	offset := uint64(binary.LittleEndian.Uint32(tx[BlobVersionedHashesOffset:BlobVersionedHashesOffset+4])) + 70
+	if offset > uint64(len(tx)) {
+		return nil, errors.New("offset to versioned hashes is out of bounds")
+	}
+	hashBytesLen := uint64(len(tx)) - offset
+	if hashBytesLen%32 != 0 {
+		return nil, errors.New("expected trailing data starting at versioned-hashes offset to be a multiple of 32 bytes")
+	}
+	hashes := make([]VersionedHash, hashBytesLen/32)
+	for i := range hashes {
+		copy(hashes[i][:], tx[offset:offset+32])
+		offset += 32
+	}
+	return hashes, nil
+}
+
+func VerifyKZGCommitmentsAgainstTransactions(transactions [][]byte, kzgCommitments [][]byte) error {
+	var versionedHashes []VersionedHash
+	for _, tx := range transactions {
+		if tx[0] == BlobTxType {
+			v, err := TxPeekBlobVersionedHashes(tx)
+			if err != nil {
+				return err
+			}
+			versionedHashes = append(versionedHashes, v...)
+		}
+	}
+	if len(kzgCommitments) != len(versionedHashes) {
+		return fmt.Errorf("invalid number of blob versioned hashes: %v vs %v", len(kzgCommitments), len(versionedHashes))
+	}
+	for i := 0; i < len(kzgCommitments); i++ {
+		h := KZGToVersionedHash(bytesutil.ToBytes48(kzgCommitments[i]))
+		if h != versionedHashes[i] {
+			return errors.New("invalid version hashes vs kzg")
+		}
+	}
+	return nil
+}
+
+func KZGToVersionedHash(kzg [48]byte) VersionedHash {
+	h := sha256.Sum256(kzg[:])
+	h[0] = BlobCommitmentVersionKZG
+	return h
 }

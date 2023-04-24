@@ -58,15 +58,19 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, error) {
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error) {
 	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
-		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
+		payload, err := blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
+		if err != nil {
+			return nil, nil, err
+		}
+		return payload, nil, err
 	}
 	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return p, e.ErrGetPayload
+	return p, nil, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --
@@ -172,9 +176,4 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 		}
 		blk = parentBlk
 	}
-}
-
-// GetBlobsBundle --
-func (e *EngineClient) GetBlobsBundle(context.Context, [8]byte) (*pb.BlobsBundle, error) {
-	return e.BlobsBundle, nil
 }
