@@ -27,6 +27,7 @@ http_archive(
         "https://github.com/uber/hermetic_cc_toolchain/releases/download/{0}/{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
     ],
 )
+
 load("@bazel-zig-cc//toolchain:defs.bzl", zig_toolchains = "toolchains")
 
 zig_toolchains()
