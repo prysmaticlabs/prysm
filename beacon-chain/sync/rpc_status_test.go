@@ -260,6 +260,10 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 }
 
 func TestHandshakeHandlers_Roundtrip(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	// Scenario is that p1 and p2 connect, exchange handshakes.
 	// p2 disconnects and p1 should forget the handshake status.
 	p1 := p2ptest.NewTestP2P(t)
@@ -282,10 +286,10 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	require.NoError(t, err)
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
-	util.SaveBlock(t, context.Background(), db, blk)
+	util.SaveBlock(t, ctx, db, blk)
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, finalizedRoot))
 	chain := &mock.ChainService{
 		State:               st,
 		FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
@@ -302,6 +306,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	}
 	cw := startup.NewClockSynchronizer()
 	r := &Service{
+		ctx: ctx,
 		cfg: &config{
 			p2p:           p1,
 			chain:         chain,
@@ -309,7 +314,6 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			stateNotifier: chain.StateNotifier(),
 			beaconDB:      db,
 		},
-		ctx:          context.Background(),
 		rateLimiter:  newRateLimiter(p1),
 		clockWaiter:  cw,
 		chainStarted: abool.New(),
@@ -321,6 +325,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
 	}
 	r2 := &Service{
+		ctx: ctx,
 		cfg: &config{
 			chain:         chain2,
 			clock:         startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
@@ -367,7 +372,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		out := new(primitives.SSZUint64)
 		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
-		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
+		assert.NoError(t, r2.pingHandler(ctx, out, stream))
 		assert.NoError(t, stream.Close())
 	})
 
@@ -780,6 +785,10 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 }
 
 func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 
@@ -791,7 +800,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	finalized := util.NewBeaconBlock()
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
-	genesisState, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
+	genesisState, err := transition.GenesisBeaconState(ctx, nil, 0, &ethpb.Eth1Data{})
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
@@ -811,6 +820,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		ValidatorsRoot: [32]byte{'A'},
 	}
 	cw := startup.NewClockSynchronizer()
+
 	r := &Service{
 		cfg: &config{
 			p2p:           p1,
@@ -818,7 +828,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			stateNotifier: chain.StateNotifier(),
 		},
 
-		ctx:          context.Background(),
+		ctx:          ctx,
 		rateLimiter:  newRateLimiter(p1),
 		clockWaiter:  cw,
 		chainStarted: abool.New(),

@@ -846,6 +846,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
 			cw := startup.NewClockSynchronizer()
 			svc := NewService(ctx, append([]Option{WithClockWaiter(cw)}, tt.svcopts...)...)
 			var clock *startup.Clock
