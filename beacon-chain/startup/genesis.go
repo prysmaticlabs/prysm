@@ -47,7 +47,7 @@ func (g *Clock) Now() time.Time {
 }
 
 // ClockOpt is a functional option to change the behavior of a clock value made by NewClock.
-// It is primarily intended as a way to inject an alternate time.Now() callback (WithNow) for testing.
+// It is primarily intended as a way to inject an alternate time.Now() callback (WithNower) for testing.
 type ClockOpt func(*Clock)
 
 // WithNower allows tests in particular to inject an alternate implementation of time.Now (vs using system time)
