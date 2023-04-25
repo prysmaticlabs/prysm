@@ -257,7 +257,6 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 		if finalizedState != nil {
 			return finalizedState, nil
 		}
-
 	}
 
 	b, err := s.beaconDB.Block(ctx, blockRoot)
