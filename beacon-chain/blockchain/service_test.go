@@ -506,7 +506,7 @@ type MockClockSetter struct {
 
 var _ startup.ClockSetter = &MockClockSetter{}
 
-// SetGenesis satisfies the ClockSetter interface.
+// SetClock satisfies the ClockSetter interface.
 // The value is written to an exported field 'G' so that it can be accessed in tests.
 func (s *MockClockSetter) SetClock(g *startup.Clock) error {
 	s.G = g
