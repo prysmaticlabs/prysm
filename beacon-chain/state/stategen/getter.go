@@ -252,8 +252,11 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 	ctx, span := trace.StartSpan(ctx, "stateGen.latestAncestor")
 	defer span.End()
 
-	if s.isFinalizedRoot(blockRoot) && s.finalizedState() != nil {
-		return s.finalizedState(), nil
+	if s.isFinalizedRoot(blockRoot) {
+		finalizedState := s.finalizedState()
+		if finalizedState != nil {
+			return finalizedState, nil
+		}
 	}
 
 	b, err := s.beaconDB.Block(ctx, blockRoot)

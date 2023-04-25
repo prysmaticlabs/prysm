@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // ProofFromMerkleLayers creates a proof starting at the leaf index of the state Merkle layers.
@@ -41,7 +40,7 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	}
 	for _, idx := range idxs {
 		if idx >= length {
-			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(version.Phase0), idx, length)
+			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(), idx, length)
 		}
 	}
 	return nil
@@ -57,7 +56,7 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 	}
 	val := reflect.Indirect(reflect.ValueOf(elements))
 	if uint64(val.Len()) > length {
-		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)
+		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), val.Len(), length)
 	}
 	return nil
 }
