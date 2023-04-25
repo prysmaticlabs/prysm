@@ -6,6 +6,7 @@ import (
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
@@ -24,7 +25,7 @@ type executionPayload struct {
 func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
 	w := executionPayload{p: p}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -185,7 +186,7 @@ type executionPayloadHeader struct {
 func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
 	w := executionPayloadHeader{p: p}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -375,7 +376,7 @@ type executionPayloadCapella struct {
 func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value uint64) (interfaces.ExecutionData, error) {
 	w := executionPayloadCapella{p: p, value: value}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -537,7 +538,7 @@ type executionPayloadHeaderCapella struct {
 func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value uint64) (interfaces.ExecutionData, error) {
 	w := executionPayloadHeaderCapella{p: p, value: value}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }

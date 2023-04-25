@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -40,7 +41,7 @@ func TestWrapExecutionPayload_IsNil(t *testing.T) {
 
 func TestWrapExecutionPayloadHeader_IsNil(t *testing.T) {
 	_, err := blocks.WrappedExecutionPayloadHeader(nil)
-	require.Equal(t, blocks.ErrNilObjectWrapped, err)
+	require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadHeader{GasUsed: 54}
 	wsb, err := blocks.WrappedExecutionPayloadHeader(data)
