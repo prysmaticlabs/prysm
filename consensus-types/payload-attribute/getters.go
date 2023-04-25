@@ -1,7 +1,7 @@
 package payloadattribute
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -33,7 +33,7 @@ func (a *data) Withdrawals() ([]*enginev1.Withdrawal, error) {
 		return nil, errNilPayloadAttribute
 	}
 	if a.version < version.Capella {
-		return nil, blocks.ErrNotSupported("Withdrawals", a.version)
+		return nil, consensus_types.ErrNotSupported("Withdrawals", a.version)
 	}
 	return a.withdrawals, nil
 }
@@ -44,7 +44,7 @@ func (a *data) PbV1() (*enginev1.PayloadAttributes, error) {
 		return nil, errNilPayloadAttribute
 	}
 	if a.version != version.Bellatrix {
-		return nil, blocks.ErrNotSupported("PayloadAttributePbV1", a.version)
+		return nil, consensus_types.ErrNotSupported("PayloadAttributePbV1", a.version)
 	}
 	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
 		return nil, nil
@@ -62,7 +62,7 @@ func (a *data) PbV2() (*enginev1.PayloadAttributesV2, error) {
 		return nil, errNilPayloadAttribute
 	}
 	if a.version != version.Capella {
-		return nil, blocks.ErrNotSupported("PayloadAttributePbV2", a.version)
+		return nil, consensus_types.ErrNotSupported("PayloadAttributePbV2", a.version)
 	}
 	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
 		return nil, nil
