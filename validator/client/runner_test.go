@@ -207,7 +207,6 @@ func TestKeyReload_ActiveKey(t *testing.T) {
 	v := &testutil.FakeValidator{Km: km}
 	go func() {
 		km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
-
 		cancel()
 	}()
 	run(ctx, v)
