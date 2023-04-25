@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -60,7 +61,7 @@ func IsExecutionBlock(body interfaces.ReadOnlyBeaconBlockBody) (bool, error) {
 	}
 	payload, err := body.Execution()
 	switch {
-	case errors.Is(err, blocks.ErrUnsupportedGetter):
+	case errors.Is(err, consensus_types.ErrUnsupportedGetter):
 		return false, nil
 	case err != nil:
 		return false, err

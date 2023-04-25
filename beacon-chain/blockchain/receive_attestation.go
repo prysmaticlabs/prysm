@@ -117,6 +117,9 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
 // The caller of this function MUST hold a lock in forkchoice
 func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.UpdateHead")
+	defer span.End()
+
 	start := time.Now()
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
@@ -148,7 +151,7 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	if err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot); err != nil {
+	if err := s.forkchoiceUpdateWithExecution(ctx, newHeadRoot, proposingSlot); err != nil {
 		log.WithError(err).Error("could not update forkchoice")
 	}
 }

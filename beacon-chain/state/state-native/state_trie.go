@@ -669,13 +669,13 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	for i, f := range b.sharedFieldReferences {
-		refMap[i.String(b.version)] = uint64(f.Refs())
+		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
 		numOfRefs := uint64(f.FieldReference().Refs())
 		f.RLock()
 		if !f.Empty() {
-			refMap[i.String(b.version)+"_trie"] = numOfRefs
+			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
 	}
@@ -691,7 +691,7 @@ func (b *BeaconState) IsNil() bool {
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("field", field.String(b.version)))
+	span.AddAttributes(trace.StringAttribute("field", field.String()))
 
 	switch field {
 	case types.GenesisTime:
