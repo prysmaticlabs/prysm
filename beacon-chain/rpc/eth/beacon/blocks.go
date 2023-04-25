@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
@@ -1019,6 +1020,20 @@ func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLe
 		})
 	}()
 
+	b := block.Block()
+	parentState, err := bs.StateGenService.StateByRoot(ctx, b.ParentRoot())
+	if err != nil {
+		return errors.Wrap(err, "could not get parent state")
+	}
+	_, err = transition.ExecuteStateTransition(ctx, parentState, block)
+	if err != nil {
+		return errors.Wrap(err, "could not execute state transition")
+	}
+
+	if bs.EqChecker.HasBlock(b.Slot(), b.ProposerIndex()) {
+		return fmt.Errorf("block exists in sync service, slot: %d, proposer index: %d", b.Slot(), b.ProposerIndex())
+	}
+
 	// Broadcast the new block to the network.
 	blockPb, err := block.Proto()
 	if err != nil {
@@ -1026,10 +1041,6 @@ func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLe
 	}
 	if err := bs.Broadcaster.Broadcast(ctx, blockPb); err != nil {
 		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-	}
-
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, block, blockRoot); err != nil {
-		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
 	return nil

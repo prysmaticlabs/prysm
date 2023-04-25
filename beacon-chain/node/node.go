@@ -753,6 +753,11 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		return err
 	}
 
+	var regSyncService *regularsync.Service
+	if err := b.services.FetchService(&regSyncService); err != nil {
+		return err
+	}
+
 	var slasherService *slasher.Service
 	if features.Get().EnableSlasher {
 		if err := b.services.FetchService(&slasherService); err != nil {

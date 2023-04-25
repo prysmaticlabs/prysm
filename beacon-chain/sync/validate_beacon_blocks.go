@@ -384,3 +384,17 @@ func getBlockFields(b interfaces.ReadOnlySignedBeaconBlock) logrus.Fields {
 		"version":       b.Block().Version(),
 	}
 }
+
+// HasBlock returns true if
+//  1. same block slot and proposer index is in the pending queue
+//  2. same block has been seen
+func (s *Service) HasBlock(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) bool {
+	blks := s.pendingBlocksInCache(slot)
+	for _, blk := range blks {
+		if blk.Block().Slot() == slot && blk.Block().ProposerIndex() == proposerIdx {
+			return true
+		}
+	}
+
+	return s.hasSeenBlockIndexSlot(slot, proposerIdx)
+}

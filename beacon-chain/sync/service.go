@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
@@ -300,4 +301,8 @@ type Checker interface {
 	Synced() bool
 	Status() error
 	Resync() error
+}
+
+type EqChecker interface {
+	HasBlock(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) bool
 }

@@ -104,6 +104,7 @@ type Config struct {
 	SyncCommitteeObjectPool       synccommittee.Pool
 	BLSChangesPool                blstoexec.PoolManager
 	SyncService                   chainSync.Checker
+	RegSyncService                chainSync.Service
 	Broadcaster                   p2p.Broadcaster
 	PeersFetcher                  p2p.PeersProvider
 	PeerManager                   p2p.PeerManager
@@ -335,6 +336,7 @@ func (s *Service) Start() {
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
 		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
+		EqChecker:                     &s.cfg.RegSyncService,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
