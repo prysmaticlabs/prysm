@@ -356,7 +356,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "process_sync_aggregate failed")
 	}
 
-	if signed.Block().Version() == version.Deneb {
+	if signed.Block().Version() == version.Deneb && !signed.Block().IsBlinded() {
 		err := ValidateBlobKzgs(ctx, signed.Block().Body())
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate blob kzgs")
