@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "clock.go",
-        "genesis.go",
         "synchronizer.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/startup",
