@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -29,7 +30,7 @@ func TestWrapExecutionPayloadHeader(t *testing.T) {
 
 func TestWrapExecutionPayload_IsNil(t *testing.T) {
 	_, err := blocks.WrappedExecutionPayload(nil)
-	require.Equal(t, blocks.ErrNilObjectWrapped, err)
+	require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayload{GasUsed: 54}
 	wsb, err := blocks.WrappedExecutionPayload(data)
@@ -40,7 +41,7 @@ func TestWrapExecutionPayload_IsNil(t *testing.T) {
 
 func TestWrapExecutionPayloadHeader_IsNil(t *testing.T) {
 	_, err := blocks.WrappedExecutionPayloadHeader(nil)
-	require.Equal(t, blocks.ErrNilObjectWrapped, err)
+	require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadHeader{GasUsed: 54}
 	wsb, err := blocks.WrappedExecutionPayloadHeader(data)
@@ -151,7 +152,7 @@ func TestWrapExecutionPayloadHeaderCapella(t *testing.T) {
 
 func TestWrapExecutionPayloadCapella_IsNil(t *testing.T) {
 	_, err := blocks.WrappedExecutionPayloadCapella(nil, 0)
-	require.Equal(t, blocks.ErrNilObjectWrapped, err)
+	require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadCapella{GasUsed: 54}
 	payload, err := blocks.WrappedExecutionPayloadCapella(data, 0)
@@ -162,7 +163,7 @@ func TestWrapExecutionPayloadCapella_IsNil(t *testing.T) {
 
 func TestWrapExecutionPayloadHeaderCapella_IsNil(t *testing.T) {
 	_, err := blocks.WrappedExecutionPayloadHeaderCapella(nil, 0)
-	require.Equal(t, blocks.ErrNilObjectWrapped, err)
+	require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadHeaderCapella{GasUsed: 54}
 	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data, 0)
@@ -210,16 +211,16 @@ func Test_executionPayload_Pb(t *testing.T) {
 	assert.DeepEqual(t, payload.Proto(), pb)
 
 	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, consensus_types.ErrUnsupportedGetter)
 }
 
 func Test_executionPayloadHeader_Pb(t *testing.T) {
 	payload := createWrappedPayloadHeader(t)
 	_, err := payload.PbBellatrix()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, consensus_types.ErrUnsupportedGetter)
 
 	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, consensus_types.ErrUnsupportedGetter)
 }
 
 func Test_executionPayloadCapella_Pb(t *testing.T) {
@@ -229,16 +230,16 @@ func Test_executionPayloadCapella_Pb(t *testing.T) {
 	assert.DeepEqual(t, payload.Proto(), pb)
 
 	_, err = payload.PbBellatrix()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, consensus_types.ErrUnsupportedGetter)
 }
 
 func Test_executionPayloadHeaderCapella_Pb(t *testing.T) {
 	payload := createWrappedPayloadHeaderCapella(t)
 	_, err := payload.PbBellatrix()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, consensus_types.ErrUnsupportedGetter)
 
 	_, err = payload.PbCapella()
-	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+	require.ErrorIs(t, err, consensus_types.ErrUnsupportedGetter)
 }
 
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
