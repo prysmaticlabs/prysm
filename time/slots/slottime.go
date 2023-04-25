@@ -173,7 +173,7 @@ func CurrentSlot(genesisTimeSec uint64) primitives.Slot {
 	return primitives.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
 }
 
-// Duration computes the slot of end relative to start.
+// Duration computes the span of time between two instants, represented as Slots.
 func Duration(start, end time.Time) primitives.Slot {
 	if end.Before(start) {
 		return 0
