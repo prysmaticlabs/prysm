@@ -1,6 +1,6 @@
 module github.com/prysmaticlabs/prysm/v4
 
-go 1.19
+go 1.20
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
@@ -70,7 +70,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/supranational/blst v0.3.8-0.20220526154634-513d2456b344
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e
-	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
+	github.com/trailofbits/go-mutexasserts v0.0.0-20230328101604-8cdbc5f3d279
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/urfave/cli/v2 v2.23.7
 	github.com/uudashr/gocognit v1.0.5
