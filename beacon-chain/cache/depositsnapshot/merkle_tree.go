@@ -60,8 +60,6 @@ func create(leaves [][32]byte, depth uint64) MerkleTreeNode {
 }
 
 // fromSnapshotParts creates a new Merkle tree from a list of finalized leaves, number of deposits and specified depth.
-//
-//nolint:unused
 func fromSnapshotParts(finalized [][32]byte, deposits uint64, level uint64) (_ MerkleTreeNode, err error) {
 	if len(finalized) < 1 || deposits == 0 {
 		return &ZeroNode{

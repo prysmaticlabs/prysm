@@ -61,8 +61,6 @@ func (d *DepositTree) GetSnapshot() (DepositTreeSnapshot, error) {
 }
 
 // fromSnapshot returns a deposit tree from a deposit tree snapshot.
-//
-//nolint:unused
 func fromSnapshot(snapshot DepositTreeSnapshot) (*DepositTree, error) {
 	root, err := snapshot.CalculateRoot()
 	if err != nil {
@@ -163,7 +161,6 @@ func (d *DepositTree) HashTreeRoot() ([32]byte, error) {
 
 // NumOfItems is defined as part of MerkleTree interface and returns the number of deposits in the tree.
 func (d *DepositTree) NumOfItems() int {
-	// TODO: discuss usefulness?
 	return int(d.depositCount)
 }
 

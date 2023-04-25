@@ -63,36 +63,7 @@ func Test_fromSnapshotParts(t *testing.T) {
 	tests := []struct {
 		name      string
 		finalized [][32]byte
-		deposits  uint64
-		level     uint64
-		want      MerkleTreeNode
 	}{
-		// {
-		// 	name:      "empty",
-		// 	finalized: nil,
-		// 	deposits:  0,
-		// 	level:     0,
-		// 	want:      &ZeroNode{},
-		// },
-		// {
-		// 	name:      "single finalized node",
-		// 	finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
-		// 	deposits:  1,
-		// 	level:     0,
-		// 	want: &FinalizedNode{
-		// 		depositCount: 1,
-		// 		hash:         [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		// 	},
-		// },
-		// {
-		// 	name:      "multiple deposits and 1 Finalized",
-		// 	finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
-		// 	deposits:  2,
-		// 	want: &InnerNode{
-		// 		left:  &InnerNode{&InnerNode{&FinalizedNode{depositCount: 2, hash: hexString(t, fmt.Sprintf("%064d", 0))}, &ZeroNode{1}}, &ZeroNode{2}},
-		// 		right: &ZeroNode{3},
-		// 	},
-		// },
 		{
 			name:      "multiple deposits and multiple Finalized",
 			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 1)), hexString(t, fmt.Sprintf("%064d", 2))},
@@ -126,7 +97,7 @@ func Test_fromSnapshotParts(t *testing.T) {
 				DepositCount: 2,
 			}, DepositContractDepth)
 			require.NoError(t, err)
-			sShot, err := test.getSnapshot()
+			sShot, err := test.GetSnapshot()
 			require.NoError(t, err)
 			got, err = sShot.CalculateRoot()
 			require.NoError(t, err)
