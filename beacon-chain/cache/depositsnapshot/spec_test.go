@@ -307,7 +307,7 @@ func TestFinalization(t *testing.T) {
 	require.NoError(t, err)
 	// ensure finalization doesn't change root
 	require.Equal(t, tree.getRoot(), originalRoot)
-	snapshotData, err := tree.getSnapshot()
+	snapshotData, err := tree.GetSnapshot()
 	require.NoError(t, err)
 	require.DeepEqual(t, testCases[100].Snapshot.DepositTreeSnapshot, snapshotData)
 	// create a copy of the tree from a snapshot by replaying
@@ -325,7 +325,7 @@ func TestFinalization(t *testing.T) {
 	//	root should still be the same
 	require.Equal(t, originalRoot, tree.getRoot())
 	// create a copy of the tree by taking a snapshot again
-	snapshotData, err = tree.getSnapshot()
+	snapshotData, err = tree.GetSnapshot()
 	require.NoError(t, err)
 	cp = cloneFromSnapshot(t, snapshotData, testCases[106:128])
 	// create a copy of the tree by replaying ALL deposits from nothing
@@ -355,14 +355,14 @@ func TestSnapshotCases(t *testing.T) {
 			BlockHash:    c.Eth1Data.BlockHash[:],
 		}, c.BlockHeight)
 		require.NoError(t, err)
-		s, err := tree.getSnapshot()
+		s, err := tree.GetSnapshot()
 		require.NoError(t, err)
 		require.DeepEqual(t, c.Snapshot.DepositTreeSnapshot, s)
 	}
 }
 
 func TestEmptyTreeSnapshot(t *testing.T) {
-	_, err := NewDepositTree().getSnapshot()
+	_, err := NewDepositTree().GetSnapshot()
 	require.ErrorContains(t, "empty execution block", err)
 }
 
