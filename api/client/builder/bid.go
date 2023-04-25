@@ -107,7 +107,7 @@ type builderBid struct {
 func WrappedBuilderBid(p *ethpb.BuilderBid) (Bid, error) {
 	w := builderBid{p: p}
 	if w.IsNil() {
-		return nil, Errnilobjectw
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }

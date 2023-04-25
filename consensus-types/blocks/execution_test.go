@@ -30,7 +30,7 @@ func TestWrapExecutionPayloadHeader(t *testing.T) {
 
 func TestWrapExecutionPayload_IsNil(t *testing.T) {
 	_, err := blocks.WrappedExecutionPayload(nil)
-	require.Equal(t, blocks.ErrNilObjectWrapped, err)
+	require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayload{GasUsed: 54}
 	wsb, err := blocks.WrappedExecutionPayload(data)
@@ -152,7 +152,7 @@ func TestWrapExecutionPayloadHeaderCapella(t *testing.T) {
 
 func TestWrapExecutionPayloadCapella_IsNil(t *testing.T) {
 	_, err := blocks.WrappedExecutionPayloadCapella(nil, 0)
-	require.Equal(t, blocks.ErrNilObjectWrapped, err)
+	require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadCapella{GasUsed: 54}
 	payload, err := blocks.WrappedExecutionPayloadCapella(data, 0)
@@ -163,7 +163,7 @@ func TestWrapExecutionPayloadCapella_IsNil(t *testing.T) {
 
 func TestWrapExecutionPayloadHeaderCapella_IsNil(t *testing.T) {
 	_, err := blocks.WrappedExecutionPayloadHeaderCapella(nil, 0)
-	require.Equal(t, blocks.ErrNilObjectWrapped, err)
+	require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadHeaderCapella{GasUsed: 54}
 	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data, 0)
