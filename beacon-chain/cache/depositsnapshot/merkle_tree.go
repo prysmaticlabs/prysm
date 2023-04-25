@@ -98,8 +98,6 @@ func fromSnapshotParts(finalized [][32]byte, deposits uint64, level uint64) (_ M
 }
 
 // generateProof returns a merkle proof and root
-//
-//nolint:unused
 func generateProof(tree MerkleTreeNode, index uint64, depth uint64) ([32]byte, [][32]byte) {
 	var proof [][32]byte
 	node := tree

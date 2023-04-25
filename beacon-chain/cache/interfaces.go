@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
+// DepositCache combines the interfaces for retrieving and inserting deposit information.
 type DepositCache interface {
 	DepositFetcher
 	DepositInserter
@@ -33,16 +34,20 @@ type DepositInserter interface {
 	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error
 }
 
+// FinalizedFetcher is a smaller interface defined to be the bare minimum to satisfy “Service”.
+// It extends the "DepositFetcher" interface with additional methods for fetching finalized deposits.
 type FinalizedFetcher interface {
 	FinalizedDeposits(ctx context.Context) FinalizedDeposits
 	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
 }
 
+// FinalizedDeposits defines a method to access a merkle tree containing deposits and their indexes.
 type FinalizedDeposits interface {
 	Deposits() MerkleTree
 	MerkleTrieIndex() int64
 }
 
+// MerkleTree defines methods for constructing and manipulating a merkle tree.
 type MerkleTree interface {
 	HashTreeRoot() ([32]byte, error)
 	NumOfItems() int

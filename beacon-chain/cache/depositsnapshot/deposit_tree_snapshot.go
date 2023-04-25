@@ -1,8 +1,6 @@
 package depositsnapshot
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -16,8 +14,6 @@ var (
 
 // DepositTreeSnapshot represents the data used to create a
 // deposit tree given a snapshot.
-//
-//nolint:unused
 type DepositTreeSnapshot struct {
 	finalized      [][32]byte
 	depositRoot    [32]byte
@@ -42,14 +38,10 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 		}
 		size >>= 1
 	}
-	fmt.Println("in snapshot calc root, deposit count is", ds.depositCount)
-	fmt.Printf("in snapshot calc, root before mixin is %#x\n", root)
 	return hash.Hash(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(ds.depositCount)...)), nil
 }
 
 // fromTreeParts constructs the deposit tree from pre-existing data.
-//
-//nolint:unused
 func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock executionBlock) (DepositTreeSnapshot, error) {
 	snapshot := DepositTreeSnapshot{
 		finalized:      finalised,

@@ -23,8 +23,6 @@ var (
 	ErrInvalidMixInLength = errors.New("depositCount should be greater than 0")
 	// ErrInvalidIndex occurs when the index is less than the number of finalized deposits.
 	ErrInvalidIndex = errors.New("index should be greater than finalizedDeposits - 1")
-	// ErrNoDeposits occurs when the number of deposits is 0.
-	ErrNoDeposits = errors.New("number of deposits should be greater than 0")
 	// ErrTooManyDeposits occurs when the number of deposits exceeds the capacity of the tree.
 	ErrTooManyDeposits = errors.New("number of deposits should not be greater than the capacity of the tree")
 )
@@ -80,9 +78,6 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (*DepositTree, error) {
 	if err != nil {
 		return nil, err
 	}
-	if snapshot.depositCount == 0 {
-		return nil, ErrNoDeposits
-	}
 	return &DepositTree{
 		tree:                    tree,
 		depositCount:            snapshot.depositCount,
@@ -134,8 +129,8 @@ func (d *DepositTree) getRoot() [32]byte {
 	return hash.Hash(append(root[:], enc[:]...))
 }
 
-// PushLeaf adds a new leaf to the tree.
-func (d *DepositTree) PushLeaf(leaf [32]byte) error {
+// pushLeaf adds a new leaf to the tree.
+func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 	var err error
 	d.tree, err = d.tree.PushLeaf(leaf, DepositContractDepth)
 	if err != nil {
@@ -145,17 +140,19 @@ func (d *DepositTree) PushLeaf(leaf [32]byte) error {
 	return nil
 }
 
+// Insert is defined as part of MerkleTree interface and adds a new leaf to the tree.
 func (d *DepositTree) Insert(item []byte, index int) error {
 	var err error
 	var leaf [32]byte
 	copy(leaf[:], item[:32])
-	err = d.PushLeaf(leaf)
+	err = d.pushLeaf(leaf)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// HashTreeRoot is defined as part of MerkleTree interface and calculates the hash tree root.
 func (d *DepositTree) HashTreeRoot() ([32]byte, error) {
 	root := d.getRoot()
 	if root == [32]byte{} {
@@ -164,11 +161,13 @@ func (d *DepositTree) HashTreeRoot() ([32]byte, error) {
 	return root, nil
 }
 
+// NumOfItems is defined as part of MerkleTree interface and returns the number of deposits in the tree.
 func (d *DepositTree) NumOfItems() int {
 	// TODO: discuss usefulness?
 	return int(d.depositCount)
 }
 
+// MerkleProof is defined as part of MerkleTree interface and generates a merkle proof.
 func (d *DepositTree) MerkleProof(index int) ([][]byte, error) {
 	_, proof, err := d.getProof(uint64(index))
 	if err != nil {

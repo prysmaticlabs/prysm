@@ -560,21 +560,21 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 	}
 	if features.Get().EnableEIP4881 {
-		trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+		tree, ok := s.depositTrie.(*depositsnapshot.DepositTree)
 		if !ok {
-			return errors.New("deposit trie was not SparseMerkleTrie")
+			return errors.New("deposit tree was not SparseMerkleTrie")
 		}
-		snapshot, err := trie.GetSnapshot()
+		snapshot, err := tree.GetSnapshot()
 		if err != nil {
 			return err
 		}
 		eth1Data.DepositSnapshot = snapshot.ToProto()
 	} else {
-		trie, ok := s.depositTrie.(*trie.SparseMerkleTrie)
+		tree, ok := s.depositTrie.(*trie.SparseMerkleTrie)
 		if !ok {
-			return errors.New("deposit trie was not SparseMerkleTrie")
+			return errors.New("deposit tree was not SparseMerkleTrie")
 		}
-		eth1Data.Trie = trie.ToProto()
+		eth1Data.Trie = tree.ToProto()
 	}
 	return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
 }

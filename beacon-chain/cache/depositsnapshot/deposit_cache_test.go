@@ -349,7 +349,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	for _, dep := range finalizedDeposits {
 		root, err := dep.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err)
-		err = dc.finalizedDeposits.depositTree.PushLeaf(root)
+		err = dc.finalizedDeposits.depositTree.pushLeaf(root)
 		require.NoError(t, err)
 	}
 	err = dc.InsertFinalizedDeposits(context.Background(), 2)
@@ -788,7 +788,7 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	for _, dep := range dc.deposits {
 		root, err := dep.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err)
-		err = dc.finalizedDeposits.depositTree.PushLeaf(root)
+		err = dc.finalizedDeposits.depositTree.pushLeaf(root)
 		require.NoError(t, err)
 	}
 	for _, dep := range deps {
