@@ -25,7 +25,7 @@ const (
 type FieldIndex int
 
 // String returns the name of the field index.
-func (f FieldIndex) String(_ int) string {
+func (f FieldIndex) String() string {
 	switch f {
 	case GenesisTime:
 		return "genesisTime"

@@ -97,9 +97,8 @@ func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
 			return valErr
 		}
 
-		var crtErr error
 		st, err = s.unmarshalState(ctx, enc, valEntries)
-		return crtErr
+		return err
 	})
 	if err != nil {
 		return nil, err

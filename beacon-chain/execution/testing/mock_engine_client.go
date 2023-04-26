@@ -39,7 +39,7 @@ type EngineClient struct {
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
 	BlobsBundle                 *pb.BlobsBundle
-	BlockValue                  *big.Int
+	BlockValue                  uint64
 }
 
 // NewPayload --

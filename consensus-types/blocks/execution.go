@@ -3,10 +3,10 @@ package blocks
 import (
 	"bytes"
 	"errors"
-	"math/big"
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
@@ -25,7 +25,7 @@ type executionPayload struct {
 func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
 	w := executionPayload{p: p}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -147,17 +147,17 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayload) TransactionsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // Withdrawals --
 func (e executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // WithdrawalsRoot --
 func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // ExcessDataGas --
@@ -172,12 +172,12 @@ func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 
 // PbCapella --
 func (executionPayload) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
-// Value --
-func (executionPayload) Value() (*big.Int, error) {
-	return nil, ErrUnsupportedGetter
+// ValueInGwei --
+func (executionPayload) ValueInGwei() (uint64, error) {
+	return 0, consensus_types.ErrUnsupportedGetter
 }
 
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
@@ -191,7 +191,7 @@ type executionPayloadHeader struct {
 func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
 	w := executionPayloadHeader{p: p}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -308,7 +308,7 @@ func (e executionPayloadHeader) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeader) Transactions() ([][]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // TransactionsRoot --
@@ -318,12 +318,12 @@ func (e executionPayloadHeader) TransactionsRoot() ([]byte, error) {
 
 // Withdrawals --
 func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // WithdrawalsRoot --
 func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // ExcessDataGas --
@@ -333,17 +333,17 @@ func (e executionPayloadHeader) ExcessDataGas() ([]byte, error) {
 
 // PbV2 --
 func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbBellatrix --
 func (executionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
-// Value --
-func (executionPayloadHeader) Value() (*big.Int, error) {
-	return nil, ErrUnsupportedGetter
+// ValueInGwei --
+func (executionPayloadHeader) ValueInGwei() (uint64, error) {
+	return 0, consensus_types.ErrUnsupportedGetter
 }
 
 // PayloadToHeader converts `payload` into execution payload header format.
@@ -379,14 +379,14 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadCapella struct {
 	p     *enginev1.ExecutionPayloadCapella
-	value *big.Int
+	value uint64
 }
 
 // WrappedExecutionPayloadCapella is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value *big.Int) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value uint64) (interfaces.ExecutionData, error) {
 	w := executionPayloadCapella{p: p, value: value}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -508,7 +508,7 @@ func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayloadCapella) TransactionsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // Withdrawals --
@@ -518,7 +518,7 @@ func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // WithdrawalsRoot --
 func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 func (e executionPayloadCapella) ExcessDataGas() ([]byte, error) {
@@ -532,11 +532,11 @@ func (e executionPayloadCapella) PbCapella() (*enginev1.ExecutionPayloadCapella,
 
 // PbBellatrix --
 func (executionPayloadCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
-// Value --
-func (e executionPayloadCapella) Value() (*big.Int, error) {
+// ValueInGwei --
+func (e executionPayloadCapella) ValueInGwei() (uint64, error) {
 	return e.value, nil
 }
 
@@ -545,14 +545,14 @@ func (e executionPayloadCapella) Value() (*big.Int, error) {
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderCapella struct {
 	p     *enginev1.ExecutionPayloadHeaderCapella
-	value *big.Int
+	value uint64
 }
 
 // WrappedExecutionPayloadHeaderCapella is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value *big.Int) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value uint64) (interfaces.ExecutionData, error) {
 	w := executionPayloadHeaderCapella{p: p, value: value}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -669,7 +669,7 @@ func (e executionPayloadHeaderCapella) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeaderCapella) Transactions() ([][]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // TransactionsRoot --
@@ -679,7 +679,7 @@ func (e executionPayloadHeaderCapella) TransactionsRoot() ([]byte, error) {
 
 // Withdrawals --
 func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // WithdrawalsRoot --
@@ -693,16 +693,16 @@ func (e executionPayloadHeaderCapella) ExcessDataGas() ([]byte, error) {
 
 // PbV2 --
 func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbBellatrix --
 func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
-// Value --
-func (e executionPayloadHeaderCapella) Value() (*big.Int, error) {
+// ValueInGwei --
+func (e executionPayloadHeaderCapella) ValueInGwei() (uint64, error) {
 	return e.value, nil
 }
 
@@ -817,7 +817,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 
 	txs, err := data.Transactions()
 	switch {
-	case errors.Is(err, ErrUnsupportedGetter):
+	case errors.Is(err, consensus_types.ErrUnsupportedGetter):
 	case err != nil:
 		return false, err
 	default:

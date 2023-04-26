@@ -3,10 +3,13 @@ package builder
 import (
 	"math/big"
 
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -38,7 +41,7 @@ type signedBuilderBid struct {
 func WrappedSignedBuilderBid(p *ethpb.SignedBuilderBid) (SignedBid, error) {
 	w := signedBuilderBid{p: p}
 	if w.IsNil() {
-		return nil, blocks.ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -71,7 +74,7 @@ type signedBuilderBidCapella struct {
 func WrappedSignedBuilderBidCapella(p *ethpb.SignedBuilderBidCapella) (SignedBid, error) {
 	w := signedBuilderBidCapella{p: p}
 	if w.IsNil() {
-		return nil, blocks.ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -104,7 +107,7 @@ type builderBid struct {
 func WrappedBuilderBid(p *ethpb.BuilderBid) (Bid, error) {
 	w := builderBid{p: p}
 	if w.IsNil() {
-		return nil, blocks.ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -152,16 +155,19 @@ type builderBidCapella struct {
 func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 	w := builderBidCapella{p: p}
 	if w.IsNil() {
-		return nil, blocks.ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
 
 // Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
+	if b.p == nil {
+		return nil, errors.New("builder bid is nil")
+	}
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	v := bytesutil.ReverseByteOrder(b.p.Value)
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, big.NewInt(0).SetBytes(v))
+	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, math.WeiToGwei(v))
 }
 
 // Version --

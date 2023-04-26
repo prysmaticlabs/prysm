@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -95,7 +96,7 @@ func (b *SignedBeaconBlock) SetVoluntaryExits(v []*eth.SignedVoluntaryExit) {
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetSyncAggregate(s *eth.SyncAggregate) error {
 	if b.version == version.Phase0 {
-		return ErrNotSupported("SyncAggregate", b.version)
+		return consensus_types.ErrNotSupported("SyncAggregate", b.version)
 	}
 	b.block.body.syncAggregate = s
 	return nil
@@ -105,7 +106,7 @@ func (b *SignedBeaconBlock) SetSyncAggregate(s *eth.SyncAggregate) error {
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetExecution(e interfaces.ExecutionData) error {
 	if b.version == version.Phase0 || b.version == version.Altair {
-		return ErrNotSupported("Execution", b.version)
+		return consensus_types.ErrNotSupported("Execution", b.version)
 	}
 	if b.block.body.isBlinded {
 		b.block.body.executionPayloadHeader = e
@@ -119,7 +120,7 @@ func (b *SignedBeaconBlock) SetExecution(e interfaces.ExecutionData) error {
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetBLSToExecutionChanges(blsToExecutionChanges []*eth.SignedBLSToExecutionChange) error {
 	if b.version < version.Capella {
-		return ErrNotSupported("BLSToExecutionChanges", b.version)
+		return consensus_types.ErrNotSupported("BLSToExecutionChanges", b.version)
 	}
 	b.block.body.blsToExecutionChanges = blsToExecutionChanges
 	return nil

@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusBlocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -53,7 +53,7 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())))
 		txs, err := p.Transactions()
 		switch {
-		case errors.Is(err, consensusBlocks.ErrUnsupportedGetter):
+		case errors.Is(err, consensus_types.ErrUnsupportedGetter):
 		case err != nil:
 			return err
 		default:
