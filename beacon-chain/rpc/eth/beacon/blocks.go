@@ -25,6 +25,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -942,16 +943,15 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedPhase0Blk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
+	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Phase0{
+			Phase0: v1alpha1Blk,
+		},
+	})
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
+		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
-	root, err := phase0Blk.HashTreeRoot()
-	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-	}
-
-	return bs.submitBlock(ctx, root, wrappedPhase0Blk)
+	return nil
 }
 
 func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.BeaconBlockAltair, sig []byte) error {
@@ -959,17 +959,15 @@ func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedAltairBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
+	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Altair{
+			Altair: v1alpha1Blk,
+		},
+	})
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
+		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
-
-	root, err := altairBlk.HashTreeRoot()
-	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-	}
-
-	return bs.submitBlock(ctx, root, wrappedAltairBlk)
+	return nil
 }
 
 func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv2.BeaconBlockBellatrix, sig []byte) error {
@@ -977,17 +975,15 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedBellatrixBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
+	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Bellatrix{
+			Bellatrix: v1alpha1Blk,
+		},
+	})
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
+		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
-
-	root, err := bellatrixBlk.HashTreeRoot()
-	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-	}
-
-	return bs.submitBlock(ctx, root, wrappedBellatrixBlk)
+	return nil
 }
 
 func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.BeaconBlockCapella, sig []byte) error {
@@ -995,17 +991,15 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedCapellaBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
+	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Capella{
+			Capella: v1alpha1Blk,
+		},
+	})
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
+		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
-
-	root, err := capellaBlk.HashTreeRoot()
-	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-	}
-
-	return bs.submitBlock(ctx, root, wrappedCapellaBlk)
+	return nil
 }
 
 func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.ReadOnlySignedBeaconBlock) error {
