@@ -562,7 +562,7 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 	if features.Get().EnableEIP4881 {
 		tree, ok := s.depositTrie.(*depositsnapshot.DepositTree)
 		if !ok {
-			return errors.New("deposit tree was not SparseMerkleTrie")
+			return errors.New("deposit tree was not EIP4881 DepositTree")
 		}
 		snapshot, err := tree.GetSnapshot()
 		if err != nil {

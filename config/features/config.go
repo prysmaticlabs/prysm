@@ -213,10 +213,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true
 	}
-  if ctx.IsSet(enableEIP4881.Name) {
+	if ctx.IsSet(enableEIP4881.Name) {
 		logEnabled(enableEIP4881)
 		cfg.EnableEIP4881 = true
-  }
+	}
 	Init(cfg)
 	return nil
 }

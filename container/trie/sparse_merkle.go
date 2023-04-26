@@ -79,10 +79,8 @@ func GenerateTrieFromItems(items [][]byte, depth uint64) (*SparseMerkleTrie, err
 	layers := make([][][]byte, depth+1)
 	transformedLeaves := make([][]byte, len(leaves))
 	for i := range leaves {
-		fmt.Printf("Transformed %#x\n", leaves[i])
 		arr := bytesutil.ToBytes32(leaves[i])
 		transformedLeaves[i] = arr[:]
-		fmt.Printf("Original leaf hash: %x\n", transformedLeaves[i])
 	}
 	layers[0] = transformedLeaves
 	for i := uint64(0); i < depth; i++ {
@@ -120,8 +118,6 @@ func (m *SparseMerkleTrie) HashTreeRoot() ([32]byte, error) {
 		depositCount = 0
 	}
 	binary.LittleEndian.PutUint64(enc[:], depositCount)
-	preMixInRoot := m.branches[len(m.branches)-1][0]
-	fmt.Printf("Mixing in %#x and root premixing is %#x\n", enc, preMixInRoot)
 	return hash.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...)), nil
 }
 
