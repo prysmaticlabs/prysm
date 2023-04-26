@@ -67,10 +67,6 @@ func (s *SyncCommitteeCache) Clear() {
 	s.cache = cache.NewFIFO(keyFn)
 }
 
-func (s *SyncCommitteeCache) ListKeys() []string {
-	return s.cache.ListKeys()
-}
-
 // CurrentPeriodIndexPosition returns current period index position of a validator index with respect with
 // sync committee. If the input validator index has no assignment, an empty list will be returned.
 // If the input root does not exist in cache, `ErrNonExistingSyncCommitteeKey` is returned.
