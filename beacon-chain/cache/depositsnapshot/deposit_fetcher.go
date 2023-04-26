@@ -31,16 +31,6 @@ type Cache struct {
 	depositsLock      sync.RWMutex
 }
 
-func (c *Cache) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Cache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer {
-	//TODO implement me
-	panic("implement me")
-}
-
 // finalizedDepositsContainer stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
 type finalizedDepositsContainer struct {
@@ -253,4 +243,40 @@ func getFinalizedDeposits(deposits *DepositTree, index int64) finalizedDepositsC
 		depositTree:     deposits,
 		merkleTrieIndex: index,
 	}
+}
+
+func (c *Cache) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
+	ctx, span := trace.StartSpan(ctx, "Cache.PendingDeposits")
+	defer span.End()
+
+	depositCntrs := c.PendingContainers(ctx, untilBlk)
+
+	deposits := make([]*ethpb.Deposit, 0, len(depositCntrs))
+	for _, dep := range depositCntrs {
+		deposits = append(deposits, dep.Deposit)
+	}
+
+	return deposits
+}
+
+func (c *Cache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
+	defer span.End()
+	c.depositsLock.RLock()
+	defer c.depositsLock.RUnlock()
+
+	depositCntrs := make([]*ethpb.DepositContainer, 0, len(c.pendingDeposits))
+	for _, ctnr := range c.pendingDeposits {
+		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
+			depositCntrs = append(depositCntrs, ctnr)
+		}
+	}
+	// Sort the deposits by Merkle index.
+	sort.SliceStable(depositCntrs, func(i, j int) bool {
+		return depositCntrs[i].Index < depositCntrs[j].Index
+	})
+
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(depositCntrs))))
+
+	return depositCntrs
 }

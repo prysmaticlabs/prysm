@@ -34,7 +34,6 @@ type Service struct {
 	chainStartDeposits []*ethpb.Deposit
 }
 
-// TODO: Implement error
 func (s *Service) AllDepositContainers(ctx context.Context) []*ethpb.DepositContainer {
 	//TODO implement me
 	panic("implement me")
