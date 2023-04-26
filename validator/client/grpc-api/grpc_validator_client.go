@@ -124,6 +124,16 @@ func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.E
 	return stream.Recv()
 }
 
+func (c *grpcValidatorClient) AssignValidatorToSubnet(ctx context.Context, in *ethpb.AssignValidatorToSubnetRequest) (*empty.Empty, error) {
+	return c.beaconNodeValidatorClient.AssignValidatorToSubnet(ctx, in)
+}
+func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
+	ctx context.Context,
+	in *ethpb.AggregatedSigAndAggregationBitsRequest,
+) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
+	return c.beaconNodeValidatorClient.AggregatedSigAndAggregationBits(ctx, in)
+}
+
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
 	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc)}
 }
