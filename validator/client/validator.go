@@ -1062,7 +1062,7 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		// skip registration creation if validator is not active status
 		if status.Status != ethpb.ValidatorStatus_ACTIVE {
 			log.WithFields(logrus.Fields{
-				"publickey": hexutil.Encode(resp.PublicKeys[i][:]),
+				"publickey": hexutil.Encode(resp.PublicKeys[i]),
 				"status":    status.Status.String(),
 			}).Debugf("skipping non active status key.")
 			continue
