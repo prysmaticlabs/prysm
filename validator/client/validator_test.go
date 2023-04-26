@@ -1445,12 +1445,13 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
 				v.pubkeyToValidatorIndex[keys[1]] = primitives.ValidatorIndex(2)
-				client.EXPECT().ValidatorStatus(
+				client.EXPECT().MultipleValidatorStatus(
 					gomock.Any(),
 					gomock.Any()).Return(
-					&ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
-					}, nil).Times(2)
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:], keys[1][:]},
+					}, nil)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -1525,12 +1526,13 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
 				v.pubkeyToValidatorIndex[keys[1]] = primitives.ValidatorIndex(2)
-				client.EXPECT().ValidatorStatus(
+				client.EXPECT().MultipleValidatorStatus(
 					gomock.Any(),
 					gomock.Any()).Return(
-					&ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
-					}, nil).Times(2)
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:], keys[1][:]},
+					}, nil)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -1601,12 +1603,13 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
 				v.pubkeyToValidatorIndex[keys[1]] = primitives.ValidatorIndex(2)
-				client.EXPECT().ValidatorStatus(
+				client.EXPECT().MultipleValidatorStatus(
 					gomock.Any(),
 					gomock.Any()).Return(
-					&ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
-					}, nil).Times(2)
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:], keys[1][:]},
+					}, nil)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -1673,11 +1676,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					},
 				})
 				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
-				client.EXPECT().ValidatorStatus(
+				client.EXPECT().MultipleValidatorStatus(
 					gomock.Any(),
 					gomock.Any()).Return(
-					&ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:]},
 					}, nil)
 
 				client.EXPECT().SubmitValidatorRegistrations(
@@ -1736,11 +1740,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
-				client.EXPECT().ValidatorStatus(
+				client.EXPECT().MultipleValidatorStatus(
 					gomock.Any(),
 					gomock.Any()).Return(
-					&ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:]},
 					}, nil)
 				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
@@ -1787,11 +1792,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
-				client.EXPECT().ValidatorStatus(
+				client.EXPECT().MultipleValidatorStatus(
 					gomock.Any(),
 					gomock.Any()).Return(
-					&ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:]},
 					}, nil)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
@@ -1879,11 +1885,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
-				client.EXPECT().ValidatorStatus(
+				client.EXPECT().MultipleValidatorStatus(
 					gomock.Any(),
 					gomock.Any()).Return(
-					&ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:]},
 					}, nil)
 
 				config[keys[0]] = &validatorserviceconfig.ProposerOption{
@@ -2011,12 +2018,6 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
-	client.EXPECT().ValidatorStatus(
-		ctx,
-		&ethpb.ValidatorStatusRequest{PublicKey: pubkey1[:]}).Return(
-		&ethpb.ValidatorStatusResponse{
-			Status: ethpb.ValidatorStatus_ACTIVE,
-		}, nil)
 	client.EXPECT().ValidatorIndex(
 		ctx,
 		&ethpb.ValidatorIndexRequest{
@@ -2026,24 +2027,19 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 		Index: 2,
 	}, nil)
 
-	client.EXPECT().ValidatorStatus(
-		ctx,
-		&ethpb.ValidatorStatusRequest{PublicKey: pubkey2[:]}).Return(
-		&ethpb.ValidatorStatusResponse{
-			Status: ethpb.ValidatorStatus_ACTIVE,
-		}, nil)
-
 	client.EXPECT().ValidatorIndex(
 		ctx,
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubkey3[:],
 		},
 	).Return(nil, status.Error(codes.NotFound, "NOT_FOUND"))
-	client.EXPECT().ValidatorStatus(
-		ctx,
-		&ethpb.ValidatorStatusRequest{PublicKey: pubkey4[:]}).Return(
-		&ethpb.ValidatorStatusResponse{
-			Status: ethpb.ValidatorStatus_ACTIVE,
+
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&ethpb.MultipleValidatorStatusResponse{
+			Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+			PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey4[:]},
 		}, nil)
 	v := validator{
 		validatorClient: client,
@@ -2116,12 +2112,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
-	client.EXPECT().ValidatorStatus(
-		ctx,
-		&ethpb.ValidatorStatusRequest{PublicKey: pubkey1[:]}).Return(
-		&ethpb.ValidatorStatusResponse{
-			Status: ethpb.ValidatorStatus_ACTIVE,
-		}, nil)
+
 	client.EXPECT().ValidatorIndex(
 		ctx,
 		&ethpb.ValidatorIndexRequest{
@@ -2130,12 +2121,6 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	).Return(&ethpb.ValidatorIndexResponse{
 		Index: 2,
 	}, nil)
-	client.EXPECT().ValidatorStatus(
-		ctx,
-		&ethpb.ValidatorStatusRequest{PublicKey: pubkey2[:]}).Return(
-		&ethpb.ValidatorStatusResponse{
-			Status: ethpb.ValidatorStatus_ACTIVE,
-		}, nil)
 
 	client.EXPECT().ValidatorIndex(
 		ctx,
@@ -2143,11 +2128,13 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 			PublicKey: pubkey3[:],
 		},
 	).Return(nil, status.Error(codes.NotFound, "NOT_FOUND"))
-	client.EXPECT().ValidatorStatus(
-		ctx,
-		&ethpb.ValidatorStatusRequest{PublicKey: pubkey4[:]}).Return(
-		&ethpb.ValidatorStatusResponse{
-			Status: ethpb.ValidatorStatus_ACTIVE,
+
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&ethpb.MultipleValidatorStatusResponse{
+			Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+			PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey4[:]},
 		}, nil)
 
 	v := validator{

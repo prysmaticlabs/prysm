@@ -1036,6 +1036,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 }
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
+	statusRequestKeys := make([][]byte, 0)
 	for _, k := range pubkeys {
 		_, ok := v.pubkeyToValidatorIndex[k]
 		// Get validator index from RPC server if not found.
@@ -1049,20 +1050,26 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 			}
 			v.pubkeyToValidatorIndex[k] = i
 		}
-		status, err := v.validatorClient.ValidatorStatus(ctx, &ethpb.ValidatorStatusRequest{PublicKey: k[:]})
-		if err != nil {
-			return nil, err
-		}
+		statusRequestKeys = append(statusRequestKeys, k[:])
+	}
+	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+		PublicKeys: statusRequestKeys,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for i, status := range resp.Statuses {
 		// skip registration creation if validator is not active status
 		if status.Status != ethpb.ValidatorStatus_ACTIVE {
 			log.WithFields(logrus.Fields{
-				"publickey": hexutil.Encode(k[:]),
+				"publickey": hexutil.Encode(resp.PublicKeys[i][:]),
 				"status":    status.Status.String(),
 			}).Debugf("skipping non active status key.")
 			continue
 		}
-		filteredKeys = append(filteredKeys, k)
+		filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
 	}
+
 	return filteredKeys, nil
 }
 
