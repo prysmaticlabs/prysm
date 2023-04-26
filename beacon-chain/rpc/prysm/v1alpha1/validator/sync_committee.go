@@ -101,7 +101,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
 	}
-	aggregatedSig, bits, err := vs.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubnetId, headRoot)
+	aggregatedSig, bits, err := vs.aggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubnetId, headRoot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
 	}
@@ -150,6 +150,17 @@ func (vs *Server) SubmitSignedContributionAndProof(
 // AggregatedSigAndAggregationBits returns the aggregated signature and aggregation bits
 // associated with a particular set of sync committee messages.
 func (vs *Server) AggregatedSigAndAggregationBits(
+	ctx context.Context,
+	req *ethpb.AggregatedSigAndAggregationBitsRequest,
+) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
+	aggregatedSig, bits, err := vs.aggregatedSigAndAggregationBits(ctx, req.Msgs, req.Slot, req.SubnetId, req.BlockRoot)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &ethpb.AggregatedSigAndAggregationBitsResponse{AggregatedSig: aggregatedSig, Bits: bits}, nil
+}
+
+func (vs *Server) aggregatedSigAndAggregationBits(
 	ctx context.Context,
 	msgs []*ethpb.SyncCommitteeMessage,
 	slot primitives.Slot,
