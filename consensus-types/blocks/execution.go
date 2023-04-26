@@ -162,7 +162,7 @@ func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
 
 // ExcessDataGas --
 func (e executionPayload) ExcessDataGas() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbBellatrix --
@@ -328,7 +328,7 @@ func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 
 // ExcessDataGas --
 func (e executionPayloadHeader) ExcessDataGas() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbV2 --
@@ -522,7 +522,7 @@ func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 }
 
 func (e executionPayloadCapella) ExcessDataGas() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbV2 --
@@ -688,7 +688,7 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 }
 
 func (e executionPayloadHeaderCapella) ExcessDataGas() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbV2 --
@@ -849,14 +849,14 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderDeneb struct {
 	p     *enginev1.ExecutionPayloadHeaderDeneb
-	value *big.Int
+	value uint64
 }
 
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value *big.Int) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value uint64) (interfaces.ExecutionData, error) {
 	w := executionPayloadHeaderDeneb{p: p, value: value}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -968,7 +968,7 @@ func (e executionPayloadHeaderDeneb) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeaderDeneb) Transactions() ([][]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // TransactionsRoot --
@@ -978,7 +978,7 @@ func (e executionPayloadHeaderDeneb) TransactionsRoot() ([]byte, error) {
 
 // Withdrawals --
 func (e executionPayloadHeaderDeneb) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // WitdrawalsRoot --
@@ -992,15 +992,15 @@ func (e executionPayloadHeaderDeneb) ExcessDataGas() ([]byte, error) {
 
 // PbBellatrix --
 func (e executionPayloadHeaderDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbCapella --
 func (e executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
-func (e executionPayloadHeaderDeneb) Value() (*big.Int, error) {
+func (e executionPayloadHeaderDeneb) ValueInGwei() (uint64, error) {
 	return e.value, nil
 }
 
@@ -1014,14 +1014,14 @@ func (e executionPayloadHeaderDeneb) IsBlinded() bool {
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadDeneb struct {
 	p     *enginev1.ExecutionPayloadDeneb
-	value *big.Int
+	value uint64
 }
 
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value *big.Int) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value uint64) (interfaces.ExecutionData, error) {
 	w := executionPayloadDeneb{p: p, value: value}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -1138,7 +1138,7 @@ func (e executionPayloadDeneb) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayloadDeneb) TransactionsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // Withdrawals --
@@ -1148,7 +1148,7 @@ func (e executionPayloadDeneb) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // WithdrawalsRoot --
 func (e executionPayloadDeneb) WithdrawalsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 func (e executionPayloadDeneb) ExcessDataGas() ([]byte, error) {
@@ -1157,15 +1157,15 @@ func (e executionPayloadDeneb) ExcessDataGas() ([]byte, error) {
 
 // PbBellatrix --
 func (e executionPayloadDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbCapella --
 func (e executionPayloadDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
-func (e executionPayloadDeneb) Value() (*big.Int, error) {
+func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
 	return e.value, nil
 }
 

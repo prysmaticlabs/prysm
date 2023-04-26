@@ -10,7 +10,7 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -286,7 +286,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		// try other peers if we get blobs that don't match the block commitments.
 		denebB, err := b.PbDenebBlock()
 		if err != nil {
-			if errors.Is(err, blocks.ErrUnsupportedGetter) {
+			if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 				// expected for pre-deneb blocks
 				continue
 			}

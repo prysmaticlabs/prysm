@@ -372,7 +372,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
@@ -434,7 +434,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -762,7 +762,7 @@ func (bs *Server) getBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySign
 	denebBlk, err := blk.PbDenebBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 			if blindedDenebBlk, err := blk.PbBlindedDenebBlock(); err == nil {
 				if blindedDenebBlk == nil {
 					return nil, errNilBlock
@@ -1027,7 +1027,7 @@ func (bs *Server) getSSZBlockDeneb(ctx context.Context, blk interfaces.ReadOnlyS
 	denebBlk, err := blk.PbDenebBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 			if blindedDenebBlk, err := blk.PbBlindedDenebBlock(); err == nil {
 				if blindedDenebBlk == nil {
 					return nil, errNilBlock

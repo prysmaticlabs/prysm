@@ -14,7 +14,7 @@ import (
 	prysmsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	btypes "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
@@ -329,7 +329,7 @@ func blobRequestsForBlocks(blocks []interfaces.ReadOnlySignedBeaconBlock) (*p2pp
 	for i, bl := range blocks {
 		commits, err := bl.Block().Body().BlobKzgCommitments()
 		if err != nil {
-			if errors.Is(err, btypes.ErrUnsupportedGetter) {
+			if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 				continue
 			}
 			return nil, err
