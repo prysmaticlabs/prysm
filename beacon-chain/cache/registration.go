@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"math/big"
 	"sync"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
-	"golang.org/x/net/context"
 )
 
 // RegistrationCache is used to store the cached results of an Validator Registration request.
