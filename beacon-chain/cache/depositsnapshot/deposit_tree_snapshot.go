@@ -68,7 +68,7 @@ func (ds *DepositTreeSnapshot) ToProto() *protodb.DepositSnapshot {
 		ExecutionHash:  ds.executionBlock.Hash[:],
 		ExecutionDepth: ds.executionBlock.Depth,
 	}
-	for i, _ := range ds.finalized {
+	for i := range ds.finalized {
 		trie.Finalized[i] = bytesutil.SafeCopyBytes(ds.finalized[i][:])
 	}
 	return trie
@@ -76,7 +76,7 @@ func (ds *DepositTreeSnapshot) ToProto() *protodb.DepositSnapshot {
 
 func DepositTreeFromSnapshotProto(snapshotProto *protodb.DepositSnapshot) (*DepositTree, error) {
 	finalized := make([][32]byte, len(snapshotProto.Finalized))
-	for i, _ := range snapshotProto.Finalized {
+	for i := range snapshotProto.Finalized {
 		finalized[i] = bytesutil.ToBytes32(snapshotProto.Finalized[i])
 	}
 	snapshot := DepositTreeSnapshot{
