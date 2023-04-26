@@ -69,15 +69,9 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.New("block.Block is nil")
 	}
 
-	headState, err := s.cfg.chain.HeadStateReadOnly(ctx)
-	if err != nil {
-		log.WithError(err).Error("could not get head state")
+	if err := s.verifySignatureAndInsertProposerIndex(ctx, blk); err != nil {
+		log.WithError(err).Error("could not verify sig and insert proposer index")
 	}
-	if err = blocks.VerifyBlockSignatureUsingCurrentFork(headState, blk); err != nil {
-		log.WithError(err).Error("could not verify signature")
-
-	}
-	s.insertProposerIndexCache(blk.Block().Slot(), blk.Block().ProposerIndex())
 
 	// Broadcast the block on a feed to notify other services in the beacon node
 	// of a received block (even if it does not process correctly through a state transition).
@@ -393,6 +387,19 @@ func getBlockFields(b interfaces.ReadOnlySignedBeaconBlock) logrus.Fields {
 		"graffiti":      string(graffiti[:]),
 		"version":       b.Block().Version(),
 	}
+}
+
+func (s *Service) verifySignatureAndInsertProposerIndex(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) error {
+	headState, err := s.cfg.chain.HeadStateReadOnly(ctx)
+	if err != nil {
+		return err
+	}
+	if err = blocks.VerifyBlockSignatureUsingCurrentFork(headState, blk); err != nil {
+		return err
+	}
+
+	s.insertProposerIndexCache(blk.Block().Slot(), blk.Block().ProposerIndex())
+	return nil
 }
 
 func (s *Service) insertProposerIndexCache(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) {
