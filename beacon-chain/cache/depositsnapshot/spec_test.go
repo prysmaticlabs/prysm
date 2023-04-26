@@ -369,10 +369,10 @@ func TestEmptyTreeSnapshot(t *testing.T) {
 func TestInvalidSnapshot(t *testing.T) {
 	invalidSnapshot := DepositTreeSnapshot{
 		finalized:    nil,
-		depositRoot:  Zerohashes[0],
+		depositRoot:  trie.ZeroHashes[0],
 		depositCount: 0,
 		executionBlock: executionBlock{
-			Hash:  Zerohashes[0],
+			Hash:  trie.ZeroHashes[0],
 			Depth: 0,
 		},
 	}

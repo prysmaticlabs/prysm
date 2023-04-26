@@ -3,6 +3,7 @@ package depositsnapshot
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/math"
 )
@@ -282,9 +283,9 @@ type ZeroNode struct {
 // GetRoot returns the root of the Merkle tree.
 func (z *ZeroNode) GetRoot() [32]byte {
 	if z.depth == DepositContractDepth {
-		return hash.Hash(append(Zerohashes[z.depth-1][:], Zerohashes[z.depth-1][:]...))
+		return hash.Hash(append(trie.ZeroHashes[z.depth-1][:], trie.ZeroHashes[z.depth-1][:]...))
 	}
-	return Zerohashes[z.depth]
+	return trie.ZeroHashes[z.depth]
 }
 
 // IsFull returns wh   ether there is space left for deposits.

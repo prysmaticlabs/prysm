@@ -2,6 +2,7 @@ package depositsnapshot
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	protodb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -25,7 +26,7 @@ type DepositTreeSnapshot struct {
 func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 	size := ds.depositCount
 	index := len(ds.finalized)
-	root := Zerohashes[0]
+	root := trie.ZeroHashes[0]
 	for i := 0; i < DepositContractDepth; i++ {
 		if (size & 1) == 1 {
 			if index == 0 {
@@ -34,7 +35,7 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 			index--
 			root = hash.Hash(append(ds.finalized[index][:], root[:]...))
 		} else {
-			root = hash.Hash(append(root[:], Zerohashes[i][:]...))
+			root = hash.Hash(append(root[:], trie.ZeroHashes[i][:]...))
 		}
 		size >>= 1
 	}
@@ -45,7 +46,7 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock executionBlock) (DepositTreeSnapshot, error) {
 	snapshot := DepositTreeSnapshot{
 		finalized:      finalised,
-		depositRoot:    Zerohashes[0],
+		depositRoot:    trie.ZeroHashes[0],
 		depositCount:   depositCount,
 		executionBlock: executionBlock,
 	}
