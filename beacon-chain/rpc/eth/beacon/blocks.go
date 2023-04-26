@@ -199,10 +199,9 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 }
 
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
-// included in the beacon chain. The beacon node is not required to validate the signed ReadOnlyBeaconBlock, and a successful
-// response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
-// new block into its state, and therefore validate the block internally, however blocks which fail the validation are
-// still broadcast but a different status code is returned (202).
+// included in the beacon chain. The beacon node will validate the signed ReadOnlyBeaconBlock, and a successful
+// response (20X) only indicates that the broadcast has been successful. The beacon node is not expected to integrate the
+// new block into its state.
 func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBlockContainer) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
@@ -232,10 +231,9 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 }
 
 // SubmitBlockSSZ instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
-// included in the beacon chain. The beacon node is not required to validate the signed ReadOnlyBeaconBlock, and a successful
-// response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
-// new block into its state, and therefore validate the block internally, however blocks which fail the validation are
-// still broadcast but a different status code is returned (202).
+// included in the beacon chain. The beacon node will validate the signed ReadOnlyBeaconBlock, and a successful
+// response (20X) only indicates that the broadcast has been successful. The beacon node is not expected to integrate the
+// new block into its state.
 //
 // The provided block must be SSZ-serialized.
 func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer) (*emptypb.Empty, error) {

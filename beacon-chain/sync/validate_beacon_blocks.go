@@ -69,11 +69,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.New("block.Block is nil")
 	}
 
-	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())
+	headState, err := s.cfg.chain.HeadStateReadOnly(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if err = blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk); err != nil {
+	if err = blocks.VerifyBlockSignatureUsingCurrentFork(headState, blk); err != nil {
 		return pubsub.ValidationReject, err
 	}
 	s.insertProposerIndexCache(blk.Block().Slot(), blk.Block().ProposerIndex())
