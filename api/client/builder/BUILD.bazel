@@ -11,6 +11,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/api/client/builder",
     visibility = ["//visibility:public"],
     deps = [
+        "//consensus-types:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
