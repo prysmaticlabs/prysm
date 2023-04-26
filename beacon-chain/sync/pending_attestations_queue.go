@@ -101,6 +101,11 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 			}
 			aggValid := pubsub.ValidationAccept == valRes
 			if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
+
+				if err := s.cfg.attPool.SaveForkchoiceAttestation(att.Aggregate); err != nil {
+					log.WithError(err).Error("could not save attestation to fork choice pool")
+				}
+
 				if err := s.cfg.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 					log.WithError(err).Debug("Could not save aggregate attestation")
 					continue

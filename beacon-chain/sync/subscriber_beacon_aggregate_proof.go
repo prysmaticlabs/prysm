@@ -27,5 +27,9 @@ func (s *Service) beaconAggregateProofSubscriber(_ context.Context, msg proto.Me
 		return s.cfg.attPool.SaveUnaggregatedAttestation(a.Message.Aggregate)
 	}
 
+	if err := s.cfg.attPool.SaveForkchoiceAttestation(a.Message.Aggregate); err != nil {
+		log.WithError(err).Error("could not save attestation to fork choice pool")
+	}
+
 	return s.cfg.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
 }
