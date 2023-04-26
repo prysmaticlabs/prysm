@@ -6,12 +6,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -178,7 +178,8 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if clearCount != s.cleared.Load() {
-		return errors.New("cache rotated during async committee update operation")
+		log.Warn("cache rotated during async committee update operation - abandoning cache update")
+		return nil
 	}
 
 	if err := s.cache.Add(&syncCommitteeIndexPosition{
