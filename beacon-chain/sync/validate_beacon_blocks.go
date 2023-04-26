@@ -395,23 +395,27 @@ func getBlockFields(b interfaces.ReadOnlySignedBeaconBlock) logrus.Fields {
 }
 
 func (s *Service) insertProposerIndexCache(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) {
+	if s.seenProposerIndexCache == nil {
+		return
+	}
 	if s.cfg.chain.CurrentSlot() != slot {
 		return
 	}
 
 	switch {
-	case uint64(s.seenProposerIndexCache[0]) > uint64(slot):
-		return
 	case uint64(s.seenProposerIndexCache[0]) == uint64(slot):
 		s.seenProposerIndexCache = append(s.seenProposerIndexCache, proposerIdx)
 	case uint64(slot) > uint64(s.seenProposerIndexCache[0]):
 		// Overwrite slot in proposer index cache if it's higher.
-		s.seenProposerIndexCache = []primitives.ValidatorIndex{primitives.ValidatorIndex(slot)}
-		s.seenProposerIndexCache = append(s.seenProposerIndexCache, proposerIdx)
+		s.seenProposerIndexCache = []primitives.ValidatorIndex{primitives.ValidatorIndex(slot), proposerIdx}
 	}
 }
 
 func (s *Service) SeenProposerIndex(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) bool {
+	if s.seenProposerIndexCache == nil {
+		return false
+	}
+
 	if s.seenProposerIndexCache[0] != primitives.ValidatorIndex(slot) {
 		return false
 	}
