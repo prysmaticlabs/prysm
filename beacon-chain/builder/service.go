@@ -171,7 +171,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		return errors.New("ids and registrations must be the same length")
 	}
 	if s.registrationCache != nil {
-		s.registrationCache.UpdateIndexToRegisteredMap(indexToRegistration)
+		s.registrationCache.UpdateIndexToRegisteredMap(ctx, indexToRegistration)
 		return nil
 	} else {
 		return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, idxs, msgs)

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ func TestRegistrationCache(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       pubkey,
 	}
-	cache.UpdateIndexToRegisteredMap(m)
+	cache.UpdateIndexToRegisteredMap(context.Background(), m)
 	reg, err := cache.GetRegistrationByIndex(validatorIndex)
 	require.NoError(t, err)
 	require.Equal(t, string(reg.Pubkey), string(pubkey))
@@ -37,7 +38,7 @@ func TestRegistrationCache(t *testing.T) {
 			Timestamp:    uint64(time.Now().Add(-1 * overExpirationPadTime).Unix()),
 			Pubkey:       pubkey,
 		}
-		cache.UpdateIndexToRegisteredMap(m)
+		cache.UpdateIndexToRegisteredMap(context.Background(), m)
 		_, err := cache.GetRegistrationByIndex(validatorIndex2)
 		require.ErrorContains(t, "no validator registered", err)
 	})
@@ -52,7 +53,7 @@ func TestRegistrationCache(t *testing.T) {
 			Timestamp:    uint64(time.Now().Add(-1 * overExpirationPadTime).Unix()),
 			Pubkey:       pubkey,
 		}
-		cache.UpdateIndexToRegisteredMap(m)
+		cache.UpdateIndexToRegisteredMap(context.Background(), m)
 		reg, err := cache.GetRegistrationByIndex(validatorIndex2)
 		require.NoError(t, err)
 		require.Equal(t, string(reg.Pubkey), string(pubkey))

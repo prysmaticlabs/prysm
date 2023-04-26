@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
+	"golang.org/x/net/context"
 )
 
 // RegistrationCache is used to store the cached results of an Validator Registration request.
@@ -54,7 +56,9 @@ func RegistrationTimeStampExpired(ts uint64) bool {
 }
 
 // UpdateIndexToRegisteredMap adds or updates values in the cache based on the argument.
-func (regCache *RegistrationCache) UpdateIndexToRegisteredMap(m map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1) {
+func (regCache *RegistrationCache) UpdateIndexToRegisteredMap(ctx context.Context, m map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1) {
+	ctx, span := trace.StartSpan(ctx, "RegistrationCache.UpdateIndexToRegisteredMap")
+	defer span.End()
 	regCache.Lock()
 	defer regCache.Unlock()
 	for key, value := range m {
