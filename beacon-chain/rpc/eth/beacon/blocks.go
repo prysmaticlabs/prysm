@@ -1020,6 +1020,10 @@ func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLe
 		})
 	}()
 
+	if block == nil || block.IsNil() {
+		return errors.New("nil block")
+	}
+
 	b := block.Block()
 	parentState, err := bs.StateGenService.StateByRoot(ctx, b.ParentRoot())
 	if err != nil {
