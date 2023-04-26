@@ -310,6 +310,19 @@ service BeaconNodeValidator {
             body: "*"
         };
     }
+
+    rpc AssignValidatorToSubnet(AssignValidatorToSubnetRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/blocks/assign_validator_to_subnet"
+            body: "*"
+        };
+    }
+
+    rpc AggregatedSigAndAggregationBits(AggregatedSigAndAggregationBitsRequest) returns (AggregatedSigAndAggregationBitsResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validator/blocks/aggregated_sig_and_aggregation_bits"
+        };
+    }
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and
@@ -748,4 +761,21 @@ message FeeRecipientByPubKeyRequest {
 
 message FeeRecipientByPubKeyResponse {
     bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+}
+
+message AssignValidatorToSubnetRequest {
+    bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+    ValidatorStatus status = 2;
+}
+
+message AggregatedSigAndAggregationBitsRequest {
+    repeated SyncCommitteeMessage msgs = 1;
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+    uint64 subnet_id = 3;
+    bytes block_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message AggregatedSigAndAggregationBitsResponse {
+    bytes aggregated_sig = 1;
+    bytes bits = 2;
 }
