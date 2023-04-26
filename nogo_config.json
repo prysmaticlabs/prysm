@@ -20,7 +20,8 @@
   "nilness": {
     "exclude_files": {
       "external/.*": "Third party code",
-      "rules_go_work-.*": "Third party code"
+      "rules_go_work-.*": "Third party code", 
+      "encoding/bytesutil/bytes_go120.go": "Tool is broken with new go1.20 bytes conversion"
     }
   },
   "pkgfact": {
