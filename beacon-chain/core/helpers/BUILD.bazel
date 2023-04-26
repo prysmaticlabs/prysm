@@ -57,6 +57,7 @@ go_test(
         "weak_subjectivity_test.go",
     ],
     embed = [":go_default_library"],
+    race = "on",
     shard_count = 2,
     deps = [
         "//beacon-chain/cache:go_default_library",
@@ -78,5 +79,4 @@ go_test(
         "//time/slots:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
-    race = "on",
 )
