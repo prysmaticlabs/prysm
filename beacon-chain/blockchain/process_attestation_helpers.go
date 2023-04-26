@@ -55,7 +55,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		return nil, errors.Wrap(err, "could not save checkpoint state to cache")
 	}
 	return baseState, nil
-
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.

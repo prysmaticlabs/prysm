@@ -157,6 +157,7 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 	if err != nil {
 		return
 	}
+	req.Header.Add("User-Agent", version.BuildData())
 	for _, o := range opts {
 		o(req)
 	}
@@ -245,7 +246,6 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	default:
 		return nil, fmt.Errorf("unsupported header version %s", strings.ToLower(v.Version))
 	}
-
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte

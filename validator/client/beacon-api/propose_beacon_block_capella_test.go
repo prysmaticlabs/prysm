@@ -42,7 +42,7 @@ func TestProposeBeaconBlock_Capella(t *testing.T) {
 				Graffiti:          hexutil.Encode(capellaBlock.Capella.Block.Body.Graffiti),
 				ProposerSlashings: jsonifyProposerSlashings(capellaBlock.Capella.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(capellaBlock.Capella.Block.Body.RandaoReveal),
-				VoluntaryExits:    jsonifySignedVoluntaryExits(capellaBlock.Capella.Block.Body.VoluntaryExits),
+				VoluntaryExits:    JsonifySignedVoluntaryExits(capellaBlock.Capella.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(capellaBlock.Capella.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(capellaBlock.Capella.Block.Body.SyncAggregate.SyncCommitteeSignature),

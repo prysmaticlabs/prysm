@@ -74,7 +74,7 @@ done
 
 echo "Converting hex yaml keys to a format that Prysm understands"
 
-# Expect YAML keys in hex encoded format. Convert this into the format the the validator already understands.
+# Expect YAML keys in hex encoded format. Convert this into the format the validator already understands.
 ./convert-keys $YAML_KEY_FILE /tmp/keys.json
 
 echo "Starting beacon chain and logging to $BEACON_LOG_FILE"

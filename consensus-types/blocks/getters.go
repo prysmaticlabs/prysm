@@ -128,7 +128,6 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 	default:
 		return nil, errIncorrectBlockVersion
 	}
-	return nil, errIncorrectBlockVersion
 }
 
 // PbPhase0Block returns the underlying protobuf object.

@@ -285,6 +285,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
 //
+// nolint:dupword
 // Spec pseudocode definition:
 //
 //	def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Bytes32) -> ValidatorIndex:

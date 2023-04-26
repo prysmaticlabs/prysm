@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -74,7 +75,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := srv.GetPayload(ctx, payloadId, 1)
+		resp, _, err := srv.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
 		resPb, err := resp.PbBellatrix()
 		require.NoError(t, err)
@@ -84,7 +85,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		resPb, err := resp.PbCapella()
 		require.NoError(t, err)
@@ -202,7 +203,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.GetPayload(ctx, payloadId, 1)
+		resp, _, err := client.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
 		pb, err := resp.PbBellatrix()
 		require.NoError(t, err)
@@ -246,7 +247,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		pb, err := resp.PbCapella()
 		require.NoError(t, err)
@@ -2312,6 +2313,80 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 		service.rpcClient = rpcClient
 
 		results, err := service.GetPayloadBodiesByRange(ctx, uint64(1), uint64(2))
+		require.NoError(t, err)
+		require.Equal(t, 3, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+}
+
+func Test_ExchangeCapabilities(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableOptionalEngineMethods: true,
+	})
+	defer resetFn()
+	t.Run("empty response works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			exchangeCapabilities := &pb.ExchangeCapabilities{}
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  exchangeCapabilities,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+		logHook := logTest.NewGlobal()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.ExchangeCapabilities(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+		assert.LogsContain(t, logHook, "Please update client, detected the following unsupported engine methods:")
+	})
+	t.Run("list of items", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			exchangeCapabilities := &pb.ExchangeCapabilities{
+				SupportedMethods: []string{"A", "B", "C"},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  exchangeCapabilities,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.ExchangeCapabilities(ctx)
 		require.NoError(t, err)
 		require.Equal(t, 3, len(results))
 

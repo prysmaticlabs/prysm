@@ -393,6 +393,7 @@ func ProcessHistoricalDataUpdate(state state.BeaconState) (state.BeaconState, er
 
 // ProcessParticipationRecordUpdates rotates current/previous epoch attestations during epoch processing.
 //
+// nolint:dupword
 // Spec pseudocode definition:
 //
 //	def process_participation_record_updates(state: BeaconState) -> None:

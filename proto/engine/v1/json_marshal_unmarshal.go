@@ -249,6 +249,7 @@ type ExecutionPayloadCapellaJSON struct {
 type getPayloadV3ResponseJson struct {
 	ExecutionPayload *executionPayloadDenebJSON `json:"executionPayload"`
 	BlockValue       string                     `json:"blockValue"`
+	BlobsBundle      *blobBundleJSON            `json:"blobsBundle"`
 }
 
 type executionPayloadDenebJSON struct {
@@ -681,54 +682,9 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type blobBundleJSON struct {
-	BlockHash       common.Hash               `json:"blockHash"`
-	Kzgs            []gethTypes.KZGCommitment `json:"kzgs"`
-	Blobs           []gethTypes.Blob          `json:"blobs"`
-	AggregatedProof gethTypes.KZGProof        `json:"aggregatedProof"`
-}
-
-// MarshalJSON --
-func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
-	kzgs := make([]gethTypes.KZGCommitment, len(b.KzgCommitments))
-	for i, kzg := range b.KzgCommitments {
-		kzgs[i] = bytesutil.ToBytes48(kzg)
-	}
-	blobs := make([]gethTypes.Blob, len(b.Blobs))
-	for i, b1 := range b.Blobs {
-		var blob [params.FieldElementsPerBlob * 32]byte
-		copy(blob[:], b1.Data)
-		blobs[i] = blob
-	}
-
-	return json.Marshal(blobBundleJSON{
-		BlockHash: bytesutil.ToBytes32(b.BlockHash),
-		Kzgs:      kzgs,
-		Blobs:     blobs,
-	})
-}
-
-// UnmarshalJSON --
-func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
-	dec := blobBundleJSON{}
-	if err := json.Unmarshal(enc, &dec); err != nil {
-		return err
-	}
-	*e = BlobsBundle{}
-	e.BlockHash = bytesutil.PadTo(dec.BlockHash.Bytes(), fieldparams.RootLength)
-	kzgs := make([][]byte, len(dec.Kzgs))
-	for i, kzg := range dec.Kzgs {
-		k := kzg
-		kzgs[i] = bytesutil.PadTo(k[:], fieldparams.BLSPubkeyLength)
-	}
-	e.KzgCommitments = kzgs
-	blobs := make([]*Blob, len(dec.Blobs))
-	for i1, b1 := range dec.Blobs {
-		b := make([]byte, params.FieldElementsPerBlob*32)
-		copy(b, b1[:])
-		blobs[i1] = &Blob{Data: bytesutil.SafeCopyBytes(b)}
-	}
-	e.Blobs = blobs
-	return nil
+	Commitments []gethTypes.KZGCommitment `json:"commitments"`
+	Proofs      []gethTypes.KZGProof      `json:"proofs"`
+	Blobs       []gethTypes.Blob          `json:"blobs"`
 }
 
 // MarshalJSON --
@@ -776,7 +732,7 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (e *ExecutionPayloadDenebWithValue) UnmarshalJSON(enc []byte) error {
+func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte) error {
 	dec := getPayloadV3ResponseJson{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
@@ -822,7 +778,7 @@ func (e *ExecutionPayloadDenebWithValue) UnmarshalJSON(enc []byte) error {
 		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
 
-	*e = ExecutionPayloadDenebWithValue{Payload: &ExecutionPayloadDeneb{}}
+	*e = ExecutionPayloadDenebWithValueAndBlobsBundle{Payload: &ExecutionPayloadDeneb{}}
 	e.Payload.ParentHash = dec.ExecutionPayload.ParentHash.Bytes()
 	e.Payload.FeeRecipient = dec.ExecutionPayload.FeeRecipient.Bytes()
 	e.Payload.StateRoot = dec.ExecutionPayload.StateRoot.Bytes()
@@ -862,6 +818,33 @@ func (e *ExecutionPayloadDenebWithValue) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	e.Value = bytesutil.PadTo(bytesutil.ReverseByteOrder(v.Bytes()), fieldparams.RootLength)
+
+	if dec.BlobsBundle == nil {
+		return nil
+	}
+	e.BlobsBundle = &BlobsBundle{}
+
+	commitments := make([][]byte, len(dec.BlobsBundle.Commitments))
+	for i, kzg := range dec.BlobsBundle.Commitments {
+		k := kzg
+		commitments[i] = bytesutil.PadTo(k[:], fieldparams.BLSPubkeyLength)
+	}
+	e.BlobsBundle.KzgCommitments = commitments
+
+	proofs := make([][]byte, len(dec.BlobsBundle.Proofs))
+	for i, proof := range dec.BlobsBundle.Proofs {
+		p := proof
+		proofs[i] = bytesutil.PadTo(p[:], fieldparams.BLSPubkeyLength)
+	}
+	e.BlobsBundle.Proofs = proofs
+
+	blobs := make([]*Blob, len(dec.BlobsBundle.Blobs))
+	for i1, b1 := range dec.BlobsBundle.Blobs {
+		b := make([]byte, params.FieldElementsPerBlob*32)
+		copy(b, b1[:])
+		blobs[i1] = &Blob{Data: bytesutil.SafeCopyBytes(b)}
+	}
+	e.BlobsBundle.Blobs = blobs
 
 	return nil
 }
