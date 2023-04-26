@@ -137,7 +137,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get execution payload")
 	}
-	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch && len(blobsBundle.KzgCommitments) > 0 {
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch && blobsBundle != nil && len(blobsBundle.KzgCommitments) > 0 {
 		// TODO: check block hash matches blob bundle hash
 		if err := blk.SetBlobKzgCommitments(blobsBundle.KzgCommitments); err != nil {
 			return nil, errors.Wrap(err, "could not set blob kzg commitments")
