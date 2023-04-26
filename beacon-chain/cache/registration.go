@@ -49,7 +49,8 @@ func RegistrationTimeStampExpired(ts uint64) bool {
 	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
 	// safely convert unint64 to int64
 	t := new(big.Int).SetUint64(ts).Int64()
-	return time.Unix(t, 0).Add(expiryDuration).After(time.Now())
+	// registered time + expiration duration < current time = expired
+	return time.Unix(t, 0).Add(expiryDuration).Before(time.Now())
 }
 
 // UpdateIndexToRegisteredMap adds or updates values in the cache based on the argument.
