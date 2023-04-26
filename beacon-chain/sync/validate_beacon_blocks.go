@@ -71,10 +71,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	headState, err := s.cfg.chain.HeadStateReadOnly(ctx)
 	if err != nil {
-		return pubsub.ValidationIgnore, err
+		log.WithError(err).Error("could not get head state")
 	}
 	if err = blocks.VerifyBlockSignatureUsingCurrentFork(headState, blk); err != nil {
-		return pubsub.ValidationReject, err
+		log.WithError(err).Error("could not verify signature")
+
 	}
 	s.insertProposerIndexCache(blk.Block().Slot(), blk.Block().ProposerIndex())
 
