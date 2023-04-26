@@ -358,7 +358,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	}
 	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
-		return nil, status.Error(codes.Internal, "Prepared beacon block is blinded")
+		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is blinded")
 	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
@@ -375,7 +375,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	}
 	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {
-		return nil, status.Error(codes.Internal, "Prepared beacon block is blinded")
+		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is blinded")
 	}
 	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
 	if ok {
@@ -461,7 +461,7 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 	}
 	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
-		return nil, status.Error(codes.Internal, "Prepared beacon block is blinded")
+		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is blinded")
 	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
@@ -480,7 +480,7 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 	}
 	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {
-		return nil, status.Error(codes.Internal, "Prepared beacon block is blinded")
+		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is blinded")
 	}
 	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
 	if ok {
@@ -669,7 +669,7 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 	}
 	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
-		return nil, status.Error(codes.Internal, "Prepared beacon block is not blinded")
+		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is not blinded")
 	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
@@ -688,7 +688,7 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 	}
 	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
 	if ok {
-		return nil, status.Error(codes.Internal, "Prepared beacon block is not blinded")
+		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is not blinded")
 	}
 	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {

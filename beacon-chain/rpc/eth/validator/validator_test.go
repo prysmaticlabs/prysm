@@ -762,7 +762,7 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 
 		_, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
-		assert.ErrorContains(t, "Prepared beacon block is blinded", err)
+		assert.ErrorContains(t, "Prepared Bellatrix beacon block is blinded", err)
 	})
 	t.Run("Capella", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: &ethpbalpha.BeaconBlockCapella{Slot: 123}}}
@@ -793,7 +793,7 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 
 		_, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
-		assert.ErrorContains(t, "Prepared beacon block is blinded", err)
+		assert.ErrorContains(t, "Prepared Capella beacon block is blinded", err)
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
@@ -891,7 +891,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		}
 
 		_, err := server.ProduceBlockV2SSZ(ctx, &ethpbv1.ProduceBlockRequest{})
-		assert.ErrorContains(t, "Prepared beacon block is blinded", err)
+		assert.ErrorContains(t, "Prepared Bellatrix beacon block is blinded", err)
 	})
 	t.Run("Capella", func(t *testing.T) {
 		b := util.HydrateBeaconBlockCapella(&ethpbalpha.BeaconBlockCapella{})
@@ -922,7 +922,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		}
 
 		_, err := server.ProduceBlockV2SSZ(ctx, &ethpbv1.ProduceBlockRequest{})
-		assert.ErrorContains(t, "Prepared beacon block is blinded", err)
+		assert.ErrorContains(t, "Prepared Capella beacon block is blinded", err)
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
@@ -1167,7 +1167,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		}
 
 		_, err := server.ProduceBlindedBlockSSZ(ctx, &ethpbv1.ProduceBlockRequest{})
-		assert.ErrorContains(t, "Prepared beacon block is not blinded", err)
+		assert.ErrorContains(t, "Prepared Bellatrix beacon block is not blinded", err)
 	})
 	t.Run("Capella", func(t *testing.T) {
 		b := util.HydrateBlindedBeaconBlockCapella(&ethpbalpha.BlindedBeaconBlockCapella{})
@@ -1200,7 +1200,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		}
 
 		_, err := server.ProduceBlindedBlockSSZ(ctx, &ethpbv1.ProduceBlockRequest{})
-		assert.ErrorContains(t, "Prepared beacon block is not blinded", err)
+		assert.ErrorContains(t, "Prepared Capella beacon block is not blinded", err)
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
