@@ -1030,7 +1030,7 @@ func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLe
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	if bs.EqChecker.HasBlock(b.Slot(), b.ProposerIndex()) {
+	if bs.EquivocationChecker.SeenProposerIndex(b.Slot(), b.ProposerIndex()) {
 		return fmt.Errorf("block exists in sync service, slot: %d, proposer index: %d", b.Slot(), b.ProposerIndex())
 	}
 

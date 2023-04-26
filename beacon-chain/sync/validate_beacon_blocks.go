@@ -69,6 +69,15 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.New("block.Block is nil")
 	}
 
+	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if err = blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk); err != nil {
+		return pubsub.ValidationReject, err
+	}
+	s.insertProposerIndexCache(blk.Block().Slot(), blk.Block().ProposerIndex())
+
 	// Broadcast the block on a feed to notify other services in the beacon node
 	// of a received block (even if it does not process correctly through a state transition).
 	s.cfg.blockNotifier.BlockFeed().Send(&feed.Event{
@@ -385,16 +394,31 @@ func getBlockFields(b interfaces.ReadOnlySignedBeaconBlock) logrus.Fields {
 	}
 }
 
-// HasBlock returns true if
-//  1. same block slot and proposer index is in the pending queue
-//  2. same block has been seen
-func (s *Service) HasBlock(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) bool {
-	blks := s.pendingBlocksInCache(slot)
-	for _, blk := range blks {
-		if blk.Block().Slot() == slot && blk.Block().ProposerIndex() == proposerIdx {
+func (s *Service) insertProposerIndexCache(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) {
+	if s.cfg.chain.CurrentSlot() != slot {
+		return
+	}
+
+	switch {
+	case uint64(s.seenProposerIndexCache[0]) > uint64(slot):
+		return
+	case uint64(s.seenProposerIndexCache[0]) == uint64(slot):
+		s.seenProposerIndexCache = append(s.seenProposerIndexCache, proposerIdx)
+	case uint64(slot) > uint64(s.seenProposerIndexCache[0]):
+		// Overwrite slot in proposer index cache if it's higher.
+		s.seenProposerIndexCache = []primitives.ValidatorIndex{primitives.ValidatorIndex(slot)}
+		s.seenProposerIndexCache = append(s.seenProposerIndexCache, proposerIdx)
+	}
+}
+
+func (s *Service) SeenProposerIndex(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) bool {
+	if s.seenProposerIndexCache[0] != primitives.ValidatorIndex(slot) {
+		return false
+	}
+	for _, i := range s.seenProposerIndexCache[1:] {
+		if i == proposerIdx {
 			return true
 		}
 	}
-
-	return s.hasSeenBlockIndexSlot(slot, proposerIdx)
+	return false
 }
