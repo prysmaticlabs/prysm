@@ -75,6 +75,7 @@ func TestTotalActiveBalance(t *testing.T) {
 }
 
 func TestTotalActiveBal_ReturnMin(t *testing.T) {
+	ClearCache()
 	tests := []struct {
 		vCount int
 	}{

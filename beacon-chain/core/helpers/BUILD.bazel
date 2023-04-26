@@ -48,6 +48,7 @@ go_test(
         "attestation_test.go",
         "beacon_committee_test.go",
         "block_test.go",
+        "main_test.go",
         "randao_test.go",
         "rewards_penalties_test.go",
         "shuffle_test.go",
@@ -77,4 +78,5 @@ go_test(
         "//time/slots:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
+    race = "on",
 )

@@ -17,6 +17,7 @@ import (
 )
 
 func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
+	ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -47,6 +48,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 }
 
 func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
+	ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -73,6 +75,8 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 }
 
 func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -211,6 +215,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 }
 
 func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
+	ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -230,7 +235,6 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
-
 	root, err := syncPeriodBoundaryRoot(state)
 	require.NoError(t, err)
 
