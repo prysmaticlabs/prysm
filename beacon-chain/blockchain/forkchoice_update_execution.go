@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 func (s *Service) isNewProposer(slot primitives.Slot) bool {
@@ -51,6 +52,11 @@ func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.Beaco
 // fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
 // it returns true if the new head is updated
 func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) (bool, error) {
+	_, span := trace.StartSpan(ctx, "beacon-chain.blockchain.forkchoiceUpdateWithExecution")
+	defer span.End()
+	// Note: Use the service context here to avoid the parent context being ended during a forkchoice update.
+	ctx = trace.NewContext(s.ctx, span)
+
 	isNewHead := s.isNewHead(newHeadRoot)
 	if !isNewHead {
 		return false, nil
