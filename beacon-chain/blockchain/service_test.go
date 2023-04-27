@@ -117,12 +117,14 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	chainService := setupBeaconChain(t, beaconDB)
 
+	gt := time.Unix(23, 0)
 	genesisBlk := util.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	util.SaveBlock(t, ctx, beaconDB, genesisBlk)
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
+	require.NoError(t, s.SetGenesisTime(uint64(gt.Unix())))
 	require.NoError(t, s.SetSlot(1))
 	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, blkRoot))
@@ -152,12 +154,14 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 
 	chainService := setupBeaconChain(t, beaconDB)
 
+	gt := time.Unix(23, 0)
 	genesisBlk := util.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb := util.SaveBlock(t, ctx, beaconDB, genesisBlk)
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
+	require.NoError(t, s.SetGenesisTime(uint64(gt.Unix())))
 	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
 	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
@@ -224,12 +228,14 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 
 	chainService := setupBeaconChain(t, beaconDB)
 
+	gt := time.Unix(23, 0)
 	genesisBlk := util.NewBeaconBlock()
 	blkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	util.SaveBlock(t, ctx, beaconDB, genesisBlk)
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
+	require.NoError(t, s.SetGenesisTime(uint64(gt.Unix())))
 	require.NoError(t, s.SetSlot(0))
 	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, blkRoot))
