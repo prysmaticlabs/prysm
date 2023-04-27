@@ -33,5 +33,5 @@ func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundar
 
 // Clear -- fake.
 func (s *FakeSyncCommitteeCache) Clear() {
-	return nil
+	return
 }

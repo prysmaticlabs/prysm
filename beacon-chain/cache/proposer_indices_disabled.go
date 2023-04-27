@@ -35,5 +35,5 @@ func (c *FakeProposerIndicesCache) Len() int {
 }
 
 // Clear is a stub.
-func (c *FakeProposerIndicesCache) Clear() int {
+func (c *FakeProposerIndicesCache) Clear() {
 }

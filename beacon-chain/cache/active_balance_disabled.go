@@ -27,4 +27,5 @@ func (c *FakeBalanceCache) Get(st state.ReadOnlyBeaconState) (uint64, error) {
 
 // Clear is a stub.
 func (c *FakeBalanceCache) Clear() {
+	return
 }
