@@ -261,6 +261,7 @@ func (s *Service) Start() {
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 		ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
 		BeaconDB:               s.cfg.BeaconDB,
+		BlockBuilder:           s.cfg.BlockBuilder,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
