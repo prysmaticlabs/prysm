@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -158,14 +159,39 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
 func (s *Service) processAttestations(ctx context.Context, disparity time.Duration) {
-	atts := s.cfg.AttPool.ForkchoiceAttestations()
+	forkchoiceAtts := s.cfg.AttPool.ForkchoiceAttestations()
+
+	// Batch attestations.
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
+	for _, a := range forkchoiceAtts {
+		attDataRoot, err := a.Data.HashTreeRoot()
+		if err != nil {
+			log.WithError(err).Error("could not hash a data")
+			continue
+		}
+		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], a)
+
+		if err := s.cfg.AttPool.DeleteForkchoiceAttestation(a); err != nil {
+			log.WithError(err).Error("could not delete forkchoice atts")
+		}
+	}
+
+	atts := make([]*ethpb.Attestation, 0)
+	for _, as := range attsByDataRoot {
+		aggregated, err := attaggregation.Aggregate(as)
+		if err != nil {
+			log.WithError(err).Error("could not aggregate atts")
+			continue
+		}
+		atts = append(atts, aggregated...)
+	}
+
 	for _, a := range atts {
-		// Diverge from the spec below, don't process the attestation until the greater or equal to current slot.
-		// We'll process attestations at the 10s or 12 mark to reorg late block.
-		// When processing at 10s mark, we should consider current slot attestations.
-		// When processing at 12s mark, unlikely we'll see current slot attestations, all the attestations should be in the past.
+		// Based on the spec, don't process the attestation until the subsequent slot.
+		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
-		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), a.Data.Slot, disparity); err != nil {
+		nextSlot := a.Data.Slot + 1
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, disparity); err != nil {
 			continue
 		}
 
