@@ -192,20 +192,25 @@ func (s *Service) processAttestations(ctx context.Context, disparity time.Durati
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
 		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, disparity); err != nil {
+			if err := s.cfg.AttPool.SaveForkchoiceAttestation(a); err != nil {
+				log.WithError(err).Error("could not save forkchoice att")
+			}
 			continue
 		}
 
 		hasState := s.cfg.BeaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 		hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 		if !(hasState && hasBlock) {
+			if err := s.cfg.AttPool.SaveForkchoiceAttestation(a); err != nil {
+				log.WithError(err).Error("could not save forkchoice att")
+			}
 			continue
 		}
 
-		if err := s.cfg.AttPool.DeleteForkchoiceAttestation(a); err != nil {
-			log.WithError(err).Error("Could not delete fork choice attestation in pool")
-		}
-
 		if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
+			if err := s.cfg.AttPool.SaveForkchoiceAttestation(a); err != nil {
+				log.WithError(err).Error("could not save forkchoice att")
+			}
 			continue
 		}
 
