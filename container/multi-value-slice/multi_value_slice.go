@@ -6,6 +6,10 @@ import (
 	"sync"
 )
 
+type MultiValueSlice interface {
+	Len() int
+}
+
 type Value[V any] struct {
 	val  V
 	objs []uintptr

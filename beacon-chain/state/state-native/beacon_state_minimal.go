@@ -23,8 +23,8 @@ type BeaconState struct {
 	slot                                primitives.Slot
 	fork                                *ethpb.Fork
 	latestBlockHeader                   *ethpb.BeaconBlockHeader
-	blockRoots                          *customtypes.BlockRoots
-	stateRoots                          *customtypes.StateRoots
+	blockRoots                          *MultiValueBlockRoots
+	stateRoots                          *MultiValueStateRoots
 	historicalRoots                     customtypes.HistoricalRoots
 	historicalSummaries                 []*ethpb.HistoricalSummary
 	eth1Data                            *ethpb.Eth1Data

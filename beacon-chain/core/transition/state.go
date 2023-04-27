@@ -223,6 +223,14 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 // EmptyGenesisState returns an empty beacon state object.
 func EmptyGenesisState() (state.BeaconState, error) {
+	blockRoots := make([][]byte, fieldparams.BlockRootsLength)
+	for i := range blockRoots {
+		blockRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+	stateRoots := make([][]byte, fieldparams.StateRootsLength)
+	for i := range stateRoots {
+		stateRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
 	mixes := make([][]byte, fieldparams.RandaoMixesLength)
 	for i := range mixes {
 		mixes[i] = bytesutil.PadTo([]byte{}, 32)
@@ -235,6 +243,8 @@ func EmptyGenesisState() (state.BeaconState, error) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
+		BlockRoots:  blockRoots,
+		StateRoots:  stateRoots,
 		RandaoMixes: mixes,
 		// Validator registry fields.
 		Validators: []*ethpb.Validator{},

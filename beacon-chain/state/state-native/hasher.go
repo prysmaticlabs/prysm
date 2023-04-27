@@ -63,9 +63,10 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.LatestBlockHeader.RealPosition()] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	bRoots := make([][]byte, len(state.blockRoots))
+	bRoots := make([][]byte, state.blockRoots.Len())
+	br := state.blockRoots.Value(state)
 	for i := range bRoots {
-		bRoots[i] = state.blockRoots[i][:]
+		bRoots[i] = br[i][:]
 	}
 	blockRootsRoot, err := stateutil.ArraysRoot(bRoots, fieldparams.BlockRootsLength)
 	if err != nil {
@@ -74,11 +75,12 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.BlockRoots.RealPosition()] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	sRoots := make([][]byte, len(state.stateRoots))
+	sRoots := make([][]byte, state.stateRoots.Len())
+	sr := state.stateRoots.Value(state)
 	for i := range sRoots {
-		sRoots[i] = state.stateRoots[i][:]
+		sRoots[i] = sr[i][:]
 	}
-	stateRootsRoot, err := stateutil.ArraysRoot(sRoots, fieldparams.StateRootsLength)
+	stateRootsRoot, err := stateutil.ArraysRoot(bRoots, fieldparams.StateRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}

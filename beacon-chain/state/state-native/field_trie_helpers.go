@@ -6,9 +6,9 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -55,8 +55,8 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 		}
 		length *= comLength
 	}
-	if field == types.RandaoMixes {
-		l := uint64(elements.(*MultiValueRandaoMixes).Len())
+	if field == types.RandaoMixes || field == types.BlockRoots || field == types.StateRoots {
+		l := uint64(elements.(multi_value_slice.MultiValueSlice).Len())
 		if l > length {
 			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), l, length)
 		}
@@ -73,9 +73,9 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 func fieldConverters(state *BeaconState, field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
-		return convertBlockRoots(indices, elements, convertAll)
+		return convertBlockRoots(state, indices, elements, convertAll)
 	case types.StateRoots:
-		return convertStateRoots(indices, elements, convertAll)
+		return convertStateRoots(state, indices, elements, convertAll)
 	case types.RandaoMixes:
 		return convertRandaoMixes(state, indices, elements, convertAll)
 	case types.Eth1DataVotes:
@@ -91,23 +91,23 @@ func fieldConverters(state *BeaconState, field types.FieldIndex, indices []uint6
 	}
 }
 
-func convertBlockRoots(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func convertBlockRoots(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch val := elements.(type) {
 	case [][]byte:
 		return handleByteArrays(val, indices, convertAll)
-	case *customtypes.BlockRoots:
-		return handle32ByteArrays(val[:], indices, convertAll)
+	case *MultiValueBlockRoots:
+		return handle32ByteArrays(val.Value(state), indices, convertAll)
 	default:
 		return nil, errors.Errorf("Incorrect type used for block roots")
 	}
 }
 
-func convertStateRoots(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func convertStateRoots(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch val := elements.(type) {
 	case [][]byte:
 		return handleByteArrays(val, indices, convertAll)
-	case *customtypes.StateRoots:
-		return handle32ByteArrays(val[:], indices, convertAll)
+	case *MultiValueStateRoots:
+		return handle32ByteArrays(val.Value(state), indices, convertAll)
 	default:
 		return nil, errors.Errorf("Incorrect type used for state roots")
 	}

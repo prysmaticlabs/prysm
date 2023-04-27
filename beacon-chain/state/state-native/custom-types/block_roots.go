@@ -7,12 +7,12 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 )
 
-var _ fssz.HashRoot = (BlockRoots)([fieldparams.BlockRootsLength][32]byte{})
+var _ fssz.HashRoot = (BlockRoots)([][32]byte{})
 var _ fssz.Marshaler = (*BlockRoots)(nil)
 var _ fssz.Unmarshaler = (*BlockRoots)(nil)
 
 // BlockRoots represents block roots of the beacon state.
-type BlockRoots [fieldparams.BlockRootsLength][32]byte
+type BlockRoots [][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r BlockRoots) HashTreeRoot() ([32]byte, error) {
@@ -35,7 +35,7 @@ func (r *BlockRoots) UnmarshalSSZ(buf []byte) error {
 		return fmt.Errorf("expected buffer of length %d received %d", r.SizeSSZ(), len(buf))
 	}
 
-	var roots BlockRoots
+	roots := BlockRoots(make([][32]byte, fieldparams.BlockRootsLength))
 	for i := range roots {
 		copy(roots[i][:], buf[i*32:(i+1)*32])
 	}
@@ -55,7 +55,7 @@ func (r *BlockRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 // MarshalSSZ marshals BlockRoots into a serialized object.
 func (r *BlockRoots) MarshalSSZ() ([]byte, error) {
 	marshalled := make([]byte, fieldparams.BlockRootsLength*32)
-	for i, r32 := range r {
+	for i, r32 := range *r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
 		}
@@ -73,8 +73,8 @@ func (r *BlockRoots) Slice() [][]byte {
 	if r == nil {
 		return nil
 	}
-	bRoots := make([][]byte, len(r))
-	for i, root := range r {
+	bRoots := make([][]byte, len(*r))
+	for i, root := range *r {
 		tmp := root
 		bRoots[i] = tmp[:]
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
 )
 
@@ -58,8 +59,8 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 			return nil, err
 		}
 		var l int
-		if field == types.RandaoMixes {
-			l = elements.(*MultiValueRandaoMixes).Len()
+		if field == types.RandaoMixes || field == types.BlockRoots || field == types.StateRoots {
+			l = elements.(multi_value_slice.MultiValueSlice).Len()
 		} else {
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
@@ -113,8 +114,8 @@ func (f *FieldTrie) RecomputeTrie(state *BeaconState, indices []uint64, elements
 			return [32]byte{}, err
 		}
 		var l int
-		if f.field == types.RandaoMixes {
-			l = elements.(*MultiValueRandaoMixes).Len()
+		if f.field == types.RandaoMixes || f.field == types.BlockRoots || f.field == types.StateRoots {
+			l = elements.(multi_value_slice.MultiValueSlice).Len()
 		} else {
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}

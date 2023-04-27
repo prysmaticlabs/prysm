@@ -83,10 +83,10 @@ var capellaFields = append(
 )
 
 const (
-	phase0SharedFieldRefCount    = 9
-	altairSharedFieldRefCount    = 10
-	bellatrixSharedFieldRefCount = 11
-	capellaSharedFieldRefCount   = 13
+	phase0SharedFieldRefCount    = 7
+	altairSharedFieldRefCount    = 8
+	bellatrixSharedFieldRefCount = 9
+	capellaSharedFieldRefCount   = 11
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -116,14 +116,6 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.BlockRoots
-	for i, r := range st.BlockRoots {
-		copy(bRoots[i][:], r)
-	}
-	var sRoots customtypes.StateRoots
-	for i, r := range st.StateRoots {
-		copy(sRoots[i][:], r)
-	}
 	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
 	for i, r := range st.HistoricalRoots {
 		copy(hRoots[i][:], r)
@@ -137,8 +129,8 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		slot:                        st.Slot,
 		fork:                        st.Fork,
 		latestBlockHeader:           st.LatestBlockHeader,
-		blockRoots:                  &bRoots,
-		stateRoots:                  &sRoots,
+		blockRoots:                  NewMultiValueBlockRoots(st.BlockRoots),
+		stateRoots:                  NewMultiValueStateRoots(st.StateRoots),
 		randaoMixes:                 NewMultiValueRandaoMixes(st.RandaoMixes),
 		historicalRoots:             hRoots,
 		eth1Data:                    st.Eth1Data,
@@ -174,8 +166,6 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
@@ -197,14 +187,6 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.BlockRoots
-	for i, r := range st.BlockRoots {
-		bRoots[i] = bytesutil.ToBytes32(r)
-	}
-	var sRoots customtypes.StateRoots
-	for i, r := range st.StateRoots {
-		sRoots[i] = bytesutil.ToBytes32(r)
-	}
 	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
 	for i, r := range st.HistoricalRoots {
 		hRoots[i] = bytesutil.ToBytes32(r)
@@ -218,8 +200,8 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		slot:                        st.Slot,
 		fork:                        st.Fork,
 		latestBlockHeader:           st.LatestBlockHeader,
-		blockRoots:                  &bRoots,
-		stateRoots:                  &sRoots,
+		blockRoots:                  NewMultiValueBlockRoots(st.BlockRoots),
+		stateRoots:                  NewMultiValueStateRoots(st.StateRoots),
 		randaoMixes:                 NewMultiValueRandaoMixes(st.RandaoMixes),
 		historicalRoots:             hRoots,
 		eth1Data:                    st.Eth1Data,
@@ -258,8 +240,6 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
@@ -282,14 +262,6 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.BlockRoots
-	for i, r := range st.BlockRoots {
-		bRoots[i] = bytesutil.ToBytes32(r)
-	}
-	var sRoots customtypes.StateRoots
-	for i, r := range st.StateRoots {
-		sRoots[i] = bytesutil.ToBytes32(r)
-	}
 	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
 	for i, r := range st.HistoricalRoots {
 		hRoots[i] = bytesutil.ToBytes32(r)
@@ -303,8 +275,8 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		slot:                         st.Slot,
 		fork:                         st.Fork,
 		latestBlockHeader:            st.LatestBlockHeader,
-		blockRoots:                   &bRoots,
-		stateRoots:                   &sRoots,
+		blockRoots:                   NewMultiValueBlockRoots(st.BlockRoots),
+		stateRoots:                   NewMultiValueStateRoots(st.StateRoots),
 		randaoMixes:                  NewMultiValueRandaoMixes(st.RandaoMixes),
 		historicalRoots:              hRoots,
 		eth1Data:                     st.Eth1Data,
@@ -344,8 +316,6 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
@@ -369,14 +339,6 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.BlockRoots
-	for i, r := range st.BlockRoots {
-		bRoots[i] = bytesutil.ToBytes32(r)
-	}
-	var sRoots customtypes.StateRoots
-	for i, r := range st.StateRoots {
-		sRoots[i] = bytesutil.ToBytes32(r)
-	}
 	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
 	for i, r := range st.HistoricalRoots {
 		hRoots[i] = bytesutil.ToBytes32(r)
@@ -390,8 +352,8 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		slot:                                st.Slot,
 		fork:                                st.Fork,
 		latestBlockHeader:                   st.LatestBlockHeader,
-		blockRoots:                          &bRoots,
-		stateRoots:                          &sRoots,
+		blockRoots:                          NewMultiValueBlockRoots(st.BlockRoots),
+		stateRoots:                          NewMultiValueStateRoots(st.StateRoots),
 		randaoMixes:                         NewMultiValueRandaoMixes(st.RandaoMixes),
 		historicalRoots:                     hRoots,
 		eth1Data:                            st.Eth1Data,
@@ -434,8 +396,6 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
@@ -521,6 +481,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 		valMapHandler: b.valMapHandler,
 	}
 
+	b.blockRoots.Copy(b, dst)
+	b.stateRoots.Copy(b, dst)
 	b.randaoMixes.Copy(b, dst)
 
 	switch b.version {
@@ -896,6 +858,10 @@ func finalizerCleanup(b *BeaconState) {
 	for i := range b.stateFieldLeaves {
 		delete(b.stateFieldLeaves, i)
 	}
+
+	b.blockRoots.Detach(b)
+	b.stateRoots.Detach(b)
 	b.randaoMixes.Detach(b)
+
 	state.StateCount.Sub(1)
 }

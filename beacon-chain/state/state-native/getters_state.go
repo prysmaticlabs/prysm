@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -17,6 +15,8 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 	}
 
 	gvrCopy := b.genesisValidatorsRoot
+	br := customtypes.BlockRoots(b.blockRoots.Value(b))
+	sr := customtypes.StateRoots(b.stateRoots.Value(b))
 	rm := customtypes.RandaoMixes(b.randaoMixes.Value(b))
 
 	switch b.version {
@@ -27,8 +27,8 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.fork,
 			LatestBlockHeader:           b.latestBlockHeader,
-			BlockRoots:                  b.blockRoots.Slice(),
-			StateRoots:                  b.stateRoots.Slice(),
+			BlockRoots:                  br.Slice(),
+			StateRoots:                  sr.Slice(),
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1Data,
 			Eth1DataVotes:               b.eth1DataVotes,
@@ -51,8 +51,8 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.fork,
 			LatestBlockHeader:           b.latestBlockHeader,
-			BlockRoots:                  b.blockRoots.Slice(),
-			StateRoots:                  b.stateRoots.Slice(),
+			BlockRoots:                  br.Slice(),
+			StateRoots:                  sr.Slice(),
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1Data,
 			Eth1DataVotes:               b.eth1DataVotes,
@@ -78,8 +78,8 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.fork,
 			LatestBlockHeader:            b.latestBlockHeader,
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br.Slice(),
+			StateRoots:                   sr.Slice(),
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1Data,
 			Eth1DataVotes:                b.eth1DataVotes,
@@ -106,8 +106,8 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.fork,
 			LatestBlockHeader:            b.latestBlockHeader,
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br.Slice(),
+			StateRoots:                   sr.Slice(),
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1Data,
 			Eth1DataVotes:                b.eth1DataVotes,
@@ -145,6 +145,8 @@ func (b *BeaconState) ToProto() interface{} {
 	defer b.lock.RUnlock()
 
 	gvrCopy := b.genesisValidatorsRoot
+	br := customtypes.BlockRoots(b.blockRoots.Value(b))
+	sr := customtypes.StateRoots(b.stateRoots.Value(b))
 	rm := customtypes.RandaoMixes(b.randaoMixes.Value(b))
 
 	switch b.version {
@@ -155,8 +157,8 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.forkVal(),
 			LatestBlockHeader:           b.latestBlockHeaderVal(),
-			BlockRoots:                  b.blockRoots.Slice(),
-			StateRoots:                  b.stateRoots.Slice(),
+			BlockRoots:                  br.Slice(),
+			StateRoots:                  sr.Slice(),
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1DataVal(),
 			Eth1DataVotes:               b.eth1DataVotesVal(),
@@ -179,8 +181,8 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.forkVal(),
 			LatestBlockHeader:           b.latestBlockHeaderVal(),
-			BlockRoots:                  b.blockRoots.Slice(),
-			StateRoots:                  b.stateRoots.Slice(),
+			BlockRoots:                  br.Slice(),
+			StateRoots:                  sr.Slice(),
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1DataVal(),
 			Eth1DataVotes:               b.eth1DataVotesVal(),
@@ -206,8 +208,8 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br.Slice(),
+			StateRoots:                   sr.Slice(),
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
@@ -234,8 +236,8 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br.Slice(),
+			StateRoots:                   sr.Slice(),
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
@@ -272,7 +274,8 @@ func (b *BeaconState) StateRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.stateRoots.Slice()
+	roots := customtypes.StateRoots(b.stateRoots.Value(b))
+	return roots.Slice()
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
@@ -285,21 +288,11 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	r, err := b.stateRootAtIndex(idx)
+	r, err := b.stateRoots.At(b, idx)
 	if err != nil {
 		return nil, err
 	}
 	return r[:], nil
-}
-
-// stateRootAtIndex retrieves a specific state root based on an
-// input index value.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
-	if uint64(len(b.stateRoots)) <= idx {
-		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
-	}
-	return b.stateRoots[idx], nil
 }
 
 // ProtobufBeaconStatePhase0 transforms an input into beacon state in the form of protobuf.

@@ -1,8 +1,7 @@
 package state_native
 
 import (
-	"fmt"
-
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -52,7 +51,8 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.blockRoots.Slice()
+	roots := customtypes.BlockRoots(b.blockRoots.Value(b))
+	return roots.Slice()
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
@@ -65,19 +65,9 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	r, err := b.blockRootAtIndex(idx)
+	r, err := b.blockRoots.At(b, idx)
 	if err != nil {
 		return nil, err
 	}
 	return r[:], nil
-}
-
-// blockRootAtIndex retrieves a specific block root based on an
-// input index value.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
-	if uint64(len(b.blockRoots)) <= idx {
-		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
-	}
-	return b.blockRoots[idx], nil
 }

@@ -9,6 +9,7 @@ type DataType int
 
 // List of current data types the state supports.
 const (
+	// TODO: This can be replaced with MultiValueArray/MultiValueSlice
 	// BasicArray represents a simple array type for a field.
 	BasicArray DataType = iota
 	// CompositeArray represents a variable length array with
