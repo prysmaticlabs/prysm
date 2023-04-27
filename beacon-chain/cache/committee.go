@@ -56,10 +56,17 @@ func committeeKeyFn(obj interface{}) (string, error) {
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
-	return &CommitteeCache{
-		CommitteeCache: lruwrpr.New(maxCommitteesCacheSize),
-		inProgress:     make(map[string]bool),
-	}
+	cc := &CommitteeCache{}
+	cc.Clear()
+	return cc
+}
+
+// Clear resets the CommitteeCache to its initial state
+func (c *CommitteeCache) Clear() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.CommitteeCache = lruwrpr.New(maxCommitteesCacheSize)
+	c.inProgress = make(map[string]bool)
 }
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
