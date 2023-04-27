@@ -1000,7 +1000,11 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		log.Info("No imported public keys. Skipping prepare proposer routine")
 		return nil
 	}
-	proposerReqs, err := v.buildPrepProposerReqs(ctx, pubkeys)
+	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys)
+	if err != nil {
+		return err
+	}
+	proposerReqs, err := v.buildPrepProposerReqs(ctx, filteredKeys)
 	if err != nil {
 		return err
 	}
@@ -1020,7 +1024,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 
-	signedRegReqs, err := v.buildSignedRegReqs(ctx, pubkeys, km.Sign)
+	signedRegReqs, err := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
 	if err != nil {
 		return err
 	}
@@ -1030,10 +1034,47 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 
 	return nil
 }
+func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
+	statusRequestKeys := make([][]byte, 0)
+	for _, k := range pubkeys {
+		_, ok := v.pubkeyToValidatorIndex[k]
+		// Get validator index from RPC server if not found.
+		if !ok {
+			i, ok, err := v.validatorIndex(ctx, k)
+			if err != nil {
+				return nil, err
+			}
+			if !ok { // Nothing we can do if RPC server doesn't have validator index.
+				continue
+			}
+			v.pubkeyToValidatorIndex[k] = i
+		}
+		statusRequestKeys = append(statusRequestKeys, k[:])
+	}
+	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+		PublicKeys: statusRequestKeys,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for i, status := range resp.Statuses {
+		// skip registration creation if validator is not active status
+		if status.Status != ethpb.ValidatorStatus_ACTIVE {
+			log.WithFields(logrus.Fields{
+				"publickey": hexutil.Encode(resp.PublicKeys[i]),
+				"status":    status.Status.String(),
+			}).Debugf("skipping non active status key.")
+			continue
+		}
+		filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
+	}
 
-func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
+	return filteredKeys, nil
+}
+
+func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
 	var prepareProposerReqs []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
-
 	for _, k := range pubkeys {
 		// Default case: Define fee recipient to burn address
 		var feeRecipient common.Address
@@ -1045,22 +1086,6 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 			isFeeRecipientDefined = true
 		}
 
-		validatorIndex, ok := v.pubkeyToValidatorIndex[k]
-		// Get validator index from RPC server if not found.
-		if !ok {
-			i, ok, err := v.validatorIndex(ctx, k)
-			if err != nil {
-				return nil, err
-			}
-
-			if !ok { // Nothing we can do if RPC server doesn't have validator index.
-				continue
-			}
-
-			validatorIndex = i
-			v.pubkeyToValidatorIndex[k] = i
-		}
-
 		// If fee recipient is defined for this specific pubkey in proposer configuration, use it
 		if v.ProposerSettings() != nil && v.ProposerSettings().ProposeConfig != nil {
 			config, ok := v.ProposerSettings().ProposeConfig[k]
@@ -1069,6 +1094,11 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 				feeRecipient = config.FeeRecipientConfig.FeeRecipient // Use file config for fee recipient.
 				isFeeRecipientDefined = true
 			}
+		}
+
+		validatorIndex, ok := v.pubkeyToValidatorIndex[k]
+		if !ok {
+			continue
 		}
 
 		if isFeeRecipientDefined {
@@ -1085,11 +1115,10 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 			}
 		}
 	}
-
 	return prepareProposerReqs, nil
 }
 
-func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, signer iface.SigningFunc) ([]*ethpb.SignedValidatorRegistrationV1, error) {
+func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */, signer iface.SigningFunc) ([]*ethpb.SignedValidatorRegistrationV1, error) {
 	var signedValRegRegs []*ethpb.SignedValidatorRegistrationV1
 
 	for i, k := range pubkeys {
@@ -1125,6 +1154,12 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 		}
 
 		if !enabled {
+			continue
+		}
+
+		// map is populated before this function in buildPrepProposerReq
+		_, ok := v.pubkeyToValidatorIndex[k]
+		if !ok {
 			continue
 		}
 
