@@ -41,7 +41,6 @@ func (s *Service) AllDepositContainers(ctx context.Context) []*ethpb.DepositCont
 
 func (s *Service) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
 	log.Errorf("InsertPendingDeposit should not be called")
-	return
 }
 
 func (s *Service) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
@@ -56,7 +55,6 @@ func (s *Service) PendingContainers(ctx context.Context, untilBlk *big.Int) []*e
 
 func (s *Service) PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64) {
 	log.Errorf("PrunePendingDeposits should not be called")
-	return
 }
 
 func (s *Service) PruneProofs(ctx context.Context, untilDepositIndex int64) error {
