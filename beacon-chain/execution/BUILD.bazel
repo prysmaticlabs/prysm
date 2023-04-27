@@ -14,7 +14,6 @@ go_library(
         "metrics.go",
         "options.go",
         "prometheus.go",
-        "provider.go",
         "rpc_connection.go",
         "service.go",
     ],
