@@ -4,18 +4,28 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // Returns true if builder (ie outsourcing block construction) can be used. Both conditions have to meet:
 // - Validator has registered to use builder (ie called registerBuilder API end point)
 // - Circuit breaker has not been activated (ie the liveness of the chain is healthy)
 func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.canUseBuilder")
+	defer span.End()
+
+	if !vs.BlockBuilder.Configured() {
+		return false, nil
+	}
 	activated, err := vs.circuitBreakBuilder(slot)
+	span.AddAttributes(trace.BoolAttribute("circuitBreakerActivated", activated))
 	if err != nil {
+		tracing.AnnotateError(span, err)
 		return false, err
 	}
 	if activated {
@@ -41,19 +51,19 @@ func (vs *Server) validatorRegistered(ctx context.Context, id primitives.Validat
 
 // circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
 func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
-	if vs.ForkFetcher == nil || vs.ForkFetcher.ForkChoicer() == nil {
+	if vs.ForkchoiceFetcher == nil {
 		return true, errors.New("no fork choicer configured")
 	}
 
 	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
-	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
+	highestReceivedSlot := vs.ForkchoiceFetcher.HighestReceivedBlockSlot()
 	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
 	diff, err := s.SafeSubSlot(highestReceivedSlot)
 	if err != nil {
 		return true, err
 	}
 
-	if diff > maxConsecutiveSkipSlotsAllowed {
+	if diff >= maxConsecutiveSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
 			"currentSlot":                    s,
 			"highestReceivedSlot":            highestReceivedSlot,
@@ -68,7 +78,7 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 	}
 
 	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `MaxBuilderEpochMissedSlots`.
-	receivedCount, err := vs.ForkFetcher.ForkChoicer().ReceivedBlocksLastEpoch()
+	receivedCount, err := vs.ForkchoiceFetcher.ReceivedBlocksLastEpoch()
 	if err != nil {
 		return true, err
 	}
@@ -77,7 +87,7 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	if diff > maxEpochSkipSlotsAllowed {
+	if diff >= maxEpochSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
 			"totalMissed":              diff,
 			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,

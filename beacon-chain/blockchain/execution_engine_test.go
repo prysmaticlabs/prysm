@@ -7,27 +7,28 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	bstate "github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	bstate "github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -799,7 +800,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0, []byte{})
 	require.Equal(t, false, hasPayload)
 	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
@@ -808,7 +809,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	slot := primitives.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hook := logTest.NewGlobal()
-	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
@@ -818,10 +819,35 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	suggestedAddr := common.HexToAddress("123")
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+}
+
+func Test_GetPayloadAttribute_PrepareAllPayloads(t *testing.T) {
+	ctx := context.Background()
+	resetCfg := features.InitWithReset(&features.Flags{
+		PrepareAllPayloads: true,
+	})
+	defer resetCfg()
+
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+
+	hook := logTest.NewGlobal()
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, 0, []byte{})
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, primitives.ValidatorIndex(0), vId)
+	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
+	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 }
 
 func Test_GetPayloadAttributeV2(t *testing.T) {
@@ -837,7 +863,7 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisStateCapella(t, 1)
-	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0, []byte{})
 	require.Equal(t, false, hasPayload)
 	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
@@ -846,7 +872,7 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 	slot := primitives.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hook := logTest.NewGlobal()
-	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
@@ -859,7 +885,7 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 	suggestedAddr := common.HexToAddress("123")
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))

@@ -15,19 +15,19 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -150,6 +150,51 @@ func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 	s.genesisTime = time.Now()
 
 	assert.NoError(t, s.Status(), "Status returned error")
+}
+
+func TestService_Start_NoDiscoverFlag(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	cfg := &Config{
+		TCPPort:       2000,
+		UDPPort:       2000,
+		StateNotifier: &mock.MockStateNotifier{},
+		NoDiscovery:   true, // <-- no s.dv5Listener is created
+	}
+	s, err := NewService(context.Background(), cfg)
+	require.NoError(t, err)
+
+	s.stateNotifier = &mock.MockStateNotifier{}
+
+	// required params to addForkEntry in s.forkWatcher
+	s.genesisTime = time.Now()
+	beaconCfg := params.BeaconConfig().Copy()
+	beaconCfg.AltairForkEpoch = 0
+	beaconCfg.BellatrixForkEpoch = 0
+	beaconCfg.CapellaForkEpoch = 0
+	beaconCfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(beaconCfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
+	}()
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
+
+	time.Sleep(time.Second * 2)
+
+	exitRoutine <- true
 }
 
 func TestListenForNewNodes(t *testing.T) {

@@ -4,12 +4,12 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func VerifyBeaconStateSlotDataRace(t *testing.T, factory getState) {
@@ -123,7 +123,6 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 				n := b.Copy()
 				// Append to another state
 				assert.NoError(t, n.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
-
 			},
 			exists:      false,
 			expectedIdx: 0,
@@ -136,7 +135,6 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 				n := b.Copy()
 				// Append to another state
 				assert.NoError(t, n.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
-
 			},
 			exists:      false,
 			expectedIdx: 0,

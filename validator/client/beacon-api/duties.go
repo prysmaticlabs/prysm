@@ -9,10 +9,10 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type dutiesProvider interface {
@@ -224,7 +224,6 @@ func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primit
 
 // GetAttesterDuties retrieves the attester duties for the given epoch and validatorIndices
 func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
-
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
 		jsonValidatorIndices[index] = strconv.FormatUint(uint64(validatorIndex), 10)

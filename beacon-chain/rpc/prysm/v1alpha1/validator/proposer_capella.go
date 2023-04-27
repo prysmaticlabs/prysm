@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -66,6 +66,10 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.R
 	randaoReveal := b.Block().Body().RandaoReveal()
 	graffiti := b.Block().Body().Graffiti()
 	sig := b.Signature()
+	blsToExecChange, err := b.Block().Body().BLSToExecutionChanges()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get bls to execution changes")
+	}
 	sb := &ethpb.SignedBlindedBeaconBlockCapella{
 		Block: &ethpb.BlindedBeaconBlockCapella{
 			Slot:          b.Block().Slot(),
@@ -83,6 +87,7 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.R
 				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
 				SyncAggregate:          agg,
 				ExecutionPayloadHeader: header,
+				BlsToExecutionChanges:  blsToExecChange,
 			},
 		},
 		Signature: sig[:],
@@ -98,10 +103,23 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.R
 		return nil, errors.Wrap(err, "could not submit blinded block")
 	}
 
+	payloadHtr, err := payload.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get payload hash tree root")
+	}
+	headerHtr, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get header hash tree root")
+	}
+	if payloadHtr != headerHtr {
+		return nil, fmt.Errorf("payload hash tree root %x does not match header hash tree root %x", payloadHtr, headerHtr)
+	}
+
 	capellaPayload, err := payload.PbCapella()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get payload")
 	}
+
 	bb := &ethpb.SignedBeaconBlockCapella{
 		Block: &ethpb.BeaconBlockCapella{
 			Slot:          sb.Block.Slot,
@@ -109,16 +127,17 @@ func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.R
 			ParentRoot:    sb.Block.ParentRoot,
 			StateRoot:     sb.Block.StateRoot,
 			Body: &ethpb.BeaconBlockBodyCapella{
-				RandaoReveal:      sb.Block.Body.RandaoReveal,
-				Eth1Data:          sb.Block.Body.Eth1Data,
-				Graffiti:          sb.Block.Body.Graffiti,
-				ProposerSlashings: sb.Block.Body.ProposerSlashings,
-				AttesterSlashings: sb.Block.Body.AttesterSlashings,
-				Attestations:      sb.Block.Body.Attestations,
-				Deposits:          sb.Block.Body.Deposits,
-				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
-				SyncAggregate:     agg,
-				ExecutionPayload:  capellaPayload,
+				RandaoReveal:          sb.Block.Body.RandaoReveal,
+				Eth1Data:              sb.Block.Body.Eth1Data,
+				Graffiti:              sb.Block.Body.Graffiti,
+				ProposerSlashings:     sb.Block.Body.ProposerSlashings,
+				AttesterSlashings:     sb.Block.Body.AttesterSlashings,
+				Attestations:          sb.Block.Body.Attestations,
+				Deposits:              sb.Block.Body.Deposits,
+				VoluntaryExits:        sb.Block.Body.VoluntaryExits,
+				SyncAggregate:         agg,
+				ExecutionPayload:      capellaPayload,
+				BlsToExecutionChanges: blsToExecChange,
 			},
 		},
 		Signature: sb.Signature,

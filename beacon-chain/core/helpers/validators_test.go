@@ -5,17 +5,17 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestIsActiveValidator_OK(t *testing.T) {
@@ -179,6 +179,7 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 func TestBeaconProposerIndex_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ClearCache()
+	defer ClearCache()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -222,6 +223,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		},
 	}
 
+	defer ClearCache()
 	for _, tt := range tests {
 		ClearCache()
 		require.NoError(t, state.SetSlot(tt.slot))
@@ -234,6 +236,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 func TestBeaconProposerIndex_BadState(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ClearCache()
+	defer ClearCache()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -345,6 +348,7 @@ func TestChurnLimit_OK(t *testing.T) {
 		{validatorCount: 1000000, wantedChurn: 15 /* validatorCount/churnLimitQuotient */},
 		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
 	}
+	defer ClearCache()
 	for _, test := range tests {
 		ClearCache()
 
@@ -516,6 +520,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			want: []primitives.ValidatorIndex{0, 2, 3},
 		},
 	}
+	defer ClearCache()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := state_native.InitializeFromProtoPhase0(tt.args.state)

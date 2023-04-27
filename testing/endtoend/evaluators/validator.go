@@ -5,20 +5,20 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
-	e2eparams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
+	e2eparams "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -145,6 +145,11 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 			}
 		case *eth.BeaconStateContainer_BellatrixState:
 			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.BellatrixState.PreviousEpochParticipation)
+			if err != nil {
+				return errors.Wrap(err, "failed to get missing validators")
+			}
+		case *eth.BeaconStateContainer_CapellaState:
+			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.CapellaState.PreviousEpochParticipation)
 			if err != nil {
 				return errors.Wrap(err, "failed to get missing validators")
 			}

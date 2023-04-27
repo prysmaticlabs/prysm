@@ -4,8 +4,8 @@ package slots
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 )
 
 // The Ticker interface defines a type which can expose a
@@ -74,7 +74,6 @@ func (s *SlotTicker) start(
 	secondsPerSlot uint64,
 	since, until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
-
 	d := time.Duration(secondsPerSlot) * time.Second
 
 	go func() {

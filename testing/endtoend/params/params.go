@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 )
 
 // params struct defines the parameters needed for running E2E tests to properly handle test sharding.
@@ -90,7 +90,7 @@ func (p *params) Logfile(rel ...string) string {
 
 // Eth1RPCURL gives the full url to use to connect to the given eth1 client's RPC endpoint.
 // The `index` param corresponds to the `index` field of the `eth1.Node` e2e component.
-// These are are off by one compared to corresponding beacon nodes, because the miner is assigned index 0.
+// These are off by one compared to corresponding beacon nodes, because the miner is assigned index 0.
 // eg instance the index of the EL instance associated with beacon node index `0` would typically be `1`.
 func (p *params) Eth1RPCURL(index int) *url.URL {
 	return &url.URL{
@@ -158,8 +158,7 @@ const (
 
 	JaegerTracingPort = 9150
 
-	StartupBufferSecs            = 5
-	StartupBufferSecsMulticlient = 10
+	StartupBufferSecs = 15
 )
 
 func logDir() string {
@@ -262,7 +261,7 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
-	genTime := uint64(time.Now().Unix()) + StartupBufferSecsMulticlient
+	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,

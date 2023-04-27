@@ -1,9 +1,9 @@
 package state_native
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // SetEth1Data for the beacon state.
@@ -42,7 +42,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 }
 
 // AppendEth1DataVotes for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()

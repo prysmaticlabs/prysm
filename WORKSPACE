@@ -4,14 +4,17 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
-    name = "bazel_toolchains",
-    sha256 = "8e0633dfb59f704594f19ae996a35650747adc621ada5e8b9fb588f808c89cb0",
-    strip_prefix = "bazel-toolchains-3.7.0",
+    name = "rules_pkg",
+    sha256 = "8c20f74bca25d2d442b327ae26768c02cf3c99e93fad0381f32be9aab1967675",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/releases/download/3.7.0/bazel-toolchains-3.7.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-toolchains/releases/download/3.7.0/bazel-toolchains-3.7.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.8.1/rules_pkg-0.8.1.tar.gz",
+        "https://github.com/bazelbuild/rules_pkg/releases/download/0.8.1/rules_pkg-0.8.1.tar.gz",
     ],
 )
+
+load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
+
+rules_pkg_dependencies()
 
 http_archive(
     name = "com_grail_bazel_toolchain",
@@ -38,10 +41,6 @@ llvm_register_toolchains()
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
 configure_prysm_toolchains()
-
-load("@prysm//tools/cross-toolchain:rbe_toolchains_config.bzl", "rbe_toolchains_config")
-
-rbe_toolchains_config()
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
@@ -76,9 +75,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "1f4e59843b61981a96835dc4ac377ad4da9f8c334ebe5e0bb3f58f80c09735f4",
-    strip_prefix = "rules_docker-0.19.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.19.0/rules_docker-v0.19.0.tar.gz"],
+    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
 )
 
 http_archive(
@@ -88,10 +86,10 @@ http_archive(
         # Expose internals of go_test for custom build transitions.
         "//third_party:io_bazel_rules_go_test.patch",
     ],
-    sha256 = "ae013bf35bd23234d1dea46b079f1e05ba74ac0321423830119d3e787ec73483",
+    sha256 = "dd926a88a564a9246713a9c00b35315f54cbd46b31a26d5d8fb264c07045f05d",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.36.0/rules_go-v0.36.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.36.0/rules_go-v0.36.0.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
     ],
 )
 
@@ -122,32 +120,36 @@ load(
     "container_pull",
 )
 
+# Pulled gcr.io/distroless/cc-debian11:latest on 2022-02-23
 container_pull(
-    name = "cc_image_base",
-    digest = "sha256:41036fc7ed8df0f6addc18484cef0c94a85867508967789f947e11ffd5ff0cc8",
+    name = "cc_image_base_amd64",
+    digest = "sha256:2a0daf90a7deb78465bfca3ef2eee6e91ce0a5706059f05d79d799a51d339523",
     registry = "gcr.io",
-    repository = "distroless/cc",
+    repository = "distroless/cc-debian11",
 )
 
+# Pulled gcr.io/distroless/cc-debian11:debug on 2022-02-23
 container_pull(
-    name = "cc_debug_image_base",
-    digest = "sha256:6865ad48467c89c3c3524d4c426f52ad12d9ab7dec31fad31fae69da40eb6445",
+    name = "cc_debug_image_base_amd64",
+    digest = "sha256:7bd596f5f200588f13a69c268eea6ce428b222b67cd7428d6a7fef95e75c052a",
     registry = "gcr.io",
-    repository = "distroless/cc",
+    repository = "distroless/cc-debian11",
 )
 
+# Pulled from gcr.io/distroless/base-debian11:latest on 2022-02-23
 container_pull(
-    name = "go_image_base",
-    digest = "sha256:b9b124f955961599e72630654107a0cf04e08e6fa777fa250b8f840728abd770",
+    name = "go_image_base_amd64",
+    digest = "sha256:34e682800774ecbd0954b1663d90238505f1ba5543692dbc75feef7dd4839e90",
     registry = "gcr.io",
-    repository = "distroless/base",
+    repository = "distroless/base-debian11",
 )
 
+# Pulled from gcr.io/distroless/base-debian11:debug on 2022-02-23
 container_pull(
-    name = "go_debug_image_base",
-    digest = "sha256:65668d2b78d25df3d8ccf5a778d017fcaba513b52078c700083eaeef212b9979",
+    name = "go_debug_image_base_amd64",
+    digest = "sha256:0f503c6bfd207793bc416f20a35bf6b75d769a903c48f180ad73f60f7b60d7bd",
     registry = "gcr.io",
-    repository = "distroless/base",
+    repository = "distroless/base-debian11",
 )
 
 container_pull(
@@ -162,7 +164,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.19.4",
+    go_version = "1.19.8",
     nogo = "@//:nogo",
 )
 
@@ -188,9 +190,22 @@ filegroup(
     url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.3.0-rc.2"
+http_archive(
+    name = "eip4881_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "89cb659498c0d196fc9f957f8b849b2e1a5c041c3b2b3ae5432ac5c26944297e",
+    url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
+)
 
-consensus_spec_test_version = "v1.3.0-rc.2-hotfix"
+consensus_spec_version = "v1.3.0"
 
 bls_test_version = "v0.1.1"
 
@@ -206,8 +221,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "5c90f42ff30857def5ae0952904c5cad6dbc16310a86d3a0914f37b557920779",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_test_version,
+    sha256 = "1c806e04ac5e3779032c06a6009350b3836b6809bb23812993d6ececd7047cf5",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -222,8 +237,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "8fbec5f1fa30fb1194b42230bf75f05690a72cf3c56af5b5ac8aafb94c60fc19",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_test_version,
+    sha256 = "2b42796dc5ccd9f1246032d0c17663e20f70334ff7e00325f0fc3af28cb24186",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -238,8 +253,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "cb22875dbb67b12f577d12a5aa8074de4c8bd31d74fff45cc110be515c1df847",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_test_version,
+    sha256 = "231e3371e81ce9acde65d2910ec4580587e74dbbcfcbd9c675e473e022deec8a",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -253,7 +268,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "c728947ccf8b628691c76cc92f2f59c02f1c7882a463f26365d32c098bb946b8",
+    sha256 = "219b74d95664ea7e8dfbf31162dfa206b9c0cf45919ea86db5fa0f8902977e3c",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -284,9 +299,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "82b01a48b143fe0f2fb7fb5f5dd385c1f934335a12d7954f08b1d45d77427b5e",
-    strip_prefix = "eth2-networks-674f7a1d01d9c18345456eab76e3871b3df2126b",
-    url = "https://github.com/eth-clients/eth2-networks/archive/674f7a1d01d9c18345456eab76e3871b3df2126b.tar.gz",
+    sha256 = "2701e1e1a3ec10c673fe7dbdbbe6f02c8ae8c922aebbf6e720d8c72d5458aafe",
+    strip_prefix = "eth2-networks-7b4897888cebef23801540236f73123e21774954",
+    url = "https://github.com/eth-clients/eth2-networks/archive/7b4897888cebef23801540236f73123e21774954.tar.gz",
 )
 
 http_archive(
@@ -317,9 +332,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "b2226874526805d64c29e5053fa28e511b57c0860585d6d59777ee81ff4859ca",
+    sha256 = "5006614c33e358699b4e072c649cd4c3866f7d41a691449d5156f6c6e07a4c60",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.2/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.3/prysm-web-ui.tar.gz",
     ],
 )
 

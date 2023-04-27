@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -15,9 +15,11 @@ import (
 
 // GetBeaconNodeConnection retrieves the current beacon node connection
 // information, as well as its sync status.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) (*validatorpb.NodeConnectionResponse, error) {
 	syncStatus, err := s.syncChecker.Syncing(ctx)
 	if err != nil || s.validatorService.Status() != nil {
+		//nolint:nilerr
 		return &validatorpb.NodeConnectionResponse{
 			GenesisTime:        0,
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
@@ -39,11 +41,13 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) 
 }
 
 // GetLogsEndpoints for the beacon and validator client.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (*Server) GetLogsEndpoints(_ context.Context, _ *emptypb.Empty) (*validatorpb.LogsEndpointResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "unimplemented")
 }
 
 // GetVersion --
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*validatorpb.VersionResponse, error) {
 	beacon, err := s.beaconNodeClient.GetVersion(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -57,6 +61,7 @@ func (s *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*validatorpb
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) StreamBeaconLogs(req *emptypb.Empty, stream validatorpb.Health_StreamBeaconLogsServer) error {
 	// Wrap service context with a cancel in order to propagate the exiting of
 	// this method properly to the beacon node server.
@@ -88,6 +93,7 @@ func (s *Server) StreamBeaconLogs(req *emptypb.Empty, stream validatorpb.Health_
 }
 
 // StreamValidatorLogs from the validator client via a gRPC server-side stream.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) StreamValidatorLogs(_ *emptypb.Empty, stream validatorpb.Health_StreamValidatorLogsServer) error {
 	ch := make(chan []byte, s.streamLogsBufferSize)
 	sub := s.logsStreamer.LogsFeed().Subscribe(ch)

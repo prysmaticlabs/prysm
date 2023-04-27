@@ -9,18 +9,18 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
@@ -37,7 +37,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		req := &ethpb.BeaconBlocksByRangeRequest{}
 		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		_, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, bogusPeer.PeerID(), req, nil)
-		assert.ErrorContains(t, "protocol not supported", err)
+		assert.ErrorContains(t, "protocols not supported", err)
 	})
 
 	knownBlocks := make([]*ethpb.SignedBeaconBlock, 0)
@@ -329,7 +329,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		req := &p2pTypes.BeaconBlockByRootsReq{}
 		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		_, err := SendBeaconBlocksByRootRequest(ctx, chain, p1, bogusPeer.PeerID(), req, nil)
-		assert.ErrorContains(t, "protocol not supported", err)
+		assert.ErrorContains(t, "protocols not supported", err)
 	})
 
 	knownBlocksProvider := func(p2pProvider p2p.P2P, processor BeaconBlockProcessor) func(stream network.Stream) {

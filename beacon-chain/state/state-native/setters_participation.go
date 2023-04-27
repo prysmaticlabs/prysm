@@ -1,9 +1,9 @@
 package state_native
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // SetPreviousParticipationBits for the beacon state. Updates the entire
@@ -45,7 +45,7 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 }
 
 // AppendCurrentParticipationBits for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -70,7 +70,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 }
 
 // AppendPreviousParticipationBits for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()

@@ -2,17 +2,16 @@ package testing
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // MockBuilderService to mock builder.
@@ -41,7 +40,7 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.
 		}
 		return w, s.ErrSubmitBlindedBlock
 	}
-	w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella, big.NewInt(0))
+	w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella, 0)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap capella payload")
 	}

@@ -9,22 +9,22 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
-	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
+	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -161,18 +161,20 @@ func TestListSyncCommittees(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
-	chainService := &mock.ChainService{}
+	stSlot := st.Slot()
+	chainService := &mock.ChainService{Slot: &stSlot}
 	s := &Server{
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
 		},
-		StateFetcher: &testutil.MockFetcher{
+		Stater: &testutil.MockStater{
 			BeaconState: st,
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
+		ChainInfoFetcher:      chainService,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{StateId: stRoot[:]}
 	resp, err := s.ListSyncCommittees(ctx, req)
@@ -205,18 +207,20 @@ func TestListSyncCommittees(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &mock.ChainService{Optimistic: true}
+		stSlot := st.Slot()
+		chainService := &mock.ChainService{Optimistic: true, Slot: &stSlot}
 		s := &Server{
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
@@ -234,22 +238,25 @@ func TestListSyncCommittees(t *testing.T) {
 
 		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
 		require.NoError(t, err)
+		stSlot := st.Slot()
 		chainService := &mock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
+			Slot: &stSlot,
 		}
 		s := &Server{
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
 			},
-			StateFetcher: &testutil.MockFetcher{
+			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
+			ChainInfoFetcher:      chainService,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
@@ -302,7 +309,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
 		},
-		StateFetcher: &futureSyncMockFetcher{
+		Stater: &futureSyncMockFetcher{
 			BeaconState: st,
 		},
 		HeadFetcher:           chainService,
@@ -310,7 +317,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
-	req := &ethpbv2.StateSyncCommitteesRequest{}
+	req := &ethpbv2.StateSyncCommitteesRequest{StateId: []byte("head")}
 	epoch := 2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	req.Epoch = &epoch
 	_, err := s.ListSyncCommittees(ctx, req)

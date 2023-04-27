@@ -4,29 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 )
 
 // resetBoostedProposerRoot sets the value of the proposer boosted root to zeros.
 func (f *ForkChoice) resetBoostedProposerRoot(_ context.Context) error {
-	f.store.proposerBoostLock.Lock()
 	f.store.proposerBoostRoot = [32]byte{}
-	f.store.proposerBoostLock.Unlock()
 	return nil
 }
 
 // applyProposerBoostScore applies the current proposer boost scores to the
-// relevant nodes. This function requires a lock in Store.nodesLock.
+// relevant nodes.
 func (f *ForkChoice) applyProposerBoostScore() error {
 	s := f.store
-	s.proposerBoostLock.Lock()
-	defer s.proposerBoostLock.Unlock()
-
-	// acquire checkpoints lock for the justified balances
-	s.checkpointsLock.RLock()
-	defer s.checkpointsLock.RUnlock()
-
 	proposerScore := uint64(0)
 	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
 		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
@@ -53,7 +44,5 @@ func (f *ForkChoice) applyProposerBoostScore() error {
 
 // ProposerBoost of fork choice store.
 func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
-	s.proposerBoostLock.RLock()
-	defer s.proposerBoostLock.RUnlock()
 	return s.proposerBoostRoot
 }

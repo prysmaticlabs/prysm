@@ -1,20 +1,19 @@
 package blocks
 
 import (
-	"math/big"
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func Test_BeaconBlockIsNil(t *testing.T) {
@@ -392,7 +391,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, e)
 
 	executionCapella := &pb.ExecutionPayloadCapella{BlockNumber: 1}
-	eCapella, err := WrappedExecutionPayloadCapella(executionCapella, big.NewInt(0))
+	eCapella, err := WrappedExecutionPayloadCapella(executionCapella, 0)
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Capella}}}
 	require.NoError(t, bb.SetExecution(eCapella))
@@ -401,7 +400,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, eCapella)
 
 	executionCapellaHeader := &pb.ExecutionPayloadHeaderCapella{BlockNumber: 1}
-	eCapellaHeader, err := WrappedExecutionPayloadHeaderCapella(executionCapellaHeader, big.NewInt(0))
+	eCapellaHeader, err := WrappedExecutionPayloadHeaderCapella(executionCapellaHeader, 0)
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{version: version.Capella, body: &BeaconBlockBody{version: version.Capella, isBlinded: true}}}
 	require.NoError(t, bb.SetExecution(eCapellaHeader))

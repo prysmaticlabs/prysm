@@ -18,7 +18,6 @@ go_library(
         "log.go",
         "migration.go",
         "migration_archived_index.go",
-        "migration_blinded_beacon_blocks.go",
         "migration_block_slot_index.go",
         "migration_state_validators.go",
         "schema.go",
@@ -29,7 +28,7 @@ go_library(
         "validated_checkpoint.go",
         "wss.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv",
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",

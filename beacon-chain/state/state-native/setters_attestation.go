@@ -3,11 +3,11 @@ package state_native
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // RotateAttestations sets the previous epoch attestations to the current epoch attestations and
@@ -44,7 +44,7 @@ func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestatio
 }
 
 // AppendCurrentEpochAttestations for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -74,7 +74,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 }
 
 // AppendPreviousEpochAttestations for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()

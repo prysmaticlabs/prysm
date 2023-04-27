@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
-	iface2 "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
+	iface2 "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 )
 
 // Wallet contains an in-memory, simulated wallet implementation.
@@ -25,6 +25,7 @@ type Wallet struct {
 	WalletPassword    string
 	UnlockAccounts    bool
 	lock              sync.RWMutex
+	HasWriteFileError bool
 }
 
 // AccountNames --
@@ -57,6 +58,11 @@ func (w *Wallet) Password() string {
 func (w *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
+	if w.HasWriteFileError {
+		// reset the flag to not contaminate other tests
+		w.HasWriteFileError = false
+		return errors.New("could not write keystore file for accounts")
+	}
 	if w.Files[pathName] == nil {
 		w.Files[pathName] = make(map[string][]byte)
 	}
@@ -186,7 +192,7 @@ func (MockValidator) HasProposerSettings() bool {
 }
 
 // PushProposerSettings for mocking
-func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
+func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager, _ time.Time) error {
 	panic("implement me")
 }
 

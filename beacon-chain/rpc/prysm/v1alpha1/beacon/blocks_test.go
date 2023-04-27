@@ -7,25 +7,26 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	chainMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/mock"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/mock"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -287,6 +288,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 		OptimisticModeFetcher: &chainMock.ChainService{},
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -558,10 +560,6 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 }
 
 func runListBlocksGenesis(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOnlyBlindedBeaconBlocks: true,
-	})
-	defer resetFn()
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -745,6 +743,10 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
 	t.Run("bellatrix block", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.Slot = 300
 		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
@@ -769,6 +771,10 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
 	t.Run("capella block", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		blk := util.NewBeaconBlockCapella()
 		blk.Block.Slot = 300
 		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {

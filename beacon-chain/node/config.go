@@ -5,12 +5,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	tracing2 "github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
 
@@ -64,6 +63,13 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.MaxBuilderEpochMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
 		c.MaxBuilderEpochMissedSlots = primitives.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	if cliCtx.IsSet(flags.LocalBlockValueBoost.Name) {
+		c := params.BeaconConfig().Copy()
+		c.LocalBlockValueBoost = cliCtx.Uint64(flags.LocalBlockValueBoost.Name)
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -129,12 +135,11 @@ func configureInteropConfig(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		return nil
 	}
-	genStateIsSet := cliCtx.IsSet(flags.InteropGenesisStateFlag.Name)
 	genTimeIsSet := cliCtx.IsSet(flags.InteropGenesisTimeFlag.Name)
 	numValsIsSet := cliCtx.IsSet(flags.InteropNumValidatorsFlag.Name)
 	votesIsSet := cliCtx.IsSet(flags.InteropMockEth1DataVotesFlag.Name)
 
-	if genStateIsSet || genTimeIsSet || numValsIsSet || votesIsSet {
+	if genTimeIsSet || numValsIsSet || votesIsSet {
 		if err := params.SetActive(params.InteropConfig().Copy()); err != nil {
 			return err
 		}
@@ -194,7 +199,5 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 }
 
 func configureFastSSZHashingAlgorithm() {
-	if features.Get().EnableVectorizedHTR {
-		fastssz.EnableVectorizedHTR = true
-	}
+	fastssz.EnableVectorizedHTR = true
 }

@@ -1,16 +1,14 @@
 package testnet
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func Test_genesisStateFromJSONValidators(t *testing.T) {
@@ -18,13 +16,10 @@ func Test_genesisStateFromJSONValidators(t *testing.T) {
 	jsonData := createGenesisDepositData(t, numKeys)
 	jsonInput, err := json.Marshal(jsonData)
 	require.NoError(t, err)
-	ctx := context.Background()
-	genesisState, err := genesisStateFromJSONValidators(
-		ctx, bytes.NewReader(jsonInput), 0, /* genesis time defaults to time.Now() */
-	)
+	_, dds, err := depositEntriesFromJSON(jsonInput)
 	require.NoError(t, err)
-	for i, val := range genesisState.Validators {
-		assert.DeepEqual(t, fmt.Sprintf("%#x", val.PublicKey), jsonData[i].PubKey)
+	for i := range dds {
+		assert.DeepEqual(t, fmt.Sprintf("%#x", dds[i].PublicKey), jsonData[i].PubKey)
 	}
 }
 

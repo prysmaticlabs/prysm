@@ -6,19 +6,18 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/fieldtrie"
-	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/fieldtrie"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -670,13 +669,13 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	for i, f := range b.sharedFieldReferences {
-		refMap[i.String(b.version)] = uint64(f.Refs())
+		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
 		numOfRefs := uint64(f.FieldReference().Refs())
 		f.RLock()
 		if !f.Empty() {
-			refMap[i.String(b.version)+"_trie"] = numOfRefs
+			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
 	}
@@ -692,9 +691,8 @@ func (b *BeaconState) IsNil() bool {
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("field", field.String(b.version)))
+	span.AddAttributes(trace.StringAttribute("field", field.String()))
 
-	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case types.GenesisTime:
 		return ssz.Uint64Root(b.genesisTime), nil
@@ -735,7 +733,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return ssz.ByteArrayRootWithLimit(hRoots, fieldparams.HistoricalRootsLength)
 	case types.Eth1Data:
-		return stateutil.Eth1Root(hasher, b.eth1Data)
+		return stateutil.Eth1Root(b.eth1Data)
 	case types.Eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(
@@ -817,11 +815,11 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case types.JustificationBits:
 		return bytesutil.ToBytes32(b.justificationBits), nil
 	case types.PreviousJustifiedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.previousJustifiedCheckpoint)
+		return ssz.CheckpointRoot(b.previousJustifiedCheckpoint)
 	case types.CurrentJustifiedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.currentJustifiedCheckpoint)
+		return ssz.CheckpointRoot(b.currentJustifiedCheckpoint)
 	case types.FinalizedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.finalizedCheckpoint)
+		return ssz.CheckpointRoot(b.finalizedCheckpoint)
 	case types.InactivityScores:
 		return stateutil.Uint64ListRootWithRegistryLimit(b.inactivityScores)
 	case types.CurrentSyncCommittee:
@@ -901,7 +899,6 @@ func finalizerCleanup(b *BeaconState) {
 		if b.stateFieldLeaves[field].FieldReference() != nil {
 			b.stateFieldLeaves[field].FieldReference().MinusRef()
 		}
-
 	}
 	for i := range b.dirtyFields {
 		delete(b.dirtyFields, i)

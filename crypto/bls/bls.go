@@ -1,12 +1,12 @@
 // Package bls implements a go-wrapper around a library implementing the
-// the BLS12-381 curve and signature scheme. This package exposes a public API for
+// BLS12-381 curve and signature scheme. This package exposes a public API for
 // verifying and aggregating BLS signatures used by Ethereum.
 package bls
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/herumi"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/herumi"
 )
 
 // Initialize herumi temporarily while we transition to blst for ethdo.

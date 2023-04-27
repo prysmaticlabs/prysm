@@ -4,9 +4,9 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 func jsonifyTransactions(transactions [][]byte) []string {
@@ -97,7 +97,8 @@ func jsonifyProposerSlashings(proposerSlashings []*ethpb.ProposerSlashing) []*ap
 	return jsonProposerSlashings
 }
 
-func jsonifySignedVoluntaryExits(voluntaryExits []*ethpb.SignedVoluntaryExit) []*apimiddleware.SignedVoluntaryExitJson {
+// JsonifySignedVoluntaryExits converts an array of voluntary exit structs to a JSON hex string compatible format.
+func JsonifySignedVoluntaryExits(voluntaryExits []*ethpb.SignedVoluntaryExit) []*apimiddleware.SignedVoluntaryExitJson {
 	jsonSignedVoluntaryExits := make([]*apimiddleware.SignedVoluntaryExitJson, len(voluntaryExits))
 	for index, signedVoluntaryExit := range voluntaryExits {
 		jsonSignedVoluntaryExit := &apimiddleware.SignedVoluntaryExitJson{

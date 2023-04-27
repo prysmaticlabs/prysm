@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	buildertesting "github.com/prysmaticlabs/prysm/v3/api/client/builder/testing"
-	blockchainTesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	dbtesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	buildertesting "github.com/prysmaticlabs/prysm/v4/api/client/builder/testing"
+	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbtesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func Test_NewServiceWithBuilder(t *testing.T) {
@@ -36,4 +36,19 @@ func Test_RegisterValidator(t *testing.T) {
 	var feeRecipient [20]byte
 	require.NoError(t, s.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{{Message: &eth.ValidatorRegistrationV1{Pubkey: pubkey[:], FeeRecipient: feeRecipient[:]}}}))
 	assert.Equal(t, true, builder.RegisteredVals[pubkey])
+}
+
+func Test_BuilderMethodsWithouClient(t *testing.T) {
+	s, err := NewService(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, false, s.Configured())
+
+	_, err = s.GetHeader(context.Background(), 0, [32]byte{}, [48]byte{})
+	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
+
+	_, err = s.SubmitBlindedBlock(context.Background(), nil)
+	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
+
+	err = s.RegisterValidator(context.Background(), nil)
+	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
 }

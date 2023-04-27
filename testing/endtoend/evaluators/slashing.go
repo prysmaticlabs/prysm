@@ -6,18 +6,19 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
-	e2eTypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
+	e2eTypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -64,13 +65,27 @@ func validatorsSlashed(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn)
 	conn := conns[0]
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
-	req := &eth.GetValidatorActiveSetChangesRequest{}
-	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
-	if err != nil {
-		return err
+
+	actualSlashedIndices := 0
+
+	for _, slashedIndex := range slashedIndices {
+		req := &eth.GetValidatorRequest{
+			QueryFilter: &eth.GetValidatorRequest_Index{
+				Index: primitives.ValidatorIndex(slashedIndex),
+			},
+		}
+		valResp, err := client.GetValidator(ctx, req)
+		if err != nil {
+			return err
+		}
+
+		if valResp.Slashed {
+			actualSlashedIndices++
+		}
 	}
-	if len(changes.SlashedIndices) != len(slashedIndices) {
-		return fmt.Errorf("expected %d indices to be slashed, received %d", len(slashedIndices), len(changes.SlashedIndices))
+
+	if actualSlashedIndices != len(slashedIndices) {
+		return fmt.Errorf("expected %d indices to be slashed, received %d", len(slashedIndices), actualSlashedIndices)
 	}
 	return nil
 }
@@ -101,7 +116,6 @@ func validatorsLoseBalance(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientC
 				valResp.EffectiveBalance,
 			)
 		}
-
 	}
 	return nil
 }
@@ -241,11 +255,40 @@ func proposeDoubleBlock(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn
 		valClient = eth.NewBeaconNodeValidatorClient(conns[1])
 	}
 
+	b, err := generateSignedBeaconBlock(chainHead, proposerIndex, valClient, privKeys, "bad state root")
+	if err != nil {
+		return err
+	}
+	if _, err = valClient.ProposeBeaconBlock(ctx, b); err == nil {
+		return errors.New("expected block to fail processing")
+	}
+
+	b, err = generateSignedBeaconBlock(chainHead, proposerIndex, valClient, privKeys, "bad state root 2")
+	if err != nil {
+		return err
+	}
+	if _, err = valClient.ProposeBeaconBlock(ctx, b); err == nil {
+		return errors.New("expected block to fail processing")
+	}
+
+	slashedIndices = append(slashedIndices, uint64(proposerIndex))
+	return nil
+}
+
+func generateSignedBeaconBlock(
+	chainHead *eth.ChainHead,
+	proposerIndex primitives.ValidatorIndex,
+	valClient eth.BeaconNodeValidatorClient,
+	privKeys []bls.SecretKey,
+	stateRoot string,
+) (*eth.GenericSignedBeaconBlock, error) {
+	ctx := context.Background()
+
 	hashLen := 32
 	blk := &eth.BeaconBlock{
-		Slot:          chainHead.HeadSlot + 1,
+		Slot:          chainHead.HeadSlot - 1,
 		ParentRoot:    chainHead.HeadBlockRoot,
-		StateRoot:     bytesutil.PadTo([]byte("bad state root"), hashLen),
+		StateRoot:     bytesutil.PadTo([]byte(stateRoot), hashLen),
 		ProposerIndex: proposerIndex,
 		Body: &eth.BeaconBlockBody{
 			Eth1Data: &eth.Eth1Data{
@@ -269,11 +312,11 @@ func proposeDoubleBlock(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn
 	}
 	resp, err := valClient.DomainData(ctx, req)
 	if err != nil {
-		return errors.Wrap(err, "could not get domain data")
+		return nil, errors.Wrap(err, "could not get domain data")
 	}
 	signingRoot, err := signing.ComputeSigningRoot(blk, resp.SignatureDomain)
 	if err != nil {
-		return errors.Wrap(err, "could not compute signing root")
+		return nil, errors.Wrap(err, "could not compute signing root")
 	}
 	sig := privKeys[proposerIndex].Sign(signingRoot[:]).Marshal()
 	signedBlk := &eth.SignedBeaconBlock{
@@ -285,15 +328,7 @@ func proposeDoubleBlock(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientConn
 	// Only broadcasting the attestation to one node also helps test slashing propagation.
 	wb, err := blocks.NewSignedBeaconBlock(signedBlk)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	b, err := wb.PbGenericBlock()
-	if err != nil {
-		return err
-	}
-	if _, err = valClient.ProposeBeaconBlock(ctx, b); err == nil {
-		return errors.New("expected block to fail processing")
-	}
-	slashedIndices = append(slashedIndices, uint64(proposerIndex))
-	return nil
+	return wb.PbGenericBlock()
 }

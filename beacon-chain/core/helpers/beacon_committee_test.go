@@ -7,17 +7,17 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 func TestComputeCommittee_WithoutCache(t *testing.T) {
@@ -91,6 +91,7 @@ func TestVerifyBitfieldLength_OK(t *testing.T) {
 
 func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 	ClearCache()
+	defer ClearCache()
 	epoch := primitives.Epoch(1)
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 0, // Epoch 0.
@@ -101,6 +102,8 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 }
 
 func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		var activationEpoch primitives.Epoch
@@ -118,7 +121,6 @@ func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	ClearCache()
 	_, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, 0)
 	require.NoError(t, err, "Failed to determine CommitteeAssignments")
 	for _, ss := range proposerIndexToSlots {
@@ -188,6 +190,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		},
 	}
 
+	defer ClearCache()
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearCache()
@@ -255,6 +258,8 @@ func TestCommitteeAssignments_CannotRetrieveOlderThanSlotsPerHistoricalRoot(t *t
 }
 
 func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -269,7 +274,6 @@ func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	ClearCache()
 	epoch := primitives.Epoch(1)
 	_, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, epoch)
 	require.NoError(t, err, "Failed to determine CommitteeAssignments")
@@ -376,6 +380,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		},
 	}
 
+	defer ClearCache()
 	for i, tt := range tests {
 		ClearCache()
 		require.NoError(t, state.SetSlot(tt.stateSlot))
@@ -390,6 +395,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	ClearCache()
+	defer ClearCache()
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount
 	validators := make([]*ethpb.Validator, validatorCount)
 	indices := make([]primitives.ValidatorIndex, validatorCount)

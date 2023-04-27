@@ -10,10 +10,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
@@ -636,5 +636,44 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 	f.HeadBlockHash = dec.HeadBlockHash
 	f.SafeBlockHash = dec.SafeBlockHash
 	f.FinalizedBlockHash = dec.FinalizedBlockHash
+	return nil
+}
+
+type executionPayloadBodyV1JSON struct {
+	Transactions []hexutil.Bytes `json:"transactions"`
+	Withdrawals  []*Withdrawal   `json:"withdrawals"`
+}
+
+func (b *ExecutionPayloadBodyV1) MarshalJSON() ([]byte, error) {
+	transactions := make([]hexutil.Bytes, len(b.Transactions))
+	for i, tx := range b.Transactions {
+		transactions[i] = tx
+	}
+	if len(b.Withdrawals) == 0 {
+		b.Withdrawals = make([]*Withdrawal, 0)
+	}
+	return json.Marshal(executionPayloadBodyV1JSON{
+		Transactions: transactions,
+		Withdrawals:  b.Withdrawals,
+	})
+}
+
+func (b *ExecutionPayloadBodyV1) UnmarshalJSON(enc []byte) error {
+	var decoded *executionPayloadBodyV1JSON
+	err := json.Unmarshal(enc, &decoded)
+	if err != nil {
+		return err
+	}
+	if len(decoded.Transactions) == 0 {
+		b.Transactions = make([][]byte, 0)
+	}
+	if len(decoded.Withdrawals) == 0 {
+		b.Withdrawals = make([]*Withdrawal, 0)
+	}
+	transactions := make([][]byte, len(decoded.Transactions))
+	for i, tx := range decoded.Transactions {
+		transactions[i] = tx
+	}
+	b.Transactions = transactions
 	return nil
 }

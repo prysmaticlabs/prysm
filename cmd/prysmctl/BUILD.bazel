@@ -8,7 +8,7 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl",
+    importpath = "github.com/prysmaticlabs/prysm/v4/cmd/prysmctl",
     visibility = ["//visibility:private"],
     deps = [
         "//cmd/prysmctl/checkpointsync:go_default_library",
@@ -38,7 +38,6 @@ go_image(
 container_image(
     name = "image_with_creation_time",
     base = "image",
-    stamp = True,
     tags = ["manual"],
     visibility = ["//cmd/prysmctl:__pkg__"],
 )
@@ -111,5 +110,6 @@ docker_push(
 go_binary(
     name = "prysmctl",
     embed = [":go_default_library"],
+    gotags = ["noMainnetGenesis"],
     visibility = ["//visibility:public"],
 )

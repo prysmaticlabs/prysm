@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
-	slashingprotection "github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,7 +27,7 @@ const (
 // 1. Parse a path to the validator's datadir from the CLI context.
 // 2. Open the validator database.
 // 3. Call the function which actually exports the data from
-// from the validator's db into an EIP standard slashing protection format
+// the validator's db into an EIP standard slashing protection format
 // 4. Format and save the JSON file to a user's specified output directory.
 func exportSlashingProtectionJSON(cliCtx *cli.Context) error {
 	log.Info(

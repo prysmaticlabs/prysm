@@ -11,16 +11,16 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"gopkg.in/yaml.v2"
 )
 
 // Variables defined in the placeholderFields will not be tested in `TestLoadConfigFile`.
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
-var placeholderFields = []string{"UPDATE_TIMEOUT", "EIP4844_FORK_EPOCH", "EIP4844_FORK_VERSION"}
+var placeholderFields = []string{"UPDATE_TIMEOUT", "DENEB_FORK_EPOCH", "DENEB_FORK_VERSION"}
 
 func assertEqualConfigs(t *testing.T, name string, fields []string, expected, actual *params.BeaconChainConfig) {
 	//  Misc params.
@@ -37,7 +37,7 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.HysteresisUpwardMultiplier, actual.HysteresisUpwardMultiplier, "%s: HysteresisUpwardMultiplier", name)
 
 	// Fork Choice params.
-	assert.Equal(t, expected.SafeSlotsToUpdateJustified, actual.SafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
+	assert.Equal(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified, "%s: SafeSlotsToUpdateJustified", name)
 
 	// Validator params.
 	assert.Equal(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance, "%s: Eth1FollowDistance", name)

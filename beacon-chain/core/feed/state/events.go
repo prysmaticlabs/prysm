@@ -6,8 +6,8 @@ package state
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 const (
@@ -19,13 +19,14 @@ const (
 	Initialized
 	// Synced is sent when the beacon node has completed syncing and is ready to participate in the network.
 	Synced
-	// Reorg is an event sent when the new head state's slot after a block
-	// transition is lower than its previous head state slot value.
+	// Reorg is an event sent when the new head is not a descendant of the previous head.
 	Reorg
 	// FinalizedCheckpoint event.
 	FinalizedCheckpoint
 	// NewHead of the chain event.
 	NewHead
+	// MissedSlot is sent when we need to notify users that a slot was missed.
+	MissedSlot
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.

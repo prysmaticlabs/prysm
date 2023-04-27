@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func testnetConfigFilePath(t *testing.T, network string) string {
@@ -76,7 +76,7 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.ShardCommitteePeriod, actual.ShardCommitteePeriod)
 	require.DeepEqual(t, expected.MinEpochsToInactivityPenalty, actual.MinEpochsToInactivityPenalty)
 	require.DeepEqual(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance)
-	require.DeepEqual(t, expected.SafeSlotsToUpdateJustified, actual.SafeSlotsToUpdateJustified)
+	require.DeepEqual(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified)
 	require.DeepEqual(t, expected.SecondsPerETH1Block, actual.SecondsPerETH1Block)
 	require.DeepEqual(t, expected.ProposerScoreBoost, actual.ProposerScoreBoost)
 	require.DeepEqual(t, expected.IntervalsPerSlot, actual.IntervalsPerSlot)

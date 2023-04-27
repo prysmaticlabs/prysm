@@ -1,9 +1,9 @@
 package state_native
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
@@ -57,7 +57,6 @@ func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, er
 	}
 
 	return stateutil.UnrealizedCheckpointBalances(cp, pp, b.validators, currentEpoch)
-
 }
 
 // currentEpochParticipationVal corresponding to participation bits on the beacon chain.

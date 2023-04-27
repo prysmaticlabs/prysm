@@ -22,40 +22,41 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v3/api/gateway"
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/backup"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
-	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/runtime"
-	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
-	"github.com/prysmaticlabs/prysm/v3/runtime/prereqs"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/client"
-	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
-	g "github.com/prysmaticlabs/prysm/v3/validator/graffiti"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
-	"github.com/prysmaticlabs/prysm/v3/validator/rpc"
-	validatormiddleware "github.com/prysmaticlabs/prysm/v3/validator/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/validator/web"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/backup"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/prometheus"
+	tracing2 "github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/runtime"
+	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v4/runtime/prereqs"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	g "github.com/prysmaticlabs/prysm/v4/validator/graffiti"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v4/validator/rpc"
+	validatormiddleware "github.com/prysmaticlabs/prysm/v4/validator/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -128,6 +129,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
+	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
 		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
 			log.Warn("Remote Keymanager API enabled. Prysm web does not properly support web3signer at this time")
@@ -228,7 +230,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 						"to use for your validator data",
 				)
 			}
-
 		}
 		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
@@ -312,7 +313,6 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 						"to use for your validator data",
 				)
 			}
-
 		}
 		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
@@ -374,7 +374,6 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
-
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -594,7 +593,6 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 				},
 				BuilderConfig: option.BuilderConfig,
 			}
-
 		}
 	}
 
@@ -751,16 +749,19 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 			h(w, req)
 		} else {
 			// Finally, we handle with the web server.
+			// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 			web.Handler(w, req)
 		}
 	}
 
+	// remove "/accounts/", "/v2/" after WebUI DEPRECATED
 	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
 		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},
 		Mux:           gwmux,
 	}
 	opts := []gateway.Option{
+		gateway.WithRouter(mux.NewRouter()),
 		gateway.WithRemoteAddr(rpcAddr),
 		gateway.WithGatewayAddr(gatewayAddress),
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
@@ -883,7 +884,5 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 }
 
 func configureFastSSZHashingAlgorithm() {
-	if features.Get().EnableVectorizedHTR {
-		fastssz.EnableVectorizedHTR = true
-	}
+	fastssz.EnableVectorizedHTR = true
 }

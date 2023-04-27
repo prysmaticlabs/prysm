@@ -5,12 +5,12 @@ import (
 	"io"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/checkpoint"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/genesis"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
 	"github.com/urfave/cli/v2"
 )
 
@@ -94,7 +94,6 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
 			flags.InteropMockEth1DataVotesFlag,
-			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
 			flags.ContractDeploymentBlock,
 			flags.RPCHost,
@@ -108,7 +107,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GPRCGatewayCorsDomain,
 			flags.ExecutionEngineEndpoint,
 			flags.ExecutionEngineHeaders,
-			flags.HTTPWeb3ProviderFlag,
 			flags.ExecutionJWTSecretFlag,
 			flags.SetGCPercent,
 			flags.SlotsPerArchivedPoint,
@@ -151,6 +149,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PHostDNS,
 			cmd.P2PMaxPeers,
 			cmd.P2PPrivKey,
+			cmd.P2PStaticID,
 			cmd.P2PMetadata,
 			cmd.P2PAllowList,
 			cmd.P2PDenyList,
@@ -173,7 +172,7 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "interop",
 		Flags: []cli.Flag{
-			flags.InteropGenesisStateFlag,
+			genesis.StatePath,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
 		},

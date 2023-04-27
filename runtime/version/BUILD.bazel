@@ -7,7 +7,7 @@ go_library(
         "metrics.go",
         "version.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/runtime/version",
+    importpath = "github.com/prysmaticlabs/prysm/v4/runtime/version",
     visibility = ["//visibility:public"],
     x_defs = {
         "gitCommit": "{STABLE_GIT_COMMIT}",
@@ -16,6 +16,7 @@ go_library(
         "gitTag": "{STABLE_GIT_TAG}",
     },
     deps = [
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
     ],

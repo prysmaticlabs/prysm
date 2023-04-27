@@ -7,23 +7,22 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -309,7 +308,7 @@ func TestSaveOrphanedAtts(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -325,6 +324,88 @@ func TestSaveOrphanedAtts(t *testing.T) {
 		return atts[i].Data.Slot > atts[j].Data.Slot
 	})
 	require.DeepEqual(t, wantAtts, atts)
+}
+
+func TestSaveOrphanedOps(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.ShardCommitteePeriod = 0
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+	service.genesisTime = time.Now().Add(time.Duration(-10*int64(1)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+
+	// Chain setup
+	// 0 -- 1 -- 2 -- 3
+	//  \-4
+	st, keys := util.DeterministicGenesisState(t, 64)
+	service.head = &head{state: st}
+	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
+	assert.NoError(t, err)
+
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
+	rG, err := blkG.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	blk1, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
+	assert.NoError(t, err)
+	blk1.Block.ParentRoot = rG[:]
+	r1, err := blk1.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	blk2, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 2)
+	assert.NoError(t, err)
+	blk2.Block.ParentRoot = r1[:]
+	r2, err := blk2.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	blkConfig := util.DefaultBlockGenConfig()
+	blkConfig.NumBLSChanges = 5
+	blkConfig.NumProposerSlashings = 1
+	blkConfig.NumAttesterSlashings = 1
+	blkConfig.NumVoluntaryExits = 1
+	blk3, err := util.GenerateFullBlock(st, keys, blkConfig, 3)
+	assert.NoError(t, err)
+	blk3.Block.ParentRoot = r2[:]
+	r3, err := blk3.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	blk4 := util.NewBeaconBlock()
+	blk4.Block.Slot = 4
+	blk4.Block.ParentRoot = rG[:]
+	r4, err := blk4.Block.HashTreeRoot()
+	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+
+	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk3, blk4} {
+		r, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
+		require.NoError(t, err)
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+		util.SaveBlock(t, ctx, beaconDB, blk)
+	}
+
+	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4))
+	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
+	wantAtts := []*ethpb.Attestation{
+		blk3.Block.Body.Attestations[0],
+		blk2.Block.Body.Attestations[0],
+		blk1.Block.Body.Attestations[0],
+	}
+	atts := service.cfg.AttPool.AggregatedAttestations()
+	sort.Slice(atts, func(i, j int) bool {
+		return atts[i].Data.Slot > atts[j].Data.Slot
+	})
+	require.DeepEqual(t, wantAtts, atts)
+	require.Equal(t, 1, len(service.cfg.SlashingPool.PendingProposerSlashings(ctx, st, false)))
+	require.Equal(t, 1, len(service.cfg.SlashingPool.PendingAttesterSlashings(ctx, st, false)))
+	exits, err := service.cfg.ExitPool.PendingExits()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(exits))
 }
 
 func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
@@ -374,7 +455,7 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -386,11 +467,6 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		DisableForkchoiceDoublyLinkedTree: false,
-	})
-	defer resetCfg()
-
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
@@ -437,7 +513,7 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -456,11 +532,6 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		DisableForkchoiceDoublyLinkedTree: false,
-	})
-	defer resetCfg()
-
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
@@ -501,7 +572,7 @@ func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 

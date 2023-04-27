@@ -4,15 +4,15 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -25,7 +25,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlindedBlock")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.Blocker.Block(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	result, err = getBlindedBlockAltair(blk)
@@ -50,7 +50,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	result, err = bs.getBlindedBlockBellatrix(ctx, blk)
@@ -59,7 +59,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	result, err = bs.getBlindedBlockCapella(ctx, blk)
@@ -68,7 +68,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 
@@ -80,7 +80,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlindedBlockSSZ")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.Blocker.Block(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	result, err = getSSZBlockAltair(blk)
@@ -105,7 +105,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	result, err = bs.getBlindedSSZBlockBellatrix(ctx, blk)
@@ -114,7 +114,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	result, err = bs.getBlindedSSZBlockCapella(ctx, blk)
@@ -123,7 +123,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+	if !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -278,7 +278,7 @@ func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.R
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 			if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 				if blindedBellatrixBlk == nil {
 					return nil, errNilBlock
@@ -348,7 +348,7 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Rea
 	capellaBlk, err := blk.PbCapellaBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 			if blindedCapellaBlk, err := blk.PbBlindedCapellaBlock(); err == nil {
 				if blindedCapellaBlk == nil {
 					return nil, errNilBlock
@@ -418,7 +418,7 @@ func (bs *Server) getBlindedSSZBlockBellatrix(ctx context.Context, blk interface
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 			if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 				if blindedBellatrixBlk == nil {
 					return nil, errNilBlock
@@ -493,7 +493,7 @@ func (bs *Server) getBlindedSSZBlockCapella(ctx context.Context, blk interfaces.
 	capellaBlk, err := blk.PbCapellaBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
-		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+		if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 			if blindedCapellaBlk, err := blk.PbBlindedCapellaBlock(); err == nil {
 				if blindedCapellaBlk == nil {
 					return nil, errNilBlock

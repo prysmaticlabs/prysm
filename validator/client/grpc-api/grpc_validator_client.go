@@ -5,9 +5,9 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"google.golang.org/grpc"
 )
 
@@ -75,10 +75,6 @@ func (c *grpcValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.
 	return c.beaconNodeValidatorClient.StreamBlocksAltair(ctx, in)
 }
 
-func (c *grpcValidatorClient) StreamDuties(ctx context.Context, in *ethpb.DutiesRequest) (ethpb.BeaconNodeValidator_StreamDutiesClient, error) {
-	return c.beaconNodeValidatorClient.StreamDuties(ctx, in)
-}
-
 func (c *grpcValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
 	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProof(ctx, in)
 }
@@ -126,6 +122,16 @@ func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.E
 	}
 
 	return stream.Recv()
+}
+
+func (c *grpcValidatorClient) AssignValidatorToSubnet(ctx context.Context, in *ethpb.AssignValidatorToSubnetRequest) (*empty.Empty, error) {
+	return c.beaconNodeValidatorClient.AssignValidatorToSubnet(ctx, in)
+}
+func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
+	ctx context.Context,
+	in *ethpb.AggregatedSigAndAggregationBitsRequest,
+) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
+	return c.beaconNodeValidatorClient.AggregatedSigAndAggregationBits(ctx, in)
 }
 
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {

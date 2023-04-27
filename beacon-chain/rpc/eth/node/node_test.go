@@ -17,20 +17,21 @@ import (
 	libp2ptest "github.com/libp2p/go-libp2p/p2p/host/peerstore/test"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	syncmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	syncmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -172,10 +173,11 @@ func TestSyncStatus(t *testing.T) {
 	syncChecker.IsSyncing = true
 
 	s := &Server{
-		HeadFetcher:           chainService,
-		GenesisTimeFetcher:    chainService,
-		OptimisticModeFetcher: chainService,
-		SyncChecker:           syncChecker,
+		HeadFetcher:               chainService,
+		GenesisTimeFetcher:        chainService,
+		OptimisticModeFetcher:     chainService,
+		SyncChecker:               syncChecker,
+		ExecutionChainInfoFetcher: &testutil.MockExecutionChainInfoFetcher{},
 	}
 	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -183,6 +185,7 @@ func TestSyncStatus(t *testing.T) {
 	assert.Equal(t, primitives.Slot(10), resp.Data.SyncDistance)
 	assert.Equal(t, true, resp.Data.IsSyncing)
 	assert.Equal(t, true, resp.Data.IsOptimistic)
+	assert.Equal(t, false, resp.Data.ElOffline)
 }
 
 func TestGetPeer(t *testing.T) {

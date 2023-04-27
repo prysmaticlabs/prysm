@@ -1,28 +1,27 @@
 package blocks_test
 
 import (
-	"math/big"
 	"math/rand"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 func TestProcessBLSToExecutionChange(t *testing.T) {
@@ -642,9 +641,9 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			}
 			st, err := prepareValidators(spb, test.Args)
 			require.NoError(t, err)
-			wdRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+			wdRoot, err := ssz.WithdrawalSliceRoot(test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 			require.NoError(t, err)
-			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]}, big.NewInt(0))
+			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]}, 0)
 			require.NoError(t, err)
 			post, err := blocks.ProcessWithdrawals(st, p)
 			if test.Control.ExpectedError {
@@ -1062,7 +1061,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			}
 			st, err := prepareValidators(spb, test.Args)
 			require.NoError(t, err)
-			p, err := consensusblocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{Withdrawals: test.Args.Withdrawals}, big.NewInt(0))
+			p, err := consensusblocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{Withdrawals: test.Args.Withdrawals}, 0)
 			require.NoError(t, err)
 			post, err := blocks.ProcessWithdrawals(st, p)
 			if test.Control.ExpectedError {

@@ -5,11 +5,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	v1 "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	v1 "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/v1"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -345,6 +345,24 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 				BlindedBlockBellatrix: util.HydrateBlindedBeaconBlockBellatrix(&eth.BlindedBeaconBlockBellatrix{}),
 			},
 		}
+	case "BLOCK_V2_CAPELLA":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlockCapella{
+				BlockCapella: util.HydrateBeaconBlockCapella(&eth.BeaconBlockCapella{}),
+			},
+		}
+	case "BLOCK_V2_BLINDED_CAPELLA":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlindedBlockCapella{
+				BlindedBlockCapella: util.HydrateBlindedBeaconBlockCapella(&eth.BlindedBeaconBlockCapella{}),
+			},
+		}
 	case "RANDAO_REVEAL":
 		return &validatorpb.SignRequest{
 			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
@@ -495,13 +513,13 @@ func MockBlockV2AltairSignRequest() *v1.BlockAltairSignRequest {
 	}
 }
 
-func MockBlockV2BellatrixSignRequest(bodyRoot []byte) *v1.BlockBellatrixSignRequest {
-	return &v1.BlockBellatrixSignRequest{
+func MockBlockV2BlindedSignRequest(bodyRoot []byte, version string) *v1.BlockV2BlindedSignRequest {
+	return &v1.BlockV2BlindedSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
-		BeaconBlock: &v1.BeaconBlockBellatrixBlockV2{
-			Version: "BELLATRIX",
+		BeaconBlock: &v1.BeaconBlockV2Blinded{
+			Version: version,
 			BlockHeader: &v1.BeaconBlockHeader{
 				Slot:          "0",
 				ProposerIndex: "0",
@@ -602,7 +620,6 @@ func MockForkInfo() *v1.ForkInfo {
 		},
 		GenesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 	}
-
 }
 
 // MockAttestation is a mock implementation of the Attestation.

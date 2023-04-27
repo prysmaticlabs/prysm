@@ -6,14 +6,14 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
 )
@@ -103,8 +103,8 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	}
 
 	log.Printf("BeaconState slot=%d, Block slot=%d", s.Slot(), b.Block().Slot())
-	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", sr, b.Block().StateRoot())
-	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", br, realBlockRoot)
+	log.Printf("BeaconState htr=%#x, Block state_root=%#x", sr, b.Block().StateRoot())
+	log.Printf("BeaconState latest_block_header htr=%#x, block htr=%#x", br, realBlockRoot)
 	return &OriginData{
 		st: s,
 		b:  b,
@@ -126,7 +126,7 @@ type WeakSubjectivityData struct {
 }
 
 // CheckpointString returns the standard string representation of a Checkpoint.
-// The format is a a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
+// The format is a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
 // "0x1c35540cac127315fabb6bf29181f2ae0de1a3fc909d2e76ba771e61312cc49a:74888"
 func (wsd *WeakSubjectivityData) CheckpointString() string {
 	return fmt.Sprintf("%#x:%d", wsd.BlockRoot, wsd.Epoch)

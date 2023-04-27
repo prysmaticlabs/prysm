@@ -3,7 +3,7 @@
 // This file is used in fuzzer builds to bypass proposer indices caches.
 package cache
 
-import "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+import "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
 // FakeProposerIndicesCache is a struct with 1 queue for looking up proposer indices by root.
 type FakeProposerIndicesCache struct {
@@ -32,4 +32,8 @@ func (c *FakeProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) 
 
 func (c *FakeProposerIndicesCache) Len() int {
 	return 0
+}
+
+// Clear is a stub.
+func (c *FakeProposerIndicesCache) Clear() {
 }
