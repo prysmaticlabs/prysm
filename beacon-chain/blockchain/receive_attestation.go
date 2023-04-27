@@ -143,16 +143,17 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	s.headLock.RLock()
-	if s.headRoot() != newHeadRoot {
+	changed, err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot)
+	if err != nil {
+		log.WithError(err).Error("could not update forkchoice")
+	}
+	if changed {
+		s.headLock.RLock()
 		log.WithFields(logrus.Fields{
 			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
 			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
 		}).Debug("Head changed due to attestations")
-	}
-	s.headLock.RUnlock()
-	if err := s.forkchoiceUpdateWithExecution(ctx, newHeadRoot, proposingSlot); err != nil {
-		log.WithError(err).Error("could not update forkchoice")
+		s.headLock.RUnlock()
 	}
 }
 
