@@ -121,7 +121,6 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*eth
 }
 
 // InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
-// TODO: Add error handling everywhere
 func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
 	defer span.End()
@@ -155,12 +154,10 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 		}
 		depHash, err := d.Deposit.Data.HashTreeRoot()
 		if err != nil {
-			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
-			return nil
+			return errors.Wrap(err, "could not hash deposit data")
 		}
 		if err = depositTrie.Insert(depHash[:], insertIndex); err != nil {
-			log.WithError(err).Error("Could not insert deposit hash")
-			return nil
+			return errors.Wrap(err, "could not insert deposit hash")
 		}
 		insertIndex++
 	}

@@ -231,7 +231,7 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	// done as the state cannot represent signed integers.
 	eth1DepositIndex -= 1
 	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(eth1DepositIndex)); err != nil {
-		return errors.Wrap(err, "could not insert finalized deposits")
+		return err
 	}
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
 	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
