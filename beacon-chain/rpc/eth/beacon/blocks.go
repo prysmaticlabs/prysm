@@ -270,11 +270,15 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		bb, err := migration.V1Alpha1BeaconBlockCapellaToV2(b.Block)
+		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Capella{
+				Capella: b,
+			},
+		})
 		if err != nil {
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not convert block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 		}
-		return &emptypb.Empty{}, bs.submitCapellaBlock(ctx, bb, b.Signature)
+		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion):
 		if block.IsBlinded() {
 			return nil, status.Error(codes.InvalidArgument, "Submitted block is blinded")
@@ -283,31 +287,43 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		bb, err := migration.V1Alpha1BeaconBlockBellatrixToV2(b.Block)
+		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Bellatrix{
+				Bellatrix: b,
+			},
+		})
 		if err != nil {
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not convert block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 		}
-		return &emptypb.Empty{}, bs.submitBellatrixBlock(ctx, bb, b.Signature)
+		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion):
 		b, err := block.PbAltairBlock()
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		bb, err := migration.V1Alpha1BeaconBlockAltairToV2(b.Block)
+		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Altair{
+				Altair: b,
+			},
+		})
 		if err != nil {
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not convert block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 		}
-		return &emptypb.Empty{}, bs.submitAltairBlock(ctx, bb, b.Signature)
+		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion):
 		b, err := block.PbPhase0Block()
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		bb, err := migration.V1Alpha1ToV1Block(b.Block)
+		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Phase0{
+				Phase0: b,
+			},
+		})
 		if err != nil {
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not convert block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 		}
-		return &emptypb.Empty{}, bs.submitPhase0Block(ctx, bb, b.Signature)
+		return &emptypb.Empty{}, nil
 	default:
 		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Unsupported fork %s", string(forkVer[:]))
 	}
