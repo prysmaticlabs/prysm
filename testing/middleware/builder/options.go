@@ -2,6 +2,7 @@ package builder
 
 import (
 	"net/url"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -68,6 +69,26 @@ func WithBeaconAddress(addr string) Option {
 			return errors.Wrapf(err, "could not parse URL for beacon address: %s", addr)
 		}
 		p.cfg.beaconUrl = u
+		return nil
+	}
+}
+
+// WithLogger sets a custom logger for the proxy.
+func WithLogger(l *logrus.Logger) Option {
+	return func(p *Builder) error {
+		p.cfg.logger = l
+		return nil
+	}
+}
+
+// WithLogFile specifies a log file to write
+// the proxies output to.
+func WithLogFile(f *os.File) Option {
+	return func(p *Builder) error {
+		if p.cfg.logger == nil {
+			return errors.New("nil logger provided")
+		}
+		p.cfg.logger.SetOutput(f)
 		return nil
 	}
 }
