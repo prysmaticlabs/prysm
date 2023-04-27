@@ -59,6 +59,12 @@ func (m mockSignature) Copy() bls.Signature {
 	return m
 }
 
+func testKeyFromBytes(t *testing.T, b []byte) keypair {
+	pri, err := bls.SecretKeyFromBytes(bytesutil.PadTo(b, 32))
+	require.NoError(t, err, "Failed to generate key from bytes")
+	return keypair{pub: bytesutil.ToBytes48(pri.PublicKey().Marshal()), pri: pri}
+}
+
 func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	validatorKey, err := bls.RandKey()
 	require.NoError(t, err)
@@ -78,17 +84,11 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 			return mockSignature{}, nil
 		},
 	}
-
 	aggregatedSlotCommitteeIDCache := lruwrpr.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: validatorKey,
-		},
-	}
+
 	validator := &validator{
 		db:                             valDB,
-		keyManager:                     km,
+		keyManager:                     newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
 		validatorClient:                m.validatorClient,
 		slashingProtectionClient:       m.slasherClient,
 		graffiti:                       []byte{},
@@ -823,9 +823,6 @@ func TestSignBlock(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
 
-	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
-	require.NoError(t, err, "Failed to generate key from bytes")
-	publicKey := secretKey.PublicKey()
 	proposerDomain := make([]byte, 32)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
@@ -834,17 +831,13 @@ func TestSignBlock(t *testing.T) {
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
 	blk.Block.ProposerIndex = 100
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], publicKey.Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: secretKey,
-		},
-	}
-	validator.keyManager = km
+
+	kp := testKeyFromBytes(t, []byte{1})
+
+	validator.keyManager = newMockKeymanager(t, kp)
 	b, err := blocks.NewBeaconBlock(blk.Block)
 	require.NoError(t, err)
-	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, b)
+	sig, blockRoot, err := validator.signBlock(ctx, kp.pub, 0, 0, b)
 	require.NoError(t, err, "%x,%v", sig, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
 		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+
@@ -864,9 +857,7 @@ func TestSignAltairBlock(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
 
-	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
-	require.NoError(t, err, "Failed to generate key from bytes")
-	publicKey := secretKey.PublicKey()
+	kp := testKeyFromBytes(t, []byte{1})
 	proposerDomain := make([]byte, 32)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
@@ -875,17 +866,10 @@ func TestSignAltairBlock(t *testing.T) {
 	blk := util.NewBeaconBlockAltair()
 	blk.Block.Slot = 1
 	blk.Block.ProposerIndex = 100
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], publicKey.Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: secretKey,
-		},
-	}
-	validator.keyManager = km
+	validator.keyManager = newMockKeymanager(t, kp)
 	wb, err := blocks.NewBeaconBlock(blk.Block)
 	require.NoError(t, err)
-	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
+	sig, blockRoot, err := validator.signBlock(ctx, kp.pub, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)
 	// Verify the returned block root matches the expected root using the proposer signature
 	// domain.
@@ -900,28 +884,21 @@ func TestSignBellatrixBlock(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
 
-	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
-	require.NoError(t, err, "Failed to generate key from bytes")
-	publicKey := secretKey.PublicKey()
 	proposerDomain := make([]byte, 32)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
+
 	ctx := context.Background()
 	blk := util.NewBeaconBlockBellatrix()
 	blk.Block.Slot = 1
 	blk.Block.ProposerIndex = 100
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], publicKey.Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: secretKey,
-		},
-	}
-	validator.keyManager = km
+
+	kp := randKeypair(t)
+	validator.keyManager = newMockKeymanager(t, kp)
 	wb, err := blocks.NewBeaconBlock(blk.Block)
 	require.NoError(t, err)
-	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
+	sig, blockRoot, err := validator.signBlock(ctx, kp.pub, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)
 	// Verify the returned block root matches the expected root using the proposer signature
 	// domain.

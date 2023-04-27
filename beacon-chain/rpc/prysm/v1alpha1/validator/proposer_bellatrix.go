@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -34,8 +33,6 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "builder_get_payload_miss_count",
 	Help: "The number of get payload misses for validator requests to builder",
 })
-
-var gweiPerEth = big.NewInt(int64(params.BeaconConfig().GweiPerEth))
 
 // emptyTransactionsRoot represents the returned value of ssz.TransactionsRoot([][]byte{}) and
 // can be used as a constant to avoid recomputing this value in every call.
@@ -73,19 +70,14 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					return errors.Wrap(err, "failed to get execution payload")
 				}
 				// Compare payload values between local and builder. Default to the local value if it is higher.
-				v, err := localPayload.Value()
+				localValueGwei, err := localPayload.ValueInGwei()
 				if err != nil {
 					return errors.Wrap(err, "failed to get local payload value")
 				}
-				v.Div(v, gweiPerEth)
-				localValue := v.Uint64()
-				v, err = builderPayload.Value()
+				builderValueGwei, err := builderPayload.ValueInGwei()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-					v = big.NewInt(0)                                                        // Default to local if can't get builder value.
 				}
-				v.Div(v, gweiPerEth)
-				builderValue := v.Uint64()
 
 				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 				if err != nil {
@@ -96,7 +88,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				// Use builder payload if the following in true:
 				// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
 				boost := params.BeaconConfig().LocalBlockValueBoost
-				higherValueBuilder := builderValue*100 > localValue*(100+boost)
+				higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
 
 				// If we can't get the builder value, just use local block.
 				if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
@@ -110,16 +102,16 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				}
 				if !higherValueBuilder {
 					log.WithFields(logrus.Fields{
-						"localGweiValue":       localValue,
+						"localGweiValue":       localValueGwei,
 						"localBoostPercentage": boost,
-						"builderGweiValue":     builderValue,
+						"builderGweiValue":     builderValueGwei,
 					}).Warn("Proposer: using local execution payload because higher value")
 				}
 				span.AddAttributes(
 					trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
-					trace.Int64Attribute("localGweiValue", int64(localValue)),     // lint:ignore uintcast -- This is OK for tracing.
-					trace.Int64Attribute("localBoostPercentage", int64(boost)),    // lint:ignore uintcast -- This is OK for tracing.
-					trace.Int64Attribute("builderGweiValue", int64(builderValue)), // lint:ignore uintcast -- This is OK for tracing.
+					trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
+					trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
+					trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
 				)
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.

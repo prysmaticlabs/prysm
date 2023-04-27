@@ -153,8 +153,7 @@ func TestUnrealizedJustifiedBlockHash(t *testing.T) {
 	service.cfg.ForkChoiceStore.SetBalancesByRooter(func(_ context.Context, _ [32]byte) ([]uint64, error) { return []uint64{}, nil })
 	require.NoError(t, service.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{Epoch: 6, Root: [32]byte{'j'}}))
 
-	h, err := service.UnrealizedJustifiedPayloadBlockHash()
-	require.NoError(t, err)
+	h := service.UnrealizedJustifiedPayloadBlockHash()
 	require.Equal(t, params.BeaconConfig().ZeroHash, h)
 	require.Equal(t, [32]byte{'j'}, service.cfg.ForkChoiceStore.JustifiedCheckpoint().Root)
 }

@@ -110,13 +110,23 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 		g.Go(func() error {
 			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, nil, al)
 			if err != nil {
-				return err
+				// In the event the transaction constructed is not valid, we continue with the routine
+				// rather than complete stop it.
+				//nolint:nilerr
+				return nil
 			}
 			signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
 			if err != nil {
-				return err
+				// We continue on in the event there is a reason we can't sign this
+				// transaction(unlikely).
+				//nolint:nilerr
+				return nil
 			}
-			return backend.SendTransaction(context.Background(), signedTx)
+			err = backend.SendTransaction(context.Background(), signedTx)
+			// We continue on if the constructed transaction is invalid
+			// and can't be submitted on chain.
+			//nolint:nilerr
+			return nil
 		})
 	}
 	return g.Wait()

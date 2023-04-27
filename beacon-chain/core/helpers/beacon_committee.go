@@ -382,10 +382,10 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 
 // ClearCache clears the beacon committee cache and sync committee cache.
 func ClearCache() {
-	committeeCache = cache.NewCommitteesCache()
-	proposerIndicesCache = cache.NewProposerIndicesCache()
-	syncCommitteeCache = cache.NewSyncCommittee()
-	balanceCache = cache.NewEffectiveBalanceCache()
+	committeeCache.Clear()
+	proposerIndicesCache.Clear()
+	syncCommitteeCache.Clear()
+	balanceCache.Clear()
 }
 
 // computeCommittee returns the requested shuffled committee out of the total committees using

@@ -3,6 +3,7 @@ package math_test
 import (
 	"fmt"
 	stdmath "math"
+	"math/big"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/math"
@@ -547,5 +548,22 @@ func TestAddInt(t *testing.T) {
 				t.Errorf("AddInt() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestWeiToGwei(t *testing.T) {
+	tests := []struct {
+		v    *big.Int
+		want uint64
+	}{
+		{big.NewInt(1e9 - 1), 0},
+		{big.NewInt(1e9), 1},
+		{big.NewInt(1e10), 10},
+		{big.NewInt(239489233849348394), 239489233},
+	}
+	for _, tt := range tests {
+		if got := math.WeiToGwei(tt.v); got != tt.want {
+			t.Errorf("WeiToGwei() = %v, want %v", got, tt.want)
+		}
 	}
 }
