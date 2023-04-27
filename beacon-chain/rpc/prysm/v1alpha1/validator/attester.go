@@ -179,6 +179,10 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
 	}
 
+	if err := vs.AttPool.SaveUnaggregatedAttestation(att); err != nil {
+		log.WithError(err).Error("could not save unaggregated attestation to forkchoice pool")
+	}
+
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		attCopy := ethpb.CopyAttestation(att)

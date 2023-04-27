@@ -139,6 +139,10 @@ func (vs *Server) SubmitSignedAggregateSelectionProof(
 		return nil, status.Errorf(codes.Internal, "Could not broadcast signed aggregated attestation: %v", err)
 	}
 
+	if err := vs.AttPool.SaveForkchoiceAttestation(req.SignedAggregateAndProof.Message.Aggregate); err != nil {
+		log.WithError(err).Error("could not save unaggregated attestation to forkchoice pool")
+	}
+
 	log.WithFields(logrus.Fields{
 		"slot":            req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
 		"committeeIndex":  req.SignedAggregateAndProof.Message.Aggregate.Data.CommitteeIndex,

@@ -33,6 +33,10 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 		return nil
 	}
 
+	if err := s.cfg.attPool.SaveForkchoiceAttestation(a); err != nil {
+		log.WithError(err).Error("could not save unaggregated attestation to forkchoice pool")
+	}
+
 	return s.cfg.attPool.SaveUnaggregatedAttestation(a)
 }
 
