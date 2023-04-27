@@ -335,7 +335,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 
 // initializeStateWithForkDigest sets up the state feed initialized event and returns the fork
 // digest associated with that genesis event.
-func initializeStateWithForkDigest(ctx context.Context, t *testing.T, gs startup.ClockSetter) [4]byte {
+func initializeStateWithForkDigest(_ context.Context, t *testing.T, gs startup.ClockSetter) [4]byte {
 	gt := prysmTime.Now()
 	gvr := bytesutil.ToBytes32(bytesutil.PadTo([]byte("genesis validators root"), 32))
 	require.NoError(t, gs.SetClock(startup.NewClock(gt, gvr)))

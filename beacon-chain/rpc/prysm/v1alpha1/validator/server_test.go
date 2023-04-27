@@ -266,9 +266,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 		assert.NoError(t, Server.WaitForChainStart(&emptypb.Empty{}, mockStream), "Could not call RPC method")
 		wg.Done()
 	}()
-	// Simulate a late state initialization event, so that
-	// method is able to handle race condition here.
-	//require.NoError(t, gs.SetClock(startup.NewClock(time.Unix(0, 0), genesisValidatorsRoot[:])))
+
 	util.WaitTimeout(wg, time.Second)
 }
 

@@ -1902,7 +1902,7 @@ func TestFillMissingBlockPayloadId_PrepareAllPayloads(t *testing.T) {
 
 // Helper function to simulate the block being on time or delayed for proposer
 // boost. It alters the genesisTime tracked by the store.
-func driftGenesisTime(s *Service, slot int64, delay int64) {
+func driftGenesisTime(s *Service, slot, delay int64) {
 	offset := slot*int64(params.BeaconConfig().SecondsPerSlot) - delay
 	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
 }

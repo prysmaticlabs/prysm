@@ -262,8 +262,7 @@ func (s *Service) registerHandlers() {
 	for {
 		select {
 		case e := <-stateChannel:
-			switch e.Type {
-			case statefeed.Synced:
+			if e.Type == statefeed.Synced {
 				_, ok := e.Data.(*statefeed.SyncedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.SyncedData")
