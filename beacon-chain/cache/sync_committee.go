@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -65,10 +66,6 @@ func (s *SyncCommitteeCache) Clear() {
 	defer s.lock.Unlock()
 	s.cleared.Add(1)
 	s.cache = cache.NewFIFO(keyFn)
-}
-
-func (s *SyncCommitteeCache) ListKeys() []string {
-	return s.cache.ListKeys()
 }
 
 // CurrentPeriodIndexPosition returns current period index position of a validator index with respect with
@@ -183,6 +180,8 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 	defer s.lock.Unlock()
 	if clearCount != s.cleared.Load() {
 		return errors.New("cache rotated during async committee update operation")
+		log.Warn("cache rotated during async committee update operation - abandoning cache update")
+		return nil
 	}
 
 	if err := s.cache.Add(&syncCommitteeIndexPosition{
