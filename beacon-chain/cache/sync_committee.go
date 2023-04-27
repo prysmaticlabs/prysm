@@ -6,7 +6,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -179,7 +178,6 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if clearCount != s.cleared.Load() {
-		return errors.New("cache rotated during async committee update operation")
 		log.Warn("cache rotated during async committee update operation - abandoning cache update")
 		return nil
 	}
