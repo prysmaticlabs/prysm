@@ -162,10 +162,10 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 		}
 		depHash, err := d.Deposit.Data.HashTreeRoot()
 		if err != nil {
-			return errors.Wrap(err, "Could not hash deposit data. Finalized deposit cache not updated.")
+			return errors.Wrap(err, "could not hash deposit data")
 		}
 		if err = depositTrie.Insert(depHash[:], insertIndex); err != nil {
-			return errors.Wrap(err, "Could not insert deposit hash")
+			return errors.Wrap(err, "could not insert deposit hash")
 		}
 		insertIndex++
 	}
