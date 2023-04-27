@@ -6,12 +6,25 @@ import (
 	"errors"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
+)
+
+var (
+	batchForkchoiceAttsTime = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "batch_forkchoice_attestations_milliseconds",
+		Help: "Total time to batch attestations for forkchoice",
+	})
+	batchedForkchoiceAttsCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "batched_forkchoice_attestations_count",
+		Help: "Count the number of attestations batched for forkchoice",
+	})
 )
 
 // Prepare attestations for fork choice three times per slot.
@@ -25,9 +38,11 @@ func (s *Service) prepareForkChoiceAtts() {
 	for {
 		select {
 		case <-ticker.C:
+			t := time.Now()
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
+			batchForkchoiceAttsTime.Set(float64(time.Since(t).Milliseconds()))
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
@@ -67,11 +82,14 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
+	count := 0
 	for _, atts := range attsByDataRoot {
+		count += len(atts)
 		if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
 			return err
 		}
 	}
+	batchedForkchoiceAttsCount.Set(float64(count))
 
 	for _, a := range s.cfg.Pool.BlockAttestations() {
 		if err := s.cfg.Pool.DeleteBlockAttestation(a); err != nil {
