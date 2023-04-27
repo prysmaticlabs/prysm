@@ -106,7 +106,7 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 
 // Initializes an RPC connection with authentication headers.
 func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.Endpoint) (*gethRPC.Client, error) {
-	client, err := network.NewExecutionClient(ctx, endpoint)
+	client, err := network.NewExecutionRPCClient(ctx, endpoint)
 	if err != nil {
 		return nil, err
 	}

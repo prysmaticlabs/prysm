@@ -10,12 +10,12 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/testing/middleware/builder"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
-	log "github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/v4/testing/middleware/builder"
+	"github.com/sirupsen/logrus"
 )
 
 // BuilderSet represents a set of builders for the validators running via a relay.
@@ -151,7 +151,7 @@ func (node *Builder) Start(ctx context.Context) error {
 	opts := []builder.Option{
 		builder.WithDestinationAddress(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1AuthRPCPort+node.index)),
 		builder.WithPort(e2e.TestParams.Ports.Eth1ProxyPort + node.index),
-		builder.WithLogger(log.New()),
+		builder.WithLogger(logrus.New()),
 		builder.WithLogFile(f),
 		builder.WithJwtSecret(string(secret)),
 		builder.WithBeaconAddress(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+node.index)),

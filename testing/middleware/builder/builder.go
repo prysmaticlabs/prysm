@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
+	gethEngine "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/beacon"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -62,9 +62,9 @@ type ExecHeaderResponse struct {
 }
 
 type BuilderBid struct {
-	Header *beacon.ExecutableData `json:"header"`
-	Value  builderAPI.Uint256     `json:"value"`
-	Pubkey hexutil.Bytes          `json:"pubkey"`
+	Header *gethEngine.ExecutableData `json:"header"`
+	Value  builderAPI.Uint256         `json:"value"`
+	Pubkey hexutil.Bytes              `json:"pubkey"`
 }
 
 type Builder struct {
@@ -98,7 +98,7 @@ func New(opts ...Option) (*Builder, error) {
 	endpoint := network.HttpEndpoint(p.cfg.destinationUrl.String())
 	endpoint.Auth.Method = authorization.Bearer
 	endpoint.Auth.Value = p.cfg.secret
-	execClient, err := network.NewExecutionClient(context.Background(), endpoint)
+	execClient, err := network.NewExecutionRPCClient(context.Background(), endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func New(opts ...Option) (*Builder, error) {
 		Addr:              addr,
 		ReadHeaderTimeout: time.Second,
 	}
-	conn, err := grpc.DialContext(context.Background(), p.cfg.beaconUrl.String())
+	conn, err := grpc.DialContext(context.Background(), p.cfg.beaconUrl.String(), grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (p *Builder) Start(ctx context.Context) error {
 	}
 	p.cfg.logger.WithFields(logrus.Fields{
 		"forwardingAddress": p.cfg.destinationUrl.String(),
-	}).Infof("Engine proxy now listening on address %s", p.address)
+	}).Infof("Builder now listening on address %s", p.address)
 	go func() {
 		if err := p.srv.ListenAndServe(); err != nil {
 			p.cfg.logger.Error(err)
@@ -167,7 +167,10 @@ func (p *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.handleEngineCalls(requestBytes)
-	p.sendHttpRequest(r, requestBytes)
+	if _, err := p.sendHttpRequest(r, requestBytes); err != nil {
+		p.cfg.logger.WithError(err).Error("Could not forward request")
+		return
+	}
 }
 
 func (p *Builder) handleEngineCalls(req []byte) {
@@ -228,7 +231,7 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 	fees := calculateFees(b)
-	execV2 := beacon.BlockToExecutableData(b, fees)
+	execV2 := gethEngine.BlockToExecutableData(b, fees)
 	secKey, err := bls.RandKey()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -245,7 +248,12 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	hdr, err := blocks.PayloadToHeaderCapella(obj)
+	wObj, err := blocks.WrappedExecutionPayloadCapella(obj, fees)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	hdr, err := blocks.PayloadToHeaderCapella(wObj)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -382,7 +390,10 @@ func unmarshalRPCObject(b []byte) (*jsonRPCObject, error) {
 func calculateFees(block *gethtypes.Block) *big.Int {
 	feesWei := new(big.Int)
 	for _, tx := range block.Transactions() {
-		minerFee, _ := tx.EffectiveGasTip(block.BaseFee())
+		minerFee, err := tx.EffectiveGasTip(block.BaseFee())
+		if err != nil {
+			continue
+		}
 		feesWei.Add(feesWei, new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), minerFee))
 	}
 	return feesWei
