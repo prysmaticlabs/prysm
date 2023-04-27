@@ -68,13 +68,17 @@ func genMockKeymanager(numKeys int) *mockKeymanager {
 }
 
 type mockKeymanager struct {
-	lock                sync.RWMutex
-	keysMap             map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey
-	fetchNoKeys         bool
-	accountsChangedFeed *event.Feed
+	lock                               sync.RWMutex
+	keysMap                            map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey
+	fetchNoKeys                        bool
+	accountsChangedFeed                *event.Feed
+	override_FetchValidatingPublicKeys func(context.Context) ([][fieldparams.BLSPubkeyLength]byte, error)
 }
 
-func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	if m.override_FetchValidatingPublicKeys != nil {
+		return m.override_FetchValidatingPublicKeys(ctx)
+	}
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	keys := make([][fieldparams.BLSPubkeyLength]byte, 0)
@@ -945,9 +949,12 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	keysMap[pubKey0] = secretKey
 	keysMap[pubKey1] = secretKey
 
+	keyFunc := func(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+		return [][fieldparams.BLSPubkeyLength]byte{pubKey0, pubKey1}, nil
+	}
 	// If AllValidatorsAreExited does not create the expected request, this test will fail
 	v := validator{
-		keyManager:      &mockKeymanager{keysMap: keysMap},
+		keyManager:      &mockKeymanager{override_FetchValidatingPublicKeys: keyFunc},
 		validatorClient: client,
 	}
 	exited, err := v.AllValidatorsAreExited(context.Background())
