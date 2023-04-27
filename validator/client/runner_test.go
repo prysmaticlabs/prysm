@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"math/bits"
 	"testing"
 	"time"
 
@@ -202,35 +203,41 @@ func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
 }
 
 func TestKeyReload_ActiveKey(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
-	go func() {
-		km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
-
-		cancel()
-	}()
-	run(ctx, v)
+	ac := make(chan [][fieldparams.BLSPubkeyLength]byte)
+	current := [][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey}
+	onAccountsChanged(ctx, v, current, ac)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
-	// We expect that WaitForActivation will only be called once,
-	// at the very beginning, and not after account changes.
-	assert.Equal(t, 1, v.WaitForActivationCalled)
+	// HandleKeyReloadCalled in the FakeValidator returns true if one of the keys is equal to the
+	// ActiveKey. WaitForActivation is only called if none of the keys are active, so it shouldn't be called at all.
+	assert.Equal(t, 0, v.WaitForActivationCalled)
 }
 
 func TestKeyReload_NoActiveKey(t *testing.T) {
-	t.Skip("Flakey test. Skipping until we can figure out how to test this properly")
-
-	ctx, cancel := context.WithCancel(context.Background())
+	na := notActive(t)
+	ctx := context.Background()
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
-	go func() {
-		km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
-
-		cancel()
-	}()
-	run(ctx, v)
+	ac := make(chan [][fieldparams.BLSPubkeyLength]byte)
+	current := [][fieldparams.BLSPubkeyLength]byte{na}
+	onAccountsChanged(ctx, v, current, ac)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
-	assert.Equal(t, 2, v.WaitForActivationCalled)
+	// HandleKeyReloadCalled in the FakeValidator returns true if one of the keys is equal to the
+	// ActiveKey. Since we are using a key we know is not active, it should return false, which
+	// sould cause the account change handler to call WaitForActivationCalled.
+	assert.Equal(t, 1, v.WaitForActivationCalled)
+}
+
+func notActive(t *testing.T) [fieldparams.BLSPubkeyLength]byte {
+	var r [fieldparams.BLSPubkeyLength]byte
+	copy(r[:], testutil.ActiveKey[:])
+	for i := 0; i < len(r); i++ {
+		r[i] = bits.Reverse8(r[i])
+	}
+	require.DeepNotEqual(t, r, testutil.ActiveKey)
+	return r
 }
 
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
