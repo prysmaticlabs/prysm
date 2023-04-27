@@ -84,12 +84,14 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 		// of a received unaggregated attestation.
 		// Note we can't send for aggregated att because we don't have selection proof.
-		bs.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: operation.UnaggregatedAttReceived,
-			Data: &operation.UnAggregatedAttReceivedData{
-				Attestation: att,
-			},
-		})
+		if !corehelpers.IsAggregated(att) {
+			bs.OperationNotifier.OperationFeed().Send(&feed.Event{
+				Type: operation.UnaggregatedAttReceived,
+				Data: &operation.UnAggregatedAttReceivedData{
+					Attestation: att,
+				},
+			})
+		}
 
 		validAttestations = append(validAttestations, att)
 	}
