@@ -91,15 +91,6 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 		})
 
 		validAttestations = append(validAttestations, att)
-
-		go func() {
-			ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-			attCopy := ethpbalpha.CopyAttestation(att)
-			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(attCopy); err != nil {
-				log.WithError(err).Error("Could not handle attestation in operations service")
-				return
-			}
-		}()
 	}
 
 	broadcastFailed := false
