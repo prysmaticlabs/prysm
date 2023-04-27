@@ -526,6 +526,9 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 
 	// nothing is set, so just return nil
 	if fileConfig == nil {
+		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+			return nil, fmt.Errorf("%s flag can only be used when a default fee recipient is present on the validator client", flags.EnableBuilderFlag.Name)
+		}
 		return nil, nil
 	}
 	// convert file config to proposer config for internal use
@@ -538,6 +541,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
+
 	if err := warnNonChecksummedAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
 		return nil, err
 	}
