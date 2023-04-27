@@ -67,29 +67,69 @@ func genMockKeymanager(numKeys int) *mockKeymanager {
 	return &mockKeymanager{keysMap: km}
 }
 
+type keypair struct {
+	pub [fieldparams.BLSPubkeyLength]byte
+	pri bls.SecretKey
+}
+
+func newMockKeymanager(t *testing.T, pairs ...keypair) *mockKeymanager {
+	m := &mockKeymanager{keysMap: make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)}
+	require.NoError(t, m.add(pairs...))
+	return m
+}
+
 type mockKeymanager struct {
-	lock                               sync.RWMutex
-	keysMap                            map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey
-	fetchNoKeys                        bool
-	accountsChangedFeed                *event.Feed
-	override_FetchValidatingPublicKeys func(context.Context) ([][fieldparams.BLSPubkeyLength]byte, error)
+	lock                sync.RWMutex
+	keysMap             map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey
+	keys                [][fieldparams.BLSPubkeyLength]byte
+	fetchNoKeys         bool
+	accountsChangedFeed *event.Feed
+}
+
+var errMockKeyExists = errors.New("key already in mockKeymanager map")
+
+func (m *mockKeymanager) add(pairs ...keypair) error {
+	for _, kp := range pairs {
+		if _, exists := m.keysMap[kp.pub]; exists {
+			return errMockKeyExists
+		}
+		m.keys = append(m.keys, kp.pub)
+		m.keysMap[kp.pub] = kp.pri
+	}
+	return nil
+}
+
+func (m *mockKeymanager) remove(pairs ...keypair) {
+	for _, kp := range pairs {
+		if _, exists := m.keysMap[kp.pub]; !exists {
+			continue
+		}
+		m.removeOne(kp)
+	}
+}
+
+func (m *mockKeymanager) removeOne(kp keypair) {
+	delete(m.keysMap, kp.pub)
+	if m.keys[0] == kp.pub {
+		m.keys = m.keys[1:]
+		return
+	}
+	for i := 1; i < len(m.keys); i++ {
+		if m.keys[i] == kp.pub {
+			m.keys = append(m.keys[0:i-1], m.keys[i:]...)
+			return
+		}
+	}
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	if m.override_FetchValidatingPublicKeys != nil {
-		return m.override_FetchValidatingPublicKeys(ctx)
-	}
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	keys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	if m.fetchNoKeys {
 		m.fetchNoKeys = false
-		return keys, nil
+		return [][fieldparams.BLSPubkeyLength]byte{}, nil
 	}
-	for pubKey := range m.keysMap {
-		keys = append(keys, pubKey)
-	}
-	return keys, nil
+	return m.keys, nil
 }
 
 func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
@@ -941,20 +981,9 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 		request,      // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	keysMap := make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
-	// secretKey below is just filler and is used multiple times
-	secretKeyBytes := [32]byte{1}
-	secretKey, err := bls.SecretKeyFromBytes(secretKeyBytes[:])
-	require.NoError(t, err)
-	keysMap[pubKey0] = secretKey
-	keysMap[pubKey1] = secretKey
-
-	keyFunc := func(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-		return [][fieldparams.BLSPubkeyLength]byte{pubKey0, pubKey1}, nil
-	}
 	// If AllValidatorsAreExited does not create the expected request, this test will fail
 	v := validator{
-		keyManager:      &mockKeymanager{override_FetchValidatingPublicKeys: keyFunc},
+		keyManager:      newMockKeymanager(t, keypair{pub: pubKey0}, keypair{pub: pubKey1}),
 		validatorClient: client,
 	}
 	exited, err := v.AllValidatorsAreExited(context.Background())
