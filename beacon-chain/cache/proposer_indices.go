@@ -46,9 +46,16 @@ func proposerIndicesKeyFn(obj interface{}) (string, error) {
 
 // NewProposerIndicesCache creates a new proposer indices cache for storing/accessing proposer index assignments of an epoch.
 func NewProposerIndicesCache() *ProposerIndicesCache {
-	return &ProposerIndicesCache{
-		proposerIndicesCache: cache.NewFIFO(proposerIndicesKeyFn),
-	}
+	c := &ProposerIndicesCache{}
+	c.Clear()
+	return c
+}
+
+// Clear resets the ProposerIndicesCache to its initial state
+func (c *ProposerIndicesCache) Clear() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.proposerIndicesCache = cache.NewFIFO(proposerIndicesKeyFn)
 }
 
 // AddProposerIndices adds ProposerIndices object to the cache.
