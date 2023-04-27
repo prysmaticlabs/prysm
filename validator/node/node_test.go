@@ -692,3 +692,13 @@ func TestProposerSettings(t *testing.T) {
 		})
 	}
 }
+
+// return an error if the user is using builder settings without any default fee recipient
+func TestProposerSettings_EnableBuilder_noFeeRecipient(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.EnableBuilderFlag.Name, true, "")
+	cliCtx := cli.NewContext(&app, set, nil)
+	_, err := proposerSettings(cliCtx)
+	require.ErrorContains(t, "can only be used when a default fee recipient is present on the validator client", err)
+}
