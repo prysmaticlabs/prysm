@@ -115,6 +115,16 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 		if err := bs.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
 			broadcastFailed = true
 		}
+
+		if corehelpers.IsAggregated(att) {
+			if err := bs.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("could not save aggregated att")
+			}
+		} else {
+			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("could not save unaggregated att")
+			}
+		}
 	}
 	if broadcastFailed {
 		return nil, status.Errorf(
