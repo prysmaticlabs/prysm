@@ -160,11 +160,12 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 func (s *Service) processAttestations(ctx context.Context, disparity time.Duration) {
 	atts := s.cfg.AttPool.ForkchoiceAttestations()
 	for _, a := range atts {
-		// Based on the spec, don't process the attestation until the subsequent slot.
-		// This delays consideration in the fork choice until their slot is in the past.
+		// Diverge from the spec below, don't process the attestation until the greater or equal to current slot.
+		// We'll process attestations at the 10s or 12 mark to reorg late block.
+		// When processing at 10s mark, we should consider current slot attestations.
+		// When processing at 12s mark, unlikely we'll see current slot attestations, all the attestations should be in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
-		nextSlot := a.Data.Slot + 1
-		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, disparity); err != nil {
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), a.Data.Slot, disparity); err != nil {
 			continue
 		}
 
