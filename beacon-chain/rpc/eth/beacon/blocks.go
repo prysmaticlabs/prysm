@@ -7,13 +7,10 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -263,11 +260,57 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
 	}
-	root, err := block.Block().HashTreeRoot()
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
+
+	switch forkVer {
+	case bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion):
+		if block.IsBlinded() {
+			return nil, status.Error(codes.InvalidArgument, "Submitted block is blinded")
+		}
+		b, err := block.PbCapellaBlock()
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
+		}
+		bb, err := migration.V1Alpha1BeaconBlockCapellaToV2(b.Block)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not convert block: %v", err)
+		}
+		return &emptypb.Empty{}, bs.submitCapellaBlock(ctx, bb, b.Signature)
+	case bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion):
+		if block.IsBlinded() {
+			return nil, status.Error(codes.InvalidArgument, "Submitted block is blinded")
+		}
+		b, err := block.PbBellatrixBlock()
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
+		}
+		bb, err := migration.V1Alpha1BeaconBlockBellatrixToV2(b.Block)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not convert block: %v", err)
+		}
+		return &emptypb.Empty{}, bs.submitBellatrixBlock(ctx, bb, b.Signature)
+	case bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion):
+		b, err := block.PbAltairBlock()
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
+		}
+		bb, err := migration.V1Alpha1BeaconBlockAltairToV2(b.Block)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not convert block: %v", err)
+		}
+		return &emptypb.Empty{}, bs.submitAltairBlock(ctx, bb, b.Signature)
+	case bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion):
+		b, err := block.PbPhase0Block()
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
+		}
+		bb, err := migration.V1Alpha1ToV1Block(b.Block)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not convert block: %v", err)
+		}
+		return &emptypb.Empty{}, bs.submitPhase0Block(ctx, bb, b.Signature)
+	default:
+		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Unsupported fork %s", string(forkVer[:]))
 	}
-	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
 }
 
 // GetBlock retrieves block details for given block ID.
@@ -941,7 +984,7 @@ func (bs *Server) getSSZBlockCapella(ctx context.Context, blk interfaces.ReadOnl
 func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.BeaconBlock, sig []byte) error {
 	v1alpha1Blk, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: phase0Blk, Signature: sig})
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+		return status.Errorf(codes.InvalidArgument, "Could not convert block: %v", err)
 	}
 	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Phase0{
@@ -957,7 +1000,7 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.BeaconBlockAltair, sig []byte) error {
 	v1alpha1Blk, err := migration.AltairToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockAltair{Message: altairBlk, Signature: sig})
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+		return status.Errorf(codes.InvalidArgument, "Could not convert block %v", err)
 	}
 	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Altair{
@@ -999,32 +1042,5 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
-	return nil
-}
-
-func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.ReadOnlySignedBeaconBlock) error {
-	// Do not block proposal critical path with debug logging or block feed updates.
-	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).Debugf(
-			"Block proposal received via RPC")
-		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: block},
-		})
-	}()
-
-	// Broadcast the new block to the network.
-	blockPb, err := block.Proto()
-	if err != nil {
-		return errors.Wrap(err, "could not get protobuf block")
-	}
-	if err := bs.Broadcaster.Broadcast(ctx, blockPb); err != nil {
-		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-	}
-
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, block, blockRoot); err != nil {
-		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-	}
-
 	return nil
 }

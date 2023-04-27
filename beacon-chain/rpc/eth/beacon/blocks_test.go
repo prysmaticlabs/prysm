@@ -9,7 +9,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -411,164 +410,119 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 }
 
 func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+
 	t.Run("Phase 0", func(t *testing.T) {
-		beaconDB := dbTest.SetupDB(t)
-		ctx := context.Background()
-
-		genesis := util.NewBeaconBlock()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
-
-		numDeposits := uint64(64)
-		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-		bsRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesisRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-		beaconChainServer := &Server{
-			BeaconDB:         beaconDB,
-			BlockReceiver:    c,
-			ChainInfoFetcher: c,
-			BlockNotifier:    c.BlockNotifier(),
-			Broadcaster:      mockp2p.NewTestP2P(t),
-			HeadFetcher:      c,
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
 		}
-		req := util.NewBeaconBlock()
-		req.Block.Slot = 5
-		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
-		blockSsz, err := req.MarshalSSZ()
+
+		b := util.NewBeaconBlock()
+		ssz, err := b.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
-			Data: blockSsz,
+			Data: ssz,
 		}
 		md := metadata.MD{}
 		md.Set(versionHeader, "phase0")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
-		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
-		assert.NoError(t, err, "Could not propose block correctly")
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NoError(t, err)
 	})
-
 	t.Run("Altair", func(t *testing.T) {
-		beaconDB := dbTest.SetupDB(t)
-		ctx := context.Background()
-
-		genesis := util.NewBeaconBlockAltair()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
-
-		numDeposits := uint64(64)
-		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-		bsRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesisRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-		beaconChainServer := &Server{
-			BeaconDB:         beaconDB,
-			BlockReceiver:    c,
-			ChainInfoFetcher: c,
-			BlockNotifier:    c.BlockNotifier(),
-			Broadcaster:      mockp2p.NewTestP2P(t),
-			HeadFetcher:      c,
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
 		}
-		req := util.NewBeaconBlockAltair()
-		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().AltairForkEpoch))
-		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
-		blockSsz, err := req.MarshalSSZ()
+
+		b := util.NewBeaconBlockAltair()
+		b.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().AltairForkEpoch))
+		ssz, err := b.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
-			Data: blockSsz,
+			Data: ssz,
 		}
 		md := metadata.MD{}
 		md.Set(versionHeader, "altair")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
-		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
-		assert.NoError(t, err, "Could not propose block correctly")
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NoError(t, err)
 	})
-
 	t.Run("Bellatrix", func(t *testing.T) {
-		beaconDB := dbTest.SetupDB(t)
-		ctx := context.Background()
-
-		genesis := util.NewBeaconBlockBellatrix()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
-
-		numDeposits := uint64(64)
-		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-		bsRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesisRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-		beaconChainServer := &Server{
-			BeaconDB:         beaconDB,
-			BlockReceiver:    c,
-			ChainInfoFetcher: c,
-			BlockNotifier:    c.BlockNotifier(),
-			Broadcaster:      mockp2p.NewTestP2P(t),
-			HeadFetcher:      c,
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
 		}
-		req := util.NewBeaconBlockBellatrix()
-		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
-		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
-		blockSsz, err := req.MarshalSSZ()
+
+		b := util.NewBeaconBlockBellatrix()
+		b.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
+		ssz, err := b.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
-			Data: blockSsz,
+			Data: ssz,
 		}
 		md := metadata.MD{}
 		md.Set(versionHeader, "bellatrix")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
-		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
-		assert.NoError(t, err, "Could not propose block correctly")
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NoError(t, err)
 	})
+	t.Run("Bellatrix blinded", func(t *testing.T) {
+		server := &Server{}
 
-	t.Run("Capella", func(t *testing.T) {
-		beaconDB := dbTest.SetupDB(t)
-		ctx := context.Background()
-
-		genesis := util.NewBeaconBlockCapella()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
-
-		numDeposits := uint64(64)
-		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-		bsRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesisRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-		beaconChainServer := &Server{
-			BeaconDB:         beaconDB,
-			BlockReceiver:    c,
-			ChainInfoFetcher: c,
-			BlockNotifier:    c.BlockNotifier(),
-			Broadcaster:      mockp2p.NewTestP2P(t),
-			HeadFetcher:      c,
-		}
-		req := util.NewBeaconBlockCapella()
-		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
-		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
-		blockSsz, err := req.MarshalSSZ()
+		b := util.NewBlindedBeaconBlockBellatrix()
+		b.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
+		ssz, err := b.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
-			Data: blockSsz,
+			Data: ssz,
+		}
+		md := metadata.MD{}
+		md.Set(versionHeader, "bellatrix")
+		sszCtx := metadata.NewIncomingContext(ctx, md)
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NotNil(t, err)
+	})
+	t.Run("Capella", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+		}
+
+		b := util.NewBeaconBlockCapella()
+		b.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
+		ssz, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		blockReq := &ethpbv2.SSZContainer{
+			Data: ssz,
 		}
 		md := metadata.MD{}
 		md.Set(versionHeader, "capella")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
-		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
-		assert.NoError(t, err, "Could not propose block correctly")
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NoError(t, err)
+	})
+	t.Run("Capella blinded", func(t *testing.T) {
+		server := &Server{}
+
+		b := util.NewBlindedBeaconBlockCapella()
+		b.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
+		ssz, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		blockReq := &ethpbv2.SSZContainer{
+			Data: ssz,
+		}
+		md := metadata.MD{}
+		md.Set(versionHeader, "capella")
+		sszCtx := metadata.NewIncomingContext(ctx, md)
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NotNil(t, err)
 	})
 }
 
