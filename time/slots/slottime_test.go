@@ -354,6 +354,14 @@ func TestVerifySlotTime(t *testing.T) {
 			wantedErr: "could not process slot from the future",
 		},
 		{
+			name: "future slot but ok given 2s tolerance",
+			args: args{
+				genesisTime:   prysmTime.Now().Add(-1*time.Duration(params.BeaconConfig().SecondsPerSlot) - 10*time.Second).Unix(),
+				slot:          1,
+				timeTolerance: 2 * time.Second,
+			},
+		},
+		{
 			name: "max future slot",
 			args: args{
 				genesisTime: prysmTime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
