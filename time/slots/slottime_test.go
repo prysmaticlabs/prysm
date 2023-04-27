@@ -499,6 +499,12 @@ func TestDuration(t *testing.T) {
 			expected: 0,
 		},
 		{
+			name:     "end equals start",
+			start:    time.Now(),
+			endDelta: 0,
+			expected: 0,
+		},
+		{
 			name:     "one slot apart",
 			start:    time.Now(),
 			endDelta: oneSlot,
