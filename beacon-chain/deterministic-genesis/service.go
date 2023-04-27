@@ -35,33 +35,33 @@ type Service struct {
 }
 
 func (s *Service) AllDepositContainers(ctx context.Context) []*ethpb.DepositContainer {
-	//TODO implement me
-	panic("implement me")
+	log.Errorf("AllDepositContainers should not be called")
+	return nil
 }
 
 func (s *Service) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
-	//TODO implement me
-	panic("implement me")
+	log.Errorf("InsertPendingDeposit should not be called")
+	return
 }
 
 func (s *Service) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
-	//TODO implement me
-	panic("implement me")
+	log.Errorf("PendingDeposits should not be called")
+	return nil
 }
 
 func (s *Service) PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer {
-	//TODO implement me
-	panic("implement me")
+	log.Errorf("PendingContainers should not be called")
+	return nil
 }
 
 func (s *Service) PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64) {
-	//TODO implement me
-	panic("implement me")
+	log.Errorf("PrunePendingDeposits should not be called")
+	return
 }
 
 func (s *Service) PruneProofs(ctx context.Context, untilDepositIndex int64) error {
-	//TODO implement me
-	panic("implement me")
+	log.Errorf("PruneProofs should not be called")
+	return nil
 }
 
 // Config options for the interop service.
