@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
@@ -20,11 +21,20 @@ var prepareForkChoiceAttsPeriod = slots.DivideSlotBy(3 /* times-per-slot */)
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
-	ticker := time.NewTicker(prepareForkChoiceAttsPeriod)
-	defer ticker.Stop()
+	ticker1 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 5*time.Second, params.BeaconConfig().SecondsPerSlot)
+	ticker2 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 9*time.Second, params.BeaconConfig().SecondsPerSlot)
+	ticker3 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 11*time.Second, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case <-ticker.C:
+		case <-ticker1.C():
+			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
+				log.WithError(err).Error("Could not prepare attestations for fork choice")
+			}
+		case <-ticker2.C():
+			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
+				log.WithError(err).Error("Could not prepare attestations for fork choice")
+			}
+		case <-ticker3.C():
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
