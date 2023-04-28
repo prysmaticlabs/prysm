@@ -1007,6 +1007,8 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	for _, r := range [][32]byte{actualAtt1, actualAtt2} {
 		assert.Equal(t, true, reflect.DeepEqual(expectedAtt1, r) || reflect.DeepEqual(expectedAtt2, r))
 	}
+
+	require.Equal(t, 2, s.AttestationsPool.UnaggregatedAttestationCount())
 }
 
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
@@ -1107,6 +1109,8 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	broadcastRoot, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, expectedAtt, broadcastRoot)
+
+	require.Equal(t, 1, s.AttestationsPool.UnaggregatedAttestationCount())
 }
 
 func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
