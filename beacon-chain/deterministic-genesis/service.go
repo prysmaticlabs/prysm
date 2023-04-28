@@ -33,7 +33,7 @@ type Service struct {
 	cancel             context.CancelFunc
 	chainStartDeposits []*ethpb.Deposit
 }
-
+// All of these methods are stubs as they are not used by a node running with deterministic-genesis.
 func (s *Service) AllDepositContainers(ctx context.Context) []*ethpb.DepositContainer {
 	log.Errorf("AllDepositContainers should not be called")
 	return nil
