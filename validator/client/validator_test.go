@@ -1443,18 +1443,15 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 1,
-				}, nil)
-				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 2,
-				}, nil)
+				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
+				v.pubkeyToValidatorIndex[keys[1]] = primitives.ValidatorIndex(2)
+				client.EXPECT().MultipleValidatorStatus(
+					gomock.Any(),
+					gomock.Any()).Return(
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:], keys[1][:]},
+					}, nil)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -1527,18 +1524,15 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 1,
-				}, nil)
-				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 2,
-				}, nil)
+				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
+				v.pubkeyToValidatorIndex[keys[1]] = primitives.ValidatorIndex(2)
+				client.EXPECT().MultipleValidatorStatus(
+					gomock.Any(),
+					gomock.Any()).Return(
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:], keys[1][:]},
+					}, nil)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -1607,18 +1601,15 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 1,
-				}, nil)
-				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 2,
-				}, nil)
+				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
+				v.pubkeyToValidatorIndex[keys[1]] = primitives.ValidatorIndex(2)
+				client.EXPECT().MultipleValidatorStatus(
+					gomock.Any(),
+					gomock.Any()).Return(
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:], keys[1][:]},
+					}, nil)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -1684,12 +1675,14 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
-				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 1,
-				}, nil)
+				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
+				client.EXPECT().MultipleValidatorStatus(
+					gomock.Any(),
+					gomock.Any()).Return(
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:]},
+					}, nil)
 
 				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
@@ -1746,12 +1739,14 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 1,
-				}, nil)
+				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
+				client.EXPECT().MultipleValidatorStatus(
+					gomock.Any(),
+					gomock.Any()).Return(
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:]},
+					}, nil)
 				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
@@ -1796,12 +1791,14 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				client.EXPECT().ValidatorIndex(
-					gomock.Any(), // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 1,
-				}, nil)
+				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
+				client.EXPECT().MultipleValidatorStatus(
+					gomock.Any(),
+					gomock.Any()).Return(
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:]},
+					}, nil)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
@@ -1887,12 +1884,14 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				client.EXPECT().ValidatorIndex(
-					gomock.Any(), // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 1,
-				}, nil)
+				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
+				client.EXPECT().MultipleValidatorStatus(
+					gomock.Any(),
+					gomock.Any()).Return(
+					&ethpb.MultipleValidatorStatusResponse{
+						Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+						PublicKeys: [][]byte{keys[0][:]},
+					}, nil)
 
 				config[keys[0]] = &validatorserviceconfig.ProposerOption{
 					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1977,24 +1976,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 	}
 }
 
-func TestValidator_buildPrepProposerReqs_InvalidValidatorIndex(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	ctx := context.Background()
-	client := validatormock.NewMockValidatorClient(ctrl)
-	v := validator{validatorClient: client}
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{{}}
-
-	client.EXPECT().ValidatorIndex(
-		ctx,
-		gomock.Any(),
-	).Return(nil, errors.New("custom error"))
-
-	_, err := v.buildPrepProposerReqs(ctx, pubkeys)
-	assert.ErrorContains(t, "custom error", err)
-}
-
 func getPubkeyFromString(t *testing.T, stringPubkey string) [fieldparams.BLSPubkeyLength]byte {
 	pubkeyTemp, err := hexutil.Decode(stringPubkey)
 	require.NoError(t, err)
@@ -2037,7 +2018,6 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
-
 	client.EXPECT().ValidatorIndex(
 		ctx,
 		&ethpb.ValidatorIndexRequest{
@@ -2054,6 +2034,13 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 		},
 	).Return(nil, status.Error(codes.NotFound, "NOT_FOUND"))
 
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&ethpb.MultipleValidatorStatusResponse{
+			Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+			PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey4[:]},
+		}, nil)
 	v := validator{
 		validatorClient: client,
 		proposerSettings: &validatorserviceconfig.ProposerSettings{
@@ -2094,8 +2081,9 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 			FeeRecipient:   feeRecipient2[:],
 		},
 	}
-
-	actual, err := v.buildPrepProposerReqs(ctx, pubkeys)
+	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys)
+	require.NoError(t, err)
+	actual, err := v.buildPrepProposerReqs(ctx, filteredKeys)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expected, actual)
 }
@@ -2140,6 +2128,14 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 			PublicKey: pubkey3[:],
 		},
 	).Return(nil, status.Error(codes.NotFound, "NOT_FOUND"))
+
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&ethpb.MultipleValidatorStatusResponse{
+			Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+			PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey4[:]},
+		}, nil)
 
 	v := validator{
 		validatorClient: client,
@@ -2189,8 +2185,9 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 			FeeRecipient:   defaultFeeRecipient[:],
 		},
 	}
-
-	actual, err := v.buildPrepProposerReqs(ctx, pubkeys)
+	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys)
+	require.NoError(t, err)
+	actual, err := v.buildPrepProposerReqs(ctx, filteredKeys)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expected, actual)
 }
@@ -2261,6 +2258,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 				},
 			},
 		},
+		pubkeyToValidatorIndex: make(map[[48]byte]primitives.ValidatorIndex),
 	}
 
 	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2, pubkey3}
@@ -2268,7 +2266,9 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	var signer = func(_ context.Context, _ *validatorpb.SignRequest) (bls.Signature, error) {
 		return signature, nil
 	}
-
+	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
+	v.pubkeyToValidatorIndex[pubkey2] = primitives.ValidatorIndex(2)
+	v.pubkeyToValidatorIndex[pubkey3] = primitives.ValidatorIndex(3)
 	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
 	require.NoError(t, err)
 
@@ -2344,6 +2344,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 				},
 			},
 		},
+		pubkeyToValidatorIndex: make(map[[48]byte]primitives.ValidatorIndex),
 	}
 
 	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2, pubkey3}
@@ -2351,7 +2352,9 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	var signer = func(_ context.Context, _ *validatorpb.SignRequest) (bls.Signature, error) {
 		return signature, nil
 	}
-
+	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
+	v.pubkeyToValidatorIndex[pubkey2] = primitives.ValidatorIndex(2)
+	v.pubkeyToValidatorIndex[pubkey3] = primitives.ValidatorIndex(3)
 	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
 	require.NoError(t, err)
 
