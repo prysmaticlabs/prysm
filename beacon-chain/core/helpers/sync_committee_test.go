@@ -17,6 +17,8 @@ import (
 )
 
 func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -37,7 +39,6 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ClearCache()
 	r := [32]byte{'a'}
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
 
@@ -47,6 +48,8 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 }
 
 func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -73,6 +76,8 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 }
 
 func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -94,11 +99,13 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
 	ok, err := IsCurrentPeriodSyncCommittee(state, 12390192)
-	require.NoError(t, err)
+	require.ErrorContains(t, "index 12390192 out of range", err)
 	require.Equal(t, false, ok)
 }
 
 func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -119,7 +126,6 @@ func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ClearCache()
 	r := [32]byte{'a'}
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
 
@@ -176,11 +182,13 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
 	ok, err := IsNextPeriodSyncCommittee(state, 120391029)
-	require.NoError(t, err)
+	require.ErrorContains(t, "index 120391029 out of range", err)
 	require.Equal(t, false, ok)
 }
 
 func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -201,7 +209,6 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ClearCache()
 	r := [32]byte{'a'}
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
 
@@ -211,6 +218,8 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 }
 
 func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -230,7 +239,6 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
-
 	root, err := syncPeriodBoundaryRoot(state)
 	require.NoError(t, err)
 
@@ -252,6 +260,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 
 func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -273,11 +282,13 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 129301923)
-	require.NoError(t, err)
+	require.ErrorContains(t, "index 129301923 out of range", err)
 	require.DeepEqual(t, []primitives.CommitteeIndex(nil), index)
 }
 
 func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -298,7 +309,6 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ClearCache()
 	r := [32]byte{'a'}
 	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
 
@@ -335,6 +345,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 
 func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -356,7 +367,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 21093019)
-	require.NoError(t, err)
+	require.ErrorContains(t, "index 21093019 out of range", err)
 	require.DeepEqual(t, []primitives.CommitteeIndex(nil), index)
 }
 
@@ -387,6 +398,8 @@ func TestUpdateSyncCommitteeCache_BadRoot(t *testing.T) {
 }
 
 func TestIsCurrentEpochSyncCommittee_SameBlockRoot(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
@@ -412,7 +425,6 @@ func TestIsCurrentEpochSyncCommittee_SameBlockRoot(t *testing.T) {
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	ClearCache()
 	comIdxs, err := CurrentPeriodSyncSubcommitteeIndices(state, 200)
 	require.NoError(t, err)
 

@@ -1,8 +1,6 @@
 package interfaces
 
 import (
-	"math/big"
-
 	ssz "github.com/prysmaticlabs/fastssz"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -123,5 +121,5 @@ type ExecutionData interface {
 	WithdrawalsRoot() ([]byte, error)
 	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
 	PbBellatrix() (*enginev1.ExecutionPayload, error)
-	Value() (*big.Int, error)
+	ValueInGwei() (uint64, error)
 }

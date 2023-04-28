@@ -296,7 +296,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		blocks, err := f.requestBlocks(ctx, req, peers[i])
 		if err == nil {
 			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
-			return blocks, peers[i], err
+			return blocks, peers[i], nil
 		} else {
 			log.WithError(err).Debug("Could not request blocks by range")
 		}

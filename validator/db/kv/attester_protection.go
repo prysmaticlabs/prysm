@@ -449,7 +449,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				return errors.Wrap(err, "could not create signing roots bucket")
 			}
 			if err := signingRootsBucket.Put(targetEpochBytes, att.SigningRoot[:]); err != nil {
-				return errors.Wrapf(err, "could not save signing signing root for epoch %d", att.Target)
+				return errors.Wrapf(err, "could not save signing root for epoch %d", att.Target)
 			}
 			sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
 			if err != nil {

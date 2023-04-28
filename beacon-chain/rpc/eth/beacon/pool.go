@@ -83,23 +83,17 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 
 		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 		// of a received unaggregated attestation.
-		bs.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: operation.UnaggregatedAttReceived,
-			Data: &operation.UnAggregatedAttReceivedData{
-				Attestation: att,
-			},
-		})
+		// Note we can't send for aggregated att because we don't have selection proof.
+		if !corehelpers.IsAggregated(att) {
+			bs.OperationNotifier.OperationFeed().Send(&feed.Event{
+				Type: operation.UnaggregatedAttReceived,
+				Data: &operation.UnAggregatedAttReceivedData{
+					Attestation: att,
+				},
+			})
+		}
 
 		validAttestations = append(validAttestations, att)
-
-		go func() {
-			ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-			attCopy := ethpbalpha.CopyAttestation(att)
-			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(attCopy); err != nil {
-				log.WithError(err).Error("Could not handle attestation in operations service")
-				return
-			}
-		}()
 	}
 
 	broadcastFailed := false
@@ -114,6 +108,16 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 
 		if err := bs.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
 			broadcastFailed = true
+		}
+
+		if corehelpers.IsAggregated(att) {
+			if err := bs.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("could not save aggregated att")
+			}
+		} else {
+			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("could not save unaggregated att")
+			}
 		}
 	}
 	if broadcastFailed {
