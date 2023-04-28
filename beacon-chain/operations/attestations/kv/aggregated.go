@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -23,6 +24,7 @@ func (c *AttCaches) AggregateUnaggregatedAttestations(ctx context.Context) error
 	if err != nil {
 		return err
 	}
+	log.Info("Aggregating unaggregated attestations ", len(unaggregatedAtts))
 	return c.aggregateUnaggregatedAttestations(ctx, unaggregatedAtts)
 }
 
@@ -40,6 +42,8 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.aggregateUnaggregatedAttestations")
 	defer span.End()
 
+	start := time.Now()
+
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
 	for _, att := range unaggregatedAtts {
 		attDataRoot, err := att.Data.HashTreeRoot()
@@ -48,6 +52,8 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 		}
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
+
+	log.Info("Fill in atts by data root in ", time.Since(start))
 
 	// Aggregate unaggregated attestations from the pool and save them in the pool.
 	// Track the unaggregated attestations that aren't able to aggregate.
@@ -74,6 +80,8 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 		}
 	}
 
+	log.Info("Aggregate unaggregated attestations and save in ", time.Since(start))
+
 	// Remove the unaggregated attestations from the pool that were successfully aggregated.
 	for _, att := range unaggregatedAtts {
 		h, err := hashFn(att)
@@ -87,6 +95,8 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 			return err
 		}
 	}
+
+	log.Info("Delete unaggregated attestations in ", time.Since(start))
 
 	return nil
 }

@@ -57,11 +57,17 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
 	defer span.End()
 
+	start := time.Now()
 	if err := s.cfg.Pool.AggregateUnaggregatedAttestations(ctx); err != nil {
 		return err
 	}
+
+	log.Info("Aggregated unaggregated attestations in ", time.Since(start))
+
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
+
+	log.Info("Aggregated attestations in ", time.Since(start))
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
 
@@ -82,6 +88,8 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
+	log.Info("Consolidated attestations in ", time.Since(start))
+
 	count := 0
 	for _, atts := range attsByDataRoot {
 		count += len(atts)
@@ -90,6 +98,8 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		}
 	}
 	batchedForkchoiceAttsCount.Set(float64(count))
+
+	log.Info("Batched attestations in ", time.Since(start))
 
 	for _, a := range s.cfg.Pool.BlockAttestations() {
 		if err := s.cfg.Pool.DeleteBlockAttestation(a); err != nil {

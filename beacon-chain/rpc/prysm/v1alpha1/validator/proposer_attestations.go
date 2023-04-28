@@ -19,7 +19,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type proposerAtts []*ethpb.Attestation
+type ProposerAtts []*ethpb.Attestation
 
 func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
@@ -43,7 +43,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 
 	// Remove duplicates from both aggregated/unaggregated attestations. This
 	// prevents inefficient aggregates being created.
-	atts, err = proposerAtts(atts).dedup()
+	atts, err = ProposerAtts(atts).Dedup()
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
-	attsForInclusion := proposerAtts(make([]*ethpb.Attestation, 0))
+	attsForInclusion := ProposerAtts(make([]*ethpb.Attestation, 0))
 	for _, as := range attsByDataRoot {
 		as, err := attaggregation.Aggregate(as)
 		if err != nil {
@@ -65,7 +65,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 		}
 		attsForInclusion = append(attsForInclusion, as...)
 	}
-	deduped, err := attsForInclusion.dedup()
+	deduped, err := attsForInclusion.Dedup()
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 // filter separates attestation list into two groups: valid and invalid attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
-func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
+func (a ProposerAtts) filter(ctx context.Context, st state.BeaconState) (ProposerAtts, ProposerAtts) {
 	validAtts := make([]*ethpb.Attestation, 0, len(a))
 	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
 	var attestationProcessor func(context.Context, state.BeaconState, *ethpb.Attestation) (state.BeaconState, error)
@@ -112,7 +112,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 }
 
 // sortByProfitability orders attestations by highest slot and by highest aggregation bit count.
-func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
+func (a ProposerAtts) sortByProfitability() (ProposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
@@ -121,10 +121,10 @@ func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
 
 // sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.
 // Duplicate bits are counted only once, using max-cover algorithm.
-func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
+func (a ProposerAtts) sortByProfitabilityUsingMaxCover() (ProposerAtts, error) {
 	// Separate attestations by slot, as slot number takes higher precedence when sorting.
 	var slots []primitives.Slot
-	attsBySlot := map[primitives.Slot]proposerAtts{}
+	attsBySlot := map[primitives.Slot]ProposerAtts{}
 	for _, att := range a {
 		if _, ok := attsBySlot[att.Data.Slot]; !ok {
 			slots = append(slots, att.Data.Slot)
@@ -132,7 +132,7 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 		attsBySlot[att.Data.Slot] = append(attsBySlot[att.Data.Slot], att)
 	}
 
-	selectAtts := func(atts proposerAtts) (proposerAtts, error) {
+	selectAtts := func(atts ProposerAtts) (ProposerAtts, error) {
 		if len(atts) < 2 {
 			return atts, nil
 		}
@@ -149,8 +149,8 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 		if err == nil {
 			// Pick selected attestations first, leftover attestations will be appended at the end.
 			// Both lists will be sorted by number of bits set.
-			selectedAtts := make(proposerAtts, selectedKeys.Count())
-			leftoverAtts := make(proposerAtts, selectedKeys.Not().Count())
+			selectedAtts := make(ProposerAtts, selectedKeys.Count())
+			leftoverAtts := make(ProposerAtts, selectedKeys.Not().Count())
 			for i, key := range selectedKeys.BitIndices() {
 				selectedAtts[i] = atts[key]
 			}
@@ -171,7 +171,7 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 	// Select attestations. Slots are sorted from higher to lower at this point. Within slots attestations
 	// are sorted to maximize profitability (greedily selected, with previous attestations' bits
 	// evaluated before including any new attestation).
-	var sortedAtts proposerAtts
+	var sortedAtts ProposerAtts
 	sort.Slice(slots, func(i, j int) bool {
 		return slots[i] > slots[j]
 	})
@@ -187,17 +187,17 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 }
 
 // limitToMaxAttestations limits attestations to maximum attestations per block.
-func (a proposerAtts) limitToMaxAttestations() proposerAtts {
+func (a ProposerAtts) limitToMaxAttestations() ProposerAtts {
 	if uint64(len(a)) > params.BeaconConfig().MaxAttestations {
 		return a[:params.BeaconConfig().MaxAttestations]
 	}
 	return a
 }
 
-// dedup removes duplicate attestations (ones with the same bits set on).
+// Dedup removes duplicate attestations (ones with the same bits set on).
 // Important: not only exact duplicates are removed, but proper subsets are removed too
 // (their known bits are redundant and are already contained in their supersets).
-func (a proposerAtts) dedup() (proposerAtts, error) {
+func (a ProposerAtts) Dedup() (ProposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
@@ -247,7 +247,7 @@ func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.Beac
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
 	defer span.End()
 
-	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
+	validAtts, invalidAtts := ProposerAtts(atts).filter(ctx, st)
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}

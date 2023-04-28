@@ -45,7 +45,7 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 	}
 
 	runner := func(atts []*ethpb.Attestation) {
-		attsCopy := make(proposerAtts, len(atts))
+		attsCopy := make(ProposerAtts, len(atts))
 		for i, att := range atts {
 			attsCopy[i] = ethpb.CopyAttestation(att)
 		}
