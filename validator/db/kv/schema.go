@@ -39,5 +39,6 @@ var (
 	graffitiFileHashKey     = []byte("graffiti-file-hash")
 
 	// ProposerSettings stores the encoded proposer settings file
-	proposerSettingsBucket = []byte("proposer-settings")
+	proposerSettingsBucket = []byte("proposer-settings-bucket")
+	proposerSettingsKey    = []byte("proposer-settings")
 )
