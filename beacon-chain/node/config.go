@@ -2,7 +2,6 @@ package node
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	fastssz "github.com/prysmaticlabs/fastssz"
@@ -196,7 +195,6 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	c.DefaultFeeRecipient = checksumAddress
 	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+
 		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
-	c.RegistrationDuration = time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second // defaults to 3 Epochs
 	return params.SetActive(c)
 }
 

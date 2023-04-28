@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -46,6 +47,7 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 		regCache.lock.Lock()
 		defer regCache.lock.Unlock()
 		delete(regCache.indexToRegistration, id)
+		log.Warnf("registration for validator index %d expired at unix time %d", id, v.Timestamp)
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
 	regCache.lock.RUnlock()
