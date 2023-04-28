@@ -9,7 +9,6 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -550,14 +549,7 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.Val
 		if enc == nil {
 			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
 		}
-		if err := decode(ctx, enc, reg); err != nil {
-			return err
-		}
-		if cache.RegistrationTimeStampExpired(reg.Timestamp) {
-			// don't delete in bucket, db will eventually be removed.
-			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
-		}
-		return nil
+		return decode(ctx, enc, reg)
 	})
 	return reg, err
 }

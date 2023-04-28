@@ -2,7 +2,6 @@ package cache
 
 import (
 	"context"
-	"math/big"
 	"sync"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -36,7 +36,11 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 		regCache.RUnlock()
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
-	if RegistrationTimeStampExpired(v.Timestamp) {
+	isExpired, err := RegistrationTimeStampExpired(v.Timestamp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to check registration expiration")
+	}
+	if isExpired {
 		regCache.RUnlock()
 		regCache.Lock()
 		defer regCache.Unlock()
@@ -47,12 +51,15 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 	return v, nil
 }
 
-func RegistrationTimeStampExpired(ts uint64) bool {
-	expiryDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3) * time.Second
+func RegistrationTimeStampExpired(ts uint64) (bool, error) {
 	// safely convert unint64 to int64
-	t := new(big.Int).SetUint64(ts).Int64()
+	i, err := math.Int(ts)
+	if err != nil {
+		return false, err
+	}
+	expiryDuration := params.BeaconConfig().RegistrationDuration
 	// registered time + expiration duration < current time = expired
-	return time.Unix(t, 0).Add(expiryDuration).Before(time.Now())
+	return time.Unix(int64(i), 0).Add(expiryDuration).Before(time.Now()), nil
 }
 
 // UpdateIndexToRegisteredMap adds or updates values in the cache based on the argument.

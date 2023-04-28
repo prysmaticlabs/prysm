@@ -65,13 +65,15 @@ func Test_RegistrationTimeStampExpired(t *testing.T) {
 	t.Run("expired registration", func(t *testing.T) {
 		overExpirationPadTime := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*4) // 4 epochs
 		ts := uint64(time.Now().Add(-1 * overExpirationPadTime).Unix())
-		isExpired := RegistrationTimeStampExpired(ts)
+		isExpired, err := RegistrationTimeStampExpired(ts)
+		require.NoError(t, err)
 		require.Equal(t, true, isExpired)
 	})
 	t.Run("is not expired registration", func(t *testing.T) {
 		overExpirationPadTime := time.Second * time.Duration((params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch)*3)-5) // 3 epochs -5 seconds
 		ts := uint64(time.Now().Add(-1 * overExpirationPadTime).Unix())
-		isExpired := RegistrationTimeStampExpired(ts)
+		isExpired, err := RegistrationTimeStampExpired(ts)
+		require.NoError(t, err)
 		require.Equal(t, false, isExpired)
 	})
 }
