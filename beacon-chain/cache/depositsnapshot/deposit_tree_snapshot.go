@@ -13,8 +13,7 @@ var (
 	ErrZeroIndex = errors.New("index should be greater than 0")
 )
 
-// DepositTreeSnapshot represents the data used to create a
-// deposit tree given a snapshot.
+// DepositTreeSnapshot represents the data used to create a deposit tree given a snapshot.
 type DepositTreeSnapshot struct {
 	finalized      [][32]byte
 	depositRoot    [32]byte
@@ -58,10 +57,9 @@ func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock exe
 	return snapshot, nil
 }
 
-// ToProto converts the underlying trie into its corresponding
-// proto object
+// ToProto converts the underlying trie into its corresponding proto object.
 func (ds *DepositTreeSnapshot) ToProto() *protodb.DepositSnapshot {
-	trie := &protodb.DepositSnapshot{
+	tree := &protodb.DepositSnapshot{
 		Finalized:      make([][]byte, len(ds.finalized)),
 		DepositRoot:    ds.depositRoot[:],
 		DepositCount:   ds.depositCount,
@@ -69,9 +67,9 @@ func (ds *DepositTreeSnapshot) ToProto() *protodb.DepositSnapshot {
 		ExecutionDepth: ds.executionBlock.Depth,
 	}
 	for i := range ds.finalized {
-		trie.Finalized[i] = bytesutil.SafeCopyBytes(ds.finalized[i][:])
+		tree.Finalized[i] = bytesutil.SafeCopyBytes(ds.finalized[i][:])
 	}
-	return trie
+	return tree
 }
 
 func DepositTreeFromSnapshotProto(snapshotProto *protodb.DepositSnapshot) (*DepositTree, error) {

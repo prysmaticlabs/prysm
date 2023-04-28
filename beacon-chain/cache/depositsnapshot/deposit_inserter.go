@@ -3,7 +3,6 @@ package depositsnapshot
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"

@@ -5,7 +5,6 @@ package depositsnapshot
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
@@ -123,7 +122,6 @@ func (d *DepositTree) getRoot() [32]byte {
 	binary.LittleEndian.PutUint64(enc[:], d.depositCount)
 
 	root := d.tree.GetRoot()
-	fmt.Printf("Our deposit snapshot tree has deposit count %#x, and premixin %#x\n", enc, root)
 	return hash.Hash(append(root[:], enc[:]...))
 }
 
