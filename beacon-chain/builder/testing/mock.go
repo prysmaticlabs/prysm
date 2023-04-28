@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// config defines a config struct for dependencies into the service.
+// Config defines a config struct for dependencies into the service.
 type Config struct {
 	BeaconDB db.HeadAccessDatabase
 }
@@ -57,7 +57,7 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.
 }
 
 // GetHeader for mocking.
-func (s *MockBuilderService) GetHeader(ctx context.Context, slot primitives.Slot, hr [32]byte, pb [48]byte) (builder.SignedBid, error) {
+func (s *MockBuilderService) GetHeader(_ context.Context, slot primitives.Slot, _ [32]byte, _ [48]byte) (builder.SignedBid, error) {
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
 		return builder.WrappedSignedBuilderBidCapella(s.BidCapella)
 	}

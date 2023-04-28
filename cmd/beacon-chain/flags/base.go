@@ -3,8 +3,6 @@
 package flags
 
 import (
-	"strings"
-
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/urfave/cli/v2"
@@ -94,7 +92,7 @@ var (
 	HTTPModules = &cli.StringFlag{
 		Name:  "http-modules",
 		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
-		Value: strings.Join([]string{PrysmAPIModule, EthAPIModule}, ","),
+		Value: PrysmAPIModule + `,` + EthAPIModule,
 	}
 	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
 	DisableGRPCGateway = &cli.BoolFlag{

@@ -17,23 +17,24 @@ import (
 // RegistrationCache is used to store the cached results of an Validator Registration request.
 // beacon api /eth/v1/validator/register_validator
 type RegistrationCache struct {
-	sync.RWMutex
 	indexToRegistration map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1
+	lock                sync.RWMutex
 }
 
 // NewRegistrationCache initializes the map and underlying cache.
 func NewRegistrationCache() *RegistrationCache {
 	return &RegistrationCache{
 		indexToRegistration: make(map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1),
+		lock:                sync.RWMutex{},
 	}
 }
 
 // GetRegistrationByIndex returns the registration by index in the cache and also removes items in the cache if expired.
 func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
-	regCache.RLock()
+	regCache.lock.RLock()
 	v, ok := regCache.indexToRegistration[id]
 	if !ok {
-		regCache.RUnlock()
+		regCache.lock.RUnlock()
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
 	isExpired, err := RegistrationTimeStampExpired(v.Timestamp)
@@ -41,13 +42,13 @@ func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.Validato
 		return nil, errors.Wrapf(err, "failed to check registration expiration")
 	}
 	if isExpired {
-		regCache.RUnlock()
-		regCache.Lock()
-		defer regCache.Unlock()
+		regCache.lock.RUnlock()
+		regCache.lock.Lock()
+		defer regCache.lock.Unlock()
 		delete(regCache.indexToRegistration, id)
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
-	regCache.RUnlock()
+	regCache.lock.RUnlock()
 	return v, nil
 }
 
@@ -64,10 +65,10 @@ func RegistrationTimeStampExpired(ts uint64) (bool, error) {
 
 // UpdateIndexToRegisteredMap adds or updates values in the cache based on the argument.
 func (regCache *RegistrationCache) UpdateIndexToRegisteredMap(ctx context.Context, m map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1) {
-	ctx, span := trace.StartSpan(ctx, "RegistrationCache.UpdateIndexToRegisteredMap")
+	_, span := trace.StartSpan(ctx, "RegistrationCache.UpdateIndexToRegisteredMap")
 	defer span.End()
-	regCache.Lock()
-	defer regCache.Unlock()
+	regCache.lock.Lock()
+	defer regCache.lock.Unlock()
 	for key, value := range m {
 		regCache.indexToRegistration[key] = &ethpb.ValidatorRegistrationV1{
 			Pubkey:       bytesutil.SafeCopyBytes(value.Pubkey),
