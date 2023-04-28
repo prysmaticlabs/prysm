@@ -9,8 +9,6 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
@@ -145,10 +143,11 @@ func TestService_InitStartStop(t *testing.T) {
 			// Initialize feed
 			gs := startup.NewClockSynchronizer()
 			s := NewService(ctx, &Config{
-				P2P:           p,
-				Chain:         mc,
-				ClockWaiter:   gs,
-				StateNotifier: &mock.MockStateNotifier{},
+				P2P:                 p,
+				Chain:               mc,
+				ClockWaiter:         gs,
+				StateNotifier:       &mock.MockStateNotifier{},
+				InitialSyncComplete: make(chan struct{}),
 			})
 			time.Sleep(500 * time.Millisecond)
 			assert.NotNil(t, s)
@@ -184,7 +183,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		cs := startup.NewClockSynchronizer()
 		ctx, cancel := context.WithCancel(ctx)
 		s := &Service{
-			cfg:          &Config{Chain: mc, StateNotifier: mc.StateNotifier(), ClockWaiter: cs},
+			cfg:          &Config{Chain: mc, StateNotifier: mc.StateNotifier(), ClockWaiter: cs, InitialSyncComplete: make(chan struct{})},
 			ctx:          ctx,
 			cancel:       cancel,
 			synced:       abool.New(),
@@ -266,12 +265,6 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			s.Start()
-			wg.Done()
-		}()
-
-		wg.Add(1)
-		go func() {
 			time.AfterFunc(500*time.Millisecond, func() {
 				var vr [32]byte
 				require.NoError(t, gs.SetClock(startup.NewClock(expectedGenesisTime, vr)))
@@ -291,11 +284,12 @@ func TestService_waitForStateInitialization(t *testing.T) {
 
 func TestService_markSynced(t *testing.T) {
 	mc := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	s := NewService(ctx, &Config{
-		Chain:         mc,
-		StateNotifier: mc.StateNotifier(),
+		Chain:               mc,
+		StateNotifier:       mc.StateNotifier(),
+		InitialSyncComplete: make(chan struct{}),
 	})
 	require.NotNil(t, s)
 	assert.Equal(t, false, s.chainStarted.IsSet())
@@ -305,33 +299,16 @@ func TestService_markSynced(t *testing.T) {
 	s.chainStarted.Set()
 	assert.ErrorContains(t, "syncing", s.Status())
 
-	expectedGenesisTime := time.Unix(358544700, 0)
-	var receivedGenesisTime time.Time
-
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
 	go func() {
-		select {
-		case stateEvent := <-stateChannel:
-			if stateEvent.Type == statefeed.Synced {
-				data, ok := stateEvent.Data.(*statefeed.SyncedData)
-				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
-				receivedGenesisTime = data.StartTime
-			}
-		case <-s.ctx.Done():
-		}
-		wg.Done()
+		s.markSynced()
 	}()
-	s.markSynced(expectedGenesisTime)
 
-	if util.WaitTimeout(wg, time.Second*2) {
-		t.Fatalf("Test should have exited by now, timed out")
+	select {
+	case <-s.cfg.InitialSyncComplete:
+	case <-ctx.Done():
+		require.NoError(t, ctx.Err()) // this is an error because it means initial sync complete failed to close
 	}
-	assert.Equal(t, expectedGenesisTime, receivedGenesisTime)
+
 	assert.Equal(t, false, s.Syncing())
 }
 

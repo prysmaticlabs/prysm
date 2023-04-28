@@ -109,6 +109,7 @@ type BeaconNode struct {
 	CheckpointInitializer   checkpoint.Initializer
 	forkChoicer             forkchoice.ForkChoicer
 	clockWaiter             startup.ClockWaiter
+	initialSyncComplete     chan struct{}
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -179,6 +180,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		proposerIdsCache:        cache.NewProposerPayloadIDsCache(),
 	}
 
+	beacon.initialSyncComplete = make(chan struct{})
 	for _, opt := range opts {
 		if err := opt(beacon); err != nil {
 			return nil, err
@@ -239,12 +241,12 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering Initial Sync Service")
-	if err := beacon.registerInitialSyncService(); err != nil {
+	if err := beacon.registerInitialSyncService(beacon.initialSyncComplete); err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering Sync Service")
-	if err := beacon.registerSyncService(); err != nil {
+	if err := beacon.registerSyncService(beacon.initialSyncComplete); err != nil {
 		return nil, err
 	}
 
@@ -270,7 +272,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering Validator Monitoring Service")
-	if err := beacon.registerValidatorMonitorService(); err != nil {
+	if err := beacon.registerValidatorMonitorService(beacon.initialSyncComplete); err != nil {
 		return nil, err
 	}
 
@@ -659,7 +661,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 	return b.services.RegisterService(web3Service)
 }
 
-func (b *BeaconNode) registerSyncService() error {
+func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) error {
 	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -695,23 +697,25 @@ func (b *BeaconNode) registerSyncService() error {
 		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
 		regularsync.WithExecutionPayloadReconstructor(web3Service),
 		regularsync.WithClockWaiter(b.clockWaiter),
+		regularsync.WithInitialSyncComplete(initialSyncComplete),
 	)
 	return b.services.RegisterService(rs)
 }
 
-func (b *BeaconNode) registerInitialSyncService() error {
+func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
 
 	is := initialsync.NewService(b.ctx, &initialsync.Config{
-		DB:            b.db,
-		Chain:         chainService,
-		P2P:           b.fetchP2P(),
-		StateNotifier: b,
-		BlockNotifier: b,
-		ClockWaiter:   b.clockWaiter,
+		DB:                  b.db,
+		Chain:               chainService,
+		P2P:                 b.fetchP2P(),
+		StateNotifier:       b,
+		BlockNotifier:       b,
+		ClockWaiter:         b.clockWaiter,
+		InitialSyncComplete: complete,
 	})
 	return b.services.RegisterService(is)
 }
@@ -944,7 +948,7 @@ func (b *BeaconNode) registerDeterminsticGenesisService() error {
 	return nil
 }
 
-func (b *BeaconNode) registerValidatorMonitorService() error {
+func (b *BeaconNode) registerValidatorMonitorService(initialSyncComplete chan struct{}) error {
 	cliSlice := b.cliCtx.IntSlice(cmd.ValidatorMonitorIndicesFlag.Name)
 	if cliSlice == nil {
 		return nil
@@ -963,6 +967,7 @@ func (b *BeaconNode) registerValidatorMonitorService() error {
 		AttestationNotifier: b,
 		StateGen:            b.stateGen,
 		HeadFetcher:         chainService,
+		InitialSyncComplete: initialSyncComplete,
 	}
 	svc, err := monitor.NewService(b.ctx, monitorConfig, tracked)
 	if err != nil {

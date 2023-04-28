@@ -142,6 +142,7 @@ type Service struct {
 	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
+	initialSyncComplete              chan struct{}
 }
 
 // NewService initializes new regular sync service.
@@ -259,33 +260,21 @@ func (s *Service) registerHandlers() {
 	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 	s.waitForChainStart()
-	for {
-		select {
-		case e := <-stateChannel:
-			if e.Type == statefeed.Synced {
-				_, ok := e.Data.(*statefeed.SyncedData)
-				if !ok {
-					log.Error("Event feed data is not type *statefeed.SyncedData")
-					return
-				}
-				// Register respective pubsub handlers at state synced event.
-				digest, err := s.currentForkDigest()
-				if err != nil {
-					log.WithError(err).Error("Could not retrieve current fork digest")
-					return
-				}
-				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.clock.GenesisTime().Unix())))
-				s.registerSubscribers(currentEpoch, digest)
-				go s.forkWatcher()
-				return
-			}
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return
-		case err := <-stateSub.Err():
-			log.WithError(err).Error("Could not subscribe to state notifier")
+	select {
+	case <-s.initialSyncComplete:
+		// Register respective pubsub handlers at state synced event.
+		digest, err := s.currentForkDigest()
+		if err != nil {
+			log.WithError(err).Error("Could not retrieve current fork digest")
 			return
 		}
+		currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.clock.GenesisTime().Unix())))
+		s.registerSubscribers(currentEpoch, digest)
+		go s.forkWatcher()
+		return
+	case <-s.ctx.Done():
+		log.Debug("Context closed, exiting goroutine")
+		return
 	}
 }
 

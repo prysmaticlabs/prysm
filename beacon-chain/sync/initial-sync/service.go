@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
@@ -35,12 +34,13 @@ type blockchainService interface {
 
 // Config to set up the initial sync service.
 type Config struct {
-	P2P           p2p.P2P
-	DB            db.ReadOnlyDatabase
-	Chain         blockchainService
-	StateNotifier statefeed.Notifier
-	BlockNotifier blockfeed.Notifier
-	ClockWaiter   startup.ClockWaiter
+	P2P                 p2p.P2P
+	DB                  db.ReadOnlyDatabase
+	Chain               blockchainService
+	StateNotifier       statefeed.Notifier
+	BlockNotifier       blockfeed.Notifier
+	ClockWaiter         startup.ClockWaiter
+	InitialSyncComplete chan struct{}
 }
 
 // Service service.
@@ -89,14 +89,14 @@ func (s *Service) Start() {
 		return
 	}
 	if gt.After(prysmTime.Now()) {
-		s.markSynced(gt)
+		s.markSynced()
 		log.WithField("genesisTime", gt).Info("Genesis time has not arrived - not syncing")
 		return
 	}
 	currentSlot := clock.CurrentSlot()
 	if slots.ToEpoch(currentSlot) == 0 {
 		log.WithField("genesisTime", gt).Info("Chain started within the last epoch - not syncing")
-		s.markSynced(gt)
+		s.markSynced()
 		return
 	}
 	s.chainStarted.Set()
@@ -104,7 +104,7 @@ func (s *Service) Start() {
 	// Are we already in sync, or close to it?
 	if slots.ToEpoch(s.cfg.Chain.HeadSlot()) == slots.ToEpoch(currentSlot) {
 		log.Info("Already synced to the current chain head")
-		s.markSynced(gt)
+		s.markSynced()
 		return
 	}
 	s.waitForMinimumPeers()
@@ -115,7 +115,7 @@ func (s *Service) Start() {
 		panic(err)
 	}
 	log.Infof("Synced up to slot %d", s.cfg.Chain.HeadSlot())
-	s.markSynced(gt)
+	s.markSynced()
 }
 
 // Stop initial sync.
@@ -188,12 +188,7 @@ func (s *Service) waitForMinimumPeers() {
 }
 
 // markSynced marks node as synced and notifies feed listeners.
-func (s *Service) markSynced(genesis time.Time) {
+func (s *Service) markSynced() {
 	s.synced.Set()
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: genesis,
-		},
-	})
+	close(s.cfg.InitialSyncComplete)
 }

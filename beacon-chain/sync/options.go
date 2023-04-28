@@ -144,3 +144,10 @@ func WithClockWaiter(cw startup.ClockWaiter) Option {
 		return nil
 	}
 }
+
+func WithInitialSyncComplete(c chan struct{}) Option {
+	return func(s *Service) error {
+		s.initialSyncComplete = c
+		return nil
+	}
+}
