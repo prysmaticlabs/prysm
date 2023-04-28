@@ -100,7 +100,6 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	// If we finalize to some lower deposit index, we
 	// ignore it.
 	if int(eth1DepositIndex) < insertIndex {
-		fmt.Println("Anything")
 		return nil
 	}
 	tree, err := depositTrie.tree.Finalize(uint64(eth1DepositIndex), DepositContractDepth)
