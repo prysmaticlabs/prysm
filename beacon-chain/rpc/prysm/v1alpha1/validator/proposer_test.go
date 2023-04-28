@@ -1469,7 +1469,8 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 	// Mutate it since its a pointer
 	d[0].Deposit.Data.WithdrawalCredentials = junkCreds[:]
 	// Insert junk to corrupt trie.
-	depositCache.InsertFinalizedDeposits(ctx, 2)
+	err = depositCache.InsertFinalizedDeposits(ctx, 2)
+	require.NoError(t, err)
 
 	// Add original back
 	d[0].Deposit = origDeposit
