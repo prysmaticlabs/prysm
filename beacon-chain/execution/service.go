@@ -749,7 +749,9 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 	}
 	var err error
 	if features.Get().EnableEIP4881 {
-		s.depositTrie, err = depositsnapshot.DepositTreeFromSnapshotProto(eth1DataInDB.DepositSnapshot)
+		if eth1DataInDB.DepositSnapshot != nil {
+			s.depositTrie, err = depositsnapshot.DepositTreeFromSnapshotProto(eth1DataInDB.DepositSnapshot)
+		}
 	} else {
 		s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
 	}
