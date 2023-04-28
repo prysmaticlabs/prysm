@@ -207,7 +207,7 @@ var (
 	// EnableRegistrationCache a temporary flag for enabling the validator registration cache instead of db.
 	EnableRegistrationCache = &cli.BoolFlag{
 		Name:  "enable-registration-cache",
-		Usage: "A temporary flag for enabling the validator registration cache instead of pesisting in db. The cache will clear on restart.",
+		Usage: "A temporary flag for enabling the validator registration cache instead of persisting in db. The cache will clear on restart.",
 	}
 	// WeakSubjectivityCheckpoint defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
 	WeakSubjectivityCheckpoint = &cli.StringFlag{
