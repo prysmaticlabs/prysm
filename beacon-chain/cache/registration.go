@@ -30,8 +30,8 @@ func NewRegistrationCache() *RegistrationCache {
 	}
 }
 
-// GetRegistrationByIndex returns the registration by index in the cache and also removes items in the cache if expired.
-func (regCache *RegistrationCache) GetRegistrationByIndex(id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
+// RegistrationByIndex returns the registration by index in the cache and also removes items in the cache if expired.
+func (regCache *RegistrationCache) RegistrationByIndex(id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
 	regCache.lock.RLock()
 	v, ok := regCache.indexToRegistration[id]
 	if !ok {

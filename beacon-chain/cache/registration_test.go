@@ -28,7 +28,7 @@ func TestRegistrationCache(t *testing.T) {
 		Pubkey:       pubkey,
 	}
 	cache.UpdateIndexToRegisteredMap(context.Background(), m)
-	reg, err := cache.GetRegistrationByIndex(validatorIndex)
+	reg, err := cache.RegistrationByIndex(validatorIndex)
 	require.NoError(t, err)
 	require.Equal(t, string(reg.Pubkey), string(pubkey))
 	t.Run("Registration expired", func(t *testing.T) {
@@ -41,7 +41,7 @@ func TestRegistrationCache(t *testing.T) {
 			Pubkey:       pubkey,
 		}
 		cache.UpdateIndexToRegisteredMap(context.Background(), m)
-		_, err := cache.GetRegistrationByIndex(validatorIndex2)
+		_, err := cache.RegistrationByIndex(validatorIndex2)
 		require.ErrorContains(t, "no validator registered", err)
 		require.LogsContain(t, hook, "expired")
 	})
@@ -57,7 +57,7 @@ func TestRegistrationCache(t *testing.T) {
 			Pubkey:       pubkey,
 		}
 		cache.UpdateIndexToRegisteredMap(context.Background(), m)
-		reg, err := cache.GetRegistrationByIndex(validatorIndex2)
+		reg, err := cache.RegistrationByIndex(validatorIndex2)
 		require.NoError(t, err)
 		require.Equal(t, string(reg.Pubkey), string(pubkey))
 	})
