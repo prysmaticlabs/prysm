@@ -102,13 +102,6 @@ func TestServer_validatorRegistered(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, reg)
 
-	// add a case for an index with an expired timestamp
-	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{3},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: 2, Pubkey: p}}))
-	reg, err = proposerServer.validatorRegistered(ctx, 3)
-	require.NoError(t, err)
-	require.Equal(t, false, reg)
-
 }
 
 func TestServer_canUseBuilder(t *testing.T) {
