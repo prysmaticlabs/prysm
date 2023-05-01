@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -38,6 +39,16 @@ const (
 	registerPath = "/eth/v1/builder/validators"
 	headerPath   = "/eth/v1/builder/header/{slot:[0-9]+}/{parent_hash:0x[a-fA-F0-9]+}/{pubkey:0x[a-fA-F0-9]+}"
 	blindedPath  = "/eth/v1/builder/blinded_blocks"
+
+	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
+	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
+	// ForkchoiceUpdatedMethodV2 v2 request string for JSON-RPC.
+	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
+	// GetPayloadMethod v1 request string for JSON-RPC.
+	GetPayloadMethod = "engine_getPayloadV1"
+	// GetPayloadMethodV2 v2 request string for JSON-RPC.
+	GetPayloadMethodV2 = "engine_getPayloadV2"
+	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 )
 
 var (
@@ -72,6 +83,7 @@ type Builder struct {
 	address      string
 	execClient   *gethRPC.Client
 	beaconConn   *grpc.ClientConn
+	currId       *v1.PayloadIDBytes
 	mux          *gMux.Router
 	validatorMap map[string]*eth.ValidatorRegistrationV1
 	srv          *http.Server
@@ -167,8 +179,22 @@ func (p *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.handleEngineCalls(requestBytes)
-	if _, err := p.sendHttpRequest(r, requestBytes); err != nil {
+	execRes, err := p.sendHttpRequest(r, requestBytes)
+	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not forward request")
+		return
+	}
+	p.cfg.logger.Infof("Received response for %s request with method %s from %s", r.Method, r.Method, p.cfg.destinationUrl.String())
+
+	defer func() {
+		if err = execRes.Body.Close(); err != nil {
+			p.cfg.logger.WithError(err).Error("Could not do close proxy responseGen body")
+		}
+	}()
+
+	// Pipe the proxy responseGen to the original caller.
+	if _, err = io.Copy(w, execRes.Body); err != nil {
+		p.cfg.logger.WithError(err).Error("Could not copy proxy request body")
 		return
 	}
 }
@@ -225,8 +251,10 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "no valid parent hash", http.StatusBadRequest)
 		return
 	}
+	time.Unix().Add().Before()
 	b, err := p.retrievePendingBlock()
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve pending block")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -234,27 +262,32 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	execV2 := gethEngine.BlockToExecutableData(b, fees)
 	secKey, err := bls.RandKey()
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve secret key")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	marshalled, err := json.Marshal(execV2.ExecutionPayload)
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not marshal execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	obj := &v1.ExecutionPayloadCapella{}
+	obj := &v1.ExecutionPayload{}
 	err = json.Unmarshal(marshalled, obj)
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not unmarshal execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	wObj, err := blocks.WrappedExecutionPayloadCapella(obj, fees)
+	wObj, err := blocks.WrappedExecutionPayload(obj)
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	hdr, err := blocks.PayloadToHeaderCapella(wObj)
+	hdr, err := blocks.PayloadToHeader(wObj)
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not make payload into header")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -263,7 +296,7 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		Value:  builderAPI.Uint256{Int: fees},
 		Pubkey: secKey.PublicKey().Marshal(),
 	}
-	sszBid := &eth.BuilderBidCapella{
+	sszBid := &eth.BuilderBid{
 		Header: hdr,
 		Value:  builderAPI.Uint256{Int: fees}.SSZBytes(),
 		Pubkey: secKey.PublicKey().Marshal(),
@@ -272,11 +305,13 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		nil, /* fork version */
 		nil /* genesis val root */)
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not compute the domain")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	rt, err := signing.ComputeSigningRoot(sszBid, d)
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not compute the signing root")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -294,6 +329,7 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 
 	err = json.NewEncoder(w).Encode(hdrResp)
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not encode response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
