@@ -15,7 +15,7 @@ type attList []*ethpb.Attestation
 // significantly more expensive than the inner logic of AggregateAttestations so they must be
 // substituted for benchmarks which analyze AggregateAttestations.
 var aggregateSignatures = bls.AggregateSignatures
-var signatureFromBytes = bls.SignatureFromBytes
+var signatureFromBytes = bls.SignatureFromBytesNoValidation
 
 var _ = logrus.WithField("prefix", "aggregation.attestations")
 
@@ -36,7 +36,7 @@ func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	return MaxCoverAttestationAggregation(atts)
 }
 
-// AggregateDisjointOneBitAtts aggregates unnagregated attestations with the
+// AggregateDisjointOneBitAtts aggregates unaggregated attestations with the
 // exact same attestation data.
 func AggregateDisjointOneBitAtts(atts []*ethpb.Attestation) (*ethpb.Attestation, error) {
 	if len(atts) == 0 {

@@ -55,7 +55,7 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 	for _, atts := range attsByDataRoot {
 		aggregated, err := attaggregation.AggregateDisjointOneBitAtts(atts)
 		if err != nil || aggregated == nil {
-			return errors.Wrap(err, "could not aggregate unnagregated attestations")
+			return errors.Wrap(err, "could not aggregate unaggregated attestations")
 		}
 		if helpers.IsAggregated(aggregated) {
 			if err := c.SaveAggregatedAttestations([]*ethpb.Attestation{aggregated}); err != nil {
