@@ -14,7 +14,7 @@ import (
 )
 
 func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
-	atts := ProposerAtts([]*ethpb.Attestation{
+	atts := proposerAtts([]*ethpb.Attestation{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11100000}}),
@@ -22,7 +22,7 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}}),
 	})
-	want := ProposerAtts([]*ethpb.Attestation{
+	want := proposerAtts([]*ethpb.Attestation{
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11110000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 4}, AggregationBits: bitfield.Bitlist{0b11100000}}),
 		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11000000}}),
@@ -42,8 +42,8 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 		slot primitives.Slot
 		bits bitfield.Bitlist
 	}
-	getAtts := func(data []testData) ProposerAtts {
-		var atts ProposerAtts
+	getAtts := func(data []testData) proposerAtts {
+		var atts proposerAtts
 		for _, att := range data {
 			atts = append(atts, util.HydrateAttestation(&ethpb.Attestation{
 				Data: &ethpb.AttestationData{Slot: att.slot}, AggregationBits: att.bits}))
@@ -197,59 +197,59 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 	})
 	tests := []struct {
 		name string
-		atts ProposerAtts
-		want ProposerAtts
+		atts proposerAtts
+		want proposerAtts
 	}{
 		{
 			name: "nil list",
 			atts: nil,
-			want: ProposerAtts(nil),
+			want: proposerAtts(nil),
 		},
 		{
 			name: "empty list",
-			atts: ProposerAtts{},
-			want: ProposerAtts{},
+			atts: proposerAtts{},
+			want: proposerAtts{},
 		},
 		{
 			name: "single item",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{}},
 			},
 		},
 		{
 			name: "two items no duplicates",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10111110, 0x01}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01111111, 0x01}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01111111, 0x01}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10111110, 0x01}},
 			},
 		},
 		{
 			name: "two items with duplicates",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0xba, 0x01}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0xba, 0x01}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0xba, 0x01}},
 			},
 		},
 		{
 			name: "sorted no duplicates",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00101011, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10100000, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00010000, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00101011, 0b1}},
@@ -259,7 +259,7 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 		},
 		{
 			name: "sorted with duplicates",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
@@ -269,14 +269,14 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000001, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 			},
 		},
 		{
 			name: "all equal",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
@@ -284,20 +284,20 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 			},
 		},
 		{
 			name: "unsorted no duplicates",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00100010, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10100101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00010000, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10100101, 0b1}},
@@ -307,7 +307,7 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 		},
 		{
 			name: "unsorted with duplicates",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10100101, 0b1}},
@@ -318,7 +318,7 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000001, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10100101, 0b1}},
@@ -326,13 +326,13 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 		},
 		{
 			name: "no proper subset (same root)",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000101, 0b1}},
@@ -341,7 +341,7 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 		},
 		{
 			name: "proper subset (same root)",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
@@ -352,20 +352,20 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000001, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 			},
 		},
 		{
 			name: "no proper subset (different root)",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000101, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00011001, 0b1}},
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b10000001, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000011, 0b1}},
@@ -374,7 +374,7 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 		},
 		{
 			name: "proper subset (different root 1)",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
@@ -385,20 +385,20 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00000001, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b01101101, 0b1}},
 			},
 		},
 		{
 			name: "proper subset (different root 2)",
-			atts: ProposerAtts{
+			atts: proposerAtts{
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b00001111, 0b1}},
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 			},
-			want: ProposerAtts{
+			want: proposerAtts{
 				&ethpb.Attestation{Data: data2, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 				&ethpb.Attestation{Data: data1, AggregationBits: bitfield.Bitlist{0b11001111, 0b1}},
 			},
@@ -406,7 +406,7 @@ func TestProposer_ProposerAtts_dedup(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			atts, err := tt.atts.Dedup()
+			atts, err := tt.atts.dedup()
 			if err != nil {
 				t.Error(err)
 			}
