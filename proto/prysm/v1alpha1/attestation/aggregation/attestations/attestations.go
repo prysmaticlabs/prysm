@@ -36,6 +36,40 @@ func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	return MaxCoverAttestationAggregation(atts)
 }
 
+// AggregateDisjointOneBitAtts aggregates unnagregated attestations with the
+// exact same attestation data.
+func AggregateDisjointOneBitAtts(atts []*ethpb.Attestation) (*ethpb.Attestation, error) {
+	if len(atts) == 0 {
+		return nil, nil
+	}
+	if len(atts) == 1 {
+		return atts[0], nil
+	}
+	coverage, err := atts[0].AggregationBits.ToBitlist64()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get aggregation bits")
+	}
+	for _, att := range atts[1:] {
+		bits, err := att.AggregationBits.ToBitlist64()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get aggregation bits")
+		}
+		err = coverage.NoAllocOr(bits, coverage)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get aggregation bits")
+		}
+	}
+	keys := make([]int, len(atts))
+	for i := 0; i < len(atts); i++ {
+		keys[i] = i
+	}
+	idx, err := aggregateAttestations(atts, keys, coverage)
+	if err != nil || idx != 0 {
+		return nil, errors.Wrap(err, "could not aggregate attestations")
+	}
+	return atts[0], nil
+}
+
 // AggregatePair aggregates pair of attestations a1 and a2 together.
 func AggregatePair(a1, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 	o, err := a1.AggregationBits.Overlaps(a2.AggregationBits)

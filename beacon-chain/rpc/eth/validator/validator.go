@@ -744,6 +744,7 @@ func (vs *Server) PrepareBeaconProposer(
 	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
 	}
+
 	log.WithFields(log.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")

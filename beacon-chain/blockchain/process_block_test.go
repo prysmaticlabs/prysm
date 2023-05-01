@@ -981,7 +981,7 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
 	}
 	// Insert 3 deposits before hand.
-	depositCache.InsertFinalizedDeposits(ctx, 2)
+	require.NoError(t, depositCache.InsertFinalizedDeposits(ctx, 2))
 
 	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'}))
 	fDeposits := depositCache.FinalizedDeposits(ctx)

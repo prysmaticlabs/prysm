@@ -370,7 +370,9 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 		// to be included (rather than the last one to be processed). This was most likely
 		// done as the state cannot represent signed integers.
 		actualIndex := int64(currIndex) - 1 // lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
-		s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex)
+		if err = s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex); err != nil {
+			return err
+		}
 
 		// Deposit proofs are only used during state transition and can be safely removed to save space.
 		if err = s.cfg.depositCache.PruneProofs(ctx, actualIndex); err != nil {

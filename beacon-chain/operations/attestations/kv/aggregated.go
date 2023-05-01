@@ -59,24 +59,20 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 	// Track the unaggregated attestations that aren't able to aggregate.
 	leftOverUnaggregatedAtt := make(map[[32]byte]bool)
 	for _, atts := range attsByDataRoot {
-		aggregatedAtts := make([]*ethpb.Attestation, 0, len(atts))
-		processedAtts, err := attaggregation.Aggregate(atts)
-		if err != nil {
-			return err
+		aggregated, err := attaggregation.AggregateDisjointOneBitAtts(atts)
+		if err != nil || aggregated == nil {
+			return errors.Wrap(err, "could not aggregate unnagregated attestations")
 		}
-		for _, att := range processedAtts {
-			if helpers.IsAggregated(att) {
-				aggregatedAtts = append(aggregatedAtts, att)
-			} else {
-				h, err := hashFn(att)
-				if err != nil {
-					return err
-				}
-				leftOverUnaggregatedAtt[h] = true
+		if helpers.IsAggregated(aggregated) {
+			if err := c.SaveAggregatedAttestations([]*ethpb.Attestation{aggregated}); err != nil {
+				return err
 			}
-		}
-		if err := c.SaveAggregatedAttestations(aggregatedAtts); err != nil {
-			return err
+		} else {
+			h, err := hashFn(aggregated)
+			if err != nil {
+				return err
+			}
+			leftOverUnaggregatedAtt[h] = true
 		}
 	}
 
