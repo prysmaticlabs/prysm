@@ -116,7 +116,7 @@ func TestBlobByRangeOK(t *testing.T) {
 			total: func() *int { x := 0; return &x }(),
 		},
 		{
-			name:    "request before window, empty response",
+			name:    "10 blocks * 4 blobs = 40",
 			nblocks: 10,
 			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
@@ -126,8 +126,9 @@ func TestBlobByRangeOK(t *testing.T) {
 			},
 			total: func() *int { x := int(params.BeaconConfig().MaxBlobsPerBlock * 10); return &x }(), // 10 blocks * 4 blobs = 40
 		},
+
 		{
-			name:    "request before window, empty response",
+			name:    "when request count > MAX_REQUEST_BLOCKS_DENEB, MAX_REQUEST_BLOBS_SIDECARS sidecars in response",
 			nblocks: int(params.BeaconNetworkConfig().MaxRequestBlocksDeneb) + 10,
 			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
