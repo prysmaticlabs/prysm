@@ -67,6 +67,8 @@ type Flags struct {
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 
+	BuildBlockParallel bool // BuildBlockParallel builds beacon block for proposer in parallel.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -211,6 +213,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true
+	}
+	if ctx.IsSet(buildBlockParallel.Name) {
+		logEnabled(buildBlockParallel)
+		cfg.BuildBlockParallel = true
 	}
 	Init(cfg)
 	return nil
