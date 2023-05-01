@@ -21,8 +21,8 @@ var prepareForkChoiceAttsPeriod = slots.DivideSlotBy(3 /* times-per-slot */)
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
-	ticker1 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 5*time.Second, params.BeaconConfig().SecondsPerSlot)
-	ticker2 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 9*time.Second, params.BeaconConfig().SecondsPerSlot)
+	ticker1 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 7*time.Second, params.BeaconConfig().SecondsPerSlot)
+	ticker2 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 10*time.Second, params.BeaconConfig().SecondsPerSlot)
 	ticker3 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 11*time.Second, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
