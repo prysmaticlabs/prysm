@@ -19,13 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	// Error when event feed data is not statefeed.SyncedData.
-	errNotSyncedData = errors.New("event feed data is not of type *statefeed.SyncedData")
-
-	// Error when the context is closed while waiting for sync.
-	errContextClosedWhileWaiting = errors.New("context closed while waiting for beacon to sync to latest Head")
-)
+// Error when the context is closed while waiting for sync.
+var errContextClosedWhileWaiting = errors.New("context closed while waiting for beacon to sync to latest Head")
 
 // ValidatorLatestPerformance keeps track of the latest participation of the validator
 type ValidatorLatestPerformance struct {
