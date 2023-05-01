@@ -69,7 +69,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		FinalizationFetcher:    &blockchainTest.ChainService{},
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
-		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true},
+		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true, Cfg: &builderTest.Config{BeaconDB: beaconDB}},
 	}
 
 	t.Run("No builder configured. Use local block", func(t *testing.T) {
@@ -84,7 +84,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(time.Now().Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
 		ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
@@ -119,6 +119,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			BidCapella:    sBid,
 			HasConfigured: true,
+			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
 		}
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 		require.NoError(t, err)
@@ -136,7 +137,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(time.Now().Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
 		ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
@@ -174,6 +175,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			BidCapella:    sBid,
 			HasConfigured: true,
+			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
 		}
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
@@ -219,6 +221,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			ErrGetHeader:  errors.New("fault"),
 			HasConfigured: true,
+			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
 		}
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: 0}
 		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
@@ -227,7 +230,6 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.Equal(t, uint64(4), e.BlockNumber()) // Local block
 	})
 }
-
 func TestServer_getPayloadHeader(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bc := params.BeaconConfig()

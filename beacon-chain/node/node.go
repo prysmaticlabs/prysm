@@ -249,7 +249,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering builder service")
-	if err := beacon.registerBuilderService(); err != nil {
+	if err := beacon.registerBuilderService(cliCtx); err != nil {
 		return nil, err
 	}
 
@@ -961,7 +961,7 @@ func (b *BeaconNode) registerValidatorMonitorService() error {
 	return b.services.RegisterService(svc)
 }
 
-func (b *BeaconNode) registerBuilderService() error {
+func (b *BeaconNode) registerBuilderService(cliCtx *cli.Context) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -970,6 +970,9 @@ func (b *BeaconNode) registerBuilderService() error {
 	opts := append(b.serviceFlagOpts.builderOpts,
 		builder.WithHeadFetcher(chainService),
 		builder.WithDatabase(b.db))
+	if cliCtx.Bool(flags.EnableRegistrationCache.Name) {
+		opts = append(opts, builder.WithRegistrationCache())
+	}
 	svc, err := builder.NewService(b.ctx, opts...)
 	if err != nil {
 		return err

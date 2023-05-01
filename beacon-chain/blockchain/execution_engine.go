@@ -70,7 +70,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
+	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot, arg.headRoot[:])
 
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
@@ -251,7 +251,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
-func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot) (bool, payloadattribute.Attributer, primitives.ValidatorIndex) {
+func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot, headRoot []byte) (bool, payloadattribute.Attributer, primitives.ValidatorIndex) {
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
@@ -261,10 +261,13 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 
 	// Get previous randao.
 	st = st.Copy()
-	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
-	if err != nil {
-		log.WithError(err).Error("Could not process slots to get payload attribute")
-		return false, emptyAttri, 0
+	if slot > st.Slot() {
+		var err error
+		st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot, slot)
+		if err != nil {
+			log.WithError(err).Error("Could not process slots to get payload attribute")
+			return false, emptyAttri, 0
+		}
 	}
 	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
