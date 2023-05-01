@@ -69,3 +69,8 @@ func (c *FakeCommitteeCache) MarkInProgress(seed [32]byte) error {
 func (c *FakeCommitteeCache) MarkNotInProgress(seed [32]byte) error {
 	return nil
 }
+
+// Clear is a stub.
+func (c *FakeCommitteeCache) Clear() {
+	return
+}

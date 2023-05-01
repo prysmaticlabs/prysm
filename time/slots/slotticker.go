@@ -74,7 +74,6 @@ func (s *SlotTicker) start(
 	secondsPerSlot uint64,
 	since, until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
-
 	d := time.Duration(secondsPerSlot) * time.Second
 
 	go func() {

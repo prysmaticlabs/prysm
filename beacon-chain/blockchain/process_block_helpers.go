@@ -64,7 +64,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 	parentRoot := b.ParentRoot()
 	// Loosen the check to HasBlock because state summary gets saved in batches
 	// during initial syncing. There's no risk given a state summary object is just a
-	// a subset of the block object.
+	// subset of the block object.
 	if !s.cfg.BeaconDB.HasStateSummary(ctx, parentRoot) && !s.cfg.BeaconDB.HasBlock(ctx, parentRoot) {
 		return errors.New("could not reconstruct parent state")
 	}
@@ -230,7 +230,9 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	// to be included(rather than the last one to be processed). This was most likely
 	// done as the state cannot represent signed integers.
 	eth1DepositIndex -= 1
-	s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(eth1DepositIndex))
+	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(eth1DepositIndex)); err != nil {
+		return err
+	}
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
 	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
 		return errors.Wrap(err, "could not prune deposit proofs")

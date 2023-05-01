@@ -230,7 +230,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 						"to use for your validator data",
 				)
 			}
-
 		}
 		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
@@ -314,7 +313,6 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 						"to use for your validator data",
 				)
 			}
-
 		}
 		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
@@ -376,7 +374,6 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
-
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -529,6 +526,9 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 
 	// nothing is set, so just return nil
 	if fileConfig == nil {
+		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+			return nil, fmt.Errorf("%s flag can only be used when a default fee recipient is present on the validator client", flags.EnableBuilderFlag.Name)
+		}
 		return nil, nil
 	}
 	// convert file config to proposer config for internal use
@@ -541,6 +541,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
+
 	if err := warnNonChecksummedAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
 		return nil, err
 	}
@@ -596,7 +597,6 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 				},
 				BuilderConfig: option.BuilderConfig,
 			}
-
 		}
 	}
 

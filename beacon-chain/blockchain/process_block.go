@@ -142,6 +142,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			return err
 		}
 	}
+
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
 		return err
 	}
@@ -208,12 +209,24 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			"headRoot":       fmt.Sprintf("%#x", headRoot),
 			"headWeight":     headWeight,
 		}).Debug("Head block is not the received block")
+	} else {
+		// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Debug("could not update next slot state cache")
+			}
+		}()
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	// verify conditions for FCU, notifies FCU, and saves the new head.
 	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
-	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
+	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
 	}
 
@@ -227,18 +240,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			Verified:    true,
 		},
 	})
-
-	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	go func() {
-		// Use a custom deadline here, since this method runs asynchronously.
-		// We ignore the parent method's context and instead create a new one
-		// with a custom deadline, therefore using the background context instead.
-		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-		defer cancel()
-		if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-			log.WithError(err).Debug("could not update next slot state cache")
-		}
-	}()
 
 	// Save justified check point to db.
 	postStateJustifiedEpoch := postState.CurrentJustifiedCheckpoint().Epoch
@@ -283,7 +284,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()
-
 	}
 	defer reportAttestationInclusion(b)
 	if err := s.handleEpochBoundary(ctx, postState); err != nil {
