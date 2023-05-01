@@ -31,9 +31,24 @@ var (
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
+	if s.genesisTime == 0 {
+		log.Warn("Waiting for genesis time to be received")
+		for s.genesisTime == 0 {
+			if err := s.ctx.Err(); err != nil {
+				log.WithError(err).Error("Giving up waiting for genesis time")
+				return
+			}
+			time.Sleep(1 * time.Second)
+		}
+		log.Warn("Genesis time received, now available to process attestations")
+	}
+
 	ticker1 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 7*time.Second, params.BeaconConfig().SecondsPerSlot)
 	ticker2 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 10*time.Second, params.BeaconConfig().SecondsPerSlot)
 	ticker3 := slots.NewSlotTickerWithOffset(time.Unix(int64(s.genesisTime), 0), 11*time.Second, params.BeaconConfig().SecondsPerSlot)
+
+	count := uint64(0)
+	total := uint64(0)
 	for {
 		select {
 		case <-ticker1.C():
@@ -41,7 +56,14 @@ func (s *Service) prepareForkChoiceAtts() {
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
-			batchForkchoiceAttsTime.Set(float64(time.Since(t).Milliseconds()))
+			ms := time.Since(t).Milliseconds()
+			batchForkchoiceAttsTime.Set(float64(ms))
+
+			count++
+			total += uint64(ms)
+
+			log.Info("Average time to batch attestations for fork choice: ", total/count, " tries: ", count)
+
 		case <-ticker2.C():
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
@@ -69,8 +91,6 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Aggregated unaggregated attestations in ", time.Since(start))
-
 	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
 	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
 
@@ -95,8 +115,6 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 	}
 
-	log.Info("Consolidated attestations in ", time.Since(start))
-
 	count := 0
 	for _, atts := range attsByDataRoot {
 		count += len(atts)
@@ -105,8 +123,6 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		}
 	}
 	batchedForkchoiceAttsCount.Set(float64(count))
-
-	log.Info("Batched attestations in ", time.Since(start))
 
 	for _, a := range s.cfg.Pool.BlockAttestations() {
 		if err := s.cfg.Pool.DeleteBlockAttestation(a); err != nil {
