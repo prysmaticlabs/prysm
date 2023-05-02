@@ -15,7 +15,7 @@ type attList []*ethpb.Attestation
 // significantly more expensive than the inner logic of AggregateAttestations so they must be
 // substituted for benchmarks which analyze AggregateAttestations.
 var aggregateSignatures = bls.AggregateSignatures
-var signatureFromBytes = bls.SignatureFromBytes
+var signatureFromBytes = bls.SignatureFromBytesNoValidation
 
 var _ = logrus.WithField("prefix", "aggregation.attestations")
 
