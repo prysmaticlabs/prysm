@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -256,9 +255,6 @@ func (s *Service) waitForChainStart() {
 }
 
 func (s *Service) registerHandlers() {
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
 	s.waitForChainStart()
 	select {
 	case <-s.initialSyncComplete:
