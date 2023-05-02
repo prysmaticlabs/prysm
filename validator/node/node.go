@@ -50,6 +50,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/v4/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
@@ -406,7 +407,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return err
 	}
 
-	bpc, err := proposerSettings(c.cliCtx)
+	bpc, err := proposerSettings(c.cliCtx, c.db)
 	if err != nil {
 		return err
 	}
@@ -488,7 +489,7 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 	return web3signerConfig, nil
 }
 
-func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSettings, error) {
+func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServiceConfig.ProposerSettings, error) {
 	var fileConfig *validatorServiceConfig.ProposerSettingsPayload
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
@@ -541,7 +542,10 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
-
+	psExists, err := db.ProposerSettingsExists(cliCtx.Context)
+	if err != nil {
+		return nil, err
+	}
 	if err := warnNonChecksummedAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
 		return nil, err
 	}
@@ -561,6 +565,12 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 
 	if vpSettings.DefaultConfig.BuilderConfig != nil {
 		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
+	}
+
+	if psExists {
+		if err := db.UpdateProposerSettingsDefault(cliCtx.Context, vpSettings.DefaultConfig); err != nil {
+			return nil, err
+		}
 	}
 
 	if fileConfig.ProposerConfig != nil {
@@ -591,15 +601,26 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 				}
 				option.BuilderConfig = builderConfig
 			}
-			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
+			o := &validatorServiceConfig.ProposerOption{
 				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
 					FeeRecipient: common.HexToAddress(option.FeeRecipient),
 				},
 				BuilderConfig: option.BuilderConfig,
 			}
+			pubkeyB := bytesutil.ToBytes48(decodedKey)
+			if psExists {
+				if err := db.UpdateProposerSettingsForPubkey(cliCtx.Context, pubkeyB, o); err != nil {
+					return nil, err
+				}
+			}
+			vpSettings.ProposeConfig[pubkeyB] = o
 		}
 	}
-
+	if !psExists {
+		if err := db.SaveProposerSettings(cliCtx.Context, vpSettings); err != nil {
+			return nil, err
+		}
+	}
 	return vpSettings, nil
 }
 

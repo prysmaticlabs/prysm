@@ -53,6 +53,13 @@ func run(ctx context.Context, v iface.Validator) {
 		log.WithError(err).Fatal("Could not get keymanager")
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
+	// checks db if proposer settings exist if none is provided.
+	if v.ProposerSettings() == nil {
+
+		// check if existing db exists and set proposer settings from that
+		// attempt to migrate persistent fee recipient data from beacon node
+	}
+	// check if proposer settings is still nil
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if v.ProposerSettings() != nil {
 		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
