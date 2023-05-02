@@ -23,7 +23,6 @@ func (c *AttCaches) AggregateUnaggregatedAttestations(ctx context.Context) error
 	if err != nil {
 		return err
 	}
-	log.Info("Aggregating unaggregated attestations ", len(unaggregatedAtts))
 	return c.aggregateUnaggregatedAttestations(ctx, unaggregatedAtts)
 }
 
