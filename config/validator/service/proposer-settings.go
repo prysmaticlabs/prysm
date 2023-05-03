@@ -77,3 +77,39 @@ type ProposerOption struct {
 	FeeRecipientConfig *FeeRecipientConfig
 	BuilderConfig      *BuilderConfig
 }
+
+// Clone creates a deep copy of the proposer settings
+func (ps *ProposerSettings) Clone() *ProposerSettings {
+	clone := &ProposerSettings{
+		ProposeConfig: make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption),
+		DefaultConfig: ps.DefaultConfig.Clone(),
+	}
+	for k, v := range ps.ProposeConfig {
+		keyCopy := k
+		valCopy := v.Clone()
+		clone.ProposeConfig[keyCopy] = valCopy
+	}
+	return clone
+}
+
+// Clone creates a deep copy of fee recipient config
+func (fo *FeeRecipientConfig) Clone() *FeeRecipientConfig {
+	return &FeeRecipientConfig{fo.FeeRecipient}
+}
+
+// Clone creates a deep copy of builder config
+func (bc *BuilderConfig) Clone() *BuilderConfig {
+	relays := make([]string, len(bc.Relays))
+	for i, s := range bc.Relays {
+		relays[i] = s
+	}
+	return &BuilderConfig{bc.Enabled, bc.GasLimit, relays}
+}
+
+// Clone creates a deep copy of proposer option
+func (po *ProposerOption) Clone() *ProposerOption {
+	return &ProposerOption{
+		FeeRecipientConfig: po.FeeRecipientConfig.Clone(),
+		BuilderConfig:      po.BuilderConfig.Clone(),
+	}
+}
