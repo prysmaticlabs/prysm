@@ -555,8 +555,11 @@ func (s *Service) ReconstructFullBlock(
 	// If the payload header has a block hash of 0x0, it means we are pre-merge and should
 	// simply return the block with an empty execution payload.
 	if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
-		payload := buildEmptyExecutionPayload()
-		return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+		payload, err := buildEmptyExecutionPayloadForBlock(blindedBlock)
+		if err != nil {
+			return nil, err
+		}
+		return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload.Proto())
 	}
 
 	executionBlockHash := common.BytesToHash(header.BlockHash())
@@ -649,8 +652,12 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	// For blocks that are pre-merge we simply reconstruct them via an empty
 	// execution payload.
 	for _, realIdx := range zeroExecPayloads {
-		payload := buildEmptyExecutionPayload()
-		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload)
+		b := blindedBlocks[realIdx]
+		payload, err := buildEmptyExecutionPayloadForBlock(b)
+		if err != nil {
+			return nil, err
+		}
+		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(b, payload.Proto())
 		if err != nil {
 			return nil, err
 		}
@@ -806,18 +813,39 @@ func tDStringToUint256(td string) (*uint256.Int, error) {
 	return i, nil
 }
 
-func buildEmptyExecutionPayload() *pb.ExecutionPayload {
-	return &pb.ExecutionPayload{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		ExtraData:     make([]byte, 0),
+var errEmptyPayloadUnknownBlock = errors.New("cannot build empty payload for block version")
+
+func buildEmptyExecutionPayloadForBlock(b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error) {
+	switch b.Version() {
+	case version.Bellatrix:
+		return blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
+		})
+	case version.Capella:
+		return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
+		}, 0)
+	default:
+		return nil, errors.Wrapf(errEmptyPayloadUnknownBlock, "block version=%s", version.String(b.Version()))
 	}
 }
 

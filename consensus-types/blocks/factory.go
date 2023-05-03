@@ -23,8 +23,9 @@ var (
 	// ErrNilObject is returned in a constructor when the underlying object is nil.
 	ErrNilObject = errors.New("received nil object")
 	// ErrNilSignedBeaconBlock is returned when a nil signed beacon block is received.
-	ErrNilSignedBeaconBlock        = errors.New("signed beacon block can't be nil")
-	errNonBlindedSignedBeaconBlock = errors.New("can only build signed beacon block from blinded format")
+	ErrNilSignedBeaconBlock            = errors.New("signed beacon block can't be nil")
+	errNonBlindedSignedBeaconBlock     = errors.New("can only build signed beacon block from blinded format")
+	errIncompatibleExecPayloadForBlock = errors.New("ExecutionPayload is not compatible with given SignedBeaconBlock")
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
@@ -191,8 +192,14 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	var wrapErr error
 	switch p := payload.(type) {
 	case *enginev1.ExecutionPayload:
+		if blk.Version() != version.Bellatrix {
+			return nil, errors.Wrapf(errIncompatibleExecPayloadForBlock, "block=%s, payload=bellatrix", version.String(blk.Version()))
+		}
 		wrappedPayload, wrapErr = WrappedExecutionPayload(p)
 	case *enginev1.ExecutionPayloadCapella:
+		if blk.Version() != version.Capella {
+			return nil, errors.Wrapf(errIncompatibleExecPayloadForBlock, "block=%s, payload=capella", version.String(blk.Version()))
+		}
 		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p, 0)
 	default:
 		return nil, fmt.Errorf("%T is not a type of execution payload", p)
