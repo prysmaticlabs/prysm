@@ -24,15 +24,19 @@ func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fie
 		if len(b) != 0 {
 			return fmt.Errorf("no proposer settings found in bucket")
 		}
-		to := &validatorServiceConfig.ProposerSettings{}
+		to := &validatorServiceConfig.ProposerSettingsPayload{}
 		if err := json.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
-		if to.ProposeConfig == nil {
-			to.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
+		settings, err := to.ToSettings()
+		if err != nil {
+			return errors.Wrap(err, "failed to convert payload to proposer settings")
 		}
-		to.ProposeConfig[pubkey] = options
-		m, err := json.Marshal(to)
+		if settings.ProposeConfig == nil {
+			settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
+		}
+		settings.ProposeConfig[pubkey] = options
+		m, err := json.Marshal(settings.ToPayload())
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal proposer settings")
 		}
@@ -57,12 +61,16 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *vali
 		if len(b) != 0 {
 			return NoProposerSettingsFound
 		}
-		to := &validatorServiceConfig.ProposerSettings{}
+		to := &validatorServiceConfig.ProposerSettingsPayload{}
 		if err := json.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
-		to.DefaultConfig = options
-		m, err := json.Marshal(to)
+		settings, err := to.ToSettings()
+		if err != nil {
+			return errors.Wrap(err, "failed to convert payload to proposer settings")
+		}
+		settings.DefaultConfig = options
+		m, err := json.Marshal(settings.ToPayload())
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal proposer settings")
 		}
@@ -75,8 +83,8 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *vali
 func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.ProposerSettings, error) {
 	_, span := trace.StartSpan(ctx, "validator.db.ProposerSettings")
 	defer span.End()
-	to := &validatorServiceConfig.ProposerSettings{}
-	err := s.db.View(func(tx *bolt.Tx) error {
+	to := &validatorServiceConfig.ProposerSettingsPayload{}
+	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
 		b := bkt.Get(proposerSettingsKey)
 		if len(b) != 0 {
@@ -86,8 +94,10 @@ func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.P
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
 		return nil
-	})
-	return to, err
+	}); err != nil {
+		return nil, err
+	}
+	return to.ToSettings()
 }
 
 // ProposerSettingsExists returns true or false if the settings exist or not
@@ -111,7 +121,7 @@ func (s *Store) SaveProposerSettings(ctx context.Context, settings *validatorSer
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
-		m, err := json.Marshal(settings)
+		m, err := json.Marshal(settings.ToPayload())
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal proposer settings")
 		}

@@ -4,7 +4,10 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 // ProposerSettingsPayload is the struct representation of the JSON or YAML payload set in the validator through the CLI.
@@ -13,6 +16,36 @@ import (
 type ProposerSettingsPayload struct {
 	ProposerConfig map[string]*ProposerOptionPayload `json:"proposer_config" yaml:"proposer_config"`
 	DefaultConfig  *ProposerOptionPayload            `json:"default_config" yaml:"default_config"`
+}
+
+// ToSettings converts struct to ProposerSettings
+func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
+	if ps.DefaultConfig == nil || ps.DefaultConfig.FeeRecipient == "" {
+		return nil, errors.New("payload default config is missing or default fee recipient is missing")
+	}
+	settings := &ProposerSettings{}
+	if ps.ProposerConfig != nil {
+		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
+		for key, optionPayload := range ps.ProposerConfig {
+			b, err := hexutil.Decode(key)
+			if err != nil {
+				return nil, err
+			}
+			settings.ProposeConfig[bytesutil.ToBytes48(b)] = &ProposerOption{
+				FeeRecipientConfig: &FeeRecipientConfig{
+					FeeRecipient: common.HexToAddress(optionPayload.FeeRecipient),
+				},
+				BuilderConfig: optionPayload.BuilderConfig.Clone(),
+			}
+		}
+	}
+	settings.DefaultConfig = &ProposerOption{
+		FeeRecipientConfig: &FeeRecipientConfig{
+			FeeRecipient: common.HexToAddress(ps.DefaultConfig.FeeRecipient),
+		},
+		BuilderConfig: ps.DefaultConfig.BuilderConfig.Clone(),
+	}
+	return settings, nil
 }
 
 // ProposerOptionPayload is the struct representation of the JSON config file set in the validator through the CLI.
@@ -67,19 +100,39 @@ func (u *Uint64) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
 // ProposerSettingsPayload maps to ProposerSettings on import through the CLI.
 type ProposerSettings struct {
-	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption `json:"proposer_config"`
-	DefaultConfig *ProposerOption                                       `json:"default_config"`
+	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption
+	DefaultConfig *ProposerOption
+}
+
+// ToPayload converts struct to ProposerSettingsPayload
+func (ps *ProposerSettings) ToPayload() *ProposerSettingsPayload {
+	payload := &ProposerSettingsPayload{
+		ProposerConfig: make(map[string]*ProposerOptionPayload),
+	}
+	for key, option := range ps.ProposeConfig {
+		payload.ProposerConfig[hexutil.Encode(key[:])] = &ProposerOptionPayload{
+			FeeRecipient:  option.FeeRecipientConfig.FeeRecipient.Hex(),
+			BuilderConfig: option.BuilderConfig.Clone(),
+		}
+	}
+	if ps.DefaultConfig != nil {
+		payload.DefaultConfig = &ProposerOptionPayload{
+			FeeRecipient:  ps.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex(),
+			BuilderConfig: ps.DefaultConfig.BuilderConfig.Clone(),
+		}
+	}
+	return payload
 }
 
 // FeeRecipientConfig is a prysm internal representation to see if the fee recipient was set.
 type FeeRecipientConfig struct {
-	FeeRecipient common.Address `json:"fee_recipient"`
+	FeeRecipient common.Address
 }
 
 // ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
 type ProposerOption struct {
-	FeeRecipientConfig *FeeRecipientConfig `json:"fee_recipient_config"`
-	BuilderConfig      *BuilderConfig      `json:"builder_config"`
+	FeeRecipientConfig *FeeRecipientConfig
+	BuilderConfig      *BuilderConfig
 }
 
 // Clone creates a deep copy of the proposer settings
