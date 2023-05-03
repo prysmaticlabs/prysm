@@ -19,13 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	// Error when event feed data is not statefeed.SyncedData.
-	errNotSyncedData = errors.New("event feed data is not of type *statefeed.SyncedData")
-
-	// Error when the context is closed while waiting for sync.
-	errContextClosedWhileWaiting = errors.New("context closed while waiting for beacon to sync to latest Head")
-)
+// Error when the context is closed while waiting for sync.
+var errContextClosedWhileWaiting = errors.New("context closed while waiting for beacon to sync to latest Head")
 
 // ValidatorLatestPerformance keeps track of the latest participation of the validator
 type ValidatorLatestPerformance struct {
@@ -63,6 +58,7 @@ type ValidatorMonitorConfig struct {
 	AttestationNotifier operation.Notifier
 	HeadFetcher         blockchain.HeadFetcher
 	StateGen            stategen.StateManager
+	InitialSyncComplete chan struct{}
 }
 
 // Service is the main structure that tracks validators and reports logs and
@@ -131,7 +127,7 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 		return
 	}
 
-	if err := s.waitForSync(stateChannel, stateSub); err != nil {
+	if err := s.waitForSync(s.config.InitialSyncComplete); err != nil {
 		log.WithError(err)
 		return
 	}
@@ -197,24 +193,13 @@ func (s *Service) Stop() error {
 }
 
 // waitForSync waits until the beacon node is synced to the latest head.
-func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subscription) error {
-	for {
-		select {
-		case e := <-stateChannel:
-			if e.Type == statefeed.Synced {
-				_, ok := e.Data.(*statefeed.SyncedData)
-				if !ok {
-					return errNotSyncedData
-				}
-				return nil
-			}
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return errContextClosedWhileWaiting
-		case err := <-stateSub.Err():
-			log.WithError(err).Error("Could not subscribe to state notifier")
-			return err
-		}
+func (s *Service) waitForSync(syncChan chan struct{}) error {
+	select {
+	case <-syncChan:
+		return nil
+	case <-s.ctx.Done():
+		log.Debug("Context closed, exiting goroutine")
+		return errContextClosedWhileWaiting
 	}
 }
 

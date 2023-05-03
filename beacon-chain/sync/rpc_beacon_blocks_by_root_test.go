@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -50,7 +51,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 
-	r := &Service{cfg: &config{p2p: p1, beaconDB: d}, rateLimiter: newRateLimiter(p1)}
+	r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: startup.NewClock(time.Unix(0, 0), [32]byte{})}, rateLimiter: newRateLimiter(p1)}
 	r.cfg.chain = &mock.ChainService{ValidatorsRoot: [32]byte{}}
 	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
 	topic := string(pcl)
@@ -148,8 +149,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 		p2p:                           p1,
 		beaconDB:                      d,
 		executionPayloadReconstructor: mockEngine,
+		chain:                         &mock.ChainService{ValidatorsRoot: [32]byte{}},
+		clock:                         startup.NewClock(time.Unix(0, 0), [32]byte{}),
 	}, rateLimiter: newRateLimiter(p1)}
-	r.cfg.chain = &mock.ChainService{ValidatorsRoot: [32]byte{}}
 	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
@@ -204,16 +206,18 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 
 	expectedRoots := p2pTypes.BeaconBlockByRootsReq{blockBRoot, blockARoot}
 
+	chain := &mock.ChainService{
+		State:               genesisState,
+		FinalizedCheckPoint: finalizedCheckpt,
+		Root:                blockARoot[:],
+		Genesis:             time.Now(),
+		ValidatorsRoot:      [32]byte{},
+	}
 	r := &Service{
 		cfg: &config{
-			p2p: p1,
-			chain: &mock.ChainService{
-				State:               genesisState,
-				FinalizedCheckPoint: finalizedCheckpt,
-				Root:                blockARoot[:],
-				Genesis:             time.Now(),
-				ValidatorsRoot:      [32]byte{},
-			},
+			p2p:   p1,
+			chain: chain,
+			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),

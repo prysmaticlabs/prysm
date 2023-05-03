@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
@@ -97,11 +98,13 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
+	chain := &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
 			beaconDB: d,
 			p2p:      p1,
-			chain:    &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -112,11 +115,13 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.Peers().Add(new(enr.Record), p1.BHost.ID(), p1.BHost.Addrs()[0], network.DirUnknown)
 	p2.Peers().SetMetadata(p1.BHost.ID(), p1.LocalMetadata)
 
+	chain2 := &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()}
 	r2 := &Service{
 		cfg: &config{
 			beaconDB: d,
 			p2p:      p2,
-			chain:    &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
+			chain:    chain2,
+			clock:    startup.NewClock(chain2.Genesis, chain.ValidatorsRoot),
 		},
 		rateLimiter: newRateLimiter(p2),
 	}

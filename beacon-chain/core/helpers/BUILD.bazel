@@ -48,6 +48,7 @@ go_test(
         "attestation_test.go",
         "beacon_committee_test.go",
         "block_test.go",
+        "main_test.go",
         "randao_test.go",
         "rewards_penalties_test.go",
         "shuffle_test.go",

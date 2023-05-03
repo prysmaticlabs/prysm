@@ -6,9 +6,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -21,19 +18,10 @@ import (
 )
 
 func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
+	service, tr := minimalTestService(t)
+	ctx, beaconDB := tr.ctx, tr.db
 
-	fc := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(fc),
-		WithStateGen(stategen.New(beaconDB, fc)),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	_, err = blockTree1(t, beaconDB, []byte{'g'})
+	_, err := blockTree1(t, beaconDB, []byte{'g'})
 	require.NoError(t, err)
 
 	blkWithoutState := util.NewBeaconBlock()
@@ -128,17 +116,9 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 }
 
 func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-		WithForkChoiceStore(fcs),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	service.SetGenesisTime(time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
@@ -158,15 +138,8 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 }
 
 func TestStore_SaveCheckpointState(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -220,15 +193,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 }
 
 func TestStore_UpdateCheckpointState(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
 	epoch := primitives.Epoch(1)
 	baseState, _ := util.DeterministicGenesisState(t, 1)
