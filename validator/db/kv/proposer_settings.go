@@ -9,12 +9,15 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 var NoProposerSettingsFound = errors.New("no proposer settings found in bucket")
 
 // UpdateProposerSettingsForPubkey updates the existing settings for an internal representation of the proposers settings file at a particular public key
-func (s *Store) UpdateProposerSettingsForPubkey(_ context.Context, pubkey [fieldparams.BLSPubkeyLength]byte, options *validatorServiceConfig.ProposerOption) error {
+func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte, options *validatorServiceConfig.ProposerOption) error {
+	_, span := trace.StartSpan(ctx, "validator.db.UpdateProposerSettingsDefault")
+	defer span.End()
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
 		b := bkt.Get(proposerSettingsKey)
@@ -39,7 +42,9 @@ func (s *Store) UpdateProposerSettingsForPubkey(_ context.Context, pubkey [field
 }
 
 // UpdateProposerSettingsDefault updates the existing default settings for proposer settings
-func (s *Store) UpdateProposerSettingsDefault(_ context.Context, options *validatorServiceConfig.ProposerOption) error {
+func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *validatorServiceConfig.ProposerOption) error {
+	_, span := trace.StartSpan(ctx, "validator.db.UpdateProposerSettingsDefault")
+	defer span.End()
 	if options == nil {
 		return errors.New("proposer settings option was empty")
 	}
@@ -68,6 +73,8 @@ func (s *Store) UpdateProposerSettingsDefault(_ context.Context, options *valida
 
 // ProposerSettings gets the current proposer settings
 func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.ProposerSettings, error) {
+	_, span := trace.StartSpan(ctx, "validator.db.ProposerSettings")
+	defer span.End()
 	to := &validatorServiceConfig.ProposerSettings{}
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
@@ -83,7 +90,7 @@ func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.P
 	return to, err
 }
 
-// ProposerSettingsExists
+// ProposerSettingsExists returns true or false if the settings exist or not
 func (s *Store) ProposerSettingsExists(ctx context.Context) (bool, error) {
 	ps, err := s.ProposerSettings(ctx)
 	if err != nil {
@@ -100,6 +107,8 @@ func (s *Store) ProposerSettingsExists(ctx context.Context) (bool, error) {
 
 // SaveProposerSettings saves the entire proposer setting overriding the existing settings
 func (s *Store) SaveProposerSettings(ctx context.Context, settings *validatorServiceConfig.ProposerSettings) error {
+	_, span := trace.StartSpan(ctx, "validator.db.SaveProposerSettings")
+	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
 		m, err := json.Marshal(settings)

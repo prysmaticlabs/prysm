@@ -30,8 +30,10 @@ type BuilderConfig struct {
 	Relays   []string `json:"relays" yaml:"relays"`
 }
 
+// Uint64 custom uint64 to be unmarshallable
 type Uint64 uint64
 
+// UnmarshalJSON custom unmarshal function for json
 func (u *Uint64) UnmarshalJSON(bs []byte) error {
 	str := string(bs) // Parse plain numbers directly.
 	if bs[0] == '"' && bs[len(bs)-1] == '"' {
@@ -46,6 +48,7 @@ func (u *Uint64) UnmarshalJSON(bs []byte) error {
 	return nil
 }
 
+// UnmarshalYAML custom unmarshal function for yaml
 func (u *Uint64) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var str string
 	err := unmarshal(&str)
@@ -68,6 +71,7 @@ type ProposerSettings struct {
 	DefaultConfig *ProposerOption                                       `json:"default_config"`
 }
 
+// FeeRecipientConfig is a prysm internal representation to see if the fee recipient was set.
 type FeeRecipientConfig struct {
 	FeeRecipient common.Address `json:"fee_recipient"`
 }
