@@ -1,14 +1,11 @@
 package blocks
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 var (
@@ -28,12 +25,8 @@ const (
 )
 
 var (
-	// ErrUnsupportedGetter is returned when a getter access is not supported for a specific beacon block version.
-	ErrUnsupportedGetter = errors.New("unsupported getter")
 	// ErrUnsupportedVersion for beacon block methods.
-	ErrUnsupportedVersion = errors.New("unsupported beacon block version")
-	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
-	ErrNilObjectWrapped      = errors.New("attempted to wrap nil object")
+	ErrUnsupportedVersion    = errors.New("unsupported beacon block version")
 	errNilBlock              = errors.New("received nil beacon block")
 	errNilBlockBody          = errors.New("received nil beacon block body")
 	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
@@ -73,8 +66,4 @@ type SignedBeaconBlock struct {
 	version   int
 	block     *BeaconBlock
 	signature [field_params.BLSSignatureLength]byte
-}
-
-func ErrNotSupported(funcName string, ver int) error {
-	return errors.Wrap(ErrUnsupportedGetter, fmt.Sprintf("%s is not supported for %s", funcName, version.String(ver)))
 }
