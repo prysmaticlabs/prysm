@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	dbtest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
@@ -998,15 +999,13 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.proposerSettings)
-			validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{})
-			require.NoError(t, err)
+			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 
 			// save a default here
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
 				ValDB:     validatorDB,
 			})
-
 			require.NoError(t, err)
 			s := &Server{
 				validatorService:          vs,
@@ -1102,12 +1101,16 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.proposerSettings)
+			validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{})
+			require.NoError(t, err)
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
+				ValDB:     validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{
 				validatorService: vs,
+				valDB:            validatorDB,
 			}
 			_, err = s.DeleteFeeRecipientByPubkey(ctx, &ethpbservice.PubkeyRequest{Pubkey: byteval})
 			require.NoError(t, err)

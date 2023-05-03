@@ -23,6 +23,9 @@ func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
 	if ps.ProposerConfig != nil {
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
 		for key, optionPayload := range ps.ProposerConfig {
+			if optionPayload.FeeRecipient == "" {
+				continue
+			}
 			b, err := hexutil.Decode(key)
 			if err != nil {
 				return nil, err
@@ -39,10 +42,11 @@ func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
 		}
 	}
 	if ps.DefaultConfig != nil {
-		d := &ProposerOption{
-			FeeRecipientConfig: &FeeRecipientConfig{
+		d := &ProposerOption{}
+		if ps.DefaultConfig.FeeRecipient != "" {
+			d.FeeRecipientConfig = &FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress(ps.DefaultConfig.FeeRecipient),
-			},
+			}
 		}
 		if ps.DefaultConfig.BuilderConfig != nil {
 			d.BuilderConfig = ps.DefaultConfig.BuilderConfig.Clone()
@@ -110,12 +114,16 @@ type ProposerSettings struct {
 
 // ToPayload converts struct to ProposerSettingsPayload
 func (ps *ProposerSettings) ToPayload() *ProposerSettingsPayload {
+	if ps == nil {
+		return nil
+	}
 	payload := &ProposerSettingsPayload{
 		ProposerConfig: make(map[string]*ProposerOptionPayload),
 	}
 	for key, option := range ps.ProposeConfig {
-		p := &ProposerOptionPayload{
-			FeeRecipient: option.FeeRecipientConfig.FeeRecipient.Hex(),
+		p := &ProposerOptionPayload{}
+		if option.FeeRecipientConfig != nil {
+			p.FeeRecipient = option.FeeRecipientConfig.FeeRecipient.Hex()
 		}
 		if option.BuilderConfig != nil {
 			p.BuilderConfig = option.BuilderConfig.Clone()
@@ -123,8 +131,9 @@ func (ps *ProposerSettings) ToPayload() *ProposerSettingsPayload {
 		payload.ProposerConfig[hexutil.Encode(key[:])] = p
 	}
 	if ps.DefaultConfig != nil {
-		p := &ProposerOptionPayload{
-			FeeRecipient: ps.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex(),
+		p := &ProposerOptionPayload{}
+		if ps.DefaultConfig.FeeRecipientConfig != nil {
+			p.FeeRecipient = ps.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex()
 		}
 		if ps.DefaultConfig.BuilderConfig != nil {
 			p.BuilderConfig = ps.DefaultConfig.BuilderConfig.Clone()
@@ -147,27 +156,38 @@ type ProposerOption struct {
 
 // Clone creates a deep copy of the proposer settings
 func (ps *ProposerSettings) Clone() *ProposerSettings {
-	clone := &ProposerSettings{
-		ProposeConfig: make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption),
+	if ps == nil {
+		return nil
 	}
+	clone := &ProposerSettings{}
 	if ps.DefaultConfig != nil {
 		clone.DefaultConfig = ps.DefaultConfig.Clone()
 	}
-	for k, v := range ps.ProposeConfig {
-		keyCopy := k
-		valCopy := v.Clone()
-		clone.ProposeConfig[keyCopy] = valCopy
+	if ps.ProposeConfig != nil {
+		clone.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
+		for k, v := range ps.ProposeConfig {
+			keyCopy := k
+			valCopy := v.Clone()
+			clone.ProposeConfig[keyCopy] = valCopy
+		}
 	}
+
 	return clone
 }
 
 // Clone creates a deep copy of fee recipient config
 func (fo *FeeRecipientConfig) Clone() *FeeRecipientConfig {
+	if fo == nil {
+		return nil
+	}
 	return &FeeRecipientConfig{fo.FeeRecipient}
 }
 
 // Clone creates a deep copy of builder config
 func (bc *BuilderConfig) Clone() *BuilderConfig {
+	if bc == nil {
+		return nil
+	}
 	relays := make([]string, len(bc.Relays))
 	copy(relays, bc.Relays)
 	return &BuilderConfig{bc.Enabled, bc.GasLimit, relays}
@@ -175,8 +195,12 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 
 // Clone creates a deep copy of proposer option
 func (po *ProposerOption) Clone() *ProposerOption {
-	p := &ProposerOption{
-		FeeRecipientConfig: po.FeeRecipientConfig.Clone(),
+	if po == nil {
+		return nil
+	}
+	p := &ProposerOption{}
+	if po.FeeRecipientConfig != nil {
+		p.FeeRecipientConfig = po.FeeRecipientConfig.Clone()
 	}
 	if po.BuilderConfig != nil {
 		p.BuilderConfig = po.BuilderConfig.Clone()
