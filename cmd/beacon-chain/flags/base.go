@@ -3,8 +3,6 @@
 package flags
 
 import (
-	"strings"
-
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/urfave/cli/v2"
@@ -94,7 +92,7 @@ var (
 	HTTPModules = &cli.StringFlag{
 		Name:  "http-modules",
 		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
-		Value: strings.Join([]string{PrysmAPIModule, EthAPIModule}, ","),
+		Value: PrysmAPIModule + `,` + EthAPIModule,
 	}
 	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
 	DisableGRPCGateway = &cli.BoolFlag{
@@ -203,6 +201,11 @@ var (
 		Name:  "eth1-header-req-limit",
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
+	}
+	// EnableRegistrationCache a temporary flag for enabling the validator registration cache instead of db.
+	EnableRegistrationCache = &cli.BoolFlag{
+		Name:  "enable-registration-cache",
+		Usage: "A temporary flag for enabling the validator registration cache instead of persisting in db. The cache will clear on restart.",
 	}
 	// WeakSubjectivityCheckpoint defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
 	WeakSubjectivityCheckpoint = &cli.StringFlag{
