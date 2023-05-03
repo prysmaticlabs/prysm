@@ -175,8 +175,11 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 
 // Clone creates a deep copy of proposer option
 func (po *ProposerOption) Clone() *ProposerOption {
-	return &ProposerOption{
+	p := &ProposerOption{
 		FeeRecipientConfig: po.FeeRecipientConfig.Clone(),
-		BuilderConfig:      po.BuilderConfig.Clone(),
 	}
+	if po.BuilderConfig != nil {
+		p.BuilderConfig = po.BuilderConfig.Clone()
+	}
+	return p
 }
