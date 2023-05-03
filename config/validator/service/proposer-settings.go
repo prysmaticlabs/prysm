@@ -64,18 +64,18 @@ func (u *Uint64) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
 // ProposerSettingsPayload maps to ProposerSettings on import through the CLI.
 type ProposerSettings struct {
-	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption
-	DefaultConfig *ProposerOption
+	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption `json:"proposer_config"`
+	DefaultConfig *ProposerOption                                       `json:"default_config"`
 }
 
 type FeeRecipientConfig struct {
-	FeeRecipient common.Address
+	FeeRecipient common.Address `json:"fee_recipient"`
 }
 
 // ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
 type ProposerOption struct {
-	FeeRecipientConfig *FeeRecipientConfig
-	BuilderConfig      *BuilderConfig
+	FeeRecipientConfig *FeeRecipientConfig `json:"fee_recipient_config"`
+	BuilderConfig      *BuilderConfig      `json:"builder_config"`
 }
 
 // Clone creates a deep copy of the proposer settings
@@ -100,9 +100,7 @@ func (fo *FeeRecipientConfig) Clone() *FeeRecipientConfig {
 // Clone creates a deep copy of builder config
 func (bc *BuilderConfig) Clone() *BuilderConfig {
 	relays := make([]string, len(bc.Relays))
-	for i, s := range bc.Relays {
-		relays[i] = s
-	}
+	copy(relays, bc.Relays)
 	return &BuilderConfig{bc.Enabled, bc.GasLimit, relays}
 }
 

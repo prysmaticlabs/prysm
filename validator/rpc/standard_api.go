@@ -434,7 +434,7 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 	if settings == nil {
 		return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "no proposer settings were found to update")
 	} else if settings.ProposeConfig == nil {
-		if settings.DefaultConfig.BuilderConfig == nil || settings.DefaultConfig.BuilderConfig.Enabled == false {
+		if settings.DefaultConfig.BuilderConfig == nil || !settings.DefaultConfig.BuilderConfig.Enabled {
 			return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "gas limit changes only apply when builder is enabled")
 		}
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
@@ -444,7 +444,7 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 	} else {
 		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
-			if proposerOption.BuilderConfig == nil || proposerOption.BuilderConfig.Enabled == false {
+			if proposerOption.BuilderConfig == nil || !proposerOption.BuilderConfig.Enabled {
 				return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "gas limit changes only apply when builder is enabled")
 			} else {
 				proposerOption.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(req.GasLimit)
