@@ -31,20 +31,26 @@ func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
 			if err != nil {
 				return nil, err
 			}
-			settings.ProposeConfig[bytesutil.ToBytes48(b)] = &ProposerOption{
+			p := &ProposerOption{
 				FeeRecipientConfig: &FeeRecipientConfig{
 					FeeRecipient: common.HexToAddress(optionPayload.FeeRecipient),
 				},
-				BuilderConfig: optionPayload.BuilderConfig.Clone(),
 			}
+			if optionPayload.BuilderConfig != nil {
+				p.BuilderConfig = optionPayload.BuilderConfig.Clone()
+			}
+			settings.ProposeConfig[bytesutil.ToBytes48(b)] = p
 		}
 	}
-	settings.DefaultConfig = &ProposerOption{
+	d := &ProposerOption{
 		FeeRecipientConfig: &FeeRecipientConfig{
 			FeeRecipient: common.HexToAddress(ps.DefaultConfig.FeeRecipient),
 		},
-		BuilderConfig: ps.DefaultConfig.BuilderConfig.Clone(),
 	}
+	if ps.DefaultConfig.BuilderConfig != nil {
+		d.BuilderConfig = ps.DefaultConfig.BuilderConfig.Clone()
+	}
+	settings.DefaultConfig = d
 	return settings, nil
 }
 
@@ -110,16 +116,22 @@ func (ps *ProposerSettings) ToPayload() *ProposerSettingsPayload {
 		ProposerConfig: make(map[string]*ProposerOptionPayload),
 	}
 	for key, option := range ps.ProposeConfig {
-		payload.ProposerConfig[hexutil.Encode(key[:])] = &ProposerOptionPayload{
-			FeeRecipient:  option.FeeRecipientConfig.FeeRecipient.Hex(),
-			BuilderConfig: option.BuilderConfig.Clone(),
+		p := &ProposerOptionPayload{
+			FeeRecipient: option.FeeRecipientConfig.FeeRecipient.Hex(),
 		}
+		if option.BuilderConfig != nil {
+			p.BuilderConfig = option.BuilderConfig.Clone()
+		}
+		payload.ProposerConfig[hexutil.Encode(key[:])] = p
 	}
 	if ps.DefaultConfig != nil {
-		payload.DefaultConfig = &ProposerOptionPayload{
-			FeeRecipient:  ps.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex(),
-			BuilderConfig: ps.DefaultConfig.BuilderConfig.Clone(),
+		p := &ProposerOptionPayload{
+			FeeRecipient: ps.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex(),
 		}
+		if ps.DefaultConfig.BuilderConfig != nil {
+			p.BuilderConfig = ps.DefaultConfig.BuilderConfig.Clone()
+		}
+		payload.DefaultConfig = p
 	}
 	return payload
 }

@@ -58,7 +58,7 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *vali
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
 		b := bkt.Get(proposerSettingsKey)
-		if len(b) != 0 {
+		if len(b) == 0 {
 			return NoProposerSettingsFound
 		}
 		to := &validatorServiceConfig.ProposerSettingsPayload{}
@@ -87,7 +87,7 @@ func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.P
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
 		b := bkt.Get(proposerSettingsKey)
-		if len(b) != 0 {
+		if len(b) == 0 {
 			return NoProposerSettingsFound
 		}
 		if err := json.Unmarshal(b, to); err != nil {

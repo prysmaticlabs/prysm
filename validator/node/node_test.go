@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	dbTest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
 	logtest "github.com/sirupsen/logrus/hooks/test"
@@ -677,7 +678,8 @@ func TestProposerSettings(t *testing.T) {
 				set.Bool(flags.EnableBuilderFlag.Name, true, "")
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
-			got, err := proposerSettings(cliCtx)
+			validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+			got, err := proposerSettings(cliCtx, validatorDB)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
@@ -695,10 +697,11 @@ func TestProposerSettings(t *testing.T) {
 
 // return an error if the user is using builder settings without any default fee recipient
 func TestProposerSettings_EnableBuilder_noFeeRecipient(t *testing.T) {
+	validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.EnableBuilderFlag.Name, true, "")
 	cliCtx := cli.NewContext(&app, set, nil)
-	_, err := proposerSettings(cliCtx)
+	_, err := proposerSettings(cliCtx, validatorDB)
 	require.ErrorContains(t, "can only be used when a default fee recipient is present on the validator client", err)
 }
