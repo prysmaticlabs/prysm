@@ -1,17 +1,13 @@
 package blockchain
 
 import (
-	"context"
 	"fmt"
 	"math/big"
 	"testing"
 
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/holiman/uint256"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	mocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -108,16 +104,8 @@ func Test_validateMergeBlock(t *testing.T) {
 	cfg.TerminalTotalDifficulty = "2"
 	params.OverrideBeaconConfig(cfg)
 
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-		WithForkChoiceStore(fcs),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
 	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
@@ -158,16 +146,8 @@ func Test_validateMergeBlock(t *testing.T) {
 }
 
 func Test_getBlkParentHashAndTD(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-		WithForkChoiceStore(fcs),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
 	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
@@ -239,14 +219,9 @@ func Test_validateTerminalBlockHash(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
 
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+
 	blk, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
 	require.NoError(t, err)
 	blk.SetSlot(1)

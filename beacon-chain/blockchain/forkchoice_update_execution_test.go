@@ -8,8 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -145,22 +143,14 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 }
 
 func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
+	service, tr := minimalTestService(t)
+	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
+
 	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
 	altairBlkRoot, err := altairBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
 	bellatrixBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockBellatrix())
 	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
-	require.NoError(t, err)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-		WithForkChoiceStore(fcs),
-		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-	}
-	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 10)
 	service.head = &head{
@@ -200,18 +190,10 @@ func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testin
 
 func TestShouldOverrideFCU(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-		WithForkChoiceStore(fcs),
-		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-	}
-	service, err := NewService(ctx, opts...)
+	service, tr := minimalTestService(t)
+	ctx, fcs := tr.ctx, tr.fcs
+
 	service.SetGenesisTime(time.Now().Add(-time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second))
-	require.NoError(t, err)
 	headRoot := [32]byte{'b'}
 	parentRoot := [32]byte{'a'}
 	ojc := &ethpb.Checkpoint{}

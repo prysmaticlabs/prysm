@@ -96,7 +96,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodb
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.GoodbyeMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.GoodbyeMessageName, slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	if err != nil {
 		return err
 	}

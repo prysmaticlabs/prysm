@@ -125,7 +125,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		cfg:                   &Config{UDPPort: uint(port)},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
-		stateNotifier:         &mock.MockStateNotifier{},
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -155,7 +154,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
 			genesisValidatorsRoot: genesisValidatorsRoot,
-			stateNotifier:         &mock.MockStateNotifier{},
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")

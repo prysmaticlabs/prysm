@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -160,6 +161,14 @@ func WithSlasherAttestationsFeed(f *event.Feed) Option {
 func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
 	return func(s *Service) error {
 		s.cfg.FinalizedStateAtStartUp = st
+		return nil
+	}
+}
+
+func WithClockSynchronizer(gs *startup.ClockSynchronizer) Option {
+	return func(s *Service) error {
+		s.clockSetter = gs
+		s.clockWaiter = gs
 		return nil
 	}
 }

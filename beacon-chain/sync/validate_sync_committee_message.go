@@ -72,7 +72,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
 	if err := altair.ValidateSyncMessageTime(
 		m.Slot,
-		s.cfg.chain.GenesisTime(),
+		s.cfg.clock.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
 	); err != nil {
 		tracing.AnnotateError(span, err)
