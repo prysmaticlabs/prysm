@@ -307,11 +307,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 }
 
 func TestService_setSeenCommitteeIndicesSlot(t *testing.T) {
-	chainService := &mockChain.ChainService{
-		Genesis:        time.Now(),
-		ValidatorsRoot: [32]byte{'A'},
-	}
-	s := NewService(context.Background(), WithP2P(p2ptest.NewTestP2P(t)), WithStateNotifier(chainService.StateNotifier()))
+	s := NewService(context.Background(), WithP2P(p2ptest.NewTestP2P(t)))
 	s.initCaches()
 
 	// Empty cache

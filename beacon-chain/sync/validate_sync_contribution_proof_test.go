@@ -70,7 +70,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: true}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -105,7 +104,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -140,7 +138,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -174,7 +171,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -214,7 +210,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -254,7 +249,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -295,7 +289,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -354,7 +347,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -417,7 +409,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -495,7 +486,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -575,7 +565,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -657,7 +646,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -751,7 +739,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
-				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
 			},
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) (*Service, *startup.Clock) {
@@ -913,7 +900,6 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 		WithP2P(mockp2p.NewTestP2P(t)),
 		WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 		WithChainService(chainService),
-		WithStateNotifier(chainService.StateNotifier()),
 		WithOperationNotifier(chainService.OperationNotifier()),
 	)
 	s.cfg.clock = startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)
@@ -1058,11 +1044,7 @@ func syncSelectionProofSigningRoot(st state.BeaconState, slot primitives.Slot, c
 }
 
 func TestService_setSyncContributionIndexSlotSeen(t *testing.T) {
-	chainService := &mockChain.ChainService{
-		Genesis:        time.Now(),
-		ValidatorsRoot: [32]byte{'A'},
-	}
-	s := NewService(context.Background(), WithP2P(mockp2p.NewTestP2P(t)), WithStateNotifier(chainService.StateNotifier()))
+	s := NewService(context.Background(), WithP2P(mockp2p.NewTestP2P(t)))
 	s.initCaches()
 
 	// Empty cache
