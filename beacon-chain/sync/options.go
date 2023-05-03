@@ -4,7 +4,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
@@ -85,13 +84,6 @@ func WithChainService(chain blockchainService) Option {
 func WithInitialSync(initialSync Checker) Option {
 	return func(s *Service) error {
 		s.cfg.initialSync = initialSync
-		return nil
-	}
-}
-
-func WithStateNotifier(stateNotifier statefeed.Notifier) Option {
-	return func(s *Service) error {
-		s.cfg.stateNotifier = stateNotifier
 		return nil
 	}
 }

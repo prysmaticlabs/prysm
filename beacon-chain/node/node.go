@@ -683,7 +683,6 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithP2P(b.fetchP2P()),
 		regularsync.WithChainService(chainService),
 		regularsync.WithInitialSync(initSync),
-		regularsync.WithStateNotifier(b),
 		regularsync.WithBlockNotifier(b),
 		regularsync.WithAttestationNotifier(b),
 		regularsync.WithOperationNotifier(b),

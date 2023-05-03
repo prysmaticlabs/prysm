@@ -308,11 +308,10 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
-			p2p:           p1,
-			chain:         chain,
-			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
-			stateNotifier: chain.StateNotifier(),
-			beaconDB:      db,
+			p2p:      p1,
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			beaconDB: db,
 		},
 		rateLimiter:  newRateLimiter(p1),
 		clockWaiter:  cw,
@@ -327,10 +326,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r2 := &Service{
 		ctx: ctx,
 		cfg: &config{
-			chain:         chain2,
-			clock:         startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
-			p2p:           p2,
-			stateNotifier: chain.StateNotifier(),
+			chain: chain2,
+			clock: startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+			p2p:   p2,
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
@@ -823,9 +821,8 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 
 	r := &Service{
 		cfg: &config{
-			p2p:           p1,
-			chain:         chain,
-			stateNotifier: chain.StateNotifier(),
+			p2p:   p1,
+			chain: chain,
 		},
 
 		ctx:          ctx,

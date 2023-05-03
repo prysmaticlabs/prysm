@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
@@ -79,7 +78,6 @@ type config struct {
 	blsToExecPool                 blstoexec.PoolManager
 	chain                         blockchainService
 	initialSync                   Checker
-	stateNotifier                 statefeed.Notifier
 	blockNotifier                 blockfeed.Notifier
 	operationNotifier             operation.Notifier
 	executionPayloadReconstructor execution.ExecutionPayloadReconstructor
