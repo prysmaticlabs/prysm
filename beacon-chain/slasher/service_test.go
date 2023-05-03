@@ -8,10 +8,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	mockslasher "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/mock"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -42,6 +41,7 @@ func TestService_StartStop_ChainInitialized(t *testing.T) {
 		State: beaconState,
 		Slot:  &currentSlot,
 	}
+	gs := startup.NewClockSynchronizer()
 	srv, err := New(context.Background(), &ServiceConfig{
 		IndexedAttestationsFeed: new(event.Feed),
 		BeaconBlockHeadersFeed:  new(event.Feed),
@@ -49,14 +49,13 @@ func TestService_StartStop_ChainInitialized(t *testing.T) {
 		Database:                slasherDB,
 		HeadStateFetcher:        mockChain,
 		SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		ClockWaiter:             gs,
 	})
 	require.NoError(t, err)
 	go srv.Start()
 	time.Sleep(time.Millisecond * 100)
-	srv.serviceCfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{StartTime: time.Now()},
-	})
+	var vr [32]byte
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
 	time.Sleep(time.Millisecond * 100)
 	srv.attsSlotTicker = &slots.SlotTicker{}
 	srv.blocksSlotTicker = &slots.SlotTicker{}

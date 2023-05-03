@@ -85,6 +85,12 @@ type ForkFetcher interface {
 	TimeFetcher
 }
 
+// TemporalOracle is like ForkFetcher minus CurrentFork()
+type TemporalOracle interface {
+	GenesisFetcher
+	TimeFetcher
+}
+
 // CanonicalFetcher retrieves the current chain's canonical information.
 type CanonicalFetcher interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
@@ -327,7 +333,7 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 }
 
 // IsOptimistic returns true if the current head is optimistic.
-func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
+func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return false, nil
 	}

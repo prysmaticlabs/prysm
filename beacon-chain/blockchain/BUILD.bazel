@@ -58,6 +58,7 @@ go_library(
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",
         "//beacon-chain/p2p:go_default_library",
+        "//beacon-chain/startup:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//config/features:go_default_library",
@@ -119,6 +120,7 @@ go_test(
         "receive_attestation_test.go",
         "receive_block_test.go",
         "service_test.go",
+        "setup_test.go",
         "weak_subjectivity_checks_test.go",
     ],
     embed = [":go_default_library"],
@@ -168,6 +170,7 @@ go_test(
         "mock_test.go",
         "receive_block_test.go",
         "service_norace_test.go",
+        "setup_test.go",
     ],
     embed = [":go_default_library"],
     gc_goopts = [

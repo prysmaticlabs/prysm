@@ -491,3 +491,75 @@ func TestSecondsSinceSlotStart(t *testing.T) {
 		}
 	}
 }
+
+func TestDuration(t *testing.T) {
+	oneSlot := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	cases := []struct {
+		name     string
+		start    time.Time
+		endDelta time.Duration
+		expected primitives.Slot
+	}{
+		{
+			name:     "end before start",
+			start:    time.Now(),
+			endDelta: -64 * time.Second,
+			expected: 0,
+		},
+		{
+			name:     "end equals start",
+			start:    time.Now(),
+			endDelta: 0,
+			expected: 0,
+		},
+		{
+			name:     "one slot apart",
+			start:    time.Now(),
+			endDelta: oneSlot,
+			expected: 1,
+		},
+		{
+			name:     "same slot",
+			start:    time.Now(),
+			endDelta: time.Second,
+			expected: 0,
+		},
+		{
+			name:     "don't round up",
+			start:    time.Now(),
+			endDelta: oneSlot - time.Second,
+			expected: 0,
+		},
+		{
+			name:     "don't round up pt 2",
+			start:    time.Now(),
+			endDelta: 2*oneSlot - time.Second,
+			expected: 1,
+		},
+		{
+			name:     "2 slots",
+			start:    time.Now(),
+			endDelta: 2 * oneSlot,
+			expected: 2,
+		},
+		{
+			name:     "1 epoch",
+			start:    time.Now(),
+			endDelta: time.Duration(params.BeaconConfig().SlotsPerEpoch) * oneSlot,
+			expected: params.BeaconConfig().SlotsPerEpoch,
+		},
+		{
+			name:     "1 epoch and change",
+			start:    time.Now(),
+			endDelta: oneSlot + time.Second + time.Duration(params.BeaconConfig().SlotsPerEpoch)*oneSlot,
+			expected: params.BeaconConfig().SlotsPerEpoch + 1,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			end := c.start.Add(c.endDelta)
+			a := Duration(c.start, end)
+			require.Equal(t, c.expected, a)
+		})
+	}
+}

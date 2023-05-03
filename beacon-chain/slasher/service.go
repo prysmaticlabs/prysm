@@ -10,10 +10,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -39,6 +39,7 @@ type ServiceConfig struct {
 	SlashingPoolInserter    slashings.PoolInserter
 	HeadStateFetcher        blockchain.HeadFetcher
 	SyncChecker             sync.Checker
+	ClockWaiter             startup.ClockWaiter
 }
 
 // SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
@@ -167,43 +168,19 @@ func (s *Service) Stop() error {
 }
 
 // Status of the slasher service.
-func (_ *Service) Status() error {
+func (*Service) Status() error {
 	return nil
 }
 
 func (s *Service) waitForChainInitialization() {
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-	for {
-		select {
-		case stateEvent := <-stateChannel:
-			// Wait for us to receive the genesis time via a chain started notification.
-			if stateEvent.Type == statefeed.Initialized {
-				// Alternatively, if the chain has already started, we then read the genesis
-				// time value from this data.
-				data, ok := stateEvent.Data.(*statefeed.InitializedData)
-				if !ok {
-					log.Error(
-						"Could not receive chain start notification, want *statefeed.ChainStartedData",
-					)
-					return
-				}
-				s.genesisTime = data.StartTime
-				log.WithField("genesisTime", s.genesisTime).Info(
-					"Slasher received chain initialization event",
-				)
-				return
-			}
-		case err := <-stateSub.Err():
-			log.WithError(err).Error(
-				"Slasher could not subscribe to state events",
-			)
-			return
-		case <-s.ctx.Done():
-			return
-		}
+	clock, err := s.serviceCfg.ClockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not receive chain start notification")
 	}
+	s.genesisTime = clock.GenesisTime()
+	log.WithField("genesisTime", s.genesisTime).Info(
+		"Slasher received chain initialization event",
+	)
 }
 
 func (s *Service) waitForSync(genesisTime time.Time) {
