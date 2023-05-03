@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
@@ -20,9 +19,6 @@ type ProposerSettingsPayload struct {
 
 // ToSettings converts struct to ProposerSettings
 func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
-	if ps.DefaultConfig == nil || ps.DefaultConfig.FeeRecipient == "" {
-		return nil, errors.New("payload default config is missing or default fee recipient is missing")
-	}
 	settings := &ProposerSettings{}
 	if ps.ProposerConfig != nil {
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
@@ -42,15 +38,17 @@ func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
 			settings.ProposeConfig[bytesutil.ToBytes48(b)] = p
 		}
 	}
-	d := &ProposerOption{
-		FeeRecipientConfig: &FeeRecipientConfig{
-			FeeRecipient: common.HexToAddress(ps.DefaultConfig.FeeRecipient),
-		},
+	if ps.DefaultConfig != nil {
+		d := &ProposerOption{
+			FeeRecipientConfig: &FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress(ps.DefaultConfig.FeeRecipient),
+			},
+		}
+		if ps.DefaultConfig.BuilderConfig != nil {
+			d.BuilderConfig = ps.DefaultConfig.BuilderConfig.Clone()
+		}
+		settings.DefaultConfig = d
 	}
-	if ps.DefaultConfig.BuilderConfig != nil {
-		d.BuilderConfig = ps.DefaultConfig.BuilderConfig.Clone()
-	}
-	settings.DefaultConfig = d
 	return settings, nil
 }
 
@@ -151,7 +149,9 @@ type ProposerOption struct {
 func (ps *ProposerSettings) Clone() *ProposerSettings {
 	clone := &ProposerSettings{
 		ProposeConfig: make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption),
-		DefaultConfig: ps.DefaultConfig.Clone(),
+	}
+	if ps.DefaultConfig != nil {
+		clone.DefaultConfig = ps.DefaultConfig.Clone()
 	}
 	for k, v := range ps.ProposeConfig {
 		keyCopy := k

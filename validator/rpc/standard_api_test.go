@@ -998,15 +998,20 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.proposerSettings)
+			validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{})
+			require.NoError(t, err)
 
+			// save a default here
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
+				ValDB:     validatorDB,
 			})
 
 			require.NoError(t, err)
 			s := &Server{
 				validatorService:          vs,
 				beaconNodeValidatorClient: beaconClient,
+				valDB:                     validatorDB,
 			}
 
 			_, err = s.SetFeeRecipientByPubkey(ctx, &ethpbservice.SetFeeRecipientByPubkeyRequest{Pubkey: byteval, Ethaddress: common.HexToAddress(tt.args).Bytes()})

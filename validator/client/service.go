@@ -274,11 +274,18 @@ func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 
 // ProposerSettings returns a deep copy of the underlying proposer settings in the validator
 func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSettings {
-	return v.validator.ProposerSettings().Clone()
+	settings := v.validator.ProposerSettings()
+	if settings != nil {
+		return settings.Clone()
+	}
+	return nil
 }
 
 // SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
 func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+	if v.db == nil {
+		return errors.New("db is not set")
+	}
 	if err := v.db.SaveProposerSettings(ctx, settings); err != nil {
 		return err
 	}
