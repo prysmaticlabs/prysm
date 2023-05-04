@@ -61,6 +61,7 @@ go_test(
         "migration_optimal_attester_protection_test.go",
         "migration_source_target_epochs_bucket_test.go",
         "proposer_protection_test.go",
+        "proposer_settings_test.go",
         "prune_attester_protection_test.go",
     ],
     embed = [":go_default_library"],
