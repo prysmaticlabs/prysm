@@ -80,7 +80,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	for i := range sRoots {
 		sRoots[i] = sr[i][:]
 	}
-	stateRootsRoot, err := stateutil.ArraysRoot(bRoots, fieldparams.StateRootsLength)
+	stateRootsRoot, err := stateutil.ArraysRoot(sRoots, fieldparams.StateRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
