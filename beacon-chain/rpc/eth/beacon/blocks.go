@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -11,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -204,6 +206,11 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
+	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
 	switch blkContainer := req.Message.(type) {
 	case *ethpbv2.SignedBeaconBlockContainer_Phase0Block:
 		if err := bs.submitPhase0Block(ctx, blkContainer.Phase0Block, req.Signature); err != nil {
@@ -238,6 +245,11 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlockSSZ")
 	defer span.End()
+
+	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -276,6 +288,9 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 			},
 		})
 		if err != nil {
+			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 		}
 		return &emptypb.Empty{}, nil
@@ -293,6 +308,9 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 			},
 		})
 		if err != nil {
+			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 		}
 		return &emptypb.Empty{}, nil
@@ -307,6 +325,9 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 			},
 		})
 		if err != nil {
+			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 		}
 		return &emptypb.Empty{}, nil
@@ -321,6 +342,9 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 			},
 		})
 		if err != nil {
+			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 		}
 		return &emptypb.Empty{}, nil
@@ -1008,6 +1032,9 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 		},
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, err.Error())
+		}
 		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
 	return nil
@@ -1024,6 +1051,9 @@ func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.Beac
 		},
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, err.Error())
+		}
 		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
 	return nil
@@ -1040,6 +1070,9 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 		},
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, err.Error())
+		}
 		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
 	return nil
@@ -1056,6 +1089,9 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 		},
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, err.Error())
+		}
 		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
 	return nil

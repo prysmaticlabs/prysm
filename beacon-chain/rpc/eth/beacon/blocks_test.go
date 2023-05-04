@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -348,7 +349,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 	})
 }
 
-func TestServer_SubmitBlock_OK(t *testing.T) {
+func TestServer_SubmitBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	t.Run("Phase 0", func(t *testing.T) {
@@ -407,9 +408,20 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
 	})
+	t.Run("sync not ready", func(t *testing.T) {
+		chainService := &mock.ChainService{}
+		v1Server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+		_, err := v1Server.SubmitBlock(context.Background(), nil)
+		require.ErrorContains(t, "Syncing to latest head", err)
+	})
 }
 
-func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
+func TestServer_SubmitBlockSSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 
@@ -523,6 +535,17 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NotNil(t, err)
+	})
+	t.Run("sync not ready", func(t *testing.T) {
+		chainService := &mock.ChainService{}
+		v1Server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+		_, err := v1Server.SubmitBlockSSZ(context.Background(), nil)
+		require.ErrorContains(t, "Syncing to latest head", err)
 	})
 }
 

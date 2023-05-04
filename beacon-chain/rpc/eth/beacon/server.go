@@ -37,6 +37,7 @@ type Server struct {
 	Stater                        lookup.Stater
 	Blocker                       lookup.Blocker
 	HeadFetcher                   blockchain.HeadFetcher
+	TimeFetcher                   blockchain.TimeFetcher
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	V1Alpha1ValidatorServer       eth.BeaconNodeValidatorServer
 	SyncChecker                   sync.Checker

@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -301,7 +302,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 	})
 }
 
-func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
+func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 
@@ -416,6 +417,17 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		_, err = server.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NotNil(t, err)
 	})
+	t.Run("sync not ready", func(t *testing.T) {
+		chainService := &mock.ChainService{}
+		v1Server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+		_, err := v1Server.SubmitBlindedBlockSSZ(context.Background(), nil)
+		require.ErrorContains(t, "Syncing to latest head", err)
+	})
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
@@ -476,5 +488,16 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
+	})
+	t.Run("sync not ready", func(t *testing.T) {
+		chainService := &mock.ChainService{}
+		v1Server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+		_, err := v1Server.SubmitBlindedBlock(context.Background(), nil)
+		require.ErrorContains(t, "Syncing to latest head", err)
 	})
 }
