@@ -80,7 +80,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	// processing tolerance.
 	if err := helpers.ValidateAttestationTime(
 		m.Message.Aggregate.Data.Slot,
-		s.cfg.chain.GenesisTime(),
+		s.cfg.clock.GenesisTime(),
 		earlyAttestationProcessingTolerance,
 	); err != nil {
 		tracing.AnnotateError(span, err)

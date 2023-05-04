@@ -93,6 +93,7 @@ func setupService(t *testing.T) *Service {
 			StateNotifier:       chainService.StateNotifier(),
 			HeadFetcher:         chainService,
 			AttestationNotifier: chainService.OperationNotifier(),
+			InitialSyncComplete: make(chan struct{}),
 		},
 
 		ctx:                         context.Background(),
@@ -140,34 +141,9 @@ func TestNewService(t *testing.T) {
 func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
 	s.Start()
-
-	go func() {
-		select {
-		case stateEvent := <-stateChannel:
-			if stateEvent.Type == statefeed.Synced {
-				_, ok := stateEvent.Data.(*statefeed.SyncedData)
-				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
-			}
-		case <-s.ctx.Done():
-		}
-		wg.Done()
-	}()
-
-	for sent := 0; sent == 0; {
-		sent = s.config.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: time.Now(),
-			},
-		})
-	}
+	close(s.config.InitialSyncComplete)
 
 	// wait for Logrus
 	time.Sleep(1000 * time.Millisecond)
@@ -267,26 +243,29 @@ func TestMonitorRoutine(t *testing.T) {
 }
 
 func TestWaitForSync(t *testing.T) {
-	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{ctx: ctx}
+	syncChan := make(chan struct{})
 
 	go func() {
-		err := s.waitForSync(stateChannel, stateSub)
-		require.NoError(t, err)
-		wg.Done()
+		// Failsafe to make sure tests never get deadlocked; we should always go through the happy path before 500ms.
+		// Otherwise, the NoError assertion below will fail.
+		time.Sleep(500 * time.Millisecond)
+		cancel()
 	}()
+	go func() {
+		close(syncChan)
+	}()
+	require.NoError(t, s.waitForSync(syncChan))
+}
 
-	stateChannel <- &feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: time.Now(),
-		},
-	}
+func TestWaitForSyncCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{ctx: ctx}
+	syncChan := make(chan struct{})
+
+	cancel()
+	require.ErrorIs(t, s.waitForSync(syncChan), errContextClosedWhileWaiting)
 }
 
 func TestRun(t *testing.T) {
@@ -295,21 +274,11 @@ func TestRun(t *testing.T) {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
 	go func() {
 		s.run(stateChannel, stateSub)
-		wg.Done()
 	}()
+	close(s.config.InitialSyncComplete)
 
-	stateChannel <- &feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: time.Now(),
-		},
-	}
-	//wait for Logrus
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
 }

@@ -89,7 +89,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +107,12 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
-	valRoot := s.cfg.chain.GenesisValidatorsRoot()
-	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.chain.CurrentSlot()), valRoot[:])
+	valRoot := s.cfg.clock.GenesisValidatorsRoot()
+	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.clock.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
 	}
-	msg, err := extractMetaDataType(rpcCtx[:], s.cfg.chain)
+	msg, err := extractMetaDataType(rpcCtx[:], s.cfg.clock)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	return msg, nil
 }
 
-func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (metadata.Metadata, error) {
+func extractMetaDataType(digest []byte, tor blockchain.TemporalOracle) (metadata.Metadata, error) {
 	if len(digest) == 0 {
 		mdFunc, ok := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 		if !ok {
@@ -145,7 +145,7 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (meta
 	if len(digest) != forkDigestLength {
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
-	vRoot := chain.GenesisValidatorsRoot()
+	vRoot := tor.GenesisValidatorsRoot()
 	for k, mdFunc := range types.MetaDataMap {
 		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
@@ -155,5 +155,5 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (meta
 			return mdFunc(), nil
 		}
 	}
-	return nil, errors.New("no valid digest matched")
+	return nil, errors.Wrapf(ErrNoValidDigest, "could not extract metadata type, saw digest=%#x, genesis=%v, vr=%#x", digest, tor.GenesisTime(), tor.GenesisValidatorsRoot())
 }

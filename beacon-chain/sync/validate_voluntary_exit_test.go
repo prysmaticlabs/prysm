@@ -17,6 +17,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
@@ -76,13 +77,15 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
+	gt := time.Now()
 	r := &Service{
 		cfg: &config{
 			p2p: p,
 			chain: &mock.ChainService{
 				State:   s,
-				Genesis: time.Now(),
+				Genesis: gt,
 			},
+			clock:             startup.NewClock(gt, [32]byte{}),
 			initialSync:       &mockSync.Sync{IsSyncing: false},
 			operationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},

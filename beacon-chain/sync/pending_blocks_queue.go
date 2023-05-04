@@ -37,7 +37,7 @@ func (s *Service) processPendingBlocksQueue() {
 	locker := new(sync.Mutex)
 	async.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		// Don't process the pending blocks if genesis time has not been set. The chain is not ready.
-		if !s.isGenesisTimeSet() {
+		if !s.chainIsStarted() {
 			return
 		}
 		locker.Lock()
@@ -69,7 +69,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	for _, slot := range ss {
 		// process the blocks during their respective slot.
 		// otherwise wait for the right slot to process the block.
-		if slot > s.cfg.chain.CurrentSlot() {
+		if slot > s.cfg.clock.CurrentSlot() {
 			continue
 		}
 
@@ -443,12 +443,6 @@ func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock)
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
 	return nil
-}
-
-// Returns true if the genesis time has been set in chain service.
-// Without the genesis time, the chain does not start.
-func (s *Service) isGenesisTimeSet() bool {
-	return s.cfg.chain.GenesisTime().Unix() != 0
 }
 
 // This converts input string to slot.

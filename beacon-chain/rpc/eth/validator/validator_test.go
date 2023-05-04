@@ -776,7 +776,6 @@ func TestProduceBlockV2(t *testing.T) {
 
 		resp, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
 		require.NoError(t, err)
-
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_CapellaBlock)
 		require.Equal(t, true, ok)
