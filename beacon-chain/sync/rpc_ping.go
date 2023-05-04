@@ -78,7 +78,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	defer cancel()
 
 	metadataSeq := primitives.SSZUint64(s.cfg.p2p.MetadataSeq())
-	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	if err != nil {
 		return err
 	}

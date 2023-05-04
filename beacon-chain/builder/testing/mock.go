@@ -5,6 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -14,6 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
+// Config defines a config struct for dependencies into the service.
+type Config struct {
+	BeaconDB db.HeadAccessDatabase
+}
+
 // MockBuilderService to mock builder.
 type MockBuilderService struct {
 	HasConfigured         bool
@@ -22,8 +29,10 @@ type MockBuilderService struct {
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
 	BidCapella            *ethpb.SignedBuilderBidCapella
+	RegistrationCache     *cache.RegistrationCache
 	ErrGetHeader          error
 	ErrRegisterValidator  error
+	Cfg                   *Config
 }
 
 // Configured for mocking.
@@ -48,7 +57,7 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.
 }
 
 // GetHeader for mocking.
-func (s *MockBuilderService) GetHeader(ctx context.Context, slot primitives.Slot, hr [32]byte, pb [48]byte) (builder.SignedBid, error) {
+func (s *MockBuilderService) GetHeader(_ context.Context, slot primitives.Slot, _ [32]byte, _ [48]byte) (builder.SignedBid, error) {
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
 		return builder.WrappedSignedBuilderBidCapella(s.BidCapella)
 	}
@@ -57,6 +66,17 @@ func (s *MockBuilderService) GetHeader(ctx context.Context, slot primitives.Slot
 		return nil, errors.Wrap(err, "could not wrap capella bid")
 	}
 	return w, s.ErrGetHeader
+}
+
+// RegistrationByValidatorID returns either the values from the cache or db.
+func (s *MockBuilderService) RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
+	if s.RegistrationCache != nil {
+		return s.RegistrationCache.RegistrationByIndex(id)
+	}
+	if s.Cfg.BeaconDB != nil {
+		return s.Cfg.BeaconDB.RegistrationByValidatorID(ctx, id)
+	}
+	return nil, cache.ErrNotFoundRegistration
 }
 
 // RegisterValidator for mocking.

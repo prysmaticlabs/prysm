@@ -7,11 +7,11 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -35,6 +35,8 @@ type ServiceConfig struct {
 	SlashingsPool               slashings.PoolManager
 	PrivateKeysByValidatorIndex map[primitives.ValidatorIndex]bls.SecretKey
 	SyncChecker                 sync.Checker
+	ClockWaiter                 startup.ClockWaiter
+	ClockSetter                 startup.ClockSetter
 }
 
 // Parameters for a slasher simulator.
@@ -94,6 +96,7 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 		StateGen:                srvConfig.StateGen,
 		SlashingPoolInserter:    srvConfig.SlashingsPool,
 		SyncChecker:             srvConfig.SyncChecker,
+		ClockWaiter:             srvConfig.ClockWaiter,
 	})
 	if err != nil {
 		return nil, err
@@ -142,10 +145,10 @@ func (s *Simulator) Start() {
 	// for slasher to pick up a genesis time.
 	time.Sleep(time.Second)
 	s.genesisTime = time.Now()
-	s.srvConfig.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{StartTime: s.genesisTime},
-	})
+	var vr [32]byte
+	if err := s.srvConfig.ClockSetter.SetClock(startup.NewClock(s.genesisTime, vr)); err != nil {
+		panic(err)
+	}
 
 	// We simulate blocks and attestations for N epochs.
 	s.simulateBlocksAndAttestations(s.ctx)

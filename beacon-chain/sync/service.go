@@ -19,10 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
@@ -31,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -79,13 +78,13 @@ type config struct {
 	blsToExecPool                 blstoexec.PoolManager
 	chain                         blockchainService
 	initialSync                   Checker
-	stateNotifier                 statefeed.Notifier
 	blockNotifier                 blockfeed.Notifier
 	operationNotifier             operation.Notifier
 	executionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	stateGen                      *stategen.State
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed
+	clock                         *startup.Clock
 }
 
 // This defines the interface for interacting with block chain service
@@ -139,6 +138,8 @@ type Service struct {
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
+	clockWaiter                      startup.ClockWaiter
+	initialSyncComplete              chan struct{}
 }
 
 // NewService initializes new regular sync service.
@@ -164,14 +165,14 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 	r.initCaches()
 
-	go r.registerHandlers()
-	go r.verifierRoutine()
-
 	return r
 }
 
 // Start the regular sync service.
 func (s *Service) Start() {
+	go s.verifierRoutine()
+	go s.registerHandlers()
+
 	s.cfg.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
 	s.cfg.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
 		// no-op
@@ -210,7 +211,7 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
-	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.chain.CurrentSlot()) &&
+	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.clock.CurrentSlot()) &&
 		headEpoch+1 < s.cfg.p2p.Peers().HighestEpoch() {
 		return errors.New("out of sync")
 	}
@@ -232,64 +233,52 @@ func (s *Service) initCaches() {
 	s.badBlockCache = lruwrpr.New(badBlockSize)
 }
 
-func (s *Service) registerHandlers() {
-	// Wait until chain start.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-	for {
-		select {
-		case e := <-stateChannel:
-			switch e.Type {
-			case statefeed.Initialized:
-				data, ok := e.Data.(*statefeed.InitializedData)
-				if !ok {
-					log.Error("Event feed data is not type *statefeed.InitializedData")
-					return
-				}
-				startTime := data.StartTime
-				log.WithField("starttime", startTime).Debug("Received state initialized event")
+func (s *Service) waitForChainStart() {
+	clock, err := s.clockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("sync service failed to receive genesis data")
+		return
+	}
+	s.cfg.clock = clock
+	startTime := clock.GenesisTime()
+	log.WithField("starttime", startTime).Debug("Received state initialized event")
+	// Register respective rpc handlers at state initialized event.
+	s.registerRPCHandlers()
+	// Wait for chainstart in separate routine.
+	if startTime.After(prysmTime.Now()) {
+		time.Sleep(prysmTime.Until(startTime))
+	}
+	log.WithField("starttime", startTime).Debug("Chain started in sync service")
+	s.markForChainStart()
+}
 
-				// Register respective rpc handlers at state initialized event.
-				s.registerRPCHandlers()
-				// Wait for chainstart in separate routine.
-				go func() {
-					if startTime.After(prysmTime.Now()) {
-						time.Sleep(prysmTime.Until(startTime))
-					}
-					log.WithField("starttime", startTime).Debug("Chain started in sync service")
-					s.markForChainStart()
-				}()
-			case statefeed.Synced:
-				_, ok := e.Data.(*statefeed.SyncedData)
-				if !ok {
-					log.Error("Event feed data is not type *statefeed.SyncedData")
-					return
-				}
-				// Register respective pubsub handlers at state synced event.
-				digest, err := s.currentForkDigest()
-				if err != nil {
-					log.WithError(err).Error("Could not retrieve current fork digest")
-					return
-				}
-				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.chain.GenesisTime().Unix())))
-				s.registerSubscribers(currentEpoch, digest)
-				go s.forkWatcher()
-				return
-			}
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return
-		case err := <-stateSub.Err():
-			log.WithError(err).Error("Could not subscribe to state notifier")
+func (s *Service) registerHandlers() {
+	s.waitForChainStart()
+	select {
+	case <-s.initialSyncComplete:
+		// Register respective pubsub handlers at state synced event.
+		digest, err := s.currentForkDigest()
+		if err != nil {
+			log.WithError(err).Error("Could not retrieve current fork digest")
 			return
 		}
+		currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.clock.GenesisTime().Unix())))
+		s.registerSubscribers(currentEpoch, digest)
+		go s.forkWatcher()
+		return
+	case <-s.ctx.Done():
+		log.Debug("Context closed, exiting goroutine")
+		return
 	}
 }
 
 // marks the chain as having started.
 func (s *Service) markForChainStart() {
 	s.chainStarted.Set()
+}
+
+func (s *Service) chainIsStarted() bool {
+	return s.chainStarted.IsSet()
 }
 
 // Checker defines a struct which can verify whether a node is currently

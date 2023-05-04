@@ -37,7 +37,6 @@ func TestBroadcastBLSChanges(t *testing.T) {
 		WithP2P(mockp2p.NewTestP2P(t)),
 		WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 		WithChainService(chainService),
-		WithStateNotifier(chainService.StateNotifier()),
 		WithOperationNotifier(chainService.OperationNotifier()),
 		WithBlsToExecPool(blstoexec.NewPool()),
 	)
@@ -71,7 +70,6 @@ func TestRateBLSChanges(t *testing.T) {
 		WithP2P(p1),
 		WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 		WithChainService(chainService),
-		WithStateNotifier(chainService.StateNotifier()),
 		WithOperationNotifier(chainService.OperationNotifier()),
 		WithBlsToExecPool(blstoexec.NewPool()),
 	)
@@ -141,7 +139,6 @@ func TestBroadcastBLSBatch_changes_slice(t *testing.T) {
 		WithP2P(p1),
 		WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 		WithChainService(chainService),
-		WithStateNotifier(chainService.StateNotifier()),
 		WithOperationNotifier(chainService.OperationNotifier()),
 		WithBlsToExecPool(blstoexec.NewPool()),
 	)

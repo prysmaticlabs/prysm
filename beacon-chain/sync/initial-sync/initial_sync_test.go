@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -210,11 +211,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			ret = ret[:req.Count]
 		}
 
-		mChain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		for i := 0; i < len(ret); i++ {
 			wsb, err := blocks.NewSignedBeaconBlock(ret[i])
 			require.NoError(t, err)
-			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wsb))
+			assert.NoError(t, beaconsync.WriteBlockChunk(stream, startup.NewClock(time.Now(), [32]byte{}), p.Encoding(), wsb))
 		}
 	})
 
@@ -283,10 +283,9 @@ func connectPeerHavingBlocks(
 			if uint64(i) >= uint64(len(blks)) {
 				break
 			}
-			chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 			wsb, err := blocks.NewSignedBeaconBlock(blks[i])
 			require.NoError(t, err)
-			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wsb))
+			require.NoError(t, beaconsync.WriteBlockChunk(stream, startup.NewClock(time.Now(), [32]byte{}), p.Encoding(), wsb))
 		}
 	})
 

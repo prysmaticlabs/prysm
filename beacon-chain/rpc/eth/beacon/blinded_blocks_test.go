@@ -311,6 +311,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		b := util.NewBeaconBlock()
@@ -330,6 +331,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		b := util.NewBeaconBlockAltair()
@@ -350,6 +352,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		b := util.NewBlindedBeaconBlockBellatrix()
@@ -366,7 +369,9 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Bellatrix full", func(t *testing.T) {
-		server := &Server{}
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
 
 		b := util.NewBeaconBlockBellatrix()
 		b.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
@@ -386,6 +391,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		b := util.NewBlindedBeaconBlockCapella()
@@ -402,7 +408,9 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Capella full", func(t *testing.T) {
-		server := &Server{}
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
 
 		b := util.NewBeaconBlockCapella()
 		b.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
@@ -438,6 +446,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
@@ -452,6 +461,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
@@ -466,6 +476,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
@@ -480,6 +491,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
