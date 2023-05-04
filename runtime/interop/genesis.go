@@ -121,11 +121,15 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		MergeNetsplitBlock:            bigz,
 		TerminalTotalDifficulty:       ttd,
 		TerminalTotalDifficultyPassed: false,
-		Clique: &params.CliqueConfig{
+		ShanghaiTime:                  shanghaiTime,
+	}
+	if cfg.BellatrixForkEpoch == 0 {
+		cc.TerminalTotalDifficultyPassed = true
+	} else {
+		cc.Clique = &params.CliqueConfig{
 			Period: cfg.SecondsPerETH1Block,
 			Epoch:  20000,
-		},
-		ShanghaiTime: shanghaiTime,
+		}
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()
