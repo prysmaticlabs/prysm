@@ -218,32 +218,6 @@ func (m *Miner) Start(ctx context.Context) error {
 	eth1BlockHash := block.Hash()
 	e2e.TestParams.Eth1GenesisBlock = block
 	log.Infof("genesis block timestamp=%d, hash=%#x", block.Time(), eth1BlockHash)
-	/*
-		// Connect to the started geth dev chain.
-		client, err := rpc.DialHTTP(e2e.TestParams.Eth1RPCURL(e2e.MinerComponentOffset).String())
-		if err != nil {
-			return fmt.Errorf("failed to connect to ipc: %w", err)
-		}
-
-		web3 := ethclient.NewClient(client)
-		cAddr := common.HexToAddress(params.BeaconConfig().DepositContractAddress)
-		code, err := web3.CodeAt(ctx, cAddr, nil)
-		if err != nil {
-			return err
-		}
-		log.Infof("contract code size = %d", len(code))
-		depositContractCaller, err := contracts.NewDepositContractCaller(cAddr, web3)
-		if err != nil {
-			return err
-		}
-		dCount, err := depositContractCaller.GetDepositCount(&bind.CallOpts{})
-		if err != nil {
-			log.Error("failed to call get_deposit_count method of deposit contract")
-			return err
-		}
-		log.Infof("deposit contract count=%d", dCount)
-
-	*/
 
 	// Mark node as ready.
 	close(m.started)
