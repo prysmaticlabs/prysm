@@ -1215,7 +1215,6 @@ func TestServer_GetGasLimit(t *testing.T) {
 func TestServer_SetGasLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
 	beaconClient := validatormock.NewMockValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
@@ -1241,18 +1240,14 @@ func TestServer_SetGasLimit(t *testing.T) {
 		proposerSettings *validatorserviceconfig.ProposerSettings
 		w                []want
 		beaconReturn     *beaconResp
+		wantErr          string
 	}{
 		{
 			name:             "ProposerSettings is nil",
 			pubkey:           pubkey1,
 			newGasLimit:      9999,
 			proposerSettings: nil,
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr:          "no proposer settings were found to update",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is nil AND ProposerSettings.DefaultConfig is nil",
@@ -1262,12 +1257,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				ProposeConfig: nil,
 				DefaultConfig: nil,
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is nil AND ProposerSettings.DefaultConfig.BuilderConfig is nil",
@@ -1279,12 +1269,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 					BuilderConfig: nil,
 				},
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is nil AND ProposerSettings.DefaultConfig is nil",
@@ -1298,12 +1283,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				},
 				DefaultConfig: nil,
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is defined AND ProposerSettings.DefaultConfig is nil",
@@ -1317,12 +1297,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				},
 				DefaultConfig: nil,
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is NOT defined for pubkey, BuilderConfig is defined AND ProposerSettings.DefaultConfig is nil",
@@ -1330,24 +1305,16 @@ func TestServer_SetGasLimit(t *testing.T) {
 			newGasLimit: 9999,
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
-					bytesutil.ToBytes48(pubkey1): {
+					bytesutil.ToBytes48(pubkey2): {
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  true,
 							GasLimit: 12345,
 						},
 					},
 				},
 				DefaultConfig: nil,
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 12345,
-				},
-				{
-					pubkey:   pubkey2,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is nil AND ProposerSettings.DefaultConfig.BuilderConfig is defined",
@@ -1360,15 +1327,12 @@ func TestServer_SetGasLimit(t *testing.T) {
 					},
 				},
 				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled: true,
+					},
 				},
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 	}
 	for _, tt := range tests {
@@ -1394,10 +1358,13 @@ func TestServer_SetGasLimit(t *testing.T) {
 			}
 
 			_, err = s.SetGasLimit(ctx, &ethpbservice.SetGasLimitRequest{Pubkey: tt.pubkey, GasLimit: tt.newGasLimit})
-			require.NoError(t, err)
-
-			for _, w := range tt.w {
-				assert.Equal(t, w.gaslimit, uint64(s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+			} else {
+				require.NoError(t, err)
+				for _, w := range tt.w {
+					assert.Equal(t, w.gaslimit, uint64(s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit))
+				}
 			}
 		})
 	}
