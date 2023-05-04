@@ -157,11 +157,6 @@ func readResponseChunk(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p
 		return nil, err
 	}
 	err = p2p.Encoding().DecodeWithMaxLength(stream, blk)
-	log.
-		WithField("slot", blk.Block().Slot()).
-		WithField("rpc-ctx", fmt.Sprintf("%#x", rpcCtx)).
-		WithField("version", blk.Version()).
-		Warn("reading response chunk")
 	return blk, err
 }
 
