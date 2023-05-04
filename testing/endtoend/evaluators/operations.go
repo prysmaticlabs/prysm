@@ -87,7 +87,7 @@ var ValidatorsHaveExited = e2etypes.Evaluator{
 // SubmitWithdrawal sends a withdrawal from a previously exited validator.
 var SubmitWithdrawal = e2etypes.Evaluator{
 	Name:       "submit_withdrawal_epoch_%d",
-	Policy:     policies.BetweenEpochs(helpers.CapellaE2EForkEpoch-2, helpers.CapellaE2EForkEpoch+1),
+	Policy:     policies.BetweenEpochs(helpers.CapellaE2EForkEpoch, helpers.CapellaE2EForkEpoch+1),
 	Evaluation: submitWithdrawal,
 }
 

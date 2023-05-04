@@ -11,13 +11,9 @@ import (
 	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
@@ -76,35 +72,30 @@ func (m *Miner) initDataDir() error {
 	return nil
 }
 
-func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) {
-	if err := m.initDataDir(); err != nil {
-		return nil, err
-	}
-
-	// find geth so we can run it.
-	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
-	if !found {
-		return nil, errors.New("go-ethereum binary not found")
-	}
-
-	gethJsonPath := path.Join(path.Dir(binaryPath), "genesis.json")
-	gen := interop.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
+func (m *Miner) writeGenesis(binaryPath string, gen *core.Genesis) error {
 	log.Infof("eth1 miner genesis timestamp=%d", e2e.TestParams.Eth1GenesisTime)
 	b, err := json.Marshal(gen)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err := file.WriteFile(gethJsonPath, b); err != nil {
-		return nil, err
+	if err := file.WriteFile(genesisJsonPath(binaryPath), b); err != nil {
+		return err
 	}
 
-	// write the same thing to the logs dir for inspection
+	// write the same thing to the logs dir for debugging (included in outputs.zip)
 	gethJsonLogPath := e2e.TestParams.Logfile("genesis.json")
-	if err := file.WriteFile(gethJsonLogPath, b); err != nil {
+	return file.WriteFile(gethJsonLogPath, b)
+}
+
+func genesisJsonPath(binaryPath string) string {
+	return path.Join(path.Dir(binaryPath), "genesis.json")
+}
+
+func (m *Miner) initAttempt(ctx context.Context, binaryPath string, attempt int) (*os.File, error) {
+	if err := m.initDataDir(); err != nil {
 		return nil, err
 	}
-
-	initCmd := exec.CommandContext(ctx, binaryPath, "init", fmt.Sprintf("--datadir=%s", m.DataDir()), gethJsonPath) // #nosec G204 -- Safe
+	initCmd := exec.CommandContext(ctx, binaryPath, "init", fmt.Sprintf("--datadir=%s", m.DataDir()), genesisJsonPath(binaryPath)) // #nosec G204 -- Safe
 
 	// redirect stderr to a log file
 	initFile, err := helpers.DeleteAndCreatePath(e2e.TestParams.Logfile("eth1-init_miner.log"))
@@ -189,11 +180,23 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 // Start runs a mining ETH1 node.
 // The miner is responsible for moving the ETH1 chain forward and for deploying the deposit contract.
 func (m *Miner) Start(ctx context.Context) error {
+
+	// find geth so we can run it.
+	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
+	if !found {
+		return errors.New("go-ethereum binary not found")
+	}
+
+	gen := interop.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
+	if err := m.writeGenesis(binaryPath, gen); err != nil {
+		return errors.Wrapf(err, "unable to write genesis.json file to geth binary path %s", binaryPath)
+	}
+
 	// give the miner start a couple of tries, since the p2p networking check is flaky
 	var retryErr error
 	var minerLog *os.File
 	for attempt := 0; attempt < 3; attempt++ {
-		minerLog, retryErr = m.initAttempt(ctx, attempt)
+		minerLog, retryErr = m.initAttempt(ctx, binaryPath, attempt)
 		if retryErr == nil {
 			log.Infof("miner started after %d retries", attempt)
 			break
@@ -211,36 +214,36 @@ func (m *Miner) Start(ctx context.Context) error {
 	m.enr = enode
 	log.Infof("Communicated enode. Enode is %s", enode)
 
-	// Connect to the started geth dev chain.
-	client, err := rpc.DialHTTP(e2e.TestParams.Eth1RPCURL(e2e.MinerComponentOffset).String())
-	if err != nil {
-		return fmt.Errorf("failed to connect to ipc: %w", err)
-	}
-	web3 := ethclient.NewClient(client)
-	block, err := web3.BlockByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
-	log.Infof("genesis block timestamp=%d", block.Time())
+	block := gen.ToBlock()
 	eth1BlockHash := block.Hash()
 	e2e.TestParams.Eth1GenesisBlock = block
-	log.Infof("miner says genesis block root=%#x", eth1BlockHash)
-	cAddr := common.HexToAddress(params.BeaconConfig().DepositContractAddress)
-	code, err := web3.CodeAt(ctx, cAddr, nil)
-	if err != nil {
-		return err
-	}
-	log.Infof("contract code size = %d", len(code))
-	depositContractCaller, err := contracts.NewDepositContractCaller(cAddr, web3)
-	if err != nil {
-		return err
-	}
-	dCount, err := depositContractCaller.GetDepositCount(&bind.CallOpts{})
-	if err != nil {
-		log.Error("failed to call get_deposit_count method of deposit contract")
-		return err
-	}
-	log.Infof("deposit contract count=%d", dCount)
+	log.Infof("genesis block timestamp=%d, hash=%#x", block.Time(), eth1BlockHash)
+	/*
+		// Connect to the started geth dev chain.
+		client, err := rpc.DialHTTP(e2e.TestParams.Eth1RPCURL(e2e.MinerComponentOffset).String())
+		if err != nil {
+			return fmt.Errorf("failed to connect to ipc: %w", err)
+		}
+
+		web3 := ethclient.NewClient(client)
+		cAddr := common.HexToAddress(params.BeaconConfig().DepositContractAddress)
+		code, err := web3.CodeAt(ctx, cAddr, nil)
+		if err != nil {
+			return err
+		}
+		log.Infof("contract code size = %d", len(code))
+		depositContractCaller, err := contracts.NewDepositContractCaller(cAddr, web3)
+		if err != nil {
+			return err
+		}
+		dCount, err := depositContractCaller.GetDepositCount(&bind.CallOpts{})
+		if err != nil {
+			log.Error("failed to call get_deposit_count method of deposit contract")
+			return err
+		}
+		log.Infof("deposit contract count=%d", dCount)
+
+	*/
 
 	// Mark node as ready.
 	close(m.started)

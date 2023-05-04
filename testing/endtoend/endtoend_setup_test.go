@@ -53,9 +53,6 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.DepositedValidatorsAreActive,
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
-		ev.AltairForkTransition,
-		ev.BellatrixForkTransition,
-		ev.CapellaForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
@@ -63,6 +60,15 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.ValidatorSyncParticipation,
 		ev.FeeRecipientIsPresent,
 		//ev.TransactionsPresent, TODO: Re-enable Transaction evaluator once it tx pool issues are fixed.
+	}
+	if params.BeaconConfig().AltairForkEpoch > 0 {
+		evals = append(evals, ev.AltairForkTransition)
+	}
+	if params.BeaconConfig().BellatrixForkEpoch > 0 {
+		evals = append(evals, ev.BellatrixForkTransition)
+	}
+	if params.BeaconConfig().CapellaForkEpoch > 0 {
+		evals = append(evals, ev.CapellaForkTransition)
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
