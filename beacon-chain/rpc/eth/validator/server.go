@@ -25,7 +25,6 @@ type Server struct {
 	Stater                 lookup.Stater
 	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncCommitteePool      synccommittee.Pool
-	BLSChangesPool         blstoexec.PoolManager
 	V1Alpha1Server         eth.BeaconNodeValidatorServer
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	ChainInfoFetcher       blockchain.ChainInfoFetcher
