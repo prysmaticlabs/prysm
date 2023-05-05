@@ -71,13 +71,10 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 func TestValidatorStatus_Deposited(t *testing.T) {
 	ctx := context.Background()
 
-	pubKey1 := pubKey(1)
-	depData := &ethpb.Deposit_Data{
-		Amount:                params.BeaconConfig().MaxEffectiveBalance,
-		PublicKey:             pubKey1,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
-	}
+	deps, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	pubKey1 := keys[0].PublicKey().Marshal()
+	depData := deps[0].Data
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
@@ -95,14 +92,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 			0: uint64(height),
 		},
 	}
-	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
-		Validators: []*ethpb.Validator{
-			{
-				PublicKey:                  pubKey1,
-				ActivationEligibilityEpoch: 1,
-			},
-		},
-	})
+	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	vs := &Server{
 		DepositFetcher: depositCache,
@@ -152,6 +142,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 			{
 				PublicKey:                  pubKey1,
 				ActivationEligibilityEpoch: 1,
+				EffectiveBalance:           params.BeaconConfig().MinDepositAmount,
 			},
 		},
 	})
@@ -170,6 +161,65 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	require.NoError(t, err, "Could not get validator status")
 	assert.Equal(t, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED, resp.Status)
+}
+
+func TestValidatorStatus_Pending_MultipleDeposits(t *testing.T) {
+	ctx := context.Background()
+
+	pubKey1 := pubKey(1)
+	depData := &ethpb.Deposit_Data{
+		Amount:                16 * params.BeaconConfig().MinDepositAmount,
+		PublicKey:             pubKey1,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
+	}
+	deposit := &ethpb.Deposit{
+		Data: depData,
+	}
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err, "Could not setup deposit trie")
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+
+	root, err := depositTrie.HashTreeRoot()
+	require.NoError(t, err)
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
+	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 1, root))
+
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockExecution.Chain{
+		TimesByHeight: map[int]uint64{
+			0: uint64(height),
+		},
+	}
+	stateObj, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				PublicKey:                  pubKey1,
+				ActivationEligibilityEpoch: 1,
+				EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+				ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, stateObj.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	vs := &Server{
+		DepositFetcher: depositCache,
+		BlockFetcher:   p,
+		HeadFetcher: &mockChain.ChainService{
+			State: stateObj,
+		},
+		Eth1InfoFetcher: p,
+	}
+	req := &ethpb.ValidatorStatusRequest{
+		PublicKey: pubKey1,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	require.NoError(t, err, "Could not get validator status")
+	assert.Equal(t, ethpb.ValidatorStatus_PENDING, resp.Status)
 }
 
 func TestValidatorStatus_Pending(t *testing.T) {

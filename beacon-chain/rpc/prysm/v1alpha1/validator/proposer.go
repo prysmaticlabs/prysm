@@ -37,7 +37,11 @@ import (
 // eth1DataNotification is a latch to stop flooding logs with the same warning.
 var eth1DataNotification bool
 
-const eth1dataTimeout = 2 * time.Second
+const (
+	// CouldNotDecodeBlock means that a signed beacon block couldn't be created from the block present in the request.
+	CouldNotDecodeBlock = "Could not decode block"
+	eth1dataTimeout     = 2 * time.Second
+)
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -51,7 +52,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	graffiti := u.b.Block().Body().Graffiti()
 	sig := u.b.Signature()
 	blsToExecChanges, err := u.b.Block().Body().BLSToExecutionChanges()
-	if err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
+	if err != nil && !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, errors.Wrap(err, "could not get bls to execution changes")
 	}
 
@@ -79,7 +80,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 		return nil, errors.Wrap(err, "could not set sync aggregate")
 	}
 	sb.SetSignature(sig[:])
-	if err = sb.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
+	if err = sb.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, errors.Wrap(err, "could not set bls to execution changes")
 	}
 	if err = sb.SetExecution(h); err != nil {
@@ -113,7 +114,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	graffiti = sb.Block().Body().Graffiti()
 	sig = sb.Signature()
 	blsToExecChanges, err = sb.Block().Body().BLSToExecutionChanges()
-	if err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
+	if err != nil && !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, errors.Wrap(err, "could not get bls to execution changes")
 	}
 
@@ -140,7 +141,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	if err = wb.SetSyncAggregate(agg); err != nil {
 		return nil, errors.Wrap(err, "could not set sync aggregate")
 	}
-	if err = wb.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedGetter) {
+	if err = wb.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensus_types.ErrUnsupportedGetter) {
 		return nil, errors.Wrap(err, "could not set bls to execution changes")
 	}
 	if err = wb.SetExecution(payload); err != nil {

@@ -268,6 +268,7 @@ func (s *Service) Start() {
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 		ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
 		BeaconDB:               s.cfg.BeaconDB,
+		BlockBuilder:           s.cfg.BlockBuilder,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -336,6 +337,7 @@ func (s *Service) Start() {
 		Blocker:                       blocker,
 		OptimisticModeFetcher:         s.cfg.OptimisticModeFetcher,
 		HeadFetcher:                   s.cfg.HeadFetcher,
+		TimeFetcher:                   s.cfg.GenesisTimeFetcher,
 		VoluntaryExitsPool:            s.cfg.ExitPool,
 		V1Alpha1ValidatorServer:       validatorServer,
 		SyncChecker:                   s.cfg.SyncService,

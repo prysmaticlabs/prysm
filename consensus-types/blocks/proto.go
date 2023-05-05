@@ -1,9 +1,8 @@
 package blocks
 
 import (
-	"math/big"
-
 	"github.com/pkg/errors"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -797,7 +796,7 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 
 	p, err := WrappedExecutionPayload(pb.ExecutionPayload)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -824,7 +823,7 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 
 	ph, err := WrappedExecutionPayloadHeader(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -849,9 +848,9 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, big.NewInt(0))
+	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, 0)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -877,9 +876,9 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, big.NewInt(0))
+	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, 0)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -905,9 +904,9 @@ func initBlockBodyFromProtoDeneb(pb *eth.BeaconBlockBodyDeneb) (*BeaconBlockBody
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload, big.NewInt(0))
+	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload, 0)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -934,9 +933,9 @@ func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*B
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader, big.NewInt(0))
+	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader, 0)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
