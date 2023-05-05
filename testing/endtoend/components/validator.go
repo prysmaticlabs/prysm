@@ -2,7 +2,6 @@ package components
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,12 +19,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"google.golang.org/protobuf/proto"
 )
 
 const DefaultFeeRecipientAddress = "0x099FB65722e7b2455043bfebF6177f1D2E9738d9"
@@ -335,28 +335,28 @@ func createProposerSettingsPath(pubkeys []string, nodeIdx int) (string, error) {
 	if len(pubkeys) == 0 {
 		return "", errors.New("number of validators must be greater than 0")
 	}
-	var proposerSettingsPayload validator_service_config.ProposerSettingsPayload
-	config := make(map[string]*validator_service_config.ProposerOptionPayload)
+	var proposerSettingsPayload *validatorpb.ProposerSettingsPayload
+	config := make(map[string]*validatorpb.ProposerOptionPayload)
 
 	for i, pubkey := range pubkeys {
-		config[pubkeys[i]] = &validator_service_config.ProposerOptionPayload{
+		config[pubkeys[i]] = &validatorpb.ProposerOptionPayload{
 			FeeRecipient: FeeRecipientFromPubkey(pubkey),
 		}
 	}
-	proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
+	proposerSettingsPayload = &validatorpb.ProposerSettingsPayload{
 		ProposerConfig: config,
-		DefaultConfig: &validator_service_config.ProposerOptionPayload{
+		DefaultConfig: &validatorpb.ProposerOptionPayload{
 			FeeRecipient: DefaultFeeRecipientAddress,
 		},
 	}
-	jsonBytes, err := json.Marshal(proposerSettingsPayload)
+	protoBytes, err := proto.Marshal(proposerSettingsPayload)
 	if err != nil {
 		return "", err
 	}
 	if err := file.MkdirAll(testNetDir); err != nil {
 		return "", err
 	}
-	if err := file.WriteFile(configPath, jsonBytes); err != nil {
+	if err := file.WriteFile(configPath, protoBytes); err != nil {
 		return "", err
 	}
 	return configPath, nil

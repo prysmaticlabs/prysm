@@ -17,6 +17,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -1416,11 +1417,11 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 		params.BeaconConfig().DefaultBuilderGasLimit = originBeaconChainGasLimit
 	}()
 
-	globalDefaultGasLimit := validatorserviceconfig.Uint64(0xbbdd)
+	globalDefaultGasLimit := validator.Uint64(0xbbdd)
 
 	type want struct {
 		pubkey   []byte
-		gaslimit validatorserviceconfig.Uint64
+		gaslimit validator.Uint64
 	}
 
 	tests := []struct {
@@ -1436,14 +1437,14 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 					bytesutil.ToBytes48(pubkey2): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(123456789)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(123456789)},
 					},
 				},
 				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(5555)},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(5555)},
 				},
 			},
 			wantError: nil,
@@ -1451,11 +1452,11 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				{
 					pubkey: pubkey1,
 					// After deletion, use DefaultConfig.BuilderConfig.GasLimit.
-					gaslimit: validatorserviceconfig.Uint64(5555),
+					gaslimit: validator.Uint64(5555),
 				},
 				{
 					pubkey:   pubkey2,
-					gaslimit: validatorserviceconfig.Uint64(123456789),
+					gaslimit: validator.Uint64(123456789),
 				},
 			},
 		},
@@ -1465,10 +1466,10 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 					bytesutil.ToBytes48(pubkey2): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(123456789)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(123456789)},
 					},
 				},
 			},
@@ -1481,7 +1482,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				},
 				{
 					pubkey:   pubkey2,
-					gaslimit: validatorserviceconfig.Uint64(123456789),
+					gaslimit: validator.Uint64(123456789),
 				},
 			},
 		},
@@ -1491,7 +1492,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 				},
 			},
@@ -1500,7 +1501,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				// pubkey1's gaslimit is unaffected
 				{
 					pubkey:   pubkey1,
-					gaslimit: validatorserviceconfig.Uint64(987654321),
+					gaslimit: validator.Uint64(987654321),
 				},
 			},
 		},

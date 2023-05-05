@@ -85,18 +85,19 @@ func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 	if ps == nil {
 		return nil
 	}
-	payload := &validatorpb.ProposerSettingsPayload{
-		ProposerConfig: make(map[string]*validatorpb.ProposerOptionPayload),
-	}
-	for key, option := range ps.ProposeConfig {
-		p := &validatorpb.ProposerOptionPayload{}
-		if option.FeeRecipientConfig != nil {
-			p.FeeRecipient = option.FeeRecipientConfig.FeeRecipient.Hex()
+	payload := &validatorpb.ProposerSettingsPayload{}
+	if ps.ProposeConfig != nil {
+		payload.ProposerConfig = make(map[string]*validatorpb.ProposerOptionPayload)
+		for key, option := range ps.ProposeConfig {
+			p := &validatorpb.ProposerOptionPayload{}
+			if option.FeeRecipientConfig != nil {
+				p.FeeRecipient = option.FeeRecipientConfig.FeeRecipient.Hex()
+			}
+			if option.BuilderConfig != nil {
+				p.Builder = option.BuilderConfig.ToPayload()
+			}
+			payload.ProposerConfig[hexutil.Encode(key[:])] = p
 		}
-		if option.BuilderConfig != nil {
-			p.Builder = option.BuilderConfig.ToPayload()
-		}
-		payload.ProposerConfig[hexutil.Encode(key[:])] = p
 	}
 	if ps.DefaultConfig != nil {
 		p := &validatorpb.ProposerOptionPayload{}
