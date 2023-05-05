@@ -48,7 +48,7 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Capella fork blinded beacon block.
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
-        SignedBeaconBlockDenebAndBlobs Deneb  = 7;
+        SignedBeaconBlockAndBlobsDeneb Deneb  = 7;
     }
 }
 
@@ -441,9 +441,9 @@ message BlindedBeaconBlockBodyBellatrix {
     ethereum.engine.v1.ExecutionPayloadHeader execution_payload_header = 10;
 }
 
-message SignedBeaconBlockDenebAndBlobs {
+message SignedBeaconBlockAndBlobsDeneb {
     SignedBeaconBlockDeneb block = 1;
-    repeated SignedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+    repeated SignedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "blob_in_block.size"];
 }
 
 message SignedBeaconBlockDeneb {
@@ -456,7 +456,7 @@ message SignedBeaconBlockDeneb {
 
 message BeaconBlockDenebAndBlobs {
     BeaconBlockDeneb block = 1;
-    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "blob_in_block.size"];
 }
 
 message BeaconBlockDeneb {

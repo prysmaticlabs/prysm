@@ -22,6 +22,9 @@ mainnet = {
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector128",
     "withdrawal.size": "16",
     "blob.size": "131072",
+    "logs_bloom.size": "256",
+    "extra_data.size": "32",
+    "blob_in_block.size": "4",
 }
 
 minimal = {

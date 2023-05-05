@@ -123,7 +123,7 @@ func (x *GenericSignedBeaconBlock) GetBlindedCapella() *SignedBlindedBeaconBlock
 	return nil
 }
 
-func (x *GenericSignedBeaconBlock) GetDeneb() *SignedBeaconBlockDenebAndBlobs {
+func (x *GenericSignedBeaconBlock) GetDeneb() *SignedBeaconBlockAndBlobsDeneb {
 	if x, ok := x.GetBlock().(*GenericSignedBeaconBlock_Deneb); ok {
 		return x.Deneb
 	}
@@ -159,7 +159,7 @@ type GenericSignedBeaconBlock_BlindedCapella struct {
 }
 
 type GenericSignedBeaconBlock_Deneb struct {
-	Deneb *SignedBeaconBlockDenebAndBlobs `protobuf:"bytes,7,opt,name=Deneb,proto3,oneof"`
+	Deneb *SignedBeaconBlockAndBlobsDeneb `protobuf:"bytes,7,opt,name=Deneb,proto3,oneof"`
 }
 
 func (*GenericSignedBeaconBlock_Phase0) isGenericSignedBeaconBlock_Block() {}
@@ -1905,7 +1905,7 @@ func (x *BlindedBeaconBlockBodyBellatrix) GetExecutionPayloadHeader() *v1.Execut
 	return nil
 }
 
-type SignedBeaconBlockDenebAndBlobs struct {
+type SignedBeaconBlockAndBlobsDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -1914,8 +1914,8 @@ type SignedBeaconBlockDenebAndBlobs struct {
 	Blobs []*SignedBlobSidecar    `protobuf:"bytes,2,rep,name=blobs,proto3" json:"blobs,omitempty" ssz-max:"4"`
 }
 
-func (x *SignedBeaconBlockDenebAndBlobs) Reset() {
-	*x = SignedBeaconBlockDenebAndBlobs{}
+func (x *SignedBeaconBlockAndBlobsDeneb) Reset() {
+	*x = SignedBeaconBlockAndBlobsDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1923,13 +1923,13 @@ func (x *SignedBeaconBlockDenebAndBlobs) Reset() {
 	}
 }
 
-func (x *SignedBeaconBlockDenebAndBlobs) String() string {
+func (x *SignedBeaconBlockAndBlobsDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignedBeaconBlockDenebAndBlobs) ProtoMessage() {}
+func (*SignedBeaconBlockAndBlobsDeneb) ProtoMessage() {}
 
-func (x *SignedBeaconBlockDenebAndBlobs) ProtoReflect() protoreflect.Message {
+func (x *SignedBeaconBlockAndBlobsDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1941,19 +1941,19 @@ func (x *SignedBeaconBlockDenebAndBlobs) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SignedBeaconBlockDenebAndBlobs.ProtoReflect.Descriptor instead.
-func (*SignedBeaconBlockDenebAndBlobs) Descriptor() ([]byte, []int) {
+// Deprecated: Use SignedBeaconBlockAndBlobsDeneb.ProtoReflect.Descriptor instead.
+func (*SignedBeaconBlockAndBlobsDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_block_proto_rawDescGZIP(), []int{24}
 }
 
-func (x *SignedBeaconBlockDenebAndBlobs) GetBlock() *SignedBeaconBlockDeneb {
+func (x *SignedBeaconBlockAndBlobsDeneb) GetBlock() *SignedBeaconBlockDeneb {
 	if x != nil {
 		return x.Block
 	}
 	return nil
 }
 
-func (x *SignedBeaconBlockDenebAndBlobs) GetBlobs() []*SignedBlobSidecar {
+func (x *SignedBeaconBlockAndBlobsDeneb) GetBlobs() []*SignedBlobSidecar {
 	if x != nil {
 		return x.Blobs
 	}
@@ -3610,8 +3610,8 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_rawDesc = []byte{
 	0x0a, 0x05, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x35, 0x2e,
 	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61,
 	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63,
-	0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x41, 0x6e, 0x64, 0x42,
-	0x6c, 0x6f, 0x62, 0x73, 0x48, 0x00, 0x52, 0x05, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x42, 0x07, 0x0a,
+	0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6e, 0x64, 0x42, 0x6c, 0x6f, 0x62, 0x73, 0x44,
+	0x65, 0x6e, 0x65, 0x62, 0x48, 0x00, 0x52, 0x05, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x42, 0x07, 0x0a,
 	0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x22, 0xbc, 0x04, 0x0a, 0x12, 0x47, 0x65, 0x6e, 0x65, 0x72,
 	0x69, 0x63, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x3c, 0x0a,
 	0x06, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e,
@@ -4078,8 +4078,8 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_rawDesc = []byte{
 	0x6f, 0x6e, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x52,
 	0x16, 0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61,
 	0x64, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x22, 0xac, 0x01, 0x0a, 0x1e, 0x53, 0x69, 0x67, 0x6e,
-	0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x44, 0x65, 0x6e,
-	0x65, 0x62, 0x41, 0x6e, 0x64, 0x42, 0x6c, 0x6f, 0x62, 0x73, 0x12, 0x43, 0x0a, 0x05, 0x62, 0x6c,
+	0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6e, 0x64,
+	0x42, 0x6c, 0x6f, 0x62, 0x73, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x12, 0x43, 0x0a, 0x05, 0x62, 0x6c,
 	0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65,
 	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
 	0x31, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c,
@@ -4574,7 +4574,7 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_goTypes = []interface{}{
 	(*SignedBlindedBeaconBlockBellatrix)(nil), // 21: ethereum.eth.v1alpha1.SignedBlindedBeaconBlockBellatrix
 	(*BlindedBeaconBlockBellatrix)(nil),       // 22: ethereum.eth.v1alpha1.BlindedBeaconBlockBellatrix
 	(*BlindedBeaconBlockBodyBellatrix)(nil),   // 23: ethereum.eth.v1alpha1.BlindedBeaconBlockBodyBellatrix
-	(*SignedBeaconBlockDenebAndBlobs)(nil),    // 24: ethereum.eth.v1alpha1.SignedBeaconBlockDenebAndBlobs
+	(*SignedBeaconBlockAndBlobsDeneb)(nil),    // 24: ethereum.eth.v1alpha1.SignedBeaconBlockAndBlobsDeneb
 	(*SignedBeaconBlockDeneb)(nil),            // 25: ethereum.eth.v1alpha1.SignedBeaconBlockDeneb
 	(*BeaconBlockDenebAndBlobs)(nil),          // 26: ethereum.eth.v1alpha1.BeaconBlockDenebAndBlobs
 	(*BeaconBlockDeneb)(nil),                  // 27: ethereum.eth.v1alpha1.BeaconBlockDeneb
@@ -4615,7 +4615,7 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_depIdxs = []int32{
 	21,  // 3: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.blinded_bellatrix:type_name -> ethereum.eth.v1alpha1.SignedBlindedBeaconBlockBellatrix
 	29,  // 4: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.capella:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockCapella
 	32,  // 5: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.blinded_capella:type_name -> ethereum.eth.v1alpha1.SignedBlindedBeaconBlockCapella
-	24,  // 6: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.Deneb:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockDenebAndBlobs
+	24,  // 6: ethereum.eth.v1alpha1.GenericSignedBeaconBlock.Deneb:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockAndBlobsDeneb
 	2,   // 7: ethereum.eth.v1alpha1.GenericBeaconBlock.phase0:type_name -> ethereum.eth.v1alpha1.BeaconBlock
 	4,   // 8: ethereum.eth.v1alpha1.GenericBeaconBlock.altair:type_name -> ethereum.eth.v1alpha1.BeaconBlockAltair
 	19,  // 9: ethereum.eth.v1alpha1.GenericBeaconBlock.bellatrix:type_name -> ethereum.eth.v1alpha1.BeaconBlockBellatrix
@@ -4668,8 +4668,8 @@ var file_proto_prysm_v1alpha1_beacon_block_proto_depIdxs = []int32{
 	12,  // 56: ethereum.eth.v1alpha1.BlindedBeaconBlockBodyBellatrix.voluntary_exits:type_name -> ethereum.eth.v1alpha1.SignedVoluntaryExit
 	17,  // 57: ethereum.eth.v1alpha1.BlindedBeaconBlockBodyBellatrix.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
 	49,  // 58: ethereum.eth.v1alpha1.BlindedBeaconBlockBodyBellatrix.execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeader
-	25,  // 59: ethereum.eth.v1alpha1.SignedBeaconBlockDenebAndBlobs.block:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockDeneb
-	50,  // 60: ethereum.eth.v1alpha1.SignedBeaconBlockDenebAndBlobs.blobs:type_name -> ethereum.eth.v1alpha1.SignedBlobSidecar
+	25,  // 59: ethereum.eth.v1alpha1.SignedBeaconBlockAndBlobsDeneb.block:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlockDeneb
+	50,  // 60: ethereum.eth.v1alpha1.SignedBeaconBlockAndBlobsDeneb.blobs:type_name -> ethereum.eth.v1alpha1.SignedBlobSidecar
 	27,  // 61: ethereum.eth.v1alpha1.SignedBeaconBlockDeneb.block:type_name -> ethereum.eth.v1alpha1.BeaconBlockDeneb
 	27,  // 62: ethereum.eth.v1alpha1.BeaconBlockDenebAndBlobs.block:type_name -> ethereum.eth.v1alpha1.BeaconBlockDeneb
 	51,  // 63: ethereum.eth.v1alpha1.BeaconBlockDenebAndBlobs.blobs:type_name -> ethereum.eth.v1alpha1.BlobSidecar
@@ -5027,7 +5027,7 @@ func file_proto_prysm_v1alpha1_beacon_block_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_beacon_block_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignedBeaconBlockDenebAndBlobs); i {
+			switch v := v.(*SignedBeaconBlockAndBlobsDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
