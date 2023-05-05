@@ -88,10 +88,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[types.Balances].MinusRef()
-	b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
-
-	b.balances = val
+	b.balances = NewMultiValueBalances(val)
 	b.markFieldAsDirty(types.Balances)
 	b.rebuildTrie[types.Balances] = true
 	return nil
@@ -100,21 +97,12 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx primitives.ValidatorIndex, val uint64) error {
-	if uint64(len(b.balances)) <= uint64(idx) {
-		return errors.Errorf("invalid index provided %d", idx)
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	bals := b.balances
-	if b.sharedFieldReferences[types.Balances].Refs() > 1 {
-		bals = b.balancesVal()
-		b.sharedFieldReferences[types.Balances].MinusRef()
-		b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
+	if err := b.balances.UpdateAt(b, uint64(idx), val); err != nil {
+		return errors.Wrap(err, "could not update balances")
 	}
-
-	bals[idx] = val
-	b.balances = bals
 	b.markFieldAsDirty(types.Balances)
 	b.addDirtyIndices(types.Balances, []uint64{uint64(idx)})
 	return nil
@@ -188,15 +176,14 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	bals := b.balances
-	if b.sharedFieldReferences[types.Balances].Refs() > 1 {
-		bals = b.balancesVal()
-		b.sharedFieldReferences[types.Balances].MinusRef()
-		b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
-	}
+	bals := b.balances.Value(b)
+	balsCopy := make([]uint64, len(bals)+1)
+	copy(balsCopy, bals)
+	balIdx := len(balsCopy) - 1
+	balsCopy[balIdx] = bal
+	b.balances.Detach(b)
+	b.balances = NewMultiValueBalances(balsCopy)
 
-	b.balances = append(bals, bal)
-	balIdx := len(b.balances) - 1
 	b.markFieldAsDirty(types.Balances)
 	b.addDirtyIndices(types.Balances, []uint64{uint64(balIdx)})
 	return nil
@@ -211,14 +198,13 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 		return errNotSupported("AppendInactivityScore", b.version)
 	}
 
-	scores := b.inactivityScores
-	if b.sharedFieldReferences[types.InactivityScores].Refs() > 1 {
-		scores = b.inactivityScoresVal()
-		b.sharedFieldReferences[types.InactivityScores].MinusRef()
-		b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
-	}
+	scores := b.inactivityScores.Value(b)
+	scoresCopy := make([]uint64, len(scores)+1)
+	copy(scoresCopy, scores)
+	scoresCopy[len(scoresCopy)-1] = s
+	b.inactivityScores.Detach(b)
+	b.balances = NewMultiValueInactivityScores(scoresCopy)
 
-	b.inactivityScores = append(scores, s)
 	b.markFieldAsDirty(types.InactivityScores)
 	return nil
 }
@@ -233,10 +219,7 @@ func (b *BeaconState) SetInactivityScores(val []uint64) error {
 		return errNotSupported("SetInactivityScores", b.version)
 	}
 
-	b.sharedFieldReferences[types.InactivityScores].MinusRef()
-	b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
-
-	b.inactivityScores = val
+	b.inactivityScores = NewMultiValueInactivityScores(val)
 	b.markFieldAsDirty(types.InactivityScores)
 	return nil
 }

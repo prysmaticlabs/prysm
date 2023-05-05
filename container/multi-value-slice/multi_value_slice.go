@@ -25,18 +25,18 @@ type Slice[V comparable, O any] struct {
 	lock  sync.RWMutex
 }
 
-func (r *Slice[V, O]) Len() int {
-	return len(r.Items)
+func (s *Slice[V, O]) Len() int {
+	return len(s.Items)
 }
 
-func (r *Slice[V, O]) Copy(src O, dst O) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+func (s *Slice[V, O]) Copy(src O, dst O) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	pSrc := reflect.ValueOf(src).Elem().Addr().Pointer()
 	pDst := reflect.ValueOf(dst).Elem().Addr().Pointer()
 
-	for _, item := range r.Items {
+	for _, item := range s.Items {
 		if item.Individual != nil {
 		outerLoop:
 			for _, mv := range item.Individual {
@@ -51,16 +51,16 @@ func (r *Slice[V, O]) Copy(src O, dst O) {
 	}
 }
 
-func (r *Slice[V, O]) Value(obj O) []V {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
+func (s *Slice[V, O]) Value(obj O) []V {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 
 	p := reflect.ValueOf(obj).Elem().Addr().Pointer()
 
-	v := make([]V, len(r.Items))
-	for i, item := range r.Items {
+	v := make([]V, len(s.Items))
+	for i, item := range s.Items {
 		if item.Individual == nil {
-			v[i] = r.Items[i].Shared
+			v[i] = s.Items[i].Shared
 		} else {
 			found := false
 		outerLoop:
@@ -74,7 +74,7 @@ func (r *Slice[V, O]) Value(obj O) []V {
 				}
 			}
 			if !found {
-				v[i] = r.Items[i].Shared
+				v[i] = s.Items[i].Shared
 			}
 		}
 	}
@@ -82,18 +82,18 @@ func (r *Slice[V, O]) Value(obj O) []V {
 	return v
 }
 
-func (r *Slice[V, O]) At(obj O, i uint64) (V, error) {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
+func (s *Slice[V, O]) At(obj O, i uint64) (V, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 
-	if i >= uint64(len(r.Items)) {
+	if i >= uint64(len(s.Items)) {
 		var def V
 		return def, fmt.Errorf("index %d is out of bounds", i)
 	}
 
 	p := reflect.ValueOf(obj).Elem().Addr().Pointer()
 
-	item := r.Items[i]
+	item := s.Items[i]
 	if item.Individual == nil {
 		return item.Shared, nil
 	}
@@ -107,15 +107,15 @@ func (r *Slice[V, O]) At(obj O, i uint64) (V, error) {
 	return item.Shared, nil
 }
 
-func (r *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
-	if i >= uint64(len(r.Items)) {
+	if i >= uint64(len(s.Items)) {
 		return fmt.Errorf("index %d is out of bounds", i)
 	}
 
-	item := r.Items[i]
+	item := s.Items[i]
 
 	p := reflect.ValueOf(obj).Elem().Addr().Pointer()
 
@@ -152,13 +152,13 @@ outerLoop:
 	return nil
 }
 
-func (r *Slice[V, O]) Detach(obj O) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+func (s *Slice[V, O]) Detach(obj O) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	p := reflect.ValueOf(obj).Elem().Addr().Pointer()
 
-	for _, item := range r.Items {
+	for _, item := range s.Items {
 	outerLoop:
 		for mvi, mv := range item.Individual {
 			for oi, o := range mv.objs {

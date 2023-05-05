@@ -34,7 +34,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DataVotes:               b.eth1DataVotes,
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validators,
-			Balances:                    b.balances,
+			Balances:                    b.balances.Value(b),
 			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashings,
 			PreviousEpochAttestations:   b.previousEpochAttestations,
@@ -58,7 +58,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DataVotes:               b.eth1DataVotes,
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validators,
-			Balances:                    b.balances,
+			Balances:                    b.balances.Value(b),
 			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashings,
 			PreviousEpochParticipation:  b.previousEpochParticipation,
@@ -67,7 +67,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint,
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint,
 			FinalizedCheckpoint:         b.finalizedCheckpoint,
-			InactivityScores:            b.inactivityScores,
+			InactivityScores:            b.inactivityScores.Value(b),
 			CurrentSyncCommittee:        b.currentSyncCommittee,
 			NextSyncCommittee:           b.nextSyncCommittee,
 		}
@@ -85,7 +85,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validators,
-			Balances:                     b.balances,
+			Balances:                     b.balances.Value(b),
 			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
@@ -94,7 +94,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
 			FinalizedCheckpoint:          b.finalizedCheckpoint,
-			InactivityScores:             b.inactivityScores,
+			InactivityScores:             b.inactivityScores.Value(b),
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader,
@@ -113,7 +113,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validators,
-			Balances:                     b.balances,
+			Balances:                     b.balances.Value(b),
 			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
@@ -122,7 +122,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
 			FinalizedCheckpoint:          b.finalizedCheckpoint,
-			InactivityScores:             b.inactivityScores,
+			InactivityScores:             b.inactivityScores.Value(b),
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapella,
@@ -145,9 +145,41 @@ func (b *BeaconState) ToProto() interface{} {
 	defer b.lock.RUnlock()
 
 	gvrCopy := b.genesisValidatorsRoot
+
 	br := customtypes.BlockRoots(b.blockRoots.Value(b))
+	brSlice := br.Slice()
+	// TODO: Should this be done in Slice()?
+	brCopy := make([][]byte, len(br))
+	for i, v := range brSlice {
+		copy(brCopy[i], v)
+	}
+
 	sr := customtypes.StateRoots(b.stateRoots.Value(b))
+	srSlice := sr.Slice()
+	// TODO: Should this be done in Slice()?
+	srCopy := make([][]byte, len(sr))
+	for i, v := range srSlice {
+		copy(srCopy[i], v)
+	}
+
 	rm := customtypes.RandaoMixes(b.randaoMixes.Value(b))
+	rmSlice := rm.Slice()
+	// TODO: Should this be done in Slice()?
+	rmCopy := make([][]byte, len(rm))
+	for i, v := range rmSlice {
+		copy(rmCopy[i], v)
+	}
+
+	balances := b.balances.Value(b)
+	balancesCopy := make([]uint64, len(balances))
+	copy(balancesCopy, balances)
+
+	var inactivityScoresCopy []uint64
+	if b.version > version.Phase0 {
+		inactivityScores := b.inactivityScores.Value(b)
+		inactivityScoresCopy = make([]uint64, len(inactivityScores))
+		copy(inactivityScoresCopy, inactivityScores)
+	}
 
 	switch b.version {
 	case version.Phase0:
@@ -157,15 +189,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.forkVal(),
 			LatestBlockHeader:           b.latestBlockHeaderVal(),
-			BlockRoots:                  br.Slice(),
-			StateRoots:                  sr.Slice(),
+			BlockRoots:                  brCopy,
+			StateRoots:                  srCopy,
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1DataVal(),
 			Eth1DataVotes:               b.eth1DataVotesVal(),
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validatorsVal(),
-			Balances:                    b.balancesVal(),
-			RandaoMixes:                 rm.Slice(),
+			Balances:                    balancesCopy,
+			RandaoMixes:                 rmCopy,
 			Slashings:                   b.slashingsVal(),
 			PreviousEpochAttestations:   b.previousEpochAttestationsVal(),
 			CurrentEpochAttestations:    b.currentEpochAttestationsVal(),
@@ -181,15 +213,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.forkVal(),
 			LatestBlockHeader:           b.latestBlockHeaderVal(),
-			BlockRoots:                  br.Slice(),
-			StateRoots:                  sr.Slice(),
+			BlockRoots:                  brCopy,
+			StateRoots:                  srCopy,
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1DataVal(),
 			Eth1DataVotes:               b.eth1DataVotesVal(),
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validatorsVal(),
-			Balances:                    b.balancesVal(),
-			RandaoMixes:                 rm.Slice(),
+			Balances:                    balancesCopy,
+			RandaoMixes:                 rmCopy,
 			Slashings:                   b.slashingsVal(),
 			PreviousEpochParticipation:  b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:   b.currentEpochParticipationVal(),
@@ -197,7 +229,7 @@ func (b *BeaconState) ToProto() interface{} {
 			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpointVal(),
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpointVal(),
 			FinalizedCheckpoint:         b.finalizedCheckpointVal(),
-			InactivityScores:            b.inactivityScoresVal(),
+			InactivityScores:            inactivityScoresCopy,
 			CurrentSyncCommittee:        b.currentSyncCommitteeVal(),
 			NextSyncCommittee:           b.nextSyncCommitteeVal(),
 		}
@@ -208,15 +240,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
-			BlockRoots:                   br.Slice(),
-			StateRoots:                   sr.Slice(),
+			BlockRoots:                   brCopy,
+			StateRoots:                   srCopy,
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
-			Balances:                     b.balancesVal(),
-			RandaoMixes:                  rm.Slice(),
+			Balances:                     balancesCopy,
+			RandaoMixes:                  rmCopy,
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
@@ -224,7 +256,7 @@ func (b *BeaconState) ToProto() interface{} {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpointVal(),
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpointVal(),
 			FinalizedCheckpoint:          b.finalizedCheckpointVal(),
-			InactivityScores:             b.inactivityScoresVal(),
+			InactivityScores:             inactivityScoresCopy,
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal(),
@@ -236,15 +268,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
-			BlockRoots:                   br.Slice(),
-			StateRoots:                   sr.Slice(),
+			BlockRoots:                   brCopy,
+			StateRoots:                   srCopy,
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
-			Balances:                     b.balancesVal(),
-			RandaoMixes:                  rm.Slice(),
+			Balances:                     balancesCopy,
+			RandaoMixes:                  rmCopy,
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
@@ -252,7 +284,7 @@ func (b *BeaconState) ToProto() interface{} {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpointVal(),
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpointVal(),
 			FinalizedCheckpoint:          b.finalizedCheckpointVal(),
-			InactivityScores:             b.inactivityScoresVal(),
+			InactivityScores:             inactivityScoresCopy,
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapellaVal(),

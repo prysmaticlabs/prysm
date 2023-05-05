@@ -31,7 +31,7 @@ type BeaconState struct {
 	eth1DataVotes                       []*ethpb.Eth1Data
 	eth1DepositIndex                    uint64
 	validators                          []*ethpb.Validator
-	balances                            []uint64
+	balances                            *MultiValueBalances
 	randaoMixes                         *MultiValueRandaoMixes
 	slashings                           []uint64
 	previousEpochAttestations           []*ethpb.PendingAttestation
@@ -42,7 +42,7 @@ type BeaconState struct {
 	previousJustifiedCheckpoint         *ethpb.Checkpoint
 	currentJustifiedCheckpoint          *ethpb.Checkpoint
 	finalizedCheckpoint                 *ethpb.Checkpoint
-	inactivityScores                    []uint64
+	inactivityScores                    *MultiValueInactivityScores
 	currentSyncCommittee                *ethpb.SyncCommittee
 	nextSyncCommittee                   *ethpb.SyncCommittee
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader
