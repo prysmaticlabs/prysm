@@ -129,7 +129,6 @@ ssz_gen_marshal(
         "SignedBLSToExecutionChange",
         "BuilderBid",
         "BuilderBidCapella",
-        "BuilderBidDeneb",
         "BlobSidecar",
         "SignedBlobSidecar",
         "BlobIdentifier",
