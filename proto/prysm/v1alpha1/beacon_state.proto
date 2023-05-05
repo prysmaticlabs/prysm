@@ -338,7 +338,7 @@ message BeaconStateDeneb {
 
   // Fields introduced in Capella fork [11001-12000]
   uint64 next_withdrawal_index = 11001;
-  uint64 next_withdrawal_validator_index = 11002 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"]; // [New in Capella]
+  uint64 next_withdrawal_validator_index = 11002 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"]; 
   repeated HistoricalSummary historical_summaries = 11003 [(ethereum.eth.ext.ssz_max) = "16777216"];
 }
 
