@@ -48,11 +48,11 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Capella fork blinded beacon block.
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
-        // Representing a signed, post-Deneb fork beacon block content
+        // Representing a signed, post-Deneb fork beacon block content.
         SignedBeaconBlockDenebAndBlobs deneb  = 7;
 
-        // Representing a signed, post-Deneb fork beacon block content
-        SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
+        // Representing a signed, post-Deneb fork blinded beacon block content.
+        SignedBlindedBeaconBlockDenebAndBlobs blinded_deneb  = 8;
     }
 }
 

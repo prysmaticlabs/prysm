@@ -119,7 +119,7 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 	case version.Deneb:
 		if b.IsBlinded() {
 			return &eth.GenericSignedBeaconBlock{
-				Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: pb.(*eth.SignedBlindedBeaconBlockDeneb)},
+				Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: pb.(*eth.SignedBlindedBeaconBlockDenebAndBlobs)},
 			}, nil
 		}
 		return &eth.GenericSignedBeaconBlock{

@@ -241,8 +241,7 @@ func wrapSignedContributionAndProofsArray(
 }
 
 type phase0PublishBlockRequestJson struct {
-	Phase0Block *BeaconBlockJson `json:"phase0_block"`
-	Signature   string           `json:"signature" hex:"true"`
+	Phase0Block *SignedBeaconBlockJson `json:"phase0_block"`
 }
 
 type phase0PublishBlindedBlockRequestJson struct {
@@ -250,8 +249,7 @@ type phase0PublishBlindedBlockRequestJson struct {
 }
 
 type altairPublishBlockRequestJson struct {
-	AltairBlock *BeaconBlockAltairJson `json:"altair_block"`
-	Signature   string                 `json:"signature" hex:"true"`
+	AltairBlock *SignedBeaconBlockAltairJson `json:"altair_block"`
 }
 
 type altairPublishBlindedBlockRequestJson struct {
@@ -259,22 +257,23 @@ type altairPublishBlindedBlockRequestJson struct {
 }
 
 type bellatrixPublishBlockRequestJson struct {
-	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
-	Signature      string                    `json:"signature" hex:"true"`
-}
-
-type capellaPublishBlockRequestJson struct {
-	CapellaBlock *BeaconBlockCapellaJson `json:"capella_block"`
-	Signature    string                  `json:"signature" hex:"true"`
+	BellatrixBlock *SignedBeaconBlockBellatrixJson `json:"bellatrix_block"`
 }
 
 type bellatrixPublishBlindedBlockRequestJson struct {
-	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
-	Signature      string                           `json:"signature" hex:"true"`
+	BellatrixBlock *SignedBlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+}
+
+type capellaPublishBlockRequestJson struct {
+	CapellaBlock *SignedBeaconBlockCapellaJson `json:"capella_block"`
 }
 
 type capellaPublishBlindedBlockRequestJson struct {
 	CapellaBlock *SignedBlindedBeaconBlockCapellaJson `json:"capella_block"`
+}
+
+type denebPublishBlockRequestJson struct {
+	DenebContents *SignedBeaconBlockContentsDenebJson `json:"deneb_contents"`
 }
 
 type denebPublishBlindedBlockRequestJson struct {
@@ -291,9 +290,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
 	s := struct {
-		Message struct {
-			Slot string
-		}
+		Slot string
 	}{}
 
 	buf, err := io.ReadAll(req.Body)
@@ -320,7 +317,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		}
 		s.Slot = temp.Message.Slot
 	} else {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, fmt.Sprintf("object: %v is not a known signed block type", typeParseMap))
+		return false, &apimiddleware.DefaultErrorJson{Message: "could not parse slot from request", Code: http.StatusInternalServerError}
 	}
 	slot, err := strconv.ParseUint(s.Slot, 10, 64)
 	if err != nil {
@@ -333,8 +330,8 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		endpoint.PostRequest = &SignedBeaconBlockAltairJson{}
 	} else if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockBellatrixJson{}
-	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
-		endpoint.PostRequest = &SignedBeaconBlockCapellaJson{}
+		/*} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
+		endpoint.PostRequest = &SignedBeaconBlockCapellaJson{}*/
 	} else {
 		endpoint.PostRequest = &SignedBeaconBlockContentsDenebJson{}
 	}
@@ -350,8 +347,7 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &phase0PublishBlockRequestJson{
-			Phase0Block: block.Message,
-			Signature:   block.Signature,
+			Phase0Block: block,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -359,8 +355,7 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockAltairJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &altairPublishBlockRequestJson{
-			AltairBlock: block.Message,
-			Signature:   block.Signature,
+			AltairBlock: block,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -368,8 +363,7 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockBellatrixJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &bellatrixPublishBlockRequestJson{
-			BellatrixBlock: block.Message,
-			Signature:      block.Signature,
+			BellatrixBlock: block,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -377,8 +371,15 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockCapellaJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &capellaPublishBlockRequestJson{
-			CapellaBlock: block.Message,
-			Signature:    block.Signature,
+			CapellaBlock: block,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockContentsDenebJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &denebPublishBlockRequestJson{
+			DenebContents: block,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -423,7 +424,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		}
 		s.Slot = temp.Message.Slot
 	} else {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, fmt.Sprintf("object: %v is not a known signed block type", typeParseMap))
+		return false, &apimiddleware.DefaultErrorJson{Message: "could not parse slot from request", Code: http.StatusInternalServerError}
 	}
 	slot, err := strconv.ParseUint(s.Slot, 10, 64)
 	if err != nil {
@@ -485,10 +486,7 @@ func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.Respo
 	if block, ok := endpoint.PostRequest.(*SignedBlindedBeaconBlockContentsDenebJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &denebPublishBlindedBlockRequestJson{
-			DenebContents: &SignedBlindedBeaconBlockContentsDenebJson{
-				SignedBlindedBlock:        block.SignedBlindedBlock,
-				SignedBlindedBlobSidecars: block.SignedBlindedBlobSidecars,
-			},
+			DenebContents: block,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -778,7 +776,7 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 			Version: respContainer.Version,
 			Data:    respContainer.Data.CapellaState,
 		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_Deneb.String())):
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
 		actualRespContainer = &denebStateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.DenebState,

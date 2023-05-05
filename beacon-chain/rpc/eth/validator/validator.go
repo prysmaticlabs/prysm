@@ -399,7 +399,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 		return &ethpbv2.ProduceBlockResponseV2{
 			Version: ethpbv2.Version_DENEB,
 			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block: &ethpbv2.BeaconBlockContainerV2_DenebBlock{DenebBlock: blockAndBlobs},
+				Block: &ethpbv2.BeaconBlockContainerV2_DenebBlock{DenebBlock: blockAndBlobs.Block},
 			},
 		}, nil
 	}
