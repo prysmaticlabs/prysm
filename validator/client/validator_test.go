@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -2131,11 +2132,21 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 
 	client.EXPECT().MultipleValidatorStatus(
 		gomock.Any(),
-		gomock.Any()).Return(
-		&ethpb.MultipleValidatorStatusResponse{
-			Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
-			PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey4[:]},
-		}, nil)
+		gomock.Any()).DoAndReturn(func(ctx context.Context, val *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+		resp := &ethpb.MultipleValidatorStatusResponse{}
+		for _, k := range val.PublicKeys {
+			if bytes.Equal(k, pubkey1[:]) || bytes.Equal(k, pubkey2[:]) ||
+				bytes.Equal(k, pubkey4[:]) {
+				bytesutil.SafeCopyBytes(k)
+				resp.PublicKeys = append(resp.PublicKeys, bytesutil.SafeCopyBytes(k))
+				resp.Statuses = append(resp.Statuses, &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE})
+				continue
+			}
+			resp.PublicKeys = append(resp.PublicKeys, bytesutil.SafeCopyBytes(k))
+			resp.Statuses = append(resp.Statuses, &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_UNKNOWN_STATUS})
+		}
+		return resp, nil
+	})
 
 	v := validator{
 		validatorClient: client,
