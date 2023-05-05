@@ -24,8 +24,7 @@ mainnet = {
     "blob.size": "131072",
     "logs_bloom.size": "256",
     "extra_data.size": "32",
-    "max_blobs_per_block.size": "6",
-    "max_blob_commitments.size":"4096",
+    "blob_in_block.size": "4",
 }
 
 minimal = {
@@ -45,8 +44,7 @@ minimal = {
     "blob.size": "128",
     "logs_bloom.size": "256",
     "extra_data.size": "32",
-    "max_blobs_per_block.size": "6",
-    "max_blob_commitments.size":"16",
+    "blob_in_block.size": "4",
 }
 
 ###### Rules definitions #######
