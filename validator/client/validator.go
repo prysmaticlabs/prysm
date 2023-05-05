@@ -1050,7 +1050,8 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 			}
 			v.pubkeyToValidatorIndex[k] = i
 		}
-		statusRequestKeys = append(statusRequestKeys, k[:])
+		copiedk := k
+		statusRequestKeys = append(statusRequestKeys, copiedk[:])
 	}
 	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: statusRequestKeys,
