@@ -428,6 +428,10 @@ message BeaconBlockContainer {
 
         // Representing a blinded capella block.
         SignedBlindedBeaconBlockCapella blinded_capella_block = 8;
+
+        SignedBeaconBlockDeneb deneb = 9;
+
+        SignedBlindedBeaconBlockDeneb blinded_deneb = 10;
     }
 }
 
