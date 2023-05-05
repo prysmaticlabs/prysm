@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -24,11 +25,11 @@ func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fie
 		if len(b) != 0 {
 			return fmt.Errorf("no proposer settings found in bucket")
 		}
-		to := &validatorServiceConfig.ProposerSettingsPayload{}
+		to := &validatorpb.ProposerSettingsPayload{}
 		if err := json.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
-		settings, err := to.ToSettings()
+		settings, err := validatorServiceConfig.ToSettings(to)
 		if err != nil {
 			return errors.Wrap(err, "failed to convert payload to proposer settings")
 		}
@@ -61,11 +62,11 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *vali
 		if len(b) == 0 {
 			return NoProposerSettingsFound
 		}
-		to := &validatorServiceConfig.ProposerSettingsPayload{}
+		to := &validatorpb.ProposerSettingsPayload{}
 		if err := json.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
-		settings, err := to.ToSettings()
+		settings, err := validatorServiceConfig.ToSettings(to)
 		if err != nil {
 			return errors.Wrap(err, "failed to convert payload to proposer settings")
 		}
@@ -83,7 +84,7 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *vali
 func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.ProposerSettings, error) {
 	_, span := trace.StartSpan(ctx, "validator.db.ProposerSettings")
 	defer span.End()
-	to := &validatorServiceConfig.ProposerSettingsPayload{}
+	to := &validatorpb.ProposerSettingsPayload{}
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
 		b := bkt.Get(proposerSettingsKey)
@@ -97,7 +98,7 @@ func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.P
 	}); err != nil {
 		return nil, err
 	}
-	return to.ToSettings()
+	return validatorServiceConfig.ToSettings(to)
 }
 
 // ProposerSettingsExists returns true or false if the settings exist or not

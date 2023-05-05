@@ -12,6 +12,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -439,7 +440,7 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 		}
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
 		option := settings.DefaultConfig.Clone()
-		option.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(req.GasLimit)
+		option.BuilderConfig.GasLimit = validator.Uint64(req.GasLimit)
 		settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = option
 	} else {
 		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
@@ -447,14 +448,14 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 			if proposerOption.BuilderConfig == nil || !proposerOption.BuilderConfig.Enabled {
 				return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "gas limit changes only apply when builder is enabled")
 			} else {
-				proposerOption.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(req.GasLimit)
+				proposerOption.BuilderConfig.GasLimit = validator.Uint64(req.GasLimit)
 			}
 		} else {
 			if settings.DefaultConfig == nil {
 				return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "gas limit changes only apply when builder is enabled")
 			}
 			option := settings.DefaultConfig.Clone()
-			option.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(req.GasLimit)
+			option.BuilderConfig.GasLimit = validator.Uint64(req.GasLimit)
 			settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = option
 		}
 	}
@@ -488,7 +489,7 @@ func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGas
 				proposerOption.BuilderConfig.GasLimit = proposerSettings.DefaultConfig.BuilderConfig.GasLimit
 			} else {
 				// Fallback to using global default.
-				proposerOption.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+				proposerOption.BuilderConfig.GasLimit = validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 			}
 			// save the settings
 			if err := s.validatorService.SetProposerSettings(ctx, proposerSettings); err != nil {

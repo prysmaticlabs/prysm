@@ -35,6 +35,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
@@ -61,7 +62,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
-	"gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // ValidatorClient defines an instance of an Ethereum validator that manages
@@ -490,7 +491,7 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 }
 
 func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServiceConfig.ProposerSettings, error) {
-	var fileConfig *validatorServiceConfig.ProposerSettingsPayload
+	var fileConfig *validatorpb.ProposerSettingsPayload
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
@@ -505,11 +506,11 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		if err != nil {
 			return nil, err
 		}
-		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
+		fileConfig = &validatorpb.ProposerSettingsPayload{
 			ProposerConfig: nil,
-			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
-				FeeRecipient:  suggestedFee,
-				BuilderConfig: builderConfig,
+			DefaultConfig: &validatorpb.ProposerOptionPayload{
+				FeeRecipient: suggestedFee,
+				Builder:      builderConfig.ToPayload(),
 			},
 		}
 	}
@@ -553,7 +554,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
 			FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
 		},
-		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
+		BuilderConfig: validatorServiceConfig.ToBuilderConfig(fileConfig.DefaultConfig.Builder),
 	}
 	if vpSettings.DefaultConfig.BuilderConfig == nil {
 		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
@@ -592,20 +593,20 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
 				return nil, err
 			}
-			if option.BuilderConfig != nil {
-				option.BuilderConfig.GasLimit = reviewGasLimit(option.BuilderConfig.GasLimit)
+			if option.Builder != nil {
+				option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
 			} else {
 				builderConfig, err := BuilderSettingsFromFlags(cliCtx)
 				if err != nil {
 					return nil, err
 				}
-				option.BuilderConfig = builderConfig
+				option.Builder = builderConfig.ToPayload()
 			}
 			o := &validatorServiceConfig.ProposerOption{
 				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
 					FeeRecipient: common.HexToAddress(option.FeeRecipient),
 				},
-				BuilderConfig: option.BuilderConfig,
+				BuilderConfig: validatorServiceConfig.ToBuilderConfig(option.Builder),
 			}
 			pubkeyB := bytesutil.ToBytes48(decodedKey)
 			if psExists {
@@ -626,7 +627,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 
 func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.BuilderConfig, error) {
 	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
-		gasLimit := validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+		gasLimit := validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 		sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
 
 		if sgl != "" {
@@ -634,7 +635,7 @@ func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.Buil
 			if err != nil {
 				return nil, errors.New("Gas Limit is not a uint64")
 			}
-			gasLimit = reviewGasLimit(validatorServiceConfig.Uint64(gl))
+			gasLimit = reviewGasLimit(validator.Uint64(gl))
 		}
 		return &validatorServiceConfig.BuilderConfig{
 			Enabled:  true,
@@ -658,10 +659,10 @@ func warnNonChecksummedAddress(feeRecipient string) error {
 	return nil
 }
 
-func reviewGasLimit(gasLimit validatorServiceConfig.Uint64) validatorServiceConfig.Uint64 {
+func reviewGasLimit(gasLimit validator.Uint64) validator.Uint64 {
 	// sets gas limit to default if not defined or set to 0
 	if gasLimit == 0 {
-		return validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+		return validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 	}
 	// TODO(10810): add in warning for ranges
 	return gasLimit

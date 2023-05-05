@@ -16,6 +16,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -280,7 +281,7 @@ func TestProposerSettings(t *testing.T) {
 							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+								GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 							},
 						},
 						bytesutil.ToBytes48(key2): {
@@ -289,7 +290,7 @@ func TestProposerSettings(t *testing.T) {
 							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: validatorserviceconfig.Uint64(35000000),
+								GasLimit: validator.Uint64(35000000),
 							},
 						},
 					},
@@ -299,7 +300,7 @@ func TestProposerSettings(t *testing.T) {
 						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: validatorserviceconfig.Uint64(40000000),
+							GasLimit: validator.Uint64(40000000),
 						},
 					},
 				}
@@ -365,7 +366,7 @@ func TestProposerSettings(t *testing.T) {
 						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
-							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}
@@ -411,7 +412,7 @@ func TestProposerSettings(t *testing.T) {
 						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}
@@ -495,7 +496,7 @@ func TestProposerSettings(t *testing.T) {
 							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+								GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 							},
 						},
 					},
@@ -505,7 +506,7 @@ func TestProposerSettings(t *testing.T) {
 						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}
@@ -533,7 +534,7 @@ func TestProposerSettings(t *testing.T) {
 							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+								GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 							},
 						},
 					},
@@ -543,7 +544,7 @@ func TestProposerSettings(t *testing.T) {
 						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}
@@ -570,7 +571,7 @@ func TestProposerSettings(t *testing.T) {
 							},
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: validatorserviceconfig.Uint64(40000000),
+								GasLimit: validator.Uint64(40000000),
 							},
 						},
 					},
@@ -580,7 +581,7 @@ func TestProposerSettings(t *testing.T) {
 						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
-							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}

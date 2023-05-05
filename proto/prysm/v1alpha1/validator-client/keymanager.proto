@@ -107,3 +107,19 @@ message SignResponse {
     // same conventions.
     Status status = 2;
 }
+
+message ProposerOptionPayload {
+  string fee_recipient = 1;
+  BuilderConfig builder = 2;
+}
+
+message BuilderConfig {
+  bool enabled = 1;
+  uint64 gas_limit = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/validator.Uint64"];
+  repeated string relays = 3;
+}
+
+message ProposerSettingsPayload {
+  map<string, ProposerOptionPayload> proposer_config = 1;
+  ProposerOptionPayload default_config = 2;
+}

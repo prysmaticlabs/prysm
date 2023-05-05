@@ -1,24 +1,16 @@
 package validator_service_config
 
 import (
-	"strconv"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 )
 
-// ProposerSettingsPayload is the struct representation of the JSON or YAML payload set in the validator through the CLI.
-// ProposerConfig is the map of validator address to fee recipient options all in hex format.
-// DefaultConfig is the default fee recipient address for all validators unless otherwise specified in the propose config.required.
-type ProposerSettingsPayload struct {
-	ProposerConfig map[string]*ProposerOptionPayload `json:"proposer_config" yaml:"proposer_config"`
-	DefaultConfig  *ProposerOptionPayload            `json:"default_config" yaml:"default_config"`
-}
-
 // ToSettings converts struct to ProposerSettings
-func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
+func ToSettings(ps *validatorpb.ProposerSettingsPayload) (*ProposerSettings, error) {
 	settings := &ProposerSettings{}
 	if ps.ProposerConfig != nil {
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption)
@@ -35,8 +27,8 @@ func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
 					FeeRecipient: common.HexToAddress(optionPayload.FeeRecipient),
 				},
 			}
-			if optionPayload.BuilderConfig != nil {
-				p.BuilderConfig = optionPayload.BuilderConfig.Clone()
+			if optionPayload.Builder != nil {
+				p.BuilderConfig = ToBuilderConfig(optionPayload.Builder)
 			}
 			settings.ProposeConfig[bytesutil.ToBytes48(b)] = p
 		}
@@ -48,61 +40,37 @@ func (ps *ProposerSettingsPayload) ToSettings() (*ProposerSettings, error) {
 				FeeRecipient: common.HexToAddress(ps.DefaultConfig.FeeRecipient),
 			}
 		}
-		if ps.DefaultConfig.BuilderConfig != nil {
-			d.BuilderConfig = ps.DefaultConfig.BuilderConfig.Clone()
+		if ps.DefaultConfig.Builder != nil {
+			d.BuilderConfig = ToBuilderConfig(ps.DefaultConfig.Builder)
 		}
 		settings.DefaultConfig = d
 	}
 	return settings, nil
 }
 
-// ProposerOptionPayload is the struct representation of the JSON config file set in the validator through the CLI.
-// FeeRecipient is set to an eth address in hex string format with 0x prefix.
-type ProposerOptionPayload struct {
-	FeeRecipient  string         `json:"fee_recipient" yaml:"fee_recipient"`
-	BuilderConfig *BuilderConfig `json:"builder" yaml:"builder"`
-}
-
 // BuilderConfig is the struct representation of the JSON config file set in the validator through the CLI.
 // GasLimit is a number set to help the network decide on the maximum gas in each block.
 type BuilderConfig struct {
-	Enabled  bool     `json:"enabled" yaml:"enabled"`
-	GasLimit Uint64   `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
-	Relays   []string `json:"relays" yaml:"relays"`
+	Enabled  bool             `json:"enabled" yaml:"enabled"`
+	GasLimit validator.Uint64 `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
+	Relays   []string         `json:"relays,omitempty" yaml:"relays,omitempty"`
 }
 
-// Uint64 custom uint64 to be unmarshallable
-type Uint64 uint64
+func ToBuilderConfig(from *validatorpb.BuilderConfig) *BuilderConfig {
+	if from == nil {
+		return nil
+	}
+	config := &BuilderConfig{
+		Enabled:  from.Enabled,
+		GasLimit: from.GasLimit,
+	}
+	if from.Relays != nil {
+		relays := make([]string, len(from.Relays))
+		copy(relays, from.Relays)
+		config.Relays = relays
+	}
 
-// UnmarshalJSON custom unmarshal function for json
-func (u *Uint64) UnmarshalJSON(bs []byte) error {
-	str := string(bs) // Parse plain numbers directly.
-	if bs[0] == '"' && bs[len(bs)-1] == '"' {
-		// Unwrap the quotes from string numbers.
-		str = string(bs[1 : len(bs)-1])
-	}
-	x, err := strconv.ParseUint(str, 10, 64)
-	if err != nil {
-		return err
-	}
-	*u = Uint64(x)
-	return nil
-}
-
-// UnmarshalYAML custom unmarshal function for yaml
-func (u *Uint64) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var str string
-	err := unmarshal(&str)
-	if err != nil {
-		return err
-	}
-	x, err := strconv.ParseUint(str, 10, 64)
-	if err != nil {
-		return err
-	}
-	*u = Uint64(x)
-
-	return nil
+	return config
 }
 
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
@@ -113,30 +81,30 @@ type ProposerSettings struct {
 }
 
 // ToPayload converts struct to ProposerSettingsPayload
-func (ps *ProposerSettings) ToPayload() *ProposerSettingsPayload {
+func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 	if ps == nil {
 		return nil
 	}
-	payload := &ProposerSettingsPayload{
-		ProposerConfig: make(map[string]*ProposerOptionPayload),
+	payload := &validatorpb.ProposerSettingsPayload{
+		ProposerConfig: make(map[string]*validatorpb.ProposerOptionPayload),
 	}
 	for key, option := range ps.ProposeConfig {
-		p := &ProposerOptionPayload{}
+		p := &validatorpb.ProposerOptionPayload{}
 		if option.FeeRecipientConfig != nil {
 			p.FeeRecipient = option.FeeRecipientConfig.FeeRecipient.Hex()
 		}
 		if option.BuilderConfig != nil {
-			p.BuilderConfig = option.BuilderConfig.Clone()
+			p.Builder = option.BuilderConfig.ToPayload()
 		}
 		payload.ProposerConfig[hexutil.Encode(key[:])] = p
 	}
 	if ps.DefaultConfig != nil {
-		p := &ProposerOptionPayload{}
+		p := &validatorpb.ProposerOptionPayload{}
 		if ps.DefaultConfig.FeeRecipientConfig != nil {
 			p.FeeRecipient = ps.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex()
 		}
 		if ps.DefaultConfig.BuilderConfig != nil {
-			p.BuilderConfig = ps.DefaultConfig.BuilderConfig.Clone()
+			p.Builder = ps.DefaultConfig.BuilderConfig.ToPayload()
 		}
 		payload.DefaultConfig = p
 	}
@@ -188,9 +156,32 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 	if bc == nil {
 		return nil
 	}
-	relays := make([]string, len(bc.Relays))
-	copy(relays, bc.Relays)
-	return &BuilderConfig{bc.Enabled, bc.GasLimit, relays}
+	config := &BuilderConfig{}
+	config.Enabled = bc.Enabled
+	config.GasLimit = bc.GasLimit
+	var relays []string
+	if bc.Relays != nil {
+		relays = make([]string, len(bc.Relays))
+		copy(relays, bc.Relays)
+		config.Relays = relays
+	}
+	return config
+}
+
+func (bc *BuilderConfig) ToPayload() *validatorpb.BuilderConfig {
+	if bc == nil {
+		return nil
+	}
+	config := &validatorpb.BuilderConfig{}
+	config.Enabled = bc.Enabled
+	var relays []string
+	if bc.Relays != nil {
+		relays = make([]string, len(bc.Relays))
+		copy(relays, bc.Relays)
+		config.Relays = relays
+	}
+	config.GasLimit = bc.GasLimit
+	return config
 }
 
 // Clone creates a deep copy of proposer option
