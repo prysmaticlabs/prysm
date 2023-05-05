@@ -42,6 +42,9 @@ minimal = {
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector8",
     "withdrawal.size": "4",
     "blob.size": "128",
+    "logs_bloom.size": "256",
+    "extra_data.size": "32",
+    "blob_in_block.size": "4",
 }
 
 ###### Rules definitions #######
