@@ -223,7 +223,6 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	}
 	switch strings.ToLower(v.Version) {
 	case strings.ToLower(version.String(version.Capella)):
-		log.Infof("Received capella response for slot %d", slot)
 		hr := &ExecHeaderResponseCapella{}
 		if err := json.Unmarshal(hb, hr); err != nil {
 			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
@@ -234,7 +233,6 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 		}
 		return WrappedSignedBuilderBidCapella(p)
 	case strings.ToLower(version.String(version.Bellatrix)):
-		log.Infof("Received bellatrix response for slot %d", slot)
 		hr := &ExecHeaderResponse{}
 		if err := json.Unmarshal(hb, hr); err != nil {
 			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
