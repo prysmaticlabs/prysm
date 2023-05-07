@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,15 +23,17 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/network/authorization"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -79,13 +82,21 @@ type ExecPayloadResponse struct {
 	Data    *v1.ExecutionPayload `json:"data"`
 }
 
+type ExecHeaderResponseCapella struct {
+	Version string `json:"version"`
+	Data    struct {
+		Signature hexutil.Bytes                 `json:"signature"`
+		Message   *builderAPI.BuilderBidCapella `json:"message"`
+	} `json:"data"`
+}
+
 type Builder struct {
 	cfg          *config
 	address      string
 	execClient   *gethRPC.Client
 	beaconConn   *grpc.ClientConn
 	currId       *v1.PayloadIDBytes
-	currPayload  *v1.ExecutionPayload
+	currPayload  interfaces.ExecutionData
 	mux          *gMux.Router
 	validatorMap map[string]*eth.ValidatorRegistrationV1
 	srv          *http.Server
@@ -219,7 +230,7 @@ func (p *Builder) handleEngineCalls(req []byte, resp []byte) {
 	}
 	p.cfg.logger.Infof("Received engine call %s", rpcObj.Method)
 	switch rpcObj.Method {
-	case ForkchoiceUpdatedMethod:
+	case ForkchoiceUpdatedMethod, ForkchoiceUpdatedMethodV2:
 		result := &ForkchoiceUpdatedResponse{}
 		err = json.Unmarshal(resp, result)
 		if err != nil {
@@ -229,7 +240,6 @@ func (p *Builder) handleEngineCalls(req []byte, resp []byte) {
 		p.currId = result.Result.PayloadId
 		p.cfg.logger.Infof("Received payload id of %#x", result.Result.PayloadId)
 	}
-	// do things
 }
 
 func (p *Builder) isBuilderCall(req *http.Request) bool {
@@ -257,16 +267,27 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "no valid parent hash", http.StatusBadRequest)
 		return
 	}
+	reqSlot := urlParams["slot"]
+	if reqSlot == "" {
+		http.Error(w, "no valid slot provided", http.StatusBadRequest)
+		return
+	}
+	slot, err := strconv.Atoi(reqSlot)
+	if err != nil {
+		http.Error(w, "invalid slot provided", http.StatusBadRequest)
+		return
+	}
+	ax := types.Slot(slot)
+	currEpoch := types.Epoch(ax / params.BeaconConfig().SlotsPerEpoch)
+	if currEpoch >= params.BeaconConfig().CapellaForkEpoch {
+
+	}
 
 	b, err := p.retrievePendingBlock()
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not retrieve pending block")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	copiedPayload, ok := proto.Clone(b).(*v1.ExecutionPayload)
-	if !ok {
-		p.cfg.logger.Error("Cloning of object failed")
 	}
 	secKey, err := bls.RandKey()
 	if err != nil {
@@ -332,7 +353,82 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	p.currPayload = copiedPayload
+	p.currPayload = wObj
+	w.WriteHeader(http.StatusOK)
+}
+
+func (p *Builder) handleHeadeRequestCapella(w http.ResponseWriter) {
+	b, err := p.retrievePendingBlockCapella()
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve pending block")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	secKey, err := bls.RandKey()
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve secret key")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload, math.WeiToGwei(v))
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	hdr, err := blocks.PayloadToHeaderCapella(wObj)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not make payload into header")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	val := builderAPI.Uint256{Int: v}
+	wrappedHdr := &builderAPI.ExecutionPayloadHeaderCapella{ExecutionPayloadHeaderCapella: hdr}
+	bid := &builderAPI.BuilderBidCapella{
+		Header: wrappedHdr,
+		Value:  val,
+		Pubkey: secKey.PublicKey().Marshal(),
+	}
+	sszBid := &eth.BuilderBidCapella{
+		Header: hdr,
+		Value:  val.SSZBytes(),
+		Pubkey: secKey.PublicKey().Marshal(),
+	}
+	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
+		nil, /* fork version */
+		nil /* genesis val root */)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not compute the domain")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	rt, err := signing.ComputeSigningRoot(sszBid, d)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not compute the signing root")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sig := secKey.Sign(rt[:])
+	hdrResp := &ExecHeaderResponseCapella{
+		Version: "capella",
+		Data: struct {
+			Signature hexutil.Bytes                 `json:"signature"`
+			Message   *builderAPI.BuilderBidCapella `json:"message"`
+		}{
+			Signature: sig.Marshal(),
+			Message:   bid,
+		},
+	}
+
+	err = json.NewEncoder(w).Encode(hdrResp)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not encode response")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	p.currPayload = wObj
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -350,7 +446,33 @@ func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "payload not found", http.StatusInternalServerError)
 		return
 	}
-	convertedPayload, err := builderAPI.FromProto(p.currPayload)
+	if payload, err := p.currPayload.PbCapella(); err == nil {
+		convertedPayload, err := builderAPI.FromProtoCapella(payload)
+		if err != nil {
+			p.cfg.logger.WithError(err).Error("Could not convert the payload")
+			http.Error(w, "payload not found", http.StatusInternalServerError)
+			return
+		}
+		execResp := &builderAPI.ExecPayloadResponseCapella{
+			Version: "capella",
+			Data:    convertedPayload,
+		}
+		err = json.NewEncoder(w).Encode(execResp)
+		if err != nil {
+			p.cfg.logger.WithError(err).Error("Could not encode full payload response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	bellPayload, err := p.currPayload.PbBellatrix()
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve the payload")
+		http.Error(w, "payload not found", http.StatusInternalServerError)
+		return
+	}
+	convertedPayload, err := builderAPI.FromProto(bellPayload)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not convert the payload")
 		http.Error(w, "payload not found", http.StatusInternalServerError)
@@ -360,11 +482,6 @@ func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 		Version: "bellatrix",
 		Data:    convertedPayload,
 	}
-	out, err := json.Marshal(execResp)
-	if err != nil {
-		// do nothing
-	}
-	p.cfg.logger.Errorf("%s", string(out))
 	err = json.NewEncoder(w).Encode(execResp)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not encode full payload response")
@@ -380,6 +497,18 @@ func (p *Builder) retrievePendingBlock() (*v1.ExecutionPayload, error) {
 		return nil, errors.New("no payload id is cached")
 	}
 	err := p.execClient.CallContext(context.Background(), result, GetPayloadMethod, *p.currId)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (p *Builder) retrievePendingBlockCapella() (*v1.ExecutionPayloadCapellaWithValue, error) {
+	result := &v1.ExecutionPayloadCapellaWithValue{}
+	if p.currId == nil {
+		return nil, errors.New("no payload id is cached")
+	}
+	err := p.execClient.CallContext(context.Background(), result, GetPayloadMethodV2, *p.currId)
 	if err != nil {
 		return nil, err
 	}
