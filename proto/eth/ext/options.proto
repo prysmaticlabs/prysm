@@ -29,4 +29,5 @@ extend google.protobuf.FieldOptions {
   string ssz_size = 50001;
   string ssz_max = 50002;
   string spec_name = 50003;
+  string since = 50004;
 }
