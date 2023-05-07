@@ -346,6 +346,33 @@ func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
 	}, nil
 }
 
+func FromProto(payload *v1.ExecutionPayload) (ExecutionPayload, error) {
+	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
+	if err != nil {
+		return ExecutionPayload{}, err
+	}
+	txs := make([]hexutil.Bytes, len(payload.Transactions))
+	for i := range payload.Transactions {
+		txs[i] = payload.Transactions[i]
+	}
+	return ExecutionPayload{
+		ParentHash:    payload.ParentHash,
+		FeeRecipient:  payload.FeeRecipient,
+		StateRoot:     payload.StateRoot,
+		ReceiptsRoot:  payload.ReceiptsRoot,
+		LogsBloom:     payload.LogsBloom,
+		PrevRandao:    payload.PrevRandao,
+		BlockNumber:   Uint64String(payload.BlockNumber),
+		GasLimit:      Uint64String(payload.GasLimit),
+		GasUsed:       Uint64String(payload.GasUsed),
+		Timestamp:     Uint64String(payload.Timestamp),
+		ExtraData:     payload.ExtraData,
+		BaseFeePerGas: bFee,
+		BlockHash:     payload.BlockHash,
+		Transactions:  txs,
+	}, nil
+}
+
 type ExecHeaderResponseCapella struct {
 	Data struct {
 		Signature hexutil.Bytes      `json:"signature"`

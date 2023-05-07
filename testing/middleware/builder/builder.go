@@ -15,10 +15,7 @@ import (
 	"sync"
 	"time"
 
-	gethEngine "github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	gethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	gMux "github.com/gorilla/mux"
 	builderAPI "github.com/prysmaticlabs/prysm/v4/api/client/builder"
@@ -26,12 +23,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/network/authorization"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -64,18 +63,20 @@ type jsonRPCObject struct {
 	Result  interface{}   `json:"result"`
 }
 
-type ExecHeaderResponse struct {
-	Version string `json:"version"`
-	Data    struct {
-		Signature hexutil.Bytes `json:"signature"`
-		Message   *BuilderBid   `json:"message"`
-	} `json:"data"`
+type ForkchoiceUpdatedResponse struct {
+	Jsonrpc string        `json:"jsonrpc"`
+	Method  string        `json:"method"`
+	Params  []interface{} `json:"params"`
+	ID      uint64        `json:"id"`
+	Result  struct {
+		Status    *v1.PayloadStatus  `json:"payloadStatus"`
+		PayloadId *v1.PayloadIDBytes `json:"payloadId"`
+	} `json:"result"`
 }
 
-type BuilderBid struct {
-	Header *gethEngine.ExecutableData `json:"header"`
-	Value  builderAPI.Uint256         `json:"value"`
-	Pubkey hexutil.Bytes              `json:"pubkey"`
+type ExecPayloadResponse struct {
+	Version string               `json:"version"`
+	Data    *v1.ExecutionPayload `json:"data"`
 }
 
 type Builder struct {
@@ -84,6 +85,7 @@ type Builder struct {
 	execClient   *gethRPC.Client
 	beaconConn   *grpc.ClientConn
 	currId       *v1.PayloadIDBytes
+	currPayload  *v1.ExecutionPayload
 	mux          *gMux.Router
 	validatorMap map[string]*eth.ValidatorRegistrationV1
 	srv          *http.Server
@@ -153,7 +155,7 @@ func (p *Builder) Start(ctx context.Context) error {
 		return ctx
 	}
 	p.cfg.logger.WithFields(logrus.Fields{
-		"forwardingAddress": p.cfg.destinationUrl.String(),
+		"executionAddress": p.cfg.destinationUrl.String(),
 	}).Infof("Builder now listening on address %s", p.address)
 	go func() {
 		if err := p.srv.ListenAndServe(); err != nil {
@@ -169,6 +171,7 @@ func (p *Builder) Start(ctx context.Context) error {
 // ServeHTTP requests from a consensus client to an execution client, modifying in-flight requests
 // and/or responses as desired. It also processes any backed-up requests.
 func (p *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	p.cfg.logger.Infof("Received %s request from beacon with url: %s", r.Method, r.URL.Path)
 	if p.isBuilderCall(r) {
 		p.mux.ServeHTTP(w, r)
 		return
@@ -178,7 +181,6 @@ func (p *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.cfg.logger.WithError(err).Error("Could not parse request")
 		return
 	}
-	p.handleEngineCalls(requestBytes)
 	execRes, err := p.sendHttpRequest(r, requestBytes)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not forward request")
@@ -192,14 +194,21 @@ func (p *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	buf := bytes.NewBuffer([]byte{})
+	if _, err = io.Copy(buf, execRes.Body); err != nil {
+		p.cfg.logger.WithError(err).Error("Could not copy proxy request body")
+		return
+	}
+	byteResp := bytesutil.SafeCopyBytes(buf.Bytes())
+	p.handleEngineCalls(requestBytes, byteResp)
 	// Pipe the proxy responseGen to the original caller.
-	if _, err = io.Copy(w, execRes.Body); err != nil {
+	if _, err = io.Copy(w, buf); err != nil {
 		p.cfg.logger.WithError(err).Error("Could not copy proxy request body")
 		return
 	}
 }
 
-func (p *Builder) handleEngineCalls(req []byte) {
+func (p *Builder) handleEngineCalls(req []byte, resp []byte) {
 	if !isEngineAPICall(req) {
 		return
 	}
@@ -208,26 +217,23 @@ func (p *Builder) handleEngineCalls(req []byte) {
 		p.cfg.logger.WithError(err).Error("Could not unmarshal rpc object")
 		return
 	}
-	_ = rpcObj
+	p.cfg.logger.Infof("Received engine call %s", rpcObj.Method)
+	switch rpcObj.Method {
+	case ForkchoiceUpdatedMethod:
+		result := &ForkchoiceUpdatedResponse{}
+		err = json.Unmarshal(resp, result)
+		if err != nil {
+			p.cfg.logger.Errorf("Could not unmarshal fcu: %v", err)
+			return
+		}
+		p.currId = result.Result.PayloadId
+		p.cfg.logger.Infof("Received payload id of %#x", result.Result.PayloadId)
+	}
 	// do things
 }
 
 func (p *Builder) isBuilderCall(req *http.Request) bool {
 	return strings.Contains(req.URL.Path, "/eth/v1/builder/")
-}
-
-func (p *Builder) handleBuilderCalls(w http.ResponseWriter, req *http.Request) {
-	switch {
-	case strings.Contains(req.URL.Path, "/eth/v1/builder/validators"):
-		p.registerValidators(w, req)
-	case strings.Contains(req.URL.Path, "/eth/v1/builder/header"):
-		p.handleHeaderRequest(w, req)
-	case strings.Contains(req.URL.Path, "/eth/v1/builder/blinded_blocks"):
-	case strings.Contains(req.URL.Path, "/eth/v1/builder/status"):
-		w.WriteHeader(http.StatusOK)
-	default:
-		http.Error(w, "unknown request url", http.StatusBadRequest)
-	}
 }
 
 func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
@@ -251,35 +257,24 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "no valid parent hash", http.StatusBadRequest)
 		return
 	}
-	time.Unix().Add().Before()
+
 	b, err := p.retrievePendingBlock()
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not retrieve pending block")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fees := calculateFees(b)
-	execV2 := gethEngine.BlockToExecutableData(b, fees)
+	copiedPayload, ok := proto.Clone(b).(*v1.ExecutionPayload)
+	if !ok {
+		p.cfg.logger.Error("Cloning of object failed")
+	}
 	secKey, err := bls.RandKey()
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not retrieve secret key")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	marshalled, err := json.Marshal(execV2.ExecutionPayload)
-	if err != nil {
-		p.cfg.logger.WithError(err).Error("Could not marshal execution payload")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	obj := &v1.ExecutionPayload{}
-	err = json.Unmarshal(marshalled, obj)
-	if err != nil {
-		p.cfg.logger.WithError(err).Error("Could not unmarshal execution payload")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	wObj, err := blocks.WrappedExecutionPayload(obj)
+	wObj, err := blocks.WrappedExecutionPayload(b)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -291,14 +286,18 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	bid := &BuilderBid{
-		Header: execV2.ExecutionPayload,
-		Value:  builderAPI.Uint256{Int: fees},
+	gEth := big.NewInt(int64(params.BeaconConfig().GweiPerEth))
+	weiEth := gEth.Mul(gEth, gEth)
+	val := builderAPI.Uint256{Int: weiEth}
+	wrappedHdr := &builderAPI.ExecutionPayloadHeader{ExecutionPayloadHeader: hdr}
+	bid := &builderAPI.BuilderBid{
+		Header: wrappedHdr,
+		Value:  val,
 		Pubkey: secKey.PublicKey().Marshal(),
 	}
 	sszBid := &eth.BuilderBid{
 		Header: hdr,
-		Value:  builderAPI.Uint256{Int: fees}.SSZBytes(),
+		Value:  val.SSZBytes(),
 		Pubkey: secKey.PublicKey().Marshal(),
 	}
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
@@ -316,11 +315,11 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 	sig := secKey.Sign(rt[:])
-	hdrResp := &ExecHeaderResponse{
+	hdrResp := &builderAPI.ExecHeaderResponse{
 		Version: "bellatrix",
 		Data: struct {
-			Signature hexutil.Bytes `json:"signature"`
-			Message   *BuilderBid   `json:"message"`
+			Signature hexutil.Bytes          `json:"signature"`
+			Message   *builderAPI.BuilderBid `json:"message"`
 		}{
 			Signature: sig.Marshal(),
 			Message:   bid,
@@ -333,30 +332,58 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	p.currPayload = copiedPayload
 	w.WriteHeader(http.StatusOK)
 }
 
 func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
-	sb := &builderAPI.SignedBlindedBeaconBlockBellatrix{}
+	sb := &builderAPI.SignedBlindedBeaconBlockBellatrix{
+		SignedBlindedBeaconBlockBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{},
+	}
 	err := json.NewDecoder(req.Body).Decode(sb)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		p.cfg.logger.WithError(err).Error("Could not decode blinded block")
+		// TODO: Allow the method to unmarshal blinded blocks correctly
+	}
+	if p.currPayload == nil {
+		p.cfg.logger.Error("No payload is cached")
+		http.Error(w, "payload not found", http.StatusInternalServerError)
+		return
+	}
+	convertedPayload, err := builderAPI.FromProto(p.currPayload)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not convert the payload")
+		http.Error(w, "payload not found", http.StatusInternalServerError)
 		return
 	}
 	execResp := &builderAPI.ExecPayloadResponse{
-		Version: "capella",
-		Data:    builderAPI.ExecutionPayload{},
+		Version: "bellatrix",
+		Data:    convertedPayload,
 	}
+	out, err := json.Marshal(execResp)
+	if err != nil {
+		// do nothing
+	}
+	p.cfg.logger.Errorf("%s", string(out))
 	err = json.NewEncoder(w).Encode(execResp)
 	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not encode full payload response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
-func (p *Builder) retrievePendingBlock() (*gethtypes.Block, error) {
-	return ethclient.NewClient(p.execClient).BlockByNumber(context.Background(), big.NewInt(-1))
+func (p *Builder) retrievePendingBlock() (*v1.ExecutionPayload, error) {
+	result := &v1.ExecutionPayload{}
+	if p.currId == nil {
+		return nil, errors.New("no payload id is cached")
+	}
+	err := p.execClient.CallContext(context.Background(), result, GetPayloadMethod, *p.currId)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http.Response, error) {
@@ -423,14 +450,3 @@ func unmarshalRPCObject(b []byte) (*jsonRPCObject, error) {
 
 // An estimation of the fees gained by the block proposer, a real
 // estimation requires transaction receipts for the actual gas used.
-func calculateFees(block *gethtypes.Block) *big.Int {
-	feesWei := new(big.Int)
-	for _, tx := range block.Transactions() {
-		minerFee, err := tx.EffectiveGasTip(block.BaseFee())
-		if err != nil {
-			continue
-		}
-		feesWei.Add(feesWei, new(big.Int).Mul(new(big.Int).SetUint64(tx.Gas()), minerFee))
-	}
-	return feesWei
-}

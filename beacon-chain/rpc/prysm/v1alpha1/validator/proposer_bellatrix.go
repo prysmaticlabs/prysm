@@ -125,6 +125,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 			}
 		}
 	}
+	log.Warn("Not using builder")
 
 	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 	if err != nil {
