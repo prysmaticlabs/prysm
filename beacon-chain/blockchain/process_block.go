@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -652,28 +651,21 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 // This routine checks if there is a cached proposer payload ID available for the next slot proposer.
 // If there is not, it will call forkchoice updated with the correct payload attribute then cache the payload ID.
-func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *event.Feed) {
-	// Wait for state to be initialized.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := stateFeed.Subscribe(stateChannel)
+func (s *Service) spawnLateBlockTasksLoop() {
 	go func() {
-		select {
-		case <-s.ctx.Done():
-			stateSub.Unsubscribe()
+		_, err := s.clockWaiter.WaitForClock(s.ctx)
+		if err != nil {
+			log.WithError(err).Error("spawnLateBlockTasksLoop encountered an error waiting for initialization")
 			return
-		case <-stateChannel:
-			stateSub.Unsubscribe()
-			break
 		}
-
 		attThreshold := params.BeaconConfig().SecondsPerSlot / 3
 		ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
 		for {
 			select {
 			case <-ticker.C():
-				s.lateBlockTasks(ctx)
+				s.lateBlockTasks(s.ctx)
 
-			case <-ctx.Done():
+			case <-s.ctx.Done():
 				log.Debug("Context closed, exiting routine")
 				return
 			}

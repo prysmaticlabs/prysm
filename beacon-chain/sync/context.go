@@ -4,8 +4,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 )
 
@@ -13,33 +11,29 @@ import (
 const forkDigestLength = 4
 
 // writes peer's current context for the expected payload to the stream.
-func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain.ForkFetcher) error {
+func writeContextToStream(objCtx []byte, stream network.Stream) error {
 	// The rpc context for our v2 methods is the fork-digest of
 	// the relevant payload. We write the associated fork-digest(context)
 	// into the stream for the payload.
-	rpcCtx, err := rpcContext(stream, chain)
+	rpcCtx, err := expectRpcContext(stream)
 	if err != nil {
 		return err
 	}
-	// Exit early if there is an empty context.
-	if len(rpcCtx) == 0 {
+	// Exit early if an empty context is expected.
+	if !rpcCtx {
 		return nil
 	}
-	// Always choose the object's context when writing to the stream.
-	if objCtx != nil {
-		rpcCtx = objCtx
-	}
-	_, err = stream.Write(rpcCtx)
+	_, err = stream.Write(objCtx)
 	return err
 }
 
 // reads any attached context-bytes to the payload.
-func readContextFromStream(stream network.Stream, chain blockchain.ForkFetcher) ([]byte, error) {
-	rpcCtx, err := rpcContext(stream, chain)
+func readContextFromStream(stream network.Stream) ([]byte, error) {
+	hasCtx, err := expectRpcContext(stream)
 	if err != nil {
 		return nil, err
 	}
-	if len(rpcCtx) == 0 {
+	if !hasCtx {
 		return []byte{}, nil
 	}
 	// Read context (fork-digest) from stream
@@ -50,26 +44,18 @@ func readContextFromStream(stream network.Stream, chain blockchain.ForkFetcher) 
 	return b, nil
 }
 
-// retrieve expected context depending on rpc topic schema version.
-func rpcContext(stream network.Stream, chain blockchain.ForkFetcher) ([]byte, error) {
+func expectRpcContext(stream network.Stream) (bool, error) {
 	_, _, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	switch version {
 	case p2p.SchemaVersionV1:
-		// Return empty context for a v1 method.
-		return []byte{}, nil
+		return false, nil
 	case p2p.SchemaVersionV2:
-		currFork := chain.CurrentFork()
-		genRoot := chain.GenesisValidatorsRoot()
-		digest, err := signing.ComputeForkDigest(currFork.CurrentVersion, genRoot[:])
-		if err != nil {
-			return nil, err
-		}
-		return digest[:], nil
+		return true, nil
 	default:
-		return nil, errors.New("invalid version of %s registered for topic: %s")
+		return false, errors.New("invalid version of %s registered for topic: %s")
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -65,6 +66,7 @@ func startChainService(t testing.TB,
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
 		blockchain.WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+		blockchain.WithClockSynchronizer(startup.NewClockSynchronizer()),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
