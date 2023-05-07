@@ -17,6 +17,7 @@ package ethereum.eth.v1alpha1;
 
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
+import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
 
@@ -85,9 +86,9 @@ message SuperBeaconBlockBody {
     repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
 
     // Sync aggregate object to track sync committee votes for light client support.
-    SyncAggregate sync_aggregate = 9 [(ethereum.eth.ext.since = "altair")];
+    SyncAggregate sync_aggregate = 9 [(ethereum.eth.ext.since) = "altair"];
 
-    SuperExecutionPayload execution_payload_data = 10 [(ethereum.eth.ext.since = "bellatrix")];
+    SuperExecutionPayload execution_payload_data = 10 [(ethereum.eth.ext.since) = "bellatrix"];
 
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16", (ethereum.eth.ext.since) = "capella"];
 }
@@ -107,11 +108,19 @@ message SuperExecutionPayload {
 	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
     oneof transaction_data {
-        repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
-        bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
+        Txs txs = 14 [(ethereum.eth.ext.since) = "bellatrix"];
+        bytes transactions_root = 15 [(ethereum.eth.ext.ssz_size) = "32", (ethereum.eth.ext.since) = "bellatrix"];
     }
     oneof withdrawals_data {
-        repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size", (ethereum.eth.ext.since) = "capella"];
-        bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32", (ethereum.eth.ext.since) = "capella"];
+        WithdrawalsWrapper withdrawals_wrapper = 16 [(ethereum.eth.ext.since) = "capella"];
+        bytes withdrawals_root = 17 [(ethereum.eth.ext.ssz_size) = "32", (ethereum.eth.ext.since) = "capella"];
     }
+}
+
+message Txs {
+    repeated bytes transactions = 1 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+}
+
+message WithdrawalsWrapper {
+    repeated ethereum.engine.v1.Withdrawal withdrawals = 1 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
 }
