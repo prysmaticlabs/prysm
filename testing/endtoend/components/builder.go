@@ -34,7 +34,7 @@ func NewBuilderSet() *BuilderSet {
 
 // Start starts all the builders in set.
 func (s *BuilderSet) Start(ctx context.Context) error {
-	totalNodeCount := 1
+	totalNodeCount := 2
 	nodes := make([]e2etypes.ComponentRunner, totalNodeCount)
 	for i := 0; i < totalNodeCount; i++ {
 		nodes[i] = NewBuilder(i)

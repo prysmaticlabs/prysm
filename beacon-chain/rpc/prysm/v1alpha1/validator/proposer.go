@@ -268,6 +268,16 @@ func (vs *Server) PrepareBeaconProposer(
 	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
 	}
+	for i, idx := range validatorIndices {
+		addr, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, idx)
+		if err != nil {
+			log.WithError(err).Error("db err")
+			continue
+		}
+		if addr != feeRecipients[i] {
+			log.Infof("wanted %#x but got %#x for %d", feeRecipients[i], addr, idx)
+		}
+	}
 	log.WithFields(logrus.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")

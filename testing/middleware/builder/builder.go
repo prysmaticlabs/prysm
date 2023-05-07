@@ -280,7 +280,8 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	ax := types.Slot(slot)
 	currEpoch := types.Epoch(ax / params.BeaconConfig().SlotsPerEpoch)
 	if currEpoch >= params.BeaconConfig().CapellaForkEpoch {
-
+		p.handleHeadeRequestCapella(w)
+		return
 	}
 
 	b, err := p.retrievePendingBlock()
@@ -364,6 +365,9 @@ func (p *Builder) handleHeadeRequestCapella(w http.ResponseWriter) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if b == nil {
+		// do nothing
+	}
 
 	secKey, err := bls.RandKey()
 	if err != nil {
@@ -372,7 +376,11 @@ func (p *Builder) handleHeadeRequestCapella(w http.ResponseWriter) {
 		return
 	}
 	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
-	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload, math.WeiToGwei(v))
+	v = v.Mul(v, big.NewInt(2))
+	// Is used as the helper modifies the big.Int
+	weiVal := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	weiVal = weiVal.Mul(weiVal, big.NewInt(2))
+	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload, math.WeiToGwei(weiVal))
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -495,6 +503,9 @@ func (p *Builder) retrievePendingBlock() (*v1.ExecutionPayload, error) {
 	result := &v1.ExecutionPayload{}
 	if p.currId == nil {
 		return nil, errors.New("no payload id is cached")
+	}
+	if result == nil {
+		// do nothing
 	}
 	err := p.execClient.CallContext(context.Background(), result, GetPayloadMethod, *p.currId)
 	if err != nil {

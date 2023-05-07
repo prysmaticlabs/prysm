@@ -1960,7 +1960,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.Equal(t, len(signedRegisterValidatorRequests), len(v.signedValidatorRegistrations))
 			}
 			deadline := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-			if err := v.PushProposerSettings(ctx, km, deadline); tt.err != "" {
+			if err := v.PushProposerSettings(ctx, km, 0, deadline); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 			if len(tt.logMessages) > 0 {
@@ -2082,7 +2082,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 			FeeRecipient:   feeRecipient2[:],
 		},
 	}
-	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys)
+	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 0)
 	require.NoError(t, err)
 	actual, err := v.buildPrepProposerReqs(ctx, filteredKeys)
 	require.NoError(t, err)
@@ -2196,7 +2196,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 			FeeRecipient:   defaultFeeRecipient[:],
 		},
 	}
-	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys)
+	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 0)
 	require.NoError(t, err)
 	actual, err := v.buildPrepProposerReqs(ctx, filteredKeys)
 	require.NoError(t, err)

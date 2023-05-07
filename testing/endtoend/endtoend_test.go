@@ -530,7 +530,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 			})
 		}
 	}
-	return nil
+	return errors.New("failing on purpose")
 }
 
 func (r *testRunner) scenarioRun() error {

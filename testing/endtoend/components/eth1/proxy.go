@@ -34,10 +34,10 @@ func NewProxySet() *ProxySet {
 
 // Start starts all the proxies in set.
 func (s *ProxySet) Start(ctx context.Context) error {
-	totalNodeCount := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount - 1
+	totalNodeCount := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount - 2
 	nodes := make([]e2etypes.ComponentRunner, totalNodeCount)
 	for i := 0; i < totalNodeCount; i++ {
-		nodes[i] = NewProxy(i + 1)
+		nodes[i] = NewProxy(i + 2)
 	}
 	s.proxies = nodes
 
