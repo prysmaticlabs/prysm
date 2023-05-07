@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	remote_web3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	remote_web3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,7 +27,6 @@ func walletWithKeymanager(c *cli.Context) (*wallet.Wallet, keymanager.IKeymanage
 		return nil, nil, errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
 	}
 	return w, km, nil
-
 }
 
 func walletWithWeb3SignerKeymanager(c *cli.Context, config *remote_web3signer.SetupConfig) (*wallet.Wallet, keymanager.IKeymanager, error) {

@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -89,17 +89,7 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 		case currentKeys := <-accountsChangedChan:
-			anyActive, err := v.HandleKeyReload(ctx, currentKeys)
-			if err != nil {
-				log.WithError(err).Error("Could not properly handle reloaded keys")
-			}
-			if !anyActive {
-				log.Warn("No active keys found. Waiting for activation...")
-				err := v.WaitForActivation(ctx, accountsChangedChan)
-				if err != nil {
-					log.WithError(err).Warn("Could not wait for validator activation")
-				}
-			}
+			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 			allExited, err := v.AllValidatorsAreExited(ctx)
@@ -150,6 +140,20 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
+		}
+	}
+}
+
+func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byte, ac chan [][fieldparams.BLSPubkeyLength]byte) {
+	anyActive, err := v.HandleKeyReload(ctx, current)
+	if err != nil {
+		log.WithError(err).Error("Could not properly handle reloaded keys")
+	}
+	if !anyActive {
+		log.Warn("No active keys found. Waiting for activation...")
+		err := v.WaitForActivation(ctx, ac)
+		if err != nil {
+			log.WithError(err).Warn("Could not wait for validator activation")
 		}
 	}
 }

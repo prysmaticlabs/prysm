@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	slashing "github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	slashing "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -42,7 +42,6 @@ func (s *Server) ExportSlashingProtection(ctx context.Context, _ *empty.Empty) (
 	return &pb.ExportSlashingProtectionResponse{
 		File: string(encoded),
 	}, nil
-
 }
 
 // ImportSlashingProtection reads an input slashing protection EIP-3076

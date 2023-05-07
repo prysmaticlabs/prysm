@@ -14,11 +14,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -129,7 +129,7 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*eth
 }
 
 // InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
-func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) {
+func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.Lock()
@@ -141,7 +141,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	// Don't insert into finalized trie if there is no deposit to
 	// insert.
 	if len(dc.deposits) == 0 {
-		return
+		return nil
 	}
 	// In the event we have less deposits than we need to
 	// finalize we finalize till the index on which we do have it.
@@ -151,7 +151,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	// If we finalize to some lower deposit index, we
 	// ignore it.
 	if int(eth1DepositIndex) < insertIndex {
-		return
+		return nil
 	}
 	for _, d := range dc.deposits {
 		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
@@ -162,12 +162,10 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 		}
 		depHash, err := d.Deposit.Data.HashTreeRoot()
 		if err != nil {
-			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
-			return
+			return errors.Wrap(err, "could not hash deposit data")
 		}
 		if err = depositTrie.Insert(depHash[:], insertIndex); err != nil {
-			log.WithError(err).Error("Could not insert deposit hash")
-			return
+			return errors.Wrap(err, "could not insert deposit hash")
 		}
 		insertIndex++
 	}
@@ -176,6 +174,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 		Deposits:        depositTrie,
 		MerkleTrieIndex: eth1DepositIndex,
 	}
+	return nil
 }
 
 // AllDepositContainers returns all historical deposit containers.

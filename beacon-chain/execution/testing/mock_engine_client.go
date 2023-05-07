@@ -8,14 +8,14 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // EngineClient --
@@ -38,7 +38,7 @@ type EngineClient struct {
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
-	BlockValue                  *big.Int
+	BlockValue                  uint64
 }
 
 // NewPayload --

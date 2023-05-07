@@ -4,19 +4,19 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,7 +34,7 @@ var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch par
 //	DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
 //	PENDING - validator is in Ethereum's activation queue.
 //	ACTIVE - validator is active.
-//	EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
+//	EXITING - validator has initiated an exit request, or has dropped below the ejection balance and is being kicked out.
 //	EXITED - validator is no longer validating.
 //	SLASHING - validator has been kicked out due to meeting a slashing condition.
 //	UNKNOWN_STATUS - validator does not have a known status in the network.
@@ -265,7 +265,6 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 	}
 
 	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
-
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
@@ -334,10 +333,9 @@ func (vs *Server) validatorStatus(
 			if vs.DepositFetcher == nil {
 				log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit.")
 			} else {
-				// Check if there was a deposit deposit.
-				d, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+				// Check if there was a deposit.
+				_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 				if eth1BlockNumBigInt != nil {
-					resp.Status = depositStatus(d.Data.Amount)
 					resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 				}
 			}

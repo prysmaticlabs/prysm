@@ -3,10 +3,13 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "beacon_chain_client.go",
+        "node_client.go",
+        "slasher_client.go",
         "validator.go",
         "validator_client.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/iface",
+    importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/iface",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//config/fieldparams:go_default_library",

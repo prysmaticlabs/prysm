@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -64,6 +64,10 @@ type Flags struct {
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
 	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
+
+	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
+
+	BuildBlockParallel bool // BuildBlockParallel builds beacon block for proposer in parallel.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -202,9 +206,17 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
 	}
-	if ctx.IsSet(EnableOptionalEngineMethods.Name) {
-		logEnabled(EnableOptionalEngineMethods)
+	if ctx.IsSet(enableOptionalEngineMethods.Name) {
+		logEnabled(enableOptionalEngineMethods)
 		cfg.EnableOptionalEngineMethods = true
+	}
+	if ctx.IsSet(prepareAllPayloads.Name) {
+		logEnabled(prepareAllPayloads)
+		cfg.PrepareAllPayloads = true
+	}
+	if ctx.IsSet(buildBlockParallel.Name) {
+		logEnabled(buildBlockParallel)
+		cfg.BuildBlockParallel = true
 	}
 	Init(cfg)
 	return nil

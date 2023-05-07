@@ -11,21 +11,20 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -444,9 +443,6 @@ func TestSignAttestation(t *testing.T) {
 	validator, m, _, finish := setup(t)
 	defer finish()
 
-	secretKey, err := bls.SecretKeyFromBytes(bytesutil.PadTo([]byte{1}, 32))
-	require.NoError(t, err, "Failed to generate key from bytes")
-	publicKey := secretKey.PublicKey()
 	wantedFork := &ethpb.Fork{
 		PreviousVersion: []byte{'a', 'b', 'c', 'd'},
 		CurrentVersion:  []byte{'d', 'e', 'f', 'f'},
@@ -464,15 +460,10 @@ func TestSignAttestation(t *testing.T) {
 	att.Data.Target.Epoch = 200
 	att.Data.Slot = 999
 	att.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("blockRoot"), 32)
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], publicKey.Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: secretKey,
-		},
-	}
-	validator.keyManager = km
-	sig, sr, err := validator.signAtt(ctx, pubKey, att.Data, att.Data.Slot)
+
+	pk := testKeyFromBytes(t, []byte{1})
+	validator.keyManager = newMockKeymanager(t, pk)
+	sig, sr, err := validator.signAtt(ctx, pk.pub, att.Data, att.Data.Slot)
 	require.NoError(t, err, "%x,%x,%v", sig, sr, err)
 	require.Equal(t, "b6a60f8497bd328908be83634d045"+
 		"dd7a32f5e246b2c4031fc2f316983f362e36fc27fd3d6d5a2b15"+

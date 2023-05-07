@@ -20,24 +20,24 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/clientstats"
-	"github.com/prysmaticlabs/prysm/v3/network"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/v4/network"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -370,7 +370,9 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 		// to be included (rather than the last one to be processed). This was most likely
 		// done as the state cannot represent signed integers.
 		actualIndex := int64(currIndex) - 1 // lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
-		s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex)
+		if err = s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex); err != nil {
+			return err
+		}
 
 		// Deposit proofs are only used during state transition and can be safely removed to save space.
 		if err = s.cfg.depositCache.PruneProofs(ctx, actualIndex); err != nil {
@@ -425,7 +427,6 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.Hea
 			Error:  error(nil),
 		})
 		headers = append(headers, header)
-
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {

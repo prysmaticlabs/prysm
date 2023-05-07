@@ -6,18 +6,18 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/fieldtrie"
-	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/fieldtrie"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -669,13 +669,13 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	for i, f := range b.sharedFieldReferences {
-		refMap[i.String(b.version)] = uint64(f.Refs())
+		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
 		numOfRefs := uint64(f.FieldReference().Refs())
 		f.RLock()
 		if !f.Empty() {
-			refMap[i.String(b.version)+"_trie"] = numOfRefs
+			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
 	}
@@ -691,7 +691,7 @@ func (b *BeaconState) IsNil() bool {
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("field", field.String(b.version)))
+	span.AddAttributes(trace.StringAttribute("field", field.String()))
 
 	switch field {
 	case types.GenesisTime:
@@ -899,7 +899,6 @@ func finalizerCleanup(b *BeaconState) {
 		if b.stateFieldLeaves[field].FieldReference() != nil {
 			b.stateFieldLeaves[field].FieldReference().MinusRef()
 		}
-
 	}
 	for i := range b.dirtyFields {
 		delete(b.dirtyFields, i)

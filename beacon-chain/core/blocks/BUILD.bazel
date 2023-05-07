@@ -18,7 +18,7 @@ go_library(
         "signature.go",
         "withdrawals.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks",
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
@@ -28,6 +28,7 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",

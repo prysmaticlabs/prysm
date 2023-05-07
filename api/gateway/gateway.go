@@ -13,8 +13,8 @@ import (
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/runtime"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -70,14 +70,15 @@ type Gateway struct {
 func New(ctx context.Context, opts ...Option) (*Gateway, error) {
 	g := &Gateway{
 		ctx: ctx,
-		cfg: &config{
-			router: mux.NewRouter(),
-		},
+		cfg: &config{},
 	}
 	for _, opt := range opts {
 		if err := opt(g); err != nil {
 			return nil, err
 		}
+	}
+	if g.cfg.router == nil {
+		g.cfg.router = mux.NewRouter()
 	}
 	return g, nil
 }

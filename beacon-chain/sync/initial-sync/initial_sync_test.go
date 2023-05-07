@@ -11,26 +11,27 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	p2pt "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	beaconsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -210,11 +211,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			ret = ret[:req.Count]
 		}
 
-		mChain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		for i := 0; i < len(ret); i++ {
 			wsb, err := blocks.NewSignedBeaconBlock(ret[i])
 			require.NoError(t, err)
-			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wsb))
+			assert.NoError(t, beaconsync.WriteBlockChunk(stream, startup.NewClock(time.Now(), [32]byte{}), p.Encoding(), wsb))
 		}
 	})
 
@@ -283,10 +283,9 @@ func connectPeerHavingBlocks(
 			if uint64(i) >= uint64(len(blks)) {
 				break
 			}
-			chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 			wsb, err := blocks.NewSignedBeaconBlock(blks[i])
 			require.NoError(t, err)
-			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wsb))
+			require.NoError(t, beaconsync.WriteBlockChunk(stream, startup.NewClock(time.Now(), [32]byte{}), p.Encoding(), wsb))
 		}
 	})
 

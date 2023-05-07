@@ -3,19 +3,20 @@ package kv
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -910,25 +911,25 @@ func TestStore_RegistrationsByValidatorID(t *testing.T) {
 	ids := []primitives.ValidatorIndex{0, 0, 0}
 	regs := []*ethpb.ValidatorRegistrationV1{{}, {}, {}, {}}
 	require.ErrorContains(t, "ids and registrations must be the same length", db.SaveRegistrationsByValidatorIDs(ctx, ids, regs))
-
+	timestamp := time.Now().Unix()
 	ids = []primitives.ValidatorIndex{0, 1, 2}
 	regs = []*ethpb.ValidatorRegistrationV1{
 		{
 			FeeRecipient: bytesutil.PadTo([]byte("a"), 20),
 			GasLimit:     1,
-			Timestamp:    2,
+			Timestamp:    uint64(timestamp),
 			Pubkey:       bytesutil.PadTo([]byte("b"), 48),
 		},
 		{
 			FeeRecipient: bytesutil.PadTo([]byte("c"), 20),
 			GasLimit:     3,
-			Timestamp:    4,
+			Timestamp:    uint64(timestamp),
 			Pubkey:       bytesutil.PadTo([]byte("d"), 48),
 		},
 		{
 			FeeRecipient: bytesutil.PadTo([]byte("e"), 20),
 			GasLimit:     5,
-			Timestamp:    6,
+			Timestamp:    uint64(timestamp),
 			Pubkey:       bytesutil.PadTo([]byte("f"), 48),
 		},
 	}
@@ -938,7 +939,7 @@ func TestStore_RegistrationsByValidatorID(t *testing.T) {
 	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
 		FeeRecipient: bytesutil.PadTo([]byte("a"), 20),
 		GasLimit:     1,
-		Timestamp:    2,
+		Timestamp:    uint64(timestamp),
 		Pubkey:       bytesutil.PadTo([]byte("b"), 48),
 	}, f)
 	f, err = db.RegistrationByValidatorID(ctx, 1)
@@ -946,7 +947,7 @@ func TestStore_RegistrationsByValidatorID(t *testing.T) {
 	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
 		FeeRecipient: bytesutil.PadTo([]byte("c"), 20),
 		GasLimit:     3,
-		Timestamp:    4,
+		Timestamp:    uint64(timestamp),
 		Pubkey:       bytesutil.PadTo([]byte("d"), 48),
 	}, f)
 	f, err = db.RegistrationByValidatorID(ctx, 2)
@@ -954,7 +955,7 @@ func TestStore_RegistrationsByValidatorID(t *testing.T) {
 	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
 		FeeRecipient: bytesutil.PadTo([]byte("e"), 20),
 		GasLimit:     5,
-		Timestamp:    6,
+		Timestamp:    uint64(timestamp),
 		Pubkey:       bytesutil.PadTo([]byte("f"), 48),
 	}, f)
 	_, err = db.RegistrationByValidatorID(ctx, 3)

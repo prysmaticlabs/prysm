@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -229,6 +229,12 @@ var (
 	ForceExitFlag = &cli.BoolFlag{
 		Name:  "force-exit",
 		Usage: "Exit without displaying the confirmation prompt",
+	}
+	VoluntaryExitJSONOutputPath = &cli.StringFlag{
+		Name: "exit-json-output-dir",
+		Usage: "The output directory to write voluntary exits as individual unencrypted JSON " +
+			"files. If this flag is provided, voluntary exits will be written to the provided " +
+			"directory and will not be broadcasted.",
 	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{

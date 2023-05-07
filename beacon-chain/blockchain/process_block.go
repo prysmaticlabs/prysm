@@ -6,28 +6,27 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -108,13 +107,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 
 	// Verify that the parent block is in forkchoice
-	if !s.ForkChoicer().HasNode(b.ParentRoot()) {
+	if !s.cfg.ForkChoiceStore.HasNode(b.ParentRoot()) {
 		return ErrNotDescendantOfFinalized
 	}
 
 	// Save current justified and finalized epochs for future use.
-	currStoreJustifiedEpoch := s.ForkChoicer().JustifiedCheckpoint().Epoch
-	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch
+	currStoreJustifiedEpoch := s.cfg.ForkChoiceStore.JustifiedCheckpoint().Epoch
+	currStoreFinalizedEpoch := s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch
 	preStateFinalizedEpoch := preState.FinalizedCheckpoint().Epoch
 	preStateJustifiedEpoch := preState.CurrentJustifiedCheckpoint().Epoch
 
@@ -142,6 +141,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			return err
 		}
 	}
+
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
 		return err
 	}
@@ -187,18 +187,18 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}()
 	}
 
-	justified := s.ForkChoicer().JustifiedCheckpoint()
+	justified := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	start := time.Now()
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
 	if blockRoot != headRoot {
-		receivedWeight, err := s.ForkChoicer().Weight(blockRoot)
+		receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
 		}
-		headWeight, err := s.ForkChoicer().Weight(headRoot)
+		headWeight, err := s.cfg.ForkChoiceStore.Weight(headRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", headRoot)).Warn("could not determine node weight")
 		}
@@ -208,12 +208,24 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			"headRoot":       fmt.Sprintf("%#x", headRoot),
 			"headWeight":     headWeight,
 		}).Debug("Head block is not the received block")
+	} else {
+		// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Debug("could not update next slot state cache")
+			}
+		}()
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	// verify conditions for FCU, notifies FCU, and saves the new head.
 	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
-	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
+	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
 	}
 
@@ -228,18 +240,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		},
 	})
 
-	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	go func() {
-		// Use a custom deadline here, since this method runs asynchronously.
-		// We ignore the parent method's context and instead create a new one
-		// with a custom deadline, therefore using the background context instead.
-		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-		defer cancel()
-		if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-			log.WithError(err).Debug("could not update next slot state cache")
-		}
-	}()
-
 	// Save justified check point to db.
 	postStateJustifiedEpoch := postState.CurrentJustifiedCheckpoint().Epoch
 	if justified.Epoch > currStoreJustifiedEpoch || (justified.Epoch == postStateJustifiedEpoch && justified.Epoch > preStateJustifiedEpoch) {
@@ -252,7 +252,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 
 	// Save finalized check point to db and more.
 	postStateFinalizedEpoch := postState.FinalizedCheckpoint().Epoch
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	if finalized.Epoch > currStoreFinalizedEpoch || (finalized.Epoch == postStateFinalizedEpoch && finalized.Epoch > preStateFinalizedEpoch) {
 		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
 			return err
@@ -283,7 +283,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()
-
 	}
 	defer reportAttestationInclusion(b)
 	if err := s.handleEpochBoundary(ctx, postState); err != nil {
@@ -576,7 +575,7 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {
-			s.ForkChoicer().InsertSlashedIndex(ctx, primitives.ValidatorIndex(index))
+			s.cfg.ForkChoiceStore.InsertSlashedIndex(ctx, primitives.ValidatorIndex(index))
 		}
 	}
 }
@@ -652,29 +651,21 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 // This routine checks if there is a cached proposer payload ID available for the next slot proposer.
 // If there is not, it will call forkchoice updated with the correct payload attribute then cache the payload ID.
-func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *event.Feed) {
-	// Wait for state to be initialized.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := stateFeed.Subscribe(stateChannel)
+func (s *Service) spawnLateBlockTasksLoop() {
 	go func() {
-		select {
-		case <-s.ctx.Done():
-			stateSub.Unsubscribe()
+		_, err := s.clockWaiter.WaitForClock(s.ctx)
+		if err != nil {
+			log.WithError(err).Error("spawnLateBlockTasksLoop encountered an error waiting for initialization")
 			return
-		case <-stateChannel:
-			stateSub.Unsubscribe()
-			break
 		}
-
 		attThreshold := params.BeaconConfig().SecondsPerSlot / 3
 		ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
 		for {
 			select {
 			case <-ticker.C():
-				if err := s.fillMissingBlockPayloadId(ctx); err != nil {
-					log.WithError(err).Error("Could not fill missing payload ID")
-				}
-			case <-ctx.Done():
+				s.lateBlockTasks(s.ctx)
+
+			case <-s.ctx.Done():
 				log.Debug("Context closed, exiting routine")
 				return
 			}
@@ -682,34 +673,47 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 	}()
 }
 
-// fillMissingBlockPayloadId is called 4 seconds into the slot and calls FCU if we are proposing next slot
-// and the cache has been missed
-func (s *Service) fillMissingBlockPayloadId(ctx context.Context) error {
-	s.ForkChoicer().RLock()
-	highestReceivedSlot := s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
-	s.ForkChoicer().RUnlock()
-	if s.CurrentSlot() == highestReceivedSlot {
-		return nil
+// lateBlockTasks  is called 4 seconds into the slot and performs tasks
+// related to late blocks. It emits a MissedSlot state feed event.
+// It calls FCU and sets the right attributes if we are proposing next slot
+// it also updates the next slot cache to deal with skipped slots.
+func (s *Service) lateBlockTasks(ctx context.Context) {
+	if s.CurrentSlot() == s.HeadSlot() {
+		return
 	}
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.MissedSlot,
+	})
+
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-	if !has || id != [8]byte{} {
-		return nil
+	if (!has && !features.Get().PrepareAllPayloads) || id != [8]byte{} {
+		return
 	}
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
 		s.headLock.RUnlock()
-		return err
+		log.WithError(err).Debug("could not perform late block tasks: failed to retrieve head block")
+		return
 	}
-	headState := s.headState(ctx)
 	headRoot := s.headRoot()
+	headState := s.headState(ctx)
 	s.headLock.RUnlock()
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
 		headRoot:  headRoot,
 		headBlock: headBlock.Block(),
 	})
-	return err
+	if err != nil {
+		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
+	}
+	lastRoot, lastState := transition.LastCachedState()
+	if lastState == nil {
+		lastRoot, lastState = headRoot[:], headState
+	}
+	if err = transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
+		log.WithError(err).Debug("could not update next slot state cache")
+	}
 }

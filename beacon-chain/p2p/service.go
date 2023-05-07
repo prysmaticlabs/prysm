@@ -19,19 +19,17 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/async"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
-	prysmnetwork "github.com/prysmaticlabs/prysm/v3/network"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/v3/runtime"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/async"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
+	prysmnetwork "github.com/prysmaticlabs/prysm/v4/network"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v4/runtime"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -77,7 +75,6 @@ type Service struct {
 	initializationLock    sync.Mutex
 	dv5Listener           Listener
 	startupErr            error
-	stateNotifier         statefeed.Notifier
 	ctx                   context.Context
 	host                  host.Host
 	genesisTime           time.Time
@@ -93,13 +90,12 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 
 	s := &Service{
-		ctx:           ctx,
-		stateNotifier: cfg.StateNotifier,
-		cancel:        cancel,
-		cfg:           cfg,
-		isPreGenesis:  true,
-		joinedTopics:  make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
-		subnetsLock:   make(map[uint64]*sync.RWMutex),
+		ctx:          ctx,
+		cancel:       cancel,
+		cfg:          cfg,
+		isPreGenesis: true,
+		joinedTopics: make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
+		subnetsLock:  make(map[uint64]*sync.RWMutex),
 	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -383,38 +379,19 @@ func (s *Service) pingPeers() {
 func (s *Service) awaitStateInitialized() {
 	s.initializationLock.Lock()
 	defer s.initializationLock.Unlock()
-
 	if s.isInitialized() {
 		return
 	}
-
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-	cleanup := stateSub.Unsubscribe
-	defer cleanup()
-	for {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.Initialized {
-				data, ok := event.Data.(*statefeed.InitializedData)
-				if !ok {
-					// log.Fatalf will prevent defer from being called
-					cleanup()
-					log.Fatalf("Received wrong data over state initialized feed: %v", data)
-				}
-				s.genesisTime = data.StartTime
-				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
-				_, err := s.currentForkDigest() // initialize fork digest cache
-				if err != nil {
-					log.WithError(err).Error("Could not initialize fork digest")
-				}
-
-				return
-			}
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return
-		}
+	clock, err := s.cfg.ClockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Fatal("failed to receive initial genesis data")
+	}
+	s.genesisTime = clock.GenesisTime()
+	gvr := clock.GenesisValidatorsRoot()
+	s.genesisValidatorsRoot = gvr[:]
+	_, err = s.currentForkDigest() // initialize fork digest cache
+	if err != nil {
+		log.WithError(err).Error("Could not initialize fork digest")
 	}
 }
 

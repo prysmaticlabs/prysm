@@ -6,15 +6,15 @@ import (
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/v3/async"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/async"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -46,7 +46,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
-	s.validatePendingAtts(ctx, s.cfg.chain.CurrentSlot())
+	s.validatePendingAtts(ctx, s.cfg.clock.CurrentSlot())
 
 	s.pendingAttsLock.RLock()
 	roots := make([][32]byte, 0, len(s.blkRootToPendingAtts))
@@ -76,7 +76,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		} else {
 			// Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
-				"currentSlot": s.cfg.chain.CurrentSlot(),
+				"currentSlot": s.cfg.clock.CurrentSlot(),
 				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
 				"attCount":    len(attestations),
 				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),

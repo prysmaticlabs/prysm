@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	pmath "github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	pmath "github.com/prysmaticlabs/prysm/v4/math"
 )
 
 var (
@@ -79,7 +79,6 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
 	}
-
 }
 
 // RecomputeTrie rebuilds the affected branches in the trie according to the provided

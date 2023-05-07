@@ -4,21 +4,21 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
-	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -83,23 +83,17 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 
 		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 		// of a received unaggregated attestation.
-		bs.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: operation.UnaggregatedAttReceived,
-			Data: &operation.UnAggregatedAttReceivedData{
-				Attestation: att,
-			},
-		})
+		// Note we can't send for aggregated att because we don't have selection proof.
+		if !corehelpers.IsAggregated(att) {
+			bs.OperationNotifier.OperationFeed().Send(&feed.Event{
+				Type: operation.UnaggregatedAttReceived,
+				Data: &operation.UnAggregatedAttReceivedData{
+					Attestation: att,
+				},
+			})
+		}
 
 		validAttestations = append(validAttestations, att)
-
-		go func() {
-			ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
-			attCopy := ethpbalpha.CopyAttestation(att)
-			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(attCopy); err != nil {
-				log.WithError(err).Error("Could not handle attestation in operations service")
-				return
-			}
-		}()
 	}
 
 	broadcastFailed := false
@@ -114,6 +108,16 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 
 		if err := bs.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
 			broadcastFailed = true
+		}
+
+		if corehelpers.IsAggregated(att) {
+			if err := bs.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("could not save aggregated att")
+			}
+		} else {
+			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("could not save unaggregated att")
+			}
 		}
 	}
 	if broadcastFailed {
@@ -186,7 +190,7 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpbv1.Attes
 		return nil, status.Errorf(codes.Internal, "Could not insert attester slashing into pool: %v", err)
 	}
 	if !features.Get().DisableBroadcastSlashings {
-		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+		if err := bs.Broadcaster.Broadcast(ctx, alphaSlashing); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}
@@ -242,7 +246,7 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 		return nil, status.Errorf(codes.Internal, "Could not insert proposer slashing into pool: %v", err)
 	}
 	if !features.Get().DisableBroadcastSlashings {
-		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+		if err := bs.Broadcaster.Broadcast(ctx, alphaSlashing); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
 	}

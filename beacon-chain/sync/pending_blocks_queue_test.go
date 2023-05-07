@@ -11,24 +11,25 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 //	/- b1 - b2
@@ -51,6 +52,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 					Epoch: 0,
 				},
 			},
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
 			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
@@ -123,6 +125,7 @@ func TestRegularSyncBeaconBlockSubscriber_OptimisticStatus(t *testing.T) {
 					Epoch: 0,
 				},
 			},
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
 			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
@@ -196,6 +199,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 				},
 				ReceiveBlockMockErr: execution.ErrHTTPTimeout,
 			},
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
 			stateGen: stategen.New(db, fcs),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
@@ -323,6 +327,7 @@ func TestRegularSyncBeaconBlockSubscriber_DoNotReprocessBlock(t *testing.T) {
 					Epoch: 0,
 				},
 			},
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
 			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
@@ -391,6 +396,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 					Root:  make([]byte, 32),
 				},
 			},
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
 			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
@@ -583,18 +589,20 @@ func TestService_BatchRootRequest(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
+	chain := &mock.ChainService{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 1,
+			Root:  make([]byte, 32),
+		},
+		ValidatorsRoot: [32]byte{},
+		Genesis:        time.Now(),
+	}
 	r := &Service{
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Epoch: 1,
-					Root:  make([]byte, 32),
-				},
-				ValidatorsRoot: [32]byte{},
-				Genesis:        time.Now(),
-			},
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -713,6 +721,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 			p2p:      p1,
 			beaconDB: db,
 			chain:    &mockChain,
+			clock:    startup.NewClock(mockChain.Genesis, mockChain.ValidatorsRoot),
 			stateGen: stategen.New(db, fcs),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),

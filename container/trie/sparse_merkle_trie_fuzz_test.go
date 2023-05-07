@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func FuzzSparseMerkleTrie_HashTreeRoot(f *testing.F) {

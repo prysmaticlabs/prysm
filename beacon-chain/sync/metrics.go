@@ -7,12 +7,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 var (
@@ -130,7 +130,7 @@ var (
 func (s *Service) updateMetrics() {
 	// do not update metrics if genesis time
 	// has not been initialized
-	if s.cfg.chain.GenesisTime().IsZero() {
+	if s.cfg.clock.GenesisTime().IsZero() {
 		return
 	}
 	// We update the dynamic subnet topics.
@@ -138,8 +138,8 @@ func (s *Service) updateMetrics() {
 	if err != nil {
 		log.WithError(err).Debugf("Could not compute fork digest")
 	}
-	indices := s.aggregatorSubnetIndices(s.cfg.chain.CurrentSlot())
-	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	indices := s.aggregatorSubnetIndices(s.cfg.clock.CurrentSlot())
+	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	syncTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SyncCommitteeMessage{})]
 	attTopic += s.cfg.p2p.Encoding().ProtocolSuffix()

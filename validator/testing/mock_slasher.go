@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -28,7 +28,6 @@ func (MockSlasher) HighestAttestations(_ context.Context, _ *eth.HighestAttestat
 func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*eth.AttesterSlashingResponse, error) {
 	ms.IsSlashableAttestationCalled = true // skipcq: RVV-B0006
 	if ms.SlashAttestation {
-
 		slashingAtt, ok := proto.Clone(in).(*eth.IndexedAttestation)
 		if !ok {
 			return nil, errors.New("object is not of type *eth.IndexedAttestation")

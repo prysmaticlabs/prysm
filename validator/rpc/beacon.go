@@ -10,12 +10,14 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/validator/client"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -47,8 +49,6 @@ func (s *Server) registerBeaconClient() error {
 	if s.clientWithCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
-	s.beaconChainClient = ethpb.NewBeaconChainClient(grpcConn)
-	s.beaconNodeClient = ethpb.NewNodeClient(grpcConn)
 	s.beaconNodeHealthClient = ethpb.NewHealthClient(grpcConn)
 
 	conn := validatorHelpers.NewNodeConnection(
@@ -57,6 +57,8 @@ func (s *Server) registerBeaconClient() error {
 		s.beaconApiTimeout,
 	)
 
+	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn)
+	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn)
 	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
 	return nil
 }
@@ -68,6 +70,7 @@ func (s *Server) registerBeaconClient() error {
 func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validatorpb.BeaconStatusResponse, error) {
 	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
+		//nolint:nilerr
 		return &validatorpb.BeaconStatusResponse{
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
 			Connected:          false,

@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/clientstats"
 )
 
 type BeaconNodeStatsUpdater interface {

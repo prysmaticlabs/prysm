@@ -9,16 +9,16 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/io/prompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
-	accountsprompt "github.com/prysmaticlabs/prysm/v3/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
+	accountsprompt "github.com/prysmaticlabs/prysm/v4/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -195,7 +195,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 
 // NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
 func NewWalletForWeb3Signer() *Wallet {
-	// wallet is just a temporary wallet for web3 signer used to call intialize keymanager.
+	// wallet is just a temporary wallet for web3 signer used to call initialize keymanager.
 	return &Wallet{
 		walletDir:      "",
 		accountsPath:   "",
@@ -383,7 +383,6 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser,
 	}
 	w.configFilePath = configFilePath
 	return os.Open(configFilePath) // #nosec G304
-
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file

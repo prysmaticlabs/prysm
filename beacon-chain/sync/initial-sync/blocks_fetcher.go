@@ -8,18 +8,19 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	p2pTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	prysmsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v3/math"
-	p2ppb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	prysmsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	p2ppb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -86,6 +87,7 @@ type blocksFetcher struct {
 	capacityWeight  float64       // how remaining capacity affects peer selection
 	mode            syncMode      // allows to use fetcher in different sync scenarios
 	quit            chan struct{} // termination notifier
+	clock           *startup.Clock
 }
 
 // peerLock restricts fetcher actions on per peer basis. Currently, used for rate limiting.
@@ -296,7 +298,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		blocks, err := f.requestBlocks(ctx, req, peers[i])
 		if err == nil {
 			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
-			return blocks, peers[i], err
+			return blocks, peers[i], nil
 		} else {
 			log.WithError(err).Debug("Could not request blocks by range")
 		}

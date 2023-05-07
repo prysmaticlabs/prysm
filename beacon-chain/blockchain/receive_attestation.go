@@ -7,16 +7,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -56,7 +54,7 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 	if err != nil {
 		return err
 	}
-	r, err := s.ancestor(ctx, a.Data.BeaconBlockRoot, targetSlot)
+	r, err := s.Ancestor(ctx, a.Data.BeaconBlockRoot, targetSlot)
 	if err != nil {
 		return err
 	}
@@ -67,20 +65,13 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 }
 
 // This routine processes fork choice attestations from the pool to account for validator votes and fork choice.
-func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
-	// Wait for state to be initialized.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := stateFeed.Subscribe(stateChannel)
+func (s *Service) spawnProcessAttestationsRoutine() {
 	go func() {
-		select {
-		case <-s.ctx.Done():
-			stateSub.Unsubscribe()
+		_, err := s.clockWaiter.WaitForClock(s.ctx)
+		if err != nil {
+			log.WithError(err).Error("spawnProcessAttestationsRoutine failed to receive genesis data")
 			return
-		case <-stateChannel:
-			stateSub.Unsubscribe()
-			break
 		}
-
 		if s.genesisTime.IsZero() {
 			log.Warn("ProcessAttestations routine waiting for genesis time")
 			for s.genesisTime.IsZero() {
@@ -100,17 +91,15 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-pat.C():
-				s.ForkChoicer().Lock()
 				s.UpdateHead(s.ctx, s.CurrentSlot()+1)
-				s.ForkChoicer().Unlock()
 			case <-st.C():
-				s.ForkChoicer().Lock()
-				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+				s.cfg.ForkChoiceStore.Lock()
+				if err := s.cfg.ForkChoiceStore.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("could not process new slot")
 				}
+				s.cfg.ForkChoiceStore.Unlock()
 
 				s.UpdateHead(s.ctx, s.CurrentSlot())
-				s.ForkChoicer().Unlock()
 			}
 		}
 	}()
@@ -119,8 +108,12 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
 // The caller of this function MUST hold a lock in forkchoice
 func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
-	start := time.Now()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.UpdateHead")
+	defer span.End()
 
+	start := time.Now()
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
 	disparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	if !features.Get().DisableReorgLateBlocks {
@@ -134,19 +127,24 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not compute head from new attestations")
+		// Fallback to our current head root in the event of a failure.
+		s.headLock.RLock()
+		newHeadRoot = s.headRoot()
+		s.headLock.RUnlock()
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	s.headLock.RLock()
-	if s.headRoot() != newHeadRoot {
+	changed, err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot)
+	if err != nil {
+		log.WithError(err).Error("could not update forkchoice")
+	}
+	if changed {
+		s.headLock.RLock()
 		log.WithFields(logrus.Fields{
 			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
 			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
 		}).Debug("Head changed due to attestations")
-	}
-	s.headLock.RUnlock()
-	if err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot); err != nil {
-		log.WithError(err).Error("could not update forkchoice")
+		s.headLock.RUnlock()
 	}
 }
 

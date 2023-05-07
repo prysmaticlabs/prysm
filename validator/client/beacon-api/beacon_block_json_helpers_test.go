@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
 func TestBeaconBlockJsonHelpers_JsonifyTransactions(t *testing.T) {
@@ -508,7 +508,7 @@ func TestBeaconBlockJsonHelpers_JsonifySignedVoluntaryExits(t *testing.T) {
 		},
 	}
 
-	result := jsonifySignedVoluntaryExits(input)
+	result := JsonifySignedVoluntaryExits(input)
 	assert.DeepEqual(t, expectedResult, result)
 }
 

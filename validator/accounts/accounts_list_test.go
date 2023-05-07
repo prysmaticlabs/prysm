@@ -13,18 +13,18 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/mock"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
-	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
+	constant "github.com/prysmaticlabs/prysm/v4/validator/testing"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -287,7 +287,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	m := mock.NewMockValidatorClient(ctrl)
+	m := validatormock.NewMockValidatorClient(ctrl)
 	var pks [][]byte
 	for i := range pubKeys {
 		pks = append(pks, pubKeys[i][:])

@@ -15,7 +15,7 @@ go_library(
         "validators.go",
         "weak_subjectivity.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers",
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/cache:go_default_library",
@@ -48,6 +48,7 @@ go_test(
         "attestation_test.go",
         "beacon_committee_test.go",
         "block_test.go",
+        "main_test.go",
         "randao_test.go",
         "rewards_penalties_test.go",
         "shuffle_test.go",
@@ -56,6 +57,7 @@ go_test(
         "weak_subjectivity_test.go",
     ],
     embed = [":go_default_library"],
+    race = "on",
     shard_count = 2,
     deps = [
         "//beacon-chain/cache:go_default_library",

@@ -12,11 +12,11 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	mathutil "github.com/prysmaticlabs/prysm/v3/math"
+	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 )
 
 const (
@@ -56,10 +56,17 @@ func committeeKeyFn(obj interface{}) (string, error) {
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
-	return &CommitteeCache{
-		CommitteeCache: lruwrpr.New(maxCommitteesCacheSize),
-		inProgress:     make(map[string]bool),
-	}
+	cc := &CommitteeCache{}
+	cc.Clear()
+	return cc
+}
+
+// Clear resets the CommitteeCache to its initial state
+func (c *CommitteeCache) Clear() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.CommitteeCache = lruwrpr.New(maxCommitteesCacheSize)
+	c.inProgress = make(map[string]bool)
 }
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices

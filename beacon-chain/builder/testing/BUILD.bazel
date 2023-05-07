@@ -4,10 +4,12 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = ["mock.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing",
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing",
     visibility = ["//visibility:public"],
     deps = [
         "//api/client/builder:go_default_library",
+        "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/db:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",

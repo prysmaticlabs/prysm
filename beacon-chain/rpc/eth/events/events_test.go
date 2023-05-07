@@ -9,26 +9,26 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/mock"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/mock"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -337,7 +337,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 		blk := &eth.SignedBeaconBlockBellatrix{
 			Block: &eth.BeaconBlockBellatrix{
-				ProposerIndex: 1,
+				ProposerIndex: 0,
 				Slot:          1,
 				ParentRoot:    parentRoot[:],
 				StateRoot:     genesis.Block.StateRoot,
@@ -365,13 +365,15 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		require.NoError(t, err)
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
-		srv.HeadFetcher = &mockChain.ChainService{
+		fetcher := &mockChain.ChainService{
 			Genesis:        time.Now(),
 			State:          beaconState,
 			Block:          signedBlk,
 			Root:           make([]byte, 32),
 			ValidatorsRoot: [32]byte{},
 		}
+		srv.HeadFetcher = fetcher
+		srv.ChainInfoFetcher = fetcher
 
 		prevRando, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
 		require.NoError(t, err)
@@ -379,7 +381,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		wantedPayload := &ethpb.EventPayloadAttributeV1{
 			Version: version.String(version.Bellatrix),
 			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
-				ProposerIndex:     1,
+				ProposerIndex:     0,
 				ProposalSlot:      2,
 				ParentBlockNumber: 1,
 				ParentBlockRoot:   make([]byte, 32),
@@ -441,7 +443,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 		blk := &eth.SignedBeaconBlockCapella{
 			Block: &eth.BeaconBlockCapella{
-				ProposerIndex: 1,
+				ProposerIndex: 0,
 				Slot:          1,
 				ParentRoot:    parentRoot[:],
 				StateRoot:     genesis.Block.StateRoot,
@@ -470,7 +472,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		require.NoError(t, err)
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
-		srv.HeadFetcher = &mockChain.ChainService{
+		fetcher := &mockChain.ChainService{
 			Genesis:        time.Now(),
 			State:          beaconState,
 			Block:          signedBlk,
@@ -478,18 +480,21 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			ValidatorsRoot: [32]byte{},
 		}
 
+		srv.HeadFetcher = fetcher
+		srv.ChainInfoFetcher = fetcher
+
 		prevRando, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
 		require.NoError(t, err)
 
 		wantedPayload := &ethpb.EventPayloadAttributeV2{
 			Version: version.String(version.Capella),
 			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
-				ProposerIndex:     1,
+				ProposerIndex:     0,
 				ProposalSlot:      2,
 				ParentBlockNumber: 1,
 				ParentBlockRoot:   make([]byte, 32),
 				ParentBlockHash:   make([]byte, 32),
-				PayloadAttributesV2: &enginev1.PayloadAttributesV2{
+				PayloadAttributes: &enginev1.PayloadAttributesV2{
 					Timestamp:             24,
 					PrevRandao:            prevRando,
 					SuggestedFeeRecipient: make([]byte, 20),

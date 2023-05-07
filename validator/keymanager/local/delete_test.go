@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	mock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -50,6 +50,17 @@ func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 		require.Equal(t, ethpbservice.DeletedKeystoreStatus_NOT_FOUND, statuses[0].Status)
 		require.Equal(t, ethpbservice.DeletedKeystoreStatus_NOT_FOUND, statuses[1].Status)
 	})
+	t.Run("file write errors should not lead to updated local keystore or cache", func(t *testing.T) {
+		wallet.HasWriteFileError = true
+		accountToRemove := uint64(2)
+		accountPubKey := accounts[accountToRemove]
+		require.NotEqual(t, len(dr.accountsStore.PublicKeys), 0)
+		copyStore := dr.accountsStore.Copy()
+		statuses, err := dr.DeleteKeystores(ctx, [][]byte{accountPubKey[:]})
+		require.ErrorContains(t, "could not write keystore file for accounts", err)
+		require.Equal(t, len(statuses), 0)
+		require.DeepEqual(t, dr.accountsStore, copyStore)
+	})
 	t.Run("deletes properly", func(t *testing.T) {
 		accountToRemove := uint64(2)
 		accountPubKey := accounts[accountToRemove]
@@ -83,6 +94,7 @@ func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 		require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
 		require.LogsContain(t, hook, "Successfully deleted validator key(s)")
 	})
+
 	t.Run("returns NOT_ACTIVE status for duplicate public key in request", func(t *testing.T) {
 		accountToRemove := uint64(3)
 		accountPubKey := accounts[accountToRemove]
@@ -127,4 +139,5 @@ func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 		require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
 		require.LogsContain(t, hook, "Successfully deleted validator key(s)")
 	})
+
 }

@@ -5,11 +5,11 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash/htr"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v4/math"
 )
 
 // ReturnTrieLayer returns the representation of a merkle trie when

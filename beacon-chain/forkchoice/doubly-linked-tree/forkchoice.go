@@ -6,18 +6,18 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -508,6 +508,17 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	return node.payloadHash
 }
 
+// UnrealizedJustifiedPayloadBlockHash returns the hash of the payload at the unrealized justified checkpoint
+func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() [32]byte {
+	root := f.store.unrealizedJustifiedCheckpoint.Root
+	node, ok := f.store.nodeByRoot[root]
+	if !ok || node == nil {
+		// This should not happen
+		return [32]byte{}
+	}
+	return node.payloadHash
+}
+
 // ForkChoiceDump returns a full dump of forkchoice.
 func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, error) {
 	jc := &v1.Checkpoint{
@@ -549,7 +560,6 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 		ForkChoiceNodes:               nodes,
 	}
 	return resp, nil
-
 }
 
 // SetBalancesByRooter sets the balanceByRoot handler in forkchoice

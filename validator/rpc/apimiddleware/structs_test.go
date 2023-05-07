@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestListKeystores_JSONisEqual(t *testing.T) {

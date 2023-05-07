@@ -1,13 +1,12 @@
 package blocks
 
 import (
-	"math/big"
-
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -616,7 +615,7 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 
 	p, err := WrappedExecutionPayload(pb.ExecutionPayload)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -643,7 +642,7 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 
 	ph, err := WrappedExecutionPayloadHeader(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -668,9 +667,9 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, big.NewInt(0))
+	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload, 0)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -696,9 +695,9 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, big.NewInt(0))
+	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader, 0)
 	// We allow the payload to be nil
-	if err != nil && err != ErrNilObjectWrapped {
+	if err != nil && err != consensus_types.ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{

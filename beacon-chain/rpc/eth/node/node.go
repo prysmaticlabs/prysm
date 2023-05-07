@@ -10,14 +10,14 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -228,7 +228,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
 
-// PeerCount retrieves retrieves number of known peers.
+// PeerCount retrieves number of known peers.
 func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerCountResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "node.PeerCount")
 	defer span.End()
@@ -301,6 +301,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
 		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutil.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
 			// We return a positive result because failing to set a non-gRPC related header should not cause the gRPC call to fail.
+			//nolint:nilerr
 			return &emptypb.Empty{}, nil
 		}
 		return &emptypb.Empty{}, nil

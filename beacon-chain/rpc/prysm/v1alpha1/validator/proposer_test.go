@@ -10,46 +10,46 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
-	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
-	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	coretime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
-	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	coretime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
+	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -443,8 +443,8 @@ func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	proposerServer := &Server{
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		SyncChecker:           &mockSync.Sync{},
-		HeadUpdater:           mockChainService,
 		ForkFetcher:           mockChainService,
+		ForkchoiceFetcher:     mockChainService,
 		TimeFetcher:           &mock.ChainService{}}
 	req := &ethpb.BlockRequest{
 		Slot: bellatrixSlot + 1,
@@ -462,11 +462,12 @@ func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, he
 		HeadFetcher:           mockChainService,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:         mockChainService,
-		HeadUpdater:           mockChainService,
 		ChainStartFetcher:     &mockExecution.Chain{},
 		Eth1InfoFetcher:       &mockExecution.Chain{},
 		Eth1BlockFetcher:      &mockExecution.Chain{},
+		FinalizationFetcher:   mockChainService,
 		ForkFetcher:           mockChainService,
+		ForkchoiceFetcher:     mockChainService,
 		MockEth1Votes:         true,
 		AttPool:               attestations.NewPool(),
 		SlashingsPool:         slashings.NewPool(),
@@ -480,6 +481,7 @@ func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, he
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		BeaconDB:               db,
 		BLSChangesPool:         blstoexec.NewPool(),
+		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true},
 	}
 }
 
@@ -1467,7 +1469,8 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 	// Mutate it since its a pointer
 	d[0].Deposit.Data.WithdrawalCredentials = junkCreds[:]
 	// Insert junk to corrupt trie.
-	depositCache.InsertFinalizedDeposits(ctx, 2)
+	err = depositCache.InsertFinalizedDeposits(ctx, 2)
+	require.NoError(t, err)
 
 	// Add original back
 	d[0].Deposit = origDeposit

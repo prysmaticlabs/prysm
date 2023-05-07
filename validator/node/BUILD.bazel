@@ -30,7 +30,7 @@ go_library(
         "log.go",
         "node.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/validator/node",
+    importpath = "github.com/prysmaticlabs/prysm/v4/validator/node",
     visibility = [
         "//cmd/validator:__subpackages__",
         "//validator:__subpackages__",
@@ -69,6 +69,7 @@ go_library(
         "//validator/web:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@com_github_gorilla_mux//:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_fastssz//:go_default_library",

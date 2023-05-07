@@ -6,16 +6,16 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/client"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
-	"github.com/prysmaticlabs/prysm/v3/validator/node"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v4/validator/node"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 )
@@ -83,6 +83,7 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 		accounts.WithBeaconRPCProvider(beaconRPCProvider),
 		accounts.WithBeaconRESTApiProvider(c.String(flags.BeaconRESTApiProviderFlag.Name)),
 		accounts.WithGRPCHeaders(grpcHeaders),
+		accounts.WithExitJSONOutputPath(c.String(flags.VoluntaryExitJSONOutputPath.Name)),
 	}
 	// Get full set of public keys from the keymanager.
 	validatingPublicKeys, err := km.FetchValidatingPublicKeys(c.Context)

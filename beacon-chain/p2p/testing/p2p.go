@@ -21,11 +21,11 @@ import (
 	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
 	"github.com/multiformats/go-multiaddr"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -272,7 +272,7 @@ func (p *TestP2P) AddConnectionHandler(f, _ func(ctx context.Context, id peer.ID
 
 				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				if err := f(ctx, conn.RemotePeer()); err != nil {
-					logrus.WithError(err).Error("Could not send succesful hello rpc request")
+					logrus.WithError(err).Error("Could not send successful hello rpc request")
 					if err := p.Disconnect(conn.RemotePeer()); err != nil {
 						logrus.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
 					}

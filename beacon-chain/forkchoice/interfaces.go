@@ -3,11 +3,11 @@ package forkchoice
 import (
 	"context"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 )
 
 // BalancesByRooter is a handler to obtain the effective balances of the state
@@ -57,6 +57,7 @@ type Getter interface {
 	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	JustifiedPayloadBlockHash() [32]byte
+	UnrealizedJustifiedPayloadBlockHash() [32]byte
 	NodeCount() int
 	HighestReceivedBlockSlot() primitives.Slot
 	ReceivedBlocksLastEpoch() (uint64, error)

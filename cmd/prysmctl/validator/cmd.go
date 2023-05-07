@@ -5,11 +5,11 @@ import (
 	"os"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/runtime/tos"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -41,7 +41,7 @@ var (
 var Commands = []*cli.Command{
 	{
 		Name:    "validator",
-		Aliases: []string{"v", "sign"}, // remove sign command should be depreciated but having as backwards compatability.
+		Aliases: []string{"v", "sign"}, // remove sign command should be depreciated but having as backwards compatibility.
 		Usage:   "commands that affect the state of validators such as exiting or withdrawing",
 		Subcommands: []*cli.Command{
 			{
@@ -110,6 +110,7 @@ var Commands = []*cli.Command{
 					flags.GrpcRetryDelayFlag,
 					flags.ExitAllFlag,
 					flags.ForceExitFlag,
+					flags.VoluntaryExitJSONOutputPath,
 					features.Mainnet,
 					features.PraterTestnet,
 					features.SepoliaTestnet,

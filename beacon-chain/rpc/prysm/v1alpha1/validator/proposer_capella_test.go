@@ -5,14 +5,15 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
@@ -100,6 +101,12 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 					GasLimit:         123,
 					WithdrawalsRoot:  wdRoot[:],
 				}
+				b.Block.Body.BlsToExecutionChanges = []*eth.SignedBLSToExecutionChange{
+					{Message: &eth.BLSToExecutionChange{ValidatorIndex: 1, FromBlsPubkey: []byte{'a'}}},
+					{Message: &eth.BLSToExecutionChange{ValidatorIndex: 2, FromBlsPubkey: []byte{'b'}}},
+					{Message: &eth.BLSToExecutionChange{ValidatorIndex: 3, FromBlsPubkey: []byte{'c'}}},
+					{Message: &eth.BLSToExecutionChange{ValidatorIndex: 4, FromBlsPubkey: []byte{'d'}}},
+				}
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
@@ -113,6 +120,12 @@ func TestServer_unblindBuilderCapellaBlock(t *testing.T) {
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
 				b.Block.Body.ExecutionPayload = p
+				b.Block.Body.BlsToExecutionChanges = []*eth.SignedBLSToExecutionChange{
+					{Message: &eth.BLSToExecutionChange{ValidatorIndex: 1, FromBlsPubkey: []byte{'a'}}},
+					{Message: &eth.BLSToExecutionChange{ValidatorIndex: 2, FromBlsPubkey: []byte{'b'}}},
+					{Message: &eth.BLSToExecutionChange{ValidatorIndex: 3, FromBlsPubkey: []byte{'c'}}},
+					{Message: &eth.BLSToExecutionChange{ValidatorIndex: 4, FromBlsPubkey: []byte{'d'}}},
+				}
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb

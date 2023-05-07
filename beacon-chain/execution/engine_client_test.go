@@ -19,19 +19,20 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	mocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -126,7 +127,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
 		require.Equal(t, true, ok)
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, 0)
 		require.NoError(t, err)
 		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload)
 		require.NoError(t, err)
@@ -257,10 +258,9 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, want.ExecutionPayload.PrevRandao.Bytes(), pb.PrevRandao)
 		require.DeepEqual(t, want.ExecutionPayload.ParentHash.Bytes(), pb.ParentHash)
 
-		v, err := resp.Value()
+		v, err := resp.ValueInGwei()
 		require.NoError(t, err)
-		wantedValue := []byte{17, 255} // 0x11ff
-		require.DeepEqual(t, wantedValue, v.Bytes())
+		require.Equal(t, uint64(1236), v)
 	})
 	t.Run(ForkchoiceUpdatedMethod+" VALID status", func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{
@@ -424,7 +424,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.NoError(t, err)
@@ -452,7 +452,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -480,7 +480,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -508,7 +508,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -1324,7 +1324,7 @@ func fixtures() map[string]interface{} {
 			GasUsed:       &hexUint,
 			Timestamp:     &hexUint,
 		},
-		BlockValue: "0x11ff",
+		BlockValue: "0x11fffffffff",
 	}
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 	sha3Uncles := bytesutil.PadTo([]byte("sha3Uncles"), fieldparams.RootLength)
@@ -2312,6 +2312,80 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 		service.rpcClient = rpcClient
 
 		results, err := service.GetPayloadBodiesByRange(ctx, uint64(1), uint64(2))
+		require.NoError(t, err)
+		require.Equal(t, 3, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+	})
+}
+
+func Test_ExchangeCapabilities(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableOptionalEngineMethods: true,
+	})
+	defer resetFn()
+	t.Run("empty response works", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			exchangeCapabilities := &pb.ExchangeCapabilities{}
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  exchangeCapabilities,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+		logHook := logTest.NewGlobal()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.ExchangeCapabilities(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(results))
+
+		for _, item := range results {
+			require.NotNil(t, item)
+		}
+		assert.LogsContain(t, logHook, "Please update client, detected the following unsupported engine methods:")
+	})
+	t.Run("list of items", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			exchangeCapabilities := &pb.ExchangeCapabilities{
+				SupportedMethods: []string{"A", "B", "C"},
+			}
+
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  exchangeCapabilities,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		ctx := context.Background()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+
+		results, err := service.ExchangeCapabilities(ctx)
 		require.NoError(t, err)
 		require.Equal(t, 3, len(results))
 

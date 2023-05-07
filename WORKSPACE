@@ -86,10 +86,10 @@ http_archive(
         # Expose internals of go_test for custom build transitions.
         "//third_party:io_bazel_rules_go_test.patch",
     ],
-    sha256 = "dd926a88a564a9246713a9c00b35315f54cbd46b31a26d5d8fb264c07045f05d",
+    sha256 = "6b65cb7917b4d1709f9410ffe00ecf3e160edf674b78c54a894471320862184f",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.39.0/rules_go-v0.39.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.39.0/rules_go-v0.39.0.zip",
     ],
 )
 
@@ -164,7 +164,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.19.7",
+    go_version = "1.20.3",
     nogo = "@//:nogo",
 )
 
@@ -205,7 +205,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.3.0-rc.4"
+consensus_spec_version = "v1.3.0"
 
 bls_test_version = "v0.1.1"
 
@@ -221,7 +221,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "519da3cbb181fe927e41b0d13c3aaad5f5f38fe0ba87ca51bd09a661c738bd6c",
+    sha256 = "1c806e04ac5e3779032c06a6009350b3836b6809bb23812993d6ececd7047cf5",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -237,7 +237,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "894404302d3d4b0f3080d3221204c19de4e837f1b129f468a66747103174412e",
+    sha256 = "2b42796dc5ccd9f1246032d0c17663e20f70334ff7e00325f0fc3af28cb24186",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -253,7 +253,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "ca7a594a2f4be1103e01b5a1416f75a328b7555eae8b26308c07f80fa6d0f255",
+    sha256 = "231e3371e81ce9acde65d2910ec4580587e74dbbcfcbd9c675e473e022deec8a",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -268,7 +268,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "b4ed6c077c5f0857361412515b319fc8b26730c7d701d3245b5e6849b3974a4f",
+    sha256 = "219b74d95664ea7e8dfbf31162dfa206b9c0cf45919ea86db5fa0f8902977e3c",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )

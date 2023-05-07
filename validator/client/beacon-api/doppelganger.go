@@ -9,10 +9,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 type DoppelGangerInfo struct {
@@ -151,7 +151,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		indexes[i] = index
 	}
 
-	// Get validators liveness for the the last epoch.
+	// Get validators liveness for the last epoch.
 	// We request a state 1 epoch ago. We are guaranteed to have currentEpoch > 2
 	// since we assume that we are not in phase0.
 	previousEpoch := currentEpoch - 1
