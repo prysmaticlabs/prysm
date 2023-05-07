@@ -214,11 +214,13 @@ func AddInt(i ...int) (int, error) {
 }
 
 // WeiToGwei converts big int wei to uint64 gwei.
+// The input `v` is copied before being modified.
 func WeiToGwei(v *big.Int) uint64 {
 	if v == nil {
 		return 0
 	}
 	gweiPerEth := big.NewInt(1e9)
-	v.Div(v, gweiPerEth)
-	return v.Uint64()
+	copied := big.NewInt(0).Set(v)
+	copied.Div(copied, gweiPerEth)
+	return copied.Uint64()
 }
