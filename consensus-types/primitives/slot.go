@@ -7,6 +7,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/math"
 )
 
+type Root [32]byte
+type Signature [96]byte
+type Bloom [256]byte
+
 var _ fssz.HashRoot = (Slot)(0)
 var _ fssz.Marshaler = (*Slot)(nil)
 var _ fssz.Unmarshaler = (*Slot)(nil)

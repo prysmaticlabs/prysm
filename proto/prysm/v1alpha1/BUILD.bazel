@@ -57,10 +57,6 @@ ssz_gen_marshal(
         "//proto/engine/v1:go_default_library",
     ],
     objs = [
-        "SuperBeaconBlock",
-        "SignedSuperBeaconBlock",
-        "SuperBeaconBlockBody",
-        "SuperExecutionPayload",
         "BeaconBlockAltair",
         "BeaconBlockBodyAltair",
         "SignedBeaconBlockAltair",
@@ -215,10 +211,10 @@ ssz_proto_files(
     srcs = [
         "attestation.proto",
         "beacon_block.proto",
-        "beacon_block_superset.proto",
         "beacon_state.proto",
         "sync_committee.proto",
         "withdrawals.proto",
+        "beacon_block_superset.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",

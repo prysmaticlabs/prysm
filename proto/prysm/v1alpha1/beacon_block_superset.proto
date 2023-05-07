@@ -28,99 +28,103 @@ option java_outer_classname = "BeaconBlockProto";
 option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
-// The Ethereum consensus beacon block. The message does not contain a validator signature.
-message SuperBeaconBlock {
-    // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-
-    // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-
-    // 32 byte root of the parent block.
-    bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-
-    // 32 byte root of the resulting state after processing this block.
-    bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
-
-    // The block body itself.
-    SuperBeaconBlockBody body = 5;
+message Testing {
+    bytes root = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
 }
 
-// The signed version of beacon block.
-message SignedSuperBeaconBlock {
-    // The unsigned beacon block itself.
-    SuperBeaconBlock block = 1;
+// // The Ethereum consensus beacon block. The message does not contain a validator signature.
+// message SuperBeaconBlock {
+//     // Beacon chain slot that this block represents.
+//     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
 
-    // 96 byte BLS signature from the validator that produced this block.
-    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-}
+//     // Validator index of the validator that proposed the block header.
+//     uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
 
-// The block body of an Ethereum consensus beacon block.
-message SuperBeaconBlockBody {
-    // The validators RANDAO reveal 96 byte value.
-    bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
+//     // 32 byte root of the parent block.
+//     bytes parent_root = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
 
-    // A reference to the Ethereum 1.x chain.
-    Eth1Data eth1_data = 2;
+//     // 32 byte root of the resulting state after processing this block.
+//     bytes state_root = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
 
-    // 32 byte field of arbitrary data. This field may contain any data and
-    // is not used for anything other than a fun message.
-    bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+//     // The block body itself.
+//     SuperBeaconBlockBody body = 5;
+// }
 
-    // Block operations
-    // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
+// // The signed version of beacon block.
+// message SignedSuperBeaconBlock {
+//     // The unsigned beacon block itself.
+//     SuperBeaconBlock block = 1;
 
-    // At most MAX_PROPOSER_SLASHINGS.
-    repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+//     // 96 byte BLS signature from the validator that produced this block.
+//     bytes signature = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Signature"];
+// }
 
-    // At most MAX_ATTESTER_SLASHINGS.
-    repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
+// // The block body of an Ethereum consensus beacon block.
+// message SuperBeaconBlockBody {
+//     // The validators RANDAO reveal 96 byte value.
+//     bytes randao_reveal = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Signature"];
 
-    // At most MAX_ATTESTATIONS.
-    repeated Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
+//     // A reference to the Ethereum 1.x chain.
+//     Eth1Data eth1_data = 2;
 
-    // At most MAX_DEPOSITS.
-    repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+//     // 32 byte field of arbitrary data. This field may contain any data and
+//     // is not used for anything other than a fun message.
+//     bytes graffiti = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
 
-    // At most MAX_VOLUNTARY_EXITS.
-    repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+//     // Block operations
+//     // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
 
-    // Sync aggregate object to track sync committee votes for light client support.
-    SyncAggregate sync_aggregate = 9 [(ethereum.eth.ext.since) = "altair"];
+//     // At most MAX_PROPOSER_SLASHINGS.
+//     repeated ProposerSlashing proposer_slashings = 4;
 
-    SuperExecutionPayload execution_payload_data = 10 [(ethereum.eth.ext.since) = "bellatrix"];
+//     // At most MAX_ATTESTER_SLASHINGS.
+//     repeated AttesterSlashing attester_slashings = 5;
 
-    repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16", (ethereum.eth.ext.since) = "capella"];
-}
+//     // At most MAX_ATTESTATIONS.
+//     repeated Attestation attestations = 6;
 
-message SuperExecutionPayload {
-	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
-	bytes state_root            = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes receipts_root         = 4 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes logs_bloom            = 5 [(ethereum.eth.ext.ssz_size) = "256"];
-	bytes prev_randao           = 6 [(ethereum.eth.ext.ssz_size) = "32"];
-	uint64 block_number         = 7;
-	uint64 gas_limit            = 8;
-	uint64 gas_used             = 9;
-	uint64 timestamp            = 10;
-	bytes extra_data            = 11 [(ethereum.eth.ext.ssz_max) = "32"];
-	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
-    oneof transaction_data {
-        Txs txs = 14 [(ethereum.eth.ext.since) = "bellatrix"];
-        bytes transactions_root = 15 [(ethereum.eth.ext.ssz_size) = "32", (ethereum.eth.ext.since) = "bellatrix"];
-    }
-    oneof withdrawals_data {
-        WithdrawalsWrapper withdrawals_wrapper = 16 [(ethereum.eth.ext.since) = "capella"];
-        bytes withdrawals_root = 17 [(ethereum.eth.ext.ssz_size) = "32", (ethereum.eth.ext.since) = "capella"];
-    }
-}
+//     // At most MAX_DEPOSITS.
+//     repeated Deposit deposits = 7;
 
-message Txs {
-    repeated bytes transactions = 1 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
-}
+//     // At most MAX_VOLUNTARY_EXITS.
+//     repeated SignedVoluntaryExit voluntary_exits = 8;
 
-message WithdrawalsWrapper {
-    repeated ethereum.engine.v1.Withdrawal withdrawals = 1 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
-}
+//     // Sync aggregate object to track sync committee votes for light client support.
+//     SyncAggregate sync_aggregate = 9 [(ethereum.eth.ext.since) = "altair"];
+
+//     SuperExecutionPayload execution_payload_data = 10 [(ethereum.eth.ext.since) = "bellatrix"];
+
+//     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.since) = "capella"];
+// }
+
+// message SuperExecutionPayload {
+//     bytes parent_hash = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
+//     bytes fee_recipient = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
+//     bytes state_root = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
+//     bytes receipts_root = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
+//     bytes logs_bloom = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Bloom"];
+//     bytes prev_randao = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
+// 	uint64 block_number         = 7;
+// 	uint64 gas_limit            = 8;
+// 	uint64 gas_used             = 9;
+// 	uint64 timestamp            = 10;
+//     bytes extra_data = 11;
+//     bytes base_fee_per_gas = 12 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
+//     bytes block_hash = 13 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root"];
+//     oneof transaction_data {
+//         Txs txs = 14 [(ethereum.eth.ext.since) = "bellatrix"];
+//         bytes transactions_root = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root", (ethereum.eth.ext.since) = "bellatrix"];
+//     }
+//     oneof withdrawals_data {
+//         WithdrawalsWrapper withdrawals_wrapper = 16 [(ethereum.eth.ext.since) = "capella"];
+//         bytes withdrawals_root = 17 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Root", (ethereum.eth.ext.since) = "capella"];
+//     }
+// }
+
+// message Txs {
+//     repeated bytes transactions = 1;
+// }
+
+// message WithdrawalsWrapper {
+//     repeated ethereum.engine.v1.Withdrawal withdrawals = 1;
+// }
