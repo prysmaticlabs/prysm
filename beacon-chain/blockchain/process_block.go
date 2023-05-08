@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -141,6 +142,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
 			return err
 		}
+	}
+
+	if err := s.isDataAvailable(ctx, blockRoot, signed); err != nil {
+		return errors.Wrap(err, "could not validate blob data availability")
 	}
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
@@ -724,4 +729,27 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if err = transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
 		log.WithError(err).Debug("could not update next slot state cache")
 	}
+}
+
+func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
+	if signed.Version() < version.Deneb {
+		return nil
+	}
+	block := signed.Block()
+	if block == nil {
+		return errors.New("invalid nil beacon block")
+	}
+	body := block.Body()
+	if body == nil {
+		return errors.New("invalid nil beacon block body")
+	}
+	kzgCommitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return errors.Wrap(err, "could not get KZG commitments")
+	}
+	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
+	if err != nil {
+		return errors.Wrap(err, "could not get blob sidecars")
+	}
+	return kzg.IsDataAvailable(kzgCommitments, sidecars)
 }

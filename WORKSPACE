@@ -377,7 +377,21 @@ load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_d
 
 gometalinter_dependencies()
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+
+go_repository(
+    name = "com_github_bits_and_blooms_bitset",
+    importpath = "github.com/bits-and-blooms/bitset",
+    sum = "h1:NpE8frKRLGHIcEzkR+gZhiioW1+WbYV6fKwD6ZIpQT8=",
+    version = "v1.5.0",
+)
+
+go_repository(
+    name = "com_github_crate_crypto_go_kzg_4844",
+    importpath = "github.com/crate-crypto/go-kzg-4844",
+    sum = "h1:2PXr2wKBNTmSsoYLCmaNg5Z6uQUf7LiUAsnDbTfq+0M=",
+    version = "v0.1.0",
+)
 
 gazelle_dependencies()
 
