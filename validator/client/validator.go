@@ -984,7 +984,7 @@ func (v *validator) SetProposerSettings(settings *validatorserviceconfig.Propose
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, deadline time.Time) error {
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error {
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
@@ -1000,7 +1000,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		log.Info("No imported public keys. Skipping prepare proposer routine")
 		return nil
 	}
-	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys)
+	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, slot)
 	if err != nil {
 		return err
 	}
@@ -1034,7 +1034,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 
 	return nil
 }
-func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([][fieldparams.BLSPubkeyLength]byte, error) {
+func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	statusRequestKeys := make([][]byte, 0)
 	for _, k := range pubkeys {
@@ -1061,7 +1061,11 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 	}
 	for i, status := range resp.Statuses {
 		// skip registration creation if validator is not active status
-		if status.Status != ethpb.ValidatorStatus_ACTIVE {
+		nonActive := status.Status != ethpb.ValidatorStatus_ACTIVE
+		// Handle edge case at the start of the epoch with newly activated validators
+		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+		currActivated := status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= status.ActivationEpoch
+		if nonActive && !currActivated {
 			log.WithFields(logrus.Fields{
 				"publickey": hexutil.Encode(resp.PublicKeys[i]),
 				"status":    status.Status.String(),
