@@ -329,6 +329,16 @@ func TestCopyPayloadHeaderCapella(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
 }
 
+func TestCopyPayloadHeaderDeneb(t *testing.T) {
+	p := genPayloadHeaderDeneb()
+
+	got := v1alpha1.CopyExecutionPayloadHeaderDeneb(p)
+	if !reflect.DeepEqual(got, p) {
+		t.Errorf("TestCopyPayloadHeaderDeneb() = %v, want %v", got, p)
+	}
+	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
+}
+
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 	sbb := genSignedBeaconBlockBellatrix()
 
@@ -447,6 +457,66 @@ func TestCopyBlindedBeaconBlockBodyCapella(t *testing.T) {
 		t.Errorf("CopyBlindedBeaconBlockBodyCapella() = %v, want %v", got, bb)
 	}
 	assert.NotEmpty(t, bb, "Copied blinded beacon block body Capella has empty fields")
+}
+
+func TestCopySignedBeaconBlockDeneb(t *testing.T) {
+	sbb := genSignedBeaconBlockDeneb()
+
+	got := v1alpha1.CopySignedBeaconBlockDeneb(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("CopySignedBeaconBlockDeneb() = %v, want %v", got, sbb)
+	}
+	assert.NotEmpty(t, sbb, "Copied signed beacon block Deneb has empty fields")
+}
+
+func TestCopyBeaconBlockDeneb(t *testing.T) {
+	b := genBeaconBlockDeneb()
+
+	got := v1alpha1.CopyBeaconBlockDeneb(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("CopyBeaconBlockDeneb() = %v, want %v", got, b)
+	}
+	assert.NotEmpty(t, b, "Copied beacon block Deneb has empty fields")
+}
+
+func TestCopyBeaconBlockBodyDeneb(t *testing.T) {
+	bb := genBeaconBlockBodyDeneb()
+
+	got := v1alpha1.CopyBeaconBlockBodyDeneb(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("CopyBeaconBlockBodyDeneb() = %v, want %v", got, bb)
+	}
+	assert.NotEmpty(t, bb, "Copied beacon block body Deneb has empty fields")
+}
+
+func TestCopySignedBlindedBeaconBlockDeneb(t *testing.T) {
+	sbb := genSignedBlindedBeaconBlockDeneb()
+
+	got := v1alpha1.CopySignedBlindedBeaconBlockDeneb(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("CopySignedBlindedBeaconBlockDeneb() = %v, want %v", got, sbb)
+	}
+	assert.NotEmpty(t, sbb, "Copied signed blinded beacon block Deneb has empty fields")
+}
+
+func TestCopyBlindedBeaconBlockDeneb(t *testing.T) {
+	b := genBlindedBeaconBlockDeneb()
+
+	got := v1alpha1.CopyBlindedBeaconBlockDeneb(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("CopyBlindedBeaconBlockDeneb() = %v, want %v", got, b)
+	}
+	assert.NotEmpty(t, b, "Copied blinded beacon block Deneb has empty fields")
+}
+
+func TestCopyBlindedBeaconBlockBodyDeneb(t *testing.T) {
+	bb := genBlindedBeaconBlockBodyDeneb()
+
+	got := v1alpha1.CopyBlindedBeaconBlockBodyDeneb(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("CopyBlindedBeaconBlockBodyDeneb() = %v, want %v", got, bb)
+	}
+	assert.NotEmpty(t, bb, "Copied blinded beacon block body Deneb has empty fields")
 }
 
 func bytes(length int) []byte {
@@ -838,6 +908,82 @@ func genSignedBlindedBeaconBlockCapella() *v1alpha1.SignedBlindedBeaconBlockCape
 	}
 }
 
+func genBeaconBlockBodyDeneb() *v1alpha1.BeaconBlockBodyDeneb {
+	return &v1alpha1.BeaconBlockBodyDeneb{
+		RandaoReveal:          bytes(96),
+		Eth1Data:              genEth1Data(),
+		Graffiti:              bytes(32),
+		ProposerSlashings:     genProposerSlashings(5),
+		AttesterSlashings:     genAttesterSlashings(5),
+		Attestations:          genAttestations(10),
+		Deposits:              genDeposits(5),
+		VoluntaryExits:        genSignedVoluntaryExits(12),
+		SyncAggregate:         genSyncAggregate(),
+		ExecutionPayload:      genPayloadDeneb(),
+		BlsToExecutionChanges: genBLSToExecutionChanges(10),
+		BlobKzgCommitments:    getKZGCommitments(4),
+	}
+}
+
+func genBeaconBlockDeneb() *v1alpha1.BeaconBlockDeneb {
+	return &v1alpha1.BeaconBlockDeneb{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(32),
+		StateRoot:     bytes(32),
+		Body:          genBeaconBlockBodyDeneb(),
+	}
+}
+
+func genSignedBeaconBlockDeneb() *v1alpha1.SignedBeaconBlockDeneb {
+	return &v1alpha1.SignedBeaconBlockDeneb{
+		Block:     genBeaconBlockDeneb(),
+		Signature: bytes(96),
+	}
+}
+
+func genBlindedBeaconBlockBodyDeneb() *v1alpha1.BlindedBeaconBlockBodyDeneb {
+	return &v1alpha1.BlindedBeaconBlockBodyDeneb{
+		RandaoReveal:           bytes(96),
+		Eth1Data:               genEth1Data(),
+		Graffiti:               bytes(32),
+		ProposerSlashings:      genProposerSlashings(5),
+		AttesterSlashings:      genAttesterSlashings(5),
+		Attestations:           genAttestations(10),
+		Deposits:               genDeposits(5),
+		VoluntaryExits:         genSignedVoluntaryExits(12),
+		SyncAggregate:          genSyncAggregate(),
+		ExecutionPayloadHeader: genPayloadHeaderDeneb(),
+		BlsToExecutionChanges:  genBLSToExecutionChanges(10),
+		BlobKzgCommitments:     getKZGCommitments(4),
+	}
+}
+
+func getKZGCommitments(n int) [][]byte {
+	kzgs := make([][]byte, n)
+	for i := 0; i < n; i++ {
+		kzgs[i] = bytes(48)
+	}
+	return kzgs
+}
+
+func genBlindedBeaconBlockDeneb() *v1alpha1.BlindedBeaconBlockDeneb {
+	return &v1alpha1.BlindedBeaconBlockDeneb{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(32),
+		StateRoot:     bytes(32),
+		Body:          genBlindedBeaconBlockBodyDeneb(),
+	}
+}
+
+func genSignedBlindedBeaconBlockDeneb() *v1alpha1.SignedBlindedBeaconBlockDeneb {
+	return &v1alpha1.SignedBlindedBeaconBlockDeneb{
+		Block:     genBlindedBeaconBlockDeneb(),
+		Signature: bytes(32),
+	}
+}
+
 func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	return &v1alpha1.SyncCommitteeMessage{
 		Slot:           424555,
@@ -899,6 +1045,40 @@ func genPayloadCapella() *enginev1.ExecutionPayloadCapella {
 	}
 }
 
+func genPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
+	return &enginev1.ExecutionPayloadDeneb{
+		ParentHash:    bytes(32),
+		FeeRecipient:  bytes(20),
+		StateRoot:     bytes(32),
+		ReceiptsRoot:  bytes(32),
+		LogsBloom:     bytes(256),
+		PrevRandao:    bytes(32),
+		BlockNumber:   1,
+		GasLimit:      2,
+		GasUsed:       3,
+		Timestamp:     4,
+		ExtraData:     bytes(32),
+		BaseFeePerGas: bytes(32),
+		BlockHash:     bytes(32),
+		Transactions:  [][]byte{{'a'}, {'b'}, {'c'}},
+		Withdrawals: []*enginev1.Withdrawal{
+			{
+				Index:          123,
+				ValidatorIndex: 123,
+				Address:        bytes(20),
+				Amount:         123,
+			},
+			{
+				Index:          124,
+				ValidatorIndex: 456,
+				Address:        bytes(20),
+				Amount:         456,
+			},
+		},
+		ExcessDataGas: bytes(32),
+	}
+}
+
 func genPayloadHeader() *enginev1.ExecutionPayloadHeader {
 	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytes(32),
@@ -935,6 +1115,27 @@ func genPayloadHeaderCapella() *enginev1.ExecutionPayloadHeaderCapella {
 		BlockHash:        bytes(32),
 		TransactionsRoot: bytes(32),
 		WithdrawalsRoot:  bytes(32),
+	}
+}
+
+func genPayloadHeaderDeneb() *enginev1.ExecutionPayloadHeaderDeneb {
+	return &enginev1.ExecutionPayloadHeaderDeneb{
+		ParentHash:       bytes(32),
+		FeeRecipient:     bytes(20),
+		StateRoot:        bytes(32),
+		ReceiptsRoot:     bytes(32),
+		LogsBloom:        bytes(256),
+		PrevRandao:       bytes(32),
+		BlockNumber:      1,
+		GasLimit:         2,
+		GasUsed:          3,
+		Timestamp:        4,
+		ExtraData:        bytes(32),
+		BaseFeePerGas:    bytes(32),
+		BlockHash:        bytes(32),
+		TransactionsRoot: bytes(32),
+		WithdrawalsRoot:  bytes(32),
+		ExcessDataGas:    bytes(32),
 	}
 }
 
