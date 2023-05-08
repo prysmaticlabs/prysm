@@ -27,6 +27,9 @@ func (s *Service) processPendingAttsQueue() {
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	mutex := new(sync.Mutex)
 	async.RunEvery(s.ctx, processPendingAttsPeriod, func() {
+		if !s.chainIsStarted() {
+			return
+		}
 		mutex.Lock()
 		if err := s.processPendingAtts(s.ctx); err != nil {
 			log.WithError(err).Debugf("Could not process pending attestation: %v", err)
