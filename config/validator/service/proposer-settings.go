@@ -56,6 +56,7 @@ type BuilderConfig struct {
 	Relays   []string         `json:"relays,omitempty" yaml:"relays,omitempty"`
 }
 
+// ToBuilderConfig converts protobuf to a builder config used in inmemory storage
 func ToBuilderConfig(from *validatorpb.BuilderConfig) *BuilderConfig {
 	if from == nil {
 		return nil
@@ -74,7 +75,7 @@ func ToBuilderConfig(from *validatorpb.BuilderConfig) *BuilderConfig {
 }
 
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
-// ProposerSettingsPayload maps to ProposerSettings on import through the CLI.
+// validatorpb.ProposerSettingsPayload maps to ProposerSettings on import through the CLI.
 type ProposerSettings struct {
 	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption
 	DefaultConfig *ProposerOption
@@ -169,6 +170,7 @@ func (bc *BuilderConfig) Clone() *BuilderConfig {
 	return config
 }
 
+// ToPayload converts Builder Config to the protobuf object
 func (bc *BuilderConfig) ToPayload() *validatorpb.BuilderConfig {
 	if bc == nil {
 		return nil

@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// NoProposerSettingsFound is an error thrown when no settings are found in bucket
 var NoProposerSettingsFound = errors.New("no proposer settings found in bucket")
 
 // UpdateProposerSettingsForPubkey updates the existing settings for an internal representation of the proposers settings file at a particular public key

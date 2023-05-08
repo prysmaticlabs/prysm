@@ -569,6 +569,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 	}
 
 	if psExists {
+		// if settings exist update the default
 		if err := db.UpdateProposerSettingsDefault(cliCtx.Context, vpSettings.DefaultConfig); err != nil {
 			return nil, err
 		}
@@ -609,15 +610,17 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 				BuilderConfig: validatorServiceConfig.ToBuilderConfig(option.Builder),
 			}
 			pubkeyB := bytesutil.ToBytes48(decodedKey)
-			if psExists {
-				if err := db.UpdateProposerSettingsForPubkey(cliCtx.Context, pubkeyB, o); err != nil {
-					return nil, err
-				}
-			}
 			vpSettings.ProposeConfig[pubkeyB] = o
+		}
+		if psExists {
+			// override the existing saved settings if providing values via fileConfig.ProposerConfig
+			if err := db.SaveProposerSettings(cliCtx.Context, vpSettings); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if !psExists {
+		// if no proposer settings ever existed in the db just save the settings
 		if err := db.SaveProposerSettings(cliCtx.Context, vpSettings); err != nil {
 			return nil, err
 		}
