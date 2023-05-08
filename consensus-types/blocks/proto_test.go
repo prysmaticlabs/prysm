@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -24,7 +25,10 @@ type fields struct {
 	execPayloadHeader        *enginev1.ExecutionPayloadHeader
 	execPayloadCapella       *enginev1.ExecutionPayloadCapella
 	execPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella
+	execPayloadDeneb         *enginev1.ExecutionPayloadDeneb
+	execPayloadHeaderDeneb   *enginev1.ExecutionPayloadHeaderDeneb
 	blsToExecutionChanges    []*eth.SignedBLSToExecutionChange
+	kzgCommitments           [][]byte
 }
 
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
@@ -234,6 +238,74 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		expectedBlock := &eth.SignedBeaconBlockDeneb{
+			Block: &eth.BeaconBlockDeneb{
+				Slot:          128,
+				ProposerIndex: 128,
+				ParentRoot:    f.root[:],
+				StateRoot:     f.root[:],
+				Body:          bodyPbDeneb(),
+			},
+			Signature: f.sig[:],
+		}
+		block := &SignedBeaconBlock{
+			version: version.Deneb,
+			block: &BeaconBlock{
+				version:       version.Deneb,
+				slot:          128,
+				proposerIndex: 128,
+				parentRoot:    f.root,
+				stateRoot:     f.root,
+				body:          bodyDeneb(t),
+			},
+			signature: f.sig,
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.SignedBeaconBlockDeneb)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("DenebBlind", func(t *testing.T) {
+		expectedBlock := &eth.SignedBlindedBeaconBlockDeneb{
+			Block: &eth.BlindedBeaconBlockDeneb{
+				Slot:          128,
+				ProposerIndex: 128,
+				ParentRoot:    f.root[:],
+				StateRoot:     f.root[:],
+				Body:          bodyPbBlindedDeneb(),
+			},
+			Signature: f.sig[:],
+		}
+		block := &SignedBeaconBlock{
+			version: version.Deneb,
+			block: &BeaconBlock{
+				version:       version.Deneb,
+				slot:          128,
+				proposerIndex: 128,
+				parentRoot:    f.root,
+				stateRoot:     f.root,
+				body:          bodyBlindedDeneb(t),
+			},
+			signature: f.sig,
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.SignedBlindedBeaconBlockDeneb)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
 }
 
 func Test_BeaconBlock_Proto(t *testing.T) {
@@ -401,6 +473,60 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		expectedBlock := &eth.BeaconBlockDeneb{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
+			Body:          bodyPbDeneb(),
+		}
+		block := &BeaconBlock{
+			version:       version.Deneb,
+			slot:          128,
+			proposerIndex: 128,
+			parentRoot:    f.root,
+			stateRoot:     f.root,
+			body:          bodyDeneb(t),
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockDeneb)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("DenebBlind", func(t *testing.T) {
+		expectedBlock := &eth.BlindedBeaconBlockDeneb{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
+			Body:          bodyPbBlindedDeneb(),
+		}
+		block := &BeaconBlock{
+			version:       version.Deneb,
+			slot:          128,
+			proposerIndex: 128,
+			parentRoot:    f.root,
+			stateRoot:     f.root,
+			body:          bodyBlindedDeneb(t),
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BlindedBeaconBlockDeneb)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
 }
 
 func Test_BeaconBlockBody_Proto(t *testing.T) {
@@ -483,6 +609,32 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		expectedBody := bodyPbDeneb()
+		body := bodyDeneb(t)
+		result, err := body.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockBodyDeneb)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBody.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("DenebBlind", func(t *testing.T) {
+		expectedBody := bodyPbBlindedDeneb()
+		body := bodyBlindedDeneb(t)
+		result, err := body.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BlindedBeaconBlockBodyDeneb)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBody.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
 	t.Run("Bellatrix - wrong payload type", func(t *testing.T) {
 		body := bodyBellatrix(t)
 		body.executionPayload = &executionPayloadHeader{}
@@ -504,6 +656,18 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 	t.Run("CapellaBlind - wrong payload type", func(t *testing.T) {
 		body := bodyBlindedCapella(t)
 		body.executionPayloadHeader = &executionPayloadCapella{}
+		_, err := body.Proto()
+		require.ErrorIs(t, err, errPayloadHeaderWrongType)
+	})
+	t.Run("Deneb - wrong payload type", func(t *testing.T) {
+		body := bodyDeneb(t)
+		body.executionPayload = &executionPayloadHeaderDeneb{}
+		_, err := body.Proto()
+		require.ErrorIs(t, err, errPayloadWrongType)
+	})
+	t.Run("DenebBlind - wrong payload type", func(t *testing.T) {
+		body := bodyBlindedDeneb(t)
+		body.executionPayloadHeader = &executionPayloadDeneb{}
 		_, err := body.Proto()
 		require.ErrorIs(t, err, errPayloadHeaderWrongType)
 	})
@@ -641,6 +805,50 @@ func Test_initBlindedSignedBlockFromProtoCapella(t *testing.T) {
 	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
 }
 
+func Test_initSignedBlockFromProtoDeneb(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.SignedBeaconBlockDeneb{
+		Block: &eth.BeaconBlockDeneb{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
+			Body:          bodyPbDeneb(),
+		},
+		Signature: f.sig[:],
+	}
+	resultBlock, err := initSignedBlockFromProtoDeneb(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.block.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
+}
+
+func Test_initBlindedSignedBlockFromProtoDeneb(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.SignedBlindedBeaconBlockDeneb{
+		Block: &eth.BlindedBeaconBlockDeneb{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
+			Body:          bodyPbBlindedDeneb(),
+		},
+		Signature: f.sig[:],
+	}
+	resultBlock, err := initBlindedSignedBlockFromProtoDeneb(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.block.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
+}
+
 func Test_initBlockFromProtoPhase0(t *testing.T) {
 	f := getFields()
 	expectedBlock := &eth.BeaconBlock{
@@ -749,6 +957,42 @@ func Test_initBlockFromProtoBlindedCapella(t *testing.T) {
 	assert.DeepEqual(t, expectedHTR, resultHTR)
 }
 
+func Test_initBlockFromProtoDeneb(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.BeaconBlockDeneb{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.root[:],
+		StateRoot:     f.root[:],
+		Body:          bodyPbDeneb(),
+	}
+	resultBlock, err := initBlockFromProtoDeneb(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockFromProtoBlindedDeneb(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.BlindedBeaconBlockDeneb{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.root[:],
+		StateRoot:     f.root[:],
+		Body:          bodyPbBlindedDeneb(),
+	}
+	resultBlock, err := initBlindedBlockFromProtoDeneb(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
 func Test_initBlockBodyFromProtoPhase0(t *testing.T) {
 	expectedBody := bodyPbPhase0()
 	resultBody, err := initBlockBodyFromProtoPhase0(expectedBody)
@@ -807,6 +1051,28 @@ func Test_initBlockBodyFromProtoCapella(t *testing.T) {
 func Test_initBlockBodyFromProtoBlindedCapella(t *testing.T) {
 	expectedBody := bodyPbBlindedCapella()
 	resultBody, err := initBlindedBlockBodyFromProtoCapella(expectedBody)
+	require.NoError(t, err)
+	resultHTR, err := resultBody.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBody.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockBodyFromProtoDeneb(t *testing.T) {
+	expectedBody := bodyPbDeneb()
+	resultBody, err := initBlockBodyFromProtoDeneb(expectedBody)
+	require.NoError(t, err)
+	resultHTR, err := resultBody.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBody.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockBodyFromProtoBlindedDeneb(t *testing.T) {
+	expectedBody := bodyPbBlindedDeneb()
+	resultBody, err := initBlindedBlockBodyFromProtoDeneb(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()
 	require.NoError(t, err)
@@ -931,6 +1197,50 @@ func bodyPbBlindedCapella() *eth.BlindedBeaconBlockBodyCapella {
 		SyncAggregate:          f.syncAggregate,
 		ExecutionPayloadHeader: f.execPayloadHeaderCapella,
 		BlsToExecutionChanges:  f.blsToExecutionChanges,
+	}
+}
+
+func bodyPbDeneb() *eth.BeaconBlockBodyDeneb {
+	f := getFields()
+	return &eth.BeaconBlockBodyDeneb{
+		RandaoReveal: f.sig[:],
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.root[:],
+			DepositCount: 128,
+			BlockHash:    f.root[:],
+		},
+		Graffiti:              f.root[:],
+		ProposerSlashings:     f.proposerSlashings,
+		AttesterSlashings:     f.attesterSlashings,
+		Attestations:          f.atts,
+		Deposits:              f.deposits,
+		VoluntaryExits:        f.voluntaryExits,
+		SyncAggregate:         f.syncAggregate,
+		ExecutionPayload:      f.execPayloadDeneb,
+		BlsToExecutionChanges: f.blsToExecutionChanges,
+		BlobKzgCommitments:    f.kzgCommitments,
+	}
+}
+
+func bodyPbBlindedDeneb() *eth.BlindedBeaconBlockBodyDeneb {
+	f := getFields()
+	return &eth.BlindedBeaconBlockBodyDeneb{
+		RandaoReveal: f.sig[:],
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.root[:],
+			DepositCount: 128,
+			BlockHash:    f.root[:],
+		},
+		Graffiti:               f.root[:],
+		ProposerSlashings:      f.proposerSlashings,
+		AttesterSlashings:      f.attesterSlashings,
+		Attestations:           f.atts,
+		Deposits:               f.deposits,
+		VoluntaryExits:         f.voluntaryExits,
+		SyncAggregate:          f.syncAggregate,
+		ExecutionPayloadHeader: f.execPayloadHeaderDeneb,
+		BlsToExecutionChanges:  f.blsToExecutionChanges,
+		BlobKzgCommitments:     f.kzgCommitments,
 	}
 }
 
@@ -1066,6 +1376,57 @@ func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 		syncAggregate:          f.syncAggregate,
 		executionPayloadHeader: ph,
 		blsToExecutionChanges:  f.blsToExecutionChanges,
+	}
+}
+
+func bodyDeneb(t *testing.T) *BeaconBlockBody {
+	f := getFields()
+	p, err := WrappedExecutionPayloadDeneb(f.execPayloadDeneb, 0)
+	require.NoError(t, err)
+	return &BeaconBlockBody{
+		version:      version.Deneb,
+		randaoReveal: f.sig,
+		eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.root[:],
+			DepositCount: 128,
+			BlockHash:    f.root[:],
+		},
+		graffiti:              f.root,
+		proposerSlashings:     f.proposerSlashings,
+		attesterSlashings:     f.attesterSlashings,
+		attestations:          f.atts,
+		deposits:              f.deposits,
+		voluntaryExits:        f.voluntaryExits,
+		syncAggregate:         f.syncAggregate,
+		executionPayload:      p,
+		blsToExecutionChanges: f.blsToExecutionChanges,
+		blobKzgCommitments:    f.kzgCommitments,
+	}
+}
+
+func bodyBlindedDeneb(t *testing.T) *BeaconBlockBody {
+	f := getFields()
+	ph, err := WrappedExecutionPayloadHeaderDeneb(f.execPayloadHeaderDeneb, 0)
+	require.NoError(t, err)
+	return &BeaconBlockBody{
+		version:      version.Deneb,
+		isBlinded:    true,
+		randaoReveal: f.sig,
+		eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.root[:],
+			DepositCount: 128,
+			BlockHash:    f.root[:],
+		},
+		graffiti:               f.root,
+		proposerSlashings:      f.proposerSlashings,
+		attesterSlashings:      f.attesterSlashings,
+		attestations:           f.atts,
+		deposits:               f.deposits,
+		voluntaryExits:         f.voluntaryExits,
+		syncAggregate:          f.syncAggregate,
+		executionPayloadHeader: ph,
+		blsToExecutionChanges:  f.blsToExecutionChanges,
+		blobKzgCommitments:     f.kzgCommitments,
 	}
 }
 
@@ -1275,6 +1636,60 @@ func getFields() fields {
 		Signature: sig[:],
 	}}
 
+	execPayloadDeneb := &enginev1.ExecutionPayloadDeneb{
+		ParentHash:    root[:],
+		FeeRecipient:  b20,
+		StateRoot:     root[:],
+		ReceiptsRoot:  root[:],
+		LogsBloom:     b256,
+		PrevRandao:    root[:],
+		BlockNumber:   128,
+		GasLimit:      128,
+		GasUsed:       128,
+		Timestamp:     128,
+		ExtraData:     root[:],
+		BaseFeePerGas: root[:],
+		BlockHash:     root[:],
+		Transactions: [][]byte{
+			[]byte("transaction1"),
+			[]byte("transaction2"),
+			[]byte("transaction8"),
+		},
+		Withdrawals: []*enginev1.Withdrawal{
+			{
+				Index:   128,
+				Address: b20,
+				Amount:  128,
+			},
+		},
+		ExcessDataGas: root[:],
+	}
+	execPayloadHeaderDeneb := &enginev1.ExecutionPayloadHeaderDeneb{
+		ParentHash:       root[:],
+		FeeRecipient:     b20,
+		StateRoot:        root[:],
+		ReceiptsRoot:     root[:],
+		LogsBloom:        b256,
+		PrevRandao:       root[:],
+		BlockNumber:      128,
+		GasLimit:         128,
+		GasUsed:          128,
+		Timestamp:        128,
+		ExtraData:        root[:],
+		BaseFeePerGas:    root[:],
+		BlockHash:        root[:],
+		TransactionsRoot: root[:],
+		WithdrawalsRoot:  root[:],
+		ExcessDataGas:    root[:],
+	}
+
+	kzgCommitments := [][]byte{
+		bytesutil.PadTo([]byte{123}, 48),
+		bytesutil.PadTo([]byte{223}, 48),
+		bytesutil.PadTo([]byte{183}, 48),
+		bytesutil.PadTo([]byte{143}, 48),
+	}
+
 	return fields{
 		root:                     root,
 		sig:                      sig,
@@ -1288,6 +1703,9 @@ func getFields() fields {
 		execPayloadHeader:        execPayloadHeader,
 		execPayloadCapella:       execPayloadCapella,
 		execPayloadHeaderCapella: execPayloadHeaderCapella,
+		execPayloadDeneb:         execPayloadDeneb,
+		execPayloadHeaderDeneb:   execPayloadHeaderDeneb,
 		blsToExecutionChanges:    blsToExecutionChanges,
+		kzgCommitments:           kzgCommitments,
 	}
 }
