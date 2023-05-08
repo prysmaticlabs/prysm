@@ -3,7 +3,6 @@ package blocks
 import (
 	"bytes"
 	"errors"
-	"math/big"
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -11,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v4/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -162,14 +160,9 @@ func (executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
-// DataGasUsed --
-func (e executionPayload) DataGasUsed() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
 // ExcessDataGas --
-func (e executionPayload) ExcessDataGas() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
+func (e executionPayload) ExcessDataGas() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbBellatrix --
@@ -333,14 +326,9 @@ func (executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
-// DataGasUsed --
-func (e executionPayloadHeader) DataGasUsed() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
 // ExcessDataGas --
-func (e executionPayloadHeader) ExcessDataGas() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
+func (e executionPayloadHeader) ExcessDataGas() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbV2 --
@@ -395,8 +383,8 @@ type executionPayloadCapella struct {
 }
 
 // WrappedExecutionPayloadCapella is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value math.Gwei) (interfaces.ExecutionData, error) {
-	w := executionPayloadCapella{p: p, value: uint64(value)}
+func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value uint64) (interfaces.ExecutionData, error) {
+	w := executionPayloadCapella{p: p, value: value}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -533,14 +521,9 @@ func (executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
-// DataGasUsed --
-func (e executionPayloadCapella) DataGasUsed() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
-// ExcessDataGas --
-func (e executionPayloadCapella) ExcessDataGas() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
+// ExcessDataGas returns error for executionPayloadCapella.
+func (e executionPayloadCapella) ExcessDataGas() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbV2 --
@@ -567,8 +550,8 @@ type executionPayloadHeaderCapella struct {
 }
 
 // WrappedExecutionPayloadHeaderCapella is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value math.Gwei) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderCapella{p: p, value: uint64(value)}
+func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value uint64) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderCapella{p: p, value: value}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -705,14 +688,9 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
-// DataGasUsed --
-func (e executionPayloadHeaderCapella) DataGasUsed() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
-}
-
-// ExcessDataGas --
-func (e executionPayloadHeaderCapella) ExcessDataGas() (uint64, error) {
-	return 0, consensus_types.ErrUnsupportedField
+// ExcessDataGas returns error for executionPayloadHeaderCapella.
+func (e executionPayloadHeaderCapella) ExcessDataGas() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbV2 --
@@ -786,10 +764,6 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	if err != nil {
 		return nil, err
 	}
-	dataGasUsed, err := payload.DataGasUsed()
-	if err != nil {
-		return nil, err
-	}
 	excessDataGas, err := payload.ExcessDataGas()
 	if err != nil {
 		return nil, err
@@ -811,8 +785,7 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
 		TransactionsRoot: txRoot[:],
 		WithdrawalsRoot:  withdrawalsRoot[:],
-		DataGasUsed:      dataGasUsed,
-		ExcessDataGas:    excessDataGas,
+		ExcessDataGas:    bytesutil.SafeCopyBytes(excessDataGas),
 	}, nil
 }
 
@@ -882,8 +855,8 @@ type executionPayloadHeaderDeneb struct {
 }
 
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value math.Gwei) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderDeneb{p: p, value: uint64(value)}
+func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value uint64) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderDeneb{p: p, value: value}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -997,7 +970,7 @@ func (e executionPayloadHeaderDeneb) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeaderDeneb) Transactions() ([][]byte, error) {
-	return nil, consensus_types.ErrUnsupportedField
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // TransactionsRoot --
@@ -1007,7 +980,7 @@ func (e executionPayloadHeaderDeneb) TransactionsRoot() ([]byte, error) {
 
 // Withdrawals --
 func (e executionPayloadHeaderDeneb) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, consensus_types.ErrUnsupportedField
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // WitdrawalsRoot --
@@ -1015,22 +988,18 @@ func (e executionPayloadHeaderDeneb) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
-func (e executionPayloadHeaderDeneb) DataGasUsed() (uint64, error) {
-	return e.p.DataGasUsed, nil
-}
-
-func (e executionPayloadHeaderDeneb) ExcessDataGas() (uint64, error) {
+func (e executionPayloadHeaderDeneb) ExcessDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 
 // PbBellatrix --
 func (e executionPayloadHeaderDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbCapella --
 func (e executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 func (e executionPayloadHeaderDeneb) ValueInGwei() (uint64, error) {
@@ -1051,8 +1020,8 @@ type executionPayloadDeneb struct {
 }
 
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value math.Gwei) (interfaces.ExecutionData, error) {
-	w := executionPayloadDeneb{p: p, value: uint64(value)}
+func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value uint64) (interfaces.ExecutionData, error) {
+	w := executionPayloadDeneb{p: p, value: value}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1171,7 +1140,7 @@ func (e executionPayloadDeneb) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayloadDeneb) TransactionsRoot() ([]byte, error) {
-	return nil, consensus_types.ErrUnsupportedField
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // Withdrawals --
@@ -1181,25 +1150,21 @@ func (e executionPayloadDeneb) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // WithdrawalsRoot --
 func (e executionPayloadDeneb) WithdrawalsRoot() ([]byte, error) {
-	return nil, consensus_types.ErrUnsupportedField
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
-func (e executionPayloadDeneb) DataGasUsed() (uint64, error) {
-	return e.p.DataGasUsed, nil
-}
-
-func (e executionPayloadDeneb) ExcessDataGas() (uint64, error) {
+func (e executionPayloadDeneb) ExcessDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 
 // PbBellatrix --
 func (e executionPayloadDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedField
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 // PbCapella --
 func (e executionPayloadDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedField
+	return nil, consensus_types.ErrUnsupportedGetter
 }
 
 func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
@@ -1209,11 +1174,4 @@ func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadDeneb) IsBlinded() bool {
 	return false
-}
-
-// PayloadValueToGwei returns a Gwei value given the payload's value
-func PayloadValueToGwei(value []byte) math.Gwei {
-	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
-	return math.WeiToGwei(v)
 }
