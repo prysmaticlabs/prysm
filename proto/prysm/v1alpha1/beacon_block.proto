@@ -49,6 +49,8 @@ message GenericSignedBeaconBlock {
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
         SignedBeaconBlockAndBlobsDeneb Deneb  = 7;
+
+        SignedBlindedBeaconBlockDenebAndBlobs blinded_Deneb  = 8;
     }
 }
 
@@ -73,6 +75,8 @@ message GenericBeaconBlock {
         BlindedBeaconBlockCapella blinded_capella = 6;
 
         BeaconBlockDenebAndBlobs Deneb  = 7;
+
+        BlindedBeaconBlockDenebAndBlobs blinded_Deneb  = 8;
     }
 }
 
@@ -641,6 +645,17 @@ message BlindedBeaconBlockBodyCapella {
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 }
+
+message SignedBlindedBeaconBlockDenebAndBlobs {
+    SignedBlindedBeaconBlockDeneb block = 1;
+    repeated SignedBlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
+message BlindedBeaconBlockDenebAndBlobs {
+    BlindedBeaconBlockDeneb block = 1;
+    repeated BlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
 message SignedBlindedBeaconBlockDeneb {
     // The unsigned blinded beacon block itself.
     BlindedBeaconBlockDeneb block = 1;

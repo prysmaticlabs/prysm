@@ -521,6 +521,7 @@ func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedGetter
 }
 
+// ExcessDataGas returns error for executionPayloadCapella.
 func (e executionPayloadCapella) ExcessDataGas() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedGetter
 }
@@ -687,6 +688,7 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
+// ExcessDataGas returns error for executionPayloadHeaderCapella.
 func (e executionPayloadHeaderCapella) ExcessDataGas() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedGetter
 }
@@ -844,7 +846,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	return true, nil
 }
 
-// executionPayloadHeaderDeneb is a convenience wrapper around a blinded beacon block body's execution header data structure
+// executionPayloadHeaderDeneb is a convenience wrapper around a blinded beacon block body's execution header data structure.
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayloadHeaderDeneb struct {

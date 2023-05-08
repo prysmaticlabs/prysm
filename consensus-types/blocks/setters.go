@@ -130,7 +130,7 @@ func (b *SignedBeaconBlock) SetBLSToExecutionChanges(blsToExecutionChanges []*et
 func (b *SignedBeaconBlock) SetBlobKzgCommitments(c [][]byte) error {
 	switch b.version {
 	case version.Phase0, version.Altair, version.Bellatrix, version.Capella:
-		return consensus_types.ErrNotSupported("BlobKzgCommitments", b.version)
+		return consensus_types.ErrNotSupported("SetBlobKzgCommitments", b.version)
 	case version.Deneb:
 		b.block.body.blobKzgCommitments = c
 		return nil

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -27,6 +28,7 @@ type fields struct {
 	execPayloadDeneb         *enginev1.ExecutionPayloadDeneb
 	execPayloadHeaderDeneb   *enginev1.ExecutionPayloadHeaderDeneb
 	blsToExecutionChanges    []*eth.SignedBLSToExecutionChange
+	kzgCommitments           [][]byte
 }
 
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
@@ -1216,6 +1218,7 @@ func bodyPbDeneb() *eth.BeaconBlockBodyDeneb {
 		SyncAggregate:         f.syncAggregate,
 		ExecutionPayload:      f.execPayloadDeneb,
 		BlsToExecutionChanges: f.blsToExecutionChanges,
+		BlobKzgCommitments:    f.kzgCommitments,
 	}
 }
 
@@ -1237,6 +1240,7 @@ func bodyPbBlindedDeneb() *eth.BlindedBeaconBlockBodyDeneb {
 		SyncAggregate:          f.syncAggregate,
 		ExecutionPayloadHeader: f.execPayloadHeaderDeneb,
 		BlsToExecutionChanges:  f.blsToExecutionChanges,
+		BlobKzgCommitments:     f.kzgCommitments,
 	}
 }
 
@@ -1396,6 +1400,7 @@ func bodyDeneb(t *testing.T) *BeaconBlockBody {
 		syncAggregate:         f.syncAggregate,
 		executionPayload:      p,
 		blsToExecutionChanges: f.blsToExecutionChanges,
+		blobKzgCommitments:    f.kzgCommitments,
 	}
 }
 
@@ -1421,6 +1426,7 @@ func bodyBlindedDeneb(t *testing.T) *BeaconBlockBody {
 		syncAggregate:          f.syncAggregate,
 		executionPayloadHeader: ph,
 		blsToExecutionChanges:  f.blsToExecutionChanges,
+		blobKzgCommitments:     f.kzgCommitments,
 	}
 }
 
@@ -1677,6 +1683,13 @@ func getFields() fields {
 		ExcessDataGas:    root[:],
 	}
 
+	kzgCommitments := [][]byte{
+		bytesutil.PadTo([]byte{123}, 48),
+		bytesutil.PadTo([]byte{223}, 48),
+		bytesutil.PadTo([]byte{183}, 48),
+		bytesutil.PadTo([]byte{143}, 48),
+	}
+
 	return fields{
 		root:                     root,
 		sig:                      sig,
@@ -1693,5 +1706,6 @@ func getFields() fields {
 		execPayloadDeneb:         execPayloadDeneb,
 		execPayloadHeaderDeneb:   execPayloadHeaderDeneb,
 		blsToExecutionChanges:    blsToExecutionChanges,
+		kzgCommitments:           kzgCommitments,
 	}
 }
