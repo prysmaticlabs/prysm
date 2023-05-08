@@ -448,8 +448,8 @@ type SignedBeaconBlockCapellaJson struct {
 }
 
 type SignedBeaconBlockContentsDenebJson struct {
-	SignedBlock        *SignedBeaconBlockDenebJson `json:"signed_block"`
-	SignedBlobSidecars []*SignedBlobSidecarContainerJson    `json:"signed_blob_sidecars"`
+	SignedBlock        *SignedBeaconBlockDenebJson       `json:"signed_block"`
+	SignedBlobSidecars []*SignedBlobSidecarContainerJson `json:"signed_blob_sidecars"`
 }
 
 type SignedBlobSidecarContainerJson struct {
@@ -466,16 +466,6 @@ type BlobSidecarJson struct {
 	Blob            string `json:"blob" hex:"true"`                // pattern: "^0x[a-fA-F0-9]{262144}$" ssz-max:"4"
 	KzgCommitment   string `json:"kzg_commitment" hex:"true"`      // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
 	KzgProof        string `json:"kzg_proof,omitempty" hex:"true"` // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
-}
-
-type SignedBlindedBlockContentsDenebJson struct {
-	SignedBlindedBlock        *SignedBlindedBeaconBlockDenebJson `json:"signed_blinded_block"`
-	SignedBlindedBlobSidecars []*SignedBlindedBlobSidecarContainerJson    `json:"signed_blinded_blob_sidecars"`
-}
-
-type SignedBlindedBlobSidecarContainerJson struct {
-	Message   *BlindedBlobSidecarJson `json:"message"`
-	Signature string                  `json:"signature" hex:"true"`
 }
 
 type BlindedBlobSidecarJson struct {

@@ -1042,38 +1042,6 @@ func HydrateBeaconBlockBodyDeneb(b *ethpb.BeaconBlockBodyDeneb) *ethpb.BeaconBlo
 	return b
 }
 
-// HydrateSignedBlobSidecar adds the placeholder signature and calls HydrateBlobSidecar
-func HydrateSignedBlobSidecar(b *ethpb.SignedBlobSidecar) *ethpb.SignedBlobSidecar {
-	if b.Signature == nil {
-		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
-	}
-	b.Message = HydrateBlobSidecar(b.Message)
-	return b
-}
-
-// HydrateBlobSidecar fills a blob sidecar with correct field length sizes
-func HydrateBlobSidecar(b *ethpb.BlobSidecar) *ethpb.BlobSidecar {
-	if b == nil {
-		b = &ethpb.BlobSidecar{}
-	}
-	if b.Blob == nil {
-		b.Blob = make([]byte, 131072)
-	}
-	if b.BlockParentRoot == nil {
-		b.BlockParentRoot = make([]byte, 32)
-	}
-	if b.BlockRoot == nil {
-		b.BlockRoot = make([]byte, 32)
-	}
-	if b.KzgProof == nil {
-		b.KzgProof = make([]byte, 48)
-	}
-	if b.KzgCommitment == nil {
-		b.KzgCommitment = make([]byte, 48)
-	}
-	return b
-}
-
 // HydrateSignedBlindedBeaconBlockCapella hydrates a signed blinded beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBlindedBeaconBlockCapella(b *ethpb.SignedBlindedBeaconBlockCapella) *ethpb.SignedBlindedBeaconBlockCapella {

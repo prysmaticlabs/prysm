@@ -430,8 +430,6 @@ message BeaconBlockContainer {
         SignedBlindedBeaconBlockCapella blinded_capella_block = 8;
 
         SignedBeaconBlockDenebAndBlobs deneb_block = 9;
-
-        // add blinded SignedBeaconBlockDenebAndBlobs
     }
 }
 

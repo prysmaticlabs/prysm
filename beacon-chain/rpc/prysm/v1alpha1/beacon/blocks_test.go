@@ -557,9 +557,6 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 			Block: &ethpb.BeaconBlockContainer_BlindedCapellaBlock{BlindedCapellaBlock: blindedProto}}
 		runListBlocksGenesis(t, wrapped, blkContainer)
 	})
-	t.Run("deneb block", func(t *testing.T) {
-		// TODO: add case for deneb
-	})
 }
 
 func runListBlocksGenesis(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
@@ -661,9 +658,6 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		gBlock, err := blocks.NewSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksGenesisMultiBlocks(t, gBlock, blockCreator)
-	})
-	t.Run("deneb block", func(t *testing.T) {
-		// TODO: add deneb block test
 	})
 }
 
@@ -804,9 +798,6 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		assert.NoError(t, err)
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
-	t.Run("deneb block", func(t *testing.T) {
-		// TODO: add test for deneb block
-	})
 }
 
 func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.ReadOnlySignedBeaconBlock,
@@ -940,6 +931,4 @@ func TestServer_ConvertToBlockContainer(t *testing.T) {
 	container, err = convertToBlockContainer(wrapped, root, true)
 	require.NoError(t, err)
 	require.NotNil(t, container.GetBlindedCapellaBlock())
-
-	// TODO: add beacon block deneb here
 }

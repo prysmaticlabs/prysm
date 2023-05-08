@@ -90,13 +90,6 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshall blinded capella beacon block")
 		}
-	case *ethpb.GenericSignedBeaconBlock_Deneb:
-		consensusVersion = "deneb"
-		// TODO: add support for deneb!
-	case *ethpb.GenericSignedBeaconBlock_BlindedDeneb:
-		blinded = true
-		consensusVersion = "deneb"
-		// TODO: add support for deneb!
 	default:
 		return nil, errors.Errorf("unsupported block type %T", in.Block)
 	}
