@@ -408,6 +408,25 @@ func TestServer_SubmitBlock(t *testing.T) {
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_DenebContents{
+				DenebContents: &ethpbv2.SignedBeaconBlockContentsDeneb{
+					SignedBlock:        &ethpbv2.SignedBeaconBlockDeneb{},
+					SignedBlobSidecars: []*ethpbv2.SignedBlobSidecar{},
+				},
+			},
+		}
+		_, err := server.SubmitBlock(context.Background(), blockReq)
+		assert.NoError(t, err)
+	})
 	t.Run("sync not ready", func(t *testing.T) {
 		chainService := &mock.ChainService{}
 		v1Server := &Server{
@@ -554,10 +573,6 @@ func TestServer_SubmitBlockSSZ(t *testing.T) {
 		}
 		_, err := v1Server.SubmitBlockSSZ(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
-	})
-
-	t.Run("Deneb", func(t *testing.T) {
-		// TODO: BLOCKED UNTIL SSZ IS FIGURED OUT
 	})
 }
 

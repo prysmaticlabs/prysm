@@ -538,6 +538,25 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_DenebContents{
+				DenebContents: &ethpbv2.SignedBlindedBeaconBlockContentsDeneb{
+					SignedBlindedBlock:        &ethpbv2.SignedBlindedBeaconBlockDeneb{},
+					SignedBlindedBlobSidecars: []*ethpbv2.SignedBlindedBlobSidecar{},
+				},
+			},
+		}
+		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
+		assert.NoError(t, err)
+	})
 	t.Run("sync not ready", func(t *testing.T) {
 		chainService := &mock.ChainService{}
 		v1Server := &Server{

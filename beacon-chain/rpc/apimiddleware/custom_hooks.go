@@ -330,8 +330,8 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		endpoint.PostRequest = &SignedBeaconBlockAltairJson{}
 	} else if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockBellatrixJson{}
-		/*} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
-		endpoint.PostRequest = &SignedBeaconBlockCapellaJson{}*/
+	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
+		endpoint.PostRequest = &SignedBeaconBlockCapellaJson{}
 	} else {
 		endpoint.PostRequest = &SignedBeaconBlockContentsDenebJson{}
 	}
