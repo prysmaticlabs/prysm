@@ -56,6 +56,14 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initBlindedSignedBlockFromProtoCapella(b.BlindedCapella)
 	case *eth.SignedBlindedBeaconBlockCapella:
 		return initBlindedSignedBlockFromProtoCapella(b)
+	case *eth.GenericSignedBeaconBlock_Deneb:
+		return initSignedBlockFromProtoDeneb(b.Deneb.Block)
+	case *eth.SignedBeaconBlockDeneb:
+		return initSignedBlockFromProtoDeneb(b)
+	case *eth.SignedBlindedBeaconBlockDeneb:
+		return initBlindedSignedBlockFromProtoDeneb(b)
+	case *eth.GenericSignedBeaconBlock_Blinded_Deneb:
+		return initBlindedSignedBlockFromProtoDeneb(b.Blinded_Deneb.Block)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -90,6 +98,14 @@ func NewBeaconBlock(i interface{}) (interfaces.ReadOnlyBeaconBlock, error) {
 		return initBlindedBlockFromProtoCapella(b.BlindedCapella)
 	case *eth.BlindedBeaconBlockCapella:
 		return initBlindedBlockFromProtoCapella(b)
+	case *eth.GenericBeaconBlock_Deneb:
+		return initBlockFromProtoDeneb(b.Deneb.Block)
+	case *eth.BeaconBlockDeneb:
+		return initBlockFromProtoDeneb(b)
+	case *eth.BlindedBeaconBlockDeneb:
+		return initBlindedBlockFromProtoDeneb(b)
+	case *eth.GenericBeaconBlock_Blinded_Deneb:
+		return initBlindedBlockFromProtoDeneb(b.Blinded_Deneb.Block)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -112,6 +128,10 @@ func NewBeaconBlockBody(i interface{}) (interfaces.ReadOnlyBeaconBlockBody, erro
 		return initBlockBodyFromProtoCapella(b)
 	case *eth.BlindedBeaconBlockBodyCapella:
 		return initBlindedBlockBodyFromProtoCapella(b)
+	case *eth.BeaconBlockBodyDeneb:
+		return initBlockBodyFromProtoDeneb(b)
+	case *eth.BlindedBeaconBlockBodyDeneb:
+		return initBlindedBlockBodyFromProtoDeneb(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlockBody, "unable to create block body from type %T", i)
 	}
@@ -165,6 +185,19 @@ func BuildSignedBeaconBlock(blk interfaces.ReadOnlyBeaconBlock, signature []byte
 			return nil, errIncorrectBlockVersion
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockCapella{Block: pb, Signature: signature})
+	case version.Deneb:
+		if blk.IsBlinded() {
+			pb, ok := pb.(*eth.BlindedBeaconBlockDeneb)
+			if !ok {
+				return nil, errIncorrectBlockVersion
+			}
+			return NewSignedBeaconBlock(&eth.SignedBlindedBeaconBlockDeneb{Block: pb, Signature: signature})
+		}
+		pb, ok := pb.(*eth.BeaconBlockDeneb)
+		if !ok {
+			return nil, errIncorrectBlockVersion
+		}
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlockDeneb{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlock
 	}
@@ -194,6 +227,8 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		wrappedPayload, wrapErr = WrappedExecutionPayload(p)
 	case *enginev1.ExecutionPayloadCapella:
 		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p, 0)
+	case *enginev1.ExecutionPayloadDeneb:
+		wrappedPayload, wrapErr = WrappedExecutionPayloadDeneb(p, 0)
 	default:
 		return nil, fmt.Errorf("%T is not a type of execution payload", p)
 	}
@@ -278,6 +313,38 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 					SyncAggregate:         syncAgg,
 					ExecutionPayload:      p,
 					BlsToExecutionChanges: blsToExecutionChanges,
+				},
+			},
+			Signature: sig[:],
+		}
+	case *enginev1.ExecutionPayloadDeneb:
+		blsToExecutionChanges, err := b.Body().BLSToExecutionChanges()
+		if err != nil {
+			return nil, err
+		}
+		commitments, err := b.Body().BlobKzgCommitments()
+		if err != nil {
+			return nil, err
+		}
+		fullBlock = &eth.SignedBeaconBlockDeneb{
+			Block: &eth.BeaconBlockDeneb{
+				Slot:          b.Slot(),
+				ProposerIndex: b.ProposerIndex(),
+				ParentRoot:    parentRoot[:],
+				StateRoot:     stateRoot[:],
+				Body: &eth.BeaconBlockBodyDeneb{
+					RandaoReveal:          randaoReveal[:],
+					Eth1Data:              b.Body().Eth1Data(),
+					Graffiti:              graffiti[:],
+					ProposerSlashings:     b.Body().ProposerSlashings(),
+					AttesterSlashings:     b.Body().AttesterSlashings(),
+					Attestations:          b.Body().Attestations(),
+					Deposits:              b.Body().Deposits(),
+					VoluntaryExits:        b.Body().VoluntaryExits(),
+					SyncAggregate:         syncAgg,
+					ExecutionPayload:      p,
+					BlsToExecutionChanges: blsToExecutionChanges,
+					BlobKzgCommitments:    commitments,
 				},
 			},
 			Signature: sig[:],
