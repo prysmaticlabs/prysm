@@ -56,7 +56,7 @@ message BeaconBlockContainerV2 {
     BeaconBlockAltair altair_block = 2;
     BeaconBlockBellatrix bellatrix_block = 3;
     BeaconBlockCapella capella_block = 4; 
-    BeaconBlockDeneb deneb_block = 5;
+    BeaconBlockContentsDeneb deneb_contents = 5;
   }
 }
 
@@ -94,7 +94,7 @@ message BlindedBeaconBlockContainer {
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
     BlindedBeaconBlockCapella capella_block = 4;
-    BlindedBeaconBlockDeneb deneb_block = 5;
+    BlindedBeaconBlockContentsDeneb deneb_contents = 5;
   }
 }
 
@@ -568,4 +568,14 @@ message SignedBeaconBlockContentsDeneb {
 message SignedBlindedBeaconBlockContentsDeneb {
   SignedBlindedBeaconBlockDeneb signed_blinded_block = 1;
   repeated SignedBlindedBlobSidecar signed_blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
+message BeaconBlockContentsDeneb {
+  BeaconBlockDeneb block = 1;
+  repeated BlobSidecar blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
+message BlindedBeaconBlockContentsDeneb {
+  BlindedBeaconBlockDeneb blinded_block = 1;
+  repeated BlindedBlobSidecar blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }

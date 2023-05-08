@@ -1262,6 +1262,56 @@ func TestSerializeProducedV2Block(t *testing.T) {
 		assert.Equal(t, "root", beaconBlock.StateRoot)
 		require.NotNil(t, beaconBlock.Body)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		response := &ProduceBlockResponseV2Json{
+			Version: ethpbv2.Version_DENEB.String(),
+			Data: &BeaconBlockContainerV2Json{
+				DenebContents: &BeaconBlockContentsDenebJson{
+					Block: &BeaconBlockDenebJson{
+						Slot:          "1",
+						ProposerIndex: "1",
+						ParentRoot:    "root",
+						StateRoot:     "root",
+						Body:          &BeaconBlockBodyDenebJson{},
+					},
+					BlobSidecars: []*BlobSidecarJson{{
+						BlockRoot:       "root",
+						Index:           "1",
+						Slot:            "1",
+						BlockParentRoot: "root",
+						ProposerIndex:   "1",
+						Blob:            "blob",
+						KzgCommitment:   "kzgcommitment",
+						KzgProof:        "kzgproof",
+					}},
+				},
+			},
+		}
+		runDefault, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &denebProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data.Block
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		assert.NotNil(t, beaconBlock.Body)
+		require.Equal(t, 1, len(resp.Data.BlobSidecars))
+		sidecar := resp.Data.BlobSidecars[0]
+		assert.Equal(t, "root", sidecar.BlockRoot)
+		assert.Equal(t, "1", sidecar.Index)
+		assert.Equal(t, "1", sidecar.Slot)
+		assert.Equal(t, "root", sidecar.BlockParentRoot)
+		assert.Equal(t, "1", sidecar.ProposerIndex)
+		assert.Equal(t, "blob", sidecar.Blob)
+		assert.Equal(t, "kzgcommitment", sidecar.KzgCommitment)
+		assert.Equal(t, "kzgproof", sidecar.KzgProof)
+	})
 	t.Run("incorrect response type", func(t *testing.T) {
 		response := &types.Empty{}
 		runDefault, j, errJson := serializeProducedV2Block(response)
@@ -1398,6 +1448,56 @@ func TestSerializeProduceBlindedBlock(t *testing.T) {
 		assert.Equal(t, "root", beaconBlock.ParentRoot)
 		assert.Equal(t, "root", beaconBlock.StateRoot)
 		require.NotNil(t, beaconBlock.Body)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		response := &ProduceBlindedBlockResponseJson{
+			Version: ethpbv2.Version_DENEB.String(),
+			Data: &BlindedBeaconBlockContainerJson{
+				DenebContents: &BlindedBeaconBlockContentsDenebJson{
+					BlindedBlock: &BlindedBeaconBlockDenebJson{
+						Slot:          "1",
+						ProposerIndex: "1",
+						ParentRoot:    "root",
+						StateRoot:     "root",
+						Body:          &BlindedBeaconBlockBodyDenebJson{},
+					},
+					BlindedBlobSidecars: []*BlindedBlobSidecarJson{{
+						BlockRoot:       "root",
+						Index:           "1",
+						Slot:            "1",
+						BlockParentRoot: "root",
+						ProposerIndex:   "1",
+						BlobRoot:        "root",
+						KzgCommitment:   "kzgcommitment",
+						KzgProof:        "kzgproof",
+					}},
+				},
+			},
+		}
+		runDefault, j, errJson := serializeProducedBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &denebProduceBlindedBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data.BlindedBlock
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		assert.NotNil(t, beaconBlock.Body)
+		require.Equal(t, 1, len(resp.Data.BlindedBlobSidecars))
+		sidecar := resp.Data.BlindedBlobSidecars[0]
+		assert.Equal(t, "root", sidecar.BlockRoot)
+		assert.Equal(t, "1", sidecar.Index)
+		assert.Equal(t, "1", sidecar.Slot)
+		assert.Equal(t, "root", sidecar.BlockParentRoot)
+		assert.Equal(t, "1", sidecar.ProposerIndex)
+		assert.Equal(t, "root", sidecar.BlobRoot)
+		assert.Equal(t, "kzgcommitment", sidecar.KzgCommitment)
+		assert.Equal(t, "kzgproof", sidecar.KzgProof)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {

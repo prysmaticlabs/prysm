@@ -417,19 +417,19 @@ type SignedBlindedBeaconBlockContentsContainerJson struct {
 }
 
 type BeaconBlockContainerV2Json struct {
-	Phase0Block    *BeaconBlockJson          `json:"phase0_block"`
-	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
-	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
-	CapellaBlock   *BeaconBlockCapellaJson   `json:"capella_block"`
-	DenebBlock     *BeaconBlockDenebJson     `json:"deneb_block"`
+	Phase0Block    *BeaconBlockJson              `json:"phase0_block"`
+	AltairBlock    *BeaconBlockAltairJson        `json:"altair_block"`
+	BellatrixBlock *BeaconBlockBellatrixJson     `json:"bellatrix_block"`
+	CapellaBlock   *BeaconBlockCapellaJson       `json:"capella_block"`
+	DenebContents  *BeaconBlockContentsDenebJson `json:"deneb_contents"`
 }
 
 type BlindedBeaconBlockContainerJson struct {
-	Phase0Block    *BeaconBlockJson                 `json:"phase0_block"`
-	AltairBlock    *BeaconBlockAltairJson           `json:"altair_block"`
-	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
-	CapellaBlock   *BlindedBeaconBlockCapellaJson   `json:"capella_block"`
-	DenebBlock     *BlindedBeaconBlockDenebJson     `json:"deneb_block"`
+	Phase0Block    *BeaconBlockJson                     `json:"phase0_block"`
+	AltairBlock    *BeaconBlockAltairJson               `json:"altair_block"`
+	BellatrixBlock *BlindedBeaconBlockBellatrixJson     `json:"bellatrix_block"`
+	CapellaBlock   *BlindedBeaconBlockCapellaJson       `json:"capella_block"`
+	DenebContents  *BlindedBeaconBlockContentsDenebJson `json:"deneb_contents"`
 }
 
 type SignedBeaconBlockAltairJson struct {
@@ -536,6 +536,11 @@ type BeaconBlockCapellaJson struct {
 type BeaconBlockContentsDenebJson struct {
 	Block        *BeaconBlockDenebJson `json:"block"`
 	BlobSidecars []*BlobSidecarJson    `json:"blob_sidecars"`
+}
+
+type BlindedBeaconBlockContentsDenebJson struct {
+	BlindedBlock        *BlindedBeaconBlockDenebJson `json:"blinded_block"`
+	BlindedBlobSidecars []*BlindedBlobSidecarJson    `json:"blinded_blob_sidecars"`
 }
 
 type BeaconBlockDenebJson struct {
