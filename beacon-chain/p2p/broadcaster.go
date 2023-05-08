@@ -55,6 +55,9 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
 func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
+	if att == nil {
+		return errors.New("attempted to broadcast nil attestation")
+	}
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastAttestation")
 	defer span.End()
 	forkDigest, err := s.currentForkDigest()
@@ -73,6 +76,9 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 // BroadcastSyncCommitteeMessage broadcasts a sync committee message to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
 func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint64, sMsg *ethpb.SyncCommitteeMessage) error {
+	if sMsg == nil {
+		return errors.New("attempted to broadcast nil sync committee message")
+	}
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastSyncCommitteeMessage")
 	defer span.End()
 	forkDigest, err := s.currentForkDigest()

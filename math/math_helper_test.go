@@ -567,3 +567,11 @@ func TestWeiToGwei(t *testing.T) {
 		}
 	}
 }
+
+func TestWeiToGwei_CopyOk(t *testing.T) {
+	v := big.NewInt(1e9)
+	got := math.WeiToGwei(v)
+
+	require.Equal(t, uint64(1), got)
+	require.Equal(t, big.NewInt(1e9).Uint64(), v.Uint64())
+}
