@@ -1075,8 +1075,7 @@ func genPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
 				Amount:         456,
 			},
 		},
-		BlobGasUsed:   5,
-		ExcessBlobGas: 6,
+		ExcessDataGas: bytes(32),
 	}
 }
 
@@ -1136,8 +1135,7 @@ func genPayloadHeaderDeneb() *enginev1.ExecutionPayloadHeaderDeneb {
 		BlockHash:        bytes(32),
 		TransactionsRoot: bytes(32),
 		WithdrawalsRoot:  bytes(32),
-		BlobGasUsed:      5,
-		ExcessBlobGas:    6,
+		ExcessDataGas:    bytes(32),
 	}
 }
 
