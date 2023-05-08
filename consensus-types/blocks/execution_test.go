@@ -242,6 +242,104 @@ func Test_executionPayloadHeaderCapella_Pb(t *testing.T) {
 	require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
 }
 
+func TestWrapExecutionPayloadDeneb(t *testing.T) {
+	data := &enginev1.ExecutionPayloadDeneb{
+		ParentHash:    []byte("parenthash"),
+		FeeRecipient:  []byte("feerecipient"),
+		StateRoot:     []byte("stateroot"),
+		ReceiptsRoot:  []byte("receiptsroot"),
+		LogsBloom:     []byte("logsbloom"),
+		PrevRandao:    []byte("prevrandao"),
+		BlockNumber:   11,
+		GasLimit:      22,
+		GasUsed:       33,
+		Timestamp:     44,
+		ExtraData:     []byte("extradata"),
+		BaseFeePerGas: []byte("basefeepergas"),
+		BlockHash:     []byte("blockhash"),
+		Transactions:  [][]byte{[]byte("transaction")},
+		Withdrawals: []*enginev1.Withdrawal{{
+			Index:          55,
+			ValidatorIndex: 66,
+			Address:        []byte("executionaddress"),
+			Amount:         77,
+		}},
+		ExcessDataGas: []byte("excessdatagas"),
+	}
+	payload, err := blocks.WrappedExecutionPayloadDeneb(data, 420)
+	require.NoError(t, err)
+	v, err := payload.ValueInGwei()
+	require.NoError(t, err)
+	assert.Equal(t, uint64(420), v)
+
+	g, err := payload.ExcessDataGas()
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte("excessdatagas"), g)
+}
+
+func TestWrapExecutionPayloadHeaderDeneb(t *testing.T) {
+	data := &enginev1.ExecutionPayloadHeaderDeneb{
+		ParentHash:       []byte("parenthash"),
+		FeeRecipient:     []byte("feerecipient"),
+		StateRoot:        []byte("stateroot"),
+		ReceiptsRoot:     []byte("receiptsroot"),
+		LogsBloom:        []byte("logsbloom"),
+		PrevRandao:       []byte("prevrandao"),
+		BlockNumber:      11,
+		GasLimit:         22,
+		GasUsed:          33,
+		Timestamp:        44,
+		ExtraData:        []byte("extradata"),
+		BaseFeePerGas:    []byte("basefeepergas"),
+		BlockHash:        []byte("blockhash"),
+		TransactionsRoot: []byte("transactionsroot"),
+		WithdrawalsRoot:  []byte("withdrawalsroot"),
+		ExcessDataGas:    []byte("excessdatagas"),
+	}
+	payload, err := blocks.WrappedExecutionPayloadHeaderDeneb(data, 10)
+	require.NoError(t, err)
+
+	v, err := payload.ValueInGwei()
+	require.NoError(t, err)
+	assert.Equal(t, uint64(10), v)
+
+	g, err := payload.ExcessDataGas()
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte("excessdatagas"), g)
+}
+
+func TestWrapExecutionPayloadDeneb_SSZ(t *testing.T) {
+	payload := createWrappedPayloadDeneb(t)
+	rt, err := payload.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, rt)
+
+	var b []byte
+	b, err = payload.MarshalSSZTo(b)
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
+	encoded, err := payload.MarshalSSZ()
+	require.NoError(t, err)
+	assert.NotEqual(t, 0, payload.SizeSSZ())
+	assert.NoError(t, payload.UnmarshalSSZ(encoded))
+}
+
+func TestWrapExecutionPayloadHeaderDeneb_SSZ(t *testing.T) {
+	payload := createWrappedPayloadHeaderDeneb(t)
+	rt, err := payload.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, rt)
+
+	var b []byte
+	b, err = payload.MarshalSSZTo(b)
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
+	encoded, err := payload.MarshalSSZ()
+	require.NoError(t, err)
+	assert.NotEqual(t, 0, payload.SizeSSZ())
+	assert.NoError(t, payload.UnmarshalSSZ(encoded))
+}
+
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
 	wsb, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
@@ -323,6 +421,52 @@ func createWrappedPayloadHeaderCapella(t testing.TB) interfaces.ExecutionData {
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+	}, 0)
+	require.NoError(t, err)
+	return payload
+}
+
+func createWrappedPayloadDeneb(t testing.TB) interfaces.ExecutionData {
+	payload, err := blocks.WrappedExecutionPayloadDeneb(&enginev1.ExecutionPayloadDeneb{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BlockNumber:   0,
+		GasLimit:      0,
+		GasUsed:       0,
+		Timestamp:     0,
+		ExtraData:     make([]byte, 0),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
+		ExcessDataGas: make([]byte, fieldparams.RootLength),
+	}, 0)
+	require.NoError(t, err)
+	return payload
+}
+
+func createWrappedPayloadHeaderDeneb(t testing.TB) interfaces.ExecutionData {
+	payload, err := blocks.WrappedExecutionPayloadHeaderDeneb(&enginev1.ExecutionPayloadHeaderDeneb{
+		ParentHash:       make([]byte, fieldparams.RootLength),
+		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:        make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:       make([]byte, fieldparams.RootLength),
+		BlockNumber:      0,
+		GasLimit:         0,
+		GasUsed:          0,
+		Timestamp:        0,
+		ExtraData:        make([]byte, 0),
+		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+		BlockHash:        make([]byte, fieldparams.RootLength),
+		TransactionsRoot: make([]byte, fieldparams.RootLength),
+		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+		ExcessDataGas:    make([]byte, fieldparams.RootLength),
 	}, 0)
 	require.NoError(t, err)
 	return payload
