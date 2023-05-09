@@ -212,6 +212,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
 	CapellaForkEpoch:     194048,
+	DenebForkVersion:     []byte{4, 0, 0, 0},
+	DenebForkEpoch:       math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
