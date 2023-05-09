@@ -33,6 +33,8 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	case version.Capella:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
+	case version.Deneb:
+		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
 	}
 
 	// Genesis time root.
@@ -243,6 +245,32 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 			return nil, err
 		}
 		fieldRoots[types.LatestExecutionPayloadHeaderCapella.RealPosition()] = executionPayloadRoot[:]
+
+		// Next withdrawal index root.
+		nextWithdrawalIndexRoot := make([]byte, 32)
+		binary.LittleEndian.PutUint64(nextWithdrawalIndexRoot, state.nextWithdrawalIndex)
+		fieldRoots[types.NextWithdrawalIndex.RealPosition()] = nextWithdrawalIndexRoot
+
+		// Next partial withdrawal validator index root.
+		nextWithdrawalValidatorIndexRoot := make([]byte, 32)
+		binary.LittleEndian.PutUint64(nextWithdrawalValidatorIndexRoot, uint64(state.nextWithdrawalValidatorIndex))
+		fieldRoots[types.NextWithdrawalValidatorIndex.RealPosition()] = nextWithdrawalValidatorIndexRoot
+
+		// Historical summary root.
+		historicalSummaryRoot, err := stateutil.HistoricalSummariesRoot(state.historicalSummaries)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute historical summary merkleization")
+		}
+		fieldRoots[types.HistoricalSummaries.RealPosition()] = historicalSummaryRoot[:]
+	}
+
+	if state.version == version.Deneb {
+		// Execution payload root.
+		executionPayloadRoot, err := state.latestExecutionPayloadHeaderDeneb.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[types.LatestExecutionPayloadHeaderDeneb.RealPosition()] = executionPayloadRoot[:]
 
 		// Next withdrawal index root.
 		nextWithdrawalIndexRoot := make([]byte, 32)
