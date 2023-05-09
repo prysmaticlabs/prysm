@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -80,10 +81,12 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
+	chain := &mock.ChainService{State: s, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
@@ -123,10 +126,12 @@ func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T
 
 	require.NoError(t, s.SetValidators(vals))
 
+	chain := &mock.ChainService{State: s, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
@@ -171,11 +176,13 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
+	chain := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
 			initialSync: &mockSync.Sync{IsSyncing: false},
-			chain:       &mock.ChainService{Genesis: time.Now()},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		subHandler:                newSubTopicHandler(),
@@ -240,10 +247,12 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
+	chain := &mock.ChainService{State: s}
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: s},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),

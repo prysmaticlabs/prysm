@@ -16,6 +16,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
@@ -113,10 +114,12 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidProposerSlashing(t)
 
+	chain := &mock.ChainService{State: s, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenProposerSlashingCache: lruwrpr.New(10),

@@ -61,7 +61,7 @@ type Validator interface {
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
-	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, deadline time.Time) error
+	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 	ProposerSettings() *validatorserviceconfig.ProposerSettings
 	SetProposerSettings(*validatorserviceconfig.ProposerSettings)
