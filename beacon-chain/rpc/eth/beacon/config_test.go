@@ -51,6 +51,8 @@ func TestGetSpec(t *testing.T) {
 	config.BellatrixForkEpoch = 101
 	config.CapellaForkVersion = []byte("CapellaForkVersion")
 	config.CapellaForkEpoch = 103
+	config.DenebForkVersion = []byte("DenebForkVersion")
+	config.DenebForkEpoch = 105
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.ETH1AddressWithdrawalPrefixByte = byte('c')
 	config.GenesisDelay = 24
@@ -205,6 +207,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("CapellaForkVersion")), v)
 		case "CAPELLA_FORK_EPOCH":
 			assert.Equal(t, "103", v)
+		case "DENEB_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("DenebForkVersion")), v)
+		case "DENEB_FORK_EPOCH":
+			assert.Equal(t, "105", v)
 		case "MIN_ANCHOR_POW_BLOCK_DIFFICULTY":
 			assert.Equal(t, "1000", v)
 		case "BLS_WITHDRAWAL_PREFIX":
