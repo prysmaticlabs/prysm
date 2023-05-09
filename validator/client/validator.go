@@ -1034,7 +1034,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 
 	return nil
 }
-func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][48]byte, slot primitives.Slot) ([][48]byte, error) {
+func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	statusRequestKeys := make([][]byte, 0)
 	for _, k := range pubkeys {
