@@ -401,10 +401,12 @@ func ProtobufBeaconStateCapella(s interface{}) (*ethpb.BeaconStateCapella, error
 	return pbState, nil
 }
 
+// ProtobufBeaconStateDeneb transforms an input into beacon state Capella in the form of protobuf.
+// Error is returned if the input is not type protobuf beacon state.
 func ProtobufBeaconStateDeneb(s interface{}) (*ethpb.BeaconStateDeneb, error) {
 	pbState, ok := s.(*ethpb.BeaconStateDeneb)
 	if !ok {
-		return nil, errors.New("input is not type pb.BeaconStateCapella")
+		return nil, errors.New("input is not type pb.ProtobufBeaconStateDeneb")
 	}
 	return pbState, nil
 }
