@@ -36,6 +36,14 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 		b.latestExecutionPayloadHeaderCapella = latest
 		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderCapella)
 		return nil
+	case *enginev1.ExecutionPayloadDeneb:
+		latest, err := consensusblocks.PayloadToHeaderDeneb(val)
+		if err != nil {
+			return errors.Wrap(err, "could not convert payload to header")
+		}
+		b.latestExecutionPayloadHeaderDeneb = latest
+		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderDeneb)
+		return nil
 	case *enginev1.ExecutionPayloadHeader:
 		b.latestExecutionPayloadHeader = header
 		b.markFieldAsDirty(types.LatestExecutionPayloadHeader)
@@ -43,6 +51,10 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 	case *enginev1.ExecutionPayloadHeaderCapella:
 		b.latestExecutionPayloadHeaderCapella = header
 		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderCapella)
+		return nil
+	case *enginev1.ExecutionPayloadHeaderDeneb:
+		b.latestExecutionPayloadHeaderDeneb = header
+		b.markFieldAsDirty(types.LatestExecutionPayloadHeaderDeneb)
 		return nil
 	default:
 		return errors.New("value must be an execution payload header")
