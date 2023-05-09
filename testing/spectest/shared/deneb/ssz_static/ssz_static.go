@@ -1,19 +1,34 @@
 package ssz_static
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	fssz "github.com/prysmaticlabs/fastssz"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	common "github.com/prysmaticlabs/prysm/v4/testing/spectest/shared/common/ssz_static"
 )
 
 // RunSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
 	t.Skip("skipping tests at commit with incompatible ssz schema")
-	common.RunSSZStaticTests(t, config, "deneb", unmarshalledSSZ, nil)
+	common.RunSSZStaticTests(t, config, "deneb", unmarshalledSSZ, customHtr)
+}
+
+func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
+	switch object.(type) {
+	case *ethpb.BeaconStateDeneb:
+		htrs = append(htrs, func(s interface{}) ([32]byte, error) {
+			beaconState, err := state_native.InitializeFromProtoDeneb(s.(*ethpb.BeaconStateDeneb))
+			require.NoError(t, err)
+			return beaconState.HashTreeRoot(context.Background())
+		})
+	}
+	return htrs
 }
 
 // unmarshalledSSZ unmarshalls serialized input.
