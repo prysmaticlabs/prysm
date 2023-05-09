@@ -114,7 +114,6 @@ func (s *SlotTicker) startWithIntervals(
 	since, until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time,
 	intervals []time.Duration) {
-
 	go func() {
 		slot := Since(genesisTime)
 		slot++
