@@ -51,19 +51,22 @@ var (
 			"We recommend against this flag unless you are an advanced user.",
 	}
 	aggregateFirstInterval = &cli.DurationFlag{
-		Name:  "aggregate-first-interval",
-		Usage: "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
-		Value: 7 * time.Second,
+		Name:   "aggregate-first-interval",
+		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
+		Value:  7 * time.Second,
+		Hidden: true,
 	}
 	aggregateSecondInterval = &cli.DurationFlag{
-		Name:  "aggregate-second-interval",
-		Usage: "(Advanced): Specifies the second interval in which attestations are aggregated in the slot",
-		Value: 9 * time.Second,
+		Name:   "aggregate-second-interval",
+		Usage:  "(Advanced): Specifies the second interval in which attestations are aggregated in the slot",
+		Value:  9 * time.Second,
+		Hidden: true,
 	}
 	aggregateThirdInterval = &cli.DurationFlag{
-		Name:  "aggregate-third-interval",
-		Usage: "(Advanced): Specifies the third interval in which attestations are aggregated in the slot",
-		Value: 11 * time.Second,
+		Name:   "aggregate-third-interval",
+		Usage:  "(Advanced): Specifies the third interval in which attestations are aggregated in the slot",
+		Value:  11 * time.Second,
+		Hidden: true,
 	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
 		Name: "dynamic-key-reload-debounce-interval",
