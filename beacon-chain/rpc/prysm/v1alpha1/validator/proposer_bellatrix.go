@@ -170,11 +170,14 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, errors.New("builder returned nil bid")
 	}
 	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get fork information")
+	}
 	forkName, ok := params.BeaconConfig().ForkVersionNames[bytesutil.ToBytes4(fork.CurrentVersion)]
 	if !ok {
 		return nil, errors.New("unable to find current fork in schedule")
 	}
-	if strings.ToLower(version.String(signedBid.Version())) != strings.ToLower(forkName) {
+	if strings.EqualFold(version.String(signedBid.Version()), forkName) {
 		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
 	}
 
