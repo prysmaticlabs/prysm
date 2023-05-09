@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
@@ -133,6 +134,32 @@ func TestGetSlotTickerWithOffset_OK(t *testing.T) {
 				t.Fatal("Expected normal ticker to tick first")
 			}
 			firstTicked = 1
+		}
+	}
+}
+
+func TestGetSlotTickerWitIntervals(t *testing.T) {
+	genesisTime := time.Now()
+	offset := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second / 3
+	intervals := []time.Duration{offset, 2 * offset}
+
+	intervalTicker := NewSlotTickerWithIntervals(genesisTime, intervals)
+	normalTicker := NewSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
+
+	firstTicked := 0
+	for {
+		select {
+		case <-intervalTicker.C():
+			// interval ticks starts in second slot
+			if firstTicked < 2 {
+				t.Fatal("Expected other ticker to tick first")
+			}
+			return
+		case <-normalTicker.C():
+			if firstTicked > 1 {
+				t.Fatal("Expected normal ticker to tick first")
+			}
+			firstTicked++
 		}
 	}
 }
