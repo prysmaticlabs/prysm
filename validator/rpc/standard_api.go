@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
@@ -712,25 +711,16 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	if err != nil {
 		return nil, err
 	}
-	cfg := accounts.PerformExitCfg{
-		ValidatorClient: s.beaconNodeValidatorClient,
-		NodeClient:      s.beaconNodeClient,
-		Keymanager:      km,
-	}
-	sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, req.Pubkey)
+	sve, err := client.CreateSignedVoluntaryExit(ctx, s.beaconNodeValidatorClient, s.beaconNodeClient, km.Sign, req.Pubkey)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "Could not create voluntary exit")
-	}
-	vi, err := s.beaconNodeValidatorClient.ValidatorIndex(ctx, &eth.ValidatorIndexRequest{PublicKey: req.Pubkey})
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "Invalid validator index")
 	}
 
 	return &ethpbservice.SetVoluntaryExitResponse{
 		Data: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit{
 			Message: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit_VoluntaryExit{
-				Epoch:          strconv.FormatUint(uint64(req.Epoch), 10),
-				ValidatorIndex: strconv.FormatUint(uint64(vi.Index), 10),
+				Epoch:          strconv.FormatUint(uint64(sve.Exit.Epoch), 10),
+				ValidatorIndex: strconv.FormatUint(uint64(sve.Exit.ValidatorIndex), 10),
 			},
 			Signature: sve.Signature,
 		},
