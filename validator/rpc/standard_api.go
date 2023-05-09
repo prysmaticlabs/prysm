@@ -711,7 +711,14 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	if err != nil {
 		return nil, err
 	}
-	sve, err := client.CreateSignedVoluntaryExit(ctx, s.beaconNodeValidatorClient, s.beaconNodeClient, km.Sign, req.Pubkey)
+	sve, err := client.CreateSignedVoluntaryExit(
+		ctx,
+		s.beaconNodeValidatorClient,
+		s.beaconNodeClient,
+		km.Sign,
+		req.Pubkey,
+		req.Epoch,
+	)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "Could not create voluntary exit")
 	}
