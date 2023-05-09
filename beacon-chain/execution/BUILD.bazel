@@ -89,7 +89,6 @@ go_test(
         "init_test.go",
         "log_processing_test.go",
         "prometheus_test.go",
-        "provider_test.go",
         "service_test.go",
     ],
     data = glob(["testdata/**"]),

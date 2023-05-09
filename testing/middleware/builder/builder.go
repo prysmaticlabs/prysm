@@ -16,8 +16,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/beacon/engine"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/trie"
 	gMux "github.com/gorilla/mux"
 	builderAPI "github.com/prysmaticlabs/prysm/v4/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
@@ -25,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/math"
@@ -33,7 +38,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -94,7 +98,6 @@ type Builder struct {
 	cfg          *config
 	address      string
 	execClient   *gethRPC.Client
-	beaconConn   *grpc.ClientConn
 	currId       *v1.PayloadIDBytes
 	currPayload  interfaces.ExecutionData
 	mux          *gMux.Router
@@ -142,11 +145,6 @@ func New(opts ...Option) (*Builder, error) {
 		Addr:              addr,
 		ReadHeaderTimeout: time.Second,
 	}
-	conn, err := grpc.DialContext(context.Background(), p.cfg.beaconUrl.String(), grpc.WithInsecure())
-	if err != nil {
-		return nil, err
-	}
-	p.beaconConn = conn
 	p.address = addr
 	p.srv = srv
 	p.execClient = execClient
@@ -365,9 +363,6 @@ func (p *Builder) handleHeadeRequestCapella(w http.ResponseWriter) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if b == nil {
-		// do nothing
-	}
 
 	secKey, err := bls.RandKey()
 	if err != nil {
@@ -500,22 +495,31 @@ func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 }
 
 func (p *Builder) retrievePendingBlock() (*v1.ExecutionPayload, error) {
-	result := &v1.ExecutionPayload{}
+	result := &engine.ExecutableData{}
 	if p.currId == nil {
 		return nil, errors.New("no payload id is cached")
-	}
-	if result == nil {
-		// do nothing
 	}
 	err := p.execClient.CallContext(context.Background(), result, GetPayloadMethod, *p.currId)
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+	payloadEnv, err := modifyExecutionPayload(*result, big.NewInt(0))
+	if err != nil {
+		return nil, err
+	}
+	marshalledOutput, err := payloadEnv.ExecutionPayload.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	bellatrixPayload := &v1.ExecutionPayload{}
+	if err = json.Unmarshal(marshalledOutput, bellatrixPayload); err != nil {
+		return nil, err
+	}
+	return bellatrixPayload, nil
 }
 
 func (p *Builder) retrievePendingBlockCapella() (*v1.ExecutionPayloadCapellaWithValue, error) {
-	result := &v1.ExecutionPayloadCapellaWithValue{}
+	result := &engine.ExecutionPayloadEnvelope{}
 	if p.currId == nil {
 		return nil, errors.New("no payload id is cached")
 	}
@@ -523,7 +527,19 @@ func (p *Builder) retrievePendingBlockCapella() (*v1.ExecutionPayloadCapellaWith
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+	payloadEnv, err := modifyExecutionPayload(*result.ExecutionPayload, result.BlockValue)
+	if err != nil {
+		return nil, err
+	}
+	marshalledOutput, err := payloadEnv.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	capellaPayload := &v1.ExecutionPayloadCapellaWithValue{}
+	if err = json.Unmarshal(marshalledOutput, capellaPayload); err != nil {
+		return nil, err
+	}
+	return capellaPayload, nil
 }
 
 func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http.Response, error) {
@@ -588,5 +604,58 @@ func unmarshalRPCObject(b []byte) (*jsonRPCObject, error) {
 	return r, nil
 }
 
-// An estimation of the fees gained by the block proposer, a real
-// estimation requires transaction receipts for the actual gas used.
+func modifyExecutionPayload(execPayload engine.ExecutableData, fees *big.Int) (*engine.ExecutionPayloadEnvelope, error) {
+	modifiedBlock, err := executableDataToBlock(execPayload)
+	if err != nil {
+		return &engine.ExecutionPayloadEnvelope{}, err
+	}
+	return engine.BlockToExecutableData(modifiedBlock, fees), nil
+}
+
+// This modifies the provided payload to imprint the builder's extra data
+func executableDataToBlock(params engine.ExecutableData) (*gethTypes.Block, error) {
+	txs, err := decodeTransactions(params.Transactions)
+	if err != nil {
+		return nil, err
+	}
+	// Only set withdrawalsRoot if it is non-nil. This allows CLs to use
+	// ExecutableData before withdrawals are enabled by marshaling
+	// Withdrawals as the json null value.
+	var withdrawalsRoot *common.Hash
+	if params.Withdrawals != nil {
+		h := gethTypes.DeriveSha(gethTypes.Withdrawals(params.Withdrawals), trie.NewStackTrie(nil))
+		withdrawalsRoot = &h
+	}
+	header := &gethTypes.Header{
+		ParentHash:      params.ParentHash,
+		UncleHash:       gethTypes.EmptyUncleHash,
+		Coinbase:        params.FeeRecipient,
+		Root:            params.StateRoot,
+		TxHash:          gethTypes.DeriveSha(gethTypes.Transactions(txs), trie.NewStackTrie(nil)),
+		ReceiptHash:     params.ReceiptsRoot,
+		Bloom:           gethTypes.BytesToBloom(params.LogsBloom),
+		Difficulty:      common.Big0,
+		Number:          new(big.Int).SetUint64(params.Number),
+		GasLimit:        params.GasLimit,
+		GasUsed:         params.GasUsed,
+		Time:            params.Timestamp,
+		BaseFee:         params.BaseFeePerGas,
+		Extra:           []byte("prysm-builder"), // add in extra data
+		MixDigest:       params.Random,
+		WithdrawalsHash: withdrawalsRoot,
+	}
+	block := gethTypes.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */).WithWithdrawals(params.Withdrawals)
+	return block, nil
+}
+
+func decodeTransactions(enc [][]byte) ([]*gethTypes.Transaction, error) {
+	var txs = make([]*gethTypes.Transaction, len(enc))
+	for i, encTx := range enc {
+		var tx gethTypes.Transaction
+		if err := tx.UnmarshalBinary(encTx); err != nil {
+			return nil, fmt.Errorf("invalid transaction %d: %v", i, err)
+		}
+		txs[i] = &tx
+	}
+	return txs, nil
+}

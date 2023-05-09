@@ -34,7 +34,7 @@ func NewBuilderSet() *BuilderSet {
 
 // Start starts all the builders in set.
 func (s *BuilderSet) Start(ctx context.Context) error {
-	totalNodeCount := 2
+	totalNodeCount := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	nodes := make([]e2etypes.ComponentRunner, totalNodeCount)
 	for i := 0; i < totalNodeCount; i++ {
 		nodes[i] = NewBuilder(i)
@@ -135,7 +135,7 @@ func NewBuilder(index int) *Builder {
 
 // Start runs a builder.
 func (node *Builder) Start(ctx context.Context) error {
-	f, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_proxy_"+strconv.Itoa(node.index)+".log"))
+	f, err := os.Create(path.Join(e2e.TestParams.LogPath, "builder_"+strconv.Itoa(node.index)+".log"))
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,6 @@ func (node *Builder) Start(ctx context.Context) error {
 		builder.WithLogger(logrus.New()),
 		builder.WithLogFile(f),
 		builder.WithJwtSecret(string(secret)),
-		builder.WithBeaconAddress(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+node.index)),
 	}
 	bd, err := builder.New(opts...)
 	if err != nil {

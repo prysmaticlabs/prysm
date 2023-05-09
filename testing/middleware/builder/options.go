@@ -12,7 +12,6 @@ type config struct {
 	builderPort    int
 	builderHost    string
 	destinationUrl *url.URL
-	beaconUrl      *url.URL
 	logger         *logrus.Logger
 	secret         string
 }
@@ -55,20 +54,6 @@ func WithDestinationAddress(addr string) Option {
 func WithJwtSecret(secret string) Option {
 	return func(p *Builder) error {
 		p.cfg.secret = secret
-		return nil
-	}
-}
-
-func WithBeaconAddress(addr string) Option {
-	return func(p *Builder) error {
-		if addr == "" {
-			return errors.New("must provide a beacon address for builder")
-		}
-		u, err := url.Parse(addr)
-		if err != nil {
-			return errors.Wrapf(err, "could not parse URL for beacon address: %s", addr)
-		}
-		p.cfg.beaconUrl = u
 		return nil
 	}
 }
