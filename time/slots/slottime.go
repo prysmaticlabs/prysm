@@ -16,8 +16,8 @@ import (
 // incoming objects. (24 mins with mainnet spec)
 const MaxSlotBuffer = uint64(1 << 7)
 
-// startTime returns the slot start in terms of genesis time.Time
-func startTime(genesis time.Time, slot primitives.Slot) time.Time {
+// startFromTime returns the slot start in terms of genesis time.Time
+func startFromTime(genesis time.Time, slot primitives.Slot) time.Time {
 	duration := time.Second * time.Duration(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	return genesis.Add(duration) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
 }
@@ -26,7 +26,7 @@ func startTime(genesis time.Time, slot primitives.Slot) time.Time {
 // value.
 func StartTime(genesis uint64, slot primitives.Slot) time.Time {
 	genesisTime := time.Unix(int64(genesis), 0) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
-	return startTime(genesisTime, slot)
+	return startFromTime(genesisTime, slot)
 }
 
 // SinceGenesis returns the number of slots since

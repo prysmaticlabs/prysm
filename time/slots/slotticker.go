@@ -111,14 +111,14 @@ func (s *SlotTicker) start(
 // less than secondsPerSlot
 func (s *SlotTicker) startWithIntervals(
 	genesisTime time.Time,
-	since, until func(time.Time) time.Duration,
+	until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time,
 	intervals []time.Duration) {
 	go func() {
 		slot := Since(genesisTime)
 		slot++
 		interval := 0
-		nextTickTime := startTime(genesisTime, slot).Add(intervals[0])
+		nextTickTime := startFromTime(genesisTime, slot).Add(intervals[0])
 
 		for {
 			waitTime := until(nextTickTime)
@@ -130,7 +130,7 @@ func (s *SlotTicker) startWithIntervals(
 					interval = 0
 					slot++
 				}
-				nextTickTime = startTime(genesisTime, slot).Add(intervals[interval])
+				nextTickTime = startFromTime(genesisTime, slot).Add(intervals[interval])
 			case <-s.done:
 				return
 			}
@@ -163,6 +163,6 @@ func NewSlotTickerWithIntervals(genesisTime time.Time, intervals []time.Duration
 		c:    make(chan primitives.Slot),
 		done: make(chan struct{}),
 	}
-	ticker.startWithIntervals(genesisTime, prysmTime.Since, prysmTime.Until, time.After, intervals)
+	ticker.startWithIntervals(genesisTime, prysmTime.Until, time.After, intervals)
 	return ticker
 }
