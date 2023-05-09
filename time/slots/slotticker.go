@@ -107,7 +107,7 @@ func (s *SlotTicker) start(
 }
 
 // startWithIntervals starts a ticker that emits a tick every slot at the
-// prescribed intervals. The caller is reponsible to make these intervals increasing and
+// prescribed intervals. The caller is responsible to make these intervals increasing and
 // less than secondsPerSlot
 func (s *SlotTicker) startWithIntervals(
 	genesisTime time.Time,
