@@ -1,6 +1,6 @@
 #!/bin/bash
 
-repo_url=$(git config --get remote.origin.url | remove_url_credentials)
+repo_url=$(git config --get remote.origin.url)
 echo "REPO_URL $repo_url"
 
 commit_sha=$(git rev-parse HEAD)
