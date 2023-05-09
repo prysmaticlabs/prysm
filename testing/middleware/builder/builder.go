@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
@@ -103,7 +102,6 @@ type Builder struct {
 	mux          *gMux.Router
 	validatorMap map[string]*eth.ValidatorRegistrationV1
 	srv          *http.Server
-	lock         sync.RWMutex
 }
 
 // New creates a proxy server forwarding requests from a consensus client to an execution client.
