@@ -264,7 +264,9 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 			fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset),
 		)
 	}
-	args = append(args, fmt.Sprintf("--%s", flags.EnableBuilderFlag.Name))
+	if v.config.UseBuilder {
+		args = append(args, fmt.Sprintf("--%s", flags.EnableBuilderFlag.Name))
+	}
 	args = append(args, config.ValidatorFlags...)
 
 	if v.config.UsePrysmShValidator {
