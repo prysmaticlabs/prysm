@@ -95,8 +95,8 @@ const (
 	phase0SharedFieldRefCount    = 10
 	altairSharedFieldRefCount    = 11
 	bellatrixSharedFieldRefCount = 12
-	denebSharedFieldRefCount     = 14
 	capellaSharedFieldRefCount   = 14
+	denebSharedFieldRefCount     = 14
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.

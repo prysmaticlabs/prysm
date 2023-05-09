@@ -267,7 +267,7 @@ func FuzzCapellaStateHashTreeRoot(f *testing.F) {
 		assert.NoError(t, err)
 		// Perform a cold HTR calculation by initializing a new state.
 		innerState, ok := stateObj.ToProtoUnsafe().(*ethpb.BeaconStateCapella)
-		assert.Equal(t, true, ok, "inner state is a not a beacon state bellatrix proto")
+		assert.Equal(t, true, ok, "inner state is a not a beacon state capella proto")
 		newState, err := native.InitializeFromProtoUnsafeCapella(innerState)
 		assert.NoError(t, err)
 
@@ -337,7 +337,7 @@ func FuzzDenebStateHashTreeRoot(f *testing.F) {
 		assert.NoError(t, err)
 		// Perform a cold HTR calculation by initializing a new state.
 		innerState, ok := stateObj.ToProtoUnsafe().(*ethpb.BeaconStateDeneb)
-		assert.Equal(t, true, ok, "inner state is a not a beacon state bellatrix proto")
+		assert.Equal(t, true, ok, "inner state is a not a beacon state deneb proto")
 		newState, err := native.InitializeFromProtoUnsafeDeneb(innerState)
 		assert.NoError(t, err)
 
