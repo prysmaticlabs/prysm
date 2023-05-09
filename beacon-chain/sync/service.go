@@ -150,7 +150,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		ctx:                  ctx,
 		cancel:               cancel,
 		chainStarted:         abool.New(),
-		cfg:                  &config{},
+		cfg:                  &config{clock: startup.NewClock(time.Unix(0, 0), [32]byte{})},
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
@@ -170,7 +170,6 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 
 // Start the regular sync service.
 func (s *Service) Start() {
-	s.waitForChainStart()
 	go s.verifierRoutine()
 	go s.registerHandlers()
 
@@ -254,6 +253,7 @@ func (s *Service) waitForChainStart() {
 }
 
 func (s *Service) registerHandlers() {
+	s.waitForChainStart()
 	select {
 	case <-s.initialSyncComplete:
 		// Register respective pubsub handlers at state synced event.
