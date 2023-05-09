@@ -47,3 +47,7 @@ build:nostamp --workspace_status_command=./hack/workspace_status_ci.sh
 
 # Build metadata
 build --build_metadata=ROLE=CI
+
+# Buildbuddy
+build --bes_results_url=https://app.buildbuddy.io/invocation/
+build --bes_backend=grpcs://remote.buildbuddy.io
