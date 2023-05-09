@@ -32,6 +32,12 @@ func TestBeaconState_SlotDataRace_Capella(t *testing.T) {
 	})
 }
 
+func TestBeaconState_SlotDataRace_Deneb(t *testing.T) {
+	testtmpl.VerifyBeaconStateSlotDataRace(t, func() (state.BeaconState, error) {
+		return InitializeFromProtoDeneb(&ethpb.BeaconStateDeneb{Slot: 1})
+	})
+}
+
 func TestBeaconState_MatchCurrentJustifiedCheckpt_Phase0(t *testing.T) {
 	testtmpl.VerifyBeaconStateMatchCurrentJustifiedCheckptNative(
 		t,
