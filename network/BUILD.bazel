@@ -33,5 +33,6 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_golang_jwt_jwt_v4//:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
