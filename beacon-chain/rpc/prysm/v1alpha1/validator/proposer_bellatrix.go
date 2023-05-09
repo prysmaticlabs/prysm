@@ -167,8 +167,9 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if signedBid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
+	// no hard version check is added to bid here for the case of hardforking whereas an example builder bids capella while the head is bellatrix.
 	if signedBid.Version() != b.Version() {
-		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d", signedBid.Version(), b.Version())
+		log.Warnf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
 	}
 	bid, err := signedBid.Message()
 	if err != nil {
