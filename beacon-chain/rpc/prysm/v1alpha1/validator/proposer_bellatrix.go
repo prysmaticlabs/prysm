@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -167,22 +169,15 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if signedBid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
-	isForkEpoch := false
-	for _, epoch := range params.BeaconConfig().ForkVersionSchedule {
-		if epoch == slots.ToEpoch(slot) {
-			isForkEpoch = true
-		}
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	forkName, ok := params.BeaconConfig().ForkVersionNames[bytesutil.ToBytes4(fork.CurrentVersion)]
+	if !ok {
+		return nil, errors.New("unable to find current fork in schedule")
 	}
-	if !isForkEpoch {
-		if signedBid.Version() != b.Version() {
-			return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
-		}
-	} else {
-		// if it is the fork epoch the bid should only be 1 version ahead of the current head block
-		if signedBid.Version()-1 != b.Version() {
-			return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
-		}
+	if strings.ToLower(version.String(signedBid.Version())) != strings.ToLower(forkName) {
+		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
 	}
+
 	bid, err := signedBid.Message()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid")
