@@ -167,9 +167,22 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if signedBid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
-	// no hard version check is added to bid here for the case of hardforking whereas an example builder bids capella while the head is bellatrix.
-	if signedBid.Version() != b.Version() {
-		log.Warnf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
+	// no hard version check during a fork epoch here as the header will have a different version than the signed bid
+	isForkEpoch := false
+	for _, epoch := range params.BeaconConfig().ForkVersionSchedule {
+		if epoch == slots.ToEpoch(slot) {
+			isForkEpoch = true
+		}
+	}
+	if !isForkEpoch {
+		if signedBid.Version() != b.Version() {
+			return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
+		}
+	} else {
+		// if it is the fork epoch the bid should only be 1 version ahead of the current head block
+		if signedBid.Version()-1 != b.Version() {
+			return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
+		}
 	}
 	bid, err := signedBid.Message()
 	if err != nil {
