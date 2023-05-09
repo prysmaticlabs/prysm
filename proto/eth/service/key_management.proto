@@ -217,7 +217,7 @@ service KeyManagement {
     };
   }
 
-  // SetVoluntaryExit creates and sign a VoluntaryExit object, and publishes it to the Beacon API.
+  // SetVoluntaryExit creates a signed voluntary exit message and returns a VoluntaryExit object.
   //
   //  Spec page: https://ethereum.github.io/keymanager-APIs/?urls.primaryName=dev#/Voluntary%20Exit/signVoluntaryExit
   //

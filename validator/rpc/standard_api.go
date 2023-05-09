@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -12,9 +13,12 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
@@ -709,23 +713,27 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	if err != nil {
 		return nil, err
 	}
-	req.
-	apimiddleware2.HandleQueryParameters(req, []apimiddleware2.QueryParam)
-	km.Sign(ctx, &validatorpb.SignRequest{
-		PublicKey:       nil,
-		SigningRoot:     nil,
-		SignatureDomain: nil,
-		Object:          nil,
-		SigningSlot:     0,
-	})
+	cfg := accounts.PerformExitCfg{
+		ValidatorClient: s.beaconNodeValidatorClient,
+		NodeClient:      s.beaconNodeClient,
+		Keymanager:      km,
+	}
+	sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, req.Pubkey)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "Could not create voluntary exit")
+	}
+	vi, err := s.beaconNodeValidatorClient.ValidatorIndex(ctx, &eth.ValidatorIndexRequest{PublicKey: req.Pubkey})
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "Invalid validator index")
+	}
 
 	return &ethpbservice.SetVoluntaryExitResponse{
 		Data: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit{
 			Message: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit_VoluntaryExit{
-				Epoch:          req,
-				ValidatorIndex: "",
+				Epoch: ,
+				ValidatorIndex: strconv.FormatUint(uint64(vi.Index), 10),
 			},
-			Signature: nil,
+			Signature: sve.Signature,
 		},
 	}, nil
 }
