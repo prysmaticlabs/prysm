@@ -15,9 +15,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Prepare attestations for fork choice three times per slot.
-var prepareForkChoiceAttsPeriod = slots.DivideSlotBy(3 /* times-per-slot */)
-
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
@@ -27,9 +24,11 @@ func (s *Service) prepareForkChoiceAtts() {
 	for {
 		select {
 		case <-ticker1.C():
+			t := time.Now()
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
+			log.Debug("Batch forkchoice atts took: ", time.Since(t).Milliseconds())
 		case <-ticker2.C():
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
