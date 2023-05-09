@@ -315,6 +315,28 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
 				return err
 			}
+		case *ethpb.BeaconStateDeneb:
+			pbState, err := statenative.ProtobufBeaconStateDeneb(rawType)
+			if err != nil {
+				return err
+			}
+			if pbState == nil {
+				return errors.New("nil state")
+			}
+			valEntries := pbState.Validators
+			pbState.Validators = make([]*ethpb.Validator, 0)
+			rawObj, err := pbState.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			encodedState := snappy.Encode(nil, append(capellaKey, rawObj...))
+			if err := bucket.Put(rt[:], encodedState); err != nil {
+				return err
+			}
+			pbState.Validators = valEntries
+			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+				return err
+			}
 		default:
 			return errors.New("invalid state type")
 		}
@@ -472,6 +494,19 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	}
 
 	switch {
+	case hasDenebKey(enc):
+		protoState := &ethpb.BeaconStateDeneb{}
+		if err := protoState.UnmarshalSSZ(enc[len(denebKey):]); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal encoding for Deneb")
+		}
+		ok, err := s.isStateValidatorMigrationOver()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			protoState.Validators = validatorEntries
+		}
+		return statenative.InitializeFromProtoUnsafeDeneb(protoState)
 	case hasCapellaKey(enc):
 		// Marshal state bytes to capella beacon state.
 		protoState := &ethpb.BeaconStateCapella{}
@@ -579,6 +614,19 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 			return nil, err
 		}
 		return snappy.Encode(nil, append(capellaKey, rawObj...)), nil
+	case *ethpb.BeaconStateDeneb:
+		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateDeneb)
+		if !ok {
+			return nil, errors.New("non valid inner state")
+		}
+		if rState == nil {
+			return nil, errors.New("nil state")
+		}
+		rawObj, err := rState.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		return snappy.Encode(nil, append(denebKey, rawObj...)), nil
 	default:
 		return nil, errors.New("invalid inner state")
 	}
