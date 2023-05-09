@@ -67,6 +67,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		chainStarted: abool.New(),
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 		genesisChan:  make(chan time.Time),
+		clock:        startup.NewClock(time.Unix(0, 0), [32]byte{}), // default clock to prevent panic
 	}
 
 	return s
