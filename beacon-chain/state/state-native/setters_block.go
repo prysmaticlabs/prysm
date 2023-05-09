@@ -22,6 +22,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.blockRoots.Detach(b)
 	b.blockRoots = NewMultiValueBlockRoots(val)
 	b.markFieldAsDirty(types.BlockRoots)
 	b.rebuildTrie[types.BlockRoots] = true

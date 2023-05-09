@@ -88,6 +88,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.balances.Detach(b)
 	b.balances = NewMultiValueBalances(val)
 	b.markFieldAsDirty(types.Balances)
 	b.rebuildTrie[types.Balances] = true
@@ -219,6 +220,7 @@ func (b *BeaconState) SetInactivityScores(val []uint64) error {
 		return errNotSupported("SetInactivityScores", b.version)
 	}
 
+	b.inactivityScores.Detach(b)
 	b.inactivityScores = NewMultiValueInactivityScores(val)
 	b.markFieldAsDirty(types.InactivityScores)
 	return nil
