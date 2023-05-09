@@ -13,7 +13,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -730,7 +729,7 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	return &ethpbservice.SetVoluntaryExitResponse{
 		Data: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit{
 			Message: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit_VoluntaryExit{
-				Epoch: ,
+				Epoch:          strconv.FormatUint(uint64(req.Epoch), 10),
 				ValidatorIndex: strconv.FormatUint(uint64(vi.Index), 10),
 			},
 			Signature: sve.Signature,

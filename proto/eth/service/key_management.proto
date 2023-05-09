@@ -372,7 +372,8 @@ message DeleteGasLimitRequest {
 }
 
 message SetVoluntaryExitRequest {
-  bytes pubkey = 1;
+  bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
+  uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
 }
 
 message SetVoluntaryExitResponse {
