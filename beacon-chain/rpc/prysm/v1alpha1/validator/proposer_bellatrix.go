@@ -167,7 +167,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if signedBid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
-	// no hard version check during a fork epoch here as the header will have a different version than the signed bid
 	isForkEpoch := false
 	for _, epoch := range params.BeaconConfig().ForkVersionSchedule {
 		if epoch == slots.ToEpoch(slot) {
