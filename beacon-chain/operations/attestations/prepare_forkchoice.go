@@ -35,9 +35,11 @@ func (s *Service) prepareForkChoiceAtts() {
 	for {
 		select {
 		case <-ticker.C():
+			t := time.Now()
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
+			log.WithField("latency", time.Since(t).Milliseconds()).Debug("batched forkchoice attestations")
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
