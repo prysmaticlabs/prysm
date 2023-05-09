@@ -177,7 +177,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if !ok {
 		return nil, errors.New("unable to find current fork in schedule")
 	}
-	if strings.EqualFold(version.String(signedBid.Version()), forkName) {
+	if !strings.EqualFold(version.String(signedBid.Version()), forkName) {
 		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
 	}
 
