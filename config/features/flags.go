@@ -186,6 +186,9 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
 	prepareAllPayloads,
+	aggregateFirstInterval,
+	aggregateSecondInterval,
+	aggregateThirdInterval,
 	buildBlockParallel,
 }...)...)
 

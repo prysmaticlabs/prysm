@@ -221,6 +221,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(buildBlockParallel)
 		cfg.BuildBlockParallel = true
 	}
+	cfg.AggregateIntervals = []time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
 }
@@ -260,7 +261,6 @@ func ConfigureValidator(ctx *cli.Context) error {
 		cfg.EnableBeaconRESTApi = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
-	cfg.AggregateIntervals = []time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
 }
