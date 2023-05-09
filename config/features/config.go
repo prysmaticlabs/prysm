@@ -72,6 +72,9 @@ type Flags struct {
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
+
+	// AggregateIntervals specifies the time durations at which we aggregate attestations preparing for forkchoice.
+	AggregateIntervals []time.Duration
 }
 
 var featureConfig *Flags
@@ -257,6 +260,7 @@ func ConfigureValidator(ctx *cli.Context) error {
 		cfg.EnableBeaconRESTApi = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
+	cfg.AggregateIntervals = []time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
 }
