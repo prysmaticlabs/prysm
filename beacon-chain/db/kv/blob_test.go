@@ -231,11 +231,13 @@ func TestStore_verifySideCars(t *testing.T) {
 		error string
 	}{
 		{name: "empty", scs: []*ethpb.BlobSidecar{}, error: "nil or empty blob sidecars"},
+		{name: "too many sidecars", scs: generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock+1), error: "too many sidecars: 5 > 4"},
 		{name: "invalid slot", scs: []*ethpb.BlobSidecar{{Slot: 1}, {Slot: 2}}, error: "sidecar slot mismatch: 2 != 1"},
 		{name: "invalid proposer index", scs: []*ethpb.BlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, error: "sidecar proposer index mismatch: 2 != 1"},
 		{name: "invalid root", scs: []*ethpb.BlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, error: "sidecar root mismatch: 02 != 01"},
 		{name: "invalid parent root", scs: []*ethpb.BlobSidecar{{BlockParentRoot: []byte{1}}, {BlockParentRoot: []byte{2}}}, error: "sidecar parent root mismatch: 02 != 01"},
-		{name: "happy path", scs: []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}}, error: ""},
+		{name: "invalid side index", scs: []*ethpb.BlobSidecar{{Index: 0}, {Index: 0}}, error: "sidecar index mismatch: 0 != 1"},
+		{name: "happy path", scs: []*ethpb.BlobSidecar{{Index: 0}, {Index: 1}}, error: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -246,6 +248,22 @@ func TestStore_verifySideCars(t *testing.T) {
 				require.NoError(t, err)
 			}
 		})
+	}
+}
+
+func TestStore_sortSidecars(t *testing.T) {
+	scs := []*ethpb.BlobSidecar{
+		{Index: 6},
+		{Index: 4},
+		{Index: 2},
+		{Index: 1},
+		{Index: 3},
+		{Index: 5},
+		{},
+	}
+	sortSideCars(scs)
+	for i := 0; i < len(scs)-1; i++ {
+		require.Equal(t, uint64(i), scs[i].Index)
 	}
 }
 
@@ -283,4 +301,16 @@ func BenchmarkStore_BlobSidecarsByRoot(b *testing.B) {
 		_, err := s.BlobSidecarsByRoot(ctx, [32]byte{'b'})
 		require.NoError(b, err)
 	}
+}
+
+func Test_checkEpochsForBlobSidecarsRequestBucket(t *testing.T) {
+	dbStore := setupDB(t)
+
+	require.NoError(t, checkEpochsForBlobSidecarsRequestBucket(dbStore.db)) // First write
+	require.NoError(t, checkEpochsForBlobSidecarsRequestBucket(dbStore.db)) // First check
+
+	nConfig := params.BeaconNetworkConfig()
+	nConfig.MinEpochsForBlobsSidecarsRequest = 42069
+	params.OverrideBeaconNetworkConfig(nConfig)
+	require.ErrorContains(t, "epochs for blobs request value in DB 4096 does not match config value 42069", checkEpochsForBlobSidecarsRequestBucket(dbStore.db))
 }

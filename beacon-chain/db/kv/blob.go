@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -26,6 +27,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
 
+	sortSideCars(scs)
 	if err := s.verifySideCars(scs); err != nil {
 		return err
 	}
@@ -64,16 +66,21 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 }
 
 // verifySideCars ensures that all sidecars have the same slot, parent root, block root, and proposer index.
+// It also ensures that indices are sequential and start at 0 and no more than MAX_BLOB_EPOCHS.
 func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
 	if len(scs) == 0 {
 		return errors.New("nil or empty blob sidecars")
 	}
+	if uint64(len(scs)) > params.BeaconConfig().MaxBlobsPerBlock {
+		return fmt.Errorf("too many sidecars: %d > %d", len(scs), params.BeaconConfig().MaxBlobsPerBlock)
+	}
+
 	sl := scs[0].Slot
 	pr := scs[0].BlockParentRoot
 	r := scs[0].BlockRoot
 	p := scs[0].ProposerIndex
 
-	for _, sc := range scs[1:] {
+	for i, sc := range scs {
 		if sc.Slot != sl {
 			return fmt.Errorf("sidecar slot mismatch: %d != %d", sc.Slot, sl)
 		}
@@ -86,8 +93,18 @@ func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
 		if sc.ProposerIndex != p {
 			return fmt.Errorf("sidecar proposer index mismatch: %d != %d", sc.ProposerIndex, p)
 		}
+		if sc.Index != uint64(i) {
+			return fmt.Errorf("sidecar index mismatch: %d != %d", sc.Index, i)
+		}
 	}
 	return nil
+}
+
+// sortSideCars sorts the sidecars by their index.
+func sortSideCars(scs []*ethpb.BlobSidecar) {
+	sort.Slice(scs, func(i, j int) bool {
+		return scs[i].Index < scs[j].Index
+	})
 }
 
 // BlobSidecarsByRoot retrieves the blobs for the given beacon block root.
@@ -210,4 +227,26 @@ func slotKey(slot types.Slot) []byte {
 	maxEpochsToPersistBlobs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	maxSlotsToPersistBlobs := types.Slot(maxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
 	return bytesutil.SlotToBytesBigEndian(slot.ModSlot(maxSlotsToPersistBlobs))
+}
+
+func checkEpochsForBlobSidecarsRequestBucket(db *bolt.DB) error {
+	if err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(epochsForBlobSidecarsRequestBucket)
+		k := []byte("epoch-key")
+		v := b.Get(k)
+		if v == nil {
+			if err := b.Put(k, bytesutil.Uint64ToBytesBigEndian(uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest))); err != nil {
+				return err
+			}
+			return nil
+		}
+		e := bytesutil.BytesToUint64BigEndian(v)
+		if e != uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest) {
+			return fmt.Errorf("epochs for blobs request value in DB %d does not match config value %d", e, params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
 }

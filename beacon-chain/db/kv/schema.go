@@ -74,4 +74,7 @@ var (
 
 	// Migrations
 	migrationsBucket = []byte("migrations")
+
+	// Stores how long to keep the blob sidecars for.
+	epochsForBlobSidecarsRequestBucket = []byte("epochs-for-blob-sidecars-request")
 )
