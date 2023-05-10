@@ -215,7 +215,7 @@ func (p *Builder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p *Builder) handleEngineCalls(req []byte, resp []byte) {
+func (p *Builder) handleEngineCalls(req, resp []byte) {
 	if !isEngineAPICall(req) {
 		return
 	}

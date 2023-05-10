@@ -199,7 +199,7 @@ func parseJWTSecretFromFile(jwtSecretFile string) ([]byte, error) {
 		return nil, err
 	}
 	strData := strings.TrimSpace(string(enc))
-	if len(strData) == 0 {
+	if strData == "" {
 		return nil, fmt.Errorf("provided JWT secret in file %s cannot be empty", jwtSecretFile)
 	}
 	secret, err := hex.DecodeString(strings.TrimPrefix(strData, "0x"))
