@@ -94,6 +94,7 @@ func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
 // If the `indices` argument is omitted, all blobs for the root will be returned.
 // Otherwise, the result will be filtered to only include the specified indices.
 // An error will result if an invalid index is specified.
+// The bucket size is bounded by 131072 entries. That's the most blobs a node will keep before rotating it out.
 func (s *Store) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobSidecarsByRoot")
 	defer span.End()
@@ -145,6 +146,7 @@ func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobS
 // If the `indices` argument is omitted, all blobs for the root will be returned.
 // Otherwise, the result will be filtered to only include the specified indices.
 // An error will result if an invalid index is specified.
+// The bucket size is bounded by 131072 entries. That's the most blobs a node will keep before rotating it out.
 func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobSidecarsBySlot")
 	defer span.End()

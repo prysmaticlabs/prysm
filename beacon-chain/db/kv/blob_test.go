@@ -3,7 +3,6 @@ package kv
 import (
 	"context"
 	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"testing"
 
@@ -179,10 +178,12 @@ func TestStore_BlobSidecars(t *testing.T) {
 
 		newScs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
 		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
-		newScs[0].Slot = scs[0].Slot + newRetentionSlot
+		for _, sc := range newScs {
+			sc.Slot = sc.Slot + newRetentionSlot
+		}
 		require.NoError(t, db.SaveBlobSidecar(ctx, newScs))
 
-		_, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(oldBlockRoot))
+		_, err = db.BlobSidecarsBySlot(ctx, 100)
 		require.ErrorIs(t, ErrNotFound, err)
 
 		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(newScs[0].BlockRoot))
@@ -200,21 +201,8 @@ func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
 }
 
 func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
-	blockRoot := make([]byte, 32)
-	_, err := rand.Read(blockRoot)
-	require.NoError(t, err)
-	require.NoError(t, err)
-	slot := make([]byte, 8)
-	_, err = rand.Read(slot)
-	require.NoError(t, err)
-	blockParentRoot := make([]byte, 32)
-	_, err = rand.Read(blockParentRoot)
-	require.NoError(t, err)
-	proposerIndex := make([]byte, 8)
-	_, err = rand.Read(proposerIndex)
-	require.NoError(t, err)
 	blob := make([]byte, 131072)
-	_, err = rand.Read(blob)
+	_, err := rand.Read(blob)
 	require.NoError(t, err)
 	kzgCommitment := make([]byte, 48)
 	_, err = rand.Read(kzgCommitment)
@@ -224,11 +212,11 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 	require.NoError(t, err)
 
 	return &ethpb.BlobSidecar{
-		BlockRoot:       blockRoot,
+		BlockRoot:       bytesutil.PadTo([]byte{'a'}, 32),
 		Index:           index,
-		Slot:            primitives.Slot(binary.LittleEndian.Uint64(slot)),
-		BlockParentRoot: blockParentRoot,
-		ProposerIndex:   primitives.ValidatorIndex(binary.LittleEndian.Uint64(proposerIndex)),
+		Slot:            100,
+		BlockParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
+		ProposerIndex:   101,
 		Blob:            blob,
 		KzgCommitment:   kzgCommitment,
 		KzgProof:        kzgProof,
