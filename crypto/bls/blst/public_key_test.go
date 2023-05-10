@@ -97,3 +97,27 @@ func TestPublicKeysEmpty(t *testing.T) {
 	_, err := blst.AggregatePublicKeys(pubs)
 	require.ErrorContains(t, "nil or empty public keys", err)
 }
+
+func BenchmarkPublicKeyFromBytes(b *testing.B) {
+	priv, err := blst.RandKey()
+	require.NoError(b, err)
+	pubkey := priv.PublicKey()
+	pubkeyBytes := pubkey.Marshal()
+
+	b.Run("cache on", func(b *testing.B) {
+		blst.EnableCaches()
+		for i := 0; i < b.N; i++ {
+			_, err := blst.PublicKeyFromBytes(pubkeyBytes)
+			require.NoError(b, err)
+		}
+	})
+
+	b.Run("cache off", func(b *testing.B) {
+		blst.DisableCaches()
+		for i := 0; i < b.N; i++ {
+			_, err := blst.PublicKeyFromBytes(pubkeyBytes)
+			require.NoError(b, err)
+		}
+	})
+
+}
