@@ -1616,7 +1616,8 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 				beaconNodeValidatorClient: beaconClient,
 				wallet:                    w,
 			}
-
+			beaconClient.EXPECT().ValidatorIndex(gomock.Any(), &eth.ValidatorIndexRequest{PublicKey: pubkey}).
+				Return(&eth.ValidatorIndexResponse{Index: 2}, nil)
 			resp, err := s.SetVoluntaryExit(ctx, &ethpbservice.SetVoluntaryExitRequest{Pubkey: tt.pubkey, Epoch: tt.epoch})
 			require.NoError(t, err)
 			fmt.Println(resp)
