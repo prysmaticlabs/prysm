@@ -17,6 +17,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -1549,6 +1550,76 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			for _, w := range tt.w {
 				assert.Equal(t, w.gaslimit, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit)
 			}
+		})
+	}
+}
+
+func TestServer_SetVoluntaryExit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	beaconClient := validatormock.NewMockValidatorClient(ctrl)
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+
+	pubkey, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	require.NoError(t, err)
+
+	type want struct {
+		epoch          primitives.Epoch
+		validatorIndex uint64
+		signature      []byte
+	}
+
+	tests := []struct {
+		name   string
+		pubkey []byte
+		epoch  primitives.Epoch
+		w      []want
+	}{
+		{
+			name:   "Should be okay",
+			pubkey: pubkey,
+			epoch:  30000000,
+			w: []want{
+				{
+					epoch:          30000000,
+					validatorIndex: 0,
+					signature:      nil,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			localWalletDir := setupWalletDir(t)
+			defaultWalletPath = localWalletDir
+			opts := []accounts.Option{
+				accounts.WithWalletDir(defaultWalletPath),
+				accounts.WithKeymanagerType(keymanager.Derived),
+				accounts.WithWalletPassword(strongPass),
+				accounts.WithSkipMnemonicConfirm(true),
+			}
+			acc, err := accounts.NewCLIManager(opts...)
+			require.NoError(t, err)
+			w, err := acc.WalletCreate(ctx)
+			require.NoError(t, err)
+			km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+			require.NoError(t, err)
+			m := &mock.MockValidator{Km: km}
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator: m,
+			})
+			require.NoError(t, err)
+
+			s := &Server{
+				validatorService:          vs,
+				beaconNodeValidatorClient: beaconClient,
+				wallet:                    w,
+			}
+
+			resp, err := s.SetVoluntaryExit(ctx, &ethpbservice.SetVoluntaryExitRequest{Pubkey: tt.pubkey, Epoch: tt.epoch})
+			require.NoError(t, err)
+			fmt.Println(resp)
 		})
 	}
 }
