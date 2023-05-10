@@ -552,7 +552,6 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	gt := time.Now()
 	vr := [32]byte{}
 	fetcher.chain = &mock.ChainService{Genesis: gt, ValidatorsRoot: vr}
-	fetcher.clock = startup.NewClock(gt, vr)
 	hook := logTest.NewGlobal()
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
@@ -621,7 +620,6 @@ func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
 	gt := time.Now()
 	vr := [32]byte{}
 	fetcher.chain = &mock.ChainService{Genesis: gt, ValidatorsRoot: vr}
-	fetcher.clock = startup.NewClock(gt, vr)
 	start := time.Now()
 	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), 10))
 	dur := time.Since(start)
