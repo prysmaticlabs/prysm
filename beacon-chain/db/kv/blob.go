@@ -26,11 +26,11 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
 
-	if len(scs) == 0 {
-		return errors.New("nil or empty blob sidecars")
+	if err := s.verifySideCars(scs); err != nil {
+		return err
 	}
-	slot := scs[0].Slot
 
+	slot := scs[0].Slot
 	return s.db.Update(func(tx *bolt.Tx) error {
 		encodedBlobSidecar, err := encode(ctx, &ethpb.BlobSidecars{Sidecars: scs})
 		if err != nil {
@@ -54,15 +54,40 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		}
 		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
 		// store the blob by key and exit early.
-		if len(replacingKey) == 0 {
-			return bkt.Put(newKey, encodedBlobSidecar)
-		}
-
-		if err := bkt.Delete(replacingKey); err != nil {
-			log.WithError(err).Warnf("Could not delete blob with key %#x", replacingKey)
+		if len(replacingKey) != 0 {
+			if err := bkt.Delete(replacingKey); err != nil {
+				log.WithError(err).Warnf("Could not delete blob with key %#x", replacingKey)
+			}
 		}
 		return bkt.Put(newKey, encodedBlobSidecar)
 	})
+}
+
+// verifySideCars ensures that all sidecars have the same slot, parent root, block root, and proposer index.
+func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
+	if len(scs) == 0 {
+		return errors.New("nil or empty blob sidecars")
+	}
+	sl := scs[0].Slot
+	pr := scs[0].BlockParentRoot
+	r := scs[0].BlockRoot
+	p := scs[0].ProposerIndex
+
+	for _, sc := range scs[1:] {
+		if sc.Slot != sl {
+			return fmt.Errorf("sidecar slot mismatch: %d != %d", sc.Slot, sl)
+		}
+		if !bytes.Equal(sc.BlockParentRoot, pr) {
+			return fmt.Errorf("sidecar parent root mismatch: %x != %x", sc.BlockParentRoot, pr)
+		}
+		if !bytes.Equal(sc.BlockRoot, r) {
+			return fmt.Errorf("sidecar root mismatch: %x != %x", sc.BlockRoot, r)
+		}
+		if sc.ProposerIndex != p {
+			return fmt.Errorf("sidecar proposer index mismatch: %d != %d", sc.ProposerIndex, p)
+		}
+	}
+	return nil
 }
 
 // BlobSidecarsByRoot retrieves the blobs for the given beacon block root.
@@ -102,7 +127,7 @@ func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobS
 	if len(indices) == 0 {
 		return sc.Sidecars, nil
 	}
-	// NB: This loop assumes that the BlobSidecars value stores the complete set of blobs for a block
+	// This loop assumes that the BlobSidecars value stores the complete set of blobs for a block
 	// in ascending order from eg 0..3, without gaps. This allows us to assume the indices argument
 	// maps 1:1 with indices in the BlobSidecars storage object.
 	maxIdx := uint64(len(sc.Sidecars)) - 1
@@ -125,10 +150,11 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices
 	defer span.End()
 
 	var enc []byte
+	sk := slotKey(slot)
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
-		for k, v := c.First(); k != nil; k, v = c.Next() {
+		for k, v := c.Seek(sk); bytes.HasPrefix(k, sk); k, _ = c.Next() {
 			slotInKey := bytesutil.BytesToSlotBigEndian(k[8:16])
 			if slotInKey == slot {
 				enc = v
@@ -171,12 +197,15 @@ func (s *Store) DeleteBlobSidecar(ctx context.Context, beaconBlockRoot [32]byte)
 // We define a blob sidecar key as: bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
 // where slot_to_rotating_buffer(slot) = slot % MAX_SLOTS_TO_PERSIST_BLOBS.
 func blobSidecarKey(blob *ethpb.BlobSidecar) []byte {
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	maxEpochsToPersistBlobs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	maxSlotsToPersistBlobs := types.Slot(maxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
-	slotInRotatingBuffer := blob.Slot.ModSlot(maxSlotsToPersistBlobs)
-	key := bytesutil.SlotToBytesBigEndian(slotInRotatingBuffer)
+	key := slotKey(blob.Slot)
 	key = append(key, bytesutil.SlotToBytesBigEndian(blob.Slot)...)
 	key = append(key, blob.BlockRoot...)
 	return key
+}
+
+func slotKey(slot types.Slot) []byte {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	maxEpochsToPersistBlobs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	maxSlotsToPersistBlobs := types.Slot(maxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
+	return bytesutil.SlotToBytesBigEndian(slot.ModSlot(maxSlotsToPersistBlobs))
 }
