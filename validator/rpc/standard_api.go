@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -697,7 +696,7 @@ func validatePublicKey(pubkey []byte) error {
 	return nil
 }
 
-// SetVoluntaryExit TBD
+// SetVoluntaryExit creates a signed voluntary exit message and returns a VoluntaryExit object.
 func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVoluntaryExitRequest) (*ethpbservice.SetVoluntaryExitResponse, error) {
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
@@ -724,14 +723,14 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 		req.Pubkey,
 	)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "Could not create voluntary exit")
+		return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
 	}
 
 	return &ethpbservice.SetVoluntaryExitResponse{
 		Data: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit{
 			Message: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit_VoluntaryExit{
-				Epoch:          strconv.FormatUint(uint64(sve.Exit.Epoch), 10),
-				ValidatorIndex: strconv.FormatUint(uint64(sve.Exit.ValidatorIndex), 10),
+				Epoch:          uint64(sve.Exit.Epoch),
+				ValidatorIndex: uint64(sve.Exit.ValidatorIndex),
 			},
 			Signature: sve.Signature,
 		},

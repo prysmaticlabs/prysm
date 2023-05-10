@@ -112,7 +112,7 @@ type SetVoluntaryExitResponseJson struct {
 
 type SignedVoluntaryExitJson struct {
 	VoluntaryExit *VoluntaryExitJson `json:"message"`
-	Signature     string             `json:"signature"`
+	Signature     string             `json:"signature" hex:"true"`
 }
 
 type VoluntaryExitJson struct {

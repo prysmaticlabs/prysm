@@ -18,6 +18,7 @@ package ethereum.eth.service;
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
+import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/service";
@@ -379,8 +380,8 @@ message SetVoluntaryExitRequest {
 message SetVoluntaryExitResponse {
   message SignedVoluntaryExit {
     message VoluntaryExit {
-      string epoch = 1;
-      string validator_index = 2;
+      uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
+      uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
     }
     VoluntaryExit message = 1;
     bytes signature = 2;
