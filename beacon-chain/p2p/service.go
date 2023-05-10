@@ -121,6 +121,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
 	opts := s.buildOptions(ipAddr, s.privKey)
+	opts = append(opts, libp2p.ResourceManager(&network.NullResourceManager{}))
 	h, err := libp2p.New(opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")
