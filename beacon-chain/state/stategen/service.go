@@ -154,7 +154,6 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 			pub := val.PublicKey()
 			_, err := bls.PublicKeyFromBytes(pub[:])
 			return err
-
 		}); err != nil {
 			log.WithError(err).Error("Failed to populate pubkey cache")
 		}
