@@ -138,7 +138,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 107, len(resp.Data))
+	assert.Equal(t, 108, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -275,6 +275,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "51", v)
 		case "MAX_VOLUNTARY_EXITS":
 			assert.Equal(t, "52", v)
+		case "MAX_BLOBS_PER_BLOCK":
+			assert.Equal(t, "4", v)
 		case "TIMELY_HEAD_FLAG_INDEX":
 			assert.Equal(t, "0x35", v)
 		case "TIMELY_SOURCE_FLAG_INDEX":
