@@ -43,4 +43,12 @@ build --flaky_test_attempts=5
 
 # Better caching
 build:nostamp --nostamp
-build:nostamp --workspace_status_command=./hack/workspace_status_ci.sh
+
+# Build metadata
+build --build_metadata=ROLE=CI
+build --build_metadata=REPO_URL=https://github.com/prysmaticlabs/prysm.git
+build --workspace_status_command=./hack/workspace_status_ci.sh
+
+# Buildbuddy
+build --bes_results_url=https://app.buildbuddy.io/invocation/
+build --bes_backend=grpcs://remote.buildbuddy.io
