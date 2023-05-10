@@ -14,6 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func equalBlobSlices(expect []*ethpb.BlobSidecar, got []*ethpb.BlobSidecar) error {
@@ -231,5 +232,67 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 		Blob:            blob,
 		KzgCommitment:   kzgCommitment,
 		KzgProof:        kzgProof,
+	}
+}
+
+func TestStore_verifySideCars(t *testing.T) {
+	s := setupDB(t)
+	tests := []struct {
+		name  string
+		scs   []*ethpb.BlobSidecar
+		error string
+	}{
+		{name: "empty", scs: []*ethpb.BlobSidecar{}, error: "nil or empty blob sidecars"},
+		{name: "invalid slot", scs: []*ethpb.BlobSidecar{{Slot: 1}, {Slot: 2}}, error: "sidecar slot mismatch: 2 != 1"},
+		{name: "invalid proposer index", scs: []*ethpb.BlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, error: "sidecar proposer index mismatch: 2 != 1"},
+		{name: "invalid root", scs: []*ethpb.BlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, error: "sidecar root mismatch: 02 != 01"},
+		{name: "invalid parent root", scs: []*ethpb.BlobSidecar{{BlockParentRoot: []byte{1}}, {BlockParentRoot: []byte{2}}}, error: "sidecar parent root mismatch: 02 != 01"},
+		{name: "happy path", scs: []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}}, error: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := s.verifySideCars(tt.scs)
+			if tt.error != "" {
+				require.Equal(t, tt.error, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func BenchmarkStore_BlobSidecarsByRoot(b *testing.B) {
+	s := setupDB(b)
+	ctx := context.Background()
+	require.NoError(b, s.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{
+		{BlockRoot: bytesutil.PadTo([]byte{'a'}, 32), Slot: 0},
+	}))
+
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blobsBucket)
+		for i := 1; i < 131071; i++ {
+			r := make([]byte, 32)
+			_, err := rand.Read(r)
+			require.NoError(b, err)
+			scs := []*ethpb.BlobSidecar{
+				{BlockRoot: r, Slot: primitives.Slot(i)},
+			}
+			k := blobSidecarKey(scs[0])
+			encodedBlobSidecar, err := encode(ctx, &ethpb.BlobSidecars{Sidecars: scs})
+			require.NoError(b, err)
+			require.NoError(b, bkt.Put(k, encodedBlobSidecar))
+		}
+		return nil
+	})
+	require.NoError(b, err)
+
+	require.NoError(b, s.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{
+		{BlockRoot: bytesutil.PadTo([]byte{'b'}, 32), Slot: 131071},
+	}))
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := s.BlobSidecarsByRoot(ctx, [32]byte{'b'})
+		require.NoError(b, err)
 	}
 }
