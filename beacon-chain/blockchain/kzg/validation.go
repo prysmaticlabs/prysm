@@ -21,9 +21,24 @@ func IsDataAvailable(commitments [][]byte, sidecars []*ethpb.BlobSidecar) error 
 	proofs := make([]GoKZG.KZGProof, len(commitments))
 	cmts := make([]GoKZG.KZGCommitment, len(commitments))
 	for i, sidecar := range sidecars {
-		blobs[i] = GoKZG.Blob(sidecar.Blob)
-		proofs[i] = GoKZG.KZGProof(sidecar.KzgProof)
-		cmts[i] = GoKZG.KZGCommitment(commitments[i])
+		blobs[i] = bytesToBlob(sidecar.Blob)
+		proofs[i] = bytesToKZGProof(sidecar.KzgProof)
+		cmts[i] = bytesToCommitment(commitments[i])
 	}
 	return kzgContext.VerifyBlobKZGProofBatch(blobs, cmts, proofs)
+}
+
+func bytesToBlob(blob []byte) (ret GoKZG.Blob) {
+	copy(ret[:], blob)
+	return
+}
+
+func bytesToCommitment(commitment []byte) (ret GoKZG.KZGCommitment) {
+	copy(ret[:], commitment)
+	return
+}
+
+func bytesToKZGProof(proof []byte) (ret GoKZG.KZGProof) {
+	copy(ret[:], proof)
+	return
 }
