@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -205,13 +204,12 @@ func ProposeExit(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
-	cfg := accounts.PerformExitCfg{
-		ValidatorClient: validatorClient,
-		NodeClient:      nodeClient,
-		Epoch:           0, // if 0 we use current epoch
-	}
 
-	signedExit, err := CreateSignedVoluntaryExit(ctx, cfg, signer, pubKey)
+	epoch, err := CurrentEpoch(ctx, nodeClient)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch current epoch")
+	}
+	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, nodeClient, signer, pubKey, epoch)
 	if err != nil {
 		return errors.Wrap(err, "failed to create signed voluntary exit")
 	}
@@ -227,30 +225,37 @@ func ProposeExit(
 	return nil
 }
 
+func CurrentEpoch(ctx context.Context, nodeClient iface.NodeClient) (primitives.Epoch, error) {
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		return 0, err
+	}
+	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
+	return primitives.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))), nil
+}
+
 func CreateSignedVoluntaryExit(
 	ctx context.Context,
-	cfg accounts.PerformExitCfg,
+	validatorClient iface.ValidatorClient,
+	nodeClient iface.NodeClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
+	epoch primitives.Epoch,
 ) (*ethpb.SignedVoluntaryExit, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CreateSignedVoluntaryExit")
 	defer span.End()
 
-	indexResponse, err := cfg.ValidatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
+	indexResponse, err := validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey})
 	if err != nil {
 		return nil, errors.Wrap(err, "gRPC call to get validator index failed")
 	}
-	genesisResponse, err := cfg.NodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
-	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
-	if cfg.Epoch == 0 {
-		cfg.Epoch = primitives.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
-	}
 	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
-	exit := &ethpb.VoluntaryExit{Epoch: cfg.Epoch, ValidatorIndex: indexResponse.Index}
-	sig, err := signVoluntaryExit(ctx, cfg.ValidatorClient, signer, pubKey, exit, currentSlot)
+	exit := &ethpb.VoluntaryExit{Epoch: epoch, ValidatorIndex: indexResponse.Index}
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, currentSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign voluntary exit")
 	}

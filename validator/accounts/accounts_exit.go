@@ -91,7 +91,11 @@ func PerformVoluntaryExit(
 		// When output directory is present, only create the signed exit, but do not propose it.
 		// Otherwise, propose the exit immediately.
 		if len(cfg.OutputDirectory) > 0 {
-			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg, cfg.Keymanager.Sign, key)
+			epoch, err := client.CurrentEpoch(ctx, cfg.NodeClient)
+			if err != nil {
+				log.WithError(err).Errorf("failed to fetch current epoch")
+			}
+			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, key, epoch)
 			if err != nil {
 				rawNotExitedKeys = append(rawNotExitedKeys, key)
 				msg := err.Error()
