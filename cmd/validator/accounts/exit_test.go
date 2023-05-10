@@ -104,6 +104,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,
 		FormattedPubKeys: formattedPubKeys,
+		Epoch:            0, // if 0 we use current epoch
 	}
 	rawExitedKeys, formattedExitedKeys, err := accounts.PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
@@ -205,6 +206,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,
 		FormattedPubKeys: formattedPubKeys,
+		Epoch:            0, // if 0 we use current epoch
 	}
 	rawExitedKeys, formattedExitedKeys, err := accounts.PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
@@ -300,6 +302,7 @@ func TestExitAccountsCli_OK_ForceExit(t *testing.T) {
 		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,
 		FormattedPubKeys: formattedPubKeys,
+		Epoch:            0, // if 0 we use current epoch
 	}
 	rawExitedKeys, formattedExitedKeys, err := accounts.PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
@@ -388,6 +391,7 @@ func TestExitAccountsCli_WriteJSON_NoBroadcast(t *testing.T) {
 		RawPubKeys:       rawPubKeys,
 		FormattedPubKeys: formattedPubKeys,
 		OutputDirectory:  out,
+		Epoch:            0, // if 0 we use current epoch
 	}
 	rawExitedKeys, formattedExitedKeys, err := accounts.PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)

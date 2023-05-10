@@ -105,3 +105,17 @@ type SetVoluntaryExitRequestJson struct {
 	Pubkey string `json:"pubkey" hex:"true"`
 	Epoch  uint64 `json:"epoch"`
 }
+
+type SetVoluntaryExitResponseJson struct {
+	SignedVoluntaryExit *SignedVoluntaryExitJson `json:"data"`
+}
+
+type SignedVoluntaryExitJson struct {
+	VoluntaryExit *VoluntaryExitJson `json:"message"`
+	Signature     string             `json:"signature"`
+}
+
+type VoluntaryExitJson struct {
+	Epoch          string `json:"epoch"`
+	ValidatorIndex string `json:"validator_index"`
+}

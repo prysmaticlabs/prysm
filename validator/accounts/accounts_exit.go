@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -31,6 +32,7 @@ type PerformExitCfg struct {
 	RawPubKeys       [][]byte
 	FormattedPubKeys []string
 	OutputDirectory  string
+	Epoch            primitives.Epoch
 }
 
 // ExitPassphrase exported for use in test.
@@ -69,6 +71,7 @@ func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
 		acm.rawPubKeys,
 		acm.formattedPubKeys,
 		acm.exitJSONOutputPath,
+		0, // if 0 we use current epoch
 	}
 	rawExitedKeys, trimmedExitedKeys, err := PerformVoluntaryExit(ctx, cfg)
 	if err != nil {
@@ -88,7 +91,7 @@ func PerformVoluntaryExit(
 		// When output directory is present, only create the signed exit, but do not propose it.
 		// Otherwise, propose the exit immediately.
 		if len(cfg.OutputDirectory) > 0 {
-			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, key, 0)
+			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg, cfg.Keymanager.Sign, key)
 			if err != nil {
 				rawNotExitedKeys = append(rawNotExitedKeys, key)
 				msg := err.Error()

@@ -186,6 +186,7 @@ func (s *Server) VoluntaryExit(
 		Keymanager:       km,
 		RawPubKeys:       req.PublicKeys,
 		FormattedPubKeys: formattedKeys,
+		Epoch:            0, // if 0 we use current epoch
 	}
 	rawExitedKeys, _, err := accounts.PerformVoluntaryExit(ctx, cfg)
 	if err != nil {

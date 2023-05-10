@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
@@ -711,13 +712,16 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	if err != nil {
 		return nil, err
 	}
+	cfg := accounts.PerformExitCfg{
+		ValidatorClient: s.beaconNodeValidatorClient,
+		NodeClient:      s.beaconNodeClient,
+		Epoch:           req.Epoch,
+	}
 	sve, err := client.CreateSignedVoluntaryExit(
 		ctx,
-		s.beaconNodeValidatorClient,
-		s.beaconNodeClient,
+		cfg,
 		km.Sign,
 		req.Pubkey,
-		req.Epoch,
 	)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "Could not create voluntary exit")
