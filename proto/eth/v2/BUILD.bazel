@@ -45,7 +45,6 @@ ssz_gen_marshal(
         "SignedBlindedBeaconBlockBellatrix",
         "SignedBeaconBlockCapella",
         "SignedBlindedBeaconBlockCapella",
-        "BlindedBeaconBlockContentsDeneb",
         "SignedBeaconBlockDeneb",
         "SignedBlindedBeaconBlockDeneb",
         "BlsToExecutionChange",

@@ -390,6 +390,27 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared Deneb beacon block contents are blinded")
+	}
+	denebBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	if ok {
+		blockAndBlobs, err := migration.V1Alpha1BeaconBlockDenebAndBlobsToV2(denebBlock.Deneb)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block contents: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_DENEB,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_DenebContents{
+					DenebContents: &ethpbv2.BeaconBlockContentsDeneb{
+						Block:        blockAndBlobs.Block,
+						BlobSidecars: blockAndBlobs.Blobs,
+					}},
+			},
+		}, nil
+	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
@@ -497,6 +518,11 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 			Data:    sszBlock,
 		}, nil
 	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	if ok {
+		// TODO: ssz support for blobcontents is an ongoing discussion.
+		return nil, status.Error(codes.Unimplemented, "Feature for blobcontents ssz is not implemented yet.")
+	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
@@ -595,6 +621,27 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			Version: ethpbv2.Version_CAPELLA,
 			Data: &ethpbv2.BlindedBeaconBlockContainer{
 				Block: &ethpbv2.BlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: blk},
+			},
+		}, nil
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared Deneb beacon block contents are not blinded")
+	}
+	denebBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
+	if ok {
+		blockAndBlobs, err := migration.V1Alpha1BlindedBlockAndBlobsDenebToV2Blinded(denebBlock.BlindedDeneb)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block contents: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_DENEB,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_DenebContents{
+					DenebContents: &ethpbv2.BlindedBeaconBlockContentsDeneb{
+						BlindedBlock:        blockAndBlobs.BlindedBlock,
+						BlindedBlobSidecars: blockAndBlobs.BlindedBlobSidecars,
+					}},
 			},
 		}, nil
 	}

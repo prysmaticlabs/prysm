@@ -8,7 +8,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -123,7 +122,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		capellaBlock, ok := resp.Data.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_DenebBlock)
 		require.Equal(t, true, ok)
 		assert.DeepEqual(t, expected, capellaBlock.DenebBlock)
-		assert.Equal(t, ethpbv2.Version_Deneb, resp.Version)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
@@ -282,7 +281,7 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.DeepEqual(t, expected, resp.Data)
-		assert.Equal(t, ethpbv2.Version_Deneb, resp.Version)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
@@ -491,9 +490,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block{Phase0Block: &ethpbv1.BeaconBlock{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_Phase0Block{Phase0Block: &ethpbv1.SignedBeaconBlock{}},
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -506,20 +504,22 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock{AltairBlock: &ethpbv2.BeaconBlockAltair{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_AltairBlock{AltairBlock: &ethpbv2.SignedBeaconBlockAltair{}},
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.BlindedBeaconBlockBellatrix{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.SignedBlindedBeaconBlockBellatrix{}},
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -532,9 +532,27 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: &ethpbv2.BlindedBeaconBlockCapella{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_CapellaBlock{CapellaBlock: &ethpbv2.SignedBlindedBeaconBlockCapella{}},
+		}
+		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
+		assert.NoError(t, err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_DenebContents{
+				DenebContents: &ethpbv2.SignedBlindedBeaconBlockContentsDeneb{
+					SignedBlindedBlock:        &ethpbv2.SignedBlindedBeaconBlockDeneb{},
+					SignedBlindedBlobSidecars: []*ethpbv2.SignedBlindedBlobSidecar{},
+				},
+			},
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -550,52 +568,4 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		_, err := v1Server.SubmitBlindedBlock(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
 	})
-}
-
-func emptyPayload() *enginev1.ExecutionPayload {
-	return &enginev1.ExecutionPayload{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		ExtraData:     make([]byte, 0),
-	}
-}
-
-func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
-	return &enginev1.ExecutionPayloadCapella{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		Withdrawals:   make([]*enginev1.Withdrawal, 0),
-		ExtraData:     make([]byte, 0),
-	}
-}
-
-func emptyPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
-	return &enginev1.ExecutionPayloadDeneb{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		Withdrawals:   make([]*enginev1.Withdrawal, 0),
-		ExtraData:     make([]byte, 0),
-		ExcessDataGas: make([]byte, 32),
-	}
 }

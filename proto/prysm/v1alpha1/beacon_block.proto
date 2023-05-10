@@ -48,9 +48,11 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Capella fork blinded beacon block.
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
-        SignedBeaconBlockDenebAndBlobs Deneb  = 7;
+        // Representing a signed, post-Deneb fork beacon block content.
+        SignedBeaconBlockDenebAndBlobs deneb  = 7;
 
-        SignedBlindedBeaconBlockDenebAndBlobs blinded_Deneb  = 8;
+        // Representing a signed, post-Deneb fork blinded beacon block content.
+        SignedBlindedBeaconBlockDenebAndBlobs blinded_deneb  = 8;
     }
 }
 
@@ -74,9 +76,9 @@ message GenericBeaconBlock {
         // Representing a post-Capella fork blinded beacon block.
         BlindedBeaconBlockCapella blinded_capella = 6;
 
-        BeaconBlockDenebAndBlobs Deneb  = 7;
+        BeaconBlockDenebAndBlobs deneb  = 7;
 
-        BlindedBeaconBlockDenebAndBlobs blinded_Deneb  = 8;
+        BlindedBeaconBlockDenebAndBlobs blinded_deneb  = 8;
     }
 }
 

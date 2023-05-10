@@ -795,6 +795,49 @@ func TestProduceBlockV2(t *testing.T) {
 		_, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
 		assert.ErrorContains(t, "Prepared Capella beacon block is blinded", err)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		blk := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_Deneb{
+				Deneb: &ethpbalpha.BeaconBlockDenebAndBlobs{
+					Block: &ethpbalpha.BeaconBlockDeneb{Slot: 123},
+					Blobs: []*ethpbalpha.BlobSidecar{{Slot: 123}},
+				}}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		resp, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
+		require.NoError(t, err)
+
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
+		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_DenebContents)
+		require.Equal(t, true, ok)
+		assert.Equal(t, primitives.Slot(123), containerBlock.DenebContents.Block.Slot)
+		require.Equal(t, 1, len(containerBlock.DenebContents.BlobSidecars))
+		assert.Equal(t, primitives.Slot(123), containerBlock.DenebContents.BlobSidecars[0].Slot)
+	})
+	t.Run("Deneb blinded", func(t *testing.T) {
+		blk := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
+				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockDenebAndBlobs{
+					Block: &ethpbalpha.BlindedBeaconBlockDeneb{Slot: 123},
+					Blobs: []*ethpbalpha.BlindedBlobSidecar{{Slot: 123}},
+				}}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		_, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
+		assert.ErrorContains(t, "Prepared Deneb beacon block contents are blinded", err)
+	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
 		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1054,6 +1097,51 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		_, err := server.ProduceBlindedBlock(ctx, &ethpbv1.ProduceBlockRequest{})
 		assert.ErrorContains(t, "Prepared beacon block is not blinded", err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		blk := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
+				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockDenebAndBlobs{
+					Block: &ethpbalpha.BlindedBeaconBlockDeneb{Slot: 123},
+					Blobs: []*ethpbalpha.BlindedBlobSidecar{{Slot: 123}},
+				}}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		resp, err := server.ProduceBlindedBlock(ctx, &ethpbv1.ProduceBlockRequest{})
+		require.NoError(t, err)
+
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
+		containerBlock, ok := resp.Data.Block.(*ethpbv2.BlindedBeaconBlockContainer_DenebContents)
+		require.Equal(t, true, ok)
+		assert.Equal(t, primitives.Slot(123), containerBlock.DenebContents.BlindedBlock.Slot)
+		require.Equal(t, 1, len(containerBlock.DenebContents.BlindedBlobSidecars))
+		assert.Equal(t, primitives.Slot(123), containerBlock.DenebContents.BlindedBlobSidecars[0].Slot)
+	})
+	t.Run("Deneb full", func(t *testing.T) {
+		blk := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_Deneb{
+				Deneb: &ethpbalpha.BeaconBlockDenebAndBlobs{
+					Block: &ethpbalpha.BeaconBlockDeneb{Slot: 123},
+					Blobs: []*ethpbalpha.BlobSidecar{{Slot: 123}},
+				}}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		_, err := server.ProduceBlindedBlock(ctx, &ethpbv1.ProduceBlockRequest{})
+		assert.ErrorContains(t, "Prepared Deneb beacon block contents are not blinded", err)
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}

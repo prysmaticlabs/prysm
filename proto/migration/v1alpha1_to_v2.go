@@ -172,6 +172,52 @@ func V1Alpha1BeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.BeaconBlockDeneb) (*
 	return v2Block, nil
 }
 
+// V1Alpha1BlindedBlobSidecarsToV2 converts an array of v1alpha1 blinded blob sidecars to its v2 equivalent.
+func V1Alpha1BlindedBlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlindedBlobSidecar) ([]*ethpbv2.BlindedBlobSidecar, error) {
+	v2Blobs := make([]*ethpbv2.BlindedBlobSidecar, len(v1alpha1Blobs))
+	for index, v1Blob := range v1alpha1Blobs {
+		marshaledBlob, err := proto.Marshal(v1Blob)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not marshal blob sidecar")
+		}
+		v2Blob := &ethpbv2.BlindedBlobSidecar{}
+		if err := proto.Unmarshal(marshaledBlob, v2Blob); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blobs idecar")
+		}
+		v2Blobs[index] = v2Blob
+	}
+	return v2Blobs, nil
+}
+
+// V1Alpha1BeaconBlockDenebAndBlobsToV2 converts a v1alpha1 Deneb beacon block and blobs to a v2
+// Deneb block.
+func V1Alpha1BeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.BeaconBlockDenebAndBlobs) (*ethpbv2.BeaconBlockDenebAndBlobs, error) {
+	marshaledBlkandBlobs, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2BlocknBlobs := &ethpbv2.BeaconBlockDenebAndBlobs{}
+	if err := proto.Unmarshal(marshaledBlkandBlobs, v2BlocknBlobs); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2BlocknBlobs, nil
+}
+
+// V1Alpha1BlindedBlockAndBlobsDenebToV2Blinded converts a v1alpha1 Deneb blinded beacon block and blobs to v2 blinded block contents.
+func V1Alpha1BlindedBlockAndBlobsDenebToV2Blinded(
+	v1Alpha1BlkAndBlobs *ethpbalpha.BlindedBeaconBlockDenebAndBlobs,
+) (*ethpbv2.BlindedBeaconBlockContentsDeneb, error) {
+	v2Block, err := V1Alpha1BeaconBlockBlindedDenebToV2Blinded(v1Alpha1BlkAndBlobs.Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert block")
+	}
+	v2Blobs, err := V1Alpha1BlindedBlobSidecarsToV2(v1Alpha1BlkAndBlobs.Blobs)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert blobs")
+	}
+	return &ethpbv2.BlindedBeaconBlockContentsDeneb{BlindedBlock: v2Block, BlindedBlobSidecars: v2Blobs}, nil
+}
+
 // V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded converts a v1alpha1 Blinded Bellatrix beacon block to a v2 Blinded Bellatrix block.
 func V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockBellatrix) (*ethpbv2.BlindedBeaconBlockBellatrix, error) {
 	marshaledBlk, err := proto.Marshal(v1alpha1Block)
@@ -1194,8 +1240,8 @@ func V1Alpha1SignedBLSToExecChangeToV2(alphaChange *ethpbalpha.SignedBLSToExecut
 	return result
 }
 
-// BlindedBlobsToV1Alpha1SignedBlobs converts an array of v2 SignedBlindedBlobSidecar objects to its v1alpha1 equivalent.
-func BlindedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.SignedBlindedBlobSidecar) []*ethpbalpha.SignedBlindedBlobSidecar {
+// SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs converts an array of v2 SignedBlindedBlobSidecar objects to its v1alpha1 equivalent.
+func SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(sidecars []*ethpbv2.SignedBlindedBlobSidecar) []*ethpbalpha.SignedBlindedBlobSidecar {
 	result := make([]*ethpbalpha.SignedBlindedBlobSidecar, len(sidecars))
 	for i, sc := range sidecars {
 		result[i] = &ethpbalpha.SignedBlindedBlobSidecar{
@@ -1206,6 +1252,27 @@ func BlindedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.SignedBlindedBlobSide
 				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
 				ProposerIndex:   sc.Message.ProposerIndex,
 				BlobRoot:        bytesutil.SafeCopyBytes(sc.Message.BlobRoot),
+				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
+				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
+			},
+			Signature: bytesutil.SafeCopyBytes(sc.Signature),
+		}
+	}
+	return result
+}
+
+// SignedBlobsToV1Alpha1SignedBlobs converts an array of v2 SignedBlobSidecar objects to its v1alpha1 equivalent.
+func SignedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.SignedBlobSidecar) []*ethpbalpha.SignedBlobSidecar {
+	result := make([]*ethpbalpha.SignedBlobSidecar, len(sidecars))
+	for i, sc := range sidecars {
+		result[i] = &ethpbalpha.SignedBlobSidecar{
+			Message: &ethpbalpha.BlobSidecar{
+				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
+				Index:           sc.Message.Index,
+				Slot:            sc.Message.Slot,
+				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
+				ProposerIndex:   sc.Message.ProposerIndex,
+				Blob:            bytesutil.SafeCopyBytes(sc.Message.Blob),
 				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
 				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
 			},

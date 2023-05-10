@@ -56,8 +56,13 @@ message BeaconBlockContainerV2 {
     BeaconBlockAltair altair_block = 2;
     BeaconBlockBellatrix bellatrix_block = 3;
     BeaconBlockCapella capella_block = 4; 
-    BeaconBlockDeneb deneb_block = 5;
+    BeaconBlockContentsDeneb deneb_contents = 5;
   }
+}
+
+message BeaconBlockDenebAndBlobs {
+    BeaconBlockDeneb block = 1;
+    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }
 
 message SignedBeaconBlockContainer {
@@ -73,13 +78,23 @@ message SignedBeaconBlockContainer {
   bytes signature = 6 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message SignedBeaconBlockContentsContainer {
+  oneof message {
+    v1.SignedBeaconBlock phase0_block = 1;
+    SignedBeaconBlockAltair altair_block = 2;
+    SignedBeaconBlockBellatrix bellatrix_block = 3;
+    SignedBeaconBlockCapella capella_block = 4;
+    SignedBeaconBlockContentsDeneb deneb_contents = 5;
+  }
+}
+
 message BlindedBeaconBlockContainer {
   oneof block {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
     BlindedBeaconBlockCapella capella_block = 4;
-    BlindedBeaconBlockDeneb deneb_block = 5;
+    BlindedBeaconBlockContentsDeneb deneb_contents = 5;
   }
 }
 
@@ -545,7 +560,22 @@ message BeaconBlockBodyDeneb {
   repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
 }
 
+message SignedBeaconBlockContentsDeneb {
+  SignedBeaconBlockDeneb signed_block = 1;
+  repeated SignedBlobSidecar signed_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
 message SignedBlindedBeaconBlockContentsDeneb {
   SignedBlindedBeaconBlockDeneb signed_blinded_block = 1;
   repeated SignedBlindedBlobSidecar signed_blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
+message BeaconBlockContentsDeneb {
+  BeaconBlockDeneb block = 1;
+  repeated BlobSidecar blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
+message BlindedBeaconBlockContentsDeneb {
+  BlindedBeaconBlockDeneb blinded_block = 1;
+  repeated BlindedBlobSidecar blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }

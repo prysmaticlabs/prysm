@@ -28,5 +28,5 @@ enum Version {
   ALTAIR = 1;
   BELLATRIX = 2;
   CAPELLA = 3;
-  Deneb = 4;
+  DENEB = 4;
 }

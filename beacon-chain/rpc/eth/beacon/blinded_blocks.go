@@ -526,7 +526,7 @@ func (bs *Server) getBlindedBlockDeneb(ctx context.Context, blk interfaces.ReadO
 				}
 				sig := blk.Signature()
 				return &ethpbv2.BlindedBlockResponse{
-					Version: ethpbv2.Version_Deneb,
+					Version: ethpbv2.Version_DENEB,
 					Data: &ethpbv2.SignedBlindedBeaconBlockContainer{
 						Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_DenebBlock{DenebBlock: v2Blk},
 						Signature: sig[:],
@@ -754,7 +754,7 @@ func (bs *Server) getBlindedSSZBlockDeneb(ctx context.Context, blk interfaces.Re
 					return nil, errors.Wrapf(err, "could not marshal block into SSZ")
 				}
 				return &ethpbv2.SSZContainer{
-					Version:             ethpbv2.Version_Deneb,
+					Version:             ethpbv2.Version_DENEB,
 					ExecutionOptimistic: isOptimistic,
 					Data:                sszData,
 				}, nil
@@ -795,7 +795,7 @@ func (bs *Server) getBlindedSSZBlockDeneb(ctx context.Context, blk interfaces.Re
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
 	}
-	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_Deneb, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
+	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_DENEB, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
 }
 
 func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
@@ -850,16 +850,19 @@ func (bs *Server) submitBlindedDenebContents(ctx context.Context, blindedDenebCo
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
-	blobs := migration.BlindedBlobsToV1Alpha1SignedBlobs(blindedDenebContents.SignedBlindedBlobSidecars)
+	blobs := migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(blindedDenebContents.SignedBlindedBlobSidecars)
 	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_Blinded_Deneb{
-			Blinded_Deneb: &eth.SignedBlindedBeaconBlockDenebAndBlobs{
+		Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
+			BlindedDeneb: &eth.SignedBlindedBeaconBlockDenebAndBlobs{
 				Block: blk,
 				Blobs: blobs,
 			},
 		},
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, err.Error())
+		}
 		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
 	}
 	return nil

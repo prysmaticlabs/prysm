@@ -60,8 +60,8 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initSignedBlockFromProtoDeneb(b.Deneb.Block)
 	case *eth.SignedBeaconBlockDeneb:
 		return initSignedBlockFromProtoDeneb(b)
-	case *eth.GenericSignedBeaconBlock_Blinded_Deneb:
-		return initBlindedSignedBlockFromProtoDeneb(b.Blinded_Deneb.Block)
+	case *eth.GenericSignedBeaconBlock_BlindedDeneb:
+		return initBlindedSignedBlockFromProtoDeneb(b.BlindedDeneb.Block)
 	case *eth.SignedBlindedBeaconBlockDeneb:
 		return initBlindedSignedBlockFromProtoDeneb(b)
 	default:
@@ -102,8 +102,8 @@ func NewBeaconBlock(i interface{}) (interfaces.ReadOnlyBeaconBlock, error) {
 		return initBlockFromProtoDeneb(b.Deneb.Block)
 	case *eth.BeaconBlockDeneb:
 		return initBlockFromProtoDeneb(b)
-	case *eth.GenericBeaconBlock_Blinded_Deneb:
-		return initBlindedBlockFromProtoDeneb(b.Blinded_Deneb.Block)
+	case *eth.GenericBeaconBlock_BlindedDeneb:
+		return initBlindedBlockFromProtoDeneb(b.BlindedDeneb.Block)
 	case *eth.BlindedBeaconBlockDeneb:
 		return initBlindedBlockFromProtoDeneb(b)
 	default:
@@ -360,6 +360,8 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 // This is particularly useful for using the values from API calls.
 func BeaconBlockContainerToSignedBeaconBlock(obj *eth.BeaconBlockContainer) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	switch obj.Block.(type) {
+	case *eth.BeaconBlockContainer_DenebBlock:
+		return NewSignedBeaconBlock(obj.GetDenebBlock())
 	case *eth.BeaconBlockContainer_BlindedCapellaBlock:
 		return NewSignedBeaconBlock(obj.GetBlindedCapellaBlock())
 	case *eth.BeaconBlockContainer_CapellaBlock:
