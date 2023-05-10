@@ -158,6 +158,7 @@ func NewSlotTickerWithIntervals(genesisTime time.Time, intervals []time.Duration
 		if offset >= slotDuration {
 			panic("invalid ticker offset")
 		}
+		lastOffset = offset
 	}
 	ticker := &SlotTicker{
 		c:    make(chan primitives.Slot),
