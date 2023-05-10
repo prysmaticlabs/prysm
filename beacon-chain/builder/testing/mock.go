@@ -58,7 +58,7 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.
 
 // GetHeader for mocking.
 func (s *MockBuilderService) GetHeader(_ context.Context, slot primitives.Slot, _ [32]byte, _ [48]byte) (builder.SignedBid, error) {
-	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
+	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch || s.BidCapella != nil {
 		return builder.WrappedSignedBuilderBidCapella(s.BidCapella)
 	}
 	w, err := builder.WrappedSignedBuilderBid(s.Bid)
