@@ -18,7 +18,7 @@ var NoProposerSettingsFound = errors.New("no proposer settings found in bucket")
 
 // UpdateProposerSettingsForPubkey updates the existing settings for an internal representation of the proposers settings file at a particular public key
 func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte, options *validatorServiceConfig.ProposerOption) error {
-	_, span := trace.StartSpan(ctx, "validator.db.UpdateProposerSettingsDefault")
+	_, span := trace.StartSpan(ctx, "validator.db.UpdateProposerSettingsForPubkey")
 	defer span.End()
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
