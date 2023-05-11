@@ -1597,16 +1597,18 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	}
 
 	beaconClient.EXPECT().ValidatorIndex(gomock.Any(), &eth.ValidatorIndexRequest{PublicKey: pubKeys[0][:]}).
+		Times(3).
 		Return(&eth.ValidatorIndexResponse{Index: 2}, nil)
 
 	beaconClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).
+	).Times(3).
 		Return(&eth.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	mockNodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
+		Times(6).
 		Return(&eth.Genesis{GenesisTime: genesisTime}, nil)
 
 	s := &Server{

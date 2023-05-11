@@ -207,7 +207,7 @@ func ProposeExit(
 
 	epoch, err := CurrentEpoch(ctx, nodeClient)
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch current epoch")
+		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
 	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, nodeClient, signer, pubKey, epoch)
 	if err != nil {
