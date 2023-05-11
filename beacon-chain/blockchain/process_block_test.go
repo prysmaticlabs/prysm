@@ -1875,9 +1875,9 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 	r3 := bytesutil.ToBytes32(a3.Data.BeaconBlockRoot)
 	require.Equal(t, false, service.cfg.ForkChoiceStore.HasNode(r3))
 
-	require.NoError(t, service.handleBlockAttestations(ctx, wsb.Block(), st)) // fine to use the same committe as st
+	require.NoError(t, service.handleBlockAttestations(ctx, wsb.Block(), st)) // fine to use the same committee as st
 	require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
-	require.NoError(t, service.handleBlockAttestations(ctx, wsb3.Block(), st3)) // fine to use the same committe as st
+	require.NoError(t, service.handleBlockAttestations(ctx, wsb3.Block(), st3)) // fine to use the same committee as st
 	require.Equal(t, 1, len(service.cfg.AttPool.BlockAttestations()))
 }
 

@@ -222,7 +222,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 
-	// Make sure theres no errors running if its the same data.
+	// Make sure there are no errors running if it is the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -264,7 +264,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 
 	genesisValidatorsRoot = bytesutil.ToBytes32([]byte("badvalidators"))
 
-	// Make sure theres no errors running if its the same data.
+	// Make sure there are no errors running if it is the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},

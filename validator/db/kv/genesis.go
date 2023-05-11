@@ -13,7 +13,7 @@ func (s *Store) SaveGenesisValidatorsRoot(_ context.Context, genValRoot []byte) 
 		bkt := tx.Bucket(genesisInfoBucket)
 		enc := bkt.Get(genesisValidatorsRootKey)
 		if len(enc) != 0 {
-			return fmt.Errorf("cannot overwite existing genesis validators root: %#x", enc)
+			return fmt.Errorf("cannot overwrite existing genesis validators root: %#x", enc)
 		}
 		return bkt.Put(genesisValidatorsRootKey, genValRoot)
 	})
