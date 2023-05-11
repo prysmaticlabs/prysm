@@ -45,6 +45,10 @@ var (
 		Name:  "disable-reorg-late-blocks",
 		Usage: "Disables reorgs of late blocks",
 	}
+	disablePeerScorer = &cli.BoolFlag{
+		Name:  "disable-peer-scorer",
+		Usage: "Disables experimental P2P peer scorer",
+	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
@@ -175,6 +179,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
+	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
