@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -1596,16 +1597,18 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	}
 
 	beaconClient.EXPECT().ValidatorIndex(gomock.Any(), &eth.ValidatorIndexRequest{PublicKey: pubKeys[0][:]}).
+		Times(3).
 		Return(&eth.ValidatorIndexResponse{Index: 2}, nil)
 
 	beaconClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&eth.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	).Times(3).
+		Return(&eth.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	mockNodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
-		Times(2).
+		Times(6).
 		Return(&eth.Genesis{GenesisTime: genesisTime}, nil)
 
 	s := &Server{
@@ -1628,12 +1631,20 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		w      want
 	}{
 		{
-			name:  "Should be okay",
+			name:  "Ok: with epoch",
 			epoch: 30000000,
 			w: want{
 				epoch:          30000000,
 				validatorIndex: 2,
-				signature:      []byte{175, 157, 5, 134, 253, 2, 193, 35, 176, 43, 217, 36, 39, 240, 24, 79, 207, 133, 150, 7, 237, 16, 54, 244, 64, 27, 244, 17, 8, 225, 140, 1, 172, 24, 35, 95, 178, 116, 172, 213, 113, 182, 193, 61, 192, 65, 162, 253, 19, 202, 111, 164, 195, 215, 0, 205, 95, 7, 30, 251, 244, 157, 210, 155, 238, 30, 35, 219, 177, 232, 174, 62, 218, 69, 23, 249, 180, 140, 60, 29, 190, 249, 229, 95, 235, 236, 81, 33, 60, 4, 201, 227, 70, 239, 167, 2},
+				signature:      []uint8{175, 157, 5, 134, 253, 2, 193, 35, 176, 43, 217, 36, 39, 240, 24, 79, 207, 133, 150, 7, 237, 16, 54, 244, 64, 27, 244, 17, 8, 225, 140, 1, 172, 24, 35, 95, 178, 116, 172, 213, 113, 182, 193, 61, 192, 65, 162, 253, 19, 202, 111, 164, 195, 215, 0, 205, 95, 7, 30, 251, 244, 157, 210, 155, 238, 30, 35, 219, 177, 232, 174, 62, 218, 69, 23, 249, 180, 140, 60, 29, 190, 249, 229, 95, 235, 236, 81, 33, 60, 4, 201, 227, 70, 239, 167, 2},
+			},
+		},
+		{
+			name: "Ok: epoch not set",
+			w: want{
+				epoch:          0,
+				validatorIndex: 2,
+				signature:      []uint8{},
 			},
 		},
 	}
@@ -1641,10 +1652,18 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := s.SetVoluntaryExit(ctx, &ethpbservice.SetVoluntaryExitRequest{Pubkey: pubKeys[0][:], Epoch: tt.epoch})
 			require.NoError(t, err)
+			if tt.w.epoch == 0 {
+				tt.w.epoch, err = client.CurrentEpoch(ctx, s.beaconNodeClient)
+				require.NoError(t, err)
+				resp2, err := s.SetVoluntaryExit(ctx, &ethpbservice.SetVoluntaryExitRequest{Pubkey: pubKeys[0][:], Epoch: tt.epoch})
+				require.NoError(t, err)
+				tt.w.signature = resp2.Data.Signature
+			}
 			require.Equal(t, uint64(tt.w.epoch), resp.Data.Message.Epoch)
 			require.Equal(t, tt.w.validatorIndex, resp.Data.Message.ValidatorIndex)
-			t.Log(resp.Data.Signature)
-			require.Equal(t, tt.w.signature, resp.Data.Signature)
+			require.NotEmpty(t, resp.Data.Signature)
+			ok = bytes.Equal(tt.w.signature, resp.Data.Signature)
+			require.Equal(t, true, ok)
 		})
 	}
 }

@@ -710,6 +710,9 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	if err != nil {
 		return nil, err
 	}
+	if req.Epoch == 0 {
+		req.Epoch, err = client.CurrentEpoch(ctx, s.beaconNodeClient)
+	}
 	sve, err := client.CreateSignedVoluntaryExit(
 		ctx,
 		s.beaconNodeValidatorClient,
