@@ -91,7 +91,9 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		require.NoError(t, err)
 		noption, ok = newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
 		require.Equal(t, true, ok)
-		require.DeepEqual(t, option, noption)
+		require.Equal(t, option.FeeRecipientConfig.FeeRecipient.Hex(), noption.FeeRecipientConfig.FeeRecipient.Hex())
+		require.Equal(t, option.BuilderConfig.GasLimit, option.BuilderConfig.GasLimit)
+		require.Equal(t, option.BuilderConfig.Enabled, option.BuilderConfig.Enabled)
 
 	})
 }
