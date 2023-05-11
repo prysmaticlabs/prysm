@@ -26,23 +26,24 @@ const (
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                   1 << 20,      // 1 MiB
-	GossipMaxSizeBellatrix:          10 * 1 << 20, // 10 MiB
-	MaxChunkSize:                    1 << 20,      // 1 MiB
-	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
-	AttestationSubnetCount:          64,
-	AttestationPropagationSlotRange: 32,
-	MaxRequestBlocks:                1 << 10, // 1024
-	TtfbTimeout:                     5 * time.Second,
-	RespTimeout:                     10 * time.Second,
-	MaximumGossipClockDisparity:     500 * time.Millisecond,
-	MessageDomainInvalidSnappy:      [4]byte{00, 00, 00, 00},
-	MessageDomainValidSnappy:        [4]byte{01, 00, 00, 00},
-	ETH2Key:                         "eth2",
-	AttSubnetKey:                    "attnets",
-	SyncCommsSubnetKey:              "syncnets",
-	MinimumPeersInSubnetSearch:      20,
-	ContractDeploymentBlock:         11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
+	GossipMaxSize:                    1 << 20,      // 1 MiB
+	GossipMaxSizeBellatrix:           10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                     1 << 20,      // 1 MiB
+	MaxChunkSizeBellatrix:            10 * 1 << 20, // 10 MiB
+	AttestationSubnetCount:           64,
+	AttestationPropagationSlotRange:  32,
+	MaxRequestBlocks:                 1 << 10, // 1024
+	TtfbTimeout:                      5 * time.Second,
+	RespTimeout:                      10 * time.Second,
+	MaximumGossipClockDisparity:      500 * time.Millisecond,
+	MessageDomainInvalidSnappy:       [4]byte{00, 00, 00, 00},
+	MessageDomainValidSnappy:         [4]byte{01, 00, 00, 00},
+	ETH2Key:                          "eth2",
+	AttSubnetKey:                     "attnets",
+	SyncCommsSubnetKey:               "syncnets",
+	MinimumPeersInSubnetSearch:       20,
+	ContractDeploymentBlock:          11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
+	MinEpochsForBlobsSidecarsRequest: 4096,
 	BootstrapNodes: []string{
 		// Teku team's bootnode
 		"enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
@@ -159,6 +160,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxWithdrawalsPerPayload:         16,
 	MaxBlsToExecutionChanges:         16,
 	MaxValidatorsPerWithdrawalsSweep: 16384,
+	MaxBlobsPerBlock:                 4,
 
 	// BLS domain values.
 	DomainBeaconProposer:              bytesutil.Uint32ToBytes4(0x00000000),
