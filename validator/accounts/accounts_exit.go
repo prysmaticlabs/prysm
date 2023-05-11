@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -32,7 +31,6 @@ type PerformExitCfg struct {
 	RawPubKeys       [][]byte
 	FormattedPubKeys []string
 	OutputDirectory  string
-	Epoch            primitives.Epoch
 }
 
 // ExitPassphrase exported for use in test.
@@ -71,7 +69,6 @@ func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
 		acm.rawPubKeys,
 		acm.formattedPubKeys,
 		acm.exitJSONOutputPath,
-		0, // if 0 we use current epoch
 	}
 	rawExitedKeys, trimmedExitedKeys, err := PerformVoluntaryExit(ctx, cfg)
 	if err != nil {
