@@ -46,6 +46,7 @@ var (
 	finalizedCheckpointKey     = []byte("finalized-checkpoint")
 	powchainDataKey            = []byte("powchain-data")
 	lastValidatedCheckpointKey = []byte("last-validated-checkpoint")
+	blobsBucket                = []byte("blobs")
 
 	// Below keys are used to identify objects are to be fork compatible.
 	// Objects that are only compatible with specific forks should be prefixed with such keys.
@@ -55,6 +56,9 @@ var (
 	capellaKey                 = []byte("capella")
 	capellaBlindKey            = []byte("blind-capella")
 	saveBlindedBeaconBlocksKey = []byte("save-blinded-beacon-blocks")
+	denebKey                   = []byte("deneb")
+	denebBlindKey              = []byte("blind-deneb")
+
 	// block root included in the beacon state used by weak subjectivity initial sync
 	originCheckpointBlockRootKey = []byte("origin-checkpoint-block-root")
 	// block root tracking the progress of backfill, or pointing at genesis if backfill has not been initiated
@@ -70,4 +74,7 @@ var (
 
 	// Migrations
 	migrationsBucket = []byte("migrations")
+
+	// Stores how long to keep the blob sidecars for.
+	epochsForBlobSidecarsRequestBucket = []byte("epochs-for-blob-sidecars-request")
 )
