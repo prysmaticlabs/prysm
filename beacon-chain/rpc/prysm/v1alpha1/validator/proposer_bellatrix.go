@@ -127,7 +127,6 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 			}
 		}
 	}
-
 	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload")
