@@ -346,6 +346,8 @@ func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
 	}, nil
 }
 
+// FromProto converts a proto execution payload type to our builder
+// compatible payload type.
 func FromProto(payload *v1.ExecutionPayload) (ExecutionPayload, error) {
 	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
 	if err != nil {
@@ -373,6 +375,8 @@ func FromProto(payload *v1.ExecutionPayload) (ExecutionPayload, error) {
 	}, nil
 }
 
+// FromProtoCapella converts a proto execution payload type for capella to our
+// builder compatible payload type.
 func FromProtoCapella(payload *v1.ExecutionPayloadCapella) (ExecutionPayloadCapella, error) {
 	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
 	if err != nil {
