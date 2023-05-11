@@ -12,7 +12,7 @@ type Scraper interface {
 
 // An Updater can take the io.Reader created by Scraper and
 // send it to a data sink for consumption. An Updater is used
-// for instance ot send the scraped data for a beacon-node to
+// for instance to send the scraped data for a beacon-node to
 // a remote client-stats endpoint.
 type Updater interface {
 	Update(io.Reader) error

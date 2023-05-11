@@ -16,7 +16,7 @@
 package usb
 
 // Supported returns whether this platform is supported by the USB library or not.
-// The goal of this method is to allow programatically handling platforms that do
+// The goal of this method is to allow programmatically handling platforms that do
 // not support USB and not having to fall back to build constraints.
 func Supported() bool {
 	return false
@@ -43,7 +43,7 @@ func EnumerateHid(vendorID uint16, productID uint16) ([]DeviceInfo, error) {
 	return nil, nil
 }
 
-// Open connects to a previsouly discovered USB device.
+// Open connects to a previously discovered USB device.
 func (info DeviceInfo) Open() (Device, error) {
 	return nil, ErrUnsupportedPlatform
 }

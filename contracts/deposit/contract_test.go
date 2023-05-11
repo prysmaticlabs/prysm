@@ -78,7 +78,7 @@ func TestValidatorRegister_OK(t *testing.T) {
 		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx)
 	}
 
-	assert.Equal(t, uint64(0), merkleTreeIndex[0], "Deposit event total desposit count miss matched")
-	assert.Equal(t, uint64(1), merkleTreeIndex[1], "Deposit event total desposit count miss matched")
-	assert.Equal(t, uint64(2), merkleTreeIndex[2], "Deposit event total desposit count miss matched")
+	assert.Equal(t, uint64(0), merkleTreeIndex[0], "Deposit event total deposit count mismatched")
+	assert.Equal(t, uint64(1), merkleTreeIndex[1], "Deposit event total deposit count mismatched")
+	assert.Equal(t, uint64(2), merkleTreeIndex[2], "Deposit event total deposit count mismatched")
 }
