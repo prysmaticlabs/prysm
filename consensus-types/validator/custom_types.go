@@ -8,7 +8,7 @@ type Uint64 uint64
 // UnmarshalJSON custom unmarshal function for json
 func (u *Uint64) UnmarshalJSON(bs []byte) error {
 	str := string(bs) // Parse plain numbers directly.
-	if len(str) == 0 {
+	if str == "" {
 		*u = Uint64(0)
 		return nil
 	}
