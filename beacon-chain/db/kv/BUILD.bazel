@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "archived_point.go",
         "backup.go",
+        "blob.go",
         "blocks.go",
         "checkpoint.go",
         "deposit_contract.go",
@@ -74,6 +75,7 @@ go_test(
     srcs = [
         "archived_point_test.go",
         "backup_test.go",
+        "blob_test.go",
         "blocks_test.go",
         "checkpoint_test.go",
         "deposit_contract_test.go",
@@ -110,6 +112,7 @@ go_test(
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/testing:go_default_library",
         "//testing/assert:go_default_library",
+        "//testing/assertions:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
