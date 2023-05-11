@@ -70,6 +70,7 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		payload := settings.ToPayload()
 		option, ok := settings.ProposeConfig[bytesutil.ToBytes48(key1)]
 		require.Equal(t, true, ok)
+		fee := option.FeeRecipientConfig.FeeRecipient.Hex()
 		potion, pok := payload.ProposerConfig[key1hex]
 		require.Equal(t, true, pok)
 		require.Equal(t, option.FeeRecipientConfig.FeeRecipient.Hex(), potion.FeeRecipient)
@@ -86,7 +87,7 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		require.DeepEqual(t, newSettings.DefaultConfig, settings.DefaultConfig)
 
 		// if fee recipient is set it will not skip
-		potion.FeeRecipient = "0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"
+		potion.FeeRecipient = fee
 		newSettings, err = ToSettings(payload)
 		require.NoError(t, err)
 		noption, ok = newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
