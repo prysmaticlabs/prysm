@@ -15,7 +15,7 @@ import (
 func TestCleanup(t *testing.T) {
 	ctx := context.Background()
 	pc, err := NewPowchainCollector(ctx)
-	assert.NoError(t, err, "Uxpected error caling NewPowchainCollector")
+	assert.NoError(t, err, "Unexpected error calling NewPowchainCollector")
 	unregistered := pc.unregister()
 	assert.Equal(t, true, unregistered, "PowchainCollector.unregister did not return true (via prometheus.DefaultRegistry)")
 	// PowchainCollector is a prometheus.Collector, so we should be able to register it again
@@ -39,7 +39,7 @@ func TestCleanup(t *testing.T) {
 func TestCancelation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	pc, err := NewPowchainCollector(ctx)
-	assert.NoError(t, err, "Uxpected error caling NewPowchainCollector")
+	assert.NoError(t, err, "Unexpected error calling NewPowchainCollector")
 	ticker := time.NewTicker(10 * time.Second)
 	cancel()
 	select {

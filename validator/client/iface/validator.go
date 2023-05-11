@@ -31,7 +31,7 @@ const (
 	RoleAggregator
 	// RoleSyncCommittee means that the validator should submit a sync committee message.
 	RoleSyncCommittee
-	// RoleSyncCommitteeAggregator means the valiator should aggregate sync committee messages and submit a sync committee contribution.
+	// RoleSyncCommitteeAggregator means the validator should aggregate sync committee messages and submit a sync committee contribution.
 	RoleSyncCommitteeAggregator
 )
 
