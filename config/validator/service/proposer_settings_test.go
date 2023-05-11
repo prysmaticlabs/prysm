@@ -13,7 +13,8 @@ import (
 )
 
 func Test_Proposer_Setting_Cloning(t *testing.T) {
-	key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+	key1hex := "0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a"
+	key1, err := hexutil.Decode(key1hex)
 	require.NoError(t, err)
 	settings := &ProposerSettings{
 		ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption{
@@ -50,5 +51,47 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		require.Equal(t, true, k)
 		require.NotEqual(t, option.FeeRecipientConfig.FeeRecipient.Hex(), coption.FeeRecipientConfig.FeeRecipient.Hex())
 		require.Equal(t, "0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3", coption.FeeRecipientConfig.FeeRecipient.Hex())
+	})
+	t.Run("Happy Path Cloning Builder config", func(t *testing.T) {
+		clone := settings.DefaultConfig.BuilderConfig.Clone()
+		require.DeepEqual(t, settings.DefaultConfig.BuilderConfig, clone)
+		settings.DefaultConfig.BuilderConfig.GasLimit = 1
+		require.NotEqual(t, settings.DefaultConfig.BuilderConfig.GasLimit, clone.GasLimit)
+	})
+
+	t.Run("Happy Path ToBuilderConfig", func(t *testing.T) {
+		clone := settings.DefaultConfig.BuilderConfig.Clone()
+		config := ToBuilderConfig(clone.ToPayload())
+		require.DeepEqual(t, config.Relays, clone.Relays)
+		require.Equal(t, config.Enabled, clone.Enabled)
+		require.Equal(t, config.GasLimit, clone.GasLimit)
+	})
+	t.Run("To Payload and ToSettings", func(t *testing.T) {
+		payload := settings.ToPayload()
+		option, ok := settings.ProposeConfig[bytesutil.ToBytes48(key1)]
+		require.Equal(t, true, ok)
+		potion, pok := payload.ProposerConfig[key1hex]
+		require.Equal(t, true, pok)
+		require.Equal(t, option.FeeRecipientConfig.FeeRecipient.Hex(), potion.FeeRecipient)
+		require.Equal(t, settings.DefaultConfig.FeeRecipientConfig.FeeRecipient.Hex(), payload.DefaultConfig.FeeRecipient)
+		require.Equal(t, settings.DefaultConfig.BuilderConfig.Enabled, payload.DefaultConfig.Builder.Enabled)
+		potion.FeeRecipient = ""
+		newSettings, err := ToSettings(payload)
+		require.NoError(t, err)
+
+		// when converting to settings if a fee recipient is empty string then it will be skipped
+		noption, ok := newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
+		require.Equal(t, false, ok)
+		require.Equal(t, true, noption == nil)
+		require.DeepEqual(t, newSettings.DefaultConfig, settings.DefaultConfig)
+
+		// if fee recipient is set it will not skip
+		potion.FeeRecipient = "0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"
+		newSettings, err = ToSettings(payload)
+		require.NoError(t, err)
+		noption, ok = newSettings.ProposeConfig[bytesutil.ToBytes48(key1)]
+		require.Equal(t, true, ok)
+		require.DeepEqual(t, option, noption)
+
 	})
 }
