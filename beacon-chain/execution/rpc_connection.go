@@ -3,7 +3,6 @@ package execution
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -107,25 +106,9 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 
 // Initializes an RPC connection with authentication headers.
 func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.Endpoint) (*gethRPC.Client, error) {
-	// Need to handle ipc and http
-	var client *gethRPC.Client
-	u, err := url.Parse(endpoint.Url)
+	client, err := network.NewExecutionRPCClient(ctx, endpoint)
 	if err != nil {
 		return nil, err
-	}
-	switch u.Scheme {
-	case "http", "https":
-		client, err = gethRPC.DialOptions(ctx, endpoint.Url, gethRPC.WithHTTPClient(endpoint.HttpClient()))
-		if err != nil {
-			return nil, err
-		}
-	case "", "ipc":
-		client, err = gethRPC.DialIPC(ctx, endpoint.Url)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("no known transport for URL scheme %q", u.Scheme)
 	}
 	if endpoint.Auth.Method != authorization.None {
 		header, err := endpoint.Auth.ToHeaderValue()
