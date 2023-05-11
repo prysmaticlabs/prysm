@@ -38,6 +38,7 @@ func HoleskyConfig() *BeaconChainConfig {
 	cfg.TerminalTotalDifficulty = "0"
 	cfg.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	cfg.EjectionBalance = 28000000000
+	cfg.MaxBlobsPerBlock = 6
 	cfg.InitializeForkSchedule()
 	return cfg
 }
