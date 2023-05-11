@@ -20,7 +20,7 @@ var (
 type FieldTrie struct {
 	*sync.RWMutex
 	reference     *stateutil.Reference
-	fieldLayers   [][]*[32]byte
+	fieldLayers   [][]byte
 	field         types.FieldIndex
 	dataType      types.DataType
 	length        uint64
@@ -162,9 +162,9 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 			numOfElems: f.numOfElems,
 		}
 	}
-	dstFieldTrie := make([][]*[32]byte, len(f.fieldLayers))
+	dstFieldTrie := make([][]byte, len(f.fieldLayers))
 	for i, layer := range f.fieldLayers {
-		dstFieldTrie[i] = make([]*[32]byte, len(layer))
+		dstFieldTrie[i] = make([]byte, len(layer))
 		copy(dstFieldTrie[i], layer)
 	}
 	return &FieldTrie{
@@ -252,6 +252,6 @@ func (f *FieldTrie) Empty() bool {
 // InsertFieldLayer manually inserts a field layer. This method
 // bypasses the normal method of field computation, it is only
 // meant to be used in tests.
-func (f *FieldTrie) InsertFieldLayer(layer [][]*[32]byte) {
+func (f *FieldTrie) InsertFieldLayer(layer [][]byte) {
 	f.fieldLayers = layer
 }

@@ -56,7 +56,7 @@ func optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) 
 	if len(validators) == 0 {
 		return [][32]byte{}, nil
 	}
-	roots := make([][32]byte, 0, len(validators)*validatorFieldRoots)
+	roots := make([]byte, 0, len(validators)*validatorFieldRoots)
 	for i := 0; i < len(validators); i++ {
 		fRoots, err := ValidatorFieldRoots(validators[i])
 		if err != nil {

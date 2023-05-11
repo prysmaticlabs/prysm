@@ -9,7 +9,14 @@ import (
 // hardware configuration, using this routine can lead to a significant
 // performance improvement compared to the default method of hashing
 // lists.
-func VectorizedSha256(inputList [][32]byte, outputList [][32]byte) {
+func VectorizedSha256(inputList []byte, outputList []byte) {
+	err := gohashtree.HashByteSlice(outputList, inputList)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func VectorizedSha256Chunks(inputList [][32]byte, outputList [][32]byte) {
 	err := gohashtree.Hash(outputList, inputList)
 	if err != nil {
 		panic(err)
