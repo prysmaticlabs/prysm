@@ -90,7 +90,7 @@ func PerformVoluntaryExit(
 		if len(cfg.OutputDirectory) > 0 {
 			epoch, err := client.CurrentEpoch(ctx, cfg.NodeClient)
 			if err != nil {
-				log.WithError(err).Errorf("failed to fetch current epoch")
+				log.WithError(err).Errorf("gRPC call to get genesis time failed")
 			}
 			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, key, epoch)
 			if err != nil {

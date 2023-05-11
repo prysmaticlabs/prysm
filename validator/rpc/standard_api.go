@@ -712,7 +712,9 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	}
 	if req.Epoch == 0 {
 		req.Epoch, err = client.CurrentEpoch(ctx, s.beaconNodeClient)
-		return nil, status.Errorf(codes.Internal, "Could not fetch current epoch: %v", err)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "gRPC call to get genesis time failed: %v", err)
+		}
 	}
 	sve, err := client.CreateSignedVoluntaryExit(
 		ctx,
