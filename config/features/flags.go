@@ -47,7 +47,7 @@ var (
 	}
 	disablePeerScorer = &cli.BoolFlag{
 		Name:  "disable-peer-scorer",
-		Usage: "Disables experimental P2P peer scorer",
+		Usage: "(Danger): Disables P2P peer scorer. Do NOT use this in production!",
 	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
