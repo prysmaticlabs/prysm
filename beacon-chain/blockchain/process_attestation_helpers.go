@@ -19,7 +19,7 @@ import (
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
-func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.BeaconState, error) {
+func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
 	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
@@ -39,7 +39,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		targetSlot, err := s.cfg.ForkChoiceStore.Slot([32]byte(c.Root))
 		if err == nil && slots.ToEpoch(targetSlot)+1 >= headEpoch {
 			if s.cfg.ForkChoiceStore.IsCanonical([32]byte(c.Root)) {
-				return s.HeadState(ctx)
+				return s.HeadStateReadOnly(ctx)
 			}
 		}
 	}
