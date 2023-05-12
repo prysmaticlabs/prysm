@@ -50,24 +50,6 @@ var (
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
 			"We recommend against this flag unless you are an advanced user.",
 	}
-	aggregateFirstInterval = &cli.DurationFlag{
-		Name:   "aggregate-first-interval",
-		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
-		Value:  7 * time.Second,
-		Hidden: true,
-	}
-	aggregateSecondInterval = &cli.DurationFlag{
-		Name:   "aggregate-second-interval",
-		Usage:  "(Advanced): Specifies the second interval in which attestations are aggregated in the slot",
-		Value:  9 * time.Second,
-		Hidden: true,
-	}
-	aggregateThirdInterval = &cli.DurationFlag{
-		Name:   "aggregate-third-interval",
-		Usage:  "(Advanced): Specifies the third interval in which attestations are aggregated in the slot",
-		Value:  11 * time.Second,
-		Hidden: true,
-	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
 		Name: "dynamic-key-reload-debounce-interval",
 		Usage: "(Advanced): Specifies the time duration the validator waits to reload new keys if they have " +
@@ -186,9 +168,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
 	prepareAllPayloads,
-	aggregateFirstInterval,
-	aggregateSecondInterval,
-	aggregateThirdInterval,
 	buildBlockParallel,
 }...)...)
 

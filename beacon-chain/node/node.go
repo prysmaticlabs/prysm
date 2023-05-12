@@ -581,8 +581,7 @@ func (b *BeaconNode) fetchBuilderService() *builder.Service {
 
 func (b *BeaconNode) registerAttestationPool() error {
 	s, err := attestations.NewService(b.ctx, &attestations.Config{
-		Pool:                b.attestationPool,
-		InitialSyncComplete: b.initialSyncComplete,
+		Pool: b.attestationPool,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register atts pool service")
