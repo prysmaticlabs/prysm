@@ -320,7 +320,7 @@ func (_ *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestatio
 }
 
 // AttestationTargetState mocks AttestationTargetState method in chain service.
-func (s *ChainService) AttestationTargetState(_ context.Context, _ *ethpb.Checkpoint) (state.BeaconState, error) {
+func (s *ChainService) AttestationTargetState(_ context.Context, _ *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	return s.State, nil
 }
 
