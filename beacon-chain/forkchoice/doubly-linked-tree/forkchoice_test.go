@@ -853,11 +853,11 @@ func TestForkChoiceSlot(t *testing.T) {
 	st, root, err := prepareForkchoiceState(ctx, 3, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
 	require.NoError(t, err)
 	// No Node
-	slot, err := f.Slot(root)
+	_, err = f.Slot(root)
 	require.ErrorIs(t, ErrNilNode, err)
 
 	require.NoError(t, f.InsertNode(ctx, st, root))
-	slot, err = f.Slot(root)
+	slot, err := f.Slot(root)
 	require.NoError(t, err)
 	require.Equal(t, primitives.Slot(3), slot)
 }
