@@ -18,7 +18,6 @@ go_library(
     deps = [
         "//beacon-chain/operations/attestations/kv:go_default_library",
         "//cache/lru:go_default_library",
-        "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//crypto/hash:go_default_library",
