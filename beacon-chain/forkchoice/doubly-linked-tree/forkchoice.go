@@ -247,7 +247,7 @@ func (f *ForkChoice) IsCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) 
 		return false, nil
 	}
 	for _, child := range node.children {
-		if slots.ToEpoch(child.slot) >= cp.Epoch {
+		if child.slot > epochStart {
 			return true, nil
 		}
 	}
