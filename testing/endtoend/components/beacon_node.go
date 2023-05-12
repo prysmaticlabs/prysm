@@ -282,6 +282,9 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if !config.TestFeature || index%2 == 0 {
 		args = append(args, features.E2EBeaconChainFlags...)
 	}
+	if config.UseBuilder {
+		args = append(args, fmt.Sprintf("--%s=%s:%d", flags.MevRelayEndpoint.Name, "http://127.0.0.1", e2e.TestParams.Ports.Eth1ProxyPort+index))
+	}
 	args = append(args, config.BeaconFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe

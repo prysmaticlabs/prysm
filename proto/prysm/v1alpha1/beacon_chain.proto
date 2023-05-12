@@ -740,7 +740,7 @@ message ListValidatorAssignmentsRequest {
     }
     // 48 byte validator public keys to filter assignments for the given epoch.
     repeated bytes public_keys = 3 [(ethereum.eth.ext.ssz_size) = "?,48"];
-    // Validator indicies to filter assignments for the given epoch.
+    // Validator indices to filter assignments for the given epoch.
     repeated uint64 indices = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
 
     // The maximum number of ValidatorAssignments to return in the response.

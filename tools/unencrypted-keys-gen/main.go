@@ -12,7 +12,7 @@ import (
 
 var (
 	numKeys    = flag.Int("num-keys", 0, "Number of validator private/withdrawal keys to generate")
-	startIndex = flag.Uint64("start-index", 0, "Start index for the determinstic keygen algorithm")
+	startIndex = flag.Uint64("start-index", 0, "Start index for the deterministic keygen algorithm")
 	random     = flag.Bool("random", false, "Randomly generate keys")
 	outputJSON = flag.String("output-json", "", "JSON file to write output to")
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
