@@ -235,12 +235,16 @@ func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool
 	if !ok || node == nil {
 		return false, nil
 	}
-	if len(node.children) == 0 {
-		return true, nil
-	}
 	epochStart, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
 		return false, err
+	}
+	if node.slot > epochStart {
+		return false, nil
+	}
+
+	if len(node.children) == 0 {
+		return true, nil
 	}
 	if node.slot == epochStart {
 		return true, nil
