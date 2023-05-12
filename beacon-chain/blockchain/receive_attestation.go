@@ -45,6 +45,7 @@ func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Chec
 	if err := slots.ValidateClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
+	// We acquire the lock here instead than on gettAttPreState because that function gets called from UpdateHead that holds a write lock
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.getAttPreState(ctx, target)
