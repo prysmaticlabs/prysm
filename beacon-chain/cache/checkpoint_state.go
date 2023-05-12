@@ -12,8 +12,8 @@ import (
 
 var (
 	// maxCheckpointStateSize defines the max number of entries check point to state cache can contain.
-	// Choosing 10 to account for multiple forks, this allows 5 forks per epoch boundary with 2 epochs
-	// window to accept attestation based on latest spec.
+	// Choosing 20 to account for multiple forks, this allows for a higher worst case tolerance in the
+	// event there are multiple forked branches in the network.
 	maxCheckpointStateSize = 20
 
 	// Metrics.
