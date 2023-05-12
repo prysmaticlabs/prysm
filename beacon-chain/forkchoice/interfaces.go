@@ -53,6 +53,7 @@ type Getter interface {
 	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
+	IsViableForCheckpoint(*forkchoicetypes.Checkpoint) (bool, error)
 	FinalizedPayloadBlockHash() [32]byte
 	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
@@ -66,6 +67,7 @@ type Getter interface {
 	Tips() ([][32]byte, []primitives.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 	ShouldOverrideFCU() bool
+	Slot([32]byte) (primitives.Slot, error)
 }
 
 // Setter allows to set forkchoice information

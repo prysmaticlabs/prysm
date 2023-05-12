@@ -27,6 +27,9 @@ var (
 	errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
 	// errNotDescendantOfFinalized is returned when a block is not a descendant of the finalized checkpoint
 	ErrNotDescendantOfFinalized = invalidBlock{error: errors.New("not descendant of finalized checkpoint")}
+	// ErrNotCheckpoint is returned when a given checkpoint is not a
+	// checkpoint in any chain known to forkchoice
+	ErrNotCheckpoint = errors.New("not a checkpoint in forkchoice")
 )
 
 // An invalid block is the block that fails state transition based on the core protocol rules.
