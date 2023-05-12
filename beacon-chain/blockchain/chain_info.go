@@ -381,12 +381,12 @@ func (s *Service) InForkchoice(root [32]byte) bool {
 	return s.cfg.ForkChoiceStore.HasNode(root)
 }
 
-// IsCheckpoint returns whether the given checkpoint is a checkpoint in any
+// IsViableForkCheckpoint returns whether the given checkpoint is a checkpoint in any
 // chain known to forkchoice
-func (s *Service) IsCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
+func (s *Service) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.IsCheckpoint(cp)
+	return s.cfg.ForkChoiceStore.IsViableForCheckpoint(cp)
 }
 
 // IsOptimisticForRoot takes the root as argument instead of the current head

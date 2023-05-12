@@ -49,7 +49,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		}
 		return cachedState, nil
 	}
-	ok, err := s.cfg.ForkChoiceStore.IsCheckpoint(&forkchoicetypes.Checkpoint{Root: [32]byte(c.Root), Epoch: c.Epoch})
+	ok, err := s.cfg.ForkChoiceStore.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: [32]byte(c.Root), Epoch: c.Epoch})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check checkpoint condition in forkchoice")
 	}
