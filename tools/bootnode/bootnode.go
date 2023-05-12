@@ -114,7 +114,13 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/p2p", handler.httpHandler)
 
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), mux); err != nil {
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%d", *metricsPort),
+		ReadHeaderTimeout: 3 * time.Second,
+		Handler:           mux,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
 		log.WithError(err).Fatal("Failed to start server")
 	}
 
