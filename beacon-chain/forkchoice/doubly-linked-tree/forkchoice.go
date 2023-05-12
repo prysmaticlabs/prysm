@@ -228,12 +228,15 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primi
 	return n.root, nil
 }
 
-// IsCheckpoint returns whether the root passed is a checkpoint root for any
+// IsViableForCheckpoint returns whether the root passed is a checkpoint root for any
 // known chain in forkchoice.
-func (f *ForkChoice) IsCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
+func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
 	node, ok := f.store.nodeByRoot[cp.Root]
 	if !ok || node == nil {
 		return false, nil
+	}
+	if len(node.children) == 0 {
+		return true, nil
 	}
 	epochStart, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
