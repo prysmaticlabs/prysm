@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -31,6 +32,29 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	}
 	if cachedState != nil && !cachedState.IsNil() {
 		return cachedState, nil
+	}
+	slot, err := slots.EpochStart(c.Epoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute epoch start")
+	}
+	// Try the next slot cache for the early epoch calls
+	cachedState = transition.NextSlotState(c.Root, slot)
+	if cachedState != nil {
+		if cachedState.Slot() == slot {
+			return cachedState, nil
+		}
+		cachedState, err = transition.ProcessSlots(ctx, cachedState, slot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process slots")
+		}
+		return cachedState, nil
+	}
+	ok, err := s.cfg.ForkChoiceStore.IsCheckpoint(&forkchoicetypes.Checkpoint{Root: [32]byte(c.Root), Epoch: c.Epoch})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not check checkpoint condition in forkchoice")
+	}
+	if !ok {
+		return nil, ErrNotCheckpoint
 	}
 
 	baseState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))

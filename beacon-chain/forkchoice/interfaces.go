@@ -53,6 +53,7 @@ type Getter interface {
 	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
+	IsCheckpoint(*forkchoicetypes.Checkpoint) (bool, error)
 	FinalizedPayloadBlockHash() [32]byte
 	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
