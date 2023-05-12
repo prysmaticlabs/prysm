@@ -27,11 +27,20 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	blkWithoutState := util.NewBeaconBlock()
 	blkWithoutState.Block.Slot = 0
 	util.SaveBlock(t, ctx, beaconDB, blkWithoutState)
-	BlkWithOutStateRoot, err := blkWithoutState.Block.HashTreeRoot()
+
+	cp := &ethpb.Checkpoint{}
+	st, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, cp, cp)
 	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 
 	blkWithStateBadAtt := util.NewBeaconBlock()
 	blkWithStateBadAtt.Block.Slot = 1
+	r, err := blkWithStateBadAtt.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp = &ethpb.Checkpoint{Root: r[:]}
+	st, blkRoot, err = prepareForkchoiceState(ctx, blkWithStateBadAtt.Block.Slot, r, [32]byte{}, params.BeaconConfig().ZeroHash, cp, cp)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	util.SaveBlock(t, ctx, beaconDB, blkWithStateBadAtt)
 	BlkWithStateBadAttRoot, err := blkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -42,7 +51,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
 	blkWithValidState := util.NewBeaconBlock()
-	blkWithValidState.Block.Slot = 2
+	blkWithValidState.Block.Slot = 32
 	util.SaveBlock(t, ctx, beaconDB, blkWithValidState)
 
 	blkWithValidStateRoot, err := blkWithValidState.Block.HashTreeRoot()
@@ -57,6 +66,10 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, blkWithValidStateRoot))
 
+	service.head = &head{
+		state: st,
+	}
+
 	tests := []struct {
 		name      string
 		a         *ethpb.Attestation
@@ -66,11 +79,6 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 			name:      "attestation's data slot not aligned with target vote",
 			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}),
 			wantedErr: "slot 32 does not match target epoch 0",
-		},
-		{
-			name:      "no pre state for attestations's target block",
-			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
-			wantedErr: "could not get pre state for epoch 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
@@ -160,6 +168,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)}))
 
+	st, root, err := prepareForkchoiceState(ctx, 1, [32]byte(cp1.Root), [32]byte{}, [32]byte{'R'}, cp1, cp1)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, root))
 	s1, err := service.getAttPreState(ctx, cp1)
 	require.NoError(t, err)
 	assert.Equal(t, 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot(), "Unexpected state slot")
@@ -167,8 +178,17 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}))
+
 	s2, err := service.getAttPreState(ctx, cp2)
+	require.ErrorIs(t, ErrNotCheckpoint, err)
+
+	st, root, err = prepareForkchoiceState(ctx, 33, [32]byte(cp2.Root), [32]byte(cp1.Root), [32]byte{'R'}, cp2, cp2)
 	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, root))
+
+	s2, err = service.getAttPreState(ctx, cp2)
+	require.NoError(t, err)
+
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
 
 	s1, err = service.getAttPreState(ctx, cp1)
@@ -187,6 +207,10 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}))
+	st, root, err = prepareForkchoiceState(ctx, 31, [32]byte(cp3.Root), [32]byte(cp2.Root), [32]byte{'P'}, cp2, cp2)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, root))
+
 	s3, err := service.getAttPreState(ctx, cp3)
 	require.NoError(t, err)
 	assert.Equal(t, s.Slot(), s3.Slot(), "Unexpected state slot")
@@ -195,11 +219,18 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 func TestStore_UpdateCheckpointState(t *testing.T) {
 	service, tr := minimalTestService(t)
 	ctx := tr.ctx
+	baseState, _ := util.DeterministicGenesisState(t, 1)
 
 	epoch := primitives.Epoch(1)
-	baseState, _ := util.DeterministicGenesisState(t, 1)
-	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("hi"), fieldparams.RootLength)}
+	blk := util.NewBeaconBlock()
+	r1, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: r1[:]}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
+	st, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r1, [32]byte{}, params.BeaconConfig().ZeroHash, checkpoint, checkpoint)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, r1))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(checkpoint.Epoch)), returned.Slot(), "Incorrectly returned base state")
@@ -209,8 +240,16 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	assert.Equal(t, returned.Slot(), cached.Slot(), "State should have been cached")
 
 	epoch = 2
-	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: bytesutil.PadTo([]byte("bye"), fieldparams.RootLength)}
+	blk = util.NewBeaconBlock()
+	blk.Block.Slot = 64
+	r2, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch, Root: r2[:]}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)))
+	st, blkRoot, err = prepareForkchoiceState(ctx, blk.Block.Slot, r2, r1, params.BeaconConfig().ZeroHash, newCheckpoint, newCheckpoint)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, r2))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	require.NoError(t, err)
 	s, err := slots.EpochStart(newCheckpoint.Epoch)
