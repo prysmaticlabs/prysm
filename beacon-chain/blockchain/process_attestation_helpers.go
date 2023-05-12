@@ -33,11 +33,23 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if cachedState != nil && !cachedState.IsNil() {
 		return cachedState, nil
 	}
+	// If the attestation is recent and canonical we can use the head state to compute the shuffling.
+	headEpoch := slots.ToEpoch(s.HeadSlot())
+	if c.Epoch == headEpoch {
+		targetSlot, err := s.cfg.ForkChoiceStore.Slot([32]byte(c.Root))
+		if err == nil && slots.ToEpoch(targetSlot)+1 >= headEpoch {
+			if s.cfg.ForkChoiceStore.IsCanonical([32]byte(c.Root)) {
+				return s.HeadState(ctx)
+			}
+		}
+	}
+
+	// Try the next slot cache for the early epoch calls, this should mostly have been covered already
+	// but is cheap
 	slot, err := slots.EpochStart(c.Epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute epoch start")
 	}
-	// Try the next slot cache for the early epoch calls
 	cachedState = transition.NextSlotState(c.Root, slot)
 	if cachedState != nil {
 		if cachedState.Slot() == slot {
@@ -49,6 +61,8 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		}
 		return cachedState, nil
 	}
+
+	// Do not process attestations for old non viable checkpoints otherwise
 	ok, err := s.cfg.ForkChoiceStore.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: [32]byte(c.Root), Epoch: c.Epoch})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check checkpoint condition in forkchoice")
@@ -57,6 +71,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		return nil, ErrNotCheckpoint
 	}
 
+	// Fallback to state regeneration.
 	baseState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)

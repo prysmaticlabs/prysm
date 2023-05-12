@@ -623,3 +623,12 @@ func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte)
 	f.store.committeeWeight /= uint64(params.BeaconConfig().SlotsPerEpoch)
 	return nil
 }
+
+// Slot returns the slot of the given root if it's known to forkchoice
+func (f *ForkChoice) Slot(root [32]byte) (primitives.Slot, error) {
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return 0, ErrNilNode
+	}
+	return n.slot, nil
+}
