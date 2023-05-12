@@ -67,6 +67,7 @@ type Getter interface {
 	Tips() ([][32]byte, []primitives.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 	ShouldOverrideFCU() bool
+	Slot([32]byte) (primitives.Slot, error)
 }
 
 // Setter allows to set forkchoice information
