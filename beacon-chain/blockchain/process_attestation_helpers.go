@@ -51,7 +51,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		return nil, errors.Wrap(err, "could not compute epoch start")
 	}
 	cachedState = transition.NextSlotState(c.Root, slot)
-	if cachedState != nil {
+	if cachedState != nil && !cachedState.IsNil() {
 		if cachedState.Slot() == slot {
 			return cachedState, nil
 		}
