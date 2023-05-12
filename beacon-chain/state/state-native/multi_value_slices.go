@@ -40,27 +40,3 @@ func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 		Items: items,
 	}
 }
-
-type MultiValueBalances = multi_value_slice.Slice[uint64, *BeaconState]
-
-func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
-	items := make([]*multi_value_slice.MultiValue[uint64], len(balances))
-	for i, v := range balances {
-		items[i] = &multi_value_slice.MultiValue[uint64]{Shared: v, Individual: nil}
-	}
-	return &MultiValueBalances{
-		Items: items,
-	}
-}
-
-type MultiValueInactivityScores = multi_value_slice.Slice[uint64, *BeaconState]
-
-func NewMultiValueInactivityScores(scores []uint64) *MultiValueInactivityScores {
-	items := make([]*multi_value_slice.MultiValue[uint64], len(scores))
-	for i, v := range scores {
-		items[i] = &multi_value_slice.MultiValue[uint64]{Shared: v, Individual: nil}
-	}
-	return &MultiValueInactivityScores{
-		Items: items,
-	}
-}

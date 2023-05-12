@@ -54,7 +54,7 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 		}
 		length *= comLength
 	}
-	if field == types.RandaoMixes || field == types.BlockRoots || field == types.StateRoots || field == types.Balances || field == types.InactivityScores {
+	if field == types.RandaoMixes || field == types.BlockRoots || field == types.StateRoots {
 		l := uint64(elements.(multi_value_slice.MultiValueSlice).Len())
 		if l > length {
 			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), l, length)
@@ -84,7 +84,7 @@ func fieldConverters(state *BeaconState, field types.FieldIndex, indices []uint6
 	case types.PreviousEpochAttestations, types.CurrentEpochAttestations:
 		return convertAttestations(indices, elements, convertAll)
 	case types.Balances:
-		return convertBalances(state, indices, elements, convertAll)
+		return convertBalances(indices, elements, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}
@@ -147,12 +147,12 @@ func convertAttestations(indices []uint64, elements interface{}, convertAll bool
 	return handlePendingAttestationSlice(val, indices, convertAll)
 }
 
-func convertBalances(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	val, ok := elements.(*MultiValueBalances)
+func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+	val, ok := elements.([]uint64)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %T but got %T", &MultiValueBalances{}, elements)
+		return nil, errors.Errorf("Wanted type of %T but got %T", []uint64{}, elements)
 	}
-	return handleBalanceSlice(val.Value(state), indices, convertAll)
+	return handleBalanceSlice(val, indices, convertAll)
 }
 
 // handleByteArrays computes and returns byte arrays in a slice of root format.

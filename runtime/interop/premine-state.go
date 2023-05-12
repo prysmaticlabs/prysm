@@ -105,45 +105,22 @@ func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 
 	switch s.Version {
 	case version.Phase0:
-		e, err = state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-			BlockRoots:  bRoots,
-			StateRoots:  sRoots,
-			RandaoMixes: mixes,
-			Balances:    []uint64{},
-		})
+		e, err = state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{BlockRoots: bRoots, StateRoots: sRoots, RandaoMixes: mixes})
 		if err != nil {
 			return nil, err
 		}
 	case version.Altair:
-		e, err = state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
-			BlockRoots:       bRoots,
-			StateRoots:       sRoots,
-			RandaoMixes:      mixes,
-			Balances:         []uint64{},
-			InactivityScores: []uint64{},
-		})
+		e, err = state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{BlockRoots: bRoots, StateRoots: sRoots, RandaoMixes: mixes})
 		if err != nil {
 			return nil, err
 		}
 	case version.Bellatrix:
-		e, err = state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
-			BlockRoots:       bRoots,
-			StateRoots:       sRoots,
-			RandaoMixes:      mixes,
-			Balances:         []uint64{},
-			InactivityScores: []uint64{},
-		})
+		e, err = state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{BlockRoots: bRoots, StateRoots: sRoots, RandaoMixes: mixes})
 		if err != nil {
 			return nil, err
 		}
 	case version.Capella:
-		e, err = state_native.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{
-			BlockRoots:       bRoots,
-			StateRoots:       sRoots,
-			RandaoMixes:      mixes,
-			Balances:         []uint64{},
-			InactivityScores: []uint64{},
-		})
+		e, err = state_native.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{BlockRoots: bRoots, StateRoots: sRoots, RandaoMixes: mixes})
 		if err != nil {
 			return nil, err
 		}
