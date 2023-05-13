@@ -20,19 +20,6 @@ import (
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
-	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
-	// allowing us to behave smarter in terms of how this function is used concurrently.
-	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
-	lock := async.NewMultilock(string(c.Root) + epochKey)
-	lock.Lock()
-	defer lock.Unlock()
-	cachedState, err := s.checkpointStateCache.StateByCheckpoint(c)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get cached checkpoint state")
-	}
-	if cachedState != nil && !cachedState.IsNil() {
-		return cachedState, nil
-	}
 	// If the attestation is recent and canonical we can use the head state to compute the shuffling.
 	headEpoch := slots.ToEpoch(s.HeadSlot())
 	if c.Epoch == headEpoch {
@@ -50,7 +37,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute epoch start")
 	}
-	cachedState = transition.NextSlotState(c.Root, slot)
+	cachedState := transition.NextSlotState(c.Root, slot)
 	if cachedState != nil && !cachedState.IsNil() {
 		if cachedState.Slot() == slot {
 			return cachedState, nil
@@ -69,6 +56,20 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	}
 	if !ok {
 		return nil, ErrNotCheckpoint
+	}
+
+	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
+	// allowing us to behave smarter in terms of how this function is used concurrently.
+	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
+	lock := async.NewMultilock(string(c.Root) + epochKey)
+	lock.Lock()
+	defer lock.Unlock()
+	cachedState, err = s.checkpointStateCache.StateByCheckpoint(c)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get cached checkpoint state")
+	}
+	if cachedState != nil && !cachedState.IsNil() {
+		return cachedState, nil
 	}
 
 	// Fallback to state regeneration.
