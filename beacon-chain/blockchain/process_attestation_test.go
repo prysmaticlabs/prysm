@@ -328,3 +328,22 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 	assert.NoError(t, service.verifyBeaconBlock(ctx, d), "Did not receive the wanted error")
 }
+
+func TestGetAttPreState_HeadState(t *testing.T) {
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+	baseState, _ := util.DeterministicGenesisState(t, 1)
+
+	epoch := primitives.Epoch(1)
+	blk := util.NewBeaconBlock()
+	r1, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: r1[:]}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
+	require.NoError(t, transition.UpdateNextSlotCache(ctx, checkpoint.Root, baseState))
+	_, err = service.getAttPreState(ctx, checkpoint)
+	require.NoError(t, err)
+	st, err := service.checkpointStateCache.StateByCheckpoint(checkpoint)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch, st.Slot())
+}
