@@ -20,6 +20,16 @@ import (
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
+	// If the attestation is recent and canonical we can use the head state to compute the shuffling.
+	headEpoch := slots.ToEpoch(s.HeadSlot())
+	if c.Epoch == headEpoch {
+		targetSlot, err := s.cfg.ForkChoiceStore.Slot([32]byte(c.Root))
+		if err == nil && slots.ToEpoch(targetSlot)+1 >= headEpoch {
+			if s.cfg.ForkChoiceStore.IsCanonical([32]byte(c.Root)) {
+				return s.HeadStateReadOnly(ctx)
+			}
+		}
+	}
 	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
 	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
@@ -33,17 +43,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if cachedState != nil && !cachedState.IsNil() {
 		return cachedState, nil
 	}
-	// If the attestation is recent and canonical we can use the head state to compute the shuffling.
-	headEpoch := slots.ToEpoch(s.HeadSlot())
-	if c.Epoch == headEpoch {
-		targetSlot, err := s.cfg.ForkChoiceStore.Slot([32]byte(c.Root))
-		if err == nil && slots.ToEpoch(targetSlot)+1 >= headEpoch {
-			if s.cfg.ForkChoiceStore.IsCanonical([32]byte(c.Root)) {
-				return s.HeadStateReadOnly(ctx)
-			}
-		}
-	}
-
 	// Try the next slot cache for the early epoch calls, this should mostly have been covered already
 	// but is cheap
 	slot, err := slots.EpochStart(c.Epoch)
@@ -52,12 +51,14 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	}
 	cachedState = transition.NextSlotState(c.Root, slot)
 	if cachedState != nil && !cachedState.IsNil() {
-		if cachedState.Slot() == slot {
-			return cachedState, nil
+		if cachedState.Slot() != slot {
+			cachedState, err = transition.ProcessSlots(ctx, cachedState, slot)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process slots")
+			}
 		}
-		cachedState, err = transition.ProcessSlots(ctx, cachedState, slot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process slots")
+		if err := s.checkpointStateCache.AddCheckpointState(c, cachedState); err != nil {
+			return nil, errors.Wrap(err, "could not save checkpoint state to cache")
 		}
 		return cachedState, nil
 	}
