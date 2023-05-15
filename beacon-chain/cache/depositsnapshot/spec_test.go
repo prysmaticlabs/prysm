@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -265,19 +266,22 @@ func TestDepositCases(t *testing.T) {
 	}
 }
 
+type Test struct {
+	DepositDataRoot [32]byte
+}
+
 func TestRootEquivalence(t *testing.T) {
+	var err error
 	tree := NewDepositTree()
 	testCases, err := readTestCases()
 	require.NoError(t, err)
-	transformed := make([][]byte, 0)
-	depositCount := uint64(0)
-	for _, c := range testCases[:128] {
+
+	transformed := make([][]byte, len(testCases[:128]))
+	for i, c := range testCases[:128] {
 		err = tree.pushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
-		transformed = append(transformed, c.DepositDataRoot[:])
-		depositCount++
+		transformed[i] = bytesutil.SafeCopyBytes(c.DepositDataRoot[:])
 	}
-	tree.depositCount = depositCount
 	originalRoot, err := tree.HashTreeRoot()
 	require.NoError(t, err)
 
