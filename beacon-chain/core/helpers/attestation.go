@@ -183,11 +183,11 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 		currentSlot,
 	)
 	if attTime.Before(lowerBounds) {
-		attReceivedTooEarlyCount.Inc()
+		attReceivedTooLateCount.Inc()
 		return attError
 	}
 	if attTime.After(upperBounds) {
-		attReceivedTooLateCount.Inc()
+		attReceivedTooEarlyCount.Inc()
 		return attError
 	}
 	return nil

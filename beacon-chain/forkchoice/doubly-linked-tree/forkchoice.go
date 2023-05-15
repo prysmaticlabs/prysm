@@ -228,6 +228,39 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primi
 	return n.root, nil
 }
 
+// IsViableForCheckpoint returns whether the root passed is a checkpoint root for any
+// known chain in forkchoice.
+func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
+	node, ok := f.store.nodeByRoot[cp.Root]
+	if !ok || node == nil {
+		return false, nil
+	}
+	epochStart, err := slots.EpochStart(cp.Epoch)
+	if err != nil {
+		return false, err
+	}
+	if node.slot > epochStart {
+		return false, nil
+	}
+
+	if len(node.children) == 0 {
+		return true, nil
+	}
+	if node.slot == epochStart {
+		return true, nil
+	}
+	nodeEpoch := slots.ToEpoch(node.slot)
+	if nodeEpoch >= cp.Epoch {
+		return false, nil
+	}
+	for _, child := range node.children {
+		if child.slot > epochStart {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // updateBalances updates the balances that directly voted for each block taking into account the
 // validators' latest votes.
 func (f *ForkChoice) updateBalances() error {
@@ -593,4 +626,13 @@ func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte)
 	}
 	f.store.committeeWeight /= uint64(params.BeaconConfig().SlotsPerEpoch)
 	return nil
+}
+
+// Slot returns the slot of the given root if it's known to forkchoice
+func (f *ForkChoice) Slot(root [32]byte) (primitives.Slot, error) {
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return 0, ErrNilNode
+	}
+	return n.slot, nil
 }

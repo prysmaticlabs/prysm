@@ -754,3 +754,110 @@ func TestForkChoice_UnrealizedJustifiedPayloadBlockHash(t *testing.T) {
 	got := f.UnrealizedJustifiedPayloadBlockHash()
 	require.Equal(t, [32]byte{'A'}, got)
 }
+
+func TestForkChoiceIsViableForCheckpoint(t *testing.T) {
+	f := setup(0, 0)
+	ctx := context.Background()
+
+	st, root, err := prepareForkchoiceState(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+	require.NoError(t, err)
+	// No Node
+	viable, err := f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	// No Children
+	require.NoError(t, f.InsertNode(ctx, st, root))
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root, Epoch: 0})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root, Epoch: 2})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	st, broot, err := prepareForkchoiceState(ctx, 1, [32]byte{'b'}, root, [32]byte{'B'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, broot))
+
+	// Epoch start
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	// No Children but impossible checkpoint
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	st, croot, err := prepareForkchoiceState(ctx, 2, [32]byte{'c'}, broot, [32]byte{'C'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, croot))
+
+	// Children in same epoch
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	st, droot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{'d'}, broot, [32]byte{'D'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, droot))
+
+	// Children in next epoch but boundary
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	// Boundary block
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: droot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: droot, Epoch: 0})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	// Children in next epoch
+	st, eroot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'e'}, broot, [32]byte{'E'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, eroot))
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: broot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+}
+
+func TestForkChoiceSlot(t *testing.T) {
+	f := setup(0, 0)
+	ctx := context.Background()
+	st, root, err := prepareForkchoiceState(ctx, 3, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+	require.NoError(t, err)
+	// No Node
+	_, err = f.Slot(root)
+	require.ErrorIs(t, ErrNilNode, err)
+
+	require.NoError(t, f.InsertNode(ctx, st, root))
+	slot, err := f.Slot(root)
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(3), slot)
+}
