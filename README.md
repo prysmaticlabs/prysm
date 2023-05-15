@@ -4,14 +4,14 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/prysmaticlabs/prysm)](https://goreportcard.com/report/github.com/prysmaticlabs/prysm)
 [![Consensus_Spec_Version 1.3.0](https://img.shields.io/badge/Consensus%20Spec%20Version-v1.3.0-blue.svg)](https://github.com/ethereum/consensus-specs/tree/v1.3.0)
 [![Execution_API_Version 1.0.0-beta.2](https://img.shields.io/badge/Execution%20API%20Version-v1.0.0.beta.2-blue.svg)](https://github.com/ethereum/execution-apis/tree/v1.0.0-beta.2/src/engine)
-[![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/CTYGPUJ)
+[![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/prysmaticlabs)
 [![GitPOAP Badge](https://public-api.gitpoap.io/v1/repo/prysmaticlabs/prysm/badge)](https://www.gitpoap.io/gh/prysmaticlabs/prysm)
 
 This is the core repository for Prysm, a [Golang](https://golang.org/) implementation of the [Ethereum Consensus](https://ethereum.org/en/eth2/) specification, developed by [Prysmatic Labs](https://prysmaticlabs.com). See the [Changelog](https://github.com/prysmaticlabs/prysm/releases) for details of the latest releases and upcoming breaking changes.
 
 ### Getting Started
 
-A detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://docs.prylabs.network). If you still have questions, feel free to stop by our [Discord](https://discord.gg/CTYGPUJ).
+A detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://docs.prylabs.network). If you still have questions, feel free to stop by our [Discord](https://discord.gg/prysmaticlabs).
 
 ### Staking on Mainnet
 
