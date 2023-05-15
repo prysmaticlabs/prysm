@@ -17,6 +17,7 @@ type NetworkConfig struct {
 	BlobsidecarSubnetCount           uint64           `yaml:"BLOBSIDECAR_SUBNET_COUNT"`              // BlobsidecarSubnetCount is the number of blobsidecar subnets used in the gossipsub protocol.
 	AttestationPropagationSlotRange  primitives.Slot  `yaml:"ATTESTATION_PROPAGATION_SLOT_RANGE"`    // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
 	MaxRequestBlocks                 uint64           `yaml:"MAX_REQUEST_BLOCKS"`                    // MaxRequestBlocks is the maximum number of blocks in a single request.
+	MaxRequestBlocksDeneb            uint64           `yaml:"MAX_REQUEST_BLOCKS_DENEB"`              // MaxRequestBlocksDeneb is the maximum number of blocks in a single request after the Deneb fork.
 	TtfbTimeout                      time.Duration    `yaml:"TTFB_TIMEOUT"`                          // TtfbTimeout is the maximum time to wait for first byte of request response (time-to-first-byte).
 	RespTimeout                      time.Duration    `yaml:"RESP_TIMEOUT"`                          // RespTimeout is the maximum time for complete response transfer.
 	MaximumGossipClockDisparity      time.Duration    `yaml:"MAXIMUM_GOSSIP_CLOCK_DISPARITY"`        // MaximumGossipClockDisparity is the maximum milliseconds of clock disparity assumed between honest nodes.
@@ -35,6 +36,9 @@ type NetworkConfig struct {
 	// Chain Network Config
 	ContractDeploymentBlock uint64   // ContractDeploymentBlock is the eth1 block in which the deposit contract is deployed.
 	BootstrapNodes          []string // BootstrapNodes are the addresses of the bootnodes.
+
+	// Blobs config
+	MaxRequestBlobsSidecars uint64 `yaml:"MAX_REQUEST_BLOBS_SIDECARS"` // MaxRequestBlobsSidecars is the maximum number of blobs sidecars in a single request.
 }
 
 var networkConfig = mainnetNetworkConfig
