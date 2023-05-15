@@ -742,6 +742,7 @@ func (b *BeaconNode) registerSlasherService() error {
 		SlashingPoolInserter:    b.slashingsPool,
 		SyncChecker:             syncService,
 		HeadStateFetcher:        chainService,
+		ClockWaiter:             b.clockWaiter,
 	})
 	if err != nil {
 		return err
