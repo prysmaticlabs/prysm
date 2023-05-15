@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -221,7 +222,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 
-	// Make sure theres no errors running if its the same data.
+	// Make sure there are no errors running if it is the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -263,7 +264,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 
 	genesisValidatorsRoot = bytesutil.ToBytes32([]byte("badvalidators"))
 
-	// Make sure theres no errors running if its the same data.
+	// Make sure there are no errors running if it is the same data.
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -1959,7 +1960,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.Equal(t, len(signedRegisterValidatorRequests), len(v.signedValidatorRegistrations))
 			}
 			deadline := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-			if err := v.PushProposerSettings(ctx, km, deadline); tt.err != "" {
+			if err := v.PushProposerSettings(ctx, km, 0, deadline); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 			if len(tt.logMessages) > 0 {
@@ -2081,7 +2082,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 			FeeRecipient:   feeRecipient2[:],
 		},
 	}
-	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys)
+	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 0)
 	require.NoError(t, err)
 	actual, err := v.buildPrepProposerReqs(ctx, filteredKeys)
 	require.NoError(t, err)
@@ -2131,11 +2132,21 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 
 	client.EXPECT().MultipleValidatorStatus(
 		gomock.Any(),
-		gomock.Any()).Return(
-		&ethpb.MultipleValidatorStatusResponse{
-			Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}},
-			PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey4[:]},
-		}, nil)
+		gomock.Any()).DoAndReturn(func(ctx context.Context, val *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+		resp := &ethpb.MultipleValidatorStatusResponse{}
+		for _, k := range val.PublicKeys {
+			if bytes.Equal(k, pubkey1[:]) || bytes.Equal(k, pubkey2[:]) ||
+				bytes.Equal(k, pubkey4[:]) {
+				bytesutil.SafeCopyBytes(k)
+				resp.PublicKeys = append(resp.PublicKeys, bytesutil.SafeCopyBytes(k))
+				resp.Statuses = append(resp.Statuses, &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE})
+				continue
+			}
+			resp.PublicKeys = append(resp.PublicKeys, bytesutil.SafeCopyBytes(k))
+			resp.Statuses = append(resp.Statuses, &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_UNKNOWN_STATUS})
+		}
+		return resp, nil
+	})
 
 	v := validator{
 		validatorClient: client,
@@ -2185,7 +2196,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 			FeeRecipient:   defaultFeeRecipient[:],
 		},
 	}
-	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys)
+	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 0)
 	require.NoError(t, err)
 	actual, err := v.buildPrepProposerReqs(ctx, filteredKeys)
 	require.NoError(t, err)

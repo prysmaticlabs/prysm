@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -28,7 +26,7 @@ const reorgLateBlockCountAttestations = 2 * time.Second
 // AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
 // root of an attestation's target checkpoint.
 type AttestationStateFetcher interface {
-	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error)
+	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error)
 }
 
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
@@ -39,7 +37,7 @@ type AttestationReceiver interface {
 }
 
 // AttestationTargetState returns the pre state of attestation.
-func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error) {
+func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	ss, err := slots.EpochStart(target.Epoch)
 	if err != nil {
 		return nil, err
@@ -47,6 +45,9 @@ func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Chec
 	if err := slots.ValidateClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
+	// We acquire the lock here instead than on gettAttPreState because that function gets called from UpdateHead that holds a write lock
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.getAttPreState(ctx, target)
 }
 
@@ -67,20 +68,13 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 }
 
 // This routine processes fork choice attestations from the pool to account for validator votes and fork choice.
-func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
-	// Wait for state to be initialized.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := stateFeed.Subscribe(stateChannel)
+func (s *Service) spawnProcessAttestationsRoutine() {
 	go func() {
-		select {
-		case <-s.ctx.Done():
-			stateSub.Unsubscribe()
+		_, err := s.clockWaiter.WaitForClock(s.ctx)
+		if err != nil {
+			log.WithError(err).Error("spawnProcessAttestationsRoutine failed to receive genesis data")
 			return
-		case <-stateChannel:
-			stateSub.Unsubscribe()
-			break
 		}
-
 		if s.genesisTime.IsZero() {
 			log.Warn("ProcessAttestations routine waiting for genesis time")
 			for s.genesisTime.IsZero() {

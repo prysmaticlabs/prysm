@@ -69,7 +69,7 @@ func validatorsAreActive(ec *types.EvaluationContext, conns ...*grpc.ClientConn)
 	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount
 	receivedCount := uint64(len(validators.ValidatorList))
 	if expectedCount != receivedCount {
-		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
+		return fmt.Errorf("expected validator count to be %d, received %d", expectedCount, receivedCount)
 	}
 
 	effBalanceLowCount := 0

@@ -243,7 +243,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 	for {
 		select {
 		case <-dctx.Done():
-			// deadline ensures that the test eventually exits when beacon node fails to sync in a resonable timeframe
+			// deadline ensures that the test eventually exits when beacon node fails to sync in a reasonable timeframe
 			elapsed := time.Since(start)
 			return fmt.Errorf("deadline exceeded after %s waiting for known good block to appear in checkpoint-synced node", elapsed)
 		default:

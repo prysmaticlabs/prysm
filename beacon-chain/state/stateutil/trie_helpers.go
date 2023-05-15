@@ -237,7 +237,7 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 	return root, layers, nil
 }
 
-// AddInMixin describes a method from which a lenth mixin is added to the
+// AddInMixin describes a method from which a length mixin is added to the
 // provided root.
 func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 	rootBuf := new(bytes.Buffer)

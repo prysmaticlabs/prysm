@@ -118,10 +118,14 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
-	enableEIP4881 = &cli.BoolFlag{
+	buildBlockParallel = &cli.BoolFlag{
+		Name:  "build-block-parallel",
+		Usage: "Builds a beacon block in parallel for consensus and execution. It results in faster block construction time",
+	}
+  enableEIP4881 = &cli.BoolFlag{
 		Name:  "enable-eip-4881",
 		Usage: "Enables the deposit tree specified in EIP4881",
-	}
+  }
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -168,7 +172,8 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
 	prepareAllPayloads,
-	enableEIP4881,
+	buildBlockParallel,
+  enableEIP4881,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

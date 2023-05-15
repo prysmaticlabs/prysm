@@ -22,12 +22,11 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
 	testp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
@@ -169,8 +168,10 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
+	cs := startup.NewClockSynchronizer()
 	cfg := &Config{
-		MaxPeers: 30,
+		MaxPeers:    30,
+		ClockWaiter: cs,
 	}
 	port := 6000
 	var staticPeers []string
@@ -204,16 +205,8 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		<-exitRoutine
 	}()
 	time.Sleep(50 * time.Millisecond)
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Initialized,
-			Data: &statefeed.InitializedData{
-				StartTime:             time.Now(),
-				GenesisValidatorsRoot: make([]byte, 32),
-			},
-		})
-	}
+	var vr [32]byte
+	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), vr)))
 	time.Sleep(4 * time.Second)
 	ps := s.host.Network().Peers()
 	assert.Equal(t, 5, len(ps), "Not all peers added to peerstore")
