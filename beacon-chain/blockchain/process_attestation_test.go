@@ -180,7 +180,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}))
 
 	s2, err := service.getAttPreState(ctx, cp2)
-	require.ErrorIs(t, ErrNotCheckpoint, err)
+	require.ErrorContains(t, "epoch 2 root 0x4200000000000000000000000000000000000000000000000000000000000000: not a checkpoint in forkchoice", err)
 
 	st, root, err = prepareForkchoiceState(ctx, 33, [32]byte(cp2.Root), [32]byte(cp1.Root), [32]byte{'R'}, cp2, cp2)
 	require.NoError(t, err)
@@ -327,4 +327,23 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
 
 	assert.NoError(t, service.verifyBeaconBlock(ctx, d), "Did not receive the wanted error")
+}
+
+func TestGetAttPreState_HeadState(t *testing.T) {
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+	baseState, _ := util.DeterministicGenesisState(t, 1)
+
+	epoch := primitives.Epoch(1)
+	blk := util.NewBeaconBlock()
+	r1, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	checkpoint := &ethpb.Checkpoint{Epoch: epoch, Root: r1[:]}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)))
+	require.NoError(t, transition.UpdateNextSlotCache(ctx, checkpoint.Root, baseState))
+	_, err = service.getAttPreState(ctx, checkpoint)
+	require.NoError(t, err)
+	st, err := service.checkpointStateCache.StateByCheckpoint(checkpoint)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch, st.Slot())
 }
