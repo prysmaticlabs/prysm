@@ -219,10 +219,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(buildBlockParallel)
 		cfg.BuildBlockParallel = true
 	}
-  if ctx.IsSet(enableEIP4881.Name) {
-	  logEnabled(enableEIP4881)
+	if ctx.IsSet(enableEIP4881.Name) {
+		logEnabled(enableEIP4881)
 		cfg.EnableEIP4881 = true
-   }
+	}
 	Init(cfg)
 	return nil
 }
