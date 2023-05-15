@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -378,6 +379,14 @@ func (s *Service) InForkchoice(root [32]byte) bool {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.HasNode(root)
+}
+
+// IsViableForkCheckpoint returns whether the given checkpoint is a checkpoint in any
+// chain known to forkchoice
+func (s *Service) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.IsViableForCheckpoint(cp)
 }
 
 // IsOptimisticForRoot takes the root as argument instead of the current head

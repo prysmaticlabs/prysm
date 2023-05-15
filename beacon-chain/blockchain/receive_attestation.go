@@ -26,7 +26,7 @@ const reorgLateBlockCountAttestations = 2 * time.Second
 // AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
 // root of an attestation's target checkpoint.
 type AttestationStateFetcher interface {
-	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error)
+	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error)
 }
 
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
@@ -37,7 +37,7 @@ type AttestationReceiver interface {
 }
 
 // AttestationTargetState returns the pre state of attestation.
-func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error) {
+func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	ss, err := slots.EpochStart(target.Epoch)
 	if err != nil {
 		return nil, err
@@ -45,6 +45,9 @@ func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Chec
 	if err := slots.ValidateClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
+	// We acquire the lock here instead than on gettAttPreState because that function gets called from UpdateHead that holds a write lock
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.getAttPreState(ctx, target)
 }
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Continous Integration script to check that BUILD.bazel files are as expected
+# Continuous Integration script to check that BUILD.bazel files are as expected
 # when generated from gazelle.
 
 # Duplicate redirect 5 to stdout so that it can be captured, but still printed

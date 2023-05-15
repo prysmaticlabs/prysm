@@ -804,7 +804,7 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 3))
 	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 4))
 
-	// Mimick finalized deposit trie fetch.
+	// Mimic finalized deposit trie fetch.
 	fd := dc.FinalizedDeposits(context.Background())
 	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex, big.NewInt(14))
 	insertIndex := fd.MerkleTrieIndex + 1
