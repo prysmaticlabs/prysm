@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -25,7 +26,7 @@ func main() {
 	flag.Parse()
 	ctx := context.Background()
 
-	cc, err := grpc.DialContext(ctx, *beacon, grpc.WithInsecure(), grpc.WithMaxMsgSize(10000000000))
+	cc, err := grpc.DialContext(ctx, *beacon, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt64)))
 	if err != nil {
 		panic(err)
 	}
