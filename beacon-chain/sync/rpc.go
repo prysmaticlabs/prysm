@@ -49,6 +49,9 @@ func (s *Service) registerRPCHandlers() {
 			s.pingHandler,
 		)
 		s.registerRPCHandlersAltair()
+		if currEpoch >= params.BeaconConfig().DenebForkEpoch {
+			s.registerRPCHandlersDeneb()
+		}
 		return
 	}
 	s.registerRPC(
@@ -90,6 +93,13 @@ func (s *Service) registerRPCHandlersAltair() {
 	s.registerRPC(
 		p2p.RPCMetaDataTopicV2,
 		s.metaDataHandler,
+	)
+}
+
+func (s *Service) registerRPCHandlersDeneb() {
+	s.registerRPC(
+		p2p.RPCBlobSidecarsByRootTopicV1,
+		s.blobSidecarByRootRPCHandler,
 	)
 }
 

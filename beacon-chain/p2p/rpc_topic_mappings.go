@@ -37,6 +37,9 @@ const PingMessageName = "/ping"
 // MetadataMessageName specifies the name for the metadata message topic.
 const MetadataMessageName = "/metadata"
 
+// BlobSidecarsByRootName is the name for the BlobSidecarsByRoot v1 message topic.
+const BlobSidecarsByRootName = "/blob_sidecars_by_root"
+
 const (
 	// V1 RPC Topics
 	// RPCStatusTopicV1 defines the v1 topic for the status rpc method.
@@ -51,6 +54,10 @@ const (
 	RPCPingTopicV1 = protocolPrefix + PingMessageName + SchemaVersionV1
 	// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
 	RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
+
+	// RPCBlobSidecarsByRootTopicV1 is a topic for requesting blob sidecars by their block root. New in deneb.
+	// /eth2/beacon_chain/req/blob_sidecars_by_root/1/
+	RPCBlobSidecarsByRootTopicV1 = protocolPrefix + BlobSidecarsByRootName + SchemaVersionV1
 
 	// V2 RPC Topics
 	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
@@ -83,6 +90,8 @@ var RPCTopicMappings = map[string]interface{}{
 	// RPC Metadata Message
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),
+	// BlobSidecarsByRoot v1 Message
+	RPCBlobSidecarsByRootTopicV1: new(p2ptypes.BlobSidecarsByRootReq),
 }
 
 // Maps all registered protocol prefixes.
@@ -99,6 +108,7 @@ var messageMapping = map[string]bool{
 	BeaconBlocksByRootsMessageName: true,
 	PingMessageName:                true,
 	MetadataMessageName:            true,
+	BlobSidecarsByRootName:         true,
 }
 
 // Maps all the RPC messages which are to updated in altair.
@@ -111,6 +121,19 @@ var altairMapping = map[string]bool{
 var versionMapping = map[string]bool{
 	SchemaVersionV1: true,
 	SchemaVersionV2: true,
+}
+
+// OmitContextBytesV1 keeps track of which RPC methods do not write context bytes in their v1 incarnations.
+// Phase0 did not have the notion of context bytes, which prefix wire-encoded values with a [4]byte identifier
+// to convey the schema for the receiver to use. These RPCs had a version bump to V2 when the context byte encoding
+// was introduced. For other RPC methods, context bytes are always required.
+var OmitContextBytesV1 = map[string]bool{
+	StatusMessageName:              true,
+	GoodbyeMessageName:             true,
+	BeaconBlocksByRangeMessageName: true,
+	BeaconBlocksByRootsMessageName: true,
+	PingMessageName:                true,
+	MetadataMessageName:            true,
 }
 
 // VerifyTopicMapping verifies that the topic and its accompanying
