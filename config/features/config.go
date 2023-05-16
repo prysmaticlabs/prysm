@@ -217,9 +217,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true
 	}
-	if ctx.IsSet(buildBlockParallel.Name) {
-		logEnabled(buildBlockParallel)
-		cfg.BuildBlockParallel = true
+	cfg.BuildBlockParallel = true
+	if ctx.IsSet(disableBuildBlockParallel.Name) {
+		logEnabled(disableBuildBlockParallel)
+		cfg.BuildBlockParallel = false
 	}
 	cfg.AggregateIntervals = []time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
