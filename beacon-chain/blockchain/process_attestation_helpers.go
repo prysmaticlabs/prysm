@@ -69,7 +69,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		return nil, errors.Wrap(err, "could not check checkpoint condition in forkchoice")
 	}
 	if !ok {
-		return nil, ErrNotCheckpoint
+		return nil, errors.Wrap(ErrNotCheckpoint, fmt.Sprintf("epoch %d root %#x", c.Epoch, c.Root))
 	}
 
 	// Fallback to state regeneration.

@@ -180,7 +180,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}))
 
 	s2, err := service.getAttPreState(ctx, cp2)
-	require.ErrorIs(t, ErrNotCheckpoint, err)
+	require.ErrorContains(t, "epoch 2 root 0x4200000000000000000000000000000000000000000000000000000000000000: not a checkpoint in forkchoice", err)
 
 	st, root, err = prepareForkchoiceState(ctx, 33, [32]byte(cp2.Root), [32]byte(cp1.Root), [32]byte{'R'}, cp2, cp2)
 	require.NoError(t, err)

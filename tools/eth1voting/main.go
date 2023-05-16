@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -25,7 +26,7 @@ func main() {
 	flag.Parse()
 	ctx := context.Background()
 
-	cc, err := grpc.DialContext(ctx, *beacon, grpc.WithInsecure())
+	cc, err := grpc.DialContext(ctx, *beacon, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt64)))
 	if err != nil {
 		panic(err)
 	}
@@ -82,6 +83,8 @@ func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.ReadOnlyBeaconBlock 
 		wb, err = blocks.NewSignedBeaconBlock(bb.AltairBlock)
 	case *v1alpha1.BeaconBlockContainer_BellatrixBlock:
 		wb, err = blocks.NewSignedBeaconBlock(bb.BellatrixBlock)
+	case *v1alpha1.BeaconBlockContainer_CapellaBlock:
+		wb, err = blocks.NewSignedBeaconBlock(bb.CapellaBlock)
 	}
 	if err != nil {
 		panic("no block")
