@@ -128,6 +128,7 @@ go_test(
         "//consensus-types/blocks/testing:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//consensus-types/validator:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/bls/common/mock:go_default_library",
         "//encoding/bytesutil:go_default_library",
