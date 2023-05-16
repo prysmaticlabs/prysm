@@ -24,6 +24,13 @@ func PublicKeyFromBytes(pubKey []byte) (PublicKey, error) {
 	return blst.PublicKeyFromBytes(pubKey)
 }
 
+// SignatureFromBytesNoValidation creates a BLS signature from a LittleEndian byte slice.
+// It does not check validity of the signature, use only when the byte slice has
+// already been verified
+func SignatureFromBytesNoValidation(sig []byte) (Signature, error) {
+	return blst.SignatureFromBytesNoValidation(sig)
+}
+
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (Signature, error) {
 	return blst.SignatureFromBytes(sig)

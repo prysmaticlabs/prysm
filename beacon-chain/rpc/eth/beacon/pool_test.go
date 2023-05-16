@@ -1183,7 +1183,7 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 	require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 	assert.DeepEqual(
 		t,
-		[]string{"{\"failures\":[{\"index\":0,\"message\":\"Incorrect attestation signature: signature must be 96 bytes\"}]}"},
+		[]string{"{\"failures\":[{\"index\":0,\"message\":\"Incorrect attestation signature: could not create signature from byte slice: signature must be 96 bytes\"}]}"},
 		v,
 	)
 }
