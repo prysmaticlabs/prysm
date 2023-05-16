@@ -886,6 +886,29 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		assert.DeepEqual(t, sszBlock, resp.Data)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		b := util.NewBeaconBlockDeneb()
+		b.Block.Slot = 123
+		sb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		bs := &Server{
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
+		}
+
+		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		sszBlock, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		assert.DeepEqual(t, sszBlock, resp.Data)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
+	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBeaconBlockBellatrix()
 		sb, err := blocks.NewSignedBeaconBlock(b)

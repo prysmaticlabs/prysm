@@ -274,6 +274,25 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.DeepEqual(t, sszState, resp.Data)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		fakeState, _ := util.DeterministicGenesisStateDeneb(t, 1)
+		sszState, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+
+		server := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		assert.DeepEqual(t, sszState, resp.Data)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
+	})
 }
 
 func TestListForkChoiceHeadsV2(t *testing.T) {
