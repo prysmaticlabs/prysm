@@ -581,7 +581,8 @@ func (b *BeaconNode) fetchBuilderService() *builder.Service {
 
 func (b *BeaconNode) registerAttestationPool() error {
 	s, err := attestations.NewService(b.ctx, &attestations.Config{
-		Pool: b.attestationPool,
+		Pool:                b.attestationPool,
+		InitialSyncComplete: b.initialSyncComplete,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register atts pool service")
@@ -742,6 +743,7 @@ func (b *BeaconNode) registerSlasherService() error {
 		SlashingPoolInserter:    b.slashingsPool,
 		SyncChecker:             syncService,
 		HeadStateFetcher:        chainService,
+		ClockWaiter:             b.clockWaiter,
 	})
 	if err != nil {
 		return err
