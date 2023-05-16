@@ -689,10 +689,35 @@ func TestServer_GetBlockV2(t *testing.T) {
 
 		v1Block, err := migration.V1Alpha1BeaconBlockCapellaToV2(b.Block)
 		require.NoError(t, err)
-		bellatrixBlock, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_CapellaBlock)
+		capellaBlock, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_CapellaBlock)
 		require.Equal(t, true, ok)
-		assert.DeepEqual(t, v1Block, bellatrixBlock.CapellaBlock)
+		assert.DeepEqual(t, v1Block, capellaBlock.CapellaBlock)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, blk.Version)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		b := util.NewBeaconBlockDeneb()
+		b.Block.Slot = 123
+		sb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
+		mockChainService := &mock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		bs := &Server{
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			Blocker:               mockBlockFetcher,
+		}
+
+		blk, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{})
+		require.NoError(t, err)
+
+		v1Block, err := migration.V1Alpha1BeaconBlockDenebToV2(b.Block)
+		require.NoError(t, err)
+		denebBlock, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_DenebBlock)
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, v1Block, denebBlock.DenebBlock)
+		assert.Equal(t, ethpbv2.Version_DENEB, blk.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBeaconBlockBellatrix()
@@ -860,6 +885,29 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, sszBlock, resp.Data)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		b := util.NewBeaconBlockDeneb()
+		b.Block.Slot = 123
+		sb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		bs := &Server{
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
+		}
+
+		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		sszBlock, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		assert.DeepEqual(t, sszBlock, resp.Data)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBeaconBlockBellatrix()

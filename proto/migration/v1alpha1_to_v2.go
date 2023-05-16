@@ -1112,6 +1112,17 @@ func BeaconStateDenebToProto(st state.BeaconState) (*ethpbv2.BeaconStateDeneb, e
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 	}
+	summaries, err := st.HistoricalSummaries()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical summaries")
+	}
+	sourceHistoricalSummaries := make([]*ethpbv2.HistoricalSummary, len(summaries))
+	for i, summary := range summaries {
+		sourceHistoricalSummaries[i] = &ethpbv2.HistoricalSummary{
+			BlockSummaryRoot: summary.BlockSummaryRoot,
+			StateSummaryRoot: summary.StateSummaryRoot,
+		}
+	}
 
 	hr, err := st.HistoricalRoots()
 	if err != nil {
@@ -1192,6 +1203,7 @@ func BeaconStateDenebToProto(st state.BeaconState) (*ethpbv2.BeaconStateDeneb, e
 		},
 		NextWithdrawalIndex:          sourceNextWithdrawalIndex,
 		NextWithdrawalValidatorIndex: sourceNextWithdrawalValIndex,
+		HistoricalSummaries:          sourceHistoricalSummaries,
 	}
 
 	return result, nil
