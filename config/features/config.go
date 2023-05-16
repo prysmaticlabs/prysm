@@ -69,6 +69,8 @@ type Flags struct {
 
 	BuildBlockParallel bool // BuildBlockParallel builds beacon block for proposer in parallel.
 
+	CheckRolesParallel bool // CheckRolesParallel check validator roles in parallel.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -260,6 +262,10 @@ func ConfigureValidator(ctx *cli.Context) error {
 	if ctx.Bool(EnableBeaconRESTApi.Name) {
 		logEnabled(EnableBeaconRESTApi)
 		cfg.EnableBeaconRESTApi = true
+	}
+	if ctx.IsSet(checkRolesParallel.Name) {
+		logEnabled(checkRolesParallel)
+		cfg.CheckRolesParallel = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)

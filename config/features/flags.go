@@ -140,6 +140,10 @@ var (
 		Name:  "disable-build-block-parallel",
 		Usage: "Disables building a beacon block in parallel for consensus and execution",
 	}
+	checkRolesParallel = &cli.BoolFlag{
+		Name:  "check-roles-parallel",
+		Usage: "Check validator roles at each slot in parallel. It makes validator perform roles more quickly",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -160,6 +164,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlashingProtectionPruning,
 	enableDoppelGangerProtection,
 	EnableBeaconRESTApi,
+	checkRolesParallel,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
