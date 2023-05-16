@@ -1,8 +1,11 @@
 package validator_service_config
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -20,7 +23,7 @@ func ToSettings(ps *validatorpb.ProposerSettingsPayload) (*ProposerSettings, err
 			}
 			b, err := hexutil.Decode(key)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, fmt.Sprintf("cannot decode public key %s", key))
 			}
 			p := &ProposerOption{
 				FeeRecipientConfig: &FeeRecipientConfig{
