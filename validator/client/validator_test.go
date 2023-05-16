@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	validatorType "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	blsmock "github.com/prysmaticlabs/prysm/v4/crypto/bls/common/mock"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -1672,7 +1673,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				})
