@@ -20,8 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
@@ -244,8 +244,9 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 			beaconRestApiPort = e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort
 		}
 
-		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.BeaconRESTApiProviderFlag.Name, beaconRestApiPort))
-		args = append(args, fmt.Sprintf("--%s", features.EnableBeaconRESTApi.Name))
+		args = append(args,
+			fmt.Sprintf("--%s=http://localhost:%d", flags.BeaconRESTApiProviderFlag.Name, beaconRestApiPort),
+			fmt.Sprintf("--%s", features.EnableBeaconRESTApi.Name))
 	}
 
 	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
@@ -253,10 +254,11 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args, features.E2EValidatorFlags...)
 	}
 	if v.config.UseWeb3RemoteSigner {
-		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		// Write the pubkeys as comma separated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
+		args = append(args,
+			fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort),
+			fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
@@ -338,17 +340,16 @@ func createProposerSettingsPath(pubkeys []string, nodeIdx int) (string, error) {
 	if len(pubkeys) == 0 {
 		return "", errors.New("number of validators must be greater than 0")
 	}
-	var proposerSettingsPayload validator_service_config.ProposerSettingsPayload
-	config := make(map[string]*validator_service_config.ProposerOptionPayload)
+	config := make(map[string]*validatorpb.ProposerOptionPayload)
 
 	for i, pubkey := range pubkeys {
-		config[pubkeys[i]] = &validator_service_config.ProposerOptionPayload{
+		config[pubkeys[i]] = &validatorpb.ProposerOptionPayload{
 			FeeRecipient: FeeRecipientFromPubkey(pubkey),
 		}
 	}
-	proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
+	proposerSettingsPayload := &validatorpb.ProposerSettingsPayload{
 		ProposerConfig: config,
-		DefaultConfig: &validator_service_config.ProposerOptionPayload{
+		DefaultConfig: &validatorpb.ProposerOptionPayload{
 			FeeRecipient: DefaultFeeRecipientAddress,
 		},
 	}
