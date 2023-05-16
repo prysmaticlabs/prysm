@@ -136,9 +136,9 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
-	buildBlockParallel = &cli.BoolFlag{
-		Name:  "build-block-parallel",
-		Usage: "Builds a beacon block in parallel for consensus and execution. It results in faster block construction time",
+	disableBuildBlockParallel = &cli.BoolFlag{
+		Name:  "disable-build-block-parallel",
+		Usage: "Disables building a beacon block in parallel for consensus and execution",
 	}
 )
 
@@ -186,10 +186,10 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
 	prepareAllPayloads,
+	disableBuildBlockParallel,
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
-	buildBlockParallel,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
