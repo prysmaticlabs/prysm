@@ -64,8 +64,11 @@ func AggregateDisjointOneBitAtts(atts []*ethpb.Attestation) (*ethpb.Attestation,
 		keys[i] = i
 	}
 	idx, err := aggregateAttestations(atts, keys, coverage)
-	if err != nil || idx != 0 {
+	if err != nil {
 		return nil, errors.Wrap(err, "could not aggregate attestations")
+	}
+	if idx != 0 {
+		return nil, errors.New("could not aggregate attestations, obtained non zero index")
 	}
 	return atts[0], nil
 }
