@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -1627,7 +1628,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	tests := []struct {
 		name   string
 		pubkey []byte
-		epoch  primitives.Epoch
+		epoch  validator.Epoch
 		w      want
 	}{
 		{

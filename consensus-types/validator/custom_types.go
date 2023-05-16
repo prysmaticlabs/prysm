@@ -2,12 +2,10 @@ package validator
 
 import (
 	"encoding/json"
-
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // Epoch custom primitives.Epoch to be unmashalable
-type Epoch primitives.Epoch
+type Epoch uint64
 
 func (e *Epoch) UnmarshalJSON(enc []byte) error {
 	var val uint64
