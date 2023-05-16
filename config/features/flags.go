@@ -142,7 +142,7 @@ var (
 	}
 	checkRolesParallel = &cli.BoolFlag{
 		Name:  "check-roles-parallel",
-		Usage: "Check validator roles at each slot in parallel. It makes validator perform roles more quickly",
+		Usage: "Check validator roles at each slot in parallel. It makes validator start performing roles more quickly",
 	}
 )
 
