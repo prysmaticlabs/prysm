@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
 )
 
-var maxKeys = 1000000
+var maxKeys = 1_000_000
 var pubkeyCache = lruwrpr.New(maxKeys)
 
 // PublicKey used in the BLS signature scheme.

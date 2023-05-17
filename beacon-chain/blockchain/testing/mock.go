@@ -320,7 +320,7 @@ func (_ *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestatio
 }
 
 // AttestationTargetState mocks AttestationTargetState method in chain service.
-func (s *ChainService) AttestationTargetState(_ context.Context, _ *ethpb.Checkpoint) (state.BeaconState, error) {
+func (s *ChainService) AttestationTargetState(_ context.Context, _ *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	return s.State, nil
 }
 
@@ -594,6 +594,6 @@ func (s *ChainService) FinalizedBlockHash() [32]byte {
 }
 
 // UnrealizedJustifiedPayloadBlockHash mocks the same method in the chain service
-func (s *ChainService) UnrealizedJustifiedPayloadBlockHash() ([32]byte, error) {
-	return [32]byte{}, nil
+func (s *ChainService) UnrealizedJustifiedPayloadBlockHash() [32]byte {
+	return [32]byte{}
 }

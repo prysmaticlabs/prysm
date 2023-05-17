@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//api/client/builder:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//consensus-types/interfaces:go_default_library",

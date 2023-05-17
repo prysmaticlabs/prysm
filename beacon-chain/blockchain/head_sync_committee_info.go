@@ -53,7 +53,7 @@ func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot prim
 
 // HeadSyncCommitteeIndices returns the sync committee index position using the head state. Input `slot` is taken in consideration
 // where validator's duty for `slot - 1` is used for block inclusion in `slot`. That means when a validator is at epoch boundary
-// across EPOCHS_PER_SYNC_COMMITTEE_PERIOD then the valiator will be considered using next period sync committee.
+// across EPOCHS_PER_SYNC_COMMITTEE_PERIOD then the validator will be considered using next period sync committee.
 //
 // Spec definition:
 // Being assigned to a sync committee for a given slot means that the validator produces and broadcasts signatures for slot - 1 for inclusion in slot.

@@ -4,6 +4,7 @@ package math
 import (
 	"errors"
 	stdmath "math"
+	"math/big"
 	"math/bits"
 	"sync"
 
@@ -210,4 +211,16 @@ func AddInt(i ...int) (int, error) {
 		sum += ii
 	}
 	return sum, nil
+}
+
+// WeiToGwei converts big int wei to uint64 gwei.
+// The input `v` is copied before being modified.
+func WeiToGwei(v *big.Int) uint64 {
+	if v == nil {
+		return 0
+	}
+	gweiPerEth := big.NewInt(1e9)
+	copied := big.NewInt(0).Set(v)
+	copied.Div(copied, gweiPerEth)
+	return copied.Uint64()
 }

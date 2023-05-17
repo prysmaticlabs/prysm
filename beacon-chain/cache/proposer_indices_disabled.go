@@ -33,3 +33,7 @@ func (c *FakeProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) 
 func (c *FakeProposerIndicesCache) Len() int {
 	return 0
 }
+
+// Clear is a stub.
+func (c *FakeProposerIndicesCache) Clear() {
+}

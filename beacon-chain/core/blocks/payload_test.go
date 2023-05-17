@@ -1,7 +1,6 @@
 package blocks_test
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
@@ -610,7 +609,7 @@ func Test_ProcessPayloadCapella(t *testing.T) {
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	require.NoError(t, err)
 	payload.PrevRandao = random
-	wrapped, err := consensusblocks.WrappedExecutionPayloadCapella(payload, big.NewInt(0))
+	wrapped, err := consensusblocks.WrappedExecutionPayloadCapella(payload, 0)
 	require.NoError(t, err)
 	_, err = blocks.ProcessPayload(st, wrapped)
 	require.NoError(t, err)
@@ -874,7 +873,7 @@ func emptyPayloadHeaderCapella() (interfaces.ExecutionData, error) {
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
 		ExtraData:        make([]byte, 0),
-	}, big.NewInt(0))
+	}, 0)
 }
 
 func emptyPayload() *enginev1.ExecutionPayload {

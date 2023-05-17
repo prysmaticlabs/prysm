@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/network/authorization"
 )
 
@@ -15,7 +16,7 @@ type Option func(s *Service) error
 // WithHttpEndpoint parse http endpoint for the powchain service to use.
 func WithHttpEndpoint(endpointString string) Option {
 	return func(s *Service) error {
-		s.cfg.currHttpEndpoint = HttpEndpoint(endpointString)
+		s.cfg.currHttpEndpoint = network.HttpEndpoint(endpointString)
 		return nil
 	}
 }
@@ -27,7 +28,7 @@ func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 			return nil
 		}
 		// Overwrite authorization type for all endpoints to be of a bearer type.
-		hEndpoint := HttpEndpoint(endpointString)
+		hEndpoint := network.HttpEndpoint(endpointString)
 		hEndpoint.Auth.Method = authorization.Bearer
 		hEndpoint.Auth.Value = string(secret)
 

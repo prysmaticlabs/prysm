@@ -24,14 +24,34 @@ type Signature struct {
 	s *blstSignature
 }
 
-// SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
-func SignatureFromBytes(sig []byte) (common.Signature, error) {
+// signatureFromBytesNoValidation creates a BLS signature from a LittleEndian
+// byte slice. It does not validate that the signature is in the BLS group
+func signatureFromBytesNoValidation(sig []byte) (*blstSignature, error) {
 	if len(sig) != fieldparams.BLSSignatureLength {
 		return nil, fmt.Errorf("signature must be %d bytes", fieldparams.BLSSignatureLength)
 	}
 	signature := new(blstSignature).Uncompress(sig)
 	if signature == nil {
 		return nil, errors.New("could not unmarshal bytes into signature")
+	}
+	return signature, nil
+}
+
+// SignatureFromBytesNoValidation creates a BLS signature from a LittleEndian
+// byte slice. It does not validate that the signature is in the BLS group
+func SignatureFromBytesNoValidation(sig []byte) (common.Signature, error) {
+	signature, err := signatureFromBytesNoValidation(sig)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create signature from byte slice")
+	}
+	return &Signature{s: signature}, nil
+}
+
+// SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
+func SignatureFromBytes(sig []byte) (common.Signature, error) {
+	signature, err := signatureFromBytesNoValidation(sig)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create signature from byte slice")
 	}
 	// Group check signature. Do not check for infinity since an aggregated signature
 	// could be infinite.

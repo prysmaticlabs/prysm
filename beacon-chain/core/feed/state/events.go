@@ -15,10 +15,10 @@ const (
 	BlockProcessed = iota + 1
 	// ChainStarted is sent when enough validators are active to start proposing blocks.
 	ChainStarted
-	// Initialized is sent when the internal beacon node's state is ready to be accessed.
-	Initialized
-	// Synced is sent when the beacon node has completed syncing and is ready to participate in the network.
-	Synced
+	// deprecated: Initialized is sent when the internal beacon node's state is ready to be accessed.
+	_
+	// deprecated: Synced is sent when the beacon node has completed syncing and is ready to participate in the network.
+	_
 	// Reorg is an event sent when the new head is not a descendant of the previous head.
 	Reorg
 	// FinalizedCheckpoint event.

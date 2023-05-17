@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 )
@@ -51,7 +52,11 @@ func main() {
 		}
 	})
 	log.Printf("Listening on port %d", *port)
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
+	srv := &http.Server{
+		Addr:              ":" + strconv.Itoa(*port),
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
 
 func captureRequest(f *os.File, m map[string]interface{}) error {

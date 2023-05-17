@@ -112,7 +112,7 @@ func Test_initializeAuthToken(t *testing.T) {
 }
 
 // "createTokenString" now uses jwt.RegisteredClaims instead of jwt.StandardClaims (deprecated),
-// make sure emtpy jwt.RegisteredClaims and empty jwt.StandardClaims generates the same token.
+// make sure empty jwt.RegisteredClaims and empty jwt.StandardClaims generates the same token.
 func Test_UseRegisteredClaimInsteadOfStandClaims(t *testing.T) {
 	jwtsecret, err := hex.DecodeString("12345678900123456789abcdeffedcba")
 	require.NoError(t, err)
