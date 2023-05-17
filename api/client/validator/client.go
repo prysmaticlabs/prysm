@@ -93,8 +93,8 @@ func (c *Client) GetRemoteValidatorKeys(ctx context.Context) (*apimiddleware.Lis
 // GetFeeRecipientAddresses takes a list of validators in hex format and returns an equal length list of fee recipients in hex format.
 func (c *Client) GetFeeRecipientAddresses(ctx context.Context, validators []string) ([]string, error) {
 	feeRecipients := make([]string, len(validators))
-	for index, _ := range validators {
-		feejson, err := c.GetFeeRecipientAddress(ctx, validators[index])
+	for index, validator := range validators {
+		feejson, err := c.GetFeeRecipientAddress(ctx, validator)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("keymanager API failed to retrieve fee recipient for validator %s", validators[index]))
 		}
