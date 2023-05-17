@@ -252,3 +252,9 @@ func SecondsSinceSlotStart(s primitives.Slot, genesisTime, timeStamp uint64) (ui
 	}
 	return timeStamp - genesisTime - uint64(s)*params.BeaconConfig().SecondsPerSlot, nil
 }
+
+// TimeIntoSlot returns the time duration elapsed between the current time and
+// the start of the current slot
+func TimeIntoSlot(genesisTime uint64) time.Duration {
+	return time.Since(StartTime(genesisTime, CurrentSlot(genesisTime)))
+}

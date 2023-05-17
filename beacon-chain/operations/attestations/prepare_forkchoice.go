@@ -31,7 +31,7 @@ func (s *Service) prepareForkChoiceAtts() {
 			break
 		}
 	}
-	ticker := slots.NewSlotTickerWithIntervals(time.Unix(int64(s.genesisTime), 0), intervals)
+	ticker := slots.NewSlotTickerWithIntervals(time.Unix(int64(s.genesisTime), 0), intervals[:])
 	for {
 		select {
 		case <-ticker.C():
@@ -39,7 +39,11 @@ func (s *Service) prepareForkChoiceAtts() {
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
-			log.WithField("latency", time.Since(t).Milliseconds()).Debug("batched forkchoice attestations")
+			if slots.TimeIntoSlot(s.genesisTime) < intervals[1] {
+				batchForkChoiceAttsT1.Observe(float64(time.Since(t).Milliseconds()))
+			} else if slots.TimeIntoSlot(s.genesisTime) < intervals[2] {
+				batchForkChoiceAttsT2.Observe(float64(time.Since(t).Milliseconds()))
+			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
