@@ -389,6 +389,13 @@ func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
 	return s.InitSyncBlockRoots[rt]
 }
 
+func (s *ChainService) GetBlock(ctx context.Context, rt [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+	if s.DB == nil {
+		return nil, errors.New("no DB")
+	}
+	return s.DB.Block(ctx, rt)
+}
+
 // HeadGenesisValidatorsRoot mocks HeadGenesisValidatorsRoot method in chain service.
 func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
 	return [32]byte{}

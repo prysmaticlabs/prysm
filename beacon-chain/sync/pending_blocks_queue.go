@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -427,6 +428,20 @@ func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.ReadOn
 	return blks
 }
 
+// This returns signed blob sidecar given input key from slotToPendingBlobs.
+func (s *Service) pendingBlobsInCache(slot primitives.Slot) []*eth.SignedBlobSidecar {
+	k := slotToCacheKey(slot)
+	value, ok := s.slotToPendingBlobs.Get(k)
+	if !ok {
+		return []*eth.SignedBlobSidecar{}
+	}
+	bs, ok := value.([]*eth.SignedBlobSidecar)
+	if !ok {
+		return []*eth.SignedBlobSidecar{}
+	}
+	return bs
+}
+
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) error {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
@@ -442,6 +457,16 @@ func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock)
 	blks = append(blks, b)
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
+	return nil
+}
+
+// This adds blob to slotToPendingBlobs cache.
+func (s *Service) addPendingBlobToCache(b *eth.SignedBlobSidecar) error {
+	blobs := s.pendingBlobsInCache(b.Message.Slot)
+
+	blobs = append(blobs, b)
+	k := slotToCacheKey(b.Message.Slot)
+	s.slotToPendingBlobs.Set(k, blobs, pendingBlockExpTime)
 	return nil
 }
 

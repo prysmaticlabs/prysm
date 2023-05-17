@@ -87,6 +87,7 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 			s.validateCommitteeIndexBeaconAttestation,   /* validator */
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
 			digest,
+			params.BeaconNetworkConfig().AttestationSubnetCount,
 		)
 	} else {
 		s.subscribeDynamicWithSubnets(
@@ -128,6 +129,17 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 			s.validateBlsToExecutionChange,
 			s.blsToExecutionChangeSubscriber,
 			digest,
+		)
+	}
+
+	// New Gossip Topic in Deneb
+	if epoch >= params.BeaconConfig().DenebForkEpoch {
+		s.subscribeStaticWithSubnets(
+			p2p.BlobSubnetTopicFormat,
+			s.validateBlob,   /* validator */
+			s.blobSubscriber, /* message handler */
+			digest,
+			params.BeaconConfig().MaxBlobsPerBlock,
 		)
 	}
 }
@@ -300,7 +312,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
-func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
+func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte, subnetCount uint64) {
 	genRoot := s.cfg.clock.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
@@ -336,7 +348,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 				if !valid {
 					log.Warnf("Attestation subnets with digest %#x are no longer valid, unsubscribing from all of them.", digest)
 					// Unsubscribes from all our current subnets.
-					for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+					for i := uint64(0); i < subnetCount; i++ {
 						fullTopic := fmt.Sprintf(topic, digest, i) + s.cfg.p2p.Encoding().ProtocolSuffix()
 						s.unSubscribeFromTopic(fullTopic)
 					}
@@ -344,7 +356,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 					return
 				}
 				// Check every slot that there are enough peers
-				for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+				for i := uint64(0); i < subnetCount; i++ {
 					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
 						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 							"committee index %d. Searching network for peers subscribed to the subnet.", i)
