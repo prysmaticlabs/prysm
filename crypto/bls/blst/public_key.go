@@ -45,9 +45,15 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	}
 	pubKeyObj := &PublicKey{p: p}
 	copiedKey := pubKeyObj.Copy()
+	assertedKey, ok := (copiedKey).(*PublicKey)
+	// Should be impossible to happen, this is checked
+	// to satisfy lint tools.
+	if !ok {
+		return pubKeyObj, nil
+	}
 	cacheKey := *newKey
 	pubkeyLock.Lock()
-	pubkeyMap[cacheKey] = (copiedKey).(*PublicKey)
+	pubkeyMap[cacheKey] = assertedKey
 	pubkeyLock.Unlock()
 	return pubKeyObj, nil
 }

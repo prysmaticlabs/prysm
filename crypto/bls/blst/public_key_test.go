@@ -5,6 +5,7 @@ package blst_test
 import (
 	"bytes"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
@@ -98,26 +99,51 @@ func TestPublicKeysEmpty(t *testing.T) {
 	require.ErrorContains(t, "nil or empty public keys", err)
 }
 
+func TestPublicKeyMap(t *testing.T) {
+	priv, err := blst.RandKey()
+	require.NoError(t, err)
+	pubkeyA := priv.PublicKey().Marshal()
+
+	priv2, err := blst.RandKey()
+	require.NoError(t, err)
+	pubkeyB := priv2.PublicKey().Marshal()
+	km := blst.KeyMap()
+	_, ok := km[[48]byte(pubkeyA)]
+	require.Equal(t, false, ok, "pubkey a exists")
+	_, ok = km[[48]byte(pubkeyB)]
+	require.Equal(t, false, ok, "pubkey b exists")
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		_, err := blst.PublicKeyFromBytes(pubkeyA)
+		require.NoError(t, err)
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		_, err := blst.PublicKeyFromBytes(pubkeyB)
+		require.NoError(t, err)
+		wg.Done()
+	}()
+	wg.Wait()
+
+	km = blst.KeyMap()
+	_, ok = km[[48]byte(pubkeyA)]
+	require.Equal(t, true, ok, "pubkey a does not exist")
+	_, ok = km[[48]byte(pubkeyB)]
+	require.Equal(t, true, ok, "pubkey b does not exist")
+
+}
+
 func BenchmarkPublicKeyFromBytes(b *testing.B) {
 	priv, err := blst.RandKey()
 	require.NoError(b, err)
 	pubkey := priv.PublicKey()
 	pubkeyBytes := pubkey.Marshal()
 
-	b.Run("cache on", func(b *testing.B) {
-		blst.EnableCaches()
-		for i := 0; i < b.N; i++ {
-			_, err := blst.PublicKeyFromBytes(pubkeyBytes)
-			require.NoError(b, err)
-		}
-	})
-
-	b.Run("cache off", func(b *testing.B) {
-		blst.DisableCaches()
-		for i := 0; i < b.N; i++ {
-			_, err := blst.PublicKeyFromBytes(pubkeyBytes)
-			require.NoError(b, err)
-		}
-	})
-
+	for i := 0; i < b.N; i++ {
+		_, err := blst.PublicKeyFromBytes(pubkeyBytes)
+		require.NoError(b, err)
+	}
 }
