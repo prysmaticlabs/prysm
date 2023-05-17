@@ -1615,7 +1615,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	tests := []struct {
 		name   string
 		pubkey []byte
-		epoch  validator.Epoch
+		epoch  primitives.Epoch
 		w      want
 	}{
 		{
