@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cmd.go",
-        "proposerSettings.go",
+        "proposer_settings.go",
         "withdraw.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/validator",
@@ -20,10 +20,10 @@ go_library(
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
-        "//config/validator/service:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//io/file:go_default_library",
         "//io/prompt:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime/tos:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
@@ -37,7 +37,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "proposerSettings_test.go",
+        "proposer_settings_test.go",
         "withdraw_test.go",
     ],
     data = glob(["testdata/**"]),

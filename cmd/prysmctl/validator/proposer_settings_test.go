@@ -84,11 +84,11 @@ func TestGetProposerSettings(t *testing.T) {
 	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.VXjrSItV_Kmwg_XilpscyPm2SPIsstytYLtr_AuJI8I"
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("validator-client-host", baseurl, "")
+	set.String("validator-host", baseurl, "")
 	set.String("output-proposer-settings-path", file, "")
 	set.String("default-fee-recipient", defaultfeerecipient, "")
 	set.String("token", token, "")
-	assert.NoError(t, set.Set("validator-client-host", baseurl))
+	assert.NoError(t, set.Set("validator-host", baseurl))
 	assert.NoError(t, set.Set("output-proposer-settings-path", file))
 	assert.NoError(t, set.Set("default-fee-recipient", defaultfeerecipient))
 	assert.NoError(t, set.Set("token", token))

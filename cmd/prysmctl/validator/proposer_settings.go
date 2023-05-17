@@ -7,13 +7,13 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
-	client2 "github.com/prysmaticlabs/prysm/v4/api/client"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/api/client/validator"
 	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/io/prompt"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -46,15 +46,15 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 		}
 	}
 
-	cl, err := validator.NewClient(c.String(ValidatorHostFlag.Name), client2.WithTokenAuthentication(c.String(TokenFlag.Name)))
+	cl, err := validator.NewClient(c.String(ValidatorHostFlag.Name), client.WithAuthenticationToken(c.String(TokenFlag.Name)))
 	if err != nil {
 		return err
 	}
-	validators, err := cl.GetListOfValidators(ctx)
+	validators, err := cl.GetValidatorPubKeys(ctx)
 	if err != nil {
 		return err
 	}
-	feeRecipients, err := cl.GetListOfFeeRecipients(ctx, validators)
+	feeRecipients, err := cl.GetFeeRecipientAddresses(ctx, validators)
 	if err != nil {
 		return err
 	}
@@ -67,15 +67,15 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 
 	if c.IsSet(ProposerSettingsOutputFlag.Name) {
 		log.Infof("the default fee recipient is set to %s", defaultFeeRecipient)
-		proposerConfig := make(map[string]*validatorServiceConfig.ProposerOptionPayload)
-		for index, validator := range validators {
-			proposerConfig[validator] = &validatorServiceConfig.ProposerOptionPayload{
+		proposerConfig := make(map[string]*validatorpb.ProposerOptionPayload)
+		for index, val := range validators {
+			proposerConfig[val] = &validatorpb.ProposerOptionPayload{
 				FeeRecipient: feeRecipients[index],
 			}
 		}
-		fileConfig := &validatorServiceConfig.ProposerSettingsPayload{
+		fileConfig := &validatorpb.ProposerSettingsPayload{
 			ProposerConfig: proposerConfig,
-			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
+			DefaultConfig: &validatorpb.ProposerOptionPayload{
 				FeeRecipient: defaultFeeRecipient,
 			},
 		}

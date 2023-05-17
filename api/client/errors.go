@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrMalformedHostname is used to indicate if a host name's format is incorrect while providing the port.
 var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 
 // ErrNotOK is used to indicate when an HTTP request to the API failed with any non-2xx response code.
@@ -20,6 +21,7 @@ var ErrNotFound = errors.Wrap(ErrNotOK, "recv 404 NotFound response from API")
 // ErrInvalidNodeVersion indicates that the /eth/v1/node/version api response format was not recognized.
 var ErrInvalidNodeVersion = errors.New("invalid node version response")
 
+// Non200Err is a function that parses a http response to handle responses that are not 200 with a formatted error.
 func Non200Err(response *http.Response) error {
 	bodyBytes, err := io.ReadAll(response.Body)
 	var body string

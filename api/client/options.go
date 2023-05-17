@@ -6,15 +6,18 @@ import (
 	"time"
 )
 
+// ReqOption a request functional option.
 type ReqOption func(*http.Request)
 
+// WithSSZEncoding a request functional option that adds ssz encoding header.
 func WithSSZEncoding() ReqOption {
 	return func(req *http.Request) {
 		req.Header.Set("Accept", "application/octet-stream")
 	}
 }
 
-func WithTokenAuthorization(token string) ReqOption {
+// WithAuthorizationToken a request functional option that adds header for authorization token
+func WithAuthorizationToken(token string) ReqOption {
 	return func(req *http.Request) {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
@@ -30,15 +33,15 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 	}
 }
 
-// WithCustomTransport replaces the underlying http's transport with a custom one.
-func WithCustomTransport(t http.RoundTripper) ClientOpt {
+// WithRoundTripper replaces the underlying http's transport with a custom one.
+func WithRoundTripper(t http.RoundTripper) ClientOpt {
 	return func(c *Client) {
 		c.hc.Transport = t
 	}
 }
 
-// WithTokenAuthentication sets an oauth token to be used.
-func WithTokenAuthentication(token string) ClientOpt {
+// WithAuthenticationToken sets an oauth token to be used.
+func WithAuthenticationToken(token string) ClientOpt {
 	return func(c *Client) {
 		c.token = token
 	}

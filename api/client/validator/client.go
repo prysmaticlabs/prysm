@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -30,27 +31,15 @@ func NewClient(host string, opts ...client.ClientOpt) (*Client, error) {
 	return &Client{c}, nil
 }
 
-// GetListOfValidators gets the currently known validators in hex format on the validator client whether on the web3signer or the local keystores.
-func (c *Client) GetListOfValidators(ctx context.Context) ([]string, error) {
-	localBytes, err := c.Get(ctx, localKeysPath, client.WithTokenAuthorization(c.Token()))
+// GetValidatorPubKeys gets the currently known validators in hex format on the validator client whether on the web3signer or the local keystores.
+func (c *Client) GetValidatorPubKeys(ctx context.Context) ([]string, error) {
+	jsonlocal, err := c.GetLocalValidatorKeys(ctx)
 	if err != nil {
 		return nil, err
 	}
-	jsonlocal := &apimiddleware.ListKeystoresResponseJson{}
-	if err := json.Unmarshal(localBytes, jsonlocal); err != nil {
-		return nil, errors.Wrap(err, "failed to parse local list keystores")
-	}
-	remoteBytes, err := c.Get(ctx, remoteKeysPath, client.WithTokenAuthorization(c.Token()))
+	jsonremote, err := c.GetRemoteValidatorKeys(ctx)
 	if err != nil {
-		if !strings.Contains(err.Error(), "Prysm Wallet is not of type Web3Signer") {
-			return nil, err
-		}
-	}
-	jsonremote := &apimiddleware.ListRemoteKeysResponseJson{}
-	if len(remoteBytes) != 0 {
-		if err := json.Unmarshal(remoteBytes, jsonremote); err != nil {
-			return nil, errors.Wrap(err, "failed to parse remote list keystores")
-		}
+		return nil, err
 	}
 	if len(jsonlocal.Keystores) == 0 && len(jsonremote.Keystores) == 0 {
 		return nil, errors.New("there are no local keys or remote keys on the validator")
@@ -71,18 +60,43 @@ func (c *Client) GetListOfValidators(ctx context.Context) ([]string, error) {
 	return keys, nil
 }
 
-// GetListOfFeeRecipients takes a list of validators in hex format and returns an equal length list of fee recipients in hex format.
-func (c *Client) GetListOfFeeRecipients(ctx context.Context, validators []string) ([]string, error) {
-	feeRecipients := make([]string, len(validators))
-	for index, validator := range validators {
-		path := strings.Replace(feeRecipientPath, "{pubkey}", validator, 1)
-		b, err := c.Get(ctx, path, client.WithTokenAuthorization(c.Token()))
-		if err != nil {
+// GetLocalValidatorKeys calls the keymanager APIs for local validator keys
+func (c *Client) GetLocalValidatorKeys(ctx context.Context) (*apimiddleware.ListKeystoresResponseJson, error) {
+	localBytes, err := c.Get(ctx, localKeysPath, client.WithAuthorizationToken(c.Token()))
+	if err != nil {
+		return nil, err
+	}
+	jsonlocal := &apimiddleware.ListKeystoresResponseJson{}
+	if err := json.Unmarshal(localBytes, jsonlocal); err != nil {
+		return nil, errors.Wrap(err, "failed to parse local list keystores")
+	}
+	return jsonlocal, nil
+}
+
+// GetRemoteValidatorKeys calls the keymanager APIs for web3signer validator keys
+func (c *Client) GetRemoteValidatorKeys(ctx context.Context) (*apimiddleware.ListRemoteKeysResponseJson, error) {
+	remoteBytes, err := c.Get(ctx, remoteKeysPath, client.WithAuthorizationToken(c.Token()))
+	if err != nil {
+		if !strings.Contains(err.Error(), "Prysm Wallet is not of type Web3Signer") {
 			return nil, err
 		}
-		feejson := &apimiddleware.GetFeeRecipientByPubkeyResponseJson{}
-		if err := json.Unmarshal(b, feejson); err != nil {
-			return nil, errors.Wrap(err, "failed to parse fee recipient")
+	}
+	jsonremote := &apimiddleware.ListRemoteKeysResponseJson{}
+	if len(remoteBytes) != 0 {
+		if err := json.Unmarshal(remoteBytes, jsonremote); err != nil {
+			return nil, errors.Wrap(err, "failed to parse remote list keystores")
+		}
+	}
+	return jsonremote, nil
+}
+
+// GetFeeRecipientAddresses takes a list of validators in hex format and returns an equal length list of fee recipients in hex format.
+func (c *Client) GetFeeRecipientAddresses(ctx context.Context, validators []string) ([]string, error) {
+	feeRecipients := make([]string, len(validators))
+	for index, _ := range validators {
+		feejson, err := c.GetFeeRecipientAddress(ctx, validators[index])
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("keymanager API failed to retrieve fee recipient for validator %s", validators[index]))
 		}
 		if feejson.Data == nil {
 			continue
@@ -90,4 +104,18 @@ func (c *Client) GetListOfFeeRecipients(ctx context.Context, validators []string
 		feeRecipients[index] = feejson.Data.Ethaddress
 	}
 	return feeRecipients, nil
+}
+
+// GetFeeRecipientAddress takes a public key and calls the keymanager API to return its fee recipient.
+func (c *Client) GetFeeRecipientAddress(ctx context.Context, pubkey string) (*apimiddleware.GetFeeRecipientByPubkeyResponseJson, error) {
+	path := strings.Replace(feeRecipientPath, "{pubkey}", pubkey, 1)
+	b, err := c.Get(ctx, path, client.WithAuthorizationToken(c.Token()))
+	if err != nil {
+		return nil, err
+	}
+	feejson := &apimiddleware.GetFeeRecipientByPubkeyResponseJson{}
+	if err := json.Unmarshal(b, feejson); err != nil {
+		return nil, errors.Wrap(err, "failed to parse fee recipient")
+	}
+	return feejson, nil
 }

@@ -41,7 +41,7 @@ var (
 	}
 
 	ValidatorHostFlag = &cli.StringFlag{
-		Name:    "validator-client-host",
+		Name:    "validator-host",
 		Aliases: []string{"vch"},
 		Usage:   "host:port for validator client.",
 		Value:   "http://127.0.0.1:7500",
