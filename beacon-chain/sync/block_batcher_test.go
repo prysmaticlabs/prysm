@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -15,32 +14,26 @@ import (
 func TestSortedObj_SortBlocksRoots(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []interfaces.ReadOnlySignedBeaconBlock
-	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
 	}
 
+	var blks []blocks.ROBlock
 	for i := 0; i < 10; i++ {
 		slot := primitives.Slot(randFunc())
 		newBlk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot, Body: &ethpb.BeaconBlockBody{}}})
 		require.NoError(t, err)
-		blks = append(blks, newBlk)
 		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
-		roots = append(roots, root)
+		b, err := blocks.NewROBlockWithRoot(newBlk, root)
+		require.NoError(t, err)
+		blks = append(blks, b)
 	}
 
-	r := &Service{}
-
-	newBlks, newRoots := r.sortBlocksAndRoots(blks, roots)
-
+	newBlks := sortedUniqueBlocks(blks)
 	previousSlot := primitives.Slot(0)
-	for i, b := range newBlks {
+	for _, b := range newBlks {
 		if b.Block().Slot() < previousSlot {
 			t.Errorf("Block list is not sorted as %d is smaller than previousSlot %d", b.Block().Slot(), previousSlot)
-		}
-		if bytesutil.FromBytes8(newRoots[i][:]) != uint64(b.Block().Slot()) {
-			t.Errorf("root doesn't match stored slot in block: wanted %d but got %d", b.Block().Slot(), bytesutil.FromBytes8(newRoots[i][:]))
 		}
 		previousSlot = b.Block().Slot()
 	}
@@ -49,8 +42,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 func TestSortedObj_NoDuplicates(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []interfaces.ReadOnlySignedBeaconBlock
-	var roots [][32]byte
+	var blks []blocks.ROBlock
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
 	}
@@ -63,23 +55,20 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 		require.NoError(t, err)
 		wsbCopy, err := wsb.Copy()
 		require.NoError(t, err)
-		blks = append(blks, wsb, wsbCopy)
-
-		// append twice
 		root := bytesutil.ToBytes32(bytesutil.Bytes32(uint64(slot)))
-		roots = append(roots, root, root)
+		b, err := blocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		b2, err := blocks.NewROBlockWithRoot(wsbCopy, root)
+		require.NoError(t, err)
+		blks = append(blks, b, b2)
 	}
 
-	r := &Service{}
-
-	newBlks, newRoots, err := r.dedupBlocksAndRoots(blks, roots)
-	require.NoError(t, err)
-
-	rootMap := make(map[[32]byte]bool)
-	for i, b := range newBlks {
-		if rootMap[newRoots[i]] {
-			t.Errorf("Duplicated root exists %#x with block %v", newRoots[i], b)
+	dedup := sortedUniqueBlocks(blks)
+	roots := make(map[[32]byte]int)
+	for i, b := range dedup {
+		if di, dup := roots[b.Root()]; dup {
+			t.Errorf("Duplicated root %#x at index %d and %d", b.Root(), di, i)
 		}
-		rootMap[newRoots[i]] = true
+		roots[b.Root()] = i
 	}
 }
