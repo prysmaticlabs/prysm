@@ -74,7 +74,7 @@ type Flags struct {
 	KeystoreImportDebounceInterval time.Duration
 
 	// AggregateIntervals specifies the time durations at which we aggregate attestations preparing for forkchoice.
-	AggregateIntervals []time.Duration
+	AggregateIntervals [3]time.Duration
 }
 
 var featureConfig *Flags
@@ -222,7 +222,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableBuildBlockParallel)
 		cfg.BuildBlockParallel = false
 	}
-	cfg.AggregateIntervals = []time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
+	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
 }
