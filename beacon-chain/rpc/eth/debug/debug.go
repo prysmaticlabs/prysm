@@ -104,6 +104,18 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 			ExecutionOptimistic: isOptimistic,
 			Finalized:           isFinalized,
 		}, nil
+	case version.Deneb:
+		protoState, err := migration.BeaconStateDenebToProto(beaconSt)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
+		}
+		return &ethpbv2.BeaconStateResponseV2{
+			Version: ethpbv2.Version_DENEB,
+			Data: &ethpbv2.BeaconStateContainer{
+				State: &ethpbv2.BeaconStateContainer_DenebState{DenebState: protoState},
+			},
+			ExecutionOptimistic: isOptimistic,
+		}, nil
 	default:
 		return nil, status.Error(codes.Internal, "Unsupported state version")
 	}
@@ -133,6 +145,8 @@ func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.BeaconSt
 		ver = ethpbv2.Version_BELLATRIX
 	case version.Capella:
 		ver = ethpbv2.Version_CAPELLA
+	case version.Deneb:
+		ver = ethpbv2.Version_DENEB
 	default:
 		return nil, status.Error(codes.Internal, "Unsupported state version")
 	}

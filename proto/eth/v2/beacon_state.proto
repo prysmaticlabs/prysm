@@ -251,6 +251,7 @@ message BeaconStateContainer {
     BeaconState altair_state = 2;
     BeaconStateBellatrix bellatrix_state = 3;
     BeaconStateCapella capella_state = 4;
+    BeaconStateDeneb deneb_state = 5;
   }
 }
 
