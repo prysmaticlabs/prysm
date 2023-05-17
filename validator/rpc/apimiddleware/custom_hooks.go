@@ -26,7 +26,7 @@ func setVoluntaryExitEpoch(
 		j := &SetVoluntaryExitRequestJson{Epoch: epoch}
 		b, err := json.Marshal(j)
 		if err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal epoch")
 		}
 		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
