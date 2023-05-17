@@ -86,7 +86,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	blk, err := s.cfg.chain.GetBlock(ctx, parentRoot)
 	if err != nil {
 		log.WithError(err).WithFields(blobFields(blob)).Error("Failed to get parent block")
-		return pubsub.ValidationIgnore, err
+		return pubsub.ValidationReject, err
 	}
 
 	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
