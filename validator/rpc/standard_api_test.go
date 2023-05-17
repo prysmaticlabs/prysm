@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	dbtest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
@@ -1003,15 +1004,18 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.proposerSettings)
+			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 
+			// save a default here
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
+				ValDB:     validatorDB,
 			})
-
 			require.NoError(t, err)
 			s := &Server{
 				validatorService:          vs,
 				beaconNodeValidatorClient: beaconClient,
+				valDB:                     validatorDB,
 			}
 
 			_, err = s.SetFeeRecipientByPubkey(ctx, &ethpbservice.SetFeeRecipientByPubkeyRequest{Pubkey: byteval, Ethaddress: common.HexToAddress(tt.args).Bytes()})
@@ -1102,12 +1106,15 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.proposerSettings)
+			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
+				ValDB:     validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{
 				validatorService: vs,
+				valDB:            validatorDB,
 			}
 			_, err = s.DeleteFeeRecipientByPubkey(ctx, &ethpbservice.PubkeyRequest{Pubkey: byteval})
 			require.NoError(t, err)
@@ -1212,7 +1219,6 @@ func TestServer_GetGasLimit(t *testing.T) {
 func TestServer_SetGasLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
 	beaconClient := validatormock.NewMockValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
@@ -1236,20 +1242,16 @@ func TestServer_SetGasLimit(t *testing.T) {
 		pubkey           []byte
 		newGasLimit      uint64
 		proposerSettings *validatorserviceconfig.ProposerSettings
-		w                []want
+		w                []*want
 		beaconReturn     *beaconResp
+		wantErr          string
 	}{
 		{
 			name:             "ProposerSettings is nil",
 			pubkey:           pubkey1,
 			newGasLimit:      9999,
 			proposerSettings: nil,
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr:          "no proposer settings were found to update",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is nil AND ProposerSettings.DefaultConfig is nil",
@@ -1259,12 +1261,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				ProposeConfig: nil,
 				DefaultConfig: nil,
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is nil AND ProposerSettings.DefaultConfig.BuilderConfig is nil",
@@ -1276,12 +1273,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 					BuilderConfig: nil,
 				},
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is nil AND ProposerSettings.DefaultConfig is nil",
@@ -1295,12 +1287,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				},
 				DefaultConfig: nil,
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is defined AND ProposerSettings.DefaultConfig is nil",
@@ -1314,12 +1301,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				},
 				DefaultConfig: nil,
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
-			},
+			wantErr: "gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is NOT defined for pubkey, BuilderConfig is defined AND ProposerSettings.DefaultConfig is nil",
@@ -1327,23 +1309,19 @@ func TestServer_SetGasLimit(t *testing.T) {
 			newGasLimit: 9999,
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
-					bytesutil.ToBytes48(pubkey1): {
+					bytesutil.ToBytes48(pubkey2): {
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  true,
 							GasLimit: 12345,
 						},
 					},
 				},
 				DefaultConfig: nil,
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 12345,
-				},
-				{
-					pubkey:   pubkey2,
-					gaslimit: 9999,
-				},
+			w: []*want{{
+				pubkey2,
+				9999,
+			},
 			},
 		},
 		{
@@ -1352,19 +1330,20 @@ func TestServer_SetGasLimit(t *testing.T) {
 			newGasLimit: 9999,
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
-					bytesutil.ToBytes48(pubkey1): {
+					bytesutil.ToBytes48(pubkey2): {
 						BuilderConfig: nil,
 					},
 				},
 				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled: true,
+					},
 				},
 			},
-			w: []want{
-				{
-					pubkey:   pubkey1,
-					gaslimit: 9999,
-				},
+			w: []*want{{
+				pubkey1,
+				9999,
+			},
 			},
 		},
 	}
@@ -1372,15 +1351,17 @@ func TestServer_SetGasLimit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.proposerSettings)
-
+			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
+				ValDB:     validatorDB,
 			})
 			require.NoError(t, err)
 
 			s := &Server{
 				validatorService:          vs,
 				beaconNodeValidatorClient: beaconClient,
+				valDB:                     validatorDB,
 			}
 
 			if tt.beaconReturn != nil {
@@ -1391,10 +1372,13 @@ func TestServer_SetGasLimit(t *testing.T) {
 			}
 
 			_, err = s.SetGasLimit(ctx, &ethpbservice.SetGasLimitRequest{Pubkey: tt.pubkey, GasLimit: tt.newGasLimit})
-			require.NoError(t, err)
-
-			for _, w := range tt.w {
-				assert.Equal(t, w.gaslimit, uint64(s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+			} else {
+				require.NoError(t, err)
+				for _, w := range tt.w {
+					assert.Equal(t, w.gaslimit, uint64(s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit))
+				}
 			}
 		})
 	}
@@ -1437,11 +1421,11 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 		params.BeaconConfig().DefaultBuilderGasLimit = originBeaconChainGasLimit
 	}()
 
-	globalDefaultGasLimit := validatorserviceconfig.Uint64(0xbbdd)
+	globalDefaultGasLimit := validator.Uint64(0xbbdd)
 
 	type want struct {
 		pubkey   []byte
-		gaslimit validatorserviceconfig.Uint64
+		gaslimit validator.Uint64
 	}
 
 	tests := []struct {
@@ -1457,14 +1441,14 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 					bytesutil.ToBytes48(pubkey2): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(123456789)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(123456789)},
 					},
 				},
 				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(5555)},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(5555)},
 				},
 			},
 			wantError: nil,
@@ -1472,11 +1456,11 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				{
 					pubkey: pubkey1,
 					// After deletion, use DefaultConfig.BuilderConfig.GasLimit.
-					gaslimit: validatorserviceconfig.Uint64(5555),
+					gaslimit: validator.Uint64(5555),
 				},
 				{
 					pubkey:   pubkey2,
-					gaslimit: validatorserviceconfig.Uint64(123456789),
+					gaslimit: validator.Uint64(123456789),
 				},
 			},
 		},
@@ -1486,10 +1470,10 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 					bytesutil.ToBytes48(pubkey2): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(123456789)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(123456789)},
 					},
 				},
 			},
@@ -1502,7 +1486,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				},
 				{
 					pubkey:   pubkey2,
-					gaslimit: validatorserviceconfig.Uint64(123456789),
+					gaslimit: validator.Uint64(123456789),
 				},
 			},
 		},
@@ -1512,7 +1496,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(pubkey1): {
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validator.Uint64(987654321)},
 					},
 				},
 			},
@@ -1521,7 +1505,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				// pubkey1's gaslimit is unaffected
 				{
 					pubkey:   pubkey1,
-					gaslimit: validatorserviceconfig.Uint64(987654321),
+					gaslimit: validator.Uint64(987654321),
 				},
 			},
 		},
@@ -1536,12 +1520,15 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.proposerSettings)
+			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
+				ValDB:     validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{
 				validatorService: vs,
+				valDB:            validatorDB,
 			}
 			// Set up global default value for builder gas limit.
 			params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)

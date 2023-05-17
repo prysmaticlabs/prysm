@@ -11,6 +11,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
@@ -41,7 +42,7 @@ import (
 
 var _ runtime.Service = (*Service)(nil)
 
-const rangeLimit = 1024
+const rangeLimit uint64 = 1024
 const seenBlockSize = 1000
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
@@ -270,6 +271,10 @@ func (s *Service) registerHandlers() {
 		log.Debug("Context closed, exiting goroutine")
 		return
 	}
+}
+
+func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {
+	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.p2p)
 }
 
 // marks the chain as having started.
