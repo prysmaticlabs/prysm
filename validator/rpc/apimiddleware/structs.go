@@ -103,7 +103,7 @@ type DeleteGasLimitRequestJson struct {
 
 type SetVoluntaryExitRequestJson struct {
 	Pubkey string `json:"pubkey" hex:"true"`
-	Epoch  uint64 `json:"epoch"`
+	Epoch  string `json:"epoch"`
 }
 
 type SetVoluntaryExitResponseJson struct {

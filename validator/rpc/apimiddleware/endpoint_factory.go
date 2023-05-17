@@ -51,7 +51,9 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 	case "/eth/v1/validator/{pubkey}/voluntary_exit":
 		endpoint.PostRequest = &SetVoluntaryExitRequestJson{}
 		endpoint.PostResponse = &SetVoluntaryExitResponseJson{}
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: setVoluntaryExitEpoch,
+		}
 	default:
 		return nil, errors.New("invalid path")
 	}

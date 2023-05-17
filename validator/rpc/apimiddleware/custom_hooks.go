@@ -1,0 +1,28 @@
+package apimiddleware
+
+import (
+	"bytes"
+	"encoding/json"
+	"io"
+	"net/http"
+
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+)
+
+// "/eth/v1/validator/{pubkey}/voluntary_exit" POST expects epoch as a query param.
+// This hook adds the query param to the body so that it is a valid POST request.
+func setVoluntaryExitEpoch(
+	endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	if _, ok := endpoint.PostRequest.(*SetVoluntaryExitRequestJson); ok {
+		j := &SetVoluntaryExitRequestJson{Epoch: req.URL.Query().Get("epoch")}
+		b, err := json.Marshal(j)
+		if err != nil {
+			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+		}
+		req.Body = io.NopCloser(bytes.NewReader(b))
+	}
+	return true, nil
+}
