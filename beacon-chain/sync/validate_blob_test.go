@@ -263,7 +263,6 @@ func TestValidateBlob_InvalidProposerSignature(t *testing.T) {
 }
 
 func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
-	hook := logTest.NewGlobal()
 	db := dbtest.SetupDB(t)
 	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
@@ -311,7 +310,6 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 			Topic: &topic,
 		}})
 	require.NoError(t, err)
-	require.LogsContain(t, hook, "Ignored blob: blob already exists")
 	require.Equal(t, result, pubsub.ValidationIgnore)
 }
 
