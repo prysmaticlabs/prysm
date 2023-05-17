@@ -205,6 +205,13 @@ func WithFormattedPubKeys(formattedPubKeys []string) Option {
 	}
 }
 
+func WithExitJSONOutputPath(outputPath string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.exitJSONOutputPath = outputPath
+		return nil
+	}
+}
+
 // WithWalletDir specifies the password for backups.
 func WithWalletDir(walletDir string) Option {
 	return func(acc *AccountsCLIManager) error {

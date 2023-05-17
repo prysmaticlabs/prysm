@@ -203,10 +203,9 @@ func FilterExitAccountsFromUserInput(
 	}
 
 	promptHeader := au.Red("===============IMPORTANT===============")
-	promptDescription := "Withdrawing funds is not yet possible. " +
-		"Please navigate to the following website and make sure you understand the current implications " +
+	promptDescription := "Please navigate to the following website and make sure you understand the current implications " +
 		"of a voluntary exit before making the final decision:"
-	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator/#withdrawal-delay-warning")
+	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator")
 	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the above URL"
 	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
 	resp, err := prompt.ValidatePrompt(r, promptText, func(input string) error {

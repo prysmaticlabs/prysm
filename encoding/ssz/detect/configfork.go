@@ -131,7 +131,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 }
 
 var beaconBlockSlot = fieldSpec{
-	// ssz variable length offset (not to be confused with the fieldSpec offest) is a uint32
+	// ssz variable length offset (not to be confused with the fieldSpec offset) is a uint32
 	// variable length. Offsets come before fixed length data, so that's 4 bytes at the beginning
 	// then signature is 96 bytes, 4+96 = 100
 	offset: 100,

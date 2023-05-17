@@ -56,7 +56,6 @@ func VerifyBeaconStateBlockRootsNative(
 		} else {
 			want[i] = make([]byte, 32)
 		}
-
 	}
 	s, err = factoryBR(want)
 	require.NoError(t, err)

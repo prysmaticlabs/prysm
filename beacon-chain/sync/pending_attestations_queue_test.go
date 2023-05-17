@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -42,8 +43,9 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{})
 
+	chain := &mock.ChainService{Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}}
 	r := &Service{
-		cfg:                  &config{p2p: p1, beaconDB: db, chain: &mock.ChainService{Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}}},
+		cfg:                  &config{p2p: p1, beaconDB: db, chain: chain, clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot)},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		chainStarted:         abool.New(),
 	}
@@ -105,20 +107,22 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
+	chain := &mock.ChainService{Genesis: time.Now(),
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
+			Epoch: 0,
+		},
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{Genesis: time.Now(),
-				State: beaconState,
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
-					Epoch: 0,
-				},
-			},
-			attPool: attestations.NewPool(),
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			attPool:  attestations.NewPool(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
@@ -147,14 +151,16 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 
 	s, _ := util.DeterministicGenesisState(t, 256)
+	chain := &mock.ChainService{
+		State:   s,
+		Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	r := &Service{
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{
-				State:   s,
-				Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
-			attPool: attestations.NewPool(),
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			attPool:  attestations.NewPool(),
 		},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
@@ -224,18 +230,20 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 	require.NoError(t, s.SetGenesisTime(uint64(time.Now().Unix())))
 	ctx, cancel := context.WithCancel(context.Background())
+	chain2 := &mock.ChainService{Genesis: time.Now(),
+		State: s,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
+			Epoch: 0,
+		}}
 	r = &Service{
 		ctx: ctx,
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{Genesis: time.Now(),
-				State: s,
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
-					Epoch: 0,
-				}},
-			attPool: attestations.NewPool(),
+			chain:    chain2,
+			clock:    startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+			attPool:  attestations.NewPool(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
@@ -305,20 +313,22 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
+	chain := &mock.ChainService{Genesis: time.Now(),
+		DB:    db,
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
+			Epoch: 0,
+		}}
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{Genesis: time.Now(),
-				DB:    db,
-				State: beaconState,
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
-					Epoch: 0,
-				}},
-			attPool: attestations.NewPool(),
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			attPool:  attestations.NewPool(),
 		},
 		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAggregatedAttestationCache: lruwrpr.New(10),

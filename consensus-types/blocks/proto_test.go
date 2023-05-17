@@ -1,7 +1,6 @@
 package blocks
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -1023,7 +1022,7 @@ func bodyBlindedBellatrix(t *testing.T) *BeaconBlockBody {
 
 func bodyCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	p, err := WrappedExecutionPayloadCapella(f.execPayloadCapella, big.NewInt(0))
+	p, err := WrappedExecutionPayloadCapella(f.execPayloadCapella, 0)
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,
@@ -1047,7 +1046,7 @@ func bodyCapella(t *testing.T) *BeaconBlockBody {
 
 func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	ph, err := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella, big.NewInt(0))
+	ph, err := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella, 0)
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,

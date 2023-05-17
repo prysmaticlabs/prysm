@@ -7,6 +7,7 @@ import (
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
@@ -25,7 +26,7 @@ type executionPayload struct {
 func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
 	w := executionPayload{p: p}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -175,6 +176,11 @@ func (executionPayload) Value() (*big.Int, error) {
 	return nil, ErrUnsupportedField
 }
 
+// ValueInGwei --
+func (executionPayload) ValueInGwei() (uint64, error) {
+	return 0, ErrUnsupportedField
+}
+
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -186,7 +192,7 @@ type executionPayloadHeader struct {
 func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
 	w := executionPayloadHeader{p: p}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -336,6 +342,11 @@ func (executionPayloadHeader) Value() (*big.Int, error) {
 	return nil, ErrUnsupportedField
 }
 
+// ValueInGwei --
+func (executionPayloadHeader) ValueInGwei() (uint64, error) {
+	return 0, ErrUnsupportedField
+}
+
 // PayloadToHeader converts `payload` into execution payload header format.
 func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader, error) {
 	txs, err := payload.Transactions()
@@ -376,7 +387,7 @@ type executionPayloadCapella struct {
 func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value *big.Int) (interfaces.ExecutionData, error) {
 	w := executionPayloadCapella{p: p, value: value}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -526,6 +537,11 @@ func (e executionPayloadCapella) Value() (*big.Int, error) {
 	return e.value, nil
 }
 
+// ValueInGwei --
+func (e executionPayloadCapella) ValueInGwei() (uint64, error) {
+	return e.value, nil
+}
+
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -538,7 +554,7 @@ type executionPayloadHeaderCapella struct {
 func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value *big.Int) (interfaces.ExecutionData, error) {
 	w := executionPayloadHeaderCapella{p: p, value: value}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }

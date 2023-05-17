@@ -7,11 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -31,22 +27,18 @@ var (
 
 func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	helpers.ClearCache()
-	beaconDB := testDB.SetupDB(t)
+	service, _ := minimalTestService(t)
 
-	chainService := setupBeaconChain(t, beaconDB)
-	chainService.genesisTime = time.Now()
+	service.genesisTime = time.Now()
 
 	e := primitives.Epoch(slots.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
-	_, err := chainService.AttestationTargetState(context.Background(), &ethpb.Checkpoint{Epoch: e})
+	_, err := service.AttestationTargetState(context.Background(), &ethpb.Checkpoint{Epoch: e})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }
 
 func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
-	ctx := context.Background()
-	opts := testServiceOptsWithDB(t)
-
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
@@ -69,11 +61,8 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 }
 
 func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
-	ctx := context.Background()
-
-	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
@@ -96,13 +85,10 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 }
 
 func TestProcessAttestations_Ok(t *testing.T) {
+	service, tr := minimalTestService(t)
 	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	opts := testServiceOptsWithDB(t)
-	opts = append(opts, WithAttestationPool(attestations.NewPool()))
+	ctx := tr.ctx
 
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
 	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
@@ -126,21 +112,9 @@ func TestProcessAttestations_Ok(t *testing.T) {
 }
 
 func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	newStateGen := stategen.New(beaconDB, fcs)
-	fcs.SetBalancesByRooter(newStateGen.ActiveNonSlashedBalancesByRoot)
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(newStateGen),
-		WithAttestationPool(attestations.NewPool()),
-		WithStateNotifier(&mockBeaconNode{}),
-		WithForkChoiceStore(fcs),
-	}
+	service, tr := minimalTestService(t)
+	ctx, fcs := tr.ctx, tr.fcs
 
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
 	service.genesisTime = prysmTime.Now().Add(-2 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
@@ -189,21 +163,9 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 }
 
 func TestService_UpdateHead_NoAtts(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	newStateGen := stategen.New(beaconDB, fcs)
-	fcs.SetBalancesByRooter(newStateGen.ActiveNonSlashedBalancesByRoot)
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithAttestationPool(attestations.NewPool()),
-		WithStateNotifier(&mockBeaconNode{}),
-		WithStateGen(newStateGen),
-		WithForkChoiceStore(fcs),
-	}
+	service, tr := minimalTestService(t)
+	ctx, fcs := tr.ctx, tr.fcs
 
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
 	service.genesisTime = prysmTime.Now().Add(-2 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))

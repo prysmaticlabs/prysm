@@ -53,6 +53,8 @@ type Chunker interface {
 // specified epoch and all attestation target epochs a validator has created
 // where att.source.epoch > e.
 //
+// nolint:dupword
+//
 // Under ideal network conditions, where every target epoch immediately follows its source,
 // min spans for a validator will look as follows:
 //
@@ -407,7 +409,7 @@ func (m *MaxSpanChunksSlice) Update(
 // a min span chunk for use in chunk updates. To compute this value, we look at the difference between
 // H = historyLength and the current epoch. Then, we check if the source epoch > difference. If so,
 // then the start epoch is source epoch - 1. Otherwise, we return to the caller a boolean signifying
-// the input argumets are invalid for the chunk and the start epoch does not exist.
+// the input arguments are invalid for the chunk and the start epoch does not exist.
 func (m *MinSpanChunksSlice) StartEpoch(
 	sourceEpoch, currentEpoch primitives.Epoch,
 ) (epoch primitives.Epoch, exists bool) {

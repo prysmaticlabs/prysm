@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -85,6 +86,12 @@ type ForkFetcher interface {
 	TimeFetcher
 }
 
+// TemporalOracle is like ForkFetcher minus CurrentFork()
+type TemporalOracle interface {
+	GenesisFetcher
+	TimeFetcher
+}
+
 // CanonicalFetcher retrieves the current chain's canonical information.
 type CanonicalFetcher interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
@@ -96,7 +103,7 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
-	UnrealizedJustifiedPayloadBlockHash() ([32]byte, error)
+	UnrealizedJustifiedPayloadBlockHash() [32]byte
 	FinalizedBlockHash() [32]byte
 	InForkchoice([32]byte) bool
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
@@ -327,7 +334,7 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 }
 
 // IsOptimistic returns true if the current head is optimistic.
-func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
+func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return false, nil
 	}
@@ -372,6 +379,14 @@ func (s *Service) InForkchoice(root [32]byte) bool {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.HasNode(root)
+}
+
+// IsViableForkCheckpoint returns whether the given checkpoint is a checkpoint in any
+// chain known to forkchoice
+func (s *Service) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.IsViableForCheckpoint(cp)
 }
 
 // IsOptimisticForRoot takes the root as argument instead of the current head

@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -214,7 +214,6 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 			"timeFromSendingToProcessingResponse": end,
 			"totalBlocksWithExecutionPayloads":    totalExecutionBlocks,
 		}).Info("Received blocks from peer")
-
 	}
 	return nil
 }

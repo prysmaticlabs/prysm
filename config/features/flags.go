@@ -50,6 +50,24 @@ var (
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
 			"We recommend against this flag unless you are an advanced user.",
 	}
+	aggregateFirstInterval = &cli.DurationFlag{
+		Name:   "aggregate-first-interval",
+		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
+		Value:  6500 * time.Millisecond,
+		Hidden: true,
+	}
+	aggregateSecondInterval = &cli.DurationFlag{
+		Name:   "aggregate-second-interval",
+		Usage:  "(Advanced): Specifies the second interval in which attestations are aggregated in the slot",
+		Value:  9500 * time.Millisecond,
+		Hidden: true,
+	}
+	aggregateThirdInterval = &cli.DurationFlag{
+		Name:   "aggregate-third-interval",
+		Usage:  "(Advanced): Specifies the third interval in which attestations are aggregated in the slot",
+		Value:  11800 * time.Millisecond,
+		Hidden: true,
+	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
 		Name: "dynamic-key-reload-debounce-interval",
 		Usage: "(Advanced): Specifies the time duration the validator waits to reload new keys if they have " +
@@ -118,6 +136,10 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
+	disableBuildBlockParallel = &cli.BoolFlag{
+		Name:  "disable-build-block-parallel",
+		Usage: "Disables building a beacon block in parallel for consensus and execution",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -164,6 +186,10 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
 	prepareAllPayloads,
+	disableBuildBlockParallel,
+	aggregateFirstInterval,
+	aggregateSecondInterval,
+	aggregateThirdInterval,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
