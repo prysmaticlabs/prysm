@@ -83,14 +83,13 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 
 	// [REJECT] The sidecar's block's parent (defined by sidecar.block_parent_root) passes validation.
-	blk, err := s.cfg.chain.GetBlock(ctx, parentRoot)
+	parentSlot, err := s.cfg.chain.GetResentBlockSlot(parentRoot)
 	if err != nil {
-		return pubsub.ValidationReject, err
+		return pubsub.ValidationIgnore, err
 	}
-
 	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
-	if blk.Block().Slot() >= blob.Slot {
-		err := fmt.Errorf("parent block slot %d greater or equal to blob slot %d", blk.Block().Slot(), blob.Slot)
+	if parentSlot >= blob.Slot {
+		err := fmt.Errorf("parent block slot %d greater or equal to blob slot %d", parentSlot, blob.Slot)
 		log.WithFields(blobFields(blob)).Debug(err)
 		return pubsub.ValidationReject, err
 	}

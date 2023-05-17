@@ -69,6 +69,7 @@ type ChainService struct {
 	OptimisticCheckRootReceived [32]byte
 	FinalizedRoots              map[[32]byte]bool
 	OptimisticRoots             map[[32]byte]bool
+	BlockSlot                   primitives.Slot
 }
 
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
@@ -389,12 +390,9 @@ func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
 	return s.InitSyncBlockRoots[rt]
 }
 
-// GetBlock mocks the same method in the chain service.
-func (s *ChainService) GetBlock(ctx context.Context, rt [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-	if s.DB == nil {
-		return nil, errors.New("no DB")
-	}
-	return s.DB.Block(ctx, rt)
+// GetResentBlockSlot mocks the same method in the chain service.
+func (s *ChainService) GetResentBlockSlot([32]byte) (primitives.Slot, error) {
+	return s.BlockSlot, nil
 }
 
 // HeadGenesisValidatorsRoot mocks HeadGenesisValidatorsRoot method in chain service.

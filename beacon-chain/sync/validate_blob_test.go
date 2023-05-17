@@ -187,7 +187,7 @@ func TestValidateBlob_HigherThanParentSlot(t *testing.T) {
 
 	b := util.NewBlobsidecar()
 	b.Message.Slot = chainService.CurrentSlot() + 1
-
+	chainService.BlockSlot = chainService.CurrentSlot() + 1
 	bb := util.NewBeaconBlock()
 	bb.Block.Slot = b.Message.Slot
 	signedBb, err := blocks.NewSignedBeaconBlock(bb)
