@@ -437,6 +437,7 @@ func (s *Service) pendingBlobsInCache(slot primitives.Slot) []*eth.SignedBlobSid
 	}
 	bs, ok := value.([]*eth.SignedBlobSidecar)
 	if !ok {
+		log.Debug("pendingBlobsInCache: value is not of type []*eth.SignedBlobSidecar")
 		return []*eth.SignedBlobSidecar{}
 	}
 	return bs
@@ -463,6 +464,13 @@ func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock)
 // This adds blob to slotToPendingBlobs cache.
 func (s *Service) addPendingBlobToCache(b *eth.SignedBlobSidecar) error {
 	blobs := s.pendingBlobsInCache(b.Message.Slot)
+
+	// If we already have seen the index. Ignore it.
+	for _, blob := range blobs {
+		if blob.Message.Index == b.Message.Index {
+			return nil
+		}
+	}
 
 	blobs = append(blobs, b)
 	k := slotToCacheKey(b.Message.Slot)

@@ -11,7 +11,7 @@ import (
 func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 	b, ok := msg.(*eth.SignedBlobSidecar)
 	if !ok {
-		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
+		return fmt.Errorf("message was not type *eth.SignedBlobSidecar, type=%T", msg)
 	}
 
 	log.WithFields(blobFields(b.Message)).Debug("Received blob sidecar")

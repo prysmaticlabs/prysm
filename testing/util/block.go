@@ -82,7 +82,7 @@ func NewBlobsidecar() *ethpb.SignedBlobSidecar {
 		Message: &ethpb.BlobSidecar{
 			BlockRoot:       make([]byte, fieldparams.RootLength),
 			BlockParentRoot: make([]byte, fieldparams.RootLength),
-			Blob:            make([]byte, 131072),
+			Blob:            make([]byte, fieldparams.BlobLength),
 			KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
 			KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
 		},
