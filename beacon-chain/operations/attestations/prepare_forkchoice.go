@@ -31,7 +31,7 @@ func (s *Service) prepareForkChoiceAtts() {
 			break
 		}
 	}
-	ticker := slots.NewSlotTickerWithIntervals(time.Unix(int64(s.genesisTime), 0), intervals)
+	ticker := slots.NewSlotTickerWithIntervals(time.Unix(int64(s.genesisTime), 0), intervals[:])
 	for {
 		select {
 		case <-ticker.C():
