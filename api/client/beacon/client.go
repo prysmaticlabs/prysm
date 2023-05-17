@@ -85,7 +85,7 @@ func renderGetBlockPath(id StateOrBlockId) string {
 	return path.Join(getSignedBlockPath, string(id))
 }
 
-// Client is a wrapper with beacon API functions on the client
+// Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
 	*client.Client
 }
