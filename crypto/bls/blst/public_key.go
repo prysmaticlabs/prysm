@@ -4,16 +4,16 @@ package blst
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/pkg/errors"
-	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
 )
 
-var maxKeys = 1_000_000
-var pubkeyCache = lruwrpr.New(maxKeys)
+var pubkeyLock sync.RWMutex
+var pubkeyMap = make(map[[48]byte]*PublicKey)
 
 // PublicKey used in the BLS signature scheme.
 type PublicKey struct {
@@ -26,9 +26,13 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 	}
 	newKey := (*[fieldparams.BLSPubkeyLength]byte)(pubKey)
-	if cv, ok := pubkeyCache.Get(*newKey); ok {
-		return cv.(*PublicKey).Copy(), nil
+	pubkeyLock.RLock()
+	if cv, ok := pubkeyMap[*newKey]; ok {
+		pubkeyLock.RUnlock()
+		return cv.Copy(), nil
 	}
+	pubkeyLock.RUnlock()
+
 	// Subgroup check NOT done when decompressing pubkey.
 	p := new(blstPublicKey).Uncompress(pubKey)
 	if p == nil {
@@ -42,7 +46,9 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	pubKeyObj := &PublicKey{p: p}
 	copiedKey := pubKeyObj.Copy()
 	cacheKey := *newKey
-	pubkeyCache.Add(cacheKey, copiedKey)
+	pubkeyLock.Lock()
+	pubkeyMap[cacheKey] = (copiedKey).(*PublicKey)
+	pubkeyLock.Unlock()
 	return pubKeyObj, nil
 }
 
