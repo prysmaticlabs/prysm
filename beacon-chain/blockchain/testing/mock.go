@@ -389,6 +389,7 @@ func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
 	return s.InitSyncBlockRoots[rt]
 }
 
+// GetBlock mocks the same method in the chain service.
 func (s *ChainService) GetBlock(ctx context.Context, rt [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if s.DB == nil {
 		return nil, errors.New("no DB")
