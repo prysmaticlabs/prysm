@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
 
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 )
@@ -17,7 +18,11 @@ func setVoluntaryExitEpoch(
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
 	if _, ok := endpoint.PostRequest.(*SetVoluntaryExitRequestJson); ok {
-		j := &SetVoluntaryExitRequestJson{Epoch: req.URL.Query().Get("epoch")}
+		var epoch = req.URL.Query().Get("epoch")
+		if !regexp.MustCompile(`^[0-9]+?`).MatchString(epoch) {
+			epoch = "0"
+		}
+		j := &SetVoluntaryExitRequestJson{Epoch: epoch}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
