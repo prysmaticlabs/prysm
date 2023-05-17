@@ -11,7 +11,8 @@ import (
 )
 
 // "/eth/v1/validator/{pubkey}/voluntary_exit" POST expects epoch as a query param.
-// This hook adds the query param to the body so that it is a valid POST request.
+// This hook adds the query param to the body so that it is a valid POST request as
+// grpc-gateway does not handle query params in POST requests.
 func setVoluntaryExitEpoch(
 	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
