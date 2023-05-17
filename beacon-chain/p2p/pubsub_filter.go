@@ -59,7 +59,7 @@ func (s *Service) CanSubscribe(topic string) bool {
 	}
 	denebForkDigest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().DenebForkEpoch, s.genesisValidatorsRoot)
 	if err != nil {
-		log.WithError(err).Error("Could not determine Capella fork digest")
+		log.WithError(err).Error("Could not determine Deneb fork digest")
 		return false
 	}
 	switch parts[2] {
