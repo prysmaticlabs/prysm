@@ -214,7 +214,7 @@ message BeaconStateDeneb {
   SyncCommittee current_sync_committee = 9002; // [New in Altair]
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
   // Bellatrix fields [10001-11000]
-  ethereum.engine.v1.ExecutionPayloadHeaderDeneb latest_execution_payload_header = 10001; // [Updated in EIP-Deneb]
+  ethereum.engine.v1.ExecutionPayloadHeaderDeneb latest_execution_payload_header = 10001; // [Updated in Deneb]
   // Capella fields [11001-12000]
   uint64 next_withdrawal_index = 11001; // [New in Capella]
   uint64 next_withdrawal_validator_index = 11002 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"]; // [New in Capella]
