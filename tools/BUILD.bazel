@@ -108,7 +108,18 @@ genrule(
         "@platforms//cpu:x86_64": ["@bash_amd64//file:file"],
         "@platforms//cpu:arm64": ["@bash_arm64//file:file"],
     }),
-    outs = ["data.tar"],
+    outs = ["bash.tar"],
+    cmd = "ar x $< && xz -d data.tar.xz -c >> $@",
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "libtinfo6_tar",
+        srcs = select({
+        "@platforms//cpu:x86_64": ["@libtinfo6_amd64//file:file"],
+        "@platforms//cpu:arm64": ["@libtinfo6_arm64//file:file"],
+    }),
+    outs = ["libtinfo6.tar"],
     cmd = "ar x $< && xz -d data.tar.xz -c >> $@",
     visibility = ["//visibility:public"],
 )

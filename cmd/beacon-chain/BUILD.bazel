@@ -7,6 +7,7 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//tools:multi_arch.bzl", "multi_arch")
+load("//tools:prysm_image.bzl", "prysm_image_upload")
 
 go_library(
     name = "go_default_library",
@@ -157,44 +158,55 @@ go_test(
     ],
 )
 
-pkg_tar(
-    name = "tar",
-    srcs = [
-        ":beacon-chain",
-    ],
-)
-
-oci_image(
-    name = "oci_image",
-    base = "@linux_debian11_multiarch_base",
-    # TODO: Add symlink to prevent additional breaking changes. The entrypoint used to be /app/cmd/beacon-chain/beacon-chain.
-    # Alternatively, use the pkg_tar package_dir to mimick the same behavior.
-    entrypoint = ["/beacon-chain"],
-    tars = [
-        "//tools:passwd_tar",
-        "//tools:bash_tar",
-        ":tar",
-    ],
-)
-
-multi_arch(
-    name = "multiarch",
-    image = ":oci_image",
-    platforms = [
-        "@io_bazel_rules_go//go/toolchain:linux_amd64_cgo",
-        "@io_bazel_rules_go//go/toolchain:linux_arm64_cgo",
-    ],
-)
-
-oci_image_index(
-    name = "index",
-    images = [
-        ":multiarch",
-    ],
-)
-
-oci_push(
+prysm_image_upload(
     name = "push_oci_image",
-    image = ":index",
+    binary = ":beacon-chain",
+    entrypoint = ["/beacon-chain"],
+    symlinks = {
+        # Backwards compatiability for images that depended on the old filepath.
+        "/app/cmd/beacon-chain/beacon-chain": "/beacon-chain" 
+    },
     repository = "gcr.io/prylabs-dev/prysm/beacon-chain",
 )
+
+# pkg_tar(
+#     name = "tar",
+#     srcs = [
+#         ":beacon-chain",
+#     ],
+# )
+
+# oci_image(
+#     name = "oci_image",
+#     base = "@linux_debian11_multiarch_base",
+#     # TODO: Add symlink to prevent additional breaking changes. The entrypoint used to be /app/cmd/beacon-chain/beacon-chain.
+#     # Alternatively, use the pkg_tar package_dir to mimick the same behavior.
+#     entrypoint = ["/beacon-chain"],
+#     tars = [
+#         "//tools:passwd_tar",
+#         "//tools:bash_tar",
+#         ":tar",
+#     ],
+# )
+
+# multi_arch(
+#     name = "multiarch",
+#     image = ":oci_image",
+#     platforms = [
+#         "@io_bazel_rules_go//go/toolchain:linux_amd64_cgo",
+#         "@io_bazel_rules_go//go/toolchain:linux_arm64_cgo",
+#     ],
+# )
+
+# oci_image_index(
+#     name = "index",
+#     images = [
+#         ":multiarch",
+#     ],
+# )
+
+# oci_push(
+#     name = "push_oci_image",
+#     image = ":index",
+#     repository = "gcr.io/prylabs-dev/prysm/beacon-chain",
+# )
