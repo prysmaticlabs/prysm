@@ -34,6 +34,7 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blkRoots [][32]byte) error
 	HasBlock(ctx context.Context, root [32]byte) bool
+	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
 }
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
@@ -235,6 +236,11 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 // HasBlock returns true if the block of the input root exists in initial sync blocks cache or DB.
 func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 	return s.hasBlockInInitSyncOrDB(ctx, root)
+}
+
+// RecentBlockSlot returns block slot form fork choice store
+func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
+	return s.cfg.ForkChoiceStore.Slot(root)
 }
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
