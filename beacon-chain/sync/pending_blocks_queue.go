@@ -248,7 +248,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(bestPeers) == 0 {
 		return nil
 	}
-	roots = dedupRoots(roots)
+	roots = s.dedupRoots(roots)
 	// Randomly choose a peer to query from our best peers. If that peer cannot return
 	// all the requested blocks, we randomly select another peer.
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
@@ -455,17 +455,4 @@ func cacheKeyToSlot(s string) primitives.Slot {
 func slotToCacheKey(s primitives.Slot) string {
 	b := bytesutil.SlotToBytesBigEndian(s)
 	return string(b)
-}
-
-func dedupRoots(roots [][32]byte) [][32]byte {
-	newRoots := make([][32]byte, 0, len(roots))
-	rootMap := make(map[[32]byte]bool, len(roots))
-	for i, r := range roots {
-		if rootMap[r] {
-			continue
-		}
-		rootMap[r] = true
-		newRoots = append(newRoots, roots[i])
-	}
-	return newRoots
 }
