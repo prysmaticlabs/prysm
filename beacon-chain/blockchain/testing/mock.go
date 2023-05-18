@@ -390,8 +390,8 @@ func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
 	return s.InitSyncBlockRoots[rt]
 }
 
-// GetResentBlockSlot mocks the same method in the chain service.
-func (s *ChainService) GetResentBlockSlot([32]byte) (primitives.Slot, error) {
+// RecentBlockSlot mocks the same method in the chain service.
+func (s *ChainService) RecentBlockSlot([32]byte) (primitives.Slot, error) {
 	return s.BlockSlot, nil
 }
 

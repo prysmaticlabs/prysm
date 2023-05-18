@@ -83,7 +83,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 
 	// [REJECT] The sidecar's block's parent (defined by sidecar.block_parent_root) passes validation.
-	parentSlot, err := s.cfg.chain.GetResentBlockSlot(parentRoot)
+	parentSlot, err := s.cfg.chain.RecentBlockSlot(parentRoot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
