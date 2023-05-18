@@ -114,19 +114,11 @@ func (s *Service) Start() {
 		"ValidatorIndices": tracked,
 	}).Info("Starting service")
 
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-
-	go s.run(stateChannel, stateSub)
+	go s.run()
 }
 
 // run waits until the beacon is synced and starts the monitoring system.
-func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription) {
-	if stateChannel == nil {
-		log.Error("State state is nil")
-		return
-	}
-
+func (s *Service) run() {
 	if err := s.waitForSync(s.config.InitialSyncComplete); err != nil {
 		log.WithError(err)
 		return
@@ -154,6 +146,8 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 	s.isLogging = true
 	s.Unlock()
 
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 	s.monitorRoutine(stateChannel, stateSub)
 }
 
