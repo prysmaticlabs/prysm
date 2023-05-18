@@ -31,7 +31,7 @@ var syncCommsSubnetEnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 // chosen as more than 64(attestation subnet count).
 const syncLockerVal = 100
 
-// The value used with the blob sidecar subnet, inorder
+// The value used with the blob sidecar subnet, in order
 // to create an appropriate key to retrieve
 // the relevant lock. This is used to differentiate
 // blob subnets from others. This is deliberately
