@@ -453,9 +453,7 @@ func TestService_BroadcastBlob(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.BHost.Network().Peers()) == 0 {
-		t.Fatal("No peers")
-	}
+	require.NotEqual(t, 0, len(p1.BHost.Network().Peers()), "No peers")
 
 	p := &Service{
 		host:                  p1.BHost,
@@ -512,9 +510,7 @@ func TestService_BroadcastBlob(t *testing.T) {
 
 		result := &ethpb.SignedBlobSidecar{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
-		if !proto.Equal(result, blobSidecar) {
-			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, blobSidecar)
-		}
+		require.DeepEqual(t, result, blobSidecar)
 	}(t)
 
 	// Attempt to broadcast nil object should fail.
@@ -523,7 +519,5 @@ func TestService_BroadcastBlob(t *testing.T) {
 
 	// Broadcast to peers and wait.
 	require.NoError(t, p.BroadcastBlob(ctx, subnet, blobSidecar))
-	if util.WaitTimeout(&wg, 1*time.Second) {
-		t.Error("Failed to receive pubsub within 1s")
-	}
+	require.Equal(t, false, util.WaitTimeout(&wg, 1*time.Second), "Failed to receive pubsub within 1s")
 }
