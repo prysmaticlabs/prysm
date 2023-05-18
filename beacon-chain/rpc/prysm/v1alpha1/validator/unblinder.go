@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -114,7 +115,7 @@ func copyBlockData(src interfaces.SignedBeaconBlock, dst interfaces.SignedBeacon
 	graffiti := src.Block().Body().Graffiti()
 	sig := src.Signature()
 	blsToExecChanges, err := src.Block().Body().BLSToExecutionChanges()
-	if err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedField) {
+	if err != nil && !errors.Is(err, consensus_types.ErrUnsupportedField) {
 		return errors.Wrap(err, "could not get bls to execution changes")
 	}
 
@@ -134,7 +135,7 @@ func copyBlockData(src interfaces.SignedBeaconBlock, dst interfaces.SignedBeacon
 		return errors.Wrap(err, "could not set sync aggregate")
 	}
 	dst.SetSignature(sig[:])
-	if err = dst.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensusblocks.ErrUnsupportedField) {
+	if err = dst.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensus_types.ErrUnsupportedField) {
 		return errors.Wrap(err, "could not set bls to execution changes")
 	}
 
