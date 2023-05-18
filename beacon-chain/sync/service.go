@@ -44,6 +44,7 @@ var _ runtime.Service = (*Service)(nil)
 
 const rangeLimit uint64 = 1024
 const seenBlockSize = 1000
+const seenBlobSize = seenBlockSize * 4 // Each block can have max 4 blobs. Worst case 164kB for cache.
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
 const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.
@@ -110,6 +111,7 @@ type Service struct {
 	ctx                              context.Context
 	cancel                           context.CancelFunc
 	slotToPendingBlocks              *gcache.Cache
+	slotToPendingBlobs               *gcache.Cache
 	seenPendingBlocks                map[[32]byte]bool
 	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	subHandler                       *subTopicHandler
@@ -120,6 +122,8 @@ type Service struct {
 	rateLimiter                      *limiter
 	seenBlockLock                    sync.RWMutex
 	seenBlockCache                   *lru.Cache
+	seenBlobLock                     sync.RWMutex
+	seenBlobCache                    *lru.Cache
 	seenAggregatedAttestationLock    sync.RWMutex
 	seenAggregatedAttestationCache   *lru.Cache
 	seenUnAggregatedAttestationLock  sync.RWMutex
@@ -146,6 +150,7 @@ type Service struct {
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, opts ...Option) *Service {
 	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+	pendingBlobCache := gcache.New(0 /* exp time */, 0 /* prune time */)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
@@ -153,6 +158,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		chainStarted:         abool.New(),
 		cfg:                  &config{clock: startup.NewClock(time.Unix(0, 0), [32]byte{})},
 		slotToPendingBlocks:  c,
+		slotToPendingBlobs:   pendingBlobCache,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
@@ -223,6 +229,7 @@ func (s *Service) Status() error {
 // and prevent DoS.
 func (s *Service) initCaches() {
 	s.seenBlockCache = lruwrpr.New(seenBlockSize)
+	s.seenBlobCache = lruwrpr.New(seenBlobSize)
 	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
