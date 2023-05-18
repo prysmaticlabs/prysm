@@ -69,6 +69,7 @@ type ChainService struct {
 	OptimisticCheckRootReceived [32]byte
 	FinalizedRoots              map[[32]byte]bool
 	OptimisticRoots             map[[32]byte]bool
+	BlockSlot                   primitives.Slot
 }
 
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
@@ -387,6 +388,11 @@ func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
 		return false
 	}
 	return s.InitSyncBlockRoots[rt]
+}
+
+// RecentBlockSlot mocks the same method in the chain service.
+func (s *ChainService) RecentBlockSlot([32]byte) (primitives.Slot, error) {
+	return s.BlockSlot, nil
 }
 
 // HeadGenesisValidatorsRoot mocks HeadGenesisValidatorsRoot method in chain service.
