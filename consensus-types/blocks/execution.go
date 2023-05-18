@@ -683,11 +683,6 @@ func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, 
 	return nil, ErrUnsupportedField
 }
 
-// Value --
-func (e executionPayloadHeaderCapella) Value() (uint64, error) {
-	return e.value, nil
-}
-
 // ValueInGwei --
 func (e executionPayloadHeaderCapella) ValueInGwei() (uint64, error) {
 	return e.value, nil
