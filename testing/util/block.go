@@ -77,6 +77,19 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 	}
 }
 
+func NewBlobsidecar() *ethpb.SignedBlobSidecar {
+	return &ethpb.SignedBlobSidecar{
+		Message: &ethpb.BlobSidecar{
+			BlockRoot:       make([]byte, fieldparams.RootLength),
+			BlockParentRoot: make([]byte, fieldparams.RootLength),
+			Blob:            make([]byte, fieldparams.BlobLength),
+			KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
+			KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
+		},
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
+	}
+}
+
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
