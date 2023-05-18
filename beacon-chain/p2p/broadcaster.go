@@ -218,15 +218,44 @@ func (s *Service) BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.
 	}
 
 	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
-	go s.broadcastBlobBackground(ctx, subnet, blob, forkDigest)
+	go s.broadcastBlob(ctx, subnet, blob, forkDigest)
 
 	return nil
 }
 
-func (s *Service) broadcastBlobBackground(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar, forkDigest [4]byte) {
+func (s *Service) broadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar, forkDigest [4]byte) {
 	_, span := trace.StartSpan(ctx, "p2p.broadcastBlob")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
+
+	oneSlot := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	ctx, cancel := context.WithTimeout(ctx, oneSlot)
+	defer cancel()
+
+	wrappedSubIdx := subnet + blobSubnetLockerVal
+	s.subnetLocker(wrappedSubIdx).RLock()
+	hasPeer := s.hasPeerWithSubnet(blobSubnetToTopic(subnet, forkDigest))
+	s.subnetLocker(wrappedSubIdx).RUnlock()
+
+	if !hasPeer {
+		blobSidecarCommitteeBroadcastAttempts.Inc()
+		if err := func() error {
+			s.subnetLocker(wrappedSubIdx).Lock()
+			defer s.subnetLocker(wrappedSubIdx).Unlock()
+			ok, err := s.FindPeersWithSubnet(ctx, blobSubnetToTopic(subnet, forkDigest), subnet, 1)
+			if err != nil {
+				return err
+			}
+			if ok {
+				blobSidecarCommitteeBroadcasts.Inc()
+				return nil
+			}
+			return errors.New("failed to find peers for subnet")
+		}(); err != nil {
+			log.WithError(err).Error("Failed to find peers")
+			tracing.AnnotateError(span, err)
+		}
+	}
 
 	if err := s.broadcastObject(ctx, blobSidecar, blobSubnetToTopic(subnet, forkDigest)); err != nil {
 		log.WithError(err).Error("Failed to broadcast blob sidecar")
