@@ -36,7 +36,7 @@ func (e executionPayload) IsNil() bool {
 }
 
 // IsBlinded returns true if the underlying data is blinded.
-func (e executionPayload) IsBlinded() bool {
+func (executionPayload) IsBlinded() bool {
 	return false
 }
 
@@ -146,17 +146,17 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 }
 
 // TransactionsRoot --
-func (e executionPayload) TransactionsRoot() ([]byte, error) {
+func (executionPayload) TransactionsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedField
 }
 
 // Withdrawals --
-func (e executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
+func (executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return nil, ErrUnsupportedField
 }
 
 // WithdrawalsRoot --
-func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
+func (executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedField
 }
 
@@ -197,7 +197,7 @@ func (e executionPayloadHeader) IsNil() bool {
 }
 
 // IsBlinded returns true if the underlying data is a header.
-func (e executionPayloadHeader) IsBlinded() bool {
+func (executionPayloadHeader) IsBlinded() bool {
 	return true
 }
 
@@ -312,12 +312,12 @@ func (e executionPayloadHeader) TransactionsRoot() ([]byte, error) {
 }
 
 // Withdrawals --
-func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
+func (executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return nil, ErrUnsupportedField
 }
 
 // WithdrawalsRoot --
-func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
+func (executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedField
 }
 
@@ -387,7 +387,7 @@ func (e executionPayloadCapella) IsNil() bool {
 }
 
 // IsBlinded returns true if the underlying data is blinded.
-func (e executionPayloadCapella) IsBlinded() bool {
+func (executionPayloadCapella) IsBlinded() bool {
 	return false
 }
 
@@ -497,7 +497,7 @@ func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 }
 
 // TransactionsRoot --
-func (e executionPayloadCapella) TransactionsRoot() ([]byte, error) {
+func (executionPayloadCapella) TransactionsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedField
 }
 
@@ -507,7 +507,7 @@ func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 }
 
 // WithdrawalsRoot --
-func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
+func (executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedField
 }
 
@@ -549,7 +549,7 @@ func (e executionPayloadHeaderCapella) IsNil() bool {
 }
 
 // IsBlinded returns true if the underlying data is blinded.
-func (e executionPayloadHeaderCapella) IsBlinded() bool {
+func (executionPayloadHeaderCapella) IsBlinded() bool {
 	return true
 }
 
@@ -664,7 +664,7 @@ func (e executionPayloadHeaderCapella) TransactionsRoot() ([]byte, error) {
 }
 
 // Withdrawals --
-func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
+func (executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return nil, ErrUnsupportedField
 }
 
