@@ -1,6 +1,6 @@
 workspace(name = "prysm")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
@@ -83,6 +83,24 @@ http_archive(
 )
 
 http_archive(
+    name = "rules_oci",
+    sha256 = "7824dcb6c9f9f87786d65592da006d9f1e2bea826d7560d96745e54cdecb5d47",
+    strip_prefix = "rules_oci-1.0.0-rc1",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.0.0-rc1/rules_oci-v1.0.0-rc1.tar.gz",
+)
+
+load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
+
+rules_oci_dependencies()
+
+load("@rules_oci//oci:repositories.bzl", "LATEST_CRANE_VERSION", "oci_register_toolchains")
+
+oci_register_toolchains(
+    name = "oci",
+    crane_version = LATEST_CRANE_VERSION,
+)
+
+http_archive(
     name = "io_bazel_rules_go",
     patch_args = ["-p1"],
     patches = [
@@ -160,6 +178,42 @@ container_pull(
     digest = "sha256:752aa0c9a88461ffc50c5267bb7497ef03a303e38b2c8f7f2ded9bebe5f1f00e",
     registry = "index.docker.io",
     repository = "pinglamb/alpine-glibc",
+)
+
+load("@rules_oci//oci:pull.bzl", "oci_pull")
+
+# A multi-arch base image
+oci_pull(
+    name = "linux_debian11_multiarch_base",
+    digest = "sha256:9b8e0854865dcaf49470b4ec305df45957020fbcf17b71eeb50ffd3bc5bf885d", # 2023-05-17
+    image = "gcr.io/distroless/cc-debian11",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ],
+    reproducible = True,
+)
+
+http_file(
+    name = "bash_amd64",
+    urls = [
+        "http://ftp.us.debian.org/debian/pool/main/b/bash/bash_5.2.15-2+b2_amd64.deb",
+        "http://http.us.debian.org/debian/pool/main/b/bash/bash_5.2.15-2+b2_amd64.deb",
+        "http://ftp.uk.debian.org/debian/pool/main/b/bash/bash_5.2.15-2+b2_amd64.deb",
+        "http://ftp.au.debian.org/debian/pool/main/b/bash/bash_5.2.15-2+b2_amd64.deb",
+    ],
+    sha256 = "5325e63acaecb37f6636990328370774995bd9b3dce10abd0366c8a06877bd0d",
+)
+
+http_file(
+    name = "bash_arm64",
+    urls = [
+        "http://ftp.us.debian.org/debian/pool/main/b/bash/bash_5.2.15-2+b2_arm64.deb",
+        "http://http.us.debian.org/debian/pool/main/b/bash/bash_5.2.15-2+b2_arm64.deb",
+        "http://ftp.uk.debian.org/debian/pool/main/b/bash/bash_5.2.15-2+b2_arm64.deb",
+        "http://ftp.au.debian.org/debian/pool/main/b/bash/bash_5.2.15-2+b2_arm64.deb",
+    ],
+    sha256 = "13c4e70030a059aeec6b745e4ce2949ce67405246bb38521e6c8f4d21c133543",
 )
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")

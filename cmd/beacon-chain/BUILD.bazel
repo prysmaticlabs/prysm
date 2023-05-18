@@ -4,6 +4,9 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
 load("//tools:go_image.bzl", "go_image_alpine", "go_image_debug")
 load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push", "oci_image_index")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("//tools:multi_arch.bzl", "multi_arch")
 
 go_library(
     name = "go_default_library",
@@ -152,4 +155,44 @@ go_test(
         "//config/features:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],
+)
+
+pkg_tar(
+    name = "tar",
+    srcs = [
+        ":beacon-chain",
+    ],
+)
+
+oci_image(
+    name = "oci_image",
+    base = "@linux_debian11_multiarch_base",
+    tars = [
+        "//tools:passwd_tar",
+        "//tools:bash_tar",
+        ":tar",
+    ],
+    entrypoint = ["/beacon-chain"],
+)
+
+multi_arch(
+    name = "multiarch",
+    image = ":oci_image",
+    platforms = [
+        "@io_bazel_rules_go//go/toolchain:linux_amd64_cgo",
+        "@io_bazel_rules_go//go/toolchain:linux_arm64_cgo",
+    ],
+)
+
+oci_image_index(
+    name = "index",
+    images = [
+        ":multiarch",
+    ],
+)
+
+oci_push(
+    name = "push_oci_image",
+    image = ":index",
+    repository = "gcr.io/prylabs-dev/prysm/beacon-chain",
 )
