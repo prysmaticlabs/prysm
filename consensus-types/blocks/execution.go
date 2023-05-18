@@ -162,7 +162,7 @@ func (executionPayload) WithdrawalsRoot() ([]byte, error) {
 
 // ExcessDataGas --
 func (e executionPayload) ExcessDataGas() ([]byte, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbBellatrix --
@@ -328,7 +328,7 @@ func (executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 
 // ExcessDataGas --
 func (e executionPayloadHeader) ExcessDataGas() ([]byte, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbV2 --
@@ -523,7 +523,7 @@ func (executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 
 // ExcessDataGas returns error for executionPayloadCapella.
 func (e executionPayloadCapella) ExcessDataGas() ([]byte, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbV2 --
@@ -690,7 +690,7 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 
 // ExcessDataGas returns error for executionPayloadHeaderCapella.
 func (e executionPayloadHeaderCapella) ExcessDataGas() ([]byte, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbV2 --
@@ -970,7 +970,7 @@ func (e executionPayloadHeaderDeneb) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeaderDeneb) Transactions() ([][]byte, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // TransactionsRoot --
@@ -980,7 +980,7 @@ func (e executionPayloadHeaderDeneb) TransactionsRoot() ([]byte, error) {
 
 // Withdrawals --
 func (e executionPayloadHeaderDeneb) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // WitdrawalsRoot --
@@ -994,12 +994,12 @@ func (e executionPayloadHeaderDeneb) ExcessDataGas() ([]byte, error) {
 
 // PbBellatrix --
 func (e executionPayloadHeaderDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbCapella --
 func (e executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 func (e executionPayloadHeaderDeneb) ValueInGwei() (uint64, error) {
@@ -1140,7 +1140,7 @@ func (e executionPayloadDeneb) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayloadDeneb) TransactionsRoot() ([]byte, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // Withdrawals --
@@ -1150,7 +1150,7 @@ func (e executionPayloadDeneb) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // WithdrawalsRoot --
 func (e executionPayloadDeneb) WithdrawalsRoot() ([]byte, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 func (e executionPayloadDeneb) ExcessDataGas() ([]byte, error) {
@@ -1159,12 +1159,12 @@ func (e executionPayloadDeneb) ExcessDataGas() ([]byte, error) {
 
 // PbBellatrix --
 func (e executionPayloadDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbCapella --
 func (e executionPayloadDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
-	return nil, consensus_types.ErrUnsupportedGetter
+	return nil, consensus_types.ErrUnsupportedField
 }
 
 func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
