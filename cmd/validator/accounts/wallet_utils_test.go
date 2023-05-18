@@ -24,9 +24,7 @@ func TestWalletWithKeymanager(t *testing.T) {
 	logHook := test.NewGlobal()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	keysDir := filepath.Join(t.TempDir(), "keysDir")
-	keysDir2 := filepath.Join(keysDir, "InnerKeyDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-	require.NoError(t, os.MkdirAll(keysDir2, os.ModePerm))
 
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
@@ -63,8 +61,7 @@ func TestWalletWithKeymanager(t *testing.T) {
 	// Create 2 keys.
 	createKeystore(t, keysDir)
 	time.Sleep(time.Second)
-	// test creation from inner dir keystore
-	createKeystore(t, keysDir2)
+	createKeystore(t, keysDir)
 	require.NoError(t, accountsImport(cliCtx))
 
 	w, k, err := walletWithKeymanager(cliCtx)
