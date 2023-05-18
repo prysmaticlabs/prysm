@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,18 +10,23 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/v4/validator/node"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
 
 func TestWalletWithKeymanager(t *testing.T) {
+	logHook := test.NewGlobal()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	keysDir := filepath.Join(t.TempDir(), "keysDir")
+	keysDir2 := filepath.Join(keysDir, "InnerKeyDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
+	require.NoError(t, os.MkdirAll(keysDir2, os.ModePerm))
 
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
@@ -57,7 +63,8 @@ func TestWalletWithKeymanager(t *testing.T) {
 	// Create 2 keys.
 	createKeystore(t, keysDir)
 	time.Sleep(time.Second)
-	createKeystore(t, keysDir)
+	// test creation from inner dir keystore
+	createKeystore(t, keysDir2)
 	require.NoError(t, accountsImport(cliCtx))
 
 	w, k, err := walletWithKeymanager(cliCtx)
@@ -66,6 +73,9 @@ func TestWalletWithKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(keys), 2)
 	require.Equal(t, w.KeymanagerKind(), keymanager.Local)
+	hexKeys := []string{hexutil.Encode(keys[0][:])[2:], hexutil.Encode(keys[1][:])[2:]} // imported keystores don't include the 0x in name
+
+	assert.LogsContain(t, logHook, fmt.Sprintf("Imported accounts %v,", hexKeys))
 }
 
 func TestWalletWithKeymanager_web3signer(t *testing.T) {
