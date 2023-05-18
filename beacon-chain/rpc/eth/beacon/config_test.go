@@ -131,6 +131,9 @@ func TestGetSpec(t *testing.T) {
 	var dam [4]byte
 	copy(dam[:], []byte{'1', '0', '0', '0'})
 	config.DomainApplicationMask = dam
+	var dbs [4]byte
+	copy(dam[:], []byte{'2', '0', '0', '0'})
+	config.DomainBlobSidecar = dbs
 
 	params.OverrideBeaconConfig(config)
 
@@ -138,7 +141,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 108, len(resp.Data))
+	assert.Equal(t, 109, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -339,6 +342,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x08000000", v)
 		case "DOMAIN_CONTRIBUTION_AND_PROOF":
 			assert.Equal(t, "0x09000000", v)
+		case "DOMAIN_BLOB_SIDECAR":
+			assert.Equal(t, "0x00000000", v)
 		case "TRANSITION_TOTAL_DIFFICULTY":
 			assert.Equal(t, "0", v)
 		case "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH":
