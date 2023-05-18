@@ -97,6 +97,24 @@ func TestGetBeaconStateV2(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		fakeState, _ := util.DeterministicGenesisStateDeneb(t, 1)
+		server := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
+			BeaconDB:              db,
+		}
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
+			StateId: []byte("head"),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
+	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlock()
@@ -255,6 +273,25 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 
 		assert.DeepEqual(t, sszState, resp.Data)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		fakeState, _ := util.DeterministicGenesisStateDeneb(t, 1)
+		sszState, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+
+		server := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		assert.DeepEqual(t, sszState, resp.Data)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
 	})
 }
 
