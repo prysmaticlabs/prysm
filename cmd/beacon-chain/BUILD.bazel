@@ -4,7 +4,7 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
 load("//tools:go_image.bzl", "go_image_alpine", "go_image_debug")
 load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push", "oci_image_index")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//tools:multi_arch.bzl", "multi_arch")
 
@@ -167,12 +167,14 @@ pkg_tar(
 oci_image(
     name = "oci_image",
     base = "@linux_debian11_multiarch_base",
+    # TODO: Add symlink to prevent additional breaking changes. The entrypoint used to be /app/cmd/beacon-chain/beacon-chain.
+    # Alternatively, use the pkg_tar package_dir to mimick the same behavior.
+    entrypoint = ["/beacon-chain"],
     tars = [
         "//tools:passwd_tar",
         "//tools:bash_tar",
         ":tar",
     ],
-    entrypoint = ["/beacon-chain"],
 )
 
 multi_arch(
