@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/capella"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/deneb"
 	e "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/execution"
@@ -287,6 +288,14 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 
 		if time.CanUpgradeToCapella(state.Slot()) {
 			state, err = capella.UpgradeToCapella(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if time.CanUpgradeToDeneb(state.Slot()) {
+			state, err = deneb.UpgradeToDeneb(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err
