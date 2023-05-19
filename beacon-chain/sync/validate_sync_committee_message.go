@@ -141,10 +141,12 @@ func (s *Service) hasSeenSyncMessageIndexSlot(ctx context.Context, m *ethpb.Sync
 		return true // Impossible. Return true to be safe
 	}
 	if !s.cfg.chain.InForkchoice(root) && !s.cfg.beaconDB.HasBlock(ctx, root) {
+		syncMessagesForUnkownBlocks.Inc()
 		return true
 	}
 	msgRoot := [32]byte(m.BlockRoot)
 	if !s.cfg.chain.InForkchoice(msgRoot) && !s.cfg.beaconDB.HasBlock(ctx, msgRoot) {
+		syncMessagesForUnkownBlocks.Inc()
 		return false
 	}
 	headRoot := s.cfg.chain.CachedHeadRoot()
