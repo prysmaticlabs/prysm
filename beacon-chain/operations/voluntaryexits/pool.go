@@ -4,7 +4,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -90,8 +90,10 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 			}
 			continue
 		}
-		if err = blocks.VerifyExitAndSignature(validator, state.Slot(), state.Fork(), exit, state.GenesisValidatorsRoot()); err != nil {
-			logrus.WithError(err).Warning("removing invalid exit from pool")
+
+		stateEpoch := time.CurrentEpoch(state)
+		if !(validator.ActivationEpoch() <= stateEpoch && stateEpoch < validator.ExitEpoch()) {
+			// Remove the exit from the pool if the validator is not active
 			p.lock.RUnlock()
 			// MarkIncluded removes the invalid exit from the pool
 			p.MarkIncluded(exit)
@@ -99,6 +101,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 		} else {
 			result = append(result, exit)
 		}
+
 		node, err = node.Next()
 		if err != nil {
 			p.lock.RUnlock()
