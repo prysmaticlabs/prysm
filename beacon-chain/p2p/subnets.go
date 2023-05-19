@@ -35,8 +35,8 @@ const syncLockerVal = 100
 // to create an appropriate key to retrieve
 // the relevant lock. This is used to differentiate
 // blob subnets from others. This is deliberately
-// chosen as less than 4(blob subnet count).
-const blobSubnetLockerVal = 4
+// chosen more than sync and attestation subnet combined.
+const blobSubnetLockerVal = 110
 
 // FindPeersWithSubnet performs a network search for peers
 // subscribed to a particular subnet. Then we try to connect
