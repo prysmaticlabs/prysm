@@ -127,9 +127,9 @@ var (
 	)
 
 	// Sync committee verification performance.
-	syncMessagesForUnkownBlocks = promauto.NewCounter(
+	syncMessagesForUnknownBlocks = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "sync_committee_messages_unnkown_root",
+			Name: "sync_committee_messages_unknown_root",
 			Help: "The number of sync committee messages that are checked against DB to see if there vote is for an unknown root",
 		},
 	)
