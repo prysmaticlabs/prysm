@@ -140,6 +140,10 @@ var (
 		Name:  "disable-build-block-parallel",
 		Usage: "Disables building a beacon block in parallel for consensus and execution",
 	}
+	disableResourceManager = &cli.BoolFlag{
+		Name:  "disable-resource-manager",
+		Usage: "Disables running the libp2p resource manager",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -190,6 +194,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
+	disableResourceManager,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
