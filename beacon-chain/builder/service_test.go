@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"testing"
+	"time"
 
 	buildertesting "github.com/prysmaticlabs/prysm/v4/api/client/builder/testing"
 	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
@@ -36,6 +37,21 @@ func Test_RegisterValidator(t *testing.T) {
 	var feeRecipient [20]byte
 	require.NoError(t, s.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{{Message: &eth.ValidatorRegistrationV1{Pubkey: pubkey[:], FeeRecipient: feeRecipient[:]}}}))
 	assert.Equal(t, true, builder.RegisteredVals[pubkey])
+}
+
+func Test_RegisterValidator_WithCache(t *testing.T) {
+	ctx := context.Background()
+	headFetcher := &blockchainTesting.ChainService{}
+	builder := buildertesting.NewClient()
+	s, err := NewService(ctx, WithRegistrationCache(), WithHeadFetcher(headFetcher), WithBuilderClient(&builder))
+	require.NoError(t, err)
+	pubkey := bytesutil.ToBytes48([]byte("pubkey"))
+	var feeRecipient [20]byte
+	reg := &eth.ValidatorRegistrationV1{Pubkey: pubkey[:], Timestamp: uint64(time.Now().UTC().Unix()), FeeRecipient: feeRecipient[:]}
+	require.NoError(t, s.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{{Message: reg}}))
+	registration, err := s.registrationCache.RegistrationByIndex(0)
+	require.NoError(t, err)
+	require.DeepEqual(t, reg, registration)
 }
 
 func Test_BuilderMethodsWithouClient(t *testing.T) {
