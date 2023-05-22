@@ -116,7 +116,7 @@ func TestGetSpec(t *testing.T) {
 	config.DomainRandao = dr
 	var dd [4]byte
 	copy(dd[:], []byte{'0', '0', '0', '4'})
-	config.DomainDeposit = ddrm
+	config.DomainDeposit = dd
 	var dve [4]byte
 	copy(dve[:], []byte{'0', '0', '0', '5'})
 	config.DomainVoluntaryExit = dve
