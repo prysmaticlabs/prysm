@@ -24,6 +24,9 @@ func newUnblinder(b interfaces.SignedBeaconBlock, builder builder.BlockBuilder) 
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
+	if builder == nil {
+		return nil, errors.New("nil builder provided")
+	}
 	return &unblinder{
 		b:       b,
 		builder: builder,
