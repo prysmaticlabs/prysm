@@ -144,8 +144,12 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
-
-				s.setSeenSyncMessageIndexSlot(1, 1, 0)
+				m := &ethpb.SyncCommitteeMessage{
+					Slot:           1,
+					ValidatorIndex: 1,
+					BlockRoot:      params.BeaconConfig().ZeroHash[:],
+				}
+				s.setSeenSyncMessageIndexSlot(m, 0)
 				return s, topic, startup.NewClock(time.Now(), [32]byte{})
 			},
 			args: args{
@@ -441,10 +445,15 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 			name: "has seen",
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.initCaches()
-				s.setSeenSyncMessageIndexSlot(1, 0, 0)
+				m := &ethpb.SyncCommitteeMessage{
+					Slot:      1,
+					BlockRoot: params.BeaconConfig().ZeroHash[:],
+				}
+				s.setSeenSyncMessageIndexSlot(m, 0)
 				return s, ""
 			},
-			msg:       &ethpb.SyncCommitteeMessage{ValidatorIndex: 0, Slot: 1},
+			msg: &ethpb.SyncCommitteeMessage{ValidatorIndex: 0, Slot: 1,
+				BlockRoot: params.BeaconConfig().ZeroHash[:]},
 			committee: []primitives.CommitteeIndex{1, 2, 3},
 			want:      pubsub.ValidationIgnore,
 		},
@@ -452,19 +461,26 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 			name: "has not seen",
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
 				s.initCaches()
-				s.setSeenSyncMessageIndexSlot(1, 0, 0)
+				m := &ethpb.SyncCommitteeMessage{
+					Slot:      1,
+					BlockRoot: params.BeaconConfig().ZeroHash[:],
+				}
+				s.setSeenSyncMessageIndexSlot(m, 0)
 				return s, ""
 			},
-			msg:       &ethpb.SyncCommitteeMessage{ValidatorIndex: 1, Slot: 1},
+			msg: &ethpb.SyncCommitteeMessage{ValidatorIndex: 1, Slot: 1,
+				BlockRoot: bytesutil.PadTo([]byte{'A'}, 32)},
 			committee: []primitives.CommitteeIndex{1, 2, 3},
 			want:      pubsub.ValidationAccept,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{}
+			s := &Service{
+				cfg: &config{chain: &mockChain.ChainService{}},
+			}
 			s, _ = tt.setupSvc(s, tt.msg, "")
-			f := s.ignoreHasSeenSyncMsg(tt.msg, tt.committee)
+			f := s.ignoreHasSeenSyncMsg(context.Background(), tt.msg, tt.committee)
 			result, err := f(context.Background())
 			_ = err
 			require.Equal(t, tt.want, result)
