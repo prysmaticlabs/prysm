@@ -48,9 +48,11 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Capella fork blinded beacon block.
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
-        SignedBeaconBlockAndBlobsDeneb Deneb  = 7;
+        // Representing a signed, post-Deneb fork beacon block content.
+        SignedBeaconBlockAndBlobsDeneb deneb  = 7;
 
-        SignedBlindedBeaconBlockDenebAndBlobs blinded_Deneb  = 8;
+        // Representing a signed, post-Deneb fork blinded beacon block content.
+        SignedBlindedBeaconBlockAndBlobsDeneb blinded_deneb  = 8;
     }
 }
 
@@ -74,9 +76,11 @@ message GenericBeaconBlock {
         // Representing a post-Capella fork blinded beacon block.
         BlindedBeaconBlockCapella blinded_capella = 6;
 
-        BeaconBlockDenebAndBlobs Deneb  = 7;
+        // Representing a signed, post-Deneb fork beacon block content.
+        BeaconBlockAndBlobsDeneb deneb  = 7;
 
-        BlindedBeaconBlockDenebAndBlobs blinded_Deneb  = 8;
+        // Representing a signed, post-Deneb fork blinded beacon block content.
+        BlindedBeaconBlockAndBlobsDeneb blinded_deneb  = 8;
     }
 }
 
@@ -458,7 +462,7 @@ message SignedBeaconBlockDeneb {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message BeaconBlockDenebAndBlobs {
+message BeaconBlockAndBlobsDeneb {
     BeaconBlockDeneb block = 1;
     repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "blob_in_block.size"];
 }
@@ -646,12 +650,12 @@ message BlindedBeaconBlockBodyCapella {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 }
 
-message SignedBlindedBeaconBlockDenebAndBlobs {
+message SignedBlindedBeaconBlockAndBlobsDeneb {
     SignedBlindedBeaconBlockDeneb block = 1;
     repeated SignedBlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }
 
-message BlindedBeaconBlockDenebAndBlobs {
+message BlindedBeaconBlockAndBlobsDeneb {
     BlindedBeaconBlockDeneb block = 1;
     repeated BlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
 }

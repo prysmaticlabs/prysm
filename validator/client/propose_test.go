@@ -636,6 +636,62 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 	}
 }
 
+func TestProposeBlockContent_Deneb(t *testing.T) {
+
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t)
+	defer finish()
+	var pubKey [fieldparams.BLSPubkeyLength]byte
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.graffiti = []byte("graffiti")
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/).Times(6)
+
+	signedBlockContents, err := util.NewBeaconBlockAndBlobsDeneb(params.BeaconConfig().MaxBlobsPerBlock)
+	require.NoError(t, err)
+	blobs := make([]*ethpb.BlobSidecar, len(signedBlockContents.Blobs))
+	for i := range signedBlockContents.Blobs {
+		blobs[i] = signedBlockContents.Blobs[i].Message
+	}
+
+	blockcontents := &ethpb.BeaconBlockAndBlobsDeneb{
+		Block: signedBlockContents.Block.Block,
+		Blobs: blobs,
+	}
+
+	m.validatorClient.EXPECT().GetBeaconBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
+	).DoAndReturn(func(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
+		return &ethpb.GenericBeaconBlock{
+			Block: &ethpb.GenericBeaconBlock_Deneb{
+				Deneb: blockcontents,
+			},
+		}, nil
+	})
+
+	var sentBlock *ethpb.GenericSignedBeaconBlock_Deneb
+	m.validatorClient.EXPECT().ProposeBeaconBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
+	).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+		sentBlock = block.Block.(*ethpb.GenericSignedBeaconBlock_Deneb)
+		assert.NoError(t, err, "Unexpected error unwrapping block")
+		return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
+	})
+
+	validator.ProposeBlock(context.Background(), 1, pubKey)
+	require.LogsContain(t, hook, "Submitted new block")
+
+	require.DeepEqual(t, sentBlock.Deneb.Block.Block, signedBlockContents.Block.Block)
+	require.Equal(t, len(sentBlock.Deneb.Blobs), len(signedBlockContents.Blobs))
+	for i := range sentBlock.Deneb.Blobs {
+		require.DeepEqual(t, sentBlock.Deneb.Blobs[i].Message, signedBlockContents.Blobs[i].Message)
+	}
+}
+
 func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 	_, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -908,6 +964,67 @@ func TestSignBellatrixBlock(t *testing.T) {
 	}
 	require.DeepEqual(t, wantedBlockRoot, blockRoot)
 }
+
+func TestSignDenebBlockContent(t *testing.T) {
+	validator, m, _, finish := setup(t)
+	defer finish()
+
+	proposerDomain := make([]byte, 32)
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
+
+	ctx := context.Background()
+
+	blk, err := util.NewBeaconBlockAndBlobsDeneb(params.BeaconConfig().MaxBlobsPerBlock)
+	require.NoError(t, err)
+	blk.Block.Block.Slot = 1
+	blk.Block.Block.ProposerIndex = 100
+
+	kp := randKeypair(t)
+	validator.keyManager = newMockKeymanager(t, kp)
+	wb, err := blocks.NewBeaconBlock(blk.Block)
+	require.NoError(t, err)
+	sig, blockRoot, err := validator.signBlock(ctx, kp.pub, 0, 0, wb)
+	require.NoError(t, err, "%x,%v", sig, err)
+	// Verify the returned block root matches the expected root using the proposer signature
+	// domain.
+	wantedBlockRoot, err := signing.ComputeSigningRoot(wb, proposerDomain)
+	if err != nil {
+		require.NoError(t, err)
+	}
+	require.DeepEqual(t, wantedBlockRoot, blockRoot)
+}
+
+//func TestSignBlob(t *testing.T) {
+//	ctx := context.Background()
+//	validator, m, _, finish := setup(t)
+//	defer finish()
+//	sidecar := &ethpb.BlobSidecar{
+//		BlockRoot:       make([]byte, fieldparams.RootLength),
+//		Index:           0,
+//		Slot:            0,
+//		BlockParentRoot: make([]byte, fieldparams.RootLength),
+//		ProposerIndex:   0,
+//		Blob:            make([]byte, fieldparams.BlobLength),
+//		KzgCommitment:   make([]byte, 48),
+//		KzgProof:        make([]byte, 48),
+//	}
+//	blobSideCarDomain := make([]byte, 32)
+//	m.validatorClient.EXPECT().
+//		DomainData(gomock.Any(), gomock.Any()).
+//		Return(&ethpb.DomainResponse{SignatureDomain: blobSideCarDomain}, nil)
+//
+//	kp := randKeypair(t)
+//	validator.keyManager = newMockKeymanager(t, kp)
+//
+//	sig, err := validator.signBlob(ctx, sidecar, kp.pub)
+//	require.NoError(t, err, "%x,%v", sig, err)
+//	require.Equal(t, fieldparams.BLSSignatureLength, len(sig))
+//	require.Equal(t, "0x8c5640d1229c767599f9db3d290ae245be00eeedf85ab33a63365f9a4000"+
+//		"e85345a74674de0d8b362440bb8fcd042a9618e8b7fb1d975c8d461f128da"+
+//		"d6de258b0167048bc43a8e676a20dc88b12632f3834735de70d2da685142636158fdf7c", hexutil.Encode(sig))
+//}
 
 func TestGetGraffiti_Ok(t *testing.T) {
 	ctrl := gomock.NewController(t)
