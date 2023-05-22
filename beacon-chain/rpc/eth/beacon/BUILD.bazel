@@ -53,6 +53,7 @@ go_library(
         "//encoding/ssz/detect:go_default_library",
         "//network:go_default_library",
         "//network/forks:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
         "//proto/migration:go_default_library",
