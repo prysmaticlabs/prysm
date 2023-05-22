@@ -136,7 +136,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 106, len(resp.Data))
+	assert.Equal(t, 108, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -331,6 +331,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x08000000", v)
 		case "DOMAIN_CONTRIBUTION_AND_PROOF":
 			assert.Equal(t, "0x09000000", v)
+		case "DOMAIN_BLS_TO_EXECUTION_CHANGE":
+			assert.Equal(t, "0x0a000000", v)
+		case "DOMAIN_APPLICATION_BUILDER":
+			assert.Equal(t, "0x00000001", v)
 		case "TRANSITION_TOTAL_DIFFICULTY":
 			assert.Equal(t, "0", v)
 		case "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH":
