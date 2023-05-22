@@ -115,6 +115,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Fork choice algorithm constants.
 	ProposerScoreBoost:              40,
 	ReorgWeightThreshold:            20,
+	ReorgParentWeightThreshold:      160,
 	ReorgMaxEpochsSinceFinalization: 2,
 	IntervalsPerSlot:                3,
 
