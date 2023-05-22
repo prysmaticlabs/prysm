@@ -98,7 +98,7 @@ type ExecutionPayloadReconstructor interface {
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
-	NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error)
+	NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes [][32]byte) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
@@ -113,7 +113,7 @@ type EngineCaller interface {
 var EmptyBlockHash = errors.New("Block hash is empty 0x0000...")
 
 // NewPayload calls the engine_newPayloadVX method via JSON-RPC.
-func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes [][32]byte) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -150,12 +150,12 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if !ok {
 			return nil, errors.New("execution data must be a Deneb execution payload")
 		}
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, payloadPb)
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, payloadPb, versionedHashes)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
 	default:
-		return nil, ErrUnknownExecutionDataType
+		return nil, errors.New("unknown execution data type")
 	}
 
 	switch result.Status {
@@ -778,7 +778,7 @@ func fullPayloadFromExecutionBlock(
 				ExcessDataGas: edg,
 			}, 0)
 	default:
-		return nil, errors.Wrapf(ErrUnknownExecutionDataType, "block.version=%d", block.Version)
+		return nil, fmt.Errorf("unknown execution block version %d", block.Version)
 	}
 }
 

@@ -75,7 +75,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := srv.GetPayload(ctx, payloadId, 1)
+		resp, _, err := srv.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
 		resPb, err := resp.PbBellatrix()
 		require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		resPb, err := resp.PbCapella()
 		require.NoError(t, err)
@@ -118,7 +118,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		wrappedPayload, err := blocks.WrappedExecutionPayload(req)
 		require.NoError(t, err)
-		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload)
+		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.NoError(t, err)
 		require.DeepEqual(t, bytesutil.ToBytes32(want.LatestValidHash), bytesutil.ToBytes32(latestValidHash))
 	})
@@ -129,7 +129,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, 0)
 		require.NoError(t, err)
-		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload)
+		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.NoError(t, err)
 		require.DeepEqual(t, bytesutil.ToBytes32(want.LatestValidHash), bytesutil.ToBytes32(latestValidHash))
 	})
@@ -203,7 +203,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.GetPayload(ctx, payloadId, 1)
+		resp, _, err := client.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
 		pb, err := resp.PbBellatrix()
 		require.NoError(t, err)
@@ -247,7 +247,7 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		pb, err := resp.PbCapella()
 		require.NoError(t, err)
@@ -412,7 +412,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.NoError(t, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
@@ -426,7 +426,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.NoError(t, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
@@ -440,7 +440,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
@@ -454,7 +454,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
@@ -468,7 +468,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
@@ -482,7 +482,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
@@ -496,7 +496,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
@@ -510,7 +510,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
@@ -524,7 +524,7 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload)
+		resp, err := client.NewPayload(ctx, wrappedPayload, [][32]byte{})
 		require.ErrorIs(t, ErrUnknownPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
