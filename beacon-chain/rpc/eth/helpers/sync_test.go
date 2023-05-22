@@ -42,7 +42,7 @@ func TestValidateSync(t *testing.T) {
 			Slot:  &headSlot,
 			State: st,
 		}
-		err = ValidateSync(ctx, syncChecker, chainService, chainService, chainService)
+		err = ValidateSyncGRPC(ctx, syncChecker, chainService, chainService, chainService)
 		require.NotNil(t, err)
 		sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)
 		require.Equal(t, true, ok, "type assertion failed")
@@ -67,7 +67,7 @@ func TestValidateSync(t *testing.T) {
 			Slot:  &headSlot,
 			State: st,
 		}
-		err = ValidateSync(ctx, syncChecker, nil, nil, chainService)
+		err = ValidateSyncGRPC(ctx, syncChecker, nil, nil, chainService)
 		require.NoError(t, err)
 	})
 }
