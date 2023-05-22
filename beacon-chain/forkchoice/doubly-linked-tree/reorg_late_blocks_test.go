@@ -22,7 +22,11 @@ func TestForkChoice_ShouldOverrideFCU(t *testing.T) {
 	st, root, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, [32]byte{}, [32]byte{'A'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, root))
-	f.ProcessAttestation(ctx, []uint64{0, 1, 2}, root, 0)
+	attesters := make([]uint64, f.numActiveValidators-64)
+	for i := range attesters {
+		attesters[i] = uint64(i + 64)
+	}
+	f.ProcessAttestation(ctx, attesters, root, 0)
 
 	driftGenesisTime(f, 2, orphanLateBlockFirstThreshold+1)
 	st, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
@@ -101,7 +105,11 @@ func TestForkChoice_GetProposerHead(t *testing.T) {
 	st, root, err := prepareForkchoiceState(ctx, 1, parentRoot, [32]byte{}, [32]byte{'A'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, root))
-	f.ProcessAttestation(ctx, []uint64{0, 1, 2}, root, 0)
+	attesters := make([]uint64, f.numActiveValidators-64)
+	for i := range attesters {
+		attesters[i] = uint64(i + 64)
+	}
+	f.ProcessAttestation(ctx, attesters, root, 0)
 
 	driftGenesisTime(f, 3, 1)
 	childRoot := [32]byte{'b'}
