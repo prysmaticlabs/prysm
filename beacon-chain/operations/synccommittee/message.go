@@ -30,8 +30,22 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 			return errors.New("not typed []ethpb.SyncCommitteeMessage")
 		}
 
-		messages = append(messages, copied)
-		savedSyncCommitteeMessageTotal.Inc()
+		idx := -1
+		for i, msg := range messages {
+			if msg.ValidatorIndex == copied.ValidatorIndex {
+				idx = i
+				break
+			}
+		}
+		if idx >= 0 {
+			// Override the existing messages with a new one
+			messages[idx] = copied
+		} else {
+			// Append the new message
+			messages = append(messages, copied)
+			savedSyncCommitteeMessageTotal.Inc()
+		}
+
 		return s.messageCache.Push(&queue.Item{
 			Key:      syncCommitteeKey(msg.Slot),
 			Value:    messages,

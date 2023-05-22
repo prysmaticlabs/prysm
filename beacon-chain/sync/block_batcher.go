@@ -149,6 +149,9 @@ func newBlockBatch(start, reqEnd primitives.Slot, size uint64) (blockBatch, bool
 }
 
 func (bat blockBatch) next(reqEnd primitives.Slot, size uint64) (blockBatch, bool) {
+	if bat.error() != nil {
+		return bat, false
+	}
 	if bat.nonLinear() {
 		return blockBatch{}, false
 	}
