@@ -68,11 +68,11 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	var more bool
 	for batch, more = batcher.next(ctx, stream); more; batch, more = batcher.next(ctx, stream) {
 		batchStart := time.Now()
-		rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
 		if err := s.writeBlockBatchToStream(ctx, batch, stream); err != nil {
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return err
 		}
+		rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
 	}
 	if err := batch.error(); err != nil {
 		log.WithError(err).Info("error in BlocksByRange batch")

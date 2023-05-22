@@ -72,3 +72,63 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 		roots[b.Root()] = i
 	}
 }
+
+func TestBlockBatchNext(t *testing.T) {
+	cases := []struct {
+		name   string
+		batch  blockBatch
+		start  primitives.Slot
+		reqEnd primitives.Slot
+		size   uint64
+		next   []blockBatch
+		more   []bool
+		err    error
+	}{
+		{
+			name:   "end aligned",
+			batch:  blockBatch{start: 0, end: 20},
+			start:  0,
+			reqEnd: 40,
+			size:   20,
+			next: []blockBatch{
+				{start: 0, end: 19},
+				{start: 20, end: 39},
+				{start: 40, end: 40},
+				{},
+			},
+			more: []bool{true, true, true, false},
+		},
+		{
+			name:   "batches with more",
+			batch:  blockBatch{start: 0, end: 22},
+			start:  0,
+			reqEnd: 40,
+			size:   23,
+			next: []blockBatch{
+				{start: 0, end: 22},
+				{start: 23, end: 40},
+				{},
+			},
+			more: []bool{true, true, false},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var next blockBatch
+			var more bool
+			i := 0
+			for next, more = newBlockBatch(c.start, c.reqEnd, c.size); more; next, more = next.next(c.reqEnd, c.size) {
+				exp := c.next[i]
+				require.Equal(t, c.more[i], more)
+				require.Equal(t, exp.start, next.start)
+				require.Equal(t, exp.end, next.end)
+				if exp.err != nil {
+					require.ErrorIs(t, next.err, exp.err)
+				} else {
+					require.NoError(t, next.err)
+				}
+				i++
+			}
+		})
+	}
+}
