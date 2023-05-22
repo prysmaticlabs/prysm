@@ -16,13 +16,15 @@ type Ticker interface {
 	Done()
 }
 
-// The IntervalTicker is similar to the Ticker interface but
-// exposes also the interval along with the slot number
+// SlotInterval is a wrapper that contains a slot and the interval index that
+// triggered the ticker
 type SlotInterval struct {
 	Slot     primitives.Slot
 	Interval int
 }
 
+// The IntervalTicker is similar to the Ticker interface but
+// exposes also the interval along with the slot number
 type IntervalTicker interface {
 	C() <-chan SlotInterval
 	Done()
