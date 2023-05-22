@@ -28,7 +28,7 @@ def prysm_image_upload(
     )
 
     multi_arch(
-        name = "multiarch",
+        name = "oci_multiarch",
         image = ":oci_image",
         platforms = [
             "@io_bazel_rules_go//go/toolchain:linux_amd64_cgo",

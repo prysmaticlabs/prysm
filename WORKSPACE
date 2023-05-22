@@ -194,6 +194,8 @@ oci_pull(
     reproducible = True,
 )
 
+
+# TODO: Put bash and libtinfo6 into some other deps file to avoid polluting this one.
 http_file(
     name = "bash_amd64",
     urls = [
