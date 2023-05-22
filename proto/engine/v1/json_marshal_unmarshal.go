@@ -86,10 +86,11 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		return errors.New("expected `totalDifficulty` field in JSON response")
 	}
 
-	rawWithdrawals, hasW := decoded["withdrawals"]
-	if !hasW || rawWithdrawals == nil {
+	rawWithdrawals, ok := decoded["withdrawals"]
+	if !ok || rawWithdrawals == nil {
 		e.Version = version.Bellatrix
 	} else {
+		e.Version = version.Capella
 		j := &withdrawalsJson{}
 		if err := json.Unmarshal(enc, j); err != nil {
 			return err
@@ -105,6 +106,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 
 		exDG, hasExDG := decoded["excessDataGas"]
 		if hasExDG && exDG != nil {
+			e.Version = version.Deneb
 			e.ExcessDataGas, err = hexutil.Decode(exDG.(string))
 			e.Version = version.Deneb
 		} else {
