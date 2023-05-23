@@ -15,8 +15,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// RunUpgradeToDeneb is a helper function that runs Deneb4's fork spec tests.
-// It unmarshals a pre- and post-state to check `UpgradeToDeneb4` comply with spec implementation.
+// RunUpgradeToDeneb is a helper function that runs Deneb's fork spec tests.
+// It unmarshals a pre- and post-state to check `UpgradeToDeneb` comply with spec implementation.
 func RunUpgradeToDeneb(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
