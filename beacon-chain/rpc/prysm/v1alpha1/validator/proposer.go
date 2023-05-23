@@ -309,7 +309,7 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}, nil
 }
 
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
@@ -317,16 +317,13 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
-	if slots.ToEpoch(blk.Block().Slot()) >= params.BeaconConfig().CapellaForkEpoch {
-		blk, err = vs.unblindBuilderBlockCapella(ctx, blk)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		blk, err = vs.unblindBuilderBlock(ctx, blk)
-		if err != nil {
-			return nil, err
-		}
+	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create unblinder")
+	}
+	blk, err = unblinder.unblindBuilderBlock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.
