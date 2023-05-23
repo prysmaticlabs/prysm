@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -93,6 +94,9 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	// Verify the block is the first block received for the proposer for the slot.
 	if s.hasSeenBlockIndexSlot(blk.Block().Slot(), blk.Block().ProposerIndex()) {
+		if features.Get().EnableEquivocatingBlockLogging {
+			log.WithField("block", hexutil.Encode(msg.Data)).Debug("equivocating block detected")
+		}
 		return pubsub.ValidationIgnore, nil
 	}
 

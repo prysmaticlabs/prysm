@@ -120,6 +120,10 @@ var (
 		Name:  "enable-full-ssz-data-logging",
 		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
 	}
+	enableEquivocatingBlockLogging = &cli.BoolFlag{
+		Name:  "enable-equivocating-block-logging",
+		Usage: "Enables logging of equivocating block received over p2p gossip",
+	}
 	SaveFullExecutionPayloads = &cli.BoolFlag{
 		Name:  "save-full-execution-payloads",
 		Usage: "Saves beacon blocks with full execution payloads instead of execution payload headers in the database",
@@ -192,6 +196,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
+	enableEquivocatingBlockLogging,
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
 	prepareAllPayloads,

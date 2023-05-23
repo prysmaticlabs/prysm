@@ -46,8 +46,9 @@ type Flags struct {
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	EnableBeaconRESTApi                 bool // EnableBeaconRESTApi enables experimental usage of the beacon REST API by the validator when querying a beacon node
 	// Logging related toggles.
-	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
-	EnableFullSSZDataLogging  bool // Enables logging for full ssz data on rejected gossip messages
+	DisableGRPCConnectionLogs      bool // Disables logging when a new grpc client has connected.
+	EnableFullSSZDataLogging       bool // Enables logging for full ssz data on rejected gossip messages
+	EnableEquivocatingBlockLogging bool // Enables logging for equivocating block gossip messages.
 
 	// Slasher toggles.
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
@@ -211,6 +212,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(enableFullSSZDataLogging.Name) {
 		logEnabled(enableFullSSZDataLogging)
 		cfg.EnableFullSSZDataLogging = true
+	}
+	if ctx.IsSet(enableEquivocatingBlockLogging.Name) {
+		logEnabled(enableEquivocatingBlockLogging)
+		cfg.EnableEquivocatingBlockLogging = true
 	}
 	if ctx.IsSet(enableVerboseSigVerification.Name) {
 		logEnabled(enableVerboseSigVerification)
