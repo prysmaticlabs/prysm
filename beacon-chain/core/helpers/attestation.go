@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
@@ -64,25 +63,6 @@ func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 
 	b := hash.Hash(slotSig)
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
-}
-
-// AggregateSignature returns the aggregated signature of the input attestations.
-//
-// Spec pseudocode definition:
-//
-//	def get_aggregate_signature(attestations: Sequence[Attestation]) -> BLSSignature:
-//	 signatures = [attestation.signature for attestation in attestations]
-//	 return bls.Aggregate(signatures)
-func AggregateSignature(attestations []*ethpb.Attestation) (bls.Signature, error) {
-	sigs := make([]bls.Signature, len(attestations))
-	var err error
-	for i := 0; i < len(sigs); i++ {
-		sigs[i], err = bls.SignatureFromBytes(attestations[i].Signature)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return bls.AggregateSignatures(sigs), nil
 }
 
 // IsAggregated returns true if the attestation is an aggregated attestation,

@@ -15,15 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -234,129 +231,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	)
 
 	return header, nil
-}
-
-// This function retrieves the full payload block using the input blind block. This input must be versioned as
-// bellatrix blind block. The output block will contain the full payload. The original header block
-// will be returned the block builder is not configured.
-func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ReadOnlySignedBeaconBlock, error) {
-	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
-	}
-
-	// No-op if the input block is not version blind and bellatrix.
-	if b.Version() != version.Bellatrix || !b.IsBlinded() {
-		return b, nil
-	}
-	// No-op nothing if the builder has not been configured.
-	if !vs.BlockBuilder.Configured() {
-		return b, nil
-	}
-
-	agg, err := b.Block().Body().SyncAggregate()
-	if err != nil {
-		return nil, err
-	}
-	h, err := b.Block().Body().Execution()
-	if err != nil {
-		return nil, err
-	}
-	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
-	if !ok {
-		return nil, errors.New("execution data must be execution payload header")
-	}
-	parentRoot := b.Block().ParentRoot()
-	stateRoot := b.Block().StateRoot()
-	randaoReveal := b.Block().Body().RandaoReveal()
-	graffiti := b.Block().Body().Graffiti()
-	sig := b.Signature()
-	psb := &ethpb.SignedBlindedBeaconBlockBellatrix{
-		Block: &ethpb.BlindedBeaconBlockBellatrix{
-			Slot:          b.Block().Slot(),
-			ProposerIndex: b.Block().ProposerIndex(),
-			ParentRoot:    parentRoot[:],
-			StateRoot:     stateRoot[:],
-			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           randaoReveal[:],
-				Eth1Data:               b.Block().Body().Eth1Data(),
-				Graffiti:               graffiti[:],
-				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
-				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
-				Attestations:           b.Block().Body().Attestations(),
-				Deposits:               b.Block().Body().Deposits(),
-				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
-				SyncAggregate:          agg,
-				ExecutionPayloadHeader: header,
-			},
-		},
-		Signature: sig[:],
-	}
-
-	sb, err := consensusblocks.NewSignedBeaconBlock(psb)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create signed block")
-	}
-	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
-	if err != nil {
-		return nil, err
-	}
-	headerRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	payloadRoot, err := payload.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	if headerRoot != payloadRoot {
-		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
-			"%#x != %#x", headerRoot, payloadRoot)
-	}
-
-	pbPayload, err := payload.PbBellatrix()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get payload")
-	}
-	bb := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:          psb.Block.Slot,
-			ProposerIndex: psb.Block.ProposerIndex,
-			ParentRoot:    psb.Block.ParentRoot,
-			StateRoot:     psb.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:      psb.Block.Body.RandaoReveal,
-				Eth1Data:          psb.Block.Body.Eth1Data,
-				Graffiti:          psb.Block.Body.Graffiti,
-				ProposerSlashings: psb.Block.Body.ProposerSlashings,
-				AttesterSlashings: psb.Block.Body.AttesterSlashings,
-				Attestations:      psb.Block.Body.Attestations,
-				Deposits:          psb.Block.Body.Deposits,
-				VoluntaryExits:    psb.Block.Body.VoluntaryExits,
-				SyncAggregate:     agg,
-				ExecutionPayload:  pbPayload,
-			},
-		},
-		Signature: psb.Signature,
-	}
-	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
-	if err != nil {
-		return nil, err
-	}
-
-	txs, err := payload.Transactions()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get transactions from payload")
-	}
-	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
-		"gasUsed":      h.GasUsed,
-		"slot":         b.Block().Slot(),
-		"txs":          len(txs),
-	}).Info("Retrieved full payload from builder")
-
-	return wb, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
