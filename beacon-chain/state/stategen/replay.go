@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/capella"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/deneb"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/execution"
 	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
@@ -240,6 +241,14 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 
 		if prysmtime.CanUpgradeToCapella(state.Slot()) {
 			state, err = capella.UpgradeToCapella(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if prysmtime.CanUpgradeToDeneb(state.Slot()) {
+			state, err = deneb.UpgradeToDeneb(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err
