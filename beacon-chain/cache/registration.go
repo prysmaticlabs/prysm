@@ -3,15 +3,11 @@ package cache
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -38,31 +34,8 @@ func (regCache *RegistrationCache) RegistrationByIndex(id primitives.ValidatorIn
 		regCache.lock.RUnlock()
 		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
 	}
-	isExpired, err := RegistrationTimeStampExpired(v.Timestamp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to check registration expiration")
-	}
-	if isExpired {
-		regCache.lock.RUnlock()
-		regCache.lock.Lock()
-		defer regCache.lock.Unlock()
-		delete(regCache.indexToRegistration, id)
-		log.Warnf("registration for validator index %d expired at unix time %d", id, v.Timestamp)
-		return nil, errors.Wrapf(ErrNotFoundRegistration, "validator id %d", id)
-	}
 	regCache.lock.RUnlock()
 	return v, nil
-}
-
-func RegistrationTimeStampExpired(ts uint64) (bool, error) {
-	// safely convert unint64 to int64
-	i, err := math.Int(ts)
-	if err != nil {
-		return false, err
-	}
-	expiryDuration := params.BeaconConfig().RegistrationDuration
-	// registered time + expiration duration < current time = expired
-	return time.Unix(int64(i), 0).Add(expiryDuration).Before(time.Now()), nil
 }
 
 // UpdateIndexToRegisteredMap adds or updates values in the cache based on the argument.
