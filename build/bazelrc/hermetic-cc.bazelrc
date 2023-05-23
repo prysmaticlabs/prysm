@@ -1,7 +1,7 @@
 # From Bazel's perspective, this is almost equivalent to always specifying
 # --extra_toolchains on every bazel <...> command-line invocation. It also
 # means there is no way to disable the toolchain with the command line. This is
-# useful if you find bazel-zig-cc useful enough to compile for all of your
+# useful if you find bazel-hermetic-cc useful enough to compile for all of your
 # targets and tools.
 #
 # With BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1 Bazel stops detecting the default

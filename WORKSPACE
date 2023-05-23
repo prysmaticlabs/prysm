@@ -31,7 +31,7 @@ load("@hermetic_cc_toolchain//toolchain:defs.bzl", zig_toolchains = "toolchains"
 
 zig_toolchains()
 
-# Register zig sdk toolchains with support for Ubuntu 20.04.
+# Register zig sdk toolchains with support for Ubuntu 20.04 (Focal Fossa) which has an EOL date of April, 2025.
 # For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc
 register_toolchains(
     "@zig_sdk//toolchain:linux_amd64_gnu.2.31",
