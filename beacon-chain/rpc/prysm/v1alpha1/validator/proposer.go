@@ -55,13 +55,16 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	curr := time.Now()
 	// process attestations and update head in forkchoice
 	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+	log.Infof("proposer_mocker: update head in rpc took %s", time.Since(curr).String())
 	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
 	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	if parentRoot != headRoot {
 		blockchain.LateBlockAttemptedReorgCount.Inc()
 	}
+	log.Infof("proposer_mocker: fetching head root in rpc took %s", time.Since(curr).String())
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
@@ -82,6 +85,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
+	log.Infof("proposer_mocker: fetching head state rpc took %s", time.Since(curr).String())
 
 	// Set slot, graffiti, randao reveal, and parent root.
 	sBlk.SetSlot(req.Slot)

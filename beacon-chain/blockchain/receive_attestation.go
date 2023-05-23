@@ -94,8 +94,10 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 			case <-s.ctx.Done():
 				return
 			case <-pat.C():
+				log.Infof("proposer_mocker: calling updated head via offset ticker")
 				s.UpdateHead(s.ctx, s.CurrentSlot()+1)
 			case <-st.C():
+				log.Infof("proposer_mocker: calling updated head via normal slot ticker in spawn atts")
 				s.cfg.ForkChoiceStore.Lock()
 				if err := s.cfg.ForkChoiceStore.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("could not process new slot")
@@ -124,6 +126,8 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	}
 	s.processAttestations(ctx, disparity)
 
+	log.Infof("proposer_mocker: process attestations in fc took %s", time.Since(start).String())
+
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	start = time.Now()
@@ -136,11 +140,14 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		s.headLock.RUnlock()
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+	log.Infof("proposer_mocker: head root in fc took %s", time.Since(start).String())
 
 	changed, err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot)
 	if err != nil {
 		log.WithError(err).Error("could not update forkchoice")
 	}
+	log.Infof("proposer_mocker: fcu call in fc took %s", time.Since(start).String())
+
 	if changed {
 		s.headLock.RLock()
 		log.WithFields(logrus.Fields{
