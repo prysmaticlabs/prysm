@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"math/big"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -10,25 +11,26 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/wealdtech/go-bytesutil"
 )
 
 type SignedBeaconBlock struct {
 	Message   BeaconBlock `json:"message" validate:"required"`
-	Signature string      `json:"signature" validate:"required"`
+	Signature string      `json:"signature" validate:"required" hex:"true"`
 }
 
 type BeaconBlock struct {
 	Slot          string          `json:"slot" validate:"required"`
 	ProposerIndex string          `json:"proposer_index" validate:"required"`
-	ParentRoot    string          `json:"parent_root" validate:"required"`
-	StateRoot     string          `json:"state_root" validate:"required"`
+	ParentRoot    string          `json:"parent_root" validate:"required" hex:"true"`
+	StateRoot     string          `json:"state_root" validate:"required" hex:"true"`
 	Body          BeaconBlockBody `json:"body" validate:"required"`
 }
 
 type BeaconBlockBody struct {
-	RandaoReveal      string                `json:"randao_reveal" validate:"required"`
+	RandaoReveal      string                `json:"randao_reveal" validate:"required" hex:"true"`
 	Eth1Data          Eth1Data              `json:"eth1_data" validate:"required"`
-	Graffiti          string                `json:"graffiti" validate:"required"`
+	Graffiti          string                `json:"graffiti" validate:"required" hex:"true"`
 	ProposerSlashings []ProposerSlashing    `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings []AttesterSlashing    `json:"attester_slashings" validate:"required"`
 	Attestations      []Attestation         `json:"attestations" validate:"required"`
@@ -38,21 +40,21 @@ type BeaconBlockBody struct {
 
 type SignedBeaconBlockAltair struct {
 	Message   BeaconBlockAltair `json:"message" validate:"required"`
-	Signature string            `json:"signature" validate:"required"`
+	Signature string            `json:"signature" validate:"required" hex:"true"`
 }
 
 type BeaconBlockAltair struct {
 	Slot          string                `json:"slot" validate:"required"`
 	ProposerIndex string                `json:"proposer_index" validate:"required"`
-	ParentRoot    string                `json:"parent_root" validate:"required"`
-	StateRoot     string                `json:"state_root" validate:"required"`
+	ParentRoot    string                `json:"parent_root" validate:"required" hex:"true"`
+	StateRoot     string                `json:"state_root" validate:"required" hex:"true"`
 	Body          BeaconBlockBodyAltair `json:"body" validate:"required"`
 }
 
 type BeaconBlockBodyAltair struct {
-	RandaoReveal      string                `json:"randao_reveal" validate:"required"`
+	RandaoReveal      string                `json:"randao_reveal" validate:"required" hex:"true"`
 	Eth1Data          Eth1Data              `json:"eth1_data" validate:"required"`
-	Graffiti          string                `json:"graffiti" validate:"required"`
+	Graffiti          string                `json:"graffiti" validate:"required" hex:"true"`
 	ProposerSlashings []ProposerSlashing    `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings []AttesterSlashing    `json:"attester_slashings" validate:"required"`
 	Attestations      []Attestation         `json:"attestations" validate:"required"`
@@ -63,21 +65,21 @@ type BeaconBlockBodyAltair struct {
 
 type SignedBeaconBlockBellatrix struct {
 	Message   BeaconBlockBellatrix `json:"message" validate:"required"`
-	Signature string               `json:"signature" validate:"required"`
+	Signature string               `json:"signature" validate:"required" hex:"true"`
 }
 
 type BeaconBlockBellatrix struct {
 	Slot          string                   `json:"slot" validate:"required"`
 	ProposerIndex string                   `json:"proposer_index" validate:"required"`
-	ParentRoot    string                   `json:"parent_root" validate:"required"`
-	StateRoot     string                   `json:"state_root" validate:"required"`
+	ParentRoot    string                   `json:"parent_root" validate:"required" hex:"true"`
+	StateRoot     string                   `json:"state_root" validate:"required" hex:"true"`
 	Body          BeaconBlockBodyBellatrix `json:"body" validate:"required"`
 }
 
 type BeaconBlockBodyBellatrix struct {
-	RandaoReveal      string                `json:"randao_reveal" validate:"required"`
+	RandaoReveal      string                `json:"randao_reveal" validate:"required" hex:"true"`
 	Eth1Data          Eth1Data              `json:"eth1_data" validate:"required"`
-	Graffiti          string                `json:"graffiti" validate:"required"`
+	Graffiti          string                `json:"graffiti" validate:"required" hex:"true"`
 	ProposerSlashings []ProposerSlashing    `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings []AttesterSlashing    `json:"attester_slashings" validate:"required"`
 	Attestations      []Attestation         `json:"attestations" validate:"required"`
@@ -89,21 +91,21 @@ type BeaconBlockBodyBellatrix struct {
 
 type SignedBlindedBeaconBlockBellatrix struct {
 	Message   BlindedBeaconBlockBellatrix `json:"message" validate:"required"`
-	Signature string                      `json:"signature" validate:"required"`
+	Signature string                      `json:"signature" validate:"required" hex:"true"`
 }
 
 type BlindedBeaconBlockBellatrix struct {
 	Slot          string                          `json:"slot" validate:"required"`
 	ProposerIndex string                          `json:"proposer_index" validate:"required"`
-	ParentRoot    string                          `json:"parent_root" validate:"required"`
-	StateRoot     string                          `json:"state_root" validate:"required"`
+	ParentRoot    string                          `json:"parent_root" validate:"required" hex:"true"`
+	StateRoot     string                          `json:"state_root" validate:"required" hex:"true"`
 	Body          BlindedBeaconBlockBodyBellatrix `json:"body" validate:"required"`
 }
 
 type BlindedBeaconBlockBodyBellatrix struct {
-	RandaoReveal      string                 `json:"randao_reveal" validate:"required"`
+	RandaoReveal      string                 `json:"randao_reveal" validate:"required" hex:"true"`
 	Eth1Data          Eth1Data               `json:"eth1_data" validate:"required"`
-	Graffiti          string                 `json:"graffiti" validate:"required"`
+	Graffiti          string                 `json:"graffiti" validate:"required" hex:"true"`
 	ProposerSlashings []ProposerSlashing     `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings []AttesterSlashing     `json:"attester_slashings" validate:"required"`
 	Attestations      []Attestation          `json:"attestations" validate:"required"`
@@ -115,21 +117,21 @@ type BlindedBeaconBlockBodyBellatrix struct {
 
 type SignedBeaconBlockCapella struct {
 	Message   BeaconBlockCapella `json:"message" validate:"required"`
-	Signature string             `json:"signature" validate:"required"`
+	Signature string             `json:"signature" validate:"required" hex:"true"`
 }
 
 type BeaconBlockCapella struct {
 	Slot          string                 `json:"slot" validate:"required"`
 	ProposerIndex string                 `json:"proposer_index" validate:"required"`
-	ParentRoot    string                 `json:"parent_root" validate:"required"`
-	StateRoot     string                 `json:"state_root" validate:"required"`
+	ParentRoot    string                 `json:"parent_root" validate:"required" hex:"true"`
+	StateRoot     string                 `json:"state_root" validate:"required" hex:"true"`
 	Body          BeaconBlockBodyCapella `json:"body" validate:"required"`
 }
 
 type BeaconBlockBodyCapella struct {
-	RandaoReveal          string                       `json:"randao_reveal" validate:"required"`
+	RandaoReveal          string                       `json:"randao_reveal" validate:"required" hex:"true"`
 	Eth1Data              Eth1Data                     `json:"eth1_data" validate:"required"`
-	Graffiti              string                       `json:"graffiti" validate:"required"`
+	Graffiti              string                       `json:"graffiti" validate:"required" hex:"true"`
 	ProposerSlashings     []ProposerSlashing           `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings     []AttesterSlashing           `json:"attester_slashings" validate:"required"`
 	Attestations          []Attestation                `json:"attestations" validate:"required"`
@@ -142,21 +144,21 @@ type BeaconBlockBodyCapella struct {
 
 type SignedBlindedBeaconBlockCapella struct {
 	Message   BlindedBeaconBlockCapella `json:"message" validate:"required"`
-	Signature string                    `json:"signature" validate:"required"`
+	Signature string                    `json:"signature" validate:"required" hex:"true"`
 }
 
 type BlindedBeaconBlockCapella struct {
 	Slot          string                        `json:"slot" validate:"required"`
 	ProposerIndex string                        `json:"proposer_index" validate:"required"`
-	ParentRoot    string                        `json:"parent_root" validate:"required"`
-	StateRoot     string                        `json:"state_root" validate:"required"`
+	ParentRoot    string                        `json:"parent_root" validate:"required" hex:"true"`
+	StateRoot     string                        `json:"state_root" validate:"required" hex:"true"`
 	Body          BlindedBeaconBlockBodyCapella `json:"body" validate:"required"`
 }
 
 type BlindedBeaconBlockBodyCapella struct {
-	RandaoReveal      string                        `json:"randao_reveal" validate:"required"`
+	RandaoReveal      string                        `json:"randao_reveal" validate:"required" hex:"true"`
 	Eth1Data          Eth1Data                      `json:"eth1_data" validate:"required"`
-	Graffiti          string                        `json:"graffiti" validate:"required"`
+	Graffiti          string                        `json:"graffiti" validate:"required" hex:"true"`
 	ProposerSlashings []ProposerSlashing            `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings []AttesterSlashing            `json:"attester_slashings" validate:"required"`
 	Attestations      []Attestation                 `json:"attestations" validate:"required"`
@@ -167,9 +169,9 @@ type BlindedBeaconBlockBodyCapella struct {
 }
 
 type Eth1Data struct {
-	DepositRoot  string `json:"deposit_root" validate:"required"`
+	DepositRoot  string `json:"deposit_root" validate:"required" hex:"true"`
 	DepositCount string `json:"deposit_count" validate:"required"`
-	BlockHash    string `json:"block_hash" validate:"required"`
+	BlockHash    string `json:"block_hash" validate:"required" hex:"true"`
 }
 
 type ProposerSlashing struct {
@@ -183,26 +185,26 @@ type AttesterSlashing struct {
 }
 
 type Attestation struct {
-	AggregationBits string          `json:"aggregation_bits" validate:"required"`
+	AggregationBits string          `json:"aggregation_bits" validate:"required" hex:"true"`
 	Data            AttestationData `json:"data" validate:"required"`
-	Signature       string          `json:"signature" validate:"required"`
+	Signature       string          `json:"signature" validate:"required" hex:"true"`
 }
 
 type Deposit struct {
-	Proof []string    `json:"proof" validate:"required"`
+	Proof []string    `json:"proof" validate:"required" hex:"true"`
 	Data  DepositData `json:"data" validate:"required"`
 }
 
 type DepositData struct {
-	Pubkey                string `json:"pubkey" validate:"required"`
-	WithdrawalCredentials string `json:"withdrawal_credentials" validate:"required"`
+	Pubkey                string `json:"pubkey" validate:"required" hex:"true"`
+	WithdrawalCredentials string `json:"withdrawal_credentials" validate:"required" hex:"true"`
 	Amount                string `json:"amount" validate:"required"`
-	Signature             string `json:"signature" validate:"required"`
+	Signature             string `json:"signature" validate:"required" hex:"true"`
 }
 
 type SignedVoluntaryExit struct {
 	Message   VoluntaryExit `json:"message" validate:"required"`
-	Signature string        `json:"signature" validate:"required"`
+	Signature string        `json:"signature" validate:"required" hex:"true"`
 }
 
 type VoluntaryExit struct {
@@ -212,128 +214,128 @@ type VoluntaryExit struct {
 
 type SignedBeaconBlockHeader struct {
 	Message   BeaconBlockHeader `json:"message" validate:"required"`
-	Signature string            `json:"signature" validate:"required"`
+	Signature string            `json:"signature" validate:"required" hex:"true"`
 }
 
 type BeaconBlockHeader struct {
 	Slot          string `json:"slot" validate:"required"`
 	ProposerIndex string `json:"proposer_index" validate:"required"`
-	ParentRoot    string `json:"parent_root" validate:"required"`
-	StateRoot     string `json:"state_root" validate:"required"`
-	BodyRoot      string `json:"body_root" validate:"required"`
+	ParentRoot    string `json:"parent_root" validate:"required" hex:"true"`
+	StateRoot     string `json:"state_root" validate:"required" hex:"true"`
+	BodyRoot      string `json:"body_root" validate:"required" hex:"true"`
 }
 
 type IndexedAttestation struct {
 	AttestingIndices []string        `json:"attesting_indices" validate:"required"`
 	Data             AttestationData `json:"data" validate:"required"`
-	Signature        string          `json:"signature" validate:"required"`
+	Signature        string          `json:"signature" validate:"required" hex:"true"`
 }
 
 type AttestationData struct {
 	Slot            string     `json:"slot" validate:"required"`
 	Index           string     `json:"index" validate:"required"`
-	BeaconBlockRoot string     `json:"beacon_block_root" validate:"required"`
+	BeaconBlockRoot string     `json:"beacon_block_root" validate:"required" hex:"true"`
 	Source          Checkpoint `json:"source" validate:"required"`
 	Target          Checkpoint `json:"target" validate:"required"`
 }
 
 type Checkpoint struct {
 	Epoch string `json:"epoch" validate:"required"`
-	Root  string `json:"root" validate:"required"`
+	Root  string `json:"root" validate:"required" hex:"true"`
 }
 
 type SyncAggregate struct {
-	SyncCommitteeBits      string `json:"sync_committee_bits" validate:"required"`
-	SyncCommitteeSignature string `json:"sync_committee_signature" validate:"required"`
+	SyncCommitteeBits      string `json:"sync_committee_bits" validate:"required" hex:"true"`
+	SyncCommitteeSignature string `json:"sync_committee_signature" validate:"required" hex:"true"`
 }
 
 type ExecutionPayload struct {
-	ParentHash    string   `json:"parent_hash" validate:"required"`
-	FeeRecipient  string   `json:"fee_recipient" validate:"required"`
-	StateRoot     string   `json:"state_root" validate:"required"`
-	ReceiptsRoot  string   `json:"receipts_root" validate:"required"`
-	LogsBloom     string   `json:"logs_bloom" validate:"required"`
-	PrevRandao    string   `json:"prev_randao" validate:"required"`
+	ParentHash    string   `json:"parent_hash" validate:"required" hex:"true"`
+	FeeRecipient  string   `json:"fee_recipient" validate:"required" hex:"true"`
+	StateRoot     string   `json:"state_root" validate:"required" hex:"true"`
+	ReceiptsRoot  string   `json:"receipts_root" validate:"required" hex:"true"`
+	LogsBloom     string   `json:"logs_bloom" validate:"required" hex:"true"`
+	PrevRandao    string   `json:"prev_randao" validate:"required" hex:"true"`
 	BlockNumber   string   `json:"block_number" validate:"required"`
 	GasLimit      string   `json:"gas_limit" validate:"required"`
 	GasUsed       string   `json:"gas_used" validate:"required"`
 	Timestamp     string   `json:"timestamp" validate:"required"`
-	ExtraData     string   `json:"extra_data" validate:"required"`
-	BaseFeePerGas string   `json:"base_fee_per_gas" validate:"required"` // TODO: Uint256
-	BlockHash     string   `json:"block_hash" validate:"required"`
-	Transactions  []string `json:"transactions" validate:"required"`
+	ExtraData     string   `json:"extra_data" validate:"required" hex:"true"`
+	BaseFeePerGas string   `json:"base_fee_per_gas" validate:"required" uint256:"true"` // TODO: Uint256
+	BlockHash     string   `json:"block_hash" validate:"required" hex:"true"`
+	Transactions  []string `json:"transactions" validate:"required" hex:"true"`
 }
 
 type ExecutionPayloadHeader struct {
-	ParentHash       string `json:"parent_hash" validate:"required"`
-	FeeRecipient     string `json:"fee_recipient" validate:"required"`
-	StateRoot        string `json:"state_root" validate:"required"`
-	ReceiptsRoot     string `json:"receipts_root" validate:"required"`
-	LogsBloom        string `json:"logs_bloom" validate:"required"`
-	PrevRandao       string `json:"prev_randao" validate:"required"`
+	ParentHash       string `json:"parent_hash" validate:"required" hex:"true"`
+	FeeRecipient     string `json:"fee_recipient" validate:"required" hex:"true"`
+	StateRoot        string `json:"state_root" validate:"required" hex:"true"`
+	ReceiptsRoot     string `json:"receipts_root" validate:"required" hex:"true"`
+	LogsBloom        string `json:"logs_bloom" validate:"required" hex:"true"`
+	PrevRandao       string `json:"prev_randao" validate:"required" hex:"true"`
 	BlockNumber      string `json:"block_number" validate:"required"`
 	GasLimit         string `json:"gas_limit" validate:"required"`
 	GasUsed          string `json:"gas_used" validate:"required"`
 	Timestamp        string `json:"timestamp" validate:"required"`
-	ExtraData        string `json:"extra_data" validate:"required"`
-	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required"`
-	BlockHash        string `json:"block_hash" validate:"required"`
-	TransactionsRoot string `json:"transactions_root" validate:"required"`
+	ExtraData        string `json:"extra_data" validate:"required" hex:"true"`
+	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required" uint256:"true"`
+	BlockHash        string `json:"block_hash" validate:"required" hex:"true"`
+	TransactionsRoot string `json:"transactions_root" validate:"required" hex:"true"`
 }
 
 type ExecutionPayloadCapella struct {
-	ParentHash    string       `json:"parent_hash" validate:"required"`
-	FeeRecipient  string       `json:"fee_recipient" validate:"required"`
-	StateRoot     string       `json:"state_root" validate:"required"`
-	ReceiptsRoot  string       `json:"receipts_root" validate:"required"`
-	LogsBloom     string       `json:"logs_bloom" validate:"required"`
-	PrevRandao    string       `json:"prev_randao" validate:"required"`
+	ParentHash    string       `json:"parent_hash" validate:"required" hex:"true"`
+	FeeRecipient  string       `json:"fee_recipient" validate:"required" hex:"true"`
+	StateRoot     string       `json:"state_root" validate:"required" hex:"true"`
+	ReceiptsRoot  string       `json:"receipts_root" validate:"required" hex:"true"`
+	LogsBloom     string       `json:"logs_bloom" validate:"required" hex:"true"`
+	PrevRandao    string       `json:"prev_randao" validate:"required" hex:"true"`
 	BlockNumber   string       `json:"block_number" validate:"required"`
 	GasLimit      string       `json:"gas_limit" validate:"required"`
 	GasUsed       string       `json:"gas_used" validate:"required"`
 	Timestamp     string       `json:"timestamp" validate:"required"`
-	ExtraData     string       `json:"extra_data" validate:"required"`
-	BaseFeePerGas string       `json:"base_fee_per_gas" validate:"required"`
-	BlockHash     string       `json:"block_hash" validate:"required"`
-	Transactions  []string     `json:"transactions" validate:"required"`
+	ExtraData     string       `json:"extra_data" validate:"required" hex:"true"`
+	BaseFeePerGas string       `json:"base_fee_per_gas" validate:"required" uint256:"true"`
+	BlockHash     string       `json:"block_hash" validate:"required" hex:"true"`
+	Transactions  []string     `json:"transactions" validate:"required" hex:"true"`
 	Withdrawals   []Withdrawal `json:"withdrawals" validate:"required"`
 }
 
 type ExecutionPayloadHeaderCapella struct {
-	ParentHash       string `json:"parent_hash" validate:"required"`
-	FeeRecipient     string `json:"fee_recipient" validate:"required"`
-	StateRoot        string `json:"state_root" validate:"required"`
-	ReceiptsRoot     string `json:"receipts_root" validate:"required"`
-	LogsBloom        string `json:"logs_bloom" validate:"required"`
-	PrevRandao       string `json:"prev_randao" validate:"required"`
+	ParentHash       string `json:"parent_hash" validate:"required" hex:"true"`
+	FeeRecipient     string `json:"fee_recipient" validate:"required" hex:"true"`
+	StateRoot        string `json:"state_root" validate:"required" hex:"true"`
+	ReceiptsRoot     string `json:"receipts_root" validate:"required" hex:"true"`
+	LogsBloom        string `json:"logs_bloom" validate:"required" hex:"true"`
+	PrevRandao       string `json:"prev_randao" validate:"required" hex:"true"`
 	BlockNumber      string `json:"block_number" validate:"required"`
 	GasLimit         string `json:"gas_limit" validate:"required"`
 	GasUsed          string `json:"gas_used" validate:"required"`
 	Timestamp        string `json:"timestamp" validate:"required"`
-	ExtraData        string `json:"extra_data" validate:"required"`
-	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required"`
-	BlockHash        string `json:"block_hash" validate:"required"`
-	TransactionsRoot string `json:"transactions_root" validate:"required"`
-	WithdrawalsRoot  string `json:"withdrawals_root" validate:"required"`
+	ExtraData        string `json:"extra_data" validate:"required" hex:"true"`
+	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required" uint256:"true"`
+	BlockHash        string `json:"block_hash" validate:"required" hex:"true"`
+	TransactionsRoot string `json:"transactions_root" validate:"required" hex:"true"`
+	WithdrawalsRoot  string `json:"withdrawals_root" validate:"required" hex:"true"`
 }
 
 type Withdrawal struct {
 	WithdrawalIndex  string `json:"index" validate:"required"`
 	ValidatorIndex   string `json:"validator_index" validate:"required"`
-	ExecutionAddress string `json:"address" validate:"required"`
+	ExecutionAddress string `json:"address" validate:"required" hex:"true"`
 	Amount           string `json:"amount" validate:"required"`
 }
 
 type SignedBlsToExecutionChange struct {
 	BlsToExecutionChange BlsToExecutionChange `json:"bls_to_execution_change" validate:"required"`
-	Signature            string               `json:"signature" validate:"required"`
+	Signature            string               `json:"signature" validate:"required" hex:"true"`
 }
 
 type BlsToExecutionChange struct {
 	ValidatorIndex string `json:"validator_index" validate:"required"`
 }
 
-func (b *SignedBeaconBlock) ToConsensusReadOnly() (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (b *SignedBeaconBlock) ToConsensus() (interfaces.SignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Signature")
@@ -374,303 +376,25 @@ func (b *SignedBeaconBlock) ToConsensusReadOnly() (interfaces.ReadOnlySignedBeac
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.Graffiti")
 	}
-	proposerSlashings := make([]*eth.ProposerSlashing, len(b.Message.Body.ProposerSlashings))
-	for i, s := range b.Message.Body.ProposerSlashings {
-		h1Sig, err := hexutil.Decode(s.SignedHeader1.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Signature", i)
-		}
-		h1Slot, err := strconv.ParseUint(s.SignedHeader1.Message.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.Slot", i)
-		}
-		h1ProposerIndex, err := strconv.ParseUint(s.SignedHeader1.Message.ProposerIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ProposerIndex", i)
-		}
-		h1ParentRoot, err := hexutil.Decode(s.SignedHeader1.Message.ParentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ParentRoot", i)
-		}
-		h1StateRoot, err := hexutil.Decode(s.SignedHeader1.Message.StateRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.StateRoot", i)
-		}
-		h1BodyRoot, err := hexutil.Decode(s.SignedHeader1.Message.BodyRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.BodyRoot", i)
-		}
-		h2Sig, err := hexutil.Decode(s.SignedHeader2.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Signature", i)
-		}
-		h2Slot, err := strconv.ParseUint(s.SignedHeader2.Message.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.Slot", i)
-		}
-		h2ProposerIndex, err := strconv.ParseUint(s.SignedHeader2.Message.ProposerIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ProposerIndex", i)
-		}
-		h2ParentRoot, err := hexutil.Decode(s.SignedHeader2.Message.ParentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ParentRoot", i)
-		}
-		h2StateRoot, err := hexutil.Decode(s.SignedHeader2.Message.StateRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.StateRoot", i)
-		}
-		h2BodyRoot, err := hexutil.Decode(s.SignedHeader2.Message.BodyRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.BodyRoot", i)
-		}
-		proposerSlashings[i] = &eth.ProposerSlashing{
-			Header_1: &eth.SignedBeaconBlockHeader{
-				Header: &eth.BeaconBlockHeader{
-					Slot:          primitives.Slot(h1Slot),
-					ProposerIndex: primitives.ValidatorIndex(h1ProposerIndex),
-					ParentRoot:    h1ParentRoot,
-					StateRoot:     h1StateRoot,
-					BodyRoot:      h1BodyRoot,
-				},
-				Signature: h1Sig,
-			},
-			Header_2: &eth.SignedBeaconBlockHeader{
-				Header: &eth.BeaconBlockHeader{
-					Slot:          primitives.Slot(h2Slot),
-					ProposerIndex: primitives.ValidatorIndex(h2ProposerIndex),
-					ParentRoot:    h2ParentRoot,
-					StateRoot:     h2StateRoot,
-					BodyRoot:      h2BodyRoot,
-				},
-				Signature: h2Sig,
-			},
-		}
+	proposerSlashings, err := convertProposerSlashings(b.Message.Body.ProposerSlashings)
+	if err != nil {
+		return nil, err
 	}
-	attesterSlashings := make([]*eth.AttesterSlashing, len(b.Message.Body.AttesterSlashings))
-	for i, s := range b.Message.Body.AttesterSlashings {
-		a1Sig, err := hexutil.Decode(s.Attestation1.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Signature", i)
-		}
-		a1AttestingIndices := make([]uint64, len(s.Attestation1.AttestingIndices))
-		for j, ix := range s.Attestation1.AttestingIndices {
-			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.AttestingIndices[%d]", i, j)
-			}
-			a1AttestingIndices[j] = attestingIndex
-		}
-		a1Slot, err := strconv.ParseUint(s.Attestation1.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Slot", i)
-		}
-		a1CommitteeIndex, err := strconv.ParseUint(s.Attestation1.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Index", i)
-		}
-		a1BeaconBlockRoot, err := hexutil.Decode(s.Attestation1.Data.BeaconBlockRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.BeaconBlockRoot", i)
-		}
-		a1SourceEpoch, err := strconv.ParseUint(s.Attestation1.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Epoch", i)
-		}
-		a1SourceRoot, err := hexutil.Decode(s.Attestation1.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Root", i)
-		}
-		a1TargetEpoch, err := strconv.ParseUint(s.Attestation1.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Epoch", i)
-		}
-		a1TargetRoot, err := hexutil.Decode(s.Attestation1.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Root", i)
-		}
-		a2Sig, err := hexutil.Decode(s.Attestation2.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Signature", i)
-		}
-		a2AttestingIndices := make([]uint64, len(s.Attestation2.AttestingIndices))
-		for j, ix := range s.Attestation2.AttestingIndices {
-			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.AttestingIndices[%d]", i, j)
-			}
-			a2AttestingIndices[j] = attestingIndex
-		}
-		a2Slot, err := strconv.ParseUint(s.Attestation2.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Slot", i)
-		}
-		a2CommitteeIndex, err := strconv.ParseUint(s.Attestation2.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Index", i)
-		}
-		a2BeaconBlockRoot, err := hexutil.Decode(s.Attestation2.Data.BeaconBlockRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.BeaconBlockRoot", i)
-		}
-		a2SourceEpoch, err := strconv.ParseUint(s.Attestation2.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Epoch", i)
-		}
-		a2SourceRoot, err := hexutil.Decode(s.Attestation2.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Root", i)
-		}
-		a2TargetEpoch, err := strconv.ParseUint(s.Attestation2.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Epoch", i)
-		}
-		a2TargetRoot, err := hexutil.Decode(s.Attestation2.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Root", i)
-		}
-		attesterSlashings[i] = &eth.AttesterSlashing{
-			Attestation_1: &eth.IndexedAttestation{
-				AttestingIndices: a1AttestingIndices,
-				Data: &eth.AttestationData{
-					Slot:            primitives.Slot(a1Slot),
-					CommitteeIndex:  primitives.CommitteeIndex(a1CommitteeIndex),
-					BeaconBlockRoot: a1BeaconBlockRoot,
-					Source: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a1SourceEpoch),
-						Root:  a1SourceRoot,
-					},
-					Target: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a1TargetEpoch),
-						Root:  a1TargetRoot,
-					},
-				},
-				Signature: a1Sig,
-			},
-			Attestation_2: &eth.IndexedAttestation{
-				AttestingIndices: a2AttestingIndices,
-				Data: &eth.AttestationData{
-					Slot:            primitives.Slot(a2Slot),
-					CommitteeIndex:  primitives.CommitteeIndex(a2CommitteeIndex),
-					BeaconBlockRoot: a2BeaconBlockRoot,
-					Source: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a2SourceEpoch),
-						Root:  a2SourceRoot,
-					},
-					Target: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a2TargetEpoch),
-						Root:  a2TargetRoot,
-					},
-				},
-				Signature: a2Sig,
-			},
-		}
+	attesterSlashings, err := convertAttesterSlashings(b.Message.Body.AttesterSlashings)
+	if err != nil {
+		return nil, err
 	}
-	atts := make([]*eth.Attestation, len(b.Message.Body.Attestations))
-	for i, a := range b.Message.Body.Attestations {
-
-		sig, err = hexutil.Decode(a.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Signature", i)
-		}
-		slot, err = strconv.ParseUint(a.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Slot", i)
-		}
-		committeeIndex, err := strconv.ParseUint(a.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Index", i)
-		}
-		sourceEpoch, err := strconv.ParseUint(a.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Epoch", i)
-		}
-		sourceRoot, err := hexutil.Decode(a.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Root", i)
-		}
-		targetEpoch, err := strconv.ParseUint(a.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Epoch", i)
-		}
-		targetRoot, err := hexutil.Decode(a.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Root", i)
-		}
-		atts[i] = &eth.Attestation{
-			AggregationBits: []byte(a.AggregationBits),
-			Data: &eth.AttestationData{
-				Slot:            primitives.Slot(slot),
-				CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
-				BeaconBlockRoot: nil,
-				Source: &eth.Checkpoint{
-					Epoch: primitives.Epoch(sourceEpoch),
-					Root:  sourceRoot,
-				},
-				Target: &eth.Checkpoint{
-					Epoch: primitives.Epoch(targetEpoch),
-					Root:  targetRoot,
-				},
-			},
-			Signature: sig,
-		}
+	atts, err := convertAtts(b.Message.Body.Attestations)
+	if err != nil {
+		return nil, err
 	}
-	deposits := make([]*eth.Deposit, len(b.Message.Body.Deposits))
-	for i, d := range b.Message.Body.Deposits {
-		proof := make([][]byte, len(d.Proof))
-		for j, p := range d.Proof {
-			proof[j], err = hexutil.Decode(p)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Proof[%d]", i, j)
-			}
-		}
-		pubkey, err := hexutil.Decode(d.Data.Pubkey)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Pubkey", i)
-		}
-		withdrawalCreds, err := hexutil.Decode(d.Data.WithdrawalCredentials)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].WithdrawalCredentials", i)
-		}
-		amount, err := strconv.ParseUint(d.Data.Amount, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Amount", i)
-		}
-		sig, err = hexutil.Decode(d.Data.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Signature", i)
-		}
-		deposits[i] = &eth.Deposit{
-			Proof: proof,
-			Data: &eth.Deposit_Data{
-				PublicKey:             pubkey,
-				WithdrawalCredentials: withdrawalCreds,
-				Amount:                amount,
-				Signature:             sig,
-			},
-		}
+	deposits, err := convertDeposits(b.Message.Body.Deposits)
+	if err != nil {
+		return nil, err
 	}
-	exits := make([]*eth.SignedVoluntaryExit, len(b.Message.Body.VoluntaryExits))
-	for i, e := range b.Message.Body.VoluntaryExits {
-		sig, err = hexutil.Decode(e.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Signature", i)
-		}
-		epoch, err := strconv.ParseUint(e.Message.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Epoch", i)
-		}
-		validatorIndex, err := strconv.ParseUint(e.Message.ValidatorIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].ValidatorIndex", i)
-		}
-		exits[i] = &eth.SignedVoluntaryExit{
-			Exit: &eth.VoluntaryExit{
-				Epoch:          primitives.Epoch(epoch),
-				ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
-			},
-			Signature: sig,
-		}
+	exits, err := convertExits(b.Message.Body.VoluntaryExits)
+	if err != nil {
+		return nil, err
 	}
 
 	block := &eth.SignedBeaconBlock{
@@ -699,7 +423,7 @@ func (b *SignedBeaconBlock) ToConsensusReadOnly() (interfaces.ReadOnlySignedBeac
 	return blocks.NewSignedBeaconBlock(block)
 }
 
-func (b *SignedBeaconBlockAltair) ToConsensusReadOnly() (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (b *SignedBeaconBlockAltair) ToConsensus() (interfaces.SignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Signature")
@@ -740,303 +464,29 @@ func (b *SignedBeaconBlockAltair) ToConsensusReadOnly() (interfaces.ReadOnlySign
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.Graffiti")
 	}
-	proposerSlashings := make([]*eth.ProposerSlashing, len(b.Message.Body.ProposerSlashings))
-	for i, s := range b.Message.Body.ProposerSlashings {
-		h1Sig, err := hexutil.Decode(s.SignedHeader1.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Signature", i)
-		}
-		h1Slot, err := strconv.ParseUint(s.SignedHeader1.Message.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.Slot", i)
-		}
-		h1ProposerIndex, err := strconv.ParseUint(s.SignedHeader1.Message.ProposerIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ProposerIndex", i)
-		}
-		h1ParentRoot, err := hexutil.Decode(s.SignedHeader1.Message.ParentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ParentRoot", i)
-		}
-		h1StateRoot, err := hexutil.Decode(s.SignedHeader1.Message.StateRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.StateRoot", i)
-		}
-		h1BodyRoot, err := hexutil.Decode(s.SignedHeader1.Message.BodyRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.BodyRoot", i)
-		}
-		h2Sig, err := hexutil.Decode(s.SignedHeader2.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Signature", i)
-		}
-		h2Slot, err := strconv.ParseUint(s.SignedHeader2.Message.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.Slot", i)
-		}
-		h2ProposerIndex, err := strconv.ParseUint(s.SignedHeader2.Message.ProposerIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ProposerIndex", i)
-		}
-		h2ParentRoot, err := hexutil.Decode(s.SignedHeader2.Message.ParentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ParentRoot", i)
-		}
-		h2StateRoot, err := hexutil.Decode(s.SignedHeader2.Message.StateRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.StateRoot", i)
-		}
-		h2BodyRoot, err := hexutil.Decode(s.SignedHeader2.Message.BodyRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.BodyRoot", i)
-		}
-		proposerSlashings[i] = &eth.ProposerSlashing{
-			Header_1: &eth.SignedBeaconBlockHeader{
-				Header: &eth.BeaconBlockHeader{
-					Slot:          primitives.Slot(h1Slot),
-					ProposerIndex: primitives.ValidatorIndex(h1ProposerIndex),
-					ParentRoot:    h1ParentRoot,
-					StateRoot:     h1StateRoot,
-					BodyRoot:      h1BodyRoot,
-				},
-				Signature: h1Sig,
-			},
-			Header_2: &eth.SignedBeaconBlockHeader{
-				Header: &eth.BeaconBlockHeader{
-					Slot:          primitives.Slot(h2Slot),
-					ProposerIndex: primitives.ValidatorIndex(h2ProposerIndex),
-					ParentRoot:    h2ParentRoot,
-					StateRoot:     h2StateRoot,
-					BodyRoot:      h2BodyRoot,
-				},
-				Signature: h2Sig,
-			},
-		}
+	proposerSlashings, err := convertProposerSlashings(b.Message.Body.ProposerSlashings)
+	if err != nil {
+		return nil, err
 	}
-	attesterSlashings := make([]*eth.AttesterSlashing, len(b.Message.Body.AttesterSlashings))
-	for i, s := range b.Message.Body.AttesterSlashings {
-		a1Sig, err := hexutil.Decode(s.Attestation1.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Signature", i)
-		}
-		a1AttestingIndices := make([]uint64, len(s.Attestation1.AttestingIndices))
-		for j, ix := range s.Attestation1.AttestingIndices {
-			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.AttestingIndices[%d]", i, j)
-			}
-			a1AttestingIndices[j] = attestingIndex
-		}
-		a1Slot, err := strconv.ParseUint(s.Attestation1.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Slot", i)
-		}
-		a1CommitteeIndex, err := strconv.ParseUint(s.Attestation1.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Index", i)
-		}
-		a1BeaconBlockRoot, err := hexutil.Decode(s.Attestation1.Data.BeaconBlockRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.BeaconBlockRoot", i)
-		}
-		a1SourceEpoch, err := strconv.ParseUint(s.Attestation1.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Epoch", i)
-		}
-		a1SourceRoot, err := hexutil.Decode(s.Attestation1.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Root", i)
-		}
-		a1TargetEpoch, err := strconv.ParseUint(s.Attestation1.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Epoch", i)
-		}
-		a1TargetRoot, err := hexutil.Decode(s.Attestation1.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Root", i)
-		}
-		a2Sig, err := hexutil.Decode(s.Attestation2.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Signature", i)
-		}
-		a2AttestingIndices := make([]uint64, len(s.Attestation2.AttestingIndices))
-		for j, ix := range s.Attestation2.AttestingIndices {
-			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.AttestingIndices[%d]", i, j)
-			}
-			a2AttestingIndices[j] = attestingIndex
-		}
-		a2Slot, err := strconv.ParseUint(s.Attestation2.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Slot", i)
-		}
-		a2CommitteeIndex, err := strconv.ParseUint(s.Attestation2.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Index", i)
-		}
-		a2BeaconBlockRoot, err := hexutil.Decode(s.Attestation2.Data.BeaconBlockRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.BeaconBlockRoot", i)
-		}
-		a2SourceEpoch, err := strconv.ParseUint(s.Attestation2.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Epoch", i)
-		}
-		a2SourceRoot, err := hexutil.Decode(s.Attestation2.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Root", i)
-		}
-		a2TargetEpoch, err := strconv.ParseUint(s.Attestation2.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Epoch", i)
-		}
-		a2TargetRoot, err := hexutil.Decode(s.Attestation2.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Root", i)
-		}
-		attesterSlashings[i] = &eth.AttesterSlashing{
-			Attestation_1: &eth.IndexedAttestation{
-				AttestingIndices: a1AttestingIndices,
-				Data: &eth.AttestationData{
-					Slot:            primitives.Slot(a1Slot),
-					CommitteeIndex:  primitives.CommitteeIndex(a1CommitteeIndex),
-					BeaconBlockRoot: a1BeaconBlockRoot,
-					Source: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a1SourceEpoch),
-						Root:  a1SourceRoot,
-					},
-					Target: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a1TargetEpoch),
-						Root:  a1TargetRoot,
-					},
-				},
-				Signature: a1Sig,
-			},
-			Attestation_2: &eth.IndexedAttestation{
-				AttestingIndices: a2AttestingIndices,
-				Data: &eth.AttestationData{
-					Slot:            primitives.Slot(a2Slot),
-					CommitteeIndex:  primitives.CommitteeIndex(a2CommitteeIndex),
-					BeaconBlockRoot: a2BeaconBlockRoot,
-					Source: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a2SourceEpoch),
-						Root:  a2SourceRoot,
-					},
-					Target: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a2TargetEpoch),
-						Root:  a2TargetRoot,
-					},
-				},
-				Signature: a2Sig,
-			},
-		}
+	attesterSlashings, err := convertAttesterSlashings(b.Message.Body.AttesterSlashings)
+	if err != nil {
+		return nil, err
 	}
-	atts := make([]*eth.Attestation, len(b.Message.Body.Attestations))
-	for i, a := range b.Message.Body.Attestations {
-
-		sig, err = hexutil.Decode(a.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Signature", i)
-		}
-		slot, err = strconv.ParseUint(a.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Slot", i)
-		}
-		committeeIndex, err := strconv.ParseUint(a.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Index", i)
-		}
-		sourceEpoch, err := strconv.ParseUint(a.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Epoch", i)
-		}
-		sourceRoot, err := hexutil.Decode(a.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Root", i)
-		}
-		targetEpoch, err := strconv.ParseUint(a.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Epoch", i)
-		}
-		targetRoot, err := hexutil.Decode(a.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Root", i)
-		}
-		atts[i] = &eth.Attestation{
-			AggregationBits: []byte(a.AggregationBits),
-			Data: &eth.AttestationData{
-				Slot:            primitives.Slot(slot),
-				CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
-				BeaconBlockRoot: nil,
-				Source: &eth.Checkpoint{
-					Epoch: primitives.Epoch(sourceEpoch),
-					Root:  sourceRoot,
-				},
-				Target: &eth.Checkpoint{
-					Epoch: primitives.Epoch(targetEpoch),
-					Root:  targetRoot,
-				},
-			},
-			Signature: sig,
-		}
+	atts, err := convertAtts(b.Message.Body.Attestations)
+	if err != nil {
+		return nil, err
 	}
-	deposits := make([]*eth.Deposit, len(b.Message.Body.Deposits))
-	for i, d := range b.Message.Body.Deposits {
-		proof := make([][]byte, len(d.Proof))
-		for j, p := range d.Proof {
-			proof[j], err = hexutil.Decode(p)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Proof[%d]", i, j)
-			}
-		}
-		pubkey, err := hexutil.Decode(d.Data.Pubkey)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Pubkey", i)
-		}
-		withdrawalCreds, err := hexutil.Decode(d.Data.WithdrawalCredentials)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].WithdrawalCredentials", i)
-		}
-		amount, err := strconv.ParseUint(d.Data.Amount, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Amount", i)
-		}
-		sig, err = hexutil.Decode(d.Data.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Signature", i)
-		}
-		deposits[i] = &eth.Deposit{
-			Proof: proof,
-			Data: &eth.Deposit_Data{
-				PublicKey:             pubkey,
-				WithdrawalCredentials: withdrawalCreds,
-				Amount:                amount,
-				Signature:             sig,
-			},
-		}
+	deposits, err := convertDeposits(b.Message.Body.Deposits)
+	if err != nil {
+		return nil, err
 	}
-	exits := make([]*eth.SignedVoluntaryExit, len(b.Message.Body.VoluntaryExits))
-	for i, e := range b.Message.Body.VoluntaryExits {
-		sig, err = hexutil.Decode(e.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Signature", i)
-		}
-		epoch, err := strconv.ParseUint(e.Message.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Epoch", i)
-		}
-		validatorIndex, err := strconv.ParseUint(e.Message.ValidatorIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].ValidatorIndex", i)
-		}
-		exits[i] = &eth.SignedVoluntaryExit{
-			Exit: &eth.VoluntaryExit{
-				Epoch:          primitives.Epoch(epoch),
-				ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
-			},
-			Signature: sig,
-		}
+	exits, err := convertExits(b.Message.Body.VoluntaryExits)
+	if err != nil {
+		return nil, err
+	}
+	syncCommitteeBits, err := bytesutil.FromHexString(b.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.SyncAggregate.SyncCommitteeBits")
 	}
 	syncCommitteeSig, err := hexutil.Decode(b.Message.Body.SyncAggregate.SyncCommitteeSignature)
 	if err != nil {
@@ -1063,7 +513,7 @@ func (b *SignedBeaconBlockAltair) ToConsensusReadOnly() (interfaces.ReadOnlySign
 				Deposits:          deposits,
 				VoluntaryExits:    exits,
 				SyncAggregate: &eth.SyncAggregate{
-					SyncCommitteeBits:      []byte(b.Message.Body.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeBits:      syncCommitteeBits,
 					SyncCommitteeSignature: syncCommitteeSig,
 				},
 			},
@@ -1073,7 +523,7 @@ func (b *SignedBeaconBlockAltair) ToConsensusReadOnly() (interfaces.ReadOnlySign
 	return blocks.NewSignedBeaconBlock(block)
 }
 
-func (b *SignedBeaconBlockBellatrix) ToConsensusReadOnly() (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (b *SignedBeaconBlockBellatrix) ToConsensus() (interfaces.SignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Signature")
@@ -1114,303 +564,29 @@ func (b *SignedBeaconBlockBellatrix) ToConsensusReadOnly() (interfaces.ReadOnlyS
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.Graffiti")
 	}
-	proposerSlashings := make([]*eth.ProposerSlashing, len(b.Message.Body.ProposerSlashings))
-	for i, s := range b.Message.Body.ProposerSlashings {
-		h1Sig, err := hexutil.Decode(s.SignedHeader1.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Signature", i)
-		}
-		h1Slot, err := strconv.ParseUint(s.SignedHeader1.Message.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.Slot", i)
-		}
-		h1ProposerIndex, err := strconv.ParseUint(s.SignedHeader1.Message.ProposerIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ProposerIndex", i)
-		}
-		h1ParentRoot, err := hexutil.Decode(s.SignedHeader1.Message.ParentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ParentRoot", i)
-		}
-		h1StateRoot, err := hexutil.Decode(s.SignedHeader1.Message.StateRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.StateRoot", i)
-		}
-		h1BodyRoot, err := hexutil.Decode(s.SignedHeader1.Message.BodyRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.BodyRoot", i)
-		}
-		h2Sig, err := hexutil.Decode(s.SignedHeader2.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Signature", i)
-		}
-		h2Slot, err := strconv.ParseUint(s.SignedHeader2.Message.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.Slot", i)
-		}
-		h2ProposerIndex, err := strconv.ParseUint(s.SignedHeader2.Message.ProposerIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ProposerIndex", i)
-		}
-		h2ParentRoot, err := hexutil.Decode(s.SignedHeader2.Message.ParentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ParentRoot", i)
-		}
-		h2StateRoot, err := hexutil.Decode(s.SignedHeader2.Message.StateRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.StateRoot", i)
-		}
-		h2BodyRoot, err := hexutil.Decode(s.SignedHeader2.Message.BodyRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.BodyRoot", i)
-		}
-		proposerSlashings[i] = &eth.ProposerSlashing{
-			Header_1: &eth.SignedBeaconBlockHeader{
-				Header: &eth.BeaconBlockHeader{
-					Slot:          primitives.Slot(h1Slot),
-					ProposerIndex: primitives.ValidatorIndex(h1ProposerIndex),
-					ParentRoot:    h1ParentRoot,
-					StateRoot:     h1StateRoot,
-					BodyRoot:      h1BodyRoot,
-				},
-				Signature: h1Sig,
-			},
-			Header_2: &eth.SignedBeaconBlockHeader{
-				Header: &eth.BeaconBlockHeader{
-					Slot:          primitives.Slot(h2Slot),
-					ProposerIndex: primitives.ValidatorIndex(h2ProposerIndex),
-					ParentRoot:    h2ParentRoot,
-					StateRoot:     h2StateRoot,
-					BodyRoot:      h2BodyRoot,
-				},
-				Signature: h2Sig,
-			},
-		}
+	proposerSlashings, err := convertProposerSlashings(b.Message.Body.ProposerSlashings)
+	if err != nil {
+		return nil, err
 	}
-	attesterSlashings := make([]*eth.AttesterSlashing, len(b.Message.Body.AttesterSlashings))
-	for i, s := range b.Message.Body.AttesterSlashings {
-		a1Sig, err := hexutil.Decode(s.Attestation1.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Signature", i)
-		}
-		a1AttestingIndices := make([]uint64, len(s.Attestation1.AttestingIndices))
-		for j, ix := range s.Attestation1.AttestingIndices {
-			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.AttestingIndices[%d]", i, j)
-			}
-			a1AttestingIndices[j] = attestingIndex
-		}
-		a1Slot, err := strconv.ParseUint(s.Attestation1.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Slot", i)
-		}
-		a1CommitteeIndex, err := strconv.ParseUint(s.Attestation1.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Index", i)
-		}
-		a1BeaconBlockRoot, err := hexutil.Decode(s.Attestation1.Data.BeaconBlockRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.BeaconBlockRoot", i)
-		}
-		a1SourceEpoch, err := strconv.ParseUint(s.Attestation1.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Epoch", i)
-		}
-		a1SourceRoot, err := hexutil.Decode(s.Attestation1.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Root", i)
-		}
-		a1TargetEpoch, err := strconv.ParseUint(s.Attestation1.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Epoch", i)
-		}
-		a1TargetRoot, err := hexutil.Decode(s.Attestation1.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Root", i)
-		}
-		a2Sig, err := hexutil.Decode(s.Attestation2.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Signature", i)
-		}
-		a2AttestingIndices := make([]uint64, len(s.Attestation2.AttestingIndices))
-		for j, ix := range s.Attestation2.AttestingIndices {
-			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.AttestingIndices[%d]", i, j)
-			}
-			a2AttestingIndices[j] = attestingIndex
-		}
-		a2Slot, err := strconv.ParseUint(s.Attestation2.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Slot", i)
-		}
-		a2CommitteeIndex, err := strconv.ParseUint(s.Attestation2.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Index", i)
-		}
-		a2BeaconBlockRoot, err := hexutil.Decode(s.Attestation2.Data.BeaconBlockRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.BeaconBlockRoot", i)
-		}
-		a2SourceEpoch, err := strconv.ParseUint(s.Attestation2.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Epoch", i)
-		}
-		a2SourceRoot, err := hexutil.Decode(s.Attestation2.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Root", i)
-		}
-		a2TargetEpoch, err := strconv.ParseUint(s.Attestation2.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Epoch", i)
-		}
-		a2TargetRoot, err := hexutil.Decode(s.Attestation2.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Root", i)
-		}
-		attesterSlashings[i] = &eth.AttesterSlashing{
-			Attestation_1: &eth.IndexedAttestation{
-				AttestingIndices: a1AttestingIndices,
-				Data: &eth.AttestationData{
-					Slot:            primitives.Slot(a1Slot),
-					CommitteeIndex:  primitives.CommitteeIndex(a1CommitteeIndex),
-					BeaconBlockRoot: a1BeaconBlockRoot,
-					Source: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a1SourceEpoch),
-						Root:  a1SourceRoot,
-					},
-					Target: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a1TargetEpoch),
-						Root:  a1TargetRoot,
-					},
-				},
-				Signature: a1Sig,
-			},
-			Attestation_2: &eth.IndexedAttestation{
-				AttestingIndices: a2AttestingIndices,
-				Data: &eth.AttestationData{
-					Slot:            primitives.Slot(a2Slot),
-					CommitteeIndex:  primitives.CommitteeIndex(a2CommitteeIndex),
-					BeaconBlockRoot: a2BeaconBlockRoot,
-					Source: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a2SourceEpoch),
-						Root:  a2SourceRoot,
-					},
-					Target: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a2TargetEpoch),
-						Root:  a2TargetRoot,
-					},
-				},
-				Signature: a2Sig,
-			},
-		}
+	attesterSlashings, err := convertAttesterSlashings(b.Message.Body.AttesterSlashings)
+	if err != nil {
+		return nil, err
 	}
-	atts := make([]*eth.Attestation, len(b.Message.Body.Attestations))
-	for i, a := range b.Message.Body.Attestations {
-
-		sig, err = hexutil.Decode(a.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Signature", i)
-		}
-		slot, err = strconv.ParseUint(a.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Slot", i)
-		}
-		committeeIndex, err := strconv.ParseUint(a.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Index", i)
-		}
-		sourceEpoch, err := strconv.ParseUint(a.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Epoch", i)
-		}
-		sourceRoot, err := hexutil.Decode(a.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Root", i)
-		}
-		targetEpoch, err := strconv.ParseUint(a.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Epoch", i)
-		}
-		targetRoot, err := hexutil.Decode(a.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Root", i)
-		}
-		atts[i] = &eth.Attestation{
-			AggregationBits: []byte(a.AggregationBits),
-			Data: &eth.AttestationData{
-				Slot:            primitives.Slot(slot),
-				CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
-				BeaconBlockRoot: nil,
-				Source: &eth.Checkpoint{
-					Epoch: primitives.Epoch(sourceEpoch),
-					Root:  sourceRoot,
-				},
-				Target: &eth.Checkpoint{
-					Epoch: primitives.Epoch(targetEpoch),
-					Root:  targetRoot,
-				},
-			},
-			Signature: sig,
-		}
+	atts, err := convertAtts(b.Message.Body.Attestations)
+	if err != nil {
+		return nil, err
 	}
-	deposits := make([]*eth.Deposit, len(b.Message.Body.Deposits))
-	for i, d := range b.Message.Body.Deposits {
-		proof := make([][]byte, len(d.Proof))
-		for j, p := range d.Proof {
-			proof[j], err = hexutil.Decode(p)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Proof[%d]", i, j)
-			}
-		}
-		pubkey, err := hexutil.Decode(d.Data.Pubkey)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Pubkey", i)
-		}
-		withdrawalCreds, err := hexutil.Decode(d.Data.WithdrawalCredentials)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].WithdrawalCredentials", i)
-		}
-		amount, err := strconv.ParseUint(d.Data.Amount, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Amount", i)
-		}
-		sig, err = hexutil.Decode(d.Data.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Signature", i)
-		}
-		deposits[i] = &eth.Deposit{
-			Proof: proof,
-			Data: &eth.Deposit_Data{
-				PublicKey:             pubkey,
-				WithdrawalCredentials: withdrawalCreds,
-				Amount:                amount,
-				Signature:             sig,
-			},
-		}
+	deposits, err := convertDeposits(b.Message.Body.Deposits)
+	if err != nil {
+		return nil, err
 	}
-	exits := make([]*eth.SignedVoluntaryExit, len(b.Message.Body.VoluntaryExits))
-	for i, e := range b.Message.Body.VoluntaryExits {
-		sig, err = hexutil.Decode(e.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Signature", i)
-		}
-		epoch, err := strconv.ParseUint(e.Message.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Epoch", i)
-		}
-		validatorIndex, err := strconv.ParseUint(e.Message.ValidatorIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].ValidatorIndex", i)
-		}
-		exits[i] = &eth.SignedVoluntaryExit{
-			Exit: &eth.VoluntaryExit{
-				Epoch:          primitives.Epoch(epoch),
-				ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
-			},
-			Signature: sig,
-		}
+	exits, err := convertExits(b.Message.Body.VoluntaryExits)
+	if err != nil {
+		return nil, err
+	}
+	syncCommitteeBits, err := bytesutil.FromHexString(b.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.SyncAggregate.SyncCommitteeBits")
 	}
 	syncCommitteeSig, err := hexutil.Decode(b.Message.Body.SyncAggregate.SyncCommitteeSignature)
 	if err != nil {
@@ -1460,7 +636,7 @@ func (b *SignedBeaconBlockBellatrix) ToConsensusReadOnly() (interfaces.ReadOnlyS
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayload.ExtraData")
 	}
-	payloadBaseFeePerGas, err := hexutil.Decode(b.Message.Body.ExecutionPayload.BaseFeePerGas)
+	payloadBaseFeePerGas, err := uint256ToHex(b.Message.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayload.BaseFeePerGas")
 	}
@@ -1496,7 +672,7 @@ func (b *SignedBeaconBlockBellatrix) ToConsensusReadOnly() (interfaces.ReadOnlyS
 				Deposits:          deposits,
 				VoluntaryExits:    exits,
 				SyncAggregate: &eth.SyncAggregate{
-					SyncCommitteeBits:      []byte(b.Message.Body.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeBits:      syncCommitteeBits,
 					SyncCommitteeSignature: syncCommitteeSig,
 				},
 				ExecutionPayload: &enginev1.ExecutionPayload{
@@ -1522,7 +698,7 @@ func (b *SignedBeaconBlockBellatrix) ToConsensusReadOnly() (interfaces.ReadOnlyS
 	return blocks.NewSignedBeaconBlock(block)
 }
 
-func (b *SignedBeaconBlockCapella) ToConsensusReadOnly() (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (b *SignedBeaconBlockCapella) ToConsensus() (interfaces.SignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Signature")
@@ -1563,303 +739,29 @@ func (b *SignedBeaconBlockCapella) ToConsensusReadOnly() (interfaces.ReadOnlySig
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.Graffiti")
 	}
-	proposerSlashings := make([]*eth.ProposerSlashing, len(b.Message.Body.ProposerSlashings))
-	for i, s := range b.Message.Body.ProposerSlashings {
-		h1Sig, err := hexutil.Decode(s.SignedHeader1.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Signature", i)
-		}
-		h1Slot, err := strconv.ParseUint(s.SignedHeader1.Message.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.Slot", i)
-		}
-		h1ProposerIndex, err := strconv.ParseUint(s.SignedHeader1.Message.ProposerIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ProposerIndex", i)
-		}
-		h1ParentRoot, err := hexutil.Decode(s.SignedHeader1.Message.ParentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ParentRoot", i)
-		}
-		h1StateRoot, err := hexutil.Decode(s.SignedHeader1.Message.StateRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.StateRoot", i)
-		}
-		h1BodyRoot, err := hexutil.Decode(s.SignedHeader1.Message.BodyRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.BodyRoot", i)
-		}
-		h2Sig, err := hexutil.Decode(s.SignedHeader2.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Signature", i)
-		}
-		h2Slot, err := strconv.ParseUint(s.SignedHeader2.Message.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.Slot", i)
-		}
-		h2ProposerIndex, err := strconv.ParseUint(s.SignedHeader2.Message.ProposerIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ProposerIndex", i)
-		}
-		h2ParentRoot, err := hexutil.Decode(s.SignedHeader2.Message.ParentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ParentRoot", i)
-		}
-		h2StateRoot, err := hexutil.Decode(s.SignedHeader2.Message.StateRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.StateRoot", i)
-		}
-		h2BodyRoot, err := hexutil.Decode(s.SignedHeader2.Message.BodyRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.BodyRoot", i)
-		}
-		proposerSlashings[i] = &eth.ProposerSlashing{
-			Header_1: &eth.SignedBeaconBlockHeader{
-				Header: &eth.BeaconBlockHeader{
-					Slot:          primitives.Slot(h1Slot),
-					ProposerIndex: primitives.ValidatorIndex(h1ProposerIndex),
-					ParentRoot:    h1ParentRoot,
-					StateRoot:     h1StateRoot,
-					BodyRoot:      h1BodyRoot,
-				},
-				Signature: h1Sig,
-			},
-			Header_2: &eth.SignedBeaconBlockHeader{
-				Header: &eth.BeaconBlockHeader{
-					Slot:          primitives.Slot(h2Slot),
-					ProposerIndex: primitives.ValidatorIndex(h2ProposerIndex),
-					ParentRoot:    h2ParentRoot,
-					StateRoot:     h2StateRoot,
-					BodyRoot:      h2BodyRoot,
-				},
-				Signature: h2Sig,
-			},
-		}
+	proposerSlashings, err := convertProposerSlashings(b.Message.Body.ProposerSlashings)
+	if err != nil {
+		return nil, err
 	}
-	attesterSlashings := make([]*eth.AttesterSlashing, len(b.Message.Body.AttesterSlashings))
-	for i, s := range b.Message.Body.AttesterSlashings {
-		a1Sig, err := hexutil.Decode(s.Attestation1.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Signature", i)
-		}
-		a1AttestingIndices := make([]uint64, len(s.Attestation1.AttestingIndices))
-		for j, ix := range s.Attestation1.AttestingIndices {
-			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.AttestingIndices[%d]", i, j)
-			}
-			a1AttestingIndices[j] = attestingIndex
-		}
-		a1Slot, err := strconv.ParseUint(s.Attestation1.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Slot", i)
-		}
-		a1CommitteeIndex, err := strconv.ParseUint(s.Attestation1.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Index", i)
-		}
-		a1BeaconBlockRoot, err := hexutil.Decode(s.Attestation1.Data.BeaconBlockRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.BeaconBlockRoot", i)
-		}
-		a1SourceEpoch, err := strconv.ParseUint(s.Attestation1.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Epoch", i)
-		}
-		a1SourceRoot, err := hexutil.Decode(s.Attestation1.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Root", i)
-		}
-		a1TargetEpoch, err := strconv.ParseUint(s.Attestation1.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Epoch", i)
-		}
-		a1TargetRoot, err := hexutil.Decode(s.Attestation1.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Root", i)
-		}
-		a2Sig, err := hexutil.Decode(s.Attestation2.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Signature", i)
-		}
-		a2AttestingIndices := make([]uint64, len(s.Attestation2.AttestingIndices))
-		for j, ix := range s.Attestation2.AttestingIndices {
-			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.AttestingIndices[%d]", i, j)
-			}
-			a2AttestingIndices[j] = attestingIndex
-		}
-		a2Slot, err := strconv.ParseUint(s.Attestation2.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Slot", i)
-		}
-		a2CommitteeIndex, err := strconv.ParseUint(s.Attestation2.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Index", i)
-		}
-		a2BeaconBlockRoot, err := hexutil.Decode(s.Attestation2.Data.BeaconBlockRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.BeaconBlockRoot", i)
-		}
-		a2SourceEpoch, err := strconv.ParseUint(s.Attestation2.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Epoch", i)
-		}
-		a2SourceRoot, err := hexutil.Decode(s.Attestation2.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Root", i)
-		}
-		a2TargetEpoch, err := strconv.ParseUint(s.Attestation2.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Epoch", i)
-		}
-		a2TargetRoot, err := hexutil.Decode(s.Attestation2.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Root", i)
-		}
-		attesterSlashings[i] = &eth.AttesterSlashing{
-			Attestation_1: &eth.IndexedAttestation{
-				AttestingIndices: a1AttestingIndices,
-				Data: &eth.AttestationData{
-					Slot:            primitives.Slot(a1Slot),
-					CommitteeIndex:  primitives.CommitteeIndex(a1CommitteeIndex),
-					BeaconBlockRoot: a1BeaconBlockRoot,
-					Source: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a1SourceEpoch),
-						Root:  a1SourceRoot,
-					},
-					Target: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a1TargetEpoch),
-						Root:  a1TargetRoot,
-					},
-				},
-				Signature: a1Sig,
-			},
-			Attestation_2: &eth.IndexedAttestation{
-				AttestingIndices: a2AttestingIndices,
-				Data: &eth.AttestationData{
-					Slot:            primitives.Slot(a2Slot),
-					CommitteeIndex:  primitives.CommitteeIndex(a2CommitteeIndex),
-					BeaconBlockRoot: a2BeaconBlockRoot,
-					Source: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a2SourceEpoch),
-						Root:  a2SourceRoot,
-					},
-					Target: &eth.Checkpoint{
-						Epoch: primitives.Epoch(a2TargetEpoch),
-						Root:  a2TargetRoot,
-					},
-				},
-				Signature: a2Sig,
-			},
-		}
+	attesterSlashings, err := convertAttesterSlashings(b.Message.Body.AttesterSlashings)
+	if err != nil {
+		return nil, err
 	}
-	atts := make([]*eth.Attestation, len(b.Message.Body.Attestations))
-	for i, a := range b.Message.Body.Attestations {
-
-		sig, err = hexutil.Decode(a.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Signature", i)
-		}
-		slot, err = strconv.ParseUint(a.Data.Slot, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Slot", i)
-		}
-		committeeIndex, err := strconv.ParseUint(a.Data.Index, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Index", i)
-		}
-		sourceEpoch, err := strconv.ParseUint(a.Data.Source.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Epoch", i)
-		}
-		sourceRoot, err := hexutil.Decode(a.Data.Source.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Root", i)
-		}
-		targetEpoch, err := strconv.ParseUint(a.Data.Target.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Epoch", i)
-		}
-		targetRoot, err := hexutil.Decode(a.Data.Target.Root)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Root", i)
-		}
-		atts[i] = &eth.Attestation{
-			AggregationBits: []byte(a.AggregationBits),
-			Data: &eth.AttestationData{
-				Slot:            primitives.Slot(slot),
-				CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
-				BeaconBlockRoot: nil,
-				Source: &eth.Checkpoint{
-					Epoch: primitives.Epoch(sourceEpoch),
-					Root:  sourceRoot,
-				},
-				Target: &eth.Checkpoint{
-					Epoch: primitives.Epoch(targetEpoch),
-					Root:  targetRoot,
-				},
-			},
-			Signature: sig,
-		}
+	atts, err := convertAtts(b.Message.Body.Attestations)
+	if err != nil {
+		return nil, err
 	}
-	deposits := make([]*eth.Deposit, len(b.Message.Body.Deposits))
-	for i, d := range b.Message.Body.Deposits {
-		proof := make([][]byte, len(d.Proof))
-		for j, p := range d.Proof {
-			proof[j], err = hexutil.Decode(p)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Proof[%d]", i, j)
-			}
-		}
-		pubkey, err := hexutil.Decode(d.Data.Pubkey)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Pubkey", i)
-		}
-		withdrawalCreds, err := hexutil.Decode(d.Data.WithdrawalCredentials)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].WithdrawalCredentials", i)
-		}
-		amount, err := strconv.ParseUint(d.Data.Amount, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Amount", i)
-		}
-		sig, err = hexutil.Decode(d.Data.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Signature", i)
-		}
-		deposits[i] = &eth.Deposit{
-			Proof: proof,
-			Data: &eth.Deposit_Data{
-				PublicKey:             pubkey,
-				WithdrawalCredentials: withdrawalCreds,
-				Amount:                amount,
-				Signature:             sig,
-			},
-		}
+	deposits, err := convertDeposits(b.Message.Body.Deposits)
+	if err != nil {
+		return nil, err
 	}
-	exits := make([]*eth.SignedVoluntaryExit, len(b.Message.Body.VoluntaryExits))
-	for i, e := range b.Message.Body.VoluntaryExits {
-		sig, err = hexutil.Decode(e.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Signature", i)
-		}
-		epoch, err := strconv.ParseUint(e.Message.Epoch, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Epoch", i)
-		}
-		validatorIndex, err := strconv.ParseUint(e.Message.ValidatorIndex, 10, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].ValidatorIndex", i)
-		}
-		exits[i] = &eth.SignedVoluntaryExit{
-			Exit: &eth.VoluntaryExit{
-				Epoch:          primitives.Epoch(epoch),
-				ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
-			},
-			Signature: sig,
-		}
+	exits, err := convertExits(b.Message.Body.VoluntaryExits)
+	if err != nil {
+		return nil, err
+	}
+	syncCommitteeBits, err := bytesutil.FromHexString(b.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.SyncAggregate.SyncCommitteeBits")
 	}
 	syncCommitteeSig, err := hexutil.Decode(b.Message.Body.SyncAggregate.SyncCommitteeSignature)
 	if err != nil {
@@ -1909,7 +811,7 @@ func (b *SignedBeaconBlockCapella) ToConsensusReadOnly() (interfaces.ReadOnlySig
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayload.ExtraData")
 	}
-	payloadBaseFeePerGas, err := hexutil.Decode(b.Message.Body.ExecutionPayload.BaseFeePerGas)
+	payloadBaseFeePerGas, err := uint256ToHex(b.Message.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayload.BaseFeePerGas")
 	}
@@ -1971,7 +873,7 @@ func (b *SignedBeaconBlockCapella) ToConsensusReadOnly() (interfaces.ReadOnlySig
 				Deposits:          deposits,
 				VoluntaryExits:    exits,
 				SyncAggregate: &eth.SyncAggregate{
-					SyncCommitteeBits:      []byte(b.Message.Body.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeBits:      syncCommitteeBits,
 					SyncCommitteeSignature: syncCommitteeSig,
 				},
 				ExecutionPayload: &enginev1.ExecutionPayloadCapella{
@@ -1997,4 +899,366 @@ func (b *SignedBeaconBlockCapella) ToConsensusReadOnly() (interfaces.ReadOnlySig
 		Signature: sig,
 	}
 	return blocks.NewSignedBeaconBlock(block)
+}
+
+func convertProposerSlashings(src []ProposerSlashing) ([]*eth.ProposerSlashing, error) {
+	if src == nil {
+		return nil, errors.New("nil b.Message.Body.ProposerSlashings")
+	}
+
+	proposerSlashings := make([]*eth.ProposerSlashing, len(src))
+	for i, s := range src {
+		h1Sig, err := hexutil.Decode(s.SignedHeader1.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Signature", i)
+		}
+		h1Slot, err := strconv.ParseUint(s.SignedHeader1.Message.Slot, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.Slot", i)
+		}
+		h1ProposerIndex, err := strconv.ParseUint(s.SignedHeader1.Message.ProposerIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ProposerIndex", i)
+		}
+		h1ParentRoot, err := hexutil.Decode(s.SignedHeader1.Message.ParentRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ParentRoot", i)
+		}
+		h1StateRoot, err := hexutil.Decode(s.SignedHeader1.Message.StateRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.StateRoot", i)
+		}
+		h1BodyRoot, err := hexutil.Decode(s.SignedHeader1.Message.BodyRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.BodyRoot", i)
+		}
+		h2Sig, err := hexutil.Decode(s.SignedHeader2.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Signature", i)
+		}
+		h2Slot, err := strconv.ParseUint(s.SignedHeader2.Message.Slot, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.Slot", i)
+		}
+		h2ProposerIndex, err := strconv.ParseUint(s.SignedHeader2.Message.ProposerIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ProposerIndex", i)
+		}
+		h2ParentRoot, err := hexutil.Decode(s.SignedHeader2.Message.ParentRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ParentRoot", i)
+		}
+		h2StateRoot, err := hexutil.Decode(s.SignedHeader2.Message.StateRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.StateRoot", i)
+		}
+		h2BodyRoot, err := hexutil.Decode(s.SignedHeader2.Message.BodyRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.BodyRoot", i)
+		}
+		proposerSlashings[i] = &eth.ProposerSlashing{
+			Header_1: &eth.SignedBeaconBlockHeader{
+				Header: &eth.BeaconBlockHeader{
+					Slot:          primitives.Slot(h1Slot),
+					ProposerIndex: primitives.ValidatorIndex(h1ProposerIndex),
+					ParentRoot:    h1ParentRoot,
+					StateRoot:     h1StateRoot,
+					BodyRoot:      h1BodyRoot,
+				},
+				Signature: h1Sig,
+			},
+			Header_2: &eth.SignedBeaconBlockHeader{
+				Header: &eth.BeaconBlockHeader{
+					Slot:          primitives.Slot(h2Slot),
+					ProposerIndex: primitives.ValidatorIndex(h2ProposerIndex),
+					ParentRoot:    h2ParentRoot,
+					StateRoot:     h2StateRoot,
+					BodyRoot:      h2BodyRoot,
+				},
+				Signature: h2Sig,
+			},
+		}
+	}
+	return proposerSlashings, nil
+}
+
+func convertAttesterSlashings(src []AttesterSlashing) ([]*eth.AttesterSlashing, error) {
+	if src == nil {
+		return nil, errors.New("nil b.Message.Body.AttesterSlashings")
+	}
+
+	attesterSlashings := make([]*eth.AttesterSlashing, len(src))
+	for i, s := range src {
+		a1Sig, err := hexutil.Decode(s.Attestation1.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Signature", i)
+		}
+		a1AttestingIndices := make([]uint64, len(s.Attestation1.AttestingIndices))
+		for j, ix := range s.Attestation1.AttestingIndices {
+			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.AttestingIndices[%d]", i, j)
+			}
+			a1AttestingIndices[j] = attestingIndex
+		}
+		a1Slot, err := strconv.ParseUint(s.Attestation1.Data.Slot, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Slot", i)
+		}
+		a1CommitteeIndex, err := strconv.ParseUint(s.Attestation1.Data.Index, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Index", i)
+		}
+		a1BeaconBlockRoot, err := hexutil.Decode(s.Attestation1.Data.BeaconBlockRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.BeaconBlockRoot", i)
+		}
+		a1SourceEpoch, err := strconv.ParseUint(s.Attestation1.Data.Source.Epoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Epoch", i)
+		}
+		a1SourceRoot, err := hexutil.Decode(s.Attestation1.Data.Source.Root)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Root", i)
+		}
+		a1TargetEpoch, err := strconv.ParseUint(s.Attestation1.Data.Target.Epoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Epoch", i)
+		}
+		a1TargetRoot, err := hexutil.Decode(s.Attestation1.Data.Target.Root)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Root", i)
+		}
+		a2Sig, err := hexutil.Decode(s.Attestation2.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Signature", i)
+		}
+		a2AttestingIndices := make([]uint64, len(s.Attestation2.AttestingIndices))
+		for j, ix := range s.Attestation2.AttestingIndices {
+			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.AttestingIndices[%d]", i, j)
+			}
+			a2AttestingIndices[j] = attestingIndex
+		}
+		a2Slot, err := strconv.ParseUint(s.Attestation2.Data.Slot, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Slot", i)
+		}
+		a2CommitteeIndex, err := strconv.ParseUint(s.Attestation2.Data.Index, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Index", i)
+		}
+		a2BeaconBlockRoot, err := hexutil.Decode(s.Attestation2.Data.BeaconBlockRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.BeaconBlockRoot", i)
+		}
+		a2SourceEpoch, err := strconv.ParseUint(s.Attestation2.Data.Source.Epoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Epoch", i)
+		}
+		a2SourceRoot, err := hexutil.Decode(s.Attestation2.Data.Source.Root)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Root", i)
+		}
+		a2TargetEpoch, err := strconv.ParseUint(s.Attestation2.Data.Target.Epoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Epoch", i)
+		}
+		a2TargetRoot, err := hexutil.Decode(s.Attestation2.Data.Target.Root)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Root", i)
+		}
+		attesterSlashings[i] = &eth.AttesterSlashing{
+			Attestation_1: &eth.IndexedAttestation{
+				AttestingIndices: a1AttestingIndices,
+				Data: &eth.AttestationData{
+					Slot:            primitives.Slot(a1Slot),
+					CommitteeIndex:  primitives.CommitteeIndex(a1CommitteeIndex),
+					BeaconBlockRoot: a1BeaconBlockRoot,
+					Source: &eth.Checkpoint{
+						Epoch: primitives.Epoch(a1SourceEpoch),
+						Root:  a1SourceRoot,
+					},
+					Target: &eth.Checkpoint{
+						Epoch: primitives.Epoch(a1TargetEpoch),
+						Root:  a1TargetRoot,
+					},
+				},
+				Signature: a1Sig,
+			},
+			Attestation_2: &eth.IndexedAttestation{
+				AttestingIndices: a2AttestingIndices,
+				Data: &eth.AttestationData{
+					Slot:            primitives.Slot(a2Slot),
+					CommitteeIndex:  primitives.CommitteeIndex(a2CommitteeIndex),
+					BeaconBlockRoot: a2BeaconBlockRoot,
+					Source: &eth.Checkpoint{
+						Epoch: primitives.Epoch(a2SourceEpoch),
+						Root:  a2SourceRoot,
+					},
+					Target: &eth.Checkpoint{
+						Epoch: primitives.Epoch(a2TargetEpoch),
+						Root:  a2TargetRoot,
+					},
+				},
+				Signature: a2Sig,
+			},
+		}
+	}
+	return attesterSlashings, nil
+}
+
+func convertAtts(src []Attestation) ([]*eth.Attestation, error) {
+	if src == nil {
+		return nil, errors.New("nil b.Message.Body.Attestations")
+	}
+
+	atts := make([]*eth.Attestation, len(src))
+	for i, a := range src {
+		sig, err := hexutil.Decode(a.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Signature", i)
+		}
+		slot, err := strconv.ParseUint(a.Data.Slot, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Slot", i)
+		}
+		committeeIndex, err := strconv.ParseUint(a.Data.Index, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Index", i)
+		}
+		beaconBlockRoot, err := hexutil.Decode(a.Data.BeaconBlockRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.BeaconBlockRoot", i)
+		}
+		sourceEpoch, err := strconv.ParseUint(a.Data.Source.Epoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Epoch", i)
+		}
+		sourceRoot, err := hexutil.Decode(a.Data.Source.Root)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Root", i)
+		}
+		targetEpoch, err := strconv.ParseUint(a.Data.Target.Epoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Epoch", i)
+		}
+		targetRoot, err := hexutil.Decode(a.Data.Target.Root)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Root", i)
+		}
+		atts[i] = &eth.Attestation{
+			AggregationBits: []byte(a.AggregationBits),
+			Data: &eth.AttestationData{
+				Slot:            primitives.Slot(slot),
+				CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
+				BeaconBlockRoot: beaconBlockRoot,
+				Source: &eth.Checkpoint{
+					Epoch: primitives.Epoch(sourceEpoch),
+					Root:  sourceRoot,
+				},
+				Target: &eth.Checkpoint{
+					Epoch: primitives.Epoch(targetEpoch),
+					Root:  targetRoot,
+				},
+			},
+			Signature: sig,
+		}
+	}
+	return atts, nil
+}
+
+func convertDeposits(src []Deposit) ([]*eth.Deposit, error) {
+	if src == nil {
+		return nil, errors.New("nil b.Message.Body.Deposits")
+	}
+
+	deposits := make([]*eth.Deposit, len(src))
+	for i, d := range src {
+		proof := make([][]byte, len(d.Proof))
+		for j, p := range d.Proof {
+			var err error
+			proof[j], err = hexutil.Decode(p)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Proof[%d]", i, j)
+			}
+		}
+		pubkey, err := hexutil.Decode(d.Data.Pubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Pubkey", i)
+		}
+		withdrawalCreds, err := hexutil.Decode(d.Data.WithdrawalCredentials)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].WithdrawalCredentials", i)
+		}
+		amount, err := strconv.ParseUint(d.Data.Amount, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Amount", i)
+		}
+		sig, err := hexutil.Decode(d.Data.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Signature", i)
+		}
+		deposits[i] = &eth.Deposit{
+			Proof: proof,
+			Data: &eth.Deposit_Data{
+				PublicKey:             pubkey,
+				WithdrawalCredentials: withdrawalCreds,
+				Amount:                amount,
+				Signature:             sig,
+			},
+		}
+	}
+	return deposits, nil
+}
+
+func convertExits(src []SignedVoluntaryExit) ([]*eth.SignedVoluntaryExit, error) {
+	if src == nil {
+		return nil, errors.New("nil b.Message.Body.VoluntaryExits")
+	}
+
+	exits := make([]*eth.SignedVoluntaryExit, len(src))
+	for i, e := range src {
+		sig, err := hexutil.Decode(e.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Signature", i)
+		}
+		epoch, err := strconv.ParseUint(e.Message.Epoch, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Epoch", i)
+		}
+		validatorIndex, err := strconv.ParseUint(e.Message.ValidatorIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].ValidatorIndex", i)
+		}
+		exits[i] = &eth.SignedVoluntaryExit{
+			Exit: &eth.VoluntaryExit{
+				Epoch:          primitives.Epoch(epoch),
+				ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
+			},
+			Signature: sig,
+		}
+	}
+	return exits, nil
+}
+
+func uint256ToHex(num string) ([]byte, error) {
+	uint256, ok := new(big.Int).SetString(num, 10)
+	if !ok {
+		return nil, errors.New("could not parse Uint256")
+	}
+	bigEndian := uint256.Bytes()
+	if len(bigEndian) > 32 {
+		return nil, errors.New("number too big for Uint256")
+	}
+
+	// Integers are stored as little-endian, but
+	// big.Int gives big-endian. So we need to reverse
+	// the byte order before encoding.
+	var littleEndian [32]byte
+	for i := 0; i < len(bigEndian); i++ {
+		littleEndian[i] = bigEndian[len(bigEndian)-1-i]
+	}
+	return littleEndian[:], nil
 }

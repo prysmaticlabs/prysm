@@ -41,7 +41,7 @@ import (
 // ValidatorServer extends ethpb.BeaconNodeValidatorServer.
 type ValidatorServer interface {
 	ethpb.BeaconNodeValidatorServer
-	ProposeGenericBeaconBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, validation BroadcastValidation) (*ethpb.ProposeResponse, error)
+	ProposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, validation BroadcastValidation) (*ethpb.ProposeResponse, error)
 }
 
 // Server defines a server implementation of the gRPC Validator service,

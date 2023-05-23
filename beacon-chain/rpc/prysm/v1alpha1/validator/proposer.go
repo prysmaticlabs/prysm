@@ -333,7 +333,7 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 
 func (vs *Server) ProposeGenericBeaconBlock(
 	ctx context.Context,
-	blk interfaces.ReadOnlySignedBeaconBlock,
+	blk interfaces.SignedBeaconBlock,
 	validation BroadcastValidation) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeGenericBeaconBlock")
 	defer span.End()
