@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -446,4 +447,77 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Error("Failed to receive pubsub within 1s")
 	}
+}
+
+func TestService_BroadcastBlob(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	require.NotEqual(t, 0, len(p1.BHost.Network().Peers()), "No peers")
+
+	p := &Service{
+		host:                  p1.BHost,
+		pubsub:                p1.PubSub(),
+		joinedTopics:          map[string]*pubsub.Topic{},
+		cfg:                   &Config{},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		subnetsLock:           make(map[uint64]*sync.RWMutex),
+		subnetsLockLock:       sync.Mutex{},
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			ScorerParams: &scorers.Config{},
+		}),
+	}
+
+	blobSidecar := &ethpb.SignedBlobSidecar{
+		Message: &ethpb.BlobSidecar{
+			BlockRoot:       bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength),
+			Index:           1,
+			Slot:            2,
+			BlockParentRoot: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength),
+			ProposerIndex:   3,
+			Blob:            bytesutil.PadTo([]byte{'C'}, fieldparams.BlobLength),
+			KzgCommitment:   bytesutil.PadTo([]byte{'D'}, fieldparams.BLSPubkeyLength),
+			KzgProof:        bytesutil.PadTo([]byte{'E'}, fieldparams.BLSPubkeyLength),
+		},
+		Signature: bytesutil.PadTo([]byte{'F'}, fieldparams.BLSSignatureLength),
+	}
+	subnet := uint64(0)
+
+	topic := BlobSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(blobSidecar)] = topic
+	digest, err := p.currentForkDigest()
+	require.NoError(t, err)
+	topic = fmt.Sprintf(topic, digest, subnet)
+
+	// External peer subscribes to the topic.
+	topic += p.Encoding().ProtocolSuffix()
+	sub, err := p2.SubscribeToTopic(topic)
+	require.NoError(t, err)
+
+	time.Sleep(50 * time.Millisecond) // libp2p fails without this delay...
+
+	// Async listen for the pubsub, must be before the broadcast.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(tt *testing.T) {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		incomingMessage, err := sub.Next(ctx)
+		require.NoError(t, err)
+
+		result := &ethpb.SignedBlobSidecar{}
+		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
+		require.DeepEqual(t, result, blobSidecar)
+	}(t)
+
+	// Attempt to broadcast nil object should fail.
+	ctx := context.Background()
+	require.ErrorContains(t, "attempted to broadcast nil", p.BroadcastBlob(ctx, subnet, nil))
+
+	// Broadcast to peers and wait.
+	require.NoError(t, p.BroadcastBlob(ctx, subnet, blobSidecar))
+	require.Equal(t, false, util.WaitTimeout(&wg, 1*time.Second), "Failed to receive pubsub within 1s")
 }
