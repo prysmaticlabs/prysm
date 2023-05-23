@@ -115,6 +115,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Fork choice algorithm constants.
 	ProposerScoreBoost:              40,
 	ReorgWeightThreshold:            20,
+	ReorgParentWeightThreshold:      160,
 	ReorgMaxEpochsSinceFinalization: 2,
 	IntervalsPerSlot:                3,
 
@@ -257,8 +258,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Mevboost circuit breaker
 	MaxBuilderConsecutiveMissedSlots: 3,
 	MaxBuilderEpochMissedSlots:       5,
-	// Mev validator registration duration before expiration
-	RegistrationDuration: 12 * 32 * 3 * time.Second, // defaults to 3 Epochs
 	// Execution engine timeout value
 	ExecutionEngineTimeoutValue: 8, // 8 seconds default based on: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
 }
