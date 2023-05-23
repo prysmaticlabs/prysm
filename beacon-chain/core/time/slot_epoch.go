@@ -81,6 +81,15 @@ func CanUpgradeToCapella(slot primitives.Slot) bool {
 	return epochStart && capellaEpoch
 }
 
+// CanUpgradeToDeneb returns true if the input `slot` can upgrade to Deneb.
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == DENEB_FORK_EPOCH
+func CanUpgradeToDeneb(slot primitives.Slot) bool {
+	epochStart := slots.IsEpochStart(slot)
+	DenebEpoch := slots.ToEpoch(slot) == params.BeaconConfig().DenebForkEpoch
+	return epochStart && DenebEpoch
+}
+
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch.
 //
