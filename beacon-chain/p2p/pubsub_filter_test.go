@@ -202,7 +202,7 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 				if string(c) == "%" {
 					next := string(topic[i+1])
 					if next != "d" && next != "x" {
-						t.Errorf("Topic %s has formatting incompatiable with scanfcheck. Only %%d and %%x are supported", topic)
+						t.Errorf("Topic %s has formatting incompatible with scanfcheck. Only %%d and %%x are supported", topic)
 					}
 				}
 			}

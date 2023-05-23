@@ -271,11 +271,9 @@ func TestWaitForSyncCanceled(t *testing.T) {
 func TestRun(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 
 	go func() {
-		s.run(stateChannel, stateSub)
+		s.run()
 	}()
 	close(s.config.InitialSyncComplete)
 

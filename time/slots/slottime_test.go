@@ -563,3 +563,9 @@ func TestDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestTimeIntoSlot(t *testing.T) {
+	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
+	require.Equal(t, true, TimeIntoSlot(genesisTime) > 900*time.Millisecond)
+	require.Equal(t, true, TimeIntoSlot(genesisTime) < 3000*time.Millisecond)
+}

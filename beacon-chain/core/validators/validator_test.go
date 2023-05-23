@@ -150,7 +150,7 @@ func TestSlashValidator_OK(t *testing.T) {
 
 	maxBalance := params.BeaconConfig().MaxEffectiveBalance
 	slashedBalance := state.Slashings()[state.Slot().Mod(uint64(params.BeaconConfig().EpochsPerSlashingsVector))]
-	assert.Equal(t, maxBalance, slashedBalance, "Slashed balance isnt the expected amount")
+	assert.Equal(t, maxBalance, slashedBalance, "Slashed balance isn't the expected amount")
 
 	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
 	bal, err := state.BalanceAtIndex(proposer)

@@ -57,19 +57,19 @@ var (
 	aggregateFirstInterval = &cli.DurationFlag{
 		Name:   "aggregate-first-interval",
 		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
-		Value:  7 * time.Second,
+		Value:  6500 * time.Millisecond,
 		Hidden: true,
 	}
 	aggregateSecondInterval = &cli.DurationFlag{
 		Name:   "aggregate-second-interval",
 		Usage:  "(Advanced): Specifies the second interval in which attestations are aggregated in the slot",
-		Value:  9 * time.Second,
+		Value:  9500 * time.Millisecond,
 		Hidden: true,
 	}
 	aggregateThirdInterval = &cli.DurationFlag{
 		Name:   "aggregate-third-interval",
 		Usage:  "(Advanced): Specifies the third interval in which attestations are aggregated in the slot",
-		Value:  11 * time.Second,
+		Value:  11800 * time.Millisecond,
 		Hidden: true,
 	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
@@ -140,9 +140,13 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
-	buildBlockParallel = &cli.BoolFlag{
-		Name:  "build-block-parallel",
-		Usage: "Builds a beacon block in parallel for consensus and execution. It results in faster block construction time",
+	disableBuildBlockParallel = &cli.BoolFlag{
+		Name:  "disable-build-block-parallel",
+		Usage: "Disables building a beacon block in parallel for consensus and execution",
+	}
+	disableResourceManager = &cli.BoolFlag{
+		Name:  "disable-resource-manager",
+		Usage: "Disables running the libp2p resource manager",
 	}
 )
 
@@ -191,10 +195,11 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
 	prepareAllPayloads,
+	disableBuildBlockParallel,
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
-	buildBlockParallel,
+	disableResourceManager,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

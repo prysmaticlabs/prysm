@@ -27,6 +27,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedBuildBlockParallel = &cli.BoolFlag{
+		Name:   "build-block-parallel",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -35,6 +40,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableVecHTR,
 	deprecatedEnableReorgLateBlocks,
 	deprecatedDisableGossipBatchAggregation,
+	deprecatedBuildBlockParallel,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components

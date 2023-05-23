@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// IsForkNextEpoch checks if an alloted fork is in the following epoch.
+// IsForkNextEpoch checks if an allotted fork is in the following epoch.
 func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool, error) {
 	if genesisTime.IsZero() {
 		return false, errors.New("genesis time is not set")

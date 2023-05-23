@@ -226,7 +226,7 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
 	// HandleKeyReloadCalled in the FakeValidator returns true if one of the keys is equal to the
 	// ActiveKey. Since we are using a key we know is not active, it should return false, which
-	// sould cause the account change handler to call WaitForActivationCalled.
+	// should cause the account change handler to call WaitForActivationCalled.
 	assert.Equal(t, 1, v.WaitForActivationCalled)
 }
 
