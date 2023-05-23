@@ -85,7 +85,7 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 
 	// Only orphan a block if the parent LMD vote is strong
 	if parent.weight*100 < f.store.committeeWeight*params.BeaconConfig().ReorgParentWeightThreshold {
-		panic(f.store.committeeWeight)
+		return
 	}
 	return true
 }
