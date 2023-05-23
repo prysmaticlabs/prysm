@@ -298,3 +298,38 @@ func TestCanUpgradeToCapella(t *testing.T) {
 		})
 	}
 }
+
+func TestCanUpgradeToDeneb(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bc := params.BeaconConfig()
+	bc.DenebForkEpoch = 5
+	params.OverrideBeaconConfig(bc)
+	tests := []struct {
+		name string
+		slot primitives.Slot
+		want bool
+	}{
+		{
+			name: "not epoch start",
+			slot: 1,
+			want: false,
+		},
+		{
+			name: "not deneb epoch",
+			slot: params.BeaconConfig().SlotsPerEpoch,
+			want: false,
+		},
+		{
+			name: "deneb epoch",
+			slot: primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := time.CanUpgradeToDeneb(tt.slot); got != tt.want {
+				t.Errorf("CanUpgradeToDeneb() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
