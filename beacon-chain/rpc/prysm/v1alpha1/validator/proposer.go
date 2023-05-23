@@ -99,6 +99,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
 	sBlk.SetProposerIndex(idx)
+	log.Infof("proposer_mocker: setting proposer index took %s", time.Since(curr).String())
 
 	if features.Get().BuildBlockParallel {
 		if err := vs.BuildBlockParallel(ctx, sBlk, head); err != nil {
@@ -112,6 +113,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			log.WithError(err).Error("Could not get eth1data")
 		}
 		sBlk.SetEth1Data(eth1Data)
+		log.Infof("proposer_mocker: setting eth1data took %s", time.Since(curr).String())
 
 		// Set deposit and attestation.
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
@@ -123,25 +125,32 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			sBlk.SetDeposits(deposits)
 			sBlk.SetAttestations(atts)
 		}
+		log.Infof("proposer_mocker: setting deposits and atts took %s", time.Since(curr).String())
 
 		// Set slashings.
 		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 		sBlk.SetProposerSlashings(validProposerSlashings)
 		sBlk.SetAttesterSlashings(validAttSlashings)
 
+		log.Infof("proposer_mocker: setting slashings took %s", time.Since(curr).String())
+
 		// Set exits.
 		sBlk.SetVoluntaryExits(vs.getExits(head, req.Slot))
+		log.Infof("proposer_mocker: setting exits took %s", time.Since(curr).String())
 
 		// Set sync aggregate. New in Altair.
 		vs.setSyncAggregate(ctx, sBlk)
+		log.Infof("proposer_mocker: setting sync aggs took %s", time.Since(curr).String())
 
 		// Set execution data. New in Bellatrix.
 		if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 		}
+		log.Infof("proposer_mocker: setting execution data took %s", time.Since(curr).String())
 
 		// Set bls to execution change. New in Capella.
 		vs.setBlsToExecData(sBlk, head)
+		log.Infof("proposer_mocker: setting bls data took %s", time.Since(curr).String())
 	}
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
@@ -149,6 +158,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	sBlk.SetStateRoot(sr)
+	log.Infof("proposer_mocker: setting state root took %s", time.Since(curr).String())
 
 	pb, err := sBlk.Block().Proto()
 	if err != nil {
@@ -367,10 +377,12 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
+	curr := time.Now()
 	beaconState, err := vs.StateGen.StateByRoot(ctx, block.Block().ParentRoot())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
+	log.Infof("proposer_mocker: fetching parent state took %s", time.Since(curr).String())
 	root, err := transition.CalculateStateRoot(
 		ctx,
 		beaconState,
@@ -379,6 +391,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnl
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot())
 	}
+	log.Infof("proposer_mocker: calculating state root took %s", time.Since(curr).String())
 
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
 	return root[:], nil
