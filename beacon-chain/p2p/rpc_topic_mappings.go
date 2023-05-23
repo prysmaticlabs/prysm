@@ -37,6 +37,9 @@ const PingMessageName = "/ping"
 // MetadataMessageName specifies the name for the metadata message topic.
 const MetadataMessageName = "/metadata"
 
+// BlobSidecarsByRangeName is the name for the BlobSidecarsByRange v1 message topic.
+const BlobSidecarsByRangeName = "/blob_sidecars_by_range"
+
 // BlobSidecarsByRootName is the name for the BlobSidecarsByRoot v1 message topic.
 const BlobSidecarsByRootName = "/blob_sidecars_by_root"
 
@@ -55,6 +58,10 @@ const (
 	// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
 	RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
 
+	// RPCBlobSidecarsByRangeTopicV1 is a topic for requesting blob sidecars
+	// in the slot range [start_slot, start_slot + count), leading up to the current head block as selected by fork choice.
+	// Protocol ID: /eth2/beacon_chain/req/blob_sidecars_by_range/1/ - New in deneb.
+	RPCBlobSidecarsByRangeTopicV1 = protocolPrefix + BlobSidecarsByRangeName + SchemaVersionV1
 	// RPCBlobSidecarsByRootTopicV1 is a topic for requesting blob sidecars by their block root. New in deneb.
 	// /eth2/beacon_chain/req/blob_sidecars_by_root/1/
 	RPCBlobSidecarsByRootTopicV1 = protocolPrefix + BlobSidecarsByRootName + SchemaVersionV1
@@ -90,6 +97,8 @@ var RPCTopicMappings = map[string]interface{}{
 	// RPC Metadata Message
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),
+	// BlobSidecarsByRange v1 Message
+	RPCBlobSidecarsByRangeTopicV1: new(pb.BlobSidecarsByRangeRequest),
 	// BlobSidecarsByRoot v1 Message
 	RPCBlobSidecarsByRootTopicV1: new(p2ptypes.BlobSidecarsByRootReq),
 }
@@ -108,6 +117,7 @@ var messageMapping = map[string]bool{
 	BeaconBlocksByRootsMessageName: true,
 	PingMessageName:                true,
 	MetadataMessageName:            true,
+	BlobSidecarsByRangeName:        true,
 	BlobSidecarsByRootName:         true,
 }
 

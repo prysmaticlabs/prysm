@@ -513,3 +513,78 @@ func TestBlobValidatorFromRootReq(t *testing.T) {
 		})
 	}
 }
+
+func TestBlobValidatorFromRangeReq(t *testing.T) {
+	cases := []struct {
+		name     string
+		req      *ethpb.BlobSidecarsByRangeRequest
+		response []*ethpb.BlobSidecar
+		err      error
+	}{
+		{
+			name: "valid - count multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 14}},
+		},
+		{
+			name: "valid - count 1",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 10}},
+		},
+		{
+			name: "invalid - before",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 9}},
+			err:      ErrBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, count 1",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 11}},
+			err:      ErrBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 23}},
+			err:      ErrBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, at boundary, multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 20}},
+			err:      ErrBlobResponseOutOfBounds,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			vf := blobValidatorFromRangeReq(c.req)
+			for _, sc := range c.response {
+				err := vf(sc)
+				if c.err != nil {
+					require.ErrorIs(t, err, c.err)
+					return
+				}
+				require.NoError(t, err)
+			}
+		})
+	}
+}
