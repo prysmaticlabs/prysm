@@ -145,6 +145,41 @@ func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfa
 			},
 			Signature: params.BeaconConfig().EmptySignature[:],
 		})
+	case *ethpb.BeaconStateDeneb:
+		return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockDeneb{
+			Block: &ethpb.BeaconBlockDeneb{
+				ParentRoot: params.BeaconConfig().ZeroHash[:],
+				StateRoot:  root[:],
+				Body: &ethpb.BeaconBlockBodyDeneb{
+					RandaoReveal: make([]byte, 96),
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot: make([]byte, 32),
+						BlockHash:   make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
+					SyncAggregate: &ethpb.SyncAggregate{
+						SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
+						SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+					},
+					ExecutionPayload: &enginev1.ExecutionPayloadDeneb{ // Deneb difference.
+						ParentHash:    make([]byte, 32),
+						FeeRecipient:  make([]byte, 20),
+						StateRoot:     make([]byte, 32),
+						ReceiptsRoot:  make([]byte, 32),
+						LogsBloom:     make([]byte, 256),
+						PrevRandao:    make([]byte, 32),
+						BaseFeePerGas: make([]byte, 32),
+						BlockHash:     make([]byte, 32),
+						Transactions:  make([][]byte, 0),
+						Withdrawals:   make([]*enginev1.Withdrawal, 0),
+						ExcessDataGas: make([]byte, 32), // New in Deneb.
+					},
+					BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
+					BlobKzgCommitments:    make([][]byte, 0),
+				},
+			},
+			Signature: params.BeaconConfig().EmptySignature[:],
+		})
 	default:
 		return nil, ErrUnrecognizedState
 	}
