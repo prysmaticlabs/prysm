@@ -167,11 +167,12 @@ func (acm *AccountsCLIManager) Import(ctx context.Context) error {
 	}
 	if len(successfullyImportedAccounts) == 0 {
 		log.Error("no accounts were successfully imported")
+	} else {
+		log.Infof(
+			"Imported accounts %v, view all of them by running `accounts list`",
+			successfullyImportedAccounts,
+		)
 	}
-	log.Infof(
-		"Imported accounts %v, view all of them by running `accounts list`",
-		successfullyImportedAccounts,
-	)
 
 	return nil
 }
