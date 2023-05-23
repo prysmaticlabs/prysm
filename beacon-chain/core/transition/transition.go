@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/capella"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/deneb"
 	e "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/execution"
@@ -269,28 +270,10 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 
-		if time.CanUpgradeToAltair(state.Slot()) {
-			state, err = altair.UpgradeToAltair(ctx, state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
-
-		if time.CanUpgradeToBellatrix(state.Slot()) {
-			state, err = execution.UpgradeToBellatrix(state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
-
-		if time.CanUpgradeToCapella(state.Slot()) {
-			state, err = capella.UpgradeToCapella(state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
+		state, err = UpgradeState(ctx, state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "failed to upgrade state")
 		}
 	}
 
@@ -298,6 +281,45 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 		SkipSlotCache.Put(ctx, key, state)
 	}
 
+	return state, nil
+}
+
+// UpgradeState upgrades the state to the next version if possible.
+func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.state.UpgradeState")
+	defer span.End()
+	var err error
+	if time.CanUpgradeToAltair(state.Slot()) {
+		state, err = altair.UpgradeToAltair(ctx, state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
+
+	if time.CanUpgradeToBellatrix(state.Slot()) {
+		state, err = execution.UpgradeToBellatrix(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
+
+	if time.CanUpgradeToCapella(state.Slot()) {
+		state, err = capella.UpgradeToCapella(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
+
+	if time.CanUpgradeToDeneb(state.Slot()) {
+		state, err = deneb.UpgradeToDeneb(state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
+	}
 	return state, nil
 }
 
