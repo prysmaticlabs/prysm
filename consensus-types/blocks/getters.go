@@ -116,6 +116,15 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 		return &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Capella{Capella: pb.(*eth.SignedBeaconBlockCapella)},
 		}, nil
+	case version.Deneb:
+		if b.IsBlinded() {
+			return &eth.GenericSignedBeaconBlock{
+				Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: pb.(*eth.SignedBlindedBeaconBlockAndBlobsDeneb)},
+			}, nil
+		}
+		return &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: pb.(*eth.SignedBeaconBlockAndBlobsDeneb)},
+		}, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -870,6 +879,11 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 			return &validatorpb.SignRequest_BlindedBlockCapella{BlindedBlockCapella: pb.(*eth.BlindedBeaconBlockCapella)}, nil
 		}
 		return &validatorpb.SignRequest_BlockCapella{BlockCapella: pb.(*eth.BeaconBlockCapella)}, nil
+	case version.Deneb:
+		if b.IsBlinded() {
+			return &validatorpb.SignRequest_BlindedBlockDeneb{BlindedBlockDeneb: pb.(*eth.BlindedBeaconBlockDeneb)}, nil
+		}
+		return &validatorpb.SignRequest_BlockDeneb{BlockDeneb: pb.(*eth.BeaconBlockDeneb)}, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}
