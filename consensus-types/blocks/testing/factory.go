@@ -26,6 +26,7 @@ func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfac
 		return blocks.NewSignedBeaconBlock(bb.Capella)
 	case *eth.GenericSignedBeaconBlock_BlindedCapella:
 		return blocks.NewSignedBeaconBlock(bb.BlindedCapella)
+	// Generic Signed Beacon Block Deneb can't be used here as it is not a block, but block content with blobs
 	default:
 		return nil, errors.Wrapf(blocks.ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", gb)
 	}
