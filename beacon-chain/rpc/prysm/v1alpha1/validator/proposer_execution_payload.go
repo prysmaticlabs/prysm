@@ -9,18 +9,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -83,42 +79,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 			return nil, errors.Wrap(err, "could not get cached payload from execution client")
 		}
 	}
-
-	var parentHash []byte
-	var hasTerminalBlock bool
-	mergeComplete, err := blocks.IsMergeTransitionComplete(st)
-	if err != nil {
-		return nil, err
-	}
-
-	t, err := slots.ToTime(st.GenesisTime(), slot)
-	if err != nil {
-		return nil, err
-	}
-	if mergeComplete {
-		header, err := st.LatestExecutionPayloadHeader()
-		if err != nil {
-			return nil, err
-		}
-		parentHash = header.BlockHash()
-	} else {
-		if activationEpochNotReached(slot) {
-			return consensusblocks.WrappedExecutionPayload(emptyPayload())
-		}
-		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
-		if err != nil {
-			return nil, err
-		}
-		if !hasTerminalBlock {
-			return consensusblocks.WrappedExecutionPayload(emptyPayload())
-		}
-	}
 	payloadIDCacheMiss.Inc()
-
-	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
-	if err != nil {
-		return nil, err
-	}
 
 	finalizedBlockHash := [32]byte{}
 	justifiedBlockHash := [32]byte{}
@@ -127,11 +88,22 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
 		justifiedBlockHash = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
 	}
-
+	header, err := st.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
 	f := &enginev1.ForkchoiceState{
-		HeadBlockHash:      parentHash,
+		HeadBlockHash:      header.BlockHash(),
 		SafeBlockHash:      justifiedBlockHash[:],
 		FinalizedBlockHash: finalizedBlockHash[:],
+	}
+	t, err := slots.ToTime(st.GenesisTime(), slot)
+	if err != nil {
+		return nil, err
+	}
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	if err != nil {
+		return nil, err
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {
@@ -167,7 +139,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
-		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
+		return nil, fmt.Errorf("nil payload with block hash: %#x", header.BlockHash())
 	}
 	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
@@ -187,80 +159,5 @@ func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient co
 			"received":           fmt.Sprintf("%#x", payload.FeeRecipient()),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
-	}
-}
-
-// This returns the valid terminal block hash with an existence bool value.
-//
-// Spec code:
-// def get_terminal_pow_block(pow_chain: Dict[Hash32, PowBlock]) -> Optional[PowBlock]:
-//
-//	if TERMINAL_BLOCK_HASH != Hash32():
-//	    # Terminal block hash override takes precedence over terminal total difficulty
-//	    if TERMINAL_BLOCK_HASH in pow_chain:
-//	        return pow_chain[TERMINAL_BLOCK_HASH]
-//	    else:
-//	        return None
-//
-//	return get_pow_block_at_terminal_total_difficulty(pow_chain)
-func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
-	terminalBlockHash := params.BeaconConfig().TerminalBlockHash
-	// Terminal block hash override takes precedence over terminal total difficulty.
-	if params.BeaconConfig().TerminalBlockHash != params.BeaconConfig().ZeroHash {
-		exists, _, err := vs.Eth1BlockFetcher.BlockExists(ctx, terminalBlockHash)
-		if err != nil {
-			return nil, false, err
-		}
-		if !exists {
-			return nil, false, nil
-		}
-
-		return terminalBlockHash.Bytes(), true, nil
-	}
-
-	return vs.ExecutionEngineCaller.GetTerminalBlockHash(ctx, transitionTime)
-}
-
-// activationEpochNotReached returns true if activation epoch has not been reach.
-// Which satisfy the following conditions in spec:
-//
-//	  is_terminal_block_hash_set = TERMINAL_BLOCK_HASH != Hash32()
-//	  is_activation_epoch_reached = get_current_epoch(state) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-//	  if is_terminal_block_hash_set and not is_activation_epoch_reached:
-//		return True
-func activationEpochNotReached(slot primitives.Slot) bool {
-	terminalBlockHashSet := bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) != [32]byte{}
-	if terminalBlockHashSet {
-		return params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(slot)
-	}
-	return false
-}
-
-func emptyPayload() *enginev1.ExecutionPayload {
-	return &enginev1.ExecutionPayload{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-	}
-}
-
-func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
-	return &enginev1.ExecutionPayloadCapella{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 	}
 }

@@ -6,35 +6,21 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	powtesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-func TestServer_activationEpochNotReached(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	require.Equal(t, false, activationEpochNotReached(0))
-
-	cfg := params.BeaconConfig().Copy()
-	cfg.TerminalBlockHash = common.BytesToHash(bytesutil.PadTo([]byte{0x01}, 32))
-	cfg.TerminalBlockHashActivationEpoch = 1
-	params.OverrideBeaconConfig(cfg)
-
-	require.Equal(t, true, activationEpochNotReached(0))
-	require.Equal(t, false, activationEpochNotReached(params.BeaconConfig().SlotsPerEpoch+1))
-}
 
 func TestServer_getExecutionPayload(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
@@ -245,101 +231,31 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	require.LogsContain(t, hook, "Fee recipient address from execution client is not what was expected")
 }
 
-func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	tests := []struct {
-		name                  string
-		paramsTerminalHash    []byte
-		paramsTd              string
-		currentPowBlock       *pb.ExecutionBlock
-		parentPowBlock        *pb.ExecutionBlock
-		wantTerminalBlockHash []byte
-		wantExists            bool
-		errString             string
-	}{
-		{
-			name:               "use terminal block hash, doesn't exist",
-			paramsTerminalHash: common.BytesToHash([]byte("a")).Bytes(),
-			errString:          "could not fetch height for hash",
-		},
-		{
-			name: "use terminal block hash, exists",
-			paramsTerminalHash: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-			wantExists: true,
-			wantTerminalBlockHash: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-		},
-		{
-			name:     "use terminal total difficulty",
-			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlock{
-				Hash: common.BytesToHash([]byte("a")),
-				Header: gethtypes.Header{
-					ParentHash: common.BytesToHash([]byte("b")),
-				},
-				TotalDifficulty: "0x3",
-			},
-			parentPowBlock: &pb.ExecutionBlock{
-				Hash: common.BytesToHash([]byte("b")),
-				Header: gethtypes.Header{
-					ParentHash: common.BytesToHash([]byte("c")),
-				},
-				TotalDifficulty: "0x1",
-			},
-			wantExists:            true,
-			wantTerminalBlockHash: common.BytesToHash([]byte("a")).Bytes(),
-		},
-		{
-			name:     "use terminal total difficulty but fails timestamp",
-			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlock{
-				Hash: common.BytesToHash([]byte("a")),
-				Header: gethtypes.Header{
-					ParentHash: common.BytesToHash([]byte("b")),
-					Time:       1,
-				},
-				TotalDifficulty: "0x3",
-			},
-			parentPowBlock: &pb.ExecutionBlock{
-				Hash: common.BytesToHash([]byte("b")),
-				Header: gethtypes.Header{
-					ParentHash: common.BytesToHash([]byte("c")),
-				},
-				TotalDifficulty: "0x1",
-			},
-		},
+func emptyPayload() *pb.ExecutionPayload {
+	return &pb.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := params.BeaconConfig().Copy()
-			cfg.TerminalTotalDifficulty = tt.paramsTd
-			cfg.TerminalBlockHash = common.BytesToHash(tt.paramsTerminalHash)
-			params.OverrideBeaconConfig(cfg)
-			var m map[[32]byte]*pb.ExecutionBlock
-			if tt.parentPowBlock != nil {
-				m = map[[32]byte]*pb.ExecutionBlock{
-					tt.parentPowBlock.Hash: tt.parentPowBlock,
-				}
-			}
-			c := powtesting.New()
-			c.HashesByHeight[0] = tt.wantTerminalBlockHash
-			vs := &Server{
-				Eth1BlockFetcher: c,
-				ExecutionEngineCaller: &powtesting.EngineClient{
-					ExecutionBlock: tt.currentPowBlock,
-					BlockByHashMap: m,
-				},
-			}
-			b, e, err := vs.getTerminalBlockHashIfExists(context.Background(), 1)
-			if tt.errString != "" {
-				require.ErrorContains(t, tt.errString, err)
-				require.DeepEqual(t, tt.wantExists, e)
-			} else {
-				require.NoError(t, err)
-				require.DeepEqual(t, tt.wantExists, e)
-				require.DeepEqual(t, tt.wantTerminalBlockHash, b)
-			}
-		})
+}
+
+func emptyPayloadCapella() *pb.ExecutionPayloadCapella {
+	return &pb.ExecutionPayloadCapella{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*pb.Withdrawal, 0),
 	}
 }
