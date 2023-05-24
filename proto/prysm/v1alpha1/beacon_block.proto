@@ -650,7 +650,6 @@ message BlindedBeaconBlockBodyCapella {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 }
 
-
 message SignedBlindedBeaconBlockAndBlobsDeneb {
     SignedBlindedBeaconBlockDeneb block = 1;
     repeated SignedBlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
