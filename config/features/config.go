@@ -214,7 +214,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableOptionalEngineMethods)
 		cfg.EnableOptionalEngineMethods = true
 	}
-	cfg.PrepareAllPayloads = true
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true

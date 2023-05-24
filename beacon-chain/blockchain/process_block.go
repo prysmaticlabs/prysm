@@ -501,7 +501,23 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
 			return err
 		}
+		ep := slots.ToEpoch(s.nextEpochBoundarySlot)
+		_, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, copied, ep)
+		if err != nil {
+			return err
+		}
+		for k, v := range nextProposerIndexToSlots {
+			s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(v[0], k, [8]byte{}, [32]byte{})
+		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
+		ep := slots.ToEpoch(s.nextEpochBoundarySlot)
+		_, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, postState, ep)
+		if err != nil {
+			return err
+		}
+		for k, v := range nextProposerIndexToSlots {
+			s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(v[0], k, [8]byte{}, [32]byte{})
+		}
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
 			return err
