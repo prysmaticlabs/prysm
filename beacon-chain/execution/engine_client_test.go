@@ -1650,6 +1650,126 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	}
 }
 
+func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
+	type args struct {
+		header *pb.ExecutionPayloadHeaderCapella
+		block  *pb.ExecutionBlock
+	}
+	wantedHash := common.BytesToHash([]byte("foo"))
+	tests := []struct {
+		name string
+		args args
+		want func() interfaces.ExecutionData
+		err  string
+	}{
+		{
+			name: "block hash field in header and block hash mismatch",
+			args: args{
+				header: &pb.ExecutionPayloadHeaderCapella{
+					BlockHash: []byte("foo"),
+				},
+				block: &pb.ExecutionBlock{
+					Version: version.Capella,
+					Hash:    common.BytesToHash([]byte("bar")),
+				},
+			},
+			err: "does not match execution block hash",
+		},
+		{
+			name: "ok",
+			args: args{
+				header: &pb.ExecutionPayloadHeaderCapella{
+					BlockHash: wantedHash[:],
+				},
+				block: &pb.ExecutionBlock{
+					Version: version.Capella,
+					Hash:    wantedHash,
+				},
+			},
+			want: func() interfaces.ExecutionData {
+				p, err := blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
+					BlockHash:    wantedHash[:],
+					Transactions: [][]byte{},
+				}, 0)
+				require.NoError(t, err)
+				return p
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, 0)
+			require.NoError(t, err)
+			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
+			if err != nil {
+				assert.ErrorContains(t, tt.err, err)
+			} else {
+				assert.DeepEqual(t, tt.want(), got)
+			}
+		})
+	}
+}
+
+func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
+	type args struct {
+		header *pb.ExecutionPayloadHeaderDeneb
+		block  *pb.ExecutionBlock
+	}
+	wantedHash := common.BytesToHash([]byte("foo"))
+	tests := []struct {
+		name string
+		args args
+		want func() interfaces.ExecutionData
+		err  string
+	}{
+		{
+			name: "block hash field in header and block hash mismatch",
+			args: args{
+				header: &pb.ExecutionPayloadHeaderDeneb{
+					BlockHash: []byte("foo"),
+				},
+				block: &pb.ExecutionBlock{
+					Version: version.Deneb,
+					Hash:    common.BytesToHash([]byte("bar")),
+				},
+			},
+			err: "does not match execution block hash",
+		},
+		{
+			name: "ok",
+			args: args{
+				header: &pb.ExecutionPayloadHeaderDeneb{
+					BlockHash: wantedHash[:],
+				},
+				block: &pb.ExecutionBlock{
+					Version: version.Deneb,
+					Hash:    wantedHash,
+				},
+			},
+			want: func() interfaces.ExecutionData {
+				p, err := blocks.WrappedExecutionPayloadDeneb(&pb.ExecutionPayloadDeneb{
+					BlockHash:    wantedHash[:],
+					Transactions: [][]byte{},
+				}, 0)
+				require.NoError(t, err)
+				return p
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, 0)
+			require.NoError(t, err)
+			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
+			if err != nil {
+				assert.ErrorContains(t, tt.err, err)
+			} else {
+				assert.DeepEqual(t, tt.want(), got)
+			}
+		})
+	}
+}
+
 func TestHeaderByHash_NotFound(t *testing.T) {
 	srv := &Service{}
 	srv.rpcClient = RPCClientBad{}
