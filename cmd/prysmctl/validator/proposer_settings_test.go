@@ -88,10 +88,12 @@ func TestGetProposerSettings(t *testing.T) {
 	set.String("output-proposer-settings-path", file, "")
 	set.String("default-fee-recipient", defaultfeerecipient, "")
 	set.String("token", token, "")
+	set.Bool("with-builder", true, "")
 	assert.NoError(t, set.Set("validator-host", baseurl))
 	assert.NoError(t, set.Set("output-proposer-settings-path", file))
 	assert.NoError(t, set.Set("default-fee-recipient", defaultfeerecipient))
 	assert.NoError(t, set.Set("token", token))
+
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	err = getProposerSettings(cliCtx, os.Stdin)

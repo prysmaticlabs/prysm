@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api/client/validator"
 	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	validatorType "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/io/prompt"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
@@ -67,16 +68,27 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 
 	if c.IsSet(ProposerSettingsOutputFlag.Name) {
 		log.Infof("the default fee recipient is set to %s", defaultFeeRecipient)
+		var builderSettings *validatorpb.BuilderConfig
+		if c.Bool(WithBuilderFlag.Name) {
+			builderSettings = &validatorpb.BuilderConfig{
+				Enabled:  true,
+				GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+			}
+		} else {
+			log.Infof("default builder settings can be included with the `--%s` flag", WithBuilderFlag.Name)
+		}
 		proposerConfig := make(map[string]*validatorpb.ProposerOptionPayload)
 		for index, val := range validators {
 			proposerConfig[val] = &validatorpb.ProposerOptionPayload{
 				FeeRecipient: feeRecipients[index],
+				Builder:      builderSettings,
 			}
 		}
 		fileConfig := &validatorpb.ProposerSettingsPayload{
 			ProposerConfig: proposerConfig,
 			DefaultConfig: &validatorpb.ProposerOptionPayload{
 				FeeRecipient: defaultFeeRecipient,
+				Builder:      builderSettings,
 			},
 		}
 		b, err := json.Marshal(fileConfig)
@@ -86,7 +98,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 		if err := file.WriteFile(c.String(ProposerSettingsOutputFlag.Name), b); err != nil {
 			return err
 		}
-		log.Infof("successfully created `%s`. settings can be imported into validator client using --%s flag. does not include custom builder settings.", c.String(ProposerSettingsOutputFlag.Name), flags.ProposerSettingsFlag.Name)
+		log.Infof("successfully created `%s`. settings can be imported into validator client using --%s flag.", c.String(ProposerSettingsOutputFlag.Name), flags.ProposerSettingsFlag.Name)
 	}
 
 	return nil

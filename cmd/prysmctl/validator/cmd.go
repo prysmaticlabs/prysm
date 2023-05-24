@@ -53,6 +53,12 @@ var (
 		Usage:   "path to outputting a proposer settings file ( i.e. ./path/to/proposer-settings.json), file does not include builder settings and will need to be added for advanced users using those features",
 	}
 
+	WithBuilderFlag = &cli.BoolFlag{
+		Name:    "with-builder",
+		Aliases: []string{"wb"},
+		Usage:   "adds default builder options to proposer settings output, used for enabling mev-boost and relays",
+	}
+
 	DefaultFeeRecipientFlag = &cli.StringFlag{
 		Name:    "default-fee-recipient",
 		Aliases: []string{"dfr"},
