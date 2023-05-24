@@ -210,6 +210,7 @@ message Withdrawal {
 message BlobsBundle {
 	// The KZG commitments of the blobs.
 	repeated bytes kzg_commitments = 1 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "4"];
+	// The proofs of the blobs.
 	repeated bytes proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "4"];
 	// The blobs itself.
 	repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,131072", (ethereum.eth.ext.ssz_max) = "4"];

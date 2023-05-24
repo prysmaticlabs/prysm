@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -29,9 +29,9 @@ func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
 // eth_getBlockByNumber endpoints via JSON-RPC.
 type ExecutionBlock struct {
 	Version int
-	gethTypes.Header
+	gethtypes.Header
 	Hash            common.Hash              `json:"hash"`
-	Transactions    []*gethTypes.Transaction `json:"transactions"`
+	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
 	ExcessDataGas   []byte                   `json:"excessDataGas"`
@@ -59,7 +59,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 
 func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	type transactionsJson struct {
-		Transactions []*gethTypes.Transaction `json:"transactions"`
+		Transactions []*gethtypes.Transaction `json:"transactions"`
 	}
 	type withdrawalsJson struct {
 		Withdrawals []*withdrawalJSON `json:"withdrawals"`
@@ -108,9 +108,6 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		if hasExDG && exDG != nil {
 			e.Version = version.Deneb
 			e.ExcessDataGas, err = hexutil.Decode(exDG.(string))
-			e.Version = version.Deneb
-		} else {
-			e.Version = version.Capella
 		}
 	}
 

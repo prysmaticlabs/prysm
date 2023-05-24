@@ -776,7 +776,7 @@ func fullPayloadFromExecutionBlock(
 				Transactions:  txs,
 				Withdrawals:   block.Withdrawals,
 				ExcessDataGas: edg,
-			}, 0)
+			}, 0) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version %d", block.Version)
 	}
