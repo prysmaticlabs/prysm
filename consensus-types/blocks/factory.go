@@ -62,8 +62,8 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initSignedBlockFromProtoDeneb(b)
 	case *eth.SignedBlindedBeaconBlockDeneb:
 		return initBlindedSignedBlockFromProtoDeneb(b)
-	case *eth.GenericSignedBeaconBlock_Blinded_Deneb:
-		return initBlindedSignedBlockFromProtoDeneb(b.Blinded_Deneb.Block)
+	case *eth.GenericSignedBeaconBlock_BlindedDeneb:
+		return initBlindedSignedBlockFromProtoDeneb(b.BlindedDeneb.Block)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -104,8 +104,8 @@ func NewBeaconBlock(i interface{}) (interfaces.ReadOnlyBeaconBlock, error) {
 		return initBlockFromProtoDeneb(b)
 	case *eth.BlindedBeaconBlockDeneb:
 		return initBlindedBlockFromProtoDeneb(b)
-	case *eth.GenericBeaconBlock_Blinded_Deneb:
-		return initBlindedBlockFromProtoDeneb(b.Blinded_Deneb.Block)
+	case *eth.GenericBeaconBlock_BlindedDeneb:
+		return initBlindedBlockFromProtoDeneb(b.BlindedDeneb.Block)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
