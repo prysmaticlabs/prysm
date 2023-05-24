@@ -378,8 +378,6 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "2", v)
 		case "REORG_WEIGHT_THRESHOLD":
 			assert.Equal(t, "20", v)
-		case "REORG_PARENT_WEIGHT_THRESHOLD":
-			assert.Equal(t, "160", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
 		default:
 			t.Errorf("Incorrect key: %s", k)

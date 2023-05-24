@@ -371,6 +371,9 @@ message StreamBlocksResponse {
 
         // Representing a capella block.
         SignedBeaconBlockCapella capella_block = 4;
+
+        // Representing a deneb block.
+        SignedBeaconBlockDeneb deneb_block = 5;
     }
 }
 
