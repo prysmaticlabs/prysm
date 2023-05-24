@@ -212,6 +212,7 @@ func (m *MockValidator) ProposerSettings() *validatorserviceconfig.ProposerSetti
 }
 
 // SetProposerSettings for mocking
-func (m *MockValidator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+func (m *MockValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
 	m.proposerSettings = settings
+	return nil
 }

@@ -1469,7 +1469,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						GasLimit: 40000000,
 					},
 				}
-				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1481,6 +1481,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
+				require.NoError(t, err)
 				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
@@ -1550,7 +1551,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						GasLimit: 40000000,
 					},
 				}
-				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1562,6 +1563,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
+				require.NoError(t, err)
 				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
@@ -1623,7 +1625,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
-				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1631,6 +1633,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
+				require.NoError(t, err)
 				return &v
 			},
 			feeRecipientMap: map[primitives.ValidatorIndex]string{
@@ -1665,7 +1668,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1677,6 +1680,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
+				require.NoError(t, err)
 				v.pubkeyToValidatorIndex[keys[0]] = primitives.ValidatorIndex(1)
 				client.EXPECT().MultipleValidatorStatus(
 					gomock.Any(),
@@ -1725,7 +1729,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1737,6 +1741,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
+				require.NoError(t, err)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1811,7 +1816,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.Address{},
 					},
 				}
-				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1819,6 +1824,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
+				require.NoError(t, err)
 				return &v
 			},
 		},
@@ -1853,7 +1859,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
-				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1861,6 +1867,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
+				require.NoError(t, err)
 				return &v
 			},
 		},
@@ -1904,7 +1911,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						GasLimit: 40000000,
 					},
 				}
-				v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1916,6 +1923,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				})
+				require.NoError(t, err)
 				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},

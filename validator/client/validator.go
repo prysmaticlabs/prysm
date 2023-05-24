@@ -979,8 +979,39 @@ func (v *validator) ProposerSettings() *validatorserviceconfig.ProposerSettings 
 	return v.proposerSettings
 }
 
-func (v *validator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+func (v *validator) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+	if v.db == nil {
+		return errors.New("db is not set")
+	}
+	if err := v.db.SaveProposerSettings(ctx, settings); err != nil {
+		return err
+	}
 	v.proposerSettings = settings
+	return nil
+}
+
+func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) error {
+	km, err := v.Keymanager()
+	if err != nil {
+		return err
+	}
+	keys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+
+	for i := range keys {
+		resp, err := v.validatorClient.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[i][:]})
+		if err != nil {
+			return err
+		}
+		resp.FeeRecipient
+	}
+
+	return nil
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.

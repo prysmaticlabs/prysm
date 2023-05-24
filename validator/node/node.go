@@ -528,6 +528,12 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 
 	// nothing is set, so just return nil
 	if fileConfig == nil {
+		// checks db if proposer settings exist if none is provided.
+		settings, err := db.ProposerSettings(cliCtx.Context)
+		if err == nil {
+			return settings, nil
+		}
+
 		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
 			return nil, fmt.Errorf("%s flag can only be used when a default fee recipient is present on the validator client", flags.EnableBuilderFlag.Name)
 		}

@@ -188,14 +188,6 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	// checks db if proposer settings exist if none is provided.
-	if v.proposerSettings == nil {
-		settings, err := v.db.ProposerSettings(v.ctx)
-		if err == nil {
-			v.proposerSettings = settings
-		}
-	}
-
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
 	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
 
@@ -283,15 +275,8 @@ func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSe
 
 // SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
 func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
-	if v.db == nil {
-		return errors.New("db is not set")
-	}
-	if err := v.db.SaveProposerSettings(ctx, settings); err != nil {
-		return err
-	}
 	v.proposerSettings = settings
-	v.validator.SetProposerSettings(settings)
-	return nil
+	return v.validator.SetProposerSettings(ctx, settings)
 }
 
 // ConstructDialOptions constructs a list of grpc dial options
