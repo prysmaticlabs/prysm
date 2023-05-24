@@ -9,9 +9,9 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/types"
 	"github.com/prysmaticlabs/prysm/v4/network"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // PublishBlindedBlockV2 instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct and publish a
@@ -47,7 +47,7 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isSyncing {
-		msg := "Beacon node is currently syncing and not serving request on that endpoint."
+		msg := "Beacon node is currently syncing and not serving request on that endpoint"
 		details, err := json.Marshal(syncDetails)
 		if err == nil {
 			msg += " Details: " + string(details)
@@ -60,14 +60,14 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var broadcastValidation v1alpha1validator.BroadcastValidation
+	var broadcastValidation types.BroadcastValidation
 	switch r.URL.Query().Get("broadcast_validation") {
 	case "consensus":
-		broadcastValidation = v1alpha1validator.Consensus
+		broadcastValidation = types.Consensus
 	case "consensus_and_equivocation":
-		broadcastValidation = v1alpha1validator.ConsensusAndEquivocation
+		broadcastValidation = types.ConsensusAndEquivocation
 	default:
-		broadcastValidation = v1alpha1validator.Gossip
+		broadcastValidation = types.Gossip
 	}
 
 	validate := validator.New()
@@ -82,92 +82,68 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var capellaBlock *SignedBeaconBlockCapella
-	if err = json.Unmarshal(body, &capellaBlock); err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "Could not decode request body into block",
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	if err = validate.Struct(capellaBlock); err == nil {
-		consensusBlock, err := capellaBlock.ToConsensus()
-		if err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not decode request body into consensus block: " + err.Error(),
-				Code:    http.StatusBadRequest,
+	if err = json.Unmarshal(body, &capellaBlock); err == nil {
+		if err = validate.Struct(capellaBlock); err == nil {
+			consensusBlock, err := capellaBlock.ToGeneric()
+			if err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: "Could not decode request body into consensus block: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
 			}
-			network.WriteError(w, errJson)
+			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
 			return
 		}
-		bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
-		return
 	}
-	var bellatrixBlock *SignedBeaconBlockCapella
-	if err = json.Unmarshal(body, &bellatrixBlock); err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "Could not decode request body into block",
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	if err = validate.Struct(bellatrixBlock); err == nil {
-		consensusBlock, err := bellatrixBlock.ToConsensus()
-		if err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not decode request body into consensus block: " + err.Error(),
-				Code:    http.StatusBadRequest,
+	var bellatrixBlock *SignedBeaconBlockBellatrix
+	if err = json.Unmarshal(body, &bellatrixBlock); err == nil {
+		if err = validate.Struct(bellatrixBlock); err == nil {
+			consensusBlock, err := bellatrixBlock.ToGeneric()
+			if err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: "Could not decode request body into consensus block: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
 			}
-			network.WriteError(w, errJson)
+			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
 			return
 		}
-		bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
-		return
 	}
 	var altairBlock *SignedBeaconBlockAltair
-	if err = json.Unmarshal(body, &altairBlock); err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "Could not decode request body into block",
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	if err = validate.Struct(altairBlock); err == nil {
-		consensusBlock, err := altairBlock.ToConsensus()
-		if err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not decode request body into consensus block: " + err.Error(),
-				Code:    http.StatusBadRequest,
+	if err = json.Unmarshal(body, &altairBlock); err == nil {
+		if err = validate.Struct(altairBlock); err == nil {
+			consensusBlock, err := altairBlock.ToGeneric()
+			if err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: "Could not decode request body into consensus block: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
 			}
-			network.WriteError(w, errJson)
+			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
 			return
 		}
-		bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
-		return
 	}
 	var phase0Block *SignedBeaconBlock
-	if err = json.Unmarshal(body, &phase0Block); err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "Could not decode request body into block",
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	if err = validate.Struct(phase0Block); err == nil {
-		consensusBlock, err := phase0Block.ToConsensus()
-		if err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not decode request body into consensus block: " + err.Error(),
-				Code:    http.StatusBadRequest,
+	if err = json.Unmarshal(body, &phase0Block); err == nil {
+		if err = validate.Struct(phase0Block); err == nil {
+			consensusBlock, err := phase0Block.ToGeneric()
+			if err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: "Could not decode request body into consensus block: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
 			}
-			network.WriteError(w, errJson)
+			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
 			return
 		}
-		bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
-		return
 	}
 
 	errJson := &network.DefaultErrorJson{
@@ -181,14 +157,14 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 func (bs *Server) proposeBlock(
 	ctx context.Context,
 	w http.ResponseWriter,
-	blk interfaces.SignedBeaconBlock,
-	broadcastValidation v1alpha1validator.BroadcastValidation,
+	blk *eth.GenericSignedBeaconBlock,
+	broadcastValidation types.BroadcastValidation,
 ) {
 	_, err := bs.V1Alpha1ValidatorServer.ProposeGenericBeaconBlock(ctx, blk, broadcastValidation)
 	if err != nil {
 		errMsg := err.Error()
-		if strings.Contains(errMsg, v1alpha1validator.ErrConsensusValidationFailed.Error()) ||
-			strings.Contains(errMsg, v1alpha1validator.ErrEquivocationValidationFailed.Error()) {
+		if strings.Contains(errMsg, types.ErrConsensusValidationFailed.Error()) ||
+			strings.Contains(errMsg, types.ErrEquivocationValidationFailed.Error()) {
 			errJson := &network.DefaultErrorJson{
 				Message: err.Error(),
 				Code:    http.StatusBadRequest,

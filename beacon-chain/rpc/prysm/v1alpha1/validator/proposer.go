@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -41,28 +42,6 @@ const (
 	// CouldNotDecodeBlock means that a signed beacon block couldn't be created from the block present in the request.
 	CouldNotDecodeBlock = "Could not decode block"
 	eth1dataTimeout     = 2 * time.Second
-)
-
-// BroadcastValidation specifies the level of validation that must be applied to a block before it is broadcast.
-type BroadcastValidation uint8
-
-const (
-	// Gossip represents lightweight gossip checks only.
-	Gossip BroadcastValidation = iota
-	// Consensus represents full consensus checks, including validation of all signatures and
-	// blocks fields except for the execution payload transactions..
-	Consensus
-	// ConsensusAndEquivocation the same as Consensus, with an extra equivocation
-	// check immediately before the block is broadcast. If the block is found to be an
-	// equivocation it fails validation.
-	ConsensusAndEquivocation
-)
-
-var (
-	// ErrConsensusValidationFailed means that a block failed consensus checks.
-	ErrConsensusValidationFailed = errors.New("block failed consensus validation")
-	// ErrEquivocationValidationFailed means that a block failed equivocation checks.
-	ErrEquivocationValidationFailed = errors.New("block failed equivocation validation")
 )
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
@@ -245,11 +224,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
-	blk, err := blocks.NewSignedBeaconBlock(req.Block)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
-	}
-	return vs.ProposeGenericBeaconBlock(ctx, blk, Gossip)
+	return vs.ProposeGenericBeaconBlock(ctx, req, types.Gossip)
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
@@ -333,10 +308,16 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 
 func (vs *Server) ProposeGenericBeaconBlock(
 	ctx context.Context,
-	blk interfaces.SignedBeaconBlock,
-	validation BroadcastValidation) (*ethpb.ProposeResponse, error) {
+	req *ethpb.GenericSignedBeaconBlock,
+	validation types.BroadcastValidation) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeGenericBeaconBlock")
 	defer span.End()
+
+	blk, err := blocks.NewSignedBeaconBlock(req.Block)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
+	}
+
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
@@ -351,16 +332,16 @@ func (vs *Server) ProposeGenericBeaconBlock(
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
 
-	if validation == Consensus {
+	if validation == types.Consensus {
 		if err = vs.validateConsensus(ctx, blk); err != nil {
-			return nil, errors.Wrap(err, ErrConsensusValidationFailed.Error())
+			return nil, errors.Wrap(err, types.ErrConsensusValidationFailed.Error())
 		}
-	} else if validation == ConsensusAndEquivocation {
+	} else if validation == types.ConsensusAndEquivocation {
 		if err = vs.validateConsensus(ctx, blk); err != nil {
-			return nil, errors.Wrap(err, ErrConsensusValidationFailed.Error())
+			return nil, errors.Wrap(err, types.ErrConsensusValidationFailed.Error())
 		}
 		if err = vs.validateEquivocation(blk.Block()); err != nil {
-			return nil, errors.Wrap(err, ErrEquivocationValidationFailed.Error())
+			return nil, errors.Wrap(err, types.ErrEquivocationValidationFailed.Error())
 		}
 	}
 

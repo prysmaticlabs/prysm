@@ -701,7 +701,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 	t.Run("Phase 0", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Phase0{Phase0: &ethpbalpha.BeaconBlock{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
@@ -718,7 +718,7 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Altair", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Altair{Altair: &ethpbalpha.BeaconBlockAltair{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
@@ -735,7 +735,7 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -753,7 +753,7 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Bellatrix blinded", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -766,7 +766,7 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Capella", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: &ethpbalpha.BeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -783,7 +783,7 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Capella blinded", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedCapella{BlindedCapella: &ethpbalpha.BlindedBeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -796,7 +796,7 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -829,7 +829,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		b := util.HydrateBeaconBlock(&ethpbalpha.BeaconBlock{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Phase0{Phase0: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
@@ -846,7 +846,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		b := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Altair{Altair: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
@@ -863,7 +863,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		b := util.HydrateBeaconBlockBellatrix(&ethpbalpha.BeaconBlockBellatrix{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -879,7 +879,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 	})
 	t.Run("Bellatrix blinded", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -894,7 +894,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		b := util.HydrateBeaconBlockCapella(&ethpbalpha.BeaconBlockCapella{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -910,7 +910,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 	})
 	t.Run("Capella blinded", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedCapella{BlindedCapella: &ethpbalpha.BlindedBeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -923,7 +923,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -954,7 +954,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 	t.Run("Phase 0", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Phase0{Phase0: &ethpbalpha.BeaconBlock{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
@@ -972,7 +972,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Altair", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Altair{Altair: &ethpbalpha.BeaconBlockAltair{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
@@ -990,7 +990,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1009,7 +1009,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Bellatrix full", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1023,7 +1023,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Capella", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedCapella{BlindedCapella: &ethpbalpha.BlindedBeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1042,7 +1042,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Capella full", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: &ethpbalpha.BeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1056,7 +1056,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1097,7 +1097,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		b := util.HydrateBeaconBlock(&ethpbalpha.BeaconBlock{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Phase0{Phase0: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
@@ -1115,7 +1115,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		b := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Altair{Altair: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
@@ -1133,7 +1133,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		b := util.HydrateBlindedBeaconBlockBellatrix(&ethpbalpha.BlindedBeaconBlockBellatrix{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1150,7 +1150,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 	})
 	t.Run("Bellatrix full", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1166,7 +1166,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		b := util.HydrateBlindedBeaconBlockCapella(&ethpbalpha.BlindedBeaconBlockCapella{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedCapella{BlindedCapella: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1183,7 +1183,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 	})
 	t.Run("Capella full", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: &ethpbalpha.BeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1197,7 +1197,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,

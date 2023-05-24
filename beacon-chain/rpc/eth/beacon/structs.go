@@ -6,9 +6,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	bytesutil2 "github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/wealdtech/go-bytesutil"
@@ -335,7 +334,7 @@ type BlsToExecutionChange struct {
 	ValidatorIndex string `json:"validator_index" validate:"required"`
 }
 
-func (b *SignedBeaconBlock) ToConsensus() (interfaces.SignedBeaconBlock, error) {
+func (b *SignedBeaconBlock) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Signature")
@@ -420,10 +419,10 @@ func (b *SignedBeaconBlock) ToConsensus() (interfaces.SignedBeaconBlock, error) 
 		},
 		Signature: sig,
 	}
-	return blocks.NewSignedBeaconBlock(block)
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Phase0{Phase0: block}}, nil
 }
 
-func (b *SignedBeaconBlockAltair) ToConsensus() (interfaces.SignedBeaconBlock, error) {
+func (b *SignedBeaconBlockAltair) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Signature")
@@ -520,10 +519,10 @@ func (b *SignedBeaconBlockAltair) ToConsensus() (interfaces.SignedBeaconBlock, e
 		},
 		Signature: sig,
 	}
-	return blocks.NewSignedBeaconBlock(block)
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Altair{Altair: block}}, nil
 }
 
-func (b *SignedBeaconBlockBellatrix) ToConsensus() (interfaces.SignedBeaconBlock, error) {
+func (b *SignedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Signature")
@@ -695,10 +694,10 @@ func (b *SignedBeaconBlockBellatrix) ToConsensus() (interfaces.SignedBeaconBlock
 		},
 		Signature: sig,
 	}
-	return blocks.NewSignedBeaconBlock(block)
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: block}}, nil
 }
 
-func (b *SignedBeaconBlockCapella) ToConsensus() (interfaces.SignedBeaconBlock, error) {
+func (b *SignedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Signature")
@@ -898,7 +897,7 @@ func (b *SignedBeaconBlockCapella) ToConsensus() (interfaces.SignedBeaconBlock, 
 		},
 		Signature: sig,
 	}
-	return blocks.NewSignedBeaconBlock(block)
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Capella{Capella: block}}, nil
 }
 
 func convertProposerSlashings(src []ProposerSlashing) ([]*eth.ProposerSlashing, error) {
@@ -1252,13 +1251,5 @@ func uint256ToHex(num string) ([]byte, error) {
 	if len(bigEndian) > 32 {
 		return nil, errors.New("number too big for Uint256")
 	}
-
-	// Integers are stored as little-endian, but
-	// big.Int gives big-endian. So we need to reverse
-	// the byte order before encoding.
-	var littleEndian [32]byte
-	for i := 0; i < len(bigEndian); i++ {
-		littleEndian[i] = bigEndian[len(bigEndian)-1-i]
-	}
-	return littleEndian[:], nil
+	return bytesutil2.ReverseByteOrder(bigEndian), nil
 }

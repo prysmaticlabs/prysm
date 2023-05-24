@@ -28,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
@@ -37,12 +36,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-// ValidatorServer extends ethpb.BeaconNodeValidatorServer.
-type ValidatorServer interface {
-	ethpb.BeaconNodeValidatorServer
-	ProposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, validation BroadcastValidation) (*ethpb.ProposeResponse, error)
-}
 
 // Server defines a server implementation of the gRPC Validator service,
 // providing RPC endpoints for obtaining validator assignments per epoch, the slots

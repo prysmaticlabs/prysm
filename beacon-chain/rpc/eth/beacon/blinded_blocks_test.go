@@ -307,7 +307,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Phase 0", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
@@ -327,7 +327,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
@@ -348,7 +348,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
@@ -387,7 +387,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 	t.Run("Capella", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
@@ -442,7 +442,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	t.Run("Phase 0", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
@@ -457,7 +457,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
@@ -472,7 +472,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
@@ -487,7 +487,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Capella", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
