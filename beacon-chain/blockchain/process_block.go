@@ -136,7 +136,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	if err != nil {
 		return errors.Wrap(err, "could not validate new payload")
 	}
-	if isValidPayload {
+	if signed.Version() < version.Capella && isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
 			return err
 		}
