@@ -154,18 +154,26 @@ func (acm *AccountsCLIManager) Import(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	var successfullyImportedAccounts []string
 	for i, status := range statuses {
 		switch status.Status {
+		case ethpbservice.ImportedKeystoreStatus_IMPORTED:
+			successfullyImportedAccounts = append(successfullyImportedAccounts, keystoresImported[i].Pubkey)
 		case ethpbservice.ImportedKeystoreStatus_DUPLICATE:
 			log.Warnf("Duplicate key %s found in import request, skipped", keystoresImported[i].Pubkey)
 		case ethpbservice.ImportedKeystoreStatus_ERROR:
 			log.Warnf("Could not import keystore for %s: %s", keystoresImported[i].Pubkey, status.Message)
 		}
 	}
-	fmt.Printf(
-		"Successfully imported %s accounts, view all of them by running `accounts list`\n",
-		au.BrightMagenta(strconv.Itoa(len(keystoresImported))),
-	)
+	if len(successfullyImportedAccounts) == 0 {
+		log.Error("no accounts were successfully imported")
+	} else {
+		log.Infof(
+			"Imported accounts %v, view all of them by running `accounts list`",
+			successfullyImportedAccounts,
+		)
+	}
+
 	return nil
 }
 
@@ -240,16 +248,20 @@ func importPrivateKeyAsAccount(ctx context.Context, wallet *wallet.Wallet, impor
 		return errors.Wrap(err, "could not import keystore into wallet")
 	}
 	for _, status := range statuses {
-		if status.Status == ethpbservice.ImportedKeystoreStatus_ERROR {
-			log.Warnf("Could not import keystore for %s: %s", keystore.Pubkey, status.Message)
-		} else if status.Status == ethpbservice.ImportedKeystoreStatus_DUPLICATE {
-			log.Warnf("Duplicate key %s skipped", keystore.Pubkey)
+		switch status.Status {
+		case ethpbservice.ImportedKeystoreStatus_IMPORTED:
+			fmt.Printf(
+				"Imported account with public key %#x, view all accounts by running `accounts list`\n",
+				au.BrightMagenta(bytesutil.Trunc(privKey.PublicKey().Marshal())),
+			)
+			return nil
+		case ethpbservice.ImportedKeystoreStatus_ERROR:
+			return fmt.Errorf("Could not import keystore for %s: %s", keystore.Pubkey, status.Message)
+		case ethpbservice.ImportedKeystoreStatus_DUPLICATE:
+			return fmt.Errorf("Duplicate key %s skipped", keystore.Pubkey)
 		}
 	}
-	fmt.Printf(
-		"Imported account with public key %#x, view all accounts by running `accounts list`\n",
-		au.BrightMagenta(bytesutil.Trunc(privKey.PublicKey().Marshal())),
-	)
+
 	return nil
 }
 

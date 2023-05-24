@@ -219,9 +219,12 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 
 	log.WithFields(logrus.Fields{
-		"value":         v.String(),
-		"builderPubKey": fmt.Sprintf("%#x", bid.Pubkey()),
-		"blockHash":     fmt.Sprintf("%#x", header.BlockHash()),
+		"value":              v.String(),
+		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
+		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
+		"slot":               slot,
+		"validator":          idx,
+		"sinceSlotStartTime": time.Since(t),
 	}).Info("Received header with bid")
 
 	span.AddAttributes(
