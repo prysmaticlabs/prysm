@@ -21,6 +21,7 @@ go_library(
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//consensus-types/validator:go_default_library",
         "//io/file:go_default_library",
         "//io/prompt:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
