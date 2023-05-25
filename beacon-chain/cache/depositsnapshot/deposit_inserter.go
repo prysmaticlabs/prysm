@@ -19,13 +19,13 @@ var (
 		Name: "beacondb_all_deposits_eip4881",
 		Help: "The number of total deposits in the beaconDB in-memory database",
 	})
-	log = logrus.WithField("prefix", "depositcache")
+	log = logrus.WithField("prefix", "cache")
 )
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
 func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertDeposit")
+	ctx, span := trace.StartSpan(ctx, "Cache.InsertDeposit")
 	defer span.End()
 	if d == nil {
 		log.WithFields(logrus.Fields{
@@ -59,7 +59,7 @@ func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum ui
 
 // InsertDepositContainers inserts a set of deposit containers into our deposit cache.
 func (c *Cache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer) {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertDepositContainers")
+	ctx, span := trace.StartSpan(ctx, "Cache.InsertDepositContainers")
 	defer span.End()
 	c.depositsLock.Lock()
 	defer c.depositsLock.Unlock()
@@ -78,7 +78,7 @@ func (c *Cache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.Depos
 
 // InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
 func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
+	ctx, span := trace.StartSpan(ctx, "Cache.InsertFinalizedDeposits")
 	defer span.End()
 	c.depositsLock.Lock()
 	defer c.depositsLock.Unlock()
