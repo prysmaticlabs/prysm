@@ -50,6 +50,15 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
+	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), req.Slot)
+	if err != nil {
+		log.WithError(err).Error("Could not convert slot to time")
+	}
+	log.WithFields(logrus.Fields{
+		"slot":               req.Slot,
+		"sinceSlotStartTime": time.Since(t),
+	}).Info("Begin building block")
+
 	// A syncing validator should not produce a block.
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
@@ -145,6 +154,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	sBlk.SetStateRoot(sr)
+
+	log.WithFields(logrus.Fields{
+		"slot":               req.Slot,
+		"sinceSlotStartTime": time.Since(t),
+		"validator":          sBlk.Block().ProposerIndex(),
+	}).Info("Finished building block")
 
 	pb, err := sBlk.Block().Proto()
 	if err != nil {
@@ -309,7 +324,7 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}, nil
 }
 
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
@@ -317,16 +332,13 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
-	if slots.ToEpoch(blk.Block().Slot()) >= params.BeaconConfig().CapellaForkEpoch {
-		blk, err = vs.unblindBuilderBlockCapella(ctx, blk)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		blk, err = vs.unblindBuilderBlock(ctx, blk)
-		if err != nil {
-			return nil, err
-		}
+	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create unblinder")
+	}
+	blk, err = unblinder.unblindBuilderBlock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.
