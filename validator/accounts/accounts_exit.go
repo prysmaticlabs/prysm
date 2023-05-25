@@ -88,7 +88,11 @@ func PerformVoluntaryExit(
 		// When output directory is present, only create the signed exit, but do not propose it.
 		// Otherwise, propose the exit immediately.
 		if len(cfg.OutputDirectory) > 0 {
-			epoch, err := client.CurrentEpoch(ctx, cfg.NodeClient)
+			genesisResponse, err := cfg.NodeClient.GetGenesis(ctx, &emptypb.Empty{})
+			if err != nil {
+				log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.FormattedPubKeys[i])
+			}
+			epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
 			if err != nil {
 				log.WithError(err).Errorf("gRPC call to get genesis time failed")
 			}

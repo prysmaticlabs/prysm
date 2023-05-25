@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // ListKeystores implements the standard validator key management API.
@@ -695,7 +696,11 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 		return nil, err
 	}
 	if req.Epoch == 0 {
-		epoch, err := client.CurrentEpoch(ctx, s.beaconNodeClient)
+		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
+		}
+		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "gRPC call to get genesis time failed: %v", err)
 		}

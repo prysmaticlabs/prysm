@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
@@ -205,7 +206,11 @@ func ProposeExit(
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
 
-	epoch, err := CurrentEpoch(ctx, nodeClient)
+	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get genesis")
+	}
+	epoch, err := CurrentEpoch(genesisResponse.GenesisTime)
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
@@ -221,17 +226,14 @@ func ProposeExit(
 	span.AddAttributes(
 		trace.StringAttribute("exitRoot", fmt.Sprintf("%#x", exitResp.ExitRoot)),
 	)
-
 	return nil
 }
 
-func CurrentEpoch(ctx context.Context, nodeClient iface.NodeClient) (primitives.Epoch, error) {
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
-	if err != nil {
-		return 0, err
-	}
-	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
-	return primitives.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))), nil
+func CurrentEpoch(genesisTime *timestamp.Timestamp) (primitives.Epoch, error) {
+	totalSecondsPassed := prysmTime.Now().Unix() - genesisTime.Seconds
+	currentSlot := primitives.Slot((uint64(totalSecondsPassed)) / params.BeaconConfig().SecondsPerSlot)
+	currentEpoch := slots.ToEpoch(currentSlot)
+	return currentEpoch, nil
 }
 
 func CreateSignedVoluntaryExit(

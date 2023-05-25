@@ -44,6 +44,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -1641,7 +1642,9 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			resp, err := s.SetVoluntaryExit(ctx, &ethpbservice.SetVoluntaryExitRequest{Pubkey: pubKeys[0][:], Epoch: tt.epoch})
 			require.NoError(t, err)
 			if tt.w.epoch == 0 {
-				tt.w.epoch, err = client.CurrentEpoch(ctx, s.beaconNodeClient)
+				genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+				require.NoError(t, err)
+				tt.w.epoch, err = client.CurrentEpoch(genesisResponse.GenesisTime)
 				require.NoError(t, err)
 				resp2, err := s.SetVoluntaryExit(ctx, &ethpbservice.SetVoluntaryExitRequest{Pubkey: pubKeys[0][:], Epoch: tt.epoch})
 				require.NoError(t, err)
