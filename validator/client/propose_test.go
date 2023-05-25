@@ -681,7 +681,7 @@ func TestProposeExit_GetGenesisFailed(t *testing.T) {
 	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
-	assert.ErrorContains(t, "gRPC call to get genesis time failed", err)
+	assert.ErrorContains(t, "failed to get genesis", err)
 }
 
 func TestProposeExit_DomainDataFailed(t *testing.T) {
