@@ -102,16 +102,16 @@ type BlindedBeaconBlockBellatrix struct {
 }
 
 type BlindedBeaconBlockBodyBellatrix struct {
-	RandaoReveal      string                 `json:"randao_reveal" validate:"required" hex:"true"`
-	Eth1Data          Eth1Data               `json:"eth1_data" validate:"required"`
-	Graffiti          string                 `json:"graffiti" validate:"required" hex:"true"`
-	ProposerSlashings []ProposerSlashing     `json:"proposer_slashings" validate:"required"`
-	AttesterSlashings []AttesterSlashing     `json:"attester_slashings" validate:"required"`
-	Attestations      []Attestation          `json:"attestations" validate:"required"`
-	Deposits          []Deposit              `json:"deposits" validate:"required"`
-	VoluntaryExits    []SignedVoluntaryExit  `json:"voluntary_exits" validate:"required"`
-	SyncAggregate     SyncAggregate          `json:"sync_aggregate" validate:"required"`
-	ExecutionPayload  ExecutionPayloadHeader `json:"execution_payload_header" validate:"required"`
+	RandaoReveal           string                 `json:"randao_reveal" validate:"required" hex:"true"`
+	Eth1Data               Eth1Data               `json:"eth1_data" validate:"required"`
+	Graffiti               string                 `json:"graffiti" validate:"required" hex:"true"`
+	ProposerSlashings      []ProposerSlashing     `json:"proposer_slashings" validate:"required"`
+	AttesterSlashings      []AttesterSlashing     `json:"attester_slashings" validate:"required"`
+	Attestations           []Attestation          `json:"attestations" validate:"required"`
+	Deposits               []Deposit              `json:"deposits" validate:"required"`
+	VoluntaryExits         []SignedVoluntaryExit  `json:"voluntary_exits" validate:"required"`
+	SyncAggregate          SyncAggregate          `json:"sync_aggregate" validate:"required"`
+	ExecutionPayloadHeader ExecutionPayloadHeader `json:"execution_payload_header" validate:"required"`
 }
 
 type SignedBeaconBlockCapella struct {
@@ -155,16 +155,17 @@ type BlindedBeaconBlockCapella struct {
 }
 
 type BlindedBeaconBlockBodyCapella struct {
-	RandaoReveal      string                        `json:"randao_reveal" validate:"required" hex:"true"`
-	Eth1Data          Eth1Data                      `json:"eth1_data" validate:"required"`
-	Graffiti          string                        `json:"graffiti" validate:"required" hex:"true"`
-	ProposerSlashings []ProposerSlashing            `json:"proposer_slashings" validate:"required"`
-	AttesterSlashings []AttesterSlashing            `json:"attester_slashings" validate:"required"`
-	Attestations      []Attestation                 `json:"attestations" validate:"required"`
-	Deposits          []Deposit                     `json:"deposits" validate:"required"`
-	VoluntaryExits    []SignedVoluntaryExit         `json:"voluntary_exits" validate:"required"`
-	SyncAggregate     SyncAggregate                 `json:"sync_aggregate" validate:"required"`
-	ExecutionPayload  ExecutionPayloadHeaderCapella `json:"execution_payload_header" validate:"required"`
+	RandaoReveal           string                        `json:"randao_reveal" validate:"required" hex:"true"`
+	Eth1Data               Eth1Data                      `json:"eth1_data" validate:"required"`
+	Graffiti               string                        `json:"graffiti" validate:"required" hex:"true"`
+	ProposerSlashings      []ProposerSlashing            `json:"proposer_slashings" validate:"required"`
+	AttesterSlashings      []AttesterSlashing            `json:"attester_slashings" validate:"required"`
+	Attestations           []Attestation                 `json:"attestations" validate:"required"`
+	Deposits               []Deposit                     `json:"deposits" validate:"required"`
+	VoluntaryExits         []SignedVoluntaryExit         `json:"voluntary_exits" validate:"required"`
+	SyncAggregate          SyncAggregate                 `json:"sync_aggregate" validate:"required"`
+	ExecutionPayloadHeader ExecutionPayloadHeaderCapella `json:"execution_payload_header" validate:"required"`
+	BlsToExecutionChanges  []SignedBlsToExecutionChange  `json:"bls_to_execution_changes" validate:"required"`
 }
 
 type Eth1Data struct {
@@ -697,6 +698,178 @@ func (b *SignedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaconBlock,
 	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: block}}, nil
 }
 
+func (b *SignedBlindedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	sig, err := hexutil.Decode(b.Signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Signature")
+	}
+	slot, err := strconv.ParseUint(b.Message.Slot, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Slot")
+	}
+	proposerIndex, err := strconv.ParseUint(b.Message.ProposerIndex, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.ProposerIndex")
+	}
+	parentRoot, err := hexutil.Decode(b.Message.ParentRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.ParentRoot")
+	}
+	stateRoot, err := hexutil.Decode(b.Message.StateRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.StateRoot")
+	}
+	randaoReveal, err := hexutil.Decode(b.Message.Body.RandaoReveal)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.RandaoReveal")
+	}
+	depositRoot, err := hexutil.Decode(b.Message.Body.Eth1Data.DepositRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.Eth1Data.DepositRoot")
+	}
+	depositCount, err := strconv.ParseUint(b.Message.Body.Eth1Data.DepositCount, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.Eth1Data.DepositCount")
+	}
+	blockHash, err := hexutil.Decode(b.Message.Body.Eth1Data.BlockHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.Eth1Data.BlockHash")
+	}
+	graffiti, err := hexutil.Decode(b.Message.Body.Graffiti)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.Graffiti")
+	}
+	proposerSlashings, err := convertProposerSlashings(b.Message.Body.ProposerSlashings)
+	if err != nil {
+		return nil, err
+	}
+	attesterSlashings, err := convertAttesterSlashings(b.Message.Body.AttesterSlashings)
+	if err != nil {
+		return nil, err
+	}
+	atts, err := convertAtts(b.Message.Body.Attestations)
+	if err != nil {
+		return nil, err
+	}
+	deposits, err := convertDeposits(b.Message.Body.Deposits)
+	if err != nil {
+		return nil, err
+	}
+	exits, err := convertExits(b.Message.Body.VoluntaryExits)
+	if err != nil {
+		return nil, err
+	}
+	syncCommitteeBits, err := bytesutil.FromHexString(b.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.SyncAggregate.SyncCommitteeBits")
+	}
+	syncCommitteeSig, err := hexutil.Decode(b.Message.Body.SyncAggregate.SyncCommitteeSignature)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.SyncAggregate.SyncCommitteeSignature")
+	}
+	payloadParentHash, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.ParentHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.ParentHash")
+	}
+	payloadFeeRecipient, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.FeeRecipient)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.FeeRecipient")
+	}
+	payloadStateRoot, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.StateRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.StateRoot")
+	}
+	payloadReceiptsRoot, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.ReceiptsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.ReceiptsRoot")
+	}
+	payloadLogsBloom, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.LogsBloom)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.LogsBloom")
+	}
+	payloadPrevRandao, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.PrevRandao)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.PrevRandao")
+	}
+	payloadBlockNumber, err := strconv.ParseUint(b.Message.Body.ExecutionPayloadHeader.BlockNumber, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.BlockNumber")
+	}
+	payloadGasLimit, err := strconv.ParseUint(b.Message.Body.ExecutionPayloadHeader.GasLimit, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.GasLimit")
+	}
+	payloadGasUsed, err := strconv.ParseUint(b.Message.Body.ExecutionPayloadHeader.GasUsed, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.GasUsed")
+	}
+	payloadTimestamp, err := strconv.ParseUint(b.Message.Body.ExecutionPayloadHeader.Timestamp, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.Timestamp")
+	}
+	payloadExtraData, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.ExtraData)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.ExtraData")
+	}
+	payloadBaseFeePerGas, err := uint256ToHex(b.Message.Body.ExecutionPayloadHeader.BaseFeePerGas)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.BaseFeePerGas")
+	}
+	payloadBlockHash, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.BlockHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.BlockHash")
+	}
+	payloadTxsRoot, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.TransactionsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.TransactionsRoot")
+	}
+
+	block := &eth.SignedBlindedBeaconBlockBellatrix{
+		Block: &eth.BlindedBeaconBlockBellatrix{
+			Slot:          primitives.Slot(slot),
+			ProposerIndex: primitives.ValidatorIndex(proposerIndex),
+			ParentRoot:    parentRoot,
+			StateRoot:     stateRoot,
+			Body: &eth.BlindedBeaconBlockBodyBellatrix{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &eth.Eth1Data{
+					DepositRoot:  depositRoot,
+					DepositCount: depositCount,
+					BlockHash:    blockHash,
+				},
+				Graffiti:          graffiti,
+				ProposerSlashings: proposerSlashings,
+				AttesterSlashings: attesterSlashings,
+				Attestations:      atts,
+				Deposits:          deposits,
+				VoluntaryExits:    exits,
+				SyncAggregate: &eth.SyncAggregate{
+					SyncCommitteeBits:      syncCommitteeBits,
+					SyncCommitteeSignature: syncCommitteeSig,
+				},
+				ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
+					ParentHash:       payloadParentHash,
+					FeeRecipient:     payloadFeeRecipient,
+					StateRoot:        payloadStateRoot,
+					ReceiptsRoot:     payloadReceiptsRoot,
+					LogsBloom:        payloadLogsBloom,
+					PrevRandao:       payloadPrevRandao,
+					BlockNumber:      payloadBlockNumber,
+					GasLimit:         payloadGasLimit,
+					GasUsed:          payloadGasUsed,
+					Timestamp:        payloadTimestamp,
+					ExtraData:        payloadExtraData,
+					BaseFeePerGas:    payloadBaseFeePerGas,
+					BlockHash:        payloadBlockHash,
+					TransactionsRoot: payloadTxsRoot,
+				},
+			},
+		},
+		Signature: sig,
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: block}}, nil
+}
+
 func (b *SignedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
@@ -898,6 +1071,185 @@ func (b *SignedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, e
 		Signature: sig,
 	}
 	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Capella{Capella: block}}, nil
+}
+
+func (b *SignedBlindedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	sig, err := hexutil.Decode(b.Signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Signature")
+	}
+	slot, err := strconv.ParseUint(b.Message.Slot, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Slot")
+	}
+	proposerIndex, err := strconv.ParseUint(b.Message.ProposerIndex, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.ProposerIndex")
+	}
+	parentRoot, err := hexutil.Decode(b.Message.ParentRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.ParentRoot")
+	}
+	stateRoot, err := hexutil.Decode(b.Message.StateRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.StateRoot")
+	}
+	randaoReveal, err := hexutil.Decode(b.Message.Body.RandaoReveal)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.RandaoReveal")
+	}
+	depositRoot, err := hexutil.Decode(b.Message.Body.Eth1Data.DepositRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.Eth1Data.DepositRoot")
+	}
+	depositCount, err := strconv.ParseUint(b.Message.Body.Eth1Data.DepositCount, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.Eth1Data.DepositCount")
+	}
+	blockHash, err := hexutil.Decode(b.Message.Body.Eth1Data.BlockHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.Eth1Data.BlockHash")
+	}
+	graffiti, err := hexutil.Decode(b.Message.Body.Graffiti)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.Graffiti")
+	}
+	proposerSlashings, err := convertProposerSlashings(b.Message.Body.ProposerSlashings)
+	if err != nil {
+		return nil, err
+	}
+	attesterSlashings, err := convertAttesterSlashings(b.Message.Body.AttesterSlashings)
+	if err != nil {
+		return nil, err
+	}
+	atts, err := convertAtts(b.Message.Body.Attestations)
+	if err != nil {
+		return nil, err
+	}
+	deposits, err := convertDeposits(b.Message.Body.Deposits)
+	if err != nil {
+		return nil, err
+	}
+	exits, err := convertExits(b.Message.Body.VoluntaryExits)
+	if err != nil {
+		return nil, err
+	}
+	syncCommitteeBits, err := bytesutil.FromHexString(b.Message.Body.SyncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.SyncAggregate.SyncCommitteeBits")
+	}
+	syncCommitteeSig, err := hexutil.Decode(b.Message.Body.SyncAggregate.SyncCommitteeSignature)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.SyncAggregate.SyncCommitteeSignature")
+	}
+	payloadParentHash, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.ParentHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.ParentHash")
+	}
+	payloadFeeRecipient, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.FeeRecipient)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.FeeRecipient")
+	}
+	payloadStateRoot, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.StateRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.StateRoot")
+	}
+	payloadReceiptsRoot, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.ReceiptsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.ReceiptsRoot")
+	}
+	payloadLogsBloom, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.LogsBloom)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.LogsBloom")
+	}
+	payloadPrevRandao, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.PrevRandao)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.PrevRandao")
+	}
+	payloadBlockNumber, err := strconv.ParseUint(b.Message.Body.ExecutionPayloadHeader.BlockNumber, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.BlockNumber")
+	}
+	payloadGasLimit, err := strconv.ParseUint(b.Message.Body.ExecutionPayloadHeader.GasLimit, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.GasLimit")
+	}
+	payloadGasUsed, err := strconv.ParseUint(b.Message.Body.ExecutionPayloadHeader.GasUsed, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.GasUsed")
+	}
+	payloadTimestamp, err := strconv.ParseUint(b.Message.Body.ExecutionPayloadHeader.Timestamp, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.Timestamp")
+	}
+	payloadExtraData, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.ExtraData)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.ExtraData")
+	}
+	payloadBaseFeePerGas, err := uint256ToHex(b.Message.Body.ExecutionPayloadHeader.BaseFeePerGas)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.BaseFeePerGas")
+	}
+	payloadBlockHash, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.BlockHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.BlockHash")
+	}
+	payloadTxsRoot, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.TransactionsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.TransactionsRoot")
+	}
+	payloadWithdrawalsRoot, err := hexutil.Decode(b.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot")
+	}
+	blsChanges := make([]*eth.SignedBLSToExecutionChange, len(b.Message.Body.BlsToExecutionChanges))
+
+	block := &eth.SignedBlindedBeaconBlockCapella{
+		Block: &eth.BlindedBeaconBlockCapella{
+			Slot:          primitives.Slot(slot),
+			ProposerIndex: primitives.ValidatorIndex(proposerIndex),
+			ParentRoot:    parentRoot,
+			StateRoot:     stateRoot,
+			Body: &eth.BlindedBeaconBlockBodyCapella{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &eth.Eth1Data{
+					DepositRoot:  depositRoot,
+					DepositCount: depositCount,
+					BlockHash:    blockHash,
+				},
+				Graffiti:          graffiti,
+				ProposerSlashings: proposerSlashings,
+				AttesterSlashings: attesterSlashings,
+				Attestations:      atts,
+				Deposits:          deposits,
+				VoluntaryExits:    exits,
+				SyncAggregate: &eth.SyncAggregate{
+					SyncCommitteeBits:      syncCommitteeBits,
+					SyncCommitteeSignature: syncCommitteeSig,
+				},
+				ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderCapella{
+					ParentHash:       payloadParentHash,
+					FeeRecipient:     payloadFeeRecipient,
+					StateRoot:        payloadStateRoot,
+					ReceiptsRoot:     payloadReceiptsRoot,
+					LogsBloom:        payloadLogsBloom,
+					PrevRandao:       payloadPrevRandao,
+					BlockNumber:      payloadBlockNumber,
+					GasLimit:         payloadGasLimit,
+					GasUsed:          payloadGasUsed,
+					Timestamp:        payloadTimestamp,
+					ExtraData:        payloadExtraData,
+					BaseFeePerGas:    payloadBaseFeePerGas,
+					BlockHash:        payloadBlockHash,
+					TransactionsRoot: payloadTxsRoot,
+					WithdrawalsRoot:  payloadWithdrawalsRoot,
+				},
+				BlsToExecutionChanges: blsChanges,
+			},
+		},
+		Signature: sig,
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: block}}, nil
 }
 
 func convertProposerSlashings(src []ProposerSlashing) ([]*eth.ProposerSlashing, error) {
