@@ -380,7 +380,6 @@ func (vs *Server) ProposeGenericBeaconBlock(
 	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
-
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
@@ -465,6 +464,8 @@ func (vs *Server) seenProposerIndex(slot primitives.Slot, proposerIdx primitives
 }
 
 func (vs *Server) insertSeenProposerIndex(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) {
+	vs.seenProposerIndexCacheLock.Lock()
+	defer vs.seenProposerIndexCacheLock.Unlock()
 	if vs.SeenProposerIndexCache == nil {
 		return
 	}
