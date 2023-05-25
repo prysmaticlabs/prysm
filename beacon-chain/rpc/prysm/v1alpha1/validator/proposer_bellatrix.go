@@ -50,6 +50,10 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 		return nil
 	}
 
+	if localPayload == nil {
+		return errors.New("local payload is nil")
+	}
+
 	// Use local payload if builder payload is nil.
 	if builderPayload == nil {
 		return blk.SetExecution(localPayload)
@@ -226,7 +230,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil /* genesis val root */)
+		nil  /* genesis val root */)
 	if err != nil {
 		return err
 	}
