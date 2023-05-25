@@ -651,26 +651,24 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 // This routine checks if there is a cached proposer payload ID available for the next slot proposer.
 // If there is not, it will call forkchoice updated with the correct payload attribute then cache the payload ID.
-func (s *Service) spawnLateBlockTasksLoop() {
-	go func() {
-		_, err := s.clockWaiter.WaitForClock(s.ctx)
-		if err != nil {
-			log.WithError(err).Error("spawnLateBlockTasksLoop encountered an error waiting for initialization")
+func (s *Service) runLateBlockTasks() {
+	_, err := s.clockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("runLateBlockTasks encountered an error waiting for initialization")
+		return
+	}
+	attThreshold := params.BeaconConfig().SecondsPerSlot / 3
+	ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
+	for {
+		select {
+		case <-ticker.C():
+			s.lateBlockTasks(s.ctx)
+
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting routine")
 			return
 		}
-		attThreshold := params.BeaconConfig().SecondsPerSlot / 3
-		ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
-		for {
-			select {
-			case <-ticker.C():
-				s.lateBlockTasks(s.ctx)
-
-			case <-s.ctx.Done():
-				log.Debug("Context closed, exiting routine")
-				return
-			}
-		}
-	}()
+	}
 }
 
 // lateBlockTasks  is called 4 seconds into the slot and performs tasks
