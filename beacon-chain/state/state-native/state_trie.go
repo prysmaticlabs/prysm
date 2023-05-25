@@ -840,6 +840,24 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	return [32]byte{}, errors.New("invalid field index provided")
 }
 
+// CopyAllTries copies our field tries from the state
+func (b *BeaconState) CopyAllTries() {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	for fldIdx, fieldTrie := range b.stateFieldLeaves {
+		if fieldTrie.FieldReference() != nil {
+			fieldTrie.Lock()
+			if fieldTrie.FieldReference().Refs() > 1 {
+				fieldTrie.FieldReference().MinusRef()
+				newTrie := fieldTrie.CopyTrie()
+				b.stateFieldLeaves[fldIdx] = newTrie
+			}
+			fieldTrie.Unlock()
+		}
+	}
+}
+
 func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
 	fTrieMutex := fTrie.RWMutex
