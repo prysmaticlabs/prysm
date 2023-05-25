@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"regexp"
+	"strconv"
 
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 )
@@ -20,8 +20,13 @@ func setVoluntaryExitEpoch(
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
 	if _, ok := endpoint.PostRequest.(*SetVoluntaryExitRequestJson); ok {
 		var epoch = req.URL.Query().Get("epoch")
-		if !regexp.MustCompile(`^[0-9]+$`).MatchString(epoch) {
+		// To handle the request without the query param
+		if epoch == "" {
 			epoch = "0"
+		}
+		_, err := strconv.ParseUint(epoch, 10, 64)
+		if err != nil {
+			return false, apimiddleware.InternalServerErrorWithMessage(err, "invalid epoch")
 		}
 		j := &SetVoluntaryExitRequestJson{Epoch: epoch}
 		b, err := json.Marshal(j)
