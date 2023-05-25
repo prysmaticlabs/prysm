@@ -140,8 +140,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		// Set sync aggregate. New in Altair.
 		vs.setSyncAggregate(ctx, sBlk)
 
-		// Set execution data. New in Bellatrix.
-		localPayload, err := vs.getLocalPayload(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex(), sBlk.Block().ParentRoot(), head)
+		// Get local and builder (if enabled) payloads. Set execution data. New in Bellatrix.
+		localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 		}
@@ -150,7 +150,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Error("Could not get builder payload")
 		}
-
 		if err := vs.setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 		}
@@ -234,7 +233,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, err := vs.getLocalPayload(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex(), sBlk.Block().ParentRoot(), head)
+	localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 	}
