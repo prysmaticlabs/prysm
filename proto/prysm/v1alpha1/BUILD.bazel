@@ -173,8 +173,8 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
-        "block_proposer.go",
         "cloners.go",
+        "interfaces.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
         ":ssz_generated_files",  # keep
@@ -185,6 +185,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1",
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
+        "//beacon-chain/rpc/prysm/v1alpha1/types:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//encoding/bytesutil:go_default_library",
