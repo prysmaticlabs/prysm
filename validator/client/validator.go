@@ -1015,7 +1015,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if len(proposerReqs) != len(pubkeys) {
 		log.WithFields(logrus.Fields{
 			"pubkeysCount":             len(pubkeys),
-			"proposerSettingsreqCount": len(proposerReqs),
+			"proposerSettingsReqCount": len(proposerReqs),
 		}).Debugln("Request count did not match included validator count. Only keys that have been activated will be included in the request.")
 	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
