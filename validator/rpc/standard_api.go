@@ -12,7 +12,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -712,7 +711,7 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 		s.beaconNodeClient,
 		km.Sign,
 		req.Pubkey,
-		primitives.Epoch(req.Epoch),
+		req.Epoch,
 	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
