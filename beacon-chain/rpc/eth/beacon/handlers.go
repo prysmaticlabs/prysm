@@ -141,7 +141,6 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 		Code:    http.StatusBadRequest,
 	}
 	network.WriteError(w, errJson)
-	return
 }
 
 // PublishBlockV2 instructs the beacon node to broadcast a newly signed beacon block to the beacon network,
@@ -267,7 +266,6 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 		Code:    http.StatusBadRequest,
 	}
 	network.WriteError(w, errJson)
-	return
 }
 
 func (bs *Server) proposeBlock(
