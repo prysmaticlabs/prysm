@@ -87,7 +87,6 @@ go_test(
         "pool_test.go",
         "server_test.go",
         "state_test.go",
-        "structs_test.go",
         "sync_committee_test.go",
         "validator_test.go",
     ],
