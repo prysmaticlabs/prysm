@@ -15,21 +15,21 @@ import (
 
 type SignedBeaconBlock struct {
 	Message   BeaconBlock `json:"message" validate:"required"`
-	Signature string      `json:"signature" validate:"required" hex:"true"`
+	Signature string      `json:"signature" validate:"required"`
 }
 
 type BeaconBlock struct {
 	Slot          string          `json:"slot" validate:"required"`
 	ProposerIndex string          `json:"proposer_index" validate:"required"`
-	ParentRoot    string          `json:"parent_root" validate:"required" hex:"true"`
-	StateRoot     string          `json:"state_root" validate:"required" hex:"true"`
+	ParentRoot    string          `json:"parent_root" validate:"required"`
+	StateRoot     string          `json:"state_root" validate:"required"`
 	Body          BeaconBlockBody `json:"body" validate:"required"`
 }
 
 type BeaconBlockBody struct {
-	RandaoReveal      string                `json:"randao_reveal" validate:"required" hex:"true"`
+	RandaoReveal      string                `json:"randao_reveal" validate:"required"`
 	Eth1Data          Eth1Data              `json:"eth1_data" validate:"required"`
-	Graffiti          string                `json:"graffiti" validate:"required" hex:"true"`
+	Graffiti          string                `json:"graffiti" validate:"required"`
 	ProposerSlashings []ProposerSlashing    `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings []AttesterSlashing    `json:"attester_slashings" validate:"required"`
 	Attestations      []Attestation         `json:"attestations" validate:"required"`
@@ -39,21 +39,21 @@ type BeaconBlockBody struct {
 
 type SignedBeaconBlockAltair struct {
 	Message   BeaconBlockAltair `json:"message" validate:"required"`
-	Signature string            `json:"signature" validate:"required" hex:"true"`
+	Signature string            `json:"signature" validate:"required"`
 }
 
 type BeaconBlockAltair struct {
 	Slot          string                `json:"slot" validate:"required"`
 	ProposerIndex string                `json:"proposer_index" validate:"required"`
-	ParentRoot    string                `json:"parent_root" validate:"required" hex:"true"`
-	StateRoot     string                `json:"state_root" validate:"required" hex:"true"`
+	ParentRoot    string                `json:"parent_root" validate:"required"`
+	StateRoot     string                `json:"state_root" validate:"required"`
 	Body          BeaconBlockBodyAltair `json:"body" validate:"required"`
 }
 
 type BeaconBlockBodyAltair struct {
-	RandaoReveal      string                `json:"randao_reveal" validate:"required" hex:"true"`
+	RandaoReveal      string                `json:"randao_reveal" validate:"required"`
 	Eth1Data          Eth1Data              `json:"eth1_data" validate:"required"`
-	Graffiti          string                `json:"graffiti" validate:"required" hex:"true"`
+	Graffiti          string                `json:"graffiti" validate:"required"`
 	ProposerSlashings []ProposerSlashing    `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings []AttesterSlashing    `json:"attester_slashings" validate:"required"`
 	Attestations      []Attestation         `json:"attestations" validate:"required"`
@@ -64,21 +64,21 @@ type BeaconBlockBodyAltair struct {
 
 type SignedBeaconBlockBellatrix struct {
 	Message   BeaconBlockBellatrix `json:"message" validate:"required"`
-	Signature string               `json:"signature" validate:"required" hex:"true"`
+	Signature string               `json:"signature" validate:"required"`
 }
 
 type BeaconBlockBellatrix struct {
 	Slot          string                   `json:"slot" validate:"required"`
 	ProposerIndex string                   `json:"proposer_index" validate:"required"`
-	ParentRoot    string                   `json:"parent_root" validate:"required" hex:"true"`
-	StateRoot     string                   `json:"state_root" validate:"required" hex:"true"`
+	ParentRoot    string                   `json:"parent_root" validate:"required"`
+	StateRoot     string                   `json:"state_root" validate:"required"`
 	Body          BeaconBlockBodyBellatrix `json:"body" validate:"required"`
 }
 
 type BeaconBlockBodyBellatrix struct {
-	RandaoReveal      string                `json:"randao_reveal" validate:"required" hex:"true"`
+	RandaoReveal      string                `json:"randao_reveal" validate:"required"`
 	Eth1Data          Eth1Data              `json:"eth1_data" validate:"required"`
-	Graffiti          string                `json:"graffiti" validate:"required" hex:"true"`
+	Graffiti          string                `json:"graffiti" validate:"required"`
 	ProposerSlashings []ProposerSlashing    `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings []AttesterSlashing    `json:"attester_slashings" validate:"required"`
 	Attestations      []Attestation         `json:"attestations" validate:"required"`
@@ -90,21 +90,21 @@ type BeaconBlockBodyBellatrix struct {
 
 type SignedBlindedBeaconBlockBellatrix struct {
 	Message   BlindedBeaconBlockBellatrix `json:"message" validate:"required"`
-	Signature string                      `json:"signature" validate:"required" hex:"true"`
+	Signature string                      `json:"signature" validate:"required"`
 }
 
 type BlindedBeaconBlockBellatrix struct {
 	Slot          string                          `json:"slot" validate:"required"`
 	ProposerIndex string                          `json:"proposer_index" validate:"required"`
-	ParentRoot    string                          `json:"parent_root" validate:"required" hex:"true"`
-	StateRoot     string                          `json:"state_root" validate:"required" hex:"true"`
+	ParentRoot    string                          `json:"parent_root" validate:"required"`
+	StateRoot     string                          `json:"state_root" validate:"required"`
 	Body          BlindedBeaconBlockBodyBellatrix `json:"body" validate:"required"`
 }
 
 type BlindedBeaconBlockBodyBellatrix struct {
-	RandaoReveal           string                 `json:"randao_reveal" validate:"required" hex:"true"`
+	RandaoReveal           string                 `json:"randao_reveal" validate:"required"`
 	Eth1Data               Eth1Data               `json:"eth1_data" validate:"required"`
-	Graffiti               string                 `json:"graffiti" validate:"required" hex:"true"`
+	Graffiti               string                 `json:"graffiti" validate:"required"`
 	ProposerSlashings      []ProposerSlashing     `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings      []AttesterSlashing     `json:"attester_slashings" validate:"required"`
 	Attestations           []Attestation          `json:"attestations" validate:"required"`
@@ -116,21 +116,21 @@ type BlindedBeaconBlockBodyBellatrix struct {
 
 type SignedBeaconBlockCapella struct {
 	Message   BeaconBlockCapella `json:"message" validate:"required"`
-	Signature string             `json:"signature" validate:"required" hex:"true"`
+	Signature string             `json:"signature" validate:"required"`
 }
 
 type BeaconBlockCapella struct {
 	Slot          string                 `json:"slot" validate:"required"`
 	ProposerIndex string                 `json:"proposer_index" validate:"required"`
-	ParentRoot    string                 `json:"parent_root" validate:"required" hex:"true"`
-	StateRoot     string                 `json:"state_root" validate:"required" hex:"true"`
+	ParentRoot    string                 `json:"parent_root" validate:"required"`
+	StateRoot     string                 `json:"state_root" validate:"required"`
 	Body          BeaconBlockBodyCapella `json:"body" validate:"required"`
 }
 
 type BeaconBlockBodyCapella struct {
-	RandaoReveal          string                       `json:"randao_reveal" validate:"required" hex:"true"`
+	RandaoReveal          string                       `json:"randao_reveal" validate:"required"`
 	Eth1Data              Eth1Data                     `json:"eth1_data" validate:"required"`
-	Graffiti              string                       `json:"graffiti" validate:"required" hex:"true"`
+	Graffiti              string                       `json:"graffiti" validate:"required"`
 	ProposerSlashings     []ProposerSlashing           `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings     []AttesterSlashing           `json:"attester_slashings" validate:"required"`
 	Attestations          []Attestation                `json:"attestations" validate:"required"`
@@ -143,21 +143,21 @@ type BeaconBlockBodyCapella struct {
 
 type SignedBlindedBeaconBlockCapella struct {
 	Message   BlindedBeaconBlockCapella `json:"message" validate:"required"`
-	Signature string                    `json:"signature" validate:"required" hex:"true"`
+	Signature string                    `json:"signature" validate:"required"`
 }
 
 type BlindedBeaconBlockCapella struct {
 	Slot          string                        `json:"slot" validate:"required"`
 	ProposerIndex string                        `json:"proposer_index" validate:"required"`
-	ParentRoot    string                        `json:"parent_root" validate:"required" hex:"true"`
-	StateRoot     string                        `json:"state_root" validate:"required" hex:"true"`
+	ParentRoot    string                        `json:"parent_root" validate:"required"`
+	StateRoot     string                        `json:"state_root" validate:"required"`
 	Body          BlindedBeaconBlockBodyCapella `json:"body" validate:"required"`
 }
 
 type BlindedBeaconBlockBodyCapella struct {
-	RandaoReveal           string                        `json:"randao_reveal" validate:"required" hex:"true"`
+	RandaoReveal           string                        `json:"randao_reveal" validate:"required"`
 	Eth1Data               Eth1Data                      `json:"eth1_data" validate:"required"`
-	Graffiti               string                        `json:"graffiti" validate:"required" hex:"true"`
+	Graffiti               string                        `json:"graffiti" validate:"required"`
 	ProposerSlashings      []ProposerSlashing            `json:"proposer_slashings" validate:"required"`
 	AttesterSlashings      []AttesterSlashing            `json:"attester_slashings" validate:"required"`
 	Attestations           []Attestation                 `json:"attestations" validate:"required"`
@@ -169,9 +169,9 @@ type BlindedBeaconBlockBodyCapella struct {
 }
 
 type Eth1Data struct {
-	DepositRoot  string `json:"deposit_root" validate:"required" hex:"true"`
+	DepositRoot  string `json:"deposit_root" validate:"required"`
 	DepositCount string `json:"deposit_count" validate:"required"`
-	BlockHash    string `json:"block_hash" validate:"required" hex:"true"`
+	BlockHash    string `json:"block_hash" validate:"required"`
 }
 
 type ProposerSlashing struct {
@@ -185,26 +185,26 @@ type AttesterSlashing struct {
 }
 
 type Attestation struct {
-	AggregationBits string          `json:"aggregation_bits" validate:"required" hex:"true"`
+	AggregationBits string          `json:"aggregation_bits" validate:"required"`
 	Data            AttestationData `json:"data" validate:"required"`
-	Signature       string          `json:"signature" validate:"required" hex:"true"`
+	Signature       string          `json:"signature" validate:"required"`
 }
 
 type Deposit struct {
-	Proof []string    `json:"proof" validate:"required" hex:"true"`
+	Proof []string    `json:"proof" validate:"required"`
 	Data  DepositData `json:"data" validate:"required"`
 }
 
 type DepositData struct {
-	Pubkey                string `json:"pubkey" validate:"required" hex:"true"`
-	WithdrawalCredentials string `json:"withdrawal_credentials" validate:"required" hex:"true"`
+	Pubkey                string `json:"pubkey" validate:"required"`
+	WithdrawalCredentials string `json:"withdrawal_credentials" validate:"required"`
 	Amount                string `json:"amount" validate:"required"`
-	Signature             string `json:"signature" validate:"required" hex:"true"`
+	Signature             string `json:"signature" validate:"required"`
 }
 
 type SignedVoluntaryExit struct {
 	Message   VoluntaryExit `json:"message" validate:"required"`
-	Signature string        `json:"signature" validate:"required" hex:"true"`
+	Signature string        `json:"signature" validate:"required"`
 }
 
 type VoluntaryExit struct {
@@ -214,121 +214,121 @@ type VoluntaryExit struct {
 
 type SignedBeaconBlockHeader struct {
 	Message   BeaconBlockHeader `json:"message" validate:"required"`
-	Signature string            `json:"signature" validate:"required" hex:"true"`
+	Signature string            `json:"signature" validate:"required"`
 }
 
 type BeaconBlockHeader struct {
 	Slot          string `json:"slot" validate:"required"`
 	ProposerIndex string `json:"proposer_index" validate:"required"`
-	ParentRoot    string `json:"parent_root" validate:"required" hex:"true"`
-	StateRoot     string `json:"state_root" validate:"required" hex:"true"`
-	BodyRoot      string `json:"body_root" validate:"required" hex:"true"`
+	ParentRoot    string `json:"parent_root" validate:"required"`
+	StateRoot     string `json:"state_root" validate:"required"`
+	BodyRoot      string `json:"body_root" validate:"required"`
 }
 
 type IndexedAttestation struct {
 	AttestingIndices []string        `json:"attesting_indices" validate:"required"`
 	Data             AttestationData `json:"data" validate:"required"`
-	Signature        string          `json:"signature" validate:"required" hex:"true"`
+	Signature        string          `json:"signature" validate:"required"`
 }
 
 type AttestationData struct {
 	Slot            string     `json:"slot" validate:"required"`
 	Index           string     `json:"index" validate:"required"`
-	BeaconBlockRoot string     `json:"beacon_block_root" validate:"required" hex:"true"`
+	BeaconBlockRoot string     `json:"beacon_block_root" validate:"required"`
 	Source          Checkpoint `json:"source" validate:"required"`
 	Target          Checkpoint `json:"target" validate:"required"`
 }
 
 type Checkpoint struct {
 	Epoch string `json:"epoch" validate:"required"`
-	Root  string `json:"root" validate:"required" hex:"true"`
+	Root  string `json:"root" validate:"required"`
 }
 
 type SyncAggregate struct {
-	SyncCommitteeBits      string `json:"sync_committee_bits" validate:"required" hex:"true"`
-	SyncCommitteeSignature string `json:"sync_committee_signature" validate:"required" hex:"true"`
+	SyncCommitteeBits      string `json:"sync_committee_bits" validate:"required"`
+	SyncCommitteeSignature string `json:"sync_committee_signature" validate:"required"`
 }
 
 type ExecutionPayload struct {
-	ParentHash    string   `json:"parent_hash" validate:"required" hex:"true"`
-	FeeRecipient  string   `json:"fee_recipient" validate:"required" hex:"true"`
-	StateRoot     string   `json:"state_root" validate:"required" hex:"true"`
-	ReceiptsRoot  string   `json:"receipts_root" validate:"required" hex:"true"`
-	LogsBloom     string   `json:"logs_bloom" validate:"required" hex:"true"`
-	PrevRandao    string   `json:"prev_randao" validate:"required" hex:"true"`
+	ParentHash    string   `json:"parent_hash" validate:"required"`
+	FeeRecipient  string   `json:"fee_recipient" validate:"required"`
+	StateRoot     string   `json:"state_root" validate:"required"`
+	ReceiptsRoot  string   `json:"receipts_root" validate:"required"`
+	LogsBloom     string   `json:"logs_bloom" validate:"required"`
+	PrevRandao    string   `json:"prev_randao" validate:"required"`
 	BlockNumber   string   `json:"block_number" validate:"required"`
 	GasLimit      string   `json:"gas_limit" validate:"required"`
 	GasUsed       string   `json:"gas_used" validate:"required"`
 	Timestamp     string   `json:"timestamp" validate:"required"`
-	ExtraData     string   `json:"extra_data" validate:"required" hex:"true"`
-	BaseFeePerGas string   `json:"base_fee_per_gas" validate:"required" uint256:"true"` // TODO: Uint256
-	BlockHash     string   `json:"block_hash" validate:"required" hex:"true"`
-	Transactions  []string `json:"transactions" validate:"required" hex:"true"`
+	ExtraData     string   `json:"extra_data" validate:"required"`
+	BaseFeePerGas string   `json:"base_fee_per_gas" validate:"required"`
+	BlockHash     string   `json:"block_hash" validate:"required"`
+	Transactions  []string `json:"transactions" validate:"required"`
 }
 
 type ExecutionPayloadHeader struct {
-	ParentHash       string `json:"parent_hash" validate:"required" hex:"true"`
-	FeeRecipient     string `json:"fee_recipient" validate:"required" hex:"true"`
-	StateRoot        string `json:"state_root" validate:"required" hex:"true"`
-	ReceiptsRoot     string `json:"receipts_root" validate:"required" hex:"true"`
-	LogsBloom        string `json:"logs_bloom" validate:"required" hex:"true"`
-	PrevRandao       string `json:"prev_randao" validate:"required" hex:"true"`
+	ParentHash       string `json:"parent_hash" validate:"required"`
+	FeeRecipient     string `json:"fee_recipient" validate:"required"`
+	StateRoot        string `json:"state_root" validate:"required"`
+	ReceiptsRoot     string `json:"receipts_root" validate:"required"`
+	LogsBloom        string `json:"logs_bloom" validate:"required"`
+	PrevRandao       string `json:"prev_randao" validate:"required"`
 	BlockNumber      string `json:"block_number" validate:"required"`
 	GasLimit         string `json:"gas_limit" validate:"required"`
 	GasUsed          string `json:"gas_used" validate:"required"`
 	Timestamp        string `json:"timestamp" validate:"required"`
-	ExtraData        string `json:"extra_data" validate:"required" hex:"true"`
-	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required" uint256:"true"`
-	BlockHash        string `json:"block_hash" validate:"required" hex:"true"`
-	TransactionsRoot string `json:"transactions_root" validate:"required" hex:"true"`
+	ExtraData        string `json:"extra_data" validate:"required"`
+	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required"`
+	BlockHash        string `json:"block_hash" validate:"required"`
+	TransactionsRoot string `json:"transactions_root" validate:"required"`
 }
 
 type ExecutionPayloadCapella struct {
-	ParentHash    string       `json:"parent_hash" validate:"required" hex:"true"`
-	FeeRecipient  string       `json:"fee_recipient" validate:"required" hex:"true"`
-	StateRoot     string       `json:"state_root" validate:"required" hex:"true"`
-	ReceiptsRoot  string       `json:"receipts_root" validate:"required" hex:"true"`
-	LogsBloom     string       `json:"logs_bloom" validate:"required" hex:"true"`
-	PrevRandao    string       `json:"prev_randao" validate:"required" hex:"true"`
+	ParentHash    string       `json:"parent_hash" validate:"required"`
+	FeeRecipient  string       `json:"fee_recipient" validate:"required"`
+	StateRoot     string       `json:"state_root" validate:"required"`
+	ReceiptsRoot  string       `json:"receipts_root" validate:"required"`
+	LogsBloom     string       `json:"logs_bloom" validate:"required"`
+	PrevRandao    string       `json:"prev_randao" validate:"required"`
 	BlockNumber   string       `json:"block_number" validate:"required"`
 	GasLimit      string       `json:"gas_limit" validate:"required"`
 	GasUsed       string       `json:"gas_used" validate:"required"`
 	Timestamp     string       `json:"timestamp" validate:"required"`
-	ExtraData     string       `json:"extra_data" validate:"required" hex:"true"`
-	BaseFeePerGas string       `json:"base_fee_per_gas" validate:"required" uint256:"true"`
-	BlockHash     string       `json:"block_hash" validate:"required" hex:"true"`
-	Transactions  []string     `json:"transactions" validate:"required" hex:"true"`
+	ExtraData     string       `json:"extra_data" validate:"required"`
+	BaseFeePerGas string       `json:"base_fee_per_gas" validate:"required"`
+	BlockHash     string       `json:"block_hash" validate:"required"`
+	Transactions  []string     `json:"transactions" validate:"required"`
 	Withdrawals   []Withdrawal `json:"withdrawals" validate:"required"`
 }
 
 type ExecutionPayloadHeaderCapella struct {
-	ParentHash       string `json:"parent_hash" validate:"required" hex:"true"`
-	FeeRecipient     string `json:"fee_recipient" validate:"required" hex:"true"`
-	StateRoot        string `json:"state_root" validate:"required" hex:"true"`
-	ReceiptsRoot     string `json:"receipts_root" validate:"required" hex:"true"`
-	LogsBloom        string `json:"logs_bloom" validate:"required" hex:"true"`
-	PrevRandao       string `json:"prev_randao" validate:"required" hex:"true"`
+	ParentHash       string `json:"parent_hash" validate:"required"`
+	FeeRecipient     string `json:"fee_recipient" validate:"required"`
+	StateRoot        string `json:"state_root" validate:"required"`
+	ReceiptsRoot     string `json:"receipts_root" validate:"required"`
+	LogsBloom        string `json:"logs_bloom" validate:"required"`
+	PrevRandao       string `json:"prev_randao" validate:"required"`
 	BlockNumber      string `json:"block_number" validate:"required"`
 	GasLimit         string `json:"gas_limit" validate:"required"`
 	GasUsed          string `json:"gas_used" validate:"required"`
 	Timestamp        string `json:"timestamp" validate:"required"`
-	ExtraData        string `json:"extra_data" validate:"required" hex:"true"`
-	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required" uint256:"true"`
-	BlockHash        string `json:"block_hash" validate:"required" hex:"true"`
-	TransactionsRoot string `json:"transactions_root" validate:"required" hex:"true"`
-	WithdrawalsRoot  string `json:"withdrawals_root" validate:"required" hex:"true"`
+	ExtraData        string `json:"extra_data" validate:"required"`
+	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required"`
+	BlockHash        string `json:"block_hash" validate:"required"`
+	TransactionsRoot string `json:"transactions_root" validate:"required"`
+	WithdrawalsRoot  string `json:"withdrawals_root" validate:"required"`
 }
 
 type Withdrawal struct {
 	WithdrawalIndex  string `json:"index" validate:"required"`
 	ValidatorIndex   string `json:"validator_index" validate:"required"`
-	ExecutionAddress string `json:"address" validate:"required" hex:"true"`
+	ExecutionAddress string `json:"address" validate:"required"`
 	Amount           string `json:"amount" validate:"required"`
 }
 
 type SignedBlsToExecutionChange struct {
 	BlsToExecutionChange BlsToExecutionChange `json:"bls_to_execution_change" validate:"required"`
-	Signature            string               `json:"signature" validate:"required" hex:"true"`
+	Signature            string               `json:"signature" validate:"required"`
 }
 
 type BlsToExecutionChange struct {
@@ -1603,5 +1603,5 @@ func uint256ToHex(num string) ([]byte, error) {
 	if len(bigEndian) > 32 {
 		return nil, errors.New("number too big for Uint256")
 	}
-	return bytesutil2.ReverseByteOrder(bigEndian), nil
+	return bytesutil2.ReverseByteOrder(bytesutil2.PadTo(bigEndian, 32)), nil
 }
