@@ -713,6 +713,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if lastState == nil {
 		lastRoot, lastState = headRoot[:], headState
 	}
+	lastState.CopyAllTries()
 	if err = transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
 		log.WithError(err).Debug("could not update next slot state cache")
 	}
