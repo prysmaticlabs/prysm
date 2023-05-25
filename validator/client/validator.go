@@ -975,10 +975,12 @@ func (v *validator) logDuties(slot primitives.Slot, duties []*ethpb.DutiesRespon
 	}
 }
 
+// ProposerSettings gets the current proposer settings saved in memory validator
 func (v *validator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
 	return v.proposerSettings
 }
 
+// SetProposerSettings sets and saves the passed in proposer settings overriding the in memory one
 func (v *validator) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
 	if v.db == nil {
 		return errors.New("db is not set")
@@ -990,7 +992,11 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *validator
 	return nil
 }
 
+// MigrateFromBeaconNodeProposerSettings tries to collect fee recipient information from the beacon node to construct the proposer settings on the validator client.
 func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) error {
+	if v.proposerSettings != nil {
+		return nil
+	}
 	km, err := v.Keymanager()
 	if err != nil {
 		return err
@@ -1002,13 +1008,33 @@ func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) e
 	if len(keys) == 0 {
 		return nil
 	}
+	proposerConfig := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 
 	for i := range keys {
 		resp, err := v.validatorClient.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[i][:]})
 		if err != nil {
 			return err
 		}
-		resp.FeeRecipient
+		proposerConfig[keys[i]] = &validatorserviceconfig.ProposerOption{
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
+			},
+		}
+	}
+	resp, err := v.validatorClient.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[i][:]})
+	if err != nil {
+		return err
+	}
+
+	defaultPropose := &validatorserviceconfig.ProposerOption{
+		FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+			FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
+		},
+	}
+
+	fileConfig := &validatorserviceconfig.ProposerSettings{
+		ProposeConfig: proposerConfig,
+		DefaultConfig: defaultPropose,
 	}
 
 	return nil
