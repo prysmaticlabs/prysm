@@ -34,7 +34,6 @@ func TestFeedPanics(t *testing.T) {
 		assert.NoError(t, checkPanic(want, func() { f.Send(uint64(2)) }))
 		// Validate it doesn't deadlock.
 		assert.NoError(t, checkPanic(want, func() { f.Send(uint64(2)) }))
-
 	}
 	{
 		var f Feed
