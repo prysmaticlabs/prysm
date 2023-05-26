@@ -169,7 +169,9 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
-	log.Infof("Payload id of %#x in exec payload", (*payloadID)[:])
+	if payloadID != nil {
+		log.Infof("Payload id of %#x in exec payload", (*payloadID)[:])
+	}
 	if payloadID == nil {
 		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}

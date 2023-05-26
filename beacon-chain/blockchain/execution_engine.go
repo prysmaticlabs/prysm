@@ -75,7 +75,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	_ = err
 	log.Infof("Calling attribute of: T %d , R %#x, F %#x, W %d in notify FCU for slot %d, with root %#x and proposer %d", attr.Timestamps(), attr.PrevRandao(), attr.SuggestedFeeRecipient(), len(w), nextSlot, arg.headRoot[:], proposerId)
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
-	log.Infof("Payload id of %#x in notify FCU", (*payloadID)[:])
+	if payloadID != nil {
+		log.Infof("Payload id of %#x in notify FCU", (*payloadID)[:])
+	}
 	if err != nil {
 		switch err {
 		case execution.ErrAcceptedSyncingPayloadStatus:
