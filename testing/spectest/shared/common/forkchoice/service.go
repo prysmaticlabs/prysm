@@ -80,14 +80,14 @@ type engineMock struct {
 	payloadStatus   error
 }
 
-func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, error) {
-	return nil, nil
+func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error) {
+	return nil, nil, nil
 }
 
 func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, m.latestValidHash, m.payloadStatus
 }
-func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
+func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, [][32]byte) ([]byte, error) {
 	return m.latestValidHash, m.payloadStatus
 }
 
