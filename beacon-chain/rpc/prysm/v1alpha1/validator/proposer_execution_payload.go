@@ -80,7 +80,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		payload, _, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
@@ -176,7 +176,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	if payloadID == nil {
 		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	payload, _, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, err
 	}
