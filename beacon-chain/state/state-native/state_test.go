@@ -358,7 +358,6 @@ func TestCopyAllTries(t *testing.T) {
 	newRt, err := nState.stateFieldLeaves[types.Balances].TrieRoot()
 	assert.NoError(t, err)
 	assert.NotEqual(t, rt, newRt)
-
 }
 
 func generateState(t *testing.T) state.BeaconState {
