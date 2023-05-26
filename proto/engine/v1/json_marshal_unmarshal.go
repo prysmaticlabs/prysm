@@ -37,8 +37,7 @@ type ExecutionBlock struct {
 	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
-	BlobGasUsed     *hexutil.Uint64          `json:"blobGasUsed"`
-	ExcessBlobGas   *hexutil.Uint64          `json:"excessBlobGas"`
+	ExcessDataGas   []byte                   `json:"excessDataGas"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -108,35 +107,10 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		}
 		e.Withdrawals = ws
 
-		edg, has := decoded["excessBlobGas"]
-		if has && edg != nil {
+		exDG, hasExDG := decoded["excessDataGas"]
+		if hasExDG && exDG != nil {
 			e.Version = version.Deneb
-			u := new(hexutil.Uint64)
-			sedg, ok := edg.(string)
-			if !ok {
-				return errors.Wrap(errExecutionUnmarshal, "excessBlobGas is not a string, can not decode")
-			}
-			err = u.UnmarshalText([]byte(sedg))
-			if err != nil {
-				return errors.Wrap(err, "unable to unmarshal excessBlobGas as hexutil.Uint64")
-			}
-			e.ExcessBlobGas = u
-		}
-
-		dgu, has := decoded["blobGasUsed"]
-		log.Error(has, dgu != nil)
-		if has && dgu != nil {
-			e.Version = version.Deneb
-			u := new(hexutil.Uint64)
-			sdgu, ok := dgu.(string)
-			if !ok {
-				return errors.Wrap(errExecutionUnmarshal, "blobGasUsed is not a string, can not decode")
-			}
-			err = u.UnmarshalText([]byte(sdgu))
-			if err != nil {
-				return errors.Wrap(err, "unable to unmarshal blobGasUsed as hexutil.Uint64")
-			}
-			e.BlobGasUsed = u
+			e.ExcessDataGas, err = hexutil.Decode(exDG.(string))
 		}
 	}
 
@@ -274,10 +248,9 @@ type ExecutionPayloadCapellaJSON struct {
 }
 
 type GetPayloadV3ResponseJson struct {
-	ExecutionPayload      *ExecutionPayloadDenebJSON `json:"executionPayload"`
-	BlockValue            string                     `json:"blockValue"`
-	BlobsBundle           *BlobBundleJSON            `json:"blobsBundle"`
-	ShouldOverrideBuilder bool                       `json:"shouldOverrideBuilder"`
+	ExecutionPayload *ExecutionPayloadDenebJSON `json:"executionPayload"`
+	BlockValue       string                     `json:"blockValue"`
+	BlobsBundle      *BlobBundleJSON            `json:"blobsBundle"`
 }
 
 type ExecutionPayloadDenebJSON struct {
@@ -293,8 +266,7 @@ type ExecutionPayloadDenebJSON struct {
 	Timestamp     *hexutil.Uint64 `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
 	BaseFeePerGas string          `json:"baseFeePerGas"`
-	BlobGasUsed   *hexutil.Uint64 `json:"blobGasUsed"`
-	ExcessBlobGas *hexutil.Uint64 `json:"excessBlobGas"`
+	ExcessDataGas string          `json:"excessDataGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	Withdrawals   []*Withdrawal   `json:"withdrawals"`
@@ -582,21 +554,6 @@ func (p *PayloadAttributesV2) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (p *PayloadAttributesV3) MarshalJSON() ([]byte, error) {
-	withdrawals := p.Withdrawals
-	if withdrawals == nil {
-		withdrawals = make([]*Withdrawal, 0)
-	}
-
-	return json.Marshal(payloadAttributesV3JSON{
-		Timestamp:             hexutil.Uint64(p.Timestamp),
-		PrevRandao:            p.PrevRandao,
-		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
-		Withdrawals:           withdrawals,
-		ParentBeaconBlockRoot: p.ParentBeaconBlockRoot,
-	})
-}
-
 // UnmarshalJSON --
 func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 	dec := payloadAttributesJSON{}
@@ -624,24 +581,6 @@ func (p *PayloadAttributesV2) UnmarshalJSON(enc []byte) error {
 		withdrawals = make([]*Withdrawal, 0)
 	}
 	p.Withdrawals = withdrawals
-	return nil
-}
-
-func (p *PayloadAttributesV3) UnmarshalJSON(enc []byte) error {
-	dec := payloadAttributesV3JSON{}
-	if err := json.Unmarshal(enc, &dec); err != nil {
-		return err
-	}
-	*p = PayloadAttributesV3{}
-	p.Timestamp = uint64(dec.Timestamp)
-	p.PrevRandao = dec.PrevRandao
-	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
-	withdrawals := dec.Withdrawals
-	if withdrawals == nil {
-		withdrawals = make([]*Withdrawal, 0)
-	}
-	p.Withdrawals = withdrawals
-	p.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
 	return nil
 }
 
@@ -755,17 +694,9 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type BlobBundleJSON struct {
-	Commitments []hexutil.Bytes `json:"commitments"`
-	Proofs      []hexutil.Bytes `json:"proofs"`
-	Blobs       []hexutil.Bytes `json:"blobs"`
-}
-
-func (b BlobBundleJSON) ToProto() *BlobsBundle {
-	return &BlobsBundle{
-		KzgCommitments: bytesutil.SafeCopy2dHexUtilBytes(b.Commitments),
-		Proofs:         bytesutil.SafeCopy2dHexUtilBytes(b.Proofs),
-		Blobs:          bytesutil.SafeCopy2dHexUtilBytes(b.Blobs),
-	}
+	Commitments [][48]byte `json:"commitments"`
+	Proofs      [][48]byte `json:"proofs"`
+	Blobs       [][]byte   `json:"blobs"`
 }
 
 // MarshalJSON --
@@ -776,6 +707,8 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	}
 	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
+	dataGas := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.ExcessDataGas))
+	dataGasHex := hexutil.EncodeBig(dataGas)
 	pHash := common.BytesToHash(e.ParentHash)
 	sRoot := common.BytesToHash(e.StateRoot)
 	recRoot := common.BytesToHash(e.ReceiptsRoot)
@@ -790,8 +723,6 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	if e.Withdrawals == nil {
 		e.Withdrawals = make([]*Withdrawal, 0)
 	}
-	blobGasUsed := hexutil.Uint64(e.BlobGasUsed)
-	excessBlobGas := hexutil.Uint64(e.ExcessBlobGas)
 
 	return json.Marshal(ExecutionPayloadDenebJSON{
 		ParentHash:    &pHash,
@@ -806,11 +737,10 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 		Timestamp:     &timeStamp,
 		ExtraData:     e.ExtraData,
 		BaseFeePerGas: baseFeeHex,
+		ExcessDataGas: dataGasHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
 		Withdrawals:   e.Withdrawals,
-		BlobGasUsed:   &blobGasUsed,
-		ExcessBlobGas: &excessBlobGas,
 	})
 }
 
@@ -859,12 +789,6 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 	if dec.ExecutionPayload.GasLimit == nil {
 		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
-	if dec.ExecutionPayload.BlobGasUsed == nil {
-		return errors.New("missing required field 'blobGasUsed' for ExecutionPayload")
-	}
-	if dec.ExecutionPayload.ExcessBlobGas == nil {
-		return errors.New("missing required field 'excessBlobGas' for ExecutionPayload")
-	}
 
 	*e = ExecutionPayloadDenebWithValueAndBlobsBundle{Payload: &ExecutionPayloadDeneb{}}
 	e.Payload.ParentHash = dec.ExecutionPayload.ParentHash.Bytes()
@@ -884,8 +808,11 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 	}
 	e.Payload.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 
-	e.Payload.ExcessBlobGas = uint64(*dec.ExecutionPayload.ExcessBlobGas)
-	e.Payload.BlobGasUsed = uint64(*dec.ExecutionPayload.BlobGasUsed)
+	dataGas, err := hexutil.DecodeBig(dec.ExecutionPayload.ExcessDataGas)
+	if err != nil {
+		return err
+	}
+	e.Payload.ExcessDataGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(dataGas.Bytes()), fieldparams.RootLength)
 
 	e.Payload.BlockHash = dec.ExecutionPayload.BlockHash.Bytes()
 	transactions := make([][]byte, len(dec.ExecutionPayload.Transactions))
@@ -930,8 +857,6 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 		blobs[i] = b
 	}
 	e.BlobsBundle.Blobs = blobs
-
-	e.ShouldOverrideBuilder = dec.ShouldOverrideBuilder
 
 	return nil
 }
