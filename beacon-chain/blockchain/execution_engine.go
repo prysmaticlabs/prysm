@@ -210,7 +210,18 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 	if err != nil {
 		return false, errors.Wrap(invalidBlock{error: err}, "could not get execution payload")
 	}
-	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+
+	var lastValidHash []byte
+	if blk.Version() >= version.Deneb {
+		_, err = blk.Block().Body().BlobKzgCommitments()
+		if err != nil {
+			return false, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
+		}
+		// TODO: Convert kzg commitment to version hashes and feed to below
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{})
+	} else {
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{} /*empty version hashes before Deneb*/)
+	}
 	switch err {
 	case nil:
 		newPayloadValidNodeCount.Inc()
