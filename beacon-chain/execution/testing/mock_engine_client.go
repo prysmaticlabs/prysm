@@ -42,7 +42,7 @@ type EngineClient struct {
 }
 
 // NewPayload --
-func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData) ([]byte, error) {
+func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData, _ [][32]byte) ([]byte, error) {
 	return e.NewPayloadResp, e.ErrNewPayload
 }
 
@@ -57,15 +57,19 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, error) {
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error) {
 	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
-		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
+		ed, err := blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
+		if err != nil {
+			return nil, nil, err
+		}
+		return ed, nil, nil
 	}
 	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return p, e.ErrGetPayload
+	return p, nil, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --
