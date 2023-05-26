@@ -6,6 +6,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
+func (b *BeaconState) Order() uint64 {
+	return b.order
+}
+
 // GenesisTime of the beacon state as a uint64.
 func (b *BeaconState) GenesisTime() uint64 {
 	b.lock.RLock()

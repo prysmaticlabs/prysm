@@ -1,6 +1,8 @@
 package types
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 )
 
@@ -210,3 +212,21 @@ const (
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries
 )
+
+// StateEnumerator is a thread-safe counter of all states created from the node's start.
+type StateEnumerator struct {
+	counter uint64
+	lock    sync.RWMutex
+}
+
+// Inc increments the number of states and returns the new state count.
+func (c *StateEnumerator) Inc() uint64 {
+	c.lock.Lock()
+	c.counter++
+	v := c.counter
+	c.lock.Unlock()
+	return v
+}
+
+// Enumerator keeps track of the number of the number of states created from the node's start.
+var Enumerator = StateEnumerator{}

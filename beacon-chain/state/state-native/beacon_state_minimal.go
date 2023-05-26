@@ -50,6 +50,7 @@ type BeaconState struct {
 	nextWithdrawalIndex                 uint64
 	nextWithdrawalValidatorIndex        primitives.ValidatorIndex
 
+	order                 uint64
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64
