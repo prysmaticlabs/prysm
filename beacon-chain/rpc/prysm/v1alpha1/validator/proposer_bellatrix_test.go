@@ -82,7 +82,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
@@ -141,7 +141,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
@@ -203,7 +203,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
@@ -217,7 +217,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -237,7 +237,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -258,7 +258,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), e.BlockNumber()) // Local block
