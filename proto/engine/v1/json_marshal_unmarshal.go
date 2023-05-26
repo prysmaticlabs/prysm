@@ -838,7 +838,7 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 
 	blobs := make([][]byte, len(dec.BlobsBundle.Blobs))
 	for i, blob := range dec.BlobsBundle.Blobs {
-		b := make([]byte, 4096*32)
+		b := make([]byte, fieldparams.BlobLength)
 		copy(b, blob)
 		blobs[i] = b
 	}
