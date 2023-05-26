@@ -65,10 +65,37 @@ message ExecutionPayloadCapella {
 	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"]; // New in Capella.
 }
 
+message ExecutionPayloadDeneb {
+	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+	bytes state_root            = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes receipts_root         = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes logs_bloom            = 5 [(ethereum.eth.ext.ssz_size) = "logs_bloom.size"];
+	bytes prev_randao           = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+	uint64 block_number         = 7;
+	uint64 gas_limit            = 8;
+	uint64 gas_used             = 9;
+	uint64 timestamp            = 10;
+	bytes extra_data            = 11 [(ethereum.eth.ext.ssz_max) = "extra_data.size"];
+	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+	// MAX_WITHDRAWALS_PER_PAYLOAD
+	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
+	bytes excess_data_gas  = 16 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
 message ExecutionPayloadCapellaWithValue {
 	ExecutionPayloadCapella payload = 1;
 	bytes value = 2;
 }
+
+message ExecutionPayloadDenebWithValueAndBlobsBundle {
+	ExecutionPayloadDeneb payload = 1;
+	bytes value = 2;
+	BlobsBundle blobs_bundle = 3;
+}
+
 
 message ExecutionPayloadHeader {
 	bytes parent_hash       = 1 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -103,26 +130,6 @@ message ExecutionPayloadHeaderCapella {
 	bytes block_hash        = 13 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes withdrawals_root  = 15 [(ethereum.eth.ext.ssz_size) = "32"]; // New in Capella.
-}
-
-message ExecutionPayloadDeneb {
-	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
-	bytes state_root            = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes receipts_root         = 4 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes logs_bloom            = 5 [(ethereum.eth.ext.ssz_size) = "logs_bloom.size"];
-	bytes prev_randao           = 6 [(ethereum.eth.ext.ssz_size) = "32"];
-	uint64 block_number         = 7;
-	uint64 gas_limit            = 8;
-	uint64 gas_used             = 9;
-	uint64 timestamp            = 10;
-	bytes extra_data            = 11 [(ethereum.eth.ext.ssz_max) = "extra_data.size"];
-	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
-	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
-	// MAX_WITHDRAWALS_PER_PAYLOAD
-	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
-	bytes excess_data_gas  = 16 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
 message ExecutionPayloadHeaderDeneb {
@@ -201,20 +208,18 @@ message Withdrawal {
 // Blobs bundle is retrieved through engine-api from the execution layer client.
 // It consists of the necessary components for constructing a blobs sidecar object to gossip through p2p.
 message BlobsBundle {
-	// The block hash of the payload which corresponds to the blobs.
-	bytes block_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	// The KZG commitments of the blobs.
-	repeated bytes kzg_commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
+	repeated bytes kzg_commitments = 1 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "4"];
+	// The proofs of the blobs.
+	repeated bytes proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "4"];
 	// The blobs itself.
-	repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
-	// The aggregated proof of the blobs to enable fast validation for commitments and blobs.
-	bytes aggregated_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+	repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,131072", (ethereum.eth.ext.ssz_max) = "4"];
 }
 
 // Blob contains the data that is to be committed on chain.
 message Blob {
 	// Each blob consists of `BLS_FIELD_ELEMENT`(32) multiplies `FIELD_ELEMENTS_PER_BLOB`(4096)
-	bytes data = 1 [(ethereum.eth.ext.ssz_size) = "131072"]; // 32 * 4096 = 131072
+	bytes data = 1 [(ethereum.eth.ext.ssz_size) = "blob.size"];
 }
 
 message ExchangeCapabilities {
