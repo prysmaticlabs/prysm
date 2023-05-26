@@ -809,16 +809,14 @@ func TestProduceBlockV2(t *testing.T) {
 		require.ErrorContains(t, "The node is currently optimistic and cannot serve validators", err)
 	})
 	t.Run("sync not ready", func(t *testing.T) {
-		st, err := util.NewBeaconState()
-		require.NoError(t, err)
-		chainService := &mockChain.ChainService{State: st}
+		chainService := &mockChain.ChainService{}
 		v1Server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
 			TimeFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 		}
-		_, err = v1Server.ProduceBlockV2(context.Background(), nil)
+		_, err := v1Server.ProduceBlockV2(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
 	})
 }
@@ -938,16 +936,14 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.ErrorContains(t, "The node is currently optimistic and cannot serve validators", err)
 	})
 	t.Run("sync not ready", func(t *testing.T) {
-		st, err := util.NewBeaconState()
-		require.NoError(t, err)
-		chainService := &mockChain.ChainService{State: st}
+		chainService := &mockChain.ChainService{}
 		v1Server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
 			TimeFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 		}
-		_, err = v1Server.ProduceBlockV2SSZ(context.Background(), nil)
+		_, err := v1Server.ProduceBlockV2SSZ(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
 	})
 }
@@ -1080,9 +1076,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.ErrorContains(t, "Block builder not configured", err)
 	})
 	t.Run("sync not ready", func(t *testing.T) {
-		st, err := util.NewBeaconState()
-		require.NoError(t, err)
-		chainService := &mockChain.ChainService{State: st}
+		chainService := &mockChain.ChainService{}
 		v1Server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
@@ -1090,7 +1084,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 		}
-		_, err = v1Server.ProduceBlindedBlock(context.Background(), nil)
+		_, err := v1Server.ProduceBlindedBlock(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
 	})
 }
@@ -1223,9 +1217,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.ErrorContains(t, "Block builder not configured", err)
 	})
 	t.Run("sync not ready", func(t *testing.T) {
-		st, err := util.NewBeaconState()
-		require.NoError(t, err)
-		chainService := &mockChain.ChainService{State: st}
+		chainService := &mockChain.ChainService{}
 		v1Server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
@@ -1233,7 +1225,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			OptimisticModeFetcher: chainService,
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 		}
-		_, err = v1Server.ProduceBlindedBlockSSZ(context.Background(), nil)
+		_, err := v1Server.ProduceBlindedBlockSSZ(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
 	})
 }

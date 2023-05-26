@@ -268,6 +268,8 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%d", flags.BlockBatchLimitBurstFactor.Name, 8),
 		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, cfgPath),
+		"--" + cmdshared.ValidatorMonitorIndicesFlag.Name + "=1",
+		"--" + cmdshared.ValidatorMonitorIndicesFlag.Name + "=2",
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 		"--" + flags.EnableDebugRPCEndpoints.Name,
@@ -281,6 +283,9 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	// feature flags; this is to allow A-B testing on new features)
 	if !config.TestFeature || index%2 == 0 {
 		args = append(args, features.E2EBeaconChainFlags...)
+	}
+	if config.UseBuilder {
+		args = append(args, fmt.Sprintf("--%s=%s:%d", flags.MevRelayEndpoint.Name, "http://127.0.0.1", e2e.TestParams.Ports.Eth1ProxyPort+index))
 	}
 	args = append(args, config.BeaconFlags...)
 

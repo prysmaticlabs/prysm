@@ -346,6 +346,74 @@ func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
 	}, nil
 }
 
+// FromProto converts a proto execution payload type to our builder
+// compatible payload type.
+func FromProto(payload *v1.ExecutionPayload) (ExecutionPayload, error) {
+	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
+	if err != nil {
+		return ExecutionPayload{}, err
+	}
+	txs := make([]hexutil.Bytes, len(payload.Transactions))
+	for i := range payload.Transactions {
+		txs[i] = payload.Transactions[i]
+	}
+	return ExecutionPayload{
+		ParentHash:    payload.ParentHash,
+		FeeRecipient:  payload.FeeRecipient,
+		StateRoot:     payload.StateRoot,
+		ReceiptsRoot:  payload.ReceiptsRoot,
+		LogsBloom:     payload.LogsBloom,
+		PrevRandao:    payload.PrevRandao,
+		BlockNumber:   Uint64String(payload.BlockNumber),
+		GasLimit:      Uint64String(payload.GasLimit),
+		GasUsed:       Uint64String(payload.GasUsed),
+		Timestamp:     Uint64String(payload.Timestamp),
+		ExtraData:     payload.ExtraData,
+		BaseFeePerGas: bFee,
+		BlockHash:     payload.BlockHash,
+		Transactions:  txs,
+	}, nil
+}
+
+// FromProtoCapella converts a proto execution payload type for capella to our
+// builder compatible payload type.
+func FromProtoCapella(payload *v1.ExecutionPayloadCapella) (ExecutionPayloadCapella, error) {
+	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
+	if err != nil {
+		return ExecutionPayloadCapella{}, err
+	}
+	txs := make([]hexutil.Bytes, len(payload.Transactions))
+	for i := range payload.Transactions {
+		txs[i] = payload.Transactions[i]
+	}
+	withdrawals := make([]Withdrawal, len(payload.Withdrawals))
+	for i, w := range payload.Withdrawals {
+		withdrawals[i] = Withdrawal{
+			Index:          Uint256{Int: big.NewInt(0).SetUint64(w.Index)},
+			ValidatorIndex: Uint256{Int: big.NewInt(0).SetUint64(uint64(w.ValidatorIndex))},
+			Address:        w.Address,
+			Amount:         Uint256{Int: big.NewInt(0).SetUint64(w.Amount)},
+		}
+	}
+	return ExecutionPayloadCapella{
+		ParentHash:    payload.ParentHash,
+		FeeRecipient:  payload.FeeRecipient,
+		StateRoot:     payload.StateRoot,
+		ReceiptsRoot:  payload.ReceiptsRoot,
+		LogsBloom:     payload.LogsBloom,
+		PrevRandao:    payload.PrevRandao,
+		BlockNumber:   Uint64String(payload.BlockNumber),
+		GasLimit:      Uint64String(payload.GasLimit),
+		GasUsed:       Uint64String(payload.GasUsed),
+		Timestamp:     Uint64String(payload.Timestamp),
+		ExtraData:     payload.ExtraData,
+		BaseFeePerGas: bFee,
+		BlockHash:     payload.BlockHash,
+		Transactions:  txs,
+		Withdrawals:   withdrawals,
+	}, nil
+}
+
 type ExecHeaderResponseCapella struct {
 	Data struct {
 		Signature hexutil.Bytes      `json:"signature"`

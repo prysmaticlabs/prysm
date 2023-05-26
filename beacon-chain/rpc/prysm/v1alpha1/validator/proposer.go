@@ -37,7 +37,11 @@ import (
 // eth1DataNotification is a latch to stop flooding logs with the same warning.
 var eth1DataNotification bool
 
-const eth1dataTimeout = 2 * time.Second
+const (
+	// CouldNotDecodeBlock means that a signed beacon block couldn't be created from the block present in the request.
+	CouldNotDecodeBlock = "Could not decode block"
+	eth1dataTimeout     = 2 * time.Second
+)
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
@@ -45,6 +49,15 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+
+	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), req.Slot)
+	if err != nil {
+		log.WithError(err).Error("Could not convert slot to time")
+	}
+	log.WithFields(logrus.Fields{
+		"slot":               req.Slot,
+		"sinceSlotStartTime": time.Since(t),
+	}).Info("Begin building block")
 
 	// A syncing validator should not produce a block.
 	if vs.SyncChecker.Syncing() {
@@ -142,6 +155,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetStateRoot(sr)
 
+	log.WithFields(logrus.Fields{
+		"slot":               req.Slot,
+		"sinceSlotStartTime": time.Since(t),
+		"validator":          sBlk.Block().ProposerIndex(),
+	}).Info("Finished building block")
+
 	pb, err := sBlk.Block().Proto()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
@@ -221,7 +240,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	defer span.End()
 	blk, err := blocks.NewSignedBeaconBlock(req.Block)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
 	}
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
@@ -305,7 +324,7 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}, nil
 }
 
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
@@ -313,16 +332,13 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
-	if slots.ToEpoch(blk.Block().Slot()) >= params.BeaconConfig().CapellaForkEpoch {
-		blk, err = vs.unblindBuilderBlockCapella(ctx, blk)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		blk, err = vs.unblindBuilderBlock(ctx, blk)
-		if err != nil {
-			return nil, err
-		}
+	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create unblinder")
+	}
+	blk, err = unblinder.unblindBuilderBlock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.
