@@ -161,11 +161,15 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 	default:
 		return nil, errors.New("unknown beacon state version")
 	}
+	w, err := attr.Withdrawals()
+	_ = err
+	log.Infof("Calling attribute of: T %d , R %#x, F %#x, W %d in get exec payload for slot %d, with root %#x and proposer %d", attr.Timestamps(), attr.PrevRandao(), attr.SuggestedFeeRecipient(), len(w), slot, headRoot[:], proposerID)
 
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
+	log.Infof("Payload id of %#x in exec payload", (*payloadID)[:])
 	if payloadID == nil {
 		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
