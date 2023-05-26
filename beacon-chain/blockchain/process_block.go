@@ -685,12 +685,6 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		Type: statefeed.MissedSlot,
 	})
 
-	// Head root should be empty when retrieving proposer index for the next slot.
-	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
-	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-	if (!has && !features.Get().PrepareAllPayloads) || id != [8]byte{} {
-		return
-	}
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
@@ -701,14 +695,20 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	headRoot := s.headRoot()
 	headState := s.headState(ctx)
 	s.headLock.RUnlock()
-	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-		headState: headState,
-		headRoot:  headRoot,
-		headBlock: headBlock.Block(),
-	})
-	if err != nil {
-		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
+	// Head root should be empty when retrieving proposer index for the next slot.
+	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
+	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
+	if (has && id == [8]byte{}) || features.Get().PrepareAllPayloads {
+		_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+			headState: headState,
+			headRoot:  headRoot,
+			headBlock: headBlock.Block(),
+		})
+		if err != nil {
+			log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
+		}
 	}
+
 	lastRoot, lastState := transition.LastCachedState()
 	if lastState == nil {
 		lastRoot, lastState = headRoot[:], headState
