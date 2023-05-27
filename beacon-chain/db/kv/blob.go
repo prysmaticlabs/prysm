@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -71,8 +72,8 @@ func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
 	if len(scs) == 0 {
 		return errors.New("nil or empty blob sidecars")
 	}
-	if uint64(len(scs)) > params.BeaconConfig().MaxBlobsPerBlock {
-		return fmt.Errorf("too many sidecars: %d > %d", len(scs), params.BeaconConfig().MaxBlobsPerBlock)
+	if uint64(len(scs)) > fieldparams.MaxBlobsPerBlock {
+		return fmt.Errorf("too many sidecars: %d > %d", len(scs), fieldparams.MaxBlobsPerBlock)
 	}
 
 	sl := scs[0].Slot
