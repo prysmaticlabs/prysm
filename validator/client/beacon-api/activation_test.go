@@ -82,21 +82,24 @@ func TestActivation_Nominal(t *testing.T) {
 			PublicKey: pubKeys[0],
 			Index:     55293,
 			Status: &ethpb.ValidatorStatusResponse{
-				Status: ethpb.ValidatorStatus_ACTIVE,
+				Status:          ethpb.ValidatorStatus_ACTIVE,
+				ActivationEpoch: 1000,
 			},
 		},
 		{
 			PublicKey: pubKeys[1],
 			Index:     11877,
 			Status: &ethpb.ValidatorStatusResponse{
-				Status: ethpb.ValidatorStatus_EXITING,
+				Status:          ethpb.ValidatorStatus_EXITING,
+				ActivationEpoch: 2000,
 			},
 		},
 		{
 			PublicKey: pubKeys[3],
 			Index:     210439,
 			Status: &ethpb.ValidatorStatusResponse{
-				Status: ethpb.ValidatorStatus_EXITED,
+				Status:          ethpb.ValidatorStatus_EXITED,
+				ActivationEpoch: 3000,
 			},
 		},
 		{
@@ -131,21 +134,24 @@ func TestActivation_Nominal(t *testing.T) {
 					Index:  "55293",
 					Status: "active_ongoing",
 					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: stringPubKeys[0],
+						PublicKey:       stringPubKeys[0],
+						ActivationEpoch: "1000",
 					},
 				},
 				{
 					Index:  "11877",
 					Status: "active_exiting",
 					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: stringPubKeys[1],
+						PublicKey:       stringPubKeys[1],
+						ActivationEpoch: "2000",
 					},
 				},
 				{
 					Index:  "210439",
 					Status: "exited_slashed",
 					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: stringPubKeys[3],
+						PublicKey:       stringPubKeys[3],
+						ActivationEpoch: "3000",
 					},
 				},
 			},

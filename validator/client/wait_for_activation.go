@@ -136,12 +136,7 @@ func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedCh
 				}
 			}
 
-			vals, err := v.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{Active: true, PageSize: 0})
-			if err != nil {
-				return errors.Wrap(err, "could not get active validator count")
-			}
-
-			valActivated := v.checkAndLogValidatorStatus(statuses, uint64(vals.TotalSize))
+			valActivated := v.checkAndLogValidatorStatus(statuses)
 			if valActivated {
 				logActiveValidatorStatus(statuses)
 			} else {

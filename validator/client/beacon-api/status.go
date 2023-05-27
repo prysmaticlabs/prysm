@@ -73,9 +73,6 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 		return nil, nil, nil, errors.Wrap(err, "failed to get state validators")
 	}
 
-	isLastActivatedValidatorIndexRetrieved := false
-	var lastActivatedValidatorIndex uint64 = 0
-
 	for i, validatorContainer := range stateValidatorsResponse.Data {
 		stringPubKey := validatorContainer.Validator.PublicKey
 
@@ -115,33 +112,6 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 		}
 
 		validatorStatus.ActivationEpoch = primitives.Epoch(activationEpoch)
-
-		// Set PositionInActivationQueue
-		switch status {
-		case ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED, ethpb.ValidatorStatus_DEPOSITED:
-			if !isLastActivatedValidatorIndexRetrieved {
-				isLastActivatedValidatorIndexRetrieved = true
-
-				activeStateValidators, err := c.stateValidatorsProvider.GetStateValidators(ctx, nil, nil, []string{"active"})
-				if err != nil {
-					return nil, nil, nil, errors.Wrap(err, "failed to get state validators")
-				}
-
-				data := activeStateValidators.Data
-
-				if nbActiveValidators := len(data); nbActiveValidators != 0 {
-					lastValidator := data[nbActiveValidators-1]
-
-					lastActivatedValidatorIndex, err = strconv.ParseUint(lastValidator.Index, 10, 64)
-					if err != nil {
-						return nil, nil, nil, errors.Wrapf(err, "failed to parse last validator index %s", lastValidator.Index)
-					}
-				}
-			}
-
-			validatorStatus.PositionInActivationQueue = validatorIndex - lastActivatedValidatorIndex
-		}
-
 		outValidatorsStatuses[i] = validatorStatus
 	}
 

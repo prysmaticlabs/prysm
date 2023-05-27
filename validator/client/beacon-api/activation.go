@@ -91,10 +91,18 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 				return nil, errors.New("invalid validator status: " + data.Status)
 			}
 
+			activationEpoch, err := strconv.ParseUint(data.Validator.ActivationEpoch, 10, 64)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to parse activation epoch")
+			}
+
 			statuses = append(statuses, &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubkey,
 				Index:     primitives.ValidatorIndex(index),
-				Status:    &ethpb.ValidatorStatusResponse{Status: validatorStatus},
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:          validatorStatus,
+					ActivationEpoch: primitives.Epoch(activationEpoch),
+				},
 			})
 		}
 

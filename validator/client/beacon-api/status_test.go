@@ -289,35 +289,6 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		nil,
 	).Times(1)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
-		ctx,
-		nil,
-		nil,
-		[]string{"active"},
-	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
-				{
-					Index:  "35000",
-					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364d",
-						ActivationEpoch: "56",
-					},
-				},
-				{
-					Index:  "39000",
-					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364e",
-						ActivationEpoch: "56",
-					},
-				},
-			},
-		},
-		nil,
-	).Times(1)
-
 	wantedStringValidatorsPubkey := []string{
 		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // existing
 		"0x800010c20716ef4264a6d93b3873a008ece58fb9312ac2cc3b0ccc40aedb050f2038281e6a92242a35476af9903c7919", // existing,
@@ -360,14 +331,12 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 			ActivationEpoch: 56,
 		},
 		{
-			Status:                    ethpb.ValidatorStatus_PENDING,
-			ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
-			PositionInActivationQueue: 1000,
+			Status:          ethpb.ValidatorStatus_PENDING,
+			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 		{
-			Status:                    ethpb.ValidatorStatus_PENDING,
-			ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
-			PositionInActivationQueue: 11000,
+			Status:          ethpb.ValidatorStatus_PENDING,
+			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 		{
 			Status:          ethpb.ValidatorStatus_UNKNOWN_STATUS,
@@ -420,25 +389,12 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		nil,
 	).Times(1)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
-		ctx,
-		nil,
-		nil,
-		[]string{"active"},
-	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{},
-		},
-		nil,
-	).Times(1)
-
 	wantedValidatorsPubKey := [][]byte{validatorPubKey}
 	wantedValidatorsIndex := []primitives.ValidatorIndex{40000}
 	wantedValidatorsStatusResponse := []*ethpb.ValidatorStatusResponse{
 		{
-			Status:                    ethpb.ValidatorStatus_PENDING,
-			ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
-			PositionInActivationQueue: 40000,
+			Status:          ethpb.ValidatorStatus_PENDING,
+			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
 
@@ -601,84 +557,6 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 				},
 			},
 			outputErrMessage: "failed to parse activation epoch NotAnEpoch",
-		},
-		{
-			name: "failed to get state validators",
-
-			inputPubKeys: [][]byte{pubKey},
-			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
-
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
-							{
-								Index:  "12345",
-								Status: "pending_queued",
-								Validator: &rpcmiddleware.ValidatorJson{
-									PublicKey:       stringPubKey,
-									ActivationEpoch: "10",
-								},
-							},
-						},
-					},
-					outputErr: nil,
-				},
-				{
-					inputStringPubKeys: nil,
-					inputIndexes:       nil,
-					inputStatuses:      []string{"active"},
-
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{},
-					outputErr:                         errors.New("a specific error"),
-				},
-			},
-			outputErrMessage: "failed to get state validators",
-		},
-		{
-			name: "failed to parse last validator index",
-
-			inputPubKeys: [][]byte{pubKey},
-			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
-
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
-							{
-								Index:  "12345",
-								Status: "pending_queued",
-								Validator: &rpcmiddleware.ValidatorJson{
-									PublicKey:       stringPubKey,
-									ActivationEpoch: "10",
-								},
-							},
-						},
-					},
-					outputErr: nil,
-				},
-				{
-					inputStringPubKeys: nil,
-					inputIndexes:       nil,
-					inputStatuses:      []string{"active"},
-
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
-							{
-								Index: "NotAnIndex",
-							},
-						},
-					},
-					outputErr: nil,
-				},
-			},
-			outputErrMessage: "failed to parse last validator index NotAnIndex",
 		},
 	}
 
