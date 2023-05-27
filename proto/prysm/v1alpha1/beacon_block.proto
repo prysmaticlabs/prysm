@@ -451,7 +451,7 @@ message BlindedBeaconBlockBodyBellatrix {
 
 message SignedBeaconBlockAndBlobsDeneb {
     SignedBeaconBlockDeneb block = 1;
-    repeated SignedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "blob_in_block.size"];
+    repeated SignedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message SignedBeaconBlockDeneb {
@@ -464,7 +464,7 @@ message SignedBeaconBlockDeneb {
 
 message BeaconBlockAndBlobsDeneb {
     BeaconBlockDeneb block = 1;
-    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "blob_in_block.size"];
+    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BeaconBlockDeneb {
@@ -522,7 +522,7 @@ message BeaconBlockBodyDeneb {
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
-    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
+    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
 }
 
 message SignedBeaconBlockCapella {
@@ -720,7 +720,7 @@ message BlindedBeaconBlockBodyDeneb {
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Deneb network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
-    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
+    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
 }
 
 message ValidatorRegistrationV1 {
