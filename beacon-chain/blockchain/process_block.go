@@ -664,7 +664,6 @@ func (s *Service) spawnLateBlockTasksLoop() {
 			select {
 			case <-ticker.C():
 				s.lateBlockTasks(s.ctx)
-
 			case <-s.ctx.Done():
 				log.Debug("Context closed, exiting routine")
 				return
@@ -698,7 +697,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-	if (has && id == [8]byte{}) || features.Get().PrepareAllPayloads {
+	if (has || features.Get().PrepareAllPayloads) && id == [8]byte{} {
 		_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 			headState: headState,
 			headRoot:  headRoot,
