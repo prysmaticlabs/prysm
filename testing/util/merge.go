@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	v2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -51,7 +50,7 @@ func NewBlindedBeaconBlockCapellaV2() *v2.SignedBlindedBeaconBlockCapella {
 
 // NewBeaconBlockAndBlobsDeneb creates a beacon block content including blobs with minimum marshalable fields.
 func NewBeaconBlockAndBlobsDeneb(numOfBlobs uint64) (*ethpb.SignedBeaconBlockAndBlobsDeneb, error) {
-	if numOfBlobs > params.BeaconConfig().MaxBlobsPerBlock {
+	if numOfBlobs > fieldparams.MaxBlobsPerBlock {
 		return nil, fmt.Errorf("declared too many blobs: %v", numOfBlobs)
 	}
 	blobs := make([]*ethpb.SignedBlobSidecar, numOfBlobs)
