@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -63,18 +64,18 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 	t.Run("save and retrieve by root (max)", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 	})
 	t.Run("save and retrieve valid subset by root", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 
 		// we'll request indices 0 and 3, so make a slice with those indices for comparison
 		expect := make([]*ethpb.BlobSidecar, 2)
@@ -89,9 +90,9 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 	t.Run("error for invalid index when retrieving by root", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot), uint64(len(scs)))
 		require.ErrorIs(t, err, ErrNotFound)
@@ -108,18 +109,18 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 	t.Run("save and retrieve by slot (max)", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot)
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 	})
 	t.Run("save and retrieve valid subset by slot", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 
 		// we'll request indices 0 and 3, so make a slice with those indices for comparison
 		expect := make([]*ethpb.BlobSidecar, 2)
@@ -135,9 +136,9 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 	t.Run("error for invalid index when retrieving by slot", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 
 		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot, uint64(len(scs)))
 		require.ErrorIs(t, err, ErrNotFound)
@@ -145,9 +146,9 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 	t.Run("delete works", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
@@ -158,9 +159,9 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 	t.Run("saving a blob with older slot", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
@@ -168,15 +169,15 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 	t.Run("saving a new blob for rotation", func(t *testing.T) {
 		db := setupDB(t)
-		scs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(params.BeaconConfig().MaxBlobsPerBlock), len(scs))
+		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
 		oldBlockRoot := scs[0].BlockRoot
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(oldBlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 
-		newScs := generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock)
+		newScs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range newScs {
 			sc.Slot = sc.Slot + newRetentionSlot
@@ -231,7 +232,7 @@ func TestStore_verifySideCars(t *testing.T) {
 		error string
 	}{
 		{name: "empty", scs: []*ethpb.BlobSidecar{}, error: "nil or empty blob sidecars"},
-		{name: "too many sidecars", scs: generateBlobSidecars(t, params.BeaconConfig().MaxBlobsPerBlock+1), error: "too many sidecars: 5 > 4"},
+		{name: "too many sidecars", scs: generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock+1), error: "too many sidecars: 5 > 4"},
 		{name: "invalid slot", scs: []*ethpb.BlobSidecar{{Slot: 1}, {Slot: 2}}, error: "sidecar slot mismatch: 2 != 1"},
 		{name: "invalid proposer index", scs: []*ethpb.BlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, error: "sidecar proposer index mismatch: 2 != 1"},
 		{name: "invalid root", scs: []*ethpb.BlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, error: "sidecar root mismatch: 02 != 01"},
