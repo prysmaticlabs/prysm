@@ -37,7 +37,7 @@ func Uint64FromString(str string) (uint64, error) {
 
 // EpochFromString converts a string into Epoch.
 func EpochFromString(str string) (primitives.Epoch, error) {
-	e, err := strconv.ParseUint(str, 10, 64)
+	e, err := Uint64FromString(str)
 	if err != nil {
 		return primitives.Epoch(e), err
 	}
@@ -46,7 +46,7 @@ func EpochFromString(str string) (primitives.Epoch, error) {
 
 // SlotFromString converts a string into Slot.
 func SlotFromString(str string) (primitives.Slot, error) {
-	s, err := strconv.ParseUint(str, 10, 64)
+	s, err := Uint64FromString(str)
 	if err != nil {
 		return primitives.Slot(s), err
 	}
