@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
-func Test_uint64FromString(t *testing.T) {
+func Test_fromString(t *testing.T) {
 	tests := []struct {
 		name    string
 		str     string
