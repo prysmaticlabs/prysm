@@ -97,15 +97,12 @@ func ExportStandardProtectionJSON(
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not retrieve signed attestations for public key %s", pubKeyHex)
 		}
-		if _, ok := dataByPubKey[pubKey]; ok {
-			dataByPubKey[pubKey].SignedAttestations = signedAttestations
-		} else {
-			dataByPubKey[pubKey] = &format.ProtectionData{
-				Pubkey:             pubKeyHex,
-				SignedBlocks:       nil,
-				SignedAttestations: signedAttestations,
-			}
+		if _, ok := dataByPubKey[pubKey]; !ok {
+			// This should never happen
+			return nil, errors.Wrapf(err, "could not retrieve proposer public key from array")
 		}
+		dataByPubKey[pubKey].SignedAttestations = signedAttestations
+
 		if err := bar.Add(1); err != nil {
 			return nil, err
 		}
@@ -173,8 +170,8 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 
 func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*format.SignedBlock, error) {
 	// If a key does not have a lowest or highest signed proposal history
-	// in our database, we return nil. This way, a user will be able to export their
-	// slashing protection history even if one of their keys does not have a history
+	// in our database, we return an empty list. This way, a user will be able to export
+	// their slashing protection history even if one of their keys does not have a history
 	// of signed blocks.
 	proposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, pubKey)
 	if err != nil {
