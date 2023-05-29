@@ -49,7 +49,7 @@ func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(
 	return primitives.ValidatorIndex(bytesutil.BytesToUint64BigEndian(vId)), pId, true
 }
 
-// SetProposerAndPayloadIDs sets the proposer and payload IDs for the given slot and block root.
+// SetProposerAndPayloadIDs sets the proposer and payload IDs for the given slot and head root to build block.
 func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(
 	slot primitives.Slot,
 	vId primitives.ValidatorIndex,
