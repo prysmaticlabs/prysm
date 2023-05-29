@@ -145,8 +145,8 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		return createBuckets(
 			tx,
 			genesisInfoBucket,
-			deprecatedAttestationHistoryBucket,
 			historicProposalsBucket,
+			deprecatedAttestationHistoryBucket,
 			lowestSignedSourceBucket,
 			lowestSignedTargetBucket,
 			lowestSignedProposalsBucket,
