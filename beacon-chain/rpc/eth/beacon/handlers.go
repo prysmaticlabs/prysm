@@ -81,6 +81,14 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 				network.WriteError(w, errJson)
 				return
 			}
+			if err = bs.validateBroadcast(r, consensusBlock); err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
 			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
@@ -93,6 +101,14 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 			if err != nil {
 				errJson := &network.DefaultErrorJson{
 					Message: "Could not decode request body into consensus block: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
+			if err = bs.validateBroadcast(r, consensusBlock); err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: err.Error(),
 					Code:    http.StatusBadRequest,
 				}
 				network.WriteError(w, errJson)
@@ -114,6 +130,14 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 				network.WriteError(w, errJson)
 				return
 			}
+			if err = bs.validateBroadcast(r, consensusBlock); err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
 			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
@@ -125,6 +149,14 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 			if err != nil {
 				errJson := &network.DefaultErrorJson{
 					Message: "Could not decode request body into consensus block: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
+			if err = bs.validateBroadcast(r, consensusBlock); err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: err.Error(),
 					Code:    http.StatusBadRequest,
 				}
 				network.WriteError(w, errJson)
@@ -197,6 +229,14 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 				network.WriteError(w, errJson)
 				return
 			}
+			if err = bs.validateBroadcast(r, consensusBlock); err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
 			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
@@ -208,6 +248,14 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				errJson := &network.DefaultErrorJson{
 					Message: "Could not decode request body into consensus block: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
+			if err = bs.validateBroadcast(r, consensusBlock); err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: err.Error(),
 					Code:    http.StatusBadRequest,
 				}
 				network.WriteError(w, errJson)
@@ -229,6 +277,14 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 				network.WriteError(w, errJson)
 				return
 			}
+			if err = bs.validateBroadcast(r, consensusBlock); err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
 			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
@@ -240,6 +296,14 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				errJson := &network.DefaultErrorJson{
 					Message: "Could not decode request body into consensus block: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
+			if err = bs.validateBroadcast(r, consensusBlock); err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: err.Error(),
 					Code:    http.StatusBadRequest,
 				}
 				network.WriteError(w, errJson)
@@ -278,23 +342,28 @@ func unmarshalStrict(data []byte, v interface{}) error {
 func (bs *Server) validateBroadcast(r *http.Request, blk *eth.GenericSignedBeaconBlock) error {
 	switch r.URL.Query().Get(broadcastValidationQueryParam) {
 	case broadcastValidationConsensus:
-		b, err := blocks.NewSignedBeaconBlock(blk)
+		b, err := blocks.NewSignedBeaconBlock(blk.Block)
 		if err != nil {
 			return errors.Wrapf(err, "could not create signed beacon block")
 		}
-		return bs.validateConsensus(r.Context(), b)
+		if err = bs.validateConsensus(r.Context(), b); err != nil {
+			return errors.Wrap(err, "consensus validation failed")
+		}
 	case broadcastValidationConsensusAndEquivocation:
-		b, err := blocks.NewSignedBeaconBlock(blk)
+		b, err := blocks.NewSignedBeaconBlock(blk.Block)
 		if err != nil {
 			return errors.Wrapf(err, "could not create signed beacon block")
 		}
-		if err := bs.validateConsensus(r.Context(), b); err != nil {
-			return err
+		if err = bs.validateConsensus(r.Context(), b); err != nil {
+			return errors.Wrap(err, "consensus validation failed")
 		}
-		return bs.validateEquivocation(b.Block())
+		if err = bs.validateEquivocation(b.Block()); err != nil {
+			return errors.Wrap(err, "equivocation validation failed")
+		}
 	default:
 		return nil
 	}
+	return nil
 }
 
 func (bs *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) error {

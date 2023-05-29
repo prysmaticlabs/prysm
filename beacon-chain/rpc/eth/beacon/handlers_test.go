@@ -9,7 +9,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/types"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -21,11 +20,11 @@ func TestPublishBlockV2(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	t.Run("Phase 0", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
 			return ok
-		}), gomock.Eq(types.Gossip))
+		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
@@ -38,11 +37,11 @@ func TestPublishBlockV2(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
 			return ok
-		}), gomock.Eq(types.Gossip))
+		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
@@ -55,11 +54,11 @@ func TestPublishBlockV2(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Bellatrix)
 			return ok
-		}), gomock.Eq(types.Gossip))
+		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
@@ -72,51 +71,17 @@ func TestPublishBlockV2(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("Capella", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Capella)
 			return ok
-		}), gomock.Eq(types.Gossip))
+		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		request := httptest.NewRequest("GET", "http://foo.example", bytes.NewReader([]byte(capellaBlock)))
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-		server.PublishBlockV2(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-	})
-	t.Run("consensus validation", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			return ok
-		}), gomock.Eq(types.Consensus))
-		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
-		}
-
-		request := httptest.NewRequest("GET", "http://foo.example?broadcast_validation=consensus", bytes.NewReader([]byte(phase0Block)))
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-		server.PublishBlockV2(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-	})
-	t.Run("consensus and equivocation validation", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			return ok
-		}), gomock.Eq(types.ConsensusAndEquivocation))
-		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
-		}
-
-		request := httptest.NewRequest("GET", "http://foo.example?broadcast_validation=consensus_and_equivocation", bytes.NewReader([]byte(phase0Block)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -156,11 +121,11 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	t.Run("Phase 0", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
 			return ok
-		}), gomock.Eq(types.Gossip))
+		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
@@ -173,11 +138,11 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
 			return ok
-		}), gomock.Eq(types.Gossip))
+		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
@@ -190,11 +155,11 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedBellatrix)
 			return ok
-		}), gomock.Eq(types.Gossip))
+		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
@@ -207,51 +172,17 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("Capella", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedCapella)
 			return ok
-		}), gomock.Eq(types.Gossip))
+		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
 		request := httptest.NewRequest("GET", "http://foo.example", bytes.NewReader([]byte(blindedCapellaBlock)))
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-		server.PublishBlindedBlockV2(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-	})
-	t.Run("consensus validation", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			return ok
-		}), gomock.Eq(types.Consensus))
-		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
-		}
-
-		request := httptest.NewRequest("GET", "http://foo.example?broadcast_validation=consensus", bytes.NewReader([]byte(phase0Block)))
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-		server.PublishBlindedBlockV2(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-	})
-	t.Run("consensus and equivocation validation", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockExtendedBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeGenericBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			return ok
-		}), gomock.Eq(types.ConsensusAndEquivocation))
-		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
-		}
-
-		request := httptest.NewRequest("GET", "http://foo.example?broadcast_validation=consensus_and_equivocation", bytes.NewReader([]byte(phase0Block)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)

@@ -327,12 +327,14 @@ type Withdrawal struct {
 }
 
 type SignedBlsToExecutionChange struct {
-	BlsToExecutionChange BlsToExecutionChange `json:"bls_to_execution_change" validate:"required"`
-	Signature            string               `json:"signature" validate:"required"`
+	Message   BlsToExecutionChange `json:"message" validate:"required"`
+	Signature string               `json:"signature" validate:"required"`
 }
 
 type BlsToExecutionChange struct {
-	ValidatorIndex string `json:"validator_index" validate:"required"`
+	ValidatorIndex     string `json:"validator_index" validate:"required"`
+	FromBlsPubkey      string `json:"from_bls_pubkey" validate:"required"`
+	ToExecutionAddress string `json:"to_execution_address" validate:"required"`
 }
 
 func (b *SignedBeaconBlock) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
@@ -1023,7 +1025,10 @@ func (b *SignedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, e
 			Amount:         amount,
 		}
 	}
-	blsChanges := make([]*eth.SignedBLSToExecutionChange, len(b.Message.Body.BlsToExecutionChanges))
+	blsChanges, err := convertBlsChanges(b.Message.Body.BlsToExecutionChanges)
+	if err != nil {
+		return nil, err
+	}
 
 	block := &eth.SignedBeaconBlockCapella{
 		Block: &eth.BeaconBlockCapella{
@@ -1202,7 +1207,10 @@ func (b *SignedBlindedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconB
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode b.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot")
 	}
-	blsChanges := make([]*eth.SignedBLSToExecutionChange, len(b.Message.Body.BlsToExecutionChanges))
+	blsChanges, err := convertBlsChanges(b.Message.Body.BlsToExecutionChanges)
+	if err != nil {
+		return nil, err
+	}
 
 	block := &eth.SignedBlindedBeaconBlockCapella{
 		Block: &eth.BlindedBeaconBlockCapella{
@@ -1592,6 +1600,41 @@ func convertExits(src []SignedVoluntaryExit) ([]*eth.SignedVoluntaryExit, error)
 		}
 	}
 	return exits, nil
+}
+
+func convertBlsChanges(src []SignedBlsToExecutionChange) ([]*eth.SignedBLSToExecutionChange, error) {
+	if src == nil {
+		return nil, errors.New("nil b.Message.Body.BlsToExecutionChanges")
+	}
+
+	changes := make([]*eth.SignedBLSToExecutionChange, len(src))
+	for i, ch := range src {
+		sig, err := hexutil.Decode(ch.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.BlsToExecutionChanges[%d].Signature", i)
+		}
+		index, err := strconv.ParseUint(ch.Message.ValidatorIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.BlsToExecutionChanges[%d].Message.ValidatorIndex", i)
+		}
+		pubkey, err := hexutil.Decode(ch.Message.FromBlsPubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.BlsToExecutionChanges[%d].Message.FromBlsPubkey", i)
+		}
+		address, err := hexutil.Decode(ch.Message.ToExecutionAddress)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode b.Message.Body.BlsToExecutionChanges[%d].Message.ToExecutionAddress", i)
+		}
+		changes[i] = &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex:     primitives.ValidatorIndex(index),
+				FromBlsPubkey:      pubkey,
+				ToExecutionAddress: address,
+			},
+			Signature: sig,
+		}
+	}
+	return changes, nil
 }
 
 func uint256ToHex(num string) ([]byte, error) {
