@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -239,7 +238,11 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
-	return vs.ProposeGenericBeaconBlock(ctx, req, types.Gossip)
+	blk, err := blocks.NewSignedBeaconBlock(req.Block)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
+	}
+	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
@@ -321,18 +324,9 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}, nil
 }
 
-func (vs *Server) ProposeGenericBeaconBlock(
-	ctx context.Context,
-	req *ethpb.GenericSignedBeaconBlock,
-	validation types.BroadcastValidation) (*ethpb.ProposeResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeGenericBeaconBlock")
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
-
-	blk, err := blocks.NewSignedBeaconBlock(req.Block)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
-	}
-
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
@@ -347,19 +341,6 @@ func (vs *Server) ProposeGenericBeaconBlock(
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
 
-	if validation == types.Consensus {
-		if err = vs.validateConsensus(ctx, blk); err != nil {
-			return nil, errors.Wrap(err, types.ErrConsensusValidationFailed.Error())
-		}
-	} else if validation == types.ConsensusAndEquivocation {
-		if err = vs.validateConsensus(ctx, blk); err != nil {
-			return nil, errors.Wrap(err, types.ErrConsensusValidationFailed.Error())
-		}
-		if err = vs.validateEquivocation(blk.Block()); err != nil {
-			return nil, errors.Wrap(err, types.ErrEquivocationValidationFailed.Error())
-		}
-	}
-
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
 		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
@@ -369,8 +350,6 @@ func (vs *Server) ProposeGenericBeaconBlock(
 			Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
 		})
 	}()
-
-	vs.insertSeenProposerIndex(blk.Block().Slot(), blk.Block().ProposerIndex())
 
 	// Broadcast the new block to the network.
 	blkPb, err := blk.Proto()
@@ -424,59 +403,4 @@ func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpb.S
 	}
 
 	return &emptypb.Empty{}, nil
-}
-
-func (vs *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) error {
-	parentState, err := vs.StateGen.StateByRoot(ctx, blk.Block().ParentRoot())
-	if err != nil {
-		return errors.Wrap(err, "could not get parent state")
-	}
-	_, err = transition.ExecuteStateTransition(ctx, parentState, blk)
-	if err != nil {
-		return errors.Wrap(err, "could not execute state transition")
-	}
-	return nil
-}
-
-func (vs *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error {
-	if vs.seenProposerIndex(blk.Slot(), blk.ProposerIndex()) {
-		return fmt.Errorf("block exists in sync service, slot: %d, proposer index: %d", blk.Slot(), blk.ProposerIndex())
-	}
-	return nil
-}
-
-func (vs *Server) seenProposerIndex(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) bool {
-	vs.seenProposerIndexCacheLock.RLock()
-	defer vs.seenProposerIndexCacheLock.RUnlock()
-	if vs.SeenProposerIndexCache == nil {
-		return false
-	}
-
-	if vs.SeenProposerIndexCache[0] != primitives.ValidatorIndex(slot) {
-		return false
-	}
-	for _, i := range vs.SeenProposerIndexCache[1:] {
-		if i == proposerIdx {
-			return true
-		}
-	}
-	return false
-}
-
-func (vs *Server) insertSeenProposerIndex(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) {
-	vs.seenProposerIndexCacheLock.Lock()
-	defer vs.seenProposerIndexCacheLock.Unlock()
-	if vs.SeenProposerIndexCache == nil {
-		return
-	}
-	if vs.TimeFetcher.CurrentSlot() != slot {
-		return
-	}
-	switch {
-	case uint64(vs.SeenProposerIndexCache[0]) == uint64(slot):
-		vs.SeenProposerIndexCache = append(vs.SeenProposerIndexCache, proposerIdx)
-	case uint64(slot) > uint64(vs.SeenProposerIndexCache[0]):
-		// Overwrite slot in proposer index cache if it's higher.
-		vs.SeenProposerIndexCache = []primitives.ValidatorIndex{primitives.ValidatorIndex(slot), proposerIdx}
-	}
 }

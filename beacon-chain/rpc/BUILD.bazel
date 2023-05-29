@@ -41,7 +41,6 @@ go_library(
         "//beacon-chain/sync:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",
-        "//consensus-types/primitives:go_default_library",
         "//io/logs:go_default_library",
         "//monitoring/tracing:go_default_library",
         "//proto/eth/service:go_default_library",

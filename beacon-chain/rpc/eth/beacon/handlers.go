@@ -4,15 +4,24 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+)
+
+const (
+	broadcastValidationQueryParam               = "broadcast_validation"
+	broadcastValidationConsensus                = "consensus"
+	broadcastValidationConsensusAndEquivocation = "consensus_and_equivocation"
 )
 
 // PublishBlindedBlockV2 instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct and publish a
@@ -49,16 +58,6 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var broadcastValidation types.BroadcastValidation
-	switch r.URL.Query().Get("broadcast_validation") {
-	case "consensus":
-		broadcastValidation = types.Consensus
-	case "consensus_and_equivocation":
-		broadcastValidation = types.ConsensusAndEquivocation
-	default:
-		broadcastValidation = types.Gossip
-	}
-
 	validate := validator.New()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -82,7 +81,7 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 				network.WriteError(w, errJson)
 				return
 			}
-			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
+			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
 	}
@@ -99,7 +98,7 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 				network.WriteError(w, errJson)
 				return
 			}
-			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
+			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
 	}
@@ -115,7 +114,7 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 				network.WriteError(w, errJson)
 				return
 			}
-			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
+			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
 	}
@@ -131,7 +130,7 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 				network.WriteError(w, errJson)
 				return
 			}
-			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
+			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
 	}
@@ -175,16 +174,6 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var broadcastValidation types.BroadcastValidation
-	switch r.URL.Query().Get("broadcast_validation") {
-	case "consensus":
-		broadcastValidation = types.Consensus
-	case "consensus_and_equivocation":
-		broadcastValidation = types.ConsensusAndEquivocation
-	default:
-		broadcastValidation = types.Gossip
-	}
-
 	validate := validator.New()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -208,7 +197,7 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 				network.WriteError(w, errJson)
 				return
 			}
-			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
+			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
 	}
@@ -224,7 +213,7 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 				network.WriteError(w, errJson)
 				return
 			}
-			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
+			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
 	}
@@ -240,7 +229,7 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 				network.WriteError(w, errJson)
 				return
 			}
-			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
+			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
 	}
@@ -256,7 +245,7 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 				network.WriteError(w, errJson)
 				return
 			}
-			bs.proposeBlock(r.Context(), w, consensusBlock, broadcastValidation)
+			bs.proposeBlock(r.Context(), w, consensusBlock)
 			return
 		}
 	}
@@ -268,24 +257,9 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	network.WriteError(w, errJson)
 }
 
-func (bs *Server) proposeBlock(
-	ctx context.Context,
-	w http.ResponseWriter,
-	blk *eth.GenericSignedBeaconBlock,
-	broadcastValidation types.BroadcastValidation,
-) {
-	_, err := bs.V1Alpha1ValidatorServer.ProposeGenericBeaconBlock(ctx, blk, broadcastValidation)
+func (bs *Server) proposeBlock(ctx context.Context, w http.ResponseWriter, blk *eth.GenericSignedBeaconBlock) {
+	_, err := bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, blk)
 	if err != nil {
-		errMsg := err.Error()
-		if strings.Contains(errMsg, types.ErrConsensusValidationFailed.Error()) ||
-			strings.Contains(errMsg, types.ErrEquivocationValidationFailed.Error()) {
-			errJson := &network.DefaultErrorJson{
-				Message: err.Error(),
-				Code:    http.StatusBadRequest,
-			}
-			network.WriteError(w, errJson)
-			return
-		}
 		errJson := &network.DefaultErrorJson{
 			Message: err.Error(),
 			Code:    http.StatusInternalServerError,
@@ -299,4 +273,46 @@ func unmarshalStrict(data []byte, v interface{}) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	return dec.Decode(v)
+}
+
+func (bs *Server) validateBroadcast(r *http.Request, blk *eth.GenericSignedBeaconBlock) error {
+	switch r.URL.Query().Get(broadcastValidationQueryParam) {
+	case broadcastValidationConsensus:
+		b, err := blocks.NewSignedBeaconBlock(blk)
+		if err != nil {
+			return errors.Wrapf(err, "could not create signed beacon block")
+		}
+		return bs.validateConsensus(r.Context(), b)
+	case broadcastValidationConsensusAndEquivocation:
+		b, err := blocks.NewSignedBeaconBlock(blk)
+		if err != nil {
+			return errors.Wrapf(err, "could not create signed beacon block")
+		}
+		if err := bs.validateConsensus(r.Context(), b); err != nil {
+			return err
+		}
+		return bs.validateEquivocation(b.Block())
+	default:
+		return nil
+	}
+}
+
+func (bs *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) error {
+	parentRoot := blk.Block().ParentRoot()
+	parentState, err := bs.Stater.State(ctx, parentRoot[:])
+	if err != nil {
+		return errors.Wrap(err, "could not get parent state")
+	}
+	_, err = transition.ExecuteStateTransition(ctx, parentState, blk)
+	if err != nil {
+		return errors.Wrap(err, "could not execute state transition")
+	}
+	return nil
+}
+
+func (bs *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error {
+	if bs.ForkchoiceFetcher.HighestReceivedBlockSlot() == blk.Slot() {
+		return fmt.Errorf("block for slot %d already exists in sync service", blk.Slot())
+	}
+	return nil
 }

@@ -5,7 +5,6 @@ package validator
 
 import (
 	"context"
-	sync2 "sync"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
@@ -28,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -42,42 +40,40 @@ import (
 // and committees in which particular validators need to perform their responsibilities,
 // and more.
 type Server struct {
-	Ctx                        context.Context
-	AttestationCache           *cache.AttestationCache
-	ProposerSlotIndexCache     *cache.ProposerPayloadIDsCache
-	HeadFetcher                blockchain.HeadFetcher
-	ForkFetcher                blockchain.ForkFetcher
-	ForkchoiceFetcher          blockchain.ForkchoiceFetcher
-	GenesisFetcher             blockchain.GenesisFetcher
-	FinalizationFetcher        blockchain.FinalizationFetcher
-	TimeFetcher                blockchain.TimeFetcher
-	BlockFetcher               execution.POWBlockFetcher
-	DepositFetcher             depositcache.DepositFetcher
-	ChainStartFetcher          execution.ChainStartFetcher
-	Eth1InfoFetcher            execution.ChainInfoFetcher
-	OptimisticModeFetcher      blockchain.OptimisticModeFetcher
-	SyncChecker                sync.Checker
-	StateNotifier              statefeed.Notifier
-	BlockNotifier              blockfeed.Notifier
-	P2P                        p2p.Broadcaster
-	AttPool                    attestations.Pool
-	SlashingsPool              slashings.PoolManager
-	ExitPool                   voluntaryexits.PoolManager
-	SyncCommitteePool          synccommittee.Pool
-	BlockReceiver              blockchain.BlockReceiver
-	MockEth1Votes              bool
-	Eth1BlockFetcher           execution.POWBlockFetcher
-	PendingDepositsFetcher     depositcache.PendingDepositsFetcher
-	OperationNotifier          opfeed.Notifier
-	StateGen                   stategen.StateManager
-	ReplayerBuilder            stategen.ReplayerBuilder
-	BeaconDB                   db.HeadAccessDatabase
-	ExecutionEngineCaller      execution.EngineCaller
-	BlockBuilder               builder.BlockBuilder
-	BLSChangesPool             blstoexec.PoolManager
-	ClockWaiter                startup.ClockWaiter
-	SeenProposerIndexCache     []primitives.ValidatorIndex
-	seenProposerIndexCacheLock sync2.RWMutex
+	Ctx                    context.Context
+	AttestationCache       *cache.AttestationCache
+	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
+	HeadFetcher            blockchain.HeadFetcher
+	ForkFetcher            blockchain.ForkFetcher
+	ForkchoiceFetcher      blockchain.ForkchoiceFetcher
+	GenesisFetcher         blockchain.GenesisFetcher
+	FinalizationFetcher    blockchain.FinalizationFetcher
+	TimeFetcher            blockchain.TimeFetcher
+	BlockFetcher           execution.POWBlockFetcher
+	DepositFetcher         depositcache.DepositFetcher
+	ChainStartFetcher      execution.ChainStartFetcher
+	Eth1InfoFetcher        execution.ChainInfoFetcher
+	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
+	SyncChecker            sync.Checker
+	StateNotifier          statefeed.Notifier
+	BlockNotifier          blockfeed.Notifier
+	P2P                    p2p.Broadcaster
+	AttPool                attestations.Pool
+	SlashingsPool          slashings.PoolManager
+	ExitPool               voluntaryexits.PoolManager
+	SyncCommitteePool      synccommittee.Pool
+	BlockReceiver          blockchain.BlockReceiver
+	MockEth1Votes          bool
+	Eth1BlockFetcher       execution.POWBlockFetcher
+	PendingDepositsFetcher depositcache.PendingDepositsFetcher
+	OperationNotifier      opfeed.Notifier
+	StateGen               stategen.StateManager
+	ReplayerBuilder        stategen.ReplayerBuilder
+	BeaconDB               db.HeadAccessDatabase
+	ExecutionEngineCaller  execution.EngineCaller
+	BlockBuilder           builder.BlockBuilder
+	BLSChangesPool         blstoexec.PoolManager
+	ClockWaiter            startup.ClockWaiter
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

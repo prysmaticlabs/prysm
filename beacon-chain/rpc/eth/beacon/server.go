@@ -39,10 +39,11 @@ type Server struct {
 	HeadFetcher                   blockchain.HeadFetcher
 	TimeFetcher                   blockchain.TimeFetcher
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
-	V1Alpha1ValidatorServer       eth.ExtendedBeaconNodeValidatorServer
+	V1Alpha1ValidatorServer       eth.BeaconNodeValidatorServer
 	SyncChecker                   sync.Checker
 	CanonicalHistory              *stategen.CanonicalHistory
 	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	BLSChangesPool                blstoexec.PoolManager
+	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
 }
