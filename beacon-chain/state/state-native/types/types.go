@@ -213,7 +213,7 @@ const (
 	HistoricalSummaries
 )
 
-// StateEnumerator is a thread-safe counter of all states created from the node's start.
+// StateEnumerator is a thread-safe counter of all states created since the node's start.
 type StateEnumerator struct {
 	counter uint64
 	lock    sync.RWMutex
@@ -228,5 +228,5 @@ func (c *StateEnumerator) Inc() uint64 {
 	return v
 }
 
-// Enumerator keeps track of the number of the number of states created from the node's start.
+// Enumerator keeps track of the number of states created from since the node's start.
 var Enumerator = StateEnumerator{}
