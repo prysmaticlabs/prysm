@@ -34,7 +34,7 @@ var (
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
-		Usage: "Enables the validator to connect to a beacon node using the --slasher flag" +
+		Usage: "Enables the validator to connect to a beacon node using the --slasher flag " +
 			"for remote slashing protection",
 	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
