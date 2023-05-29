@@ -343,7 +343,7 @@ func (bs *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnly
 
 func (bs *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error {
 	if bs.ForkchoiceFetcher.HighestReceivedBlockSlot() == blk.Slot() {
-		return fmt.Errorf("block for slot %d already exists in sync service", blk.Slot())
+		return fmt.Errorf("block for slot %d already exists in fork choice", blk.Slot())
 	}
 	return nil
 }
