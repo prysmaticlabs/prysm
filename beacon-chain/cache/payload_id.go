@@ -29,7 +29,7 @@ func NewProposerPayloadIDsCache() *ProposerPayloadIDsCache {
 	}
 }
 
-// GetProposerPayloadIDs returns the proposer and payload IDs for the given slot.
+// GetProposerPayloadIDs returns the proposer and payload IDs for the given slot and block root.
 func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(
 	slot primitives.Slot,
 	r [fieldparams.RootLength]byte,
