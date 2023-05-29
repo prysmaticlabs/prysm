@@ -35,26 +35,7 @@ const (
 // a `SignedBeaconBlock`. The broadcast behaviour may be adjusted via the `broadcast_validation`
 // query parameter.
 func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
-	isSyncing, syncDetails, err := helpers.ValidateSyncHTTP(r.Context(), bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher)
-	if err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "Could not check if node is syncing: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	if isSyncing {
-		msg := "Beacon node is currently syncing and not serving request on that endpoint"
-		details, err := json.Marshal(syncDetails)
-		if err == nil {
-			msg += " Details: " + string(details)
-		}
-		errJson := &network.DefaultErrorJson{
-			Message: msg,
-			Code:    http.StatusServiceUnavailable,
-		}
-		network.WriteError(w, errJson)
+	if ok := bs.checkSync(r.Context(), w); !ok {
 		return
 	}
 
@@ -183,26 +164,7 @@ func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) 
 // successfully broadcast but failed integration. The broadcast behaviour may be adjusted via the
 // `broadcast_validation` query parameter.
 func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
-	isSyncing, syncDetails, err := helpers.ValidateSyncHTTP(r.Context(), bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher)
-	if err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "Could not check if node is syncing: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	if isSyncing {
-		msg := "Beacon node is currently syncing and not serving request on that endpoint"
-		details, err := json.Marshal(syncDetails)
-		if err == nil {
-			msg += " Details: " + string(details)
-		}
-		errJson := &network.DefaultErrorJson{
-			Message: msg,
-			Code:    http.StatusServiceUnavailable,
-		}
-		network.WriteError(w, errJson)
+	if ok := bs.checkSync(r.Context(), w); !ok {
 		return
 	}
 
@@ -384,4 +346,30 @@ func (bs *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error
 		return fmt.Errorf("block for slot %d already exists in sync service", blk.Slot())
 	}
 	return nil
+}
+
+func (bs *Server) checkSync(ctx context.Context, w http.ResponseWriter) bool {
+	isSyncing, syncDetails, err := helpers.ValidateSyncHTTP(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not check if node is syncing: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return false
+	}
+	if isSyncing {
+		msg := "Beacon node is currently syncing and not serving request on that endpoint"
+		details, err := json.Marshal(syncDetails)
+		if err == nil {
+			msg += " Details: " + string(details)
+		}
+		errJson := &network.DefaultErrorJson{
+			Message: msg,
+			Code:    http.StatusServiceUnavailable,
+		}
+		network.WriteError(w, errJson)
+		return false
+	}
+	return true
 }
