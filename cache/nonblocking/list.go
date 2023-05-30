@@ -88,7 +88,7 @@ func (l *lruList[K, V]) remove(e *entry[K, V]) V {
 }
 
 // move moves e to next to at.
-func (l *lruList[K, V]) move(e, at *entry[K, V]) {
+func (*lruList[K, V]) move(e, at *entry[K, V]) {
 	if e == at {
 		return
 	}
