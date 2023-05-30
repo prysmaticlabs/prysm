@@ -6,8 +6,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
-func (b *BeaconState) Order() uint64 {
-	return b.order
+func (b *BeaconState) Id() uint64 {
+	return b.index
 }
 
 // GenesisTime of the beacon state as a uint64.

@@ -5,8 +5,8 @@ import (
 	"sync"
 )
 
-type Orderable interface {
-	Order() uint64
+type Identifiable interface {
+	Id() uint64
 }
 
 type MultiValueSlice interface {
@@ -23,7 +23,7 @@ type MultiValue[V any] struct {
 	Individual []*Value[V]
 }
 
-type Slice[V comparable, O Orderable] struct {
+type Slice[V comparable, O Identifiable] struct {
 	Items []*MultiValue[V]
 	lock  sync.RWMutex
 }
@@ -41,8 +41,8 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 		outerLoop:
 			for _, mv := range item.Individual {
 				for _, o := range mv.objs {
-					if o == src.Order() {
-						mv.objs = append(mv.objs, dst.Order())
+					if o == src.Id() {
+						mv.objs = append(mv.objs, dst.Id())
 						break outerLoop
 					}
 				}
@@ -64,7 +64,7 @@ func (s *Slice[V, O]) Value(obj O) []V {
 		outerLoop:
 			for _, mv := range item.Individual {
 				for _, o := range mv.objs {
-					if o == obj.Order() {
+					if o == obj.Id() {
 						v[i] = mv.val
 						found = true
 						break outerLoop
@@ -95,7 +95,7 @@ func (s *Slice[V, O]) At(obj O, i uint64) (V, error) {
 	}
 	for _, mv := range item.Individual {
 		for _, o := range mv.objs {
-			if o == obj.Order() {
+			if o == obj.Id() {
 				return mv.val, nil
 			}
 		}
@@ -116,7 +116,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 outerLoop:
 	for mvi, mv := range item.Individual {
 		for oi, o := range mv.objs {
-			if o == obj.Order() {
+			if o == obj.Id() {
 				if len(mv.objs) == 1 {
 					item.Individual = append(item.Individual[:mvi], item.Individual[mvi+1:]...)
 				} else {
@@ -134,13 +134,13 @@ outerLoop:
 	newValue := true
 	for _, mv := range item.Individual {
 		if mv.val == val {
-			mv.objs = append(mv.objs, obj.Order())
+			mv.objs = append(mv.objs, obj.Id())
 			newValue = false
 			break
 		}
 	}
 	if newValue {
-		item.Individual = append(item.Individual, &Value[V]{val: val, objs: []uint64{obj.Order()}})
+		item.Individual = append(item.Individual, &Value[V]{val: val, objs: []uint64{obj.Id()}})
 	}
 
 	return nil
@@ -154,7 +154,7 @@ func (s *Slice[V, O]) Detach(obj O) {
 	outerLoop:
 		for mvi, mv := range item.Individual {
 			for oi, o := range mv.objs {
-				if o == obj.Order() {
+				if o == obj.Id() {
 					if len(mv.objs) == 1 {
 						item.Individual = append(item.Individual[:mvi], item.Individual[mvi+1:]...)
 					} else {
