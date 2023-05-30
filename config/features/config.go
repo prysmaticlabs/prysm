@@ -39,6 +39,7 @@ type Flags struct {
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
+	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
@@ -60,6 +61,7 @@ type Flags struct {
 	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
 
+	DisableResourceManager     bool // Disables running the node with libp2p's resource manager.
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
@@ -67,9 +69,14 @@ type Flags struct {
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 
+	BuildBlockParallel bool // BuildBlockParallel builds beacon block for proposer in parallel.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
+
+	// AggregateIntervals specifies the time durations at which we aggregate attestations preparing for forkchoice.
+	AggregateIntervals [3]time.Duration
 }
 
 var featureConfig *Flags
@@ -172,6 +179,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableReorgLateBlocks)
 		cfg.DisableReorgLateBlocks = true
 	}
+	cfg.EnablePeerScorer = true
+	if ctx.Bool(disablePeerScorer.Name) {
+		logDisabled(disablePeerScorer)
+		cfg.EnablePeerScorer = false
+	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
 		cfg.DisableBroadcastSlashings = true
@@ -212,6 +224,16 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true
 	}
+	cfg.BuildBlockParallel = true
+	if ctx.IsSet(disableBuildBlockParallel.Name) {
+		logEnabled(disableBuildBlockParallel)
+		cfg.BuildBlockParallel = false
+	}
+	if ctx.IsSet(disableResourceManager.Name) {
+		logEnabled(disableResourceManager)
+		cfg.DisableResourceManager = true
+	}
+	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
 }

@@ -49,6 +49,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 
 	topic += s.Encoding().ProtocolSuffix()
 	iterator := s.dv5Listener.RandomNodes()
+	defer iterator.Close()
 	switch {
 	case strings.Contains(topic, GossipAttestationMessage):
 		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
@@ -61,12 +62,12 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	currNum := len(s.pubsub.ListPeers(topic))
 	wg := new(sync.WaitGroup)
 	for {
+		if currNum >= threshold {
+			break
+		}
 		if err := ctx.Err(); err != nil {
 			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
 				"only %d out of %d peers were able to be found", topic, currNum, threshold)
-		}
-		if currNum >= threshold {
-			break
 		}
 		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
 		for _, node := range nodes {

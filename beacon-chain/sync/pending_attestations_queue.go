@@ -46,7 +46,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
-	s.validatePendingAtts(ctx, s.cfg.chain.CurrentSlot())
+	s.validatePendingAtts(ctx, s.cfg.clock.CurrentSlot())
 
 	s.pendingAttsLock.RLock()
 	roots := make([][32]byte, 0, len(s.blkRootToPendingAtts))
@@ -76,7 +76,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		} else {
 			// Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
-				"currentSlot": s.cfg.chain.CurrentSlot(),
+				"currentSlot": s.cfg.clock.CurrentSlot(),
 				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
 				"attCount":    len(attestations),
 				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),

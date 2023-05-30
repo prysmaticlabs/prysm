@@ -1,6 +1,6 @@
 package cache
 
-import "errors"
+import "github.com/pkg/errors"
 
 var (
 	// ErrNilValueProvided for when we try to put a nil value in a cache.
@@ -12,4 +12,6 @@ var (
 	// ErrNonExistingSyncCommitteeKey when sync committee key (root) does not exist in cache.
 	ErrNonExistingSyncCommitteeKey   = errors.New("does not exist sync committee key")
 	errNotSyncCommitteeIndexPosition = errors.New("not syncCommitteeIndexPosition struct")
+	// ErrNotFoundRegistration when validator registration does not exist in cache.
+	ErrNotFoundRegistration = errors.Wrap(ErrNotFound, "no validator registered")
 )

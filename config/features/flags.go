@@ -45,10 +45,32 @@ var (
 		Name:  "disable-reorg-late-blocks",
 		Usage: "Disables reorgs of late blocks",
 	}
+	disablePeerScorer = &cli.BoolFlag{
+		Name:  "disable-peer-scorer",
+		Usage: "(Danger): Disables P2P peer scorer. Do NOT use this in production!",
+	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
 			"We recommend against this flag unless you are an advanced user.",
+	}
+	aggregateFirstInterval = &cli.DurationFlag{
+		Name:   "aggregate-first-interval",
+		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
+		Value:  6500 * time.Millisecond,
+		Hidden: true,
+	}
+	aggregateSecondInterval = &cli.DurationFlag{
+		Name:   "aggregate-second-interval",
+		Usage:  "(Advanced): Specifies the second interval in which attestations are aggregated in the slot",
+		Value:  9500 * time.Millisecond,
+		Hidden: true,
+	}
+	aggregateThirdInterval = &cli.DurationFlag{
+		Name:   "aggregate-third-interval",
+		Usage:  "(Advanced): Specifies the third interval in which attestations are aggregated in the slot",
+		Value:  11800 * time.Millisecond,
+		Hidden: true,
 	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
 		Name: "dynamic-key-reload-debounce-interval",
@@ -118,6 +140,14 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
+	disableBuildBlockParallel = &cli.BoolFlag{
+		Name:  "disable-build-block-parallel",
+		Usage: "Disables building a beacon block in parallel for consensus and execution",
+	}
+	disableResourceManager = &cli.BoolFlag{
+		Name:  "disable-resource-manager",
+		Usage: "Disables running the libp2p resource manager",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -153,6 +183,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
+	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
@@ -164,6 +195,11 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
 	prepareAllPayloads,
+	disableBuildBlockParallel,
+	aggregateFirstInterval,
+	aggregateSecondInterval,
+	aggregateThirdInterval,
+	disableResourceManager,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

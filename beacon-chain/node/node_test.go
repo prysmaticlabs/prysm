@@ -164,7 +164,7 @@ func TestMonitor_RegisteredCorrectly(t *testing.T) {
 	require.NoError(t, cliCtx.Set(cmd.ValidatorMonitorIndicesFlag.Name, "1,2"))
 	n := &BeaconNode{ctx: context.Background(), cliCtx: cliCtx, services: runtime.NewServiceRegistry()}
 	require.NoError(t, n.services.RegisterService(&blockchain.Service{}))
-	require.NoError(t, n.registerValidatorMonitorService())
+	require.NoError(t, n.registerValidatorMonitorService(make(chan struct{})))
 
 	var mService *monitor.Service
 	require.NoError(t, n.services.FetchService(&mService))

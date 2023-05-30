@@ -192,7 +192,7 @@ func (MockValidator) HasProposerSettings() bool {
 }
 
 // PushProposerSettings for mocking
-func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager, _ time.Time) error {
+func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager, _ primitives.Slot, _ time.Time) error {
 	panic("implement me")
 }
 
