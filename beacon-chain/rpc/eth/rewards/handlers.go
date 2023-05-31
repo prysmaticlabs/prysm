@@ -340,7 +340,7 @@ func attestationRewards(ctx context.Context, st state.BeaconState, indices []pri
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get total active balance")
 	}
-	activeIncrement := totalActiveBalance / params.BeaconConfig().EffectiveBalanceIncrement // TODO: Co to?
+	activeIncrement := totalActiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	baseRewardPerIncrement, err := altair.BaseRewardPerIncrement(totalActiveBalance)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get base reward per increment")
