@@ -8,11 +8,14 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
+	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
+	rcmgrObs "github.com/libp2p/go-libp2p/p2p/host/resource-manager/obs"
 	"github.com/libp2p/go-libp2p/p2p/muxer/mplex"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -103,6 +106,19 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	options = append(options, libp2p.Ping(false))
 	if features.Get().DisableResourceManager {
 		options = append(options, libp2p.ResourceManager(&network.NullResourceManager{}))
+	} else {
+		rcmgrObs.MustRegisterWith(prometheus.DefaultRegisterer)
+		str, err := rcmgrObs.NewStatsTraceReporter()
+		if err != nil {
+			log.WithError(err).Fatal("Could not create stats reporter")
+		}
+
+		rmgr, err := rcmgr.NewResourceManager(rcmgr.NewFixedLimiter(rcmgr.DefaultLimits.AutoScale()), rcmgr.WithTraceReporter(str))
+		if err != nil {
+			log.WithError(err).Fatal("Could not create resource manager")
+		}
+		options = append(options, libp2p.ResourceManager(rmgr))
+
 	}
 	return options
 }
