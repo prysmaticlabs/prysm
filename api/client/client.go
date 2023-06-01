@@ -35,14 +35,17 @@ func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 	return c, nil
 }
 
+// Token returns the bearer token used for jwt authentication
 func (c *Client) Token() string {
 	return c.token
 }
 
+// BaseURL returns the base url of the client
 func (c *Client) BaseURL() *url.URL {
 	return c.baseURL
 }
 
+// Do execute the request against the http client
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	return c.hc.Do(req)
 }
