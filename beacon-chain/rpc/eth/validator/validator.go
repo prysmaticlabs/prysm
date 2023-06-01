@@ -75,7 +75,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
+	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -166,9 +166,9 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 
 	var proposals map[primitives.ValidatorIndex][]primitives.Slot
 	if nextEpochLookahead {
-		_, proposals, err = helpers.CommitteeAssignments(ctx, s, nextEpoch)
+		_, proposals, err = helpers.CommitteeAssignments(ctx, s, nextEpoch, nextEpoch)
 	} else {
-		_, proposals, err = helpers.CommitteeAssignments(ctx, s, req.Epoch)
+		_, proposals, err = helpers.CommitteeAssignments(ctx, s, req.Epoch, req.Epoch)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)

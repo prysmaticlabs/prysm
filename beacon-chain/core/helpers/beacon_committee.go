@@ -160,6 +160,7 @@ func CommitteeAssignments(
 	ctx context.Context,
 	state state.BeaconState,
 	epoch primitives.Epoch,
+	rootEpoch primitives.Epoch,
 ) (map[primitives.ValidatorIndex]*CommitteeAssignmentContainer, map[primitives.ValidatorIndex][]primitives.Slot, error) {
 	nextEpoch := time.NextEpoch(state)
 	if epoch > nextEpoch {
@@ -194,10 +195,14 @@ func CommitteeAssignments(
 		if err := state.SetSlot(slot); err != nil {
 			return nil, nil, err
 		}
-		i, err := BeaconProposerIndex(ctx, state)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
+		i, ok := BeaconProposerIndexFromCache(ctx, state, rootEpoch)
+		if !ok {
+			i, err = BeaconProposerIndex(ctx, state)
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
+			}
 		}
+
 		proposerIndexToSlots[i] = append(proposerIndexToSlots[i], slot)
 	}
 

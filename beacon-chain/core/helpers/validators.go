@@ -238,33 +238,9 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //	  return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (primitives.ValidatorIndex, error) {
 	e := time.CurrentEpoch(state)
-	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
-	// For simplicity, the node will skip caching of genesis epoch.
-	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
-		wantedEpoch := time.PrevEpoch(state)
-		s, err := slots.EpochEnd(wantedEpoch)
-		if err != nil {
-			return 0, err
-		}
-		r, err := StateRootAtSlot(state, s)
-		if err != nil {
-			return 0, err
-		}
-		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
-			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
-			if err != nil {
-				return 0, errors.Wrap(err, "could not interface with committee cache")
-			}
-			if proposerIndices != nil {
-				if len(proposerIndices) != 2*int(params.BeaconConfig().SlotsPerEpoch) {
-					return 0, errors.Errorf("length of proposer indices is not equal %d to slots per epoch", len(proposerIndices))
-				}
-				return proposerIndices[state.Slot()%(2*params.BeaconConfig().SlotsPerEpoch)], nil
-			}
-			if err := UpdateProposerIndicesInCache(ctx, state); err != nil {
-				return 0, errors.Wrap(err, "could not update committee cache")
-			}
-		}
+	i, ok := BeaconProposerIndexFromCache(ctx, state, time.PrevEpoch(state))
+	if ok {
+		return i, nil
 	}
 
 	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
@@ -281,6 +257,49 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 	}
 
 	return ComputeProposerIndex(state, indices, seedWithSlotHash)
+}
+
+func BeaconProposerIndexFromCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch primitives.Epoch) (primitives.ValidatorIndex, bool) {
+	e := time.CurrentEpoch(state)
+	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
+	// For simplicity, the node will skip caching of genesis epoch.
+	if e <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+		return 0, false
+	}
+
+	s, err := slots.EpochEnd(epoch)
+	if err != nil {
+		log.WithError(err).Error("could not get epoch end")
+		return 0, false
+	}
+	r, err := StateRootAtSlot(state, s)
+	if err != nil {
+		log.WithError(err).Error("could not get state root at slot")
+		return 0, false
+	}
+
+	if r == nil || bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
+		return 0, false
+	}
+
+	proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
+	if err != nil {
+		log.WithError(err).Error("could not interface with committee cache")
+		return 0, false
+	}
+	if proposerIndices == nil {
+		if err := UpdateProposerIndicesInCache(ctx, state); err != nil {
+			log.WithError(err).Error("could not update proposer indices in cache")
+			return 0, false
+		}
+		return 0, false
+	}
+	if len(proposerIndices) != 2*int(params.BeaconConfig().SlotsPerEpoch) {
+		log.WithError(err).Errorf("length of proposer indices is not equal %d to slots per epoch", len(proposerIndices))
+		return 0, false
+	}
+
+	return proposerIndices[state.Slot()%(2*params.BeaconConfig().SlotsPerEpoch)], true
 }
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
