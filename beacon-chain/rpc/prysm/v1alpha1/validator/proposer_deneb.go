@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// setKzgCommitment sets the KZG commitment on the block.
+// setKzgCommitments sets the KZG commitment on the block.
 // return early if the block version is older than deneb or block slot has not passed deneb epoch.
-func setKzgCommitment(blk interfaces.SignedBeaconBlock, bundle *enginev1.BlobsBundle) error {
+func setKzgCommitments(blk interfaces.SignedBeaconBlock, bundle *enginev1.BlobsBundle) error {
 	if blk.Version() < version.Deneb {
 		return nil
 	}
@@ -23,7 +23,7 @@ func setKzgCommitment(blk interfaces.SignedBeaconBlock, bundle *enginev1.BlobsBu
 }
 
 // coverts a blobs bundle to a sidecar format.
-func blobsBundleToSidecar(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.BlobSidecar, error) {
+func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.BlobSidecar, error) {
 	r, err := blk.HashTreeRoot()
 	if err != nil {
 		return nil, err

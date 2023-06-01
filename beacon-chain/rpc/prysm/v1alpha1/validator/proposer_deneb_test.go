@@ -11,13 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-func Test_setKzgCommitment(t *testing.T) {
+func Test_setKzgCommitments(t *testing.T) {
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	require.NoError(t, setKzgCommitment(b, nil))
+	require.NoError(t, setKzgCommitments(b, nil))
 	b, err = blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
 	require.NoError(t, err)
-	require.NoError(t, setKzgCommitment(b, nil))
+	require.NoError(t, setKzgCommitments(b, nil))
 
 	cfg := params.BeaconConfig().Copy()
 	cfg.DenebForkEpoch = 0
@@ -25,13 +25,13 @@ func Test_setKzgCommitment(t *testing.T) {
 
 	kcs := [][]byte{[]byte("kzg"), []byte("kzg1"), []byte("kzg2")}
 	bundle := &enginev1.BlobsBundle{KzgCommitments: kcs}
-	require.NoError(t, setKzgCommitment(b, bundle))
+	require.NoError(t, setKzgCommitments(b, bundle))
 	got, err := b.Block().Body().BlobKzgCommitments()
 	require.NoError(t, err)
 	require.DeepEqual(t, got, kcs)
 }
 
-func Test_blobsBundleToSidecar(t *testing.T) {
+func Test_blobsBundleToSidecars(t *testing.T) {
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
 	require.NoError(t, err)
 
@@ -44,13 +44,12 @@ func Test_blobsBundleToSidecar(t *testing.T) {
 	blobs := [][]byte{[]byte("blob"), []byte("blob1"), []byte("blob2")}
 	bundle := &enginev1.BlobsBundle{KzgCommitments: kcs, Proofs: proofs, Blobs: blobs}
 
-	sidecars, err := blobsBundleToSidecar(bundle, b.Block())
+	sidecars, err := blobsBundleToSidecars(bundle, b.Block())
 	require.NoError(t, err)
-
-	require.Equal(t, len(sidecars), 3)
 
 	r, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
+	require.Equal(t, len(sidecars), 3)
 	for i := 0; i < len(sidecars); i++ {
 		require.DeepEqual(t, sidecars[i].BlockRoot, r[:])
 		require.Equal(t, sidecars[i].Index, uint64(i))

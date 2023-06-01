@@ -157,7 +157,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
-	if err := setKzgCommitment(sBlk, blobsBundle); err != nil {
+	if err := setKzgCommitments(sBlk, blobsBundle); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set kzg commitment: %v", err)
 	}
 
@@ -181,7 +181,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().DenebForkEpoch {
 		// TODO: Handle blind case
-		scs, err := blobsBundleToSidecar(blobsBundle, sBlk.Block())
+		scs, err := blobsBundleToSidecars(blobsBundle, sBlk.Block())
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
 		}
