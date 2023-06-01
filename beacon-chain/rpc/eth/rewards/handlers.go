@@ -340,10 +340,31 @@ func attestationRewards(ctx context.Context, st state.BeaconState, indices []pri
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get total active balance")
 	}
-	activeIncrement := totalActiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
+	effectiveBalanceIncrement := params.BeaconConfig().EffectiveBalanceIncrement
+	weightDenominator := params.BeaconConfig().WeightDenominator
+	activeIncrement := totalActiveBalance / effectiveBalanceIncrement
 	baseRewardPerIncrement, err := altair.BaseRewardPerIncrement(totalActiveBalance)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get base reward per increment")
+	}
+
+	flagWeights := map[uint8]uint64{
+		params.BeaconConfig().TimelyHeadFlagIndex:   params.BeaconConfig().TimelyHeadWeight,
+		params.BeaconConfig().TimelySourceFlagIndex: params.BeaconConfig().TimelySourceWeight,
+		params.BeaconConfig().TimelyTargetFlagIndex: params.BeaconConfig().TimelyTargetWeight,
+	}
+	ideal := make([]IdealAttestationReward, 32)
+
+	for i, w := range flagWeights {
+		for bal := 1; i < 33; i++ {
+			effectiveBalance := uint64(bal) * effectiveBalanceIncrement
+			baseReward := uint64(bal) * baseRewardPerIncrement
+			penalty := -(baseReward * w / weightDenominator)
+			switch i {
+			case params.BeaconConfig().TimelyHeadFlagIndex:
+
+			}
+		}
 	}
 
 	vals, err := precompute.Validators(ctx, st, indices)
