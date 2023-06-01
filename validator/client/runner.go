@@ -109,12 +109,14 @@ func run(ctx context.Context, v iface.Validator) {
 
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
+			t := time.Now()
 			if err := v.UpdateDuties(ctx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				cancel()
 				span.End()
 				continue
 			}
+			log.WithField("duration", time.Since(t)).Info("Updated assignments")
 
 			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
 				go func() {

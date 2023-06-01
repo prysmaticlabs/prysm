@@ -434,7 +434,8 @@ func computeCommittee(
 // the index of the list represents the slot number.
 func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex) ([]primitives.ValidatorIndex, error) {
 	hashFunc := hash.CustomSHA256Hasher()
-	proposerIndices := make([]primitives.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
+	twoEpochSlots := uint64(params.BeaconConfig().SlotsPerEpoch * 2)
+	proposerIndices := make([]primitives.ValidatorIndex, twoEpochSlots)
 
 	e := time.CurrentEpoch(state)
 	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
@@ -452,7 +453,25 @@ func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []
 		if err != nil {
 			return nil, err
 		}
-		proposerIndices[i] = index
+		proposerIndices[(uint64(slot)+i)%twoEpochSlots] = index
+	}
+
+	seed, err = Seed(state, e+1, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate seed")
+	}
+	slot, err = slots.EpochStart(e + 1)
+	if err != nil {
+		return nil, err
+	}
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerEpoch); i++ {
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot)+i)...)
+		seedWithSlotHash := hashFunc(seedWithSlot)
+		index, err := ComputeProposerIndex(state, activeIndices, seedWithSlotHash)
+		if err != nil {
+			return nil, err
+		}
+		proposerIndices[(uint64(slot)+i)%twoEpochSlots] = index
 	}
 
 	return proposerIndices, nil
