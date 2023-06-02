@@ -171,7 +171,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 		numOfPendingAtts += len(v)
 	}
 	// Exit early if we exceed the pending attestations limit.
-	if numOfPendingAtts > pendingAttsLimit {
+	if numOfPendingAtts >= pendingAttsLimit {
 		return
 	}
 
