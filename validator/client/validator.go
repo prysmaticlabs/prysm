@@ -993,27 +993,26 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *validator
 }
 
 // MigrateFromBeaconNodeProposerSettings tries to collect fee recipient information from the beacon node to construct the proposer settings on the validator client.
-func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) error {
+func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (*validatorserviceconfig.ProposerSettings, error) {
 	if v.proposerSettings != nil {
-		return nil
+		return nil, errors.New("proposer settings exist, can not migrate")
 	}
 	km, err := v.Keymanager()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	keys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(keys) == 0 {
-		return nil
+		return nil, errors.New("no keys found to migrate settings for")
 	}
 	proposerConfig := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
-
 	for i := range keys {
 		resp, err := v.validatorClient.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[i][:]})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		proposerConfig[keys[i]] = &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
@@ -1021,23 +1020,14 @@ func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) e
 			},
 		}
 	}
-	resp, err := v.validatorClient.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[i][:]})
-	if err != nil {
-		return err
-	}
-
-	defaultPropose := &validatorserviceconfig.ProposerOption{
-		FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
-			FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
-		},
-	}
-
-	fileConfig := &validatorserviceconfig.ProposerSettings{
+	settings := &validatorserviceconfig.ProposerSettings{
 		ProposeConfig: proposerConfig,
-		DefaultConfig: defaultPropose,
 	}
-
-	return nil
+	if err := v.SetProposerSettings(ctx, settings); err != nil {
+		return nil, err
+	}
+	// does not migrate any default, will fall back to Beacon Node
+	return settings, nil
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
