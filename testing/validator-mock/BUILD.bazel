@@ -13,6 +13,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/testing/validator-mock",
     visibility = ["//visibility:public"],
     deps = [
+        "//config/validator/service:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
