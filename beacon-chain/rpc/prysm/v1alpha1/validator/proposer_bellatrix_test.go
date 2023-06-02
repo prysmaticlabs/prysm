@@ -18,6 +18,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -70,12 +71,18 @@ func TestServer_setExecutionData(t *testing.T) {
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true, Cfg: &builderTest.Config{BeaconDB: beaconDB}},
+		ForkchoiceFetcher:      &blockchainTest.ChainService{},
 	}
 
 	t.Run("No builder configured. Use local block", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
@@ -128,7 +135,13 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		b := blk.Block()
+
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
@@ -184,7 +197,13 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
@@ -193,7 +212,12 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2}
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -208,7 +232,12 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 1}
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -224,7 +253,12 @@ func TestServer_setExecutionData(t *testing.T) {
 			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
 		}
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: 0}
-		require.NoError(t, vs.setExecutionData(context.Background(), blk, capellaTransitionState))
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), e.BlockNumber()) // Local block
