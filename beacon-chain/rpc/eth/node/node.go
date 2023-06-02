@@ -337,6 +337,9 @@ func handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection boo
 func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
+		if errors.Is(err, peerdata.ErrPeerUnknown) {
+			return nil, nil
+		}
 		return nil, errors.Wrap(err, "could not obtain ENR")
 	}
 	var serializedEnr string
