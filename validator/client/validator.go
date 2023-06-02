@@ -1008,17 +1008,20 @@ func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (
 	if len(keys) == 0 {
 		return nil, errors.New("no keys found to migrate settings for")
 	}
+	log.Info("retrieving fee recipient information from beacon node to generate proposer settings on validator client")
 	proposerConfig := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 	for i := range keys {
 		resp, err := v.validatorClient.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[i][:]})
 		if err != nil {
 			return nil, err
 		}
+		fr := common.BytesToAddress(resp.FeeRecipient)
 		proposerConfig[keys[i]] = &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
-				FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
+				FeeRecipient: fr,
 			},
 		}
+		log.Infof("preparing validator key %s with fee recipient %s on proposer settings", hexutil.Encode(keys[i][:]), fr.Hex())
 	}
 	settings := &validatorserviceconfig.ProposerSettings{
 		ProposeConfig: proposerConfig,
@@ -1026,6 +1029,7 @@ func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (
 	if err := v.SetProposerSettings(ctx, settings); err != nil {
 		return nil, err
 	}
+	log.Info("successfully migrated proposer settings from beacon node")
 	// does not migrate any default, will fall back to Beacon Node
 	return settings, nil
 }
