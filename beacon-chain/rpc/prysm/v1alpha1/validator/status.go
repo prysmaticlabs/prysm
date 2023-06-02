@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -46,7 +45,7 @@ func (vs *Server) ValidatorStatus(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey)
+	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey, headState.LastActivatedValidatorIndex)
 	return vStatus, nil
 }
 
@@ -86,8 +85,9 @@ func (vs *Server) MultipleValidatorStatus(
 	// Fetch statuses from beacon state.
 	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubKeys))
 	indices := make([]primitives.ValidatorIndex, len(pubKeys))
+	lastActivated, err := headState.LastActivatedValidatorIndex()
 	for i, pubKey := range pubKeys {
-		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey)
+		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey, func() (primitives.ValidatorIndex, error) { return lastActivated, err })
 	}
 
 	return &ethpb.MultipleValidatorStatusResponse{
@@ -227,7 +227,7 @@ func (vs *Server) activationStatus(
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
-		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey)
+		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey, headState.LastActivatedValidatorIndex)
 		if vStatus == nil {
 			continue
 		}
@@ -272,6 +272,7 @@ func (vs *Server) validatorStatus(
 	ctx context.Context,
 	headState state.ReadOnlyBeaconState,
 	pubKey []byte,
+	lastActiveValidatorFn func() (primitives.ValidatorIndex, error),
 ) (*ethpb.ValidatorStatusResponse, primitives.ValidatorIndex) {
 	ctx, span := trace.StartSpan(ctx, "ValidatorServer.validatorStatus")
 	defer span.End()
@@ -340,17 +341,9 @@ func (vs *Server) validatorStatus(
 				}
 			}
 		}
-
-		var lastActivatedvalidatorIndex primitives.ValidatorIndex
-		for j := headState.NumValidators() - 1; j >= 0; j-- {
-			val, err := headState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(j))
-			if err != nil {
-				return resp, idx
-			}
-			if helpers.IsActiveValidatorUsingTrie(val, time.CurrentEpoch(headState)) {
-				lastActivatedvalidatorIndex = primitives.ValidatorIndex(j)
-				break
-			}
+		lastActivatedvalidatorIndex, err := lastActiveValidatorFn()
+		if err != nil {
+			return resp, idx
 		}
 		// Our position in the activation queue is the above index - our validator index.
 		if lastActivatedvalidatorIndex < idx {

@@ -194,7 +194,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
-			vStatus, _ := vs.validatorStatus(ctx, s, pubKey)
+			vStatus, _ := vs.validatorStatus(ctx, s, pubKey, s.LastActivatedValidatorIndex)
 			assignment.Status = vStatus.Status
 		}
 
