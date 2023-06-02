@@ -25,6 +25,7 @@ type EngineClient struct {
 	ForkChoiceUpdatedResp       []byte
 	ExecutionPayload            *pb.ExecutionPayload
 	ExecutionPayloadCapella     *pb.ExecutionPayloadCapella
+	ExecutionPayloadDeneb       *pb.ExecutionPayloadDeneb
 	ExecutionBlock              *pb.ExecutionBlock
 	Err                         error
 	ErrLatestExecBlock          error
@@ -39,6 +40,7 @@ type EngineClient struct {
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
 	BlockValue                  uint64
+	BlobsBundle                 *pb.BlobsBundle
 }
 
 // NewPayload --
@@ -58,6 +60,13 @@ func (e *EngineClient) ForkchoiceUpdated(
 
 // GetPayload --
 func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error) {
+	if slots.ToEpoch(s) >= params.BeaconConfig().DenebForkEpoch {
+		ed, err := blocks.WrappedExecutionPayloadDeneb(e.ExecutionPayloadDeneb, e.BlockValue)
+		if err != nil {
+			return nil, nil, err
+		}
+		return ed, e.BlobsBundle, nil
+	}
 	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
 		ed, err := blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
 		if err != nil {
