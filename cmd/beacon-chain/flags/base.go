@@ -3,6 +3,8 @@
 package flags
 
 import (
+	"time"
+
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/urfave/cli/v2"
@@ -29,6 +31,11 @@ var (
 		Name: "local-block-value-boost",
 		Usage: "A percentage boost for local block construction. This is used to prioritize local block construction over relay/builder block construction" +
 			"Boost is an additional percentage to multiple local block value. Use builder block if: builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)",
+	}
+	GetHeaderCutOff = &cli.DurationFlag{
+		Name:  "get-header-cutoff",
+		Usage: "The cut off time in second for validator to call GetHeader to mev-boost/relayer before defaulting to local execution engine. This helps to prevent validator from missing proposal due to network latency",
+		Value: 1 * time.Second,
 	}
 	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
 	ExecutionEngineEndpoint = &cli.StringFlag{

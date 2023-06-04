@@ -125,6 +125,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.MaxBuilderEpochMissedSlots,
 			flags.MaxBuilderConsecutiveMissedSlots,
 			flags.EngineEndpointTimeoutSeconds,
+			flags.GetHeaderCutOff,
 			flags.SlasherDirFlag,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,

@@ -74,6 +74,13 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	if cliCtx.IsSet(flags.GetHeaderCutOff.Name) {
+		c := params.BeaconConfig().Copy()
+		c.GetHeaderCutoff = cliCtx.Duration(flags.GetHeaderCutOff.Name)
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
