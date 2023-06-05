@@ -460,6 +460,19 @@ func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	return addresses, nil
 }
 
+func peerIdsFromMultiAddrs(addrs []ma.Multiaddr) []peer.ID {
+	peers := []peer.ID{}
+	for _, a := range addrs {
+		info, err := peer.AddrInfoFromP2pAddr(a)
+		if err != nil {
+			log.WithError(err).Error("Could not derive peer info from multiaddress")
+			continue
+		}
+		peers = append(peers, info.ID)
+	}
+	return peers
+}
+
 func multiAddrFromString(address string) (ma.Multiaddr, error) {
 	return ma.NewMultiaddr(address)
 }
