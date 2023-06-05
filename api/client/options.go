@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// ReqOption a request functional option.
+// ReqOption is a request functional option.
 type ReqOption func(*http.Request)
 
 // WithSSZEncoding is a request functional option that adds SSZ encoding header.
