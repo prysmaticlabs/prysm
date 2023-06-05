@@ -264,7 +264,8 @@ func TestWrapExecutionPayloadDeneb(t *testing.T) {
 			Address:        []byte("executionaddress"),
 			Amount:         77,
 		}},
-		ExcessDataGas: []byte("excessdatagas"),
+		DataGasUsed:   88,
+		ExcessDataGas: 99,
 	}
 	payload, err := blocks.WrappedExecutionPayloadDeneb(data, 420)
 	require.NoError(t, err)
@@ -272,9 +273,13 @@ func TestWrapExecutionPayloadDeneb(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(420), v)
 
-	g, err := payload.ExcessDataGas()
+	g, err := payload.DataGasUsed()
 	require.NoError(t, err)
-	require.DeepEqual(t, []byte("excessdatagas"), g)
+	require.DeepEqual(t, uint64(88), g)
+
+	g, err = payload.ExcessDataGas()
+	require.NoError(t, err)
+	require.DeepEqual(t, uint64(99), g)
 }
 
 func TestWrapExecutionPayloadHeaderDeneb(t *testing.T) {
@@ -294,7 +299,8 @@ func TestWrapExecutionPayloadHeaderDeneb(t *testing.T) {
 		BlockHash:        []byte("blockhash"),
 		TransactionsRoot: []byte("transactionsroot"),
 		WithdrawalsRoot:  []byte("withdrawalsroot"),
-		ExcessDataGas:    []byte("excessdatagas"),
+		DataGasUsed:      88,
+		ExcessDataGas:    99,
 	}
 	payload, err := blocks.WrappedExecutionPayloadHeaderDeneb(data, 10)
 	require.NoError(t, err)
@@ -303,9 +309,13 @@ func TestWrapExecutionPayloadHeaderDeneb(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(10), v)
 
-	g, err := payload.ExcessDataGas()
+	g, err := payload.DataGasUsed()
 	require.NoError(t, err)
-	require.DeepEqual(t, []byte("excessdatagas"), g)
+	require.DeepEqual(t, uint64(88), g)
+
+	g, err = payload.ExcessDataGas()
+	require.NoError(t, err)
+	require.DeepEqual(t, uint64(99), g)
 }
 
 func TestWrapExecutionPayloadDeneb_SSZ(t *testing.T) {
@@ -443,7 +453,8 @@ func createWrappedPayloadDeneb(t testing.TB) interfaces.ExecutionData {
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
 		Withdrawals:   make([]*enginev1.Withdrawal, 0),
-		ExcessDataGas: make([]byte, fieldparams.RootLength),
+		DataGasUsed:   0,
+		ExcessDataGas: 0,
 	}, 0)
 	require.NoError(t, err)
 	return payload
@@ -466,7 +477,8 @@ func createWrappedPayloadHeaderDeneb(t testing.TB) interfaces.ExecutionData {
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
-		ExcessDataGas:    make([]byte, fieldparams.RootLength),
+		DataGasUsed:      0,
+		ExcessDataGas:    0,
 	}, 0)
 	require.NoError(t, err)
 	return payload
