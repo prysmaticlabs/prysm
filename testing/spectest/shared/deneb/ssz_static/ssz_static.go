@@ -15,7 +15,6 @@ import (
 
 // RunSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
-	t.Skip("skipping tests at commit with incompatible ssz schema")
 	common.RunSSZStaticTests(t, config, "deneb", unmarshalledSSZ, customHtr)
 }
 
