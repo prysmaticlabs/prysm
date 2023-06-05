@@ -3,7 +3,6 @@ package validator
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorType "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/io/prompt"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
@@ -24,22 +24,22 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "prysmctl.getProposerSettings")
 	defer span.End()
 	if !c.IsSet(ValidatorHostFlag.Name) {
-		return fmt.Errorf("no --%s flag value was provided", ValidatorHostFlag.Name)
+		return ErrNoFlag(ValidatorHostFlag.Name)
 	}
 	if !c.IsSet(TokenFlag.Name) {
-		return fmt.Errorf("no --%s flag value was provided", TokenFlag.Name)
+		return ErrNoFlag(TokenFlag.Name)
 	}
 	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient.Hex()
 	if c.IsSet(ProposerSettingsOutputFlag.Name) {
 		if c.IsSet(DefaultFeeRecipientFlag.Name) {
 			recipient := c.String(DefaultFeeRecipientFlag.Name)
-			if err := validateIsExecutionAddress(recipient); err != nil {
+			if err := ValidateIsExecutionAddress(recipient); err != nil {
 				return err
 			}
 			defaultFeeRecipient = recipient
 		} else {
 			promptText := "Please enter a default fee recipient address (an ethereum address in hex format)"
-			resp, err := prompt.ValidatePrompt(r, promptText, validateIsExecutionAddress)
+			resp, err := prompt.ValidatePrompt(r, promptText, ValidateIsExecutionAddress)
 			if err != nil {
 				return err
 			}
@@ -104,8 +104,8 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 	return nil
 }
 
-func validateIsExecutionAddress(input string) error {
-	if input[0:2] != "0x" || !(len(input) == common.AddressLength*2+2) {
+func ValidateIsExecutionAddress(input string) error {
+	if !bytesutil.IsHex([]byte(input)) || !(len(input) == common.AddressLength*2+2) {
 		return errors.New("no default address entered")
 	}
 	return nil

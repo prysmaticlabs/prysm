@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ErrMalformedHostname is used to indicate if a host name's format is incorrect while providing the port.
+// ErrMalformedHostname is used to indicate if a host name's format is incorrect.
 var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 
 // ErrNotOK is used to indicate when an HTTP request to the API failed with any non-2xx response code.

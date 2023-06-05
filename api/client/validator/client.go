@@ -17,7 +17,7 @@ const (
 	feeRecipientPath = "/eth/v1/validator/{pubkey}/feerecipient"
 )
 
-// Client is a wrapper with validator API functions on the client
+// Client provides a collection of helper methods for calling the Keymanager API endpoints.
 type Client struct {
 	*client.Client
 }
@@ -31,7 +31,7 @@ func NewClient(host string, opts ...client.ClientOpt) (*Client, error) {
 	return &Client{c}, nil
 }
 
-// GetValidatorPubKeys gets the currently known validators in hex format on the validator client whether on the web3signer or the local keystores.
+// GetValidatorPubKeys gets the current list of web3signer or the local validator public keys in hex format.
 func (c *Client) GetValidatorPubKeys(ctx context.Context) ([]string, error) {
 	jsonlocal, err := c.GetLocalValidatorKeys(ctx)
 	if err != nil {

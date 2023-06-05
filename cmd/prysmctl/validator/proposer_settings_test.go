@@ -104,3 +104,22 @@ func TestGetProposerSettings(t *testing.T) {
 	err = os.Remove(file)
 	require.NoError(t, err)
 }
+
+func TestValidateValidateIsExecutionAddress(t *testing.T) {
+	t.Run("Happy Path", func(t *testing.T) {
+		err := ValidateIsExecutionAddress("0xb698D697092822185bF0311052215d5B5e1F3933")
+		require.NoError(t, err)
+	})
+	t.Run("Too Long", func(t *testing.T) {
+		err := ValidateIsExecutionAddress("0xb698D697092822185bF0311052215d5B5e1F39331")
+		require.ErrorContains(t, "no default address entered", err)
+	})
+	t.Run("Too Short", func(t *testing.T) {
+		err := ValidateIsExecutionAddress("0xb698D697092822185bF0311052215d5B5e1F393")
+		require.ErrorContains(t, "no default address entered", err)
+	})
+	t.Run("Not a hex", func(t *testing.T) {
+		err := ValidateIsExecutionAddress("b698D697092822185bF0311052215d5B5e1F393310")
+		require.ErrorContains(t, "no default address entered", err)
+	})
+}
