@@ -18,7 +18,7 @@ var ErrNotOK = errors.New("did not receive 2xx response from API")
 // ErrNotFound specifically means that a '404 - NOT FOUND' response was received from the API.
 var ErrNotFound = errors.Wrap(ErrNotOK, "recv 404 NotFound response from API")
 
-// ErrInvalidNodeVersion indicates that the /eth/v1/node/version api response format was not recognized.
+// ErrInvalidNodeVersion indicates that the /eth/v1/node/version API response format was not recognized.
 var ErrInvalidNodeVersion = errors.New("invalid node version response")
 
 // Non200Err is a function that parses a http response to handle responses that are not 200 with a formatted error.
