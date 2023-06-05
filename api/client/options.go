@@ -33,7 +33,7 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 	}
 }
 
-// WithRoundTripper replaces the underlying http's transport with a custom one.
+// WithRoundTripper replaces the underlying HTTP's transport with a custom one.
 func WithRoundTripper(t http.RoundTripper) ClientOpt {
 	return func(c *Client) {
 		c.hc.Transport = t
