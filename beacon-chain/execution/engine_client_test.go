@@ -305,7 +305,10 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		g, err := resp.ExcessDataGas()
 		require.NoError(t, err)
-		require.DeepEqual(t, bytesutil.PadTo([]byte{0x45, 0x3}, 32), g)
+		require.DeepEqual(t, uint64(3), g)
+		g, err = resp.DataGasUsed()
+		require.NoError(t, err)
+		require.DeepEqual(t, uint64(2), g)
 
 		commitments := [][]byte{bytesutil.PadTo([]byte("commitment1"), fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte("commitment2"), fieldparams.BLSPubkeyLength)}
 		require.DeepEqual(t, commitments, blobsBundle.KzgCommitments)
@@ -1381,7 +1384,6 @@ func fixtures() map[string]interface{} {
 	bar := bytesutil.PadTo([]byte("bar"), 20)
 	baz := bytesutil.PadTo([]byte("baz"), 256)
 	baseFeePerGas := big.NewInt(12345)
-	excessiveDataGas := big.NewInt(33434)
 	executionPayloadFixture := &pb.ExecutionPayload{
 		ParentHash:    foo[:],
 		FeeRecipient:  bar,
@@ -1431,7 +1433,8 @@ func fixtures() map[string]interface{} {
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 		Withdrawals:   []*pb.Withdrawal{},
-		ExcessDataGas: bytesutil.PadTo(excessiveDataGas.Bytes(), fieldparams.RootLength),
+		DataGasUsed:   2,
+		ExcessDataGas: 3,
 	}
 	hexUint := hexutil.Uint64(1)
 	executionPayloadWithValueFixtureCapella := &pb.GetPayloadV2ResponseJson{
@@ -1453,6 +1456,8 @@ func fixtures() map[string]interface{} {
 		},
 		BlockValue: "0x11fffffffff",
 	}
+	dgu := hexutil.Uint64(2)
+	edg := hexutil.Uint64(3)
 	executionPayloadWithValueFixtureDeneb := &pb.GetPayloadV3ResponseJson{
 		ExecutionPayload: &pb.ExecutionPayloadDenebJSON{
 			ParentHash:    &common.Hash{'a'},
@@ -1469,7 +1474,8 @@ func fixtures() map[string]interface{} {
 			GasLimit:      &hexUint,
 			GasUsed:       &hexUint,
 			Timestamp:     &hexUint,
-			ExcessDataGas: "0x345",
+			DataGasUsed:   &dgu,
+			ExcessDataGas: &edg,
 		},
 		BlockValue: "0x11fffffffff",
 		BlobsBundle: &pb.BlobBundleJSON{

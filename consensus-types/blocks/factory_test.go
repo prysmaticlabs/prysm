@@ -512,7 +512,7 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
-			ExcessDataGas: bytesutil.PadTo([]byte{123}, 32),
+			ExcessDataGas: 123,
 		}
 		wrapped, err := WrappedExecutionPayloadDeneb(payload, 123)
 		require.NoError(t, err)
@@ -531,6 +531,6 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		got, err := builtBlock.Block().Body().Execution()
 		require.NoError(t, err)
 		require.DeepEqual(t, payload, got.Proto())
-		require.DeepEqual(t, bytesutil.PadTo([]byte{123}, 32), payload.ExcessDataGas)
+		require.DeepEqual(t, uint64(123), payload.ExcessDataGas)
 	})
 }
