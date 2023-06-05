@@ -16,7 +16,7 @@ func WithSSZEncoding() ReqOption {
 	}
 }
 
-// WithAuthorizationToken a request functional option that adds header for authorization token
+// WithAuthorizationToken is a request functional option that adds header for authorization token.
 func WithAuthorizationToken(token string) ReqOption {
 	return func(req *http.Request) {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
