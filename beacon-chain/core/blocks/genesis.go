@@ -172,7 +172,6 @@ func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfa
 						BlockHash:     make([]byte, 32),
 						Transactions:  make([][]byte, 0),
 						Withdrawals:   make([]*enginev1.Withdrawal, 0),
-						ExcessDataGas: make([]byte, 32), // New in Deneb.
 					},
 					BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
 					BlobKzgCommitments:    make([][]byte, 0),

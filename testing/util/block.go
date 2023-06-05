@@ -1191,7 +1191,6 @@ func HydrateBeaconBlockBodyDeneb(b *ethpb.BeaconBlockBodyDeneb) *ethpb.BeaconBlo
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
 			ExtraData:     make([]byte, 0),
-			ExcessDataGas: make([]byte, 32),
 		}
 	}
 	return b
@@ -1260,7 +1259,6 @@ func HydrateBlindedBeaconBlockBodyDeneb(b *ethpb.BlindedBeaconBlockBodyDeneb) *e
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
 			ExtraData:        make([]byte, 0),
 			WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
-			ExcessDataGas:    make([]byte, 32),
 		}
 	}
 	return b

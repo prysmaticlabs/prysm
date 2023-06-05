@@ -368,7 +368,6 @@ func NewBeaconStateDeneb(options ...func(state *ethpb.BeaconStateDeneb) error) (
 			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, 32),
 			WithdrawalsRoot:  make([]byte, 32),
-			ExcessDataGas:    make([]byte, 32),
 		},
 	}
 
