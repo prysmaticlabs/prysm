@@ -84,7 +84,7 @@ func (c *Client) GetRemoteValidatorKeys(ctx context.Context) (*apimiddleware.Lis
 	jsonremote := &apimiddleware.ListRemoteKeysResponseJson{}
 	if len(remoteBytes) != 0 {
 		if err := json.Unmarshal(remoteBytes, jsonremote); err != nil {
-			return nil, errors.Wrap(err, "failed to parse remote list keystores")
+			return nil, errors.Wrap(err, "failed to parse remote keystore list")
 		}
 	}
 	return jsonremote, nil
