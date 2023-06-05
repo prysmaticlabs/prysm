@@ -34,7 +34,8 @@ type ExecutionBlock struct {
 	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
-	ExcessDataGas   []byte                   `json:"excessDataGas"`
+	DataGasUsed     uint64                   `json:"dataGasUsed"`
+	ExcessDataGas   uint64                   `json:"excessDataGas"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -104,10 +105,14 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		}
 		e.Withdrawals = ws
 
-		exDG, hasExDG := decoded["excessDataGas"]
-		if hasExDG && exDG != nil {
+		edg, has := decoded["excessDataGas"]
+		if has && edg != nil {
 			e.Version = version.Deneb
-			e.ExcessDataGas, err = hexutil.Decode(exDG.(string))
+		}
+		dgu, has := decoded["dataGasUsed"]
+		if has && dgu != nil {
+			e.Version = version.Deneb
+			e.DataGasUsed, err = hexutil.DecodeUint64(dgu.(string))
 			if err != nil {
 				return err
 			}
@@ -266,7 +271,8 @@ type ExecutionPayloadDenebJSON struct {
 	Timestamp     *hexutil.Uint64 `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
 	BaseFeePerGas string          `json:"baseFeePerGas"`
-	ExcessDataGas string          `json:"excessDataGas"`
+	DataGasUsed   *hexutil.Uint64 `json:"dataGasUsed"`
+	ExcessDataGas *hexutil.Uint64 `json:"excessDataGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	Withdrawals   []*Withdrawal   `json:"withdrawals"`
@@ -699,8 +705,6 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	}
 	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
-	dataGas := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.ExcessDataGas))
-	dataGasHex := hexutil.EncodeBig(dataGas)
 	pHash := common.BytesToHash(e.ParentHash)
 	sRoot := common.BytesToHash(e.StateRoot)
 	recRoot := common.BytesToHash(e.ReceiptsRoot)
@@ -715,6 +719,8 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	if e.Withdrawals == nil {
 		e.Withdrawals = make([]*Withdrawal, 0)
 	}
+	dataGasUsed := hexutil.Uint64(e.DataGasUsed)
+	excessDataGas := hexutil.Uint64(e.ExcessDataGas)
 
 	return json.Marshal(ExecutionPayloadDenebJSON{
 		ParentHash:    &pHash,
@@ -729,7 +735,8 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 		Timestamp:     &timeStamp,
 		ExtraData:     e.ExtraData,
 		BaseFeePerGas: baseFeeHex,
-		ExcessDataGas: dataGasHex,
+		ExcessDataGas: &excessDataGas,
+		DataGasUsed:   &dataGasUsed,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
 		Withdrawals:   e.Withdrawals,
@@ -781,6 +788,12 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 	if dec.ExecutionPayload.GasLimit == nil {
 		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
+	if dec.ExecutionPayload.DataGasUsed == nil {
+		return errors.New("missing required field 'dataGasUsed' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.ExcessDataGas == nil {
+		return errors.New("missing required field 'excessDataGas' for ExecutionPayload")
+	}
 
 	*e = ExecutionPayloadDenebWithValueAndBlobsBundle{Payload: &ExecutionPayloadDeneb{}}
 	e.Payload.ParentHash = dec.ExecutionPayload.ParentHash.Bytes()
@@ -800,11 +813,8 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 	}
 	e.Payload.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 
-	dataGas, err := hexutil.DecodeBig(dec.ExecutionPayload.ExcessDataGas)
-	if err != nil {
-		return err
-	}
-	e.Payload.ExcessDataGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(dataGas.Bytes()), fieldparams.RootLength)
+	e.Payload.ExcessDataGas = uint64(*dec.ExecutionPayload.ExcessDataGas)
+	e.Payload.DataGasUsed = uint64(*dec.ExecutionPayload.DataGasUsed)
 
 	e.Payload.BlockHash = dec.ExecutionPayload.BlockHash.Bytes()
 	transactions := make([][]byte, len(dec.ExecutionPayload.Transactions))

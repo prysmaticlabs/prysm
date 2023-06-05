@@ -89,7 +89,6 @@ func TestUpgradeToDeneb(t *testing.T) {
 		BlockHash:        prevHeader.BlockHash(),
 		TransactionsRoot: txRoot,
 		WithdrawalsRoot:  wdRoot,
-		ExcessDataGas:    make([]byte, 32),
 	}
 	require.DeepEqual(t, wanted, protoHeader)
 }

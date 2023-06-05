@@ -18,7 +18,6 @@ import (
 // RunUpgradeToDeneb is a helper function that runs Deneb's fork spec tests.
 // It unmarshals a pre- and post-state to check `UpgradeToDeneb` comply with spec implementation.
 func RunUpgradeToDeneb(t *testing.T, config string) {
-	t.Skip("skipping tests at commit with incompatible ssz schema")
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "fork/fork/pyspec_tests")
