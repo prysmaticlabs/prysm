@@ -68,7 +68,7 @@ func (c *Client) GetLocalValidatorKeys(ctx context.Context) (*apimiddleware.List
 	}
 	jsonlocal := &apimiddleware.ListKeystoresResponseJson{}
 	if err := json.Unmarshal(localBytes, jsonlocal); err != nil {
-		return nil, errors.Wrap(err, "failed to parse local list keystores")
+		return nil, errors.Wrap(err, "failed to parse local keystore list")
 	}
 	return jsonlocal, nil
 }
