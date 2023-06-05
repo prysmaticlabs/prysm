@@ -67,7 +67,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 	}
 
 	if c.IsSet(ProposerSettingsOutputFlag.Name) {
-		log.Infof("the default fee recipient is set to %s", defaultFeeRecipient)
+		log.Infof("The default fee recipient is set to %s", defaultFeeRecipient)
 		var builderSettings *validatorpb.BuilderConfig
 		if c.Bool(WithBuilderFlag.Name) {
 			builderSettings = &validatorpb.BuilderConfig{
