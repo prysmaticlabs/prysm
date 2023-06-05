@@ -213,8 +213,8 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 	assert.NotEqual(t, cp, b)
 	assert.NotEqual(t, cp.Body(), bb)
 
-	payload := &pb.ExecutionPayloadDeneb{ExcessDataGas: bytesutil.PadTo([]byte{123}, 32)}
-	header := &pb.ExecutionPayloadHeaderDeneb{ExcessDataGas: bytesutil.PadTo([]byte{223}, 32)}
+	payload := &pb.ExecutionPayloadDeneb{ExcessDataGas: 123}
+	header := &pb.ExecutionPayloadHeaderDeneb{ExcessDataGas: 223}
 	payloadInterface, err := WrappedExecutionPayloadDeneb(payload, 123)
 	require.NoError(t, err)
 	headerInterface, err := WrappedExecutionPayloadHeaderDeneb(header, 123)
@@ -231,7 +231,7 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 	require.NoError(t, err)
 	gas, err := e.ExcessDataGas()
 	require.NoError(t, err)
-	require.DeepEqual(t, gas, bytesutil.PadTo([]byte{123}, 32))
+	require.DeepEqual(t, gas, uint64(123))
 
 	b.body.isBlinded = true
 	cp, err = b.Copy()
@@ -242,7 +242,7 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 	require.NoError(t, err)
 	gas, err = e.ExcessDataGas()
 	require.NoError(t, err)
-	require.DeepEqual(t, gas, bytesutil.PadTo([]byte{223}, 32))
+	require.DeepEqual(t, gas, uint64(223))
 }
 
 func Test_BeaconBlock_IsNil(t *testing.T) {
@@ -439,7 +439,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, result, eCapellaHeader)
 
-	executionDeneb := &pb.ExecutionPayloadDeneb{BlockNumber: 1, ExcessDataGas: bytesutil.PadTo([]byte{123}, 32)}
+	executionDeneb := &pb.ExecutionPayloadDeneb{BlockNumber: 1, ExcessDataGas: 123}
 	eDeneb, err := WrappedExecutionPayloadDeneb(executionDeneb, 0)
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Deneb, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Deneb}}}
@@ -449,9 +449,9 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, eDeneb)
 	gas, err := eDeneb.ExcessDataGas()
 	require.NoError(t, err)
-	require.DeepEqual(t, gas, bytesutil.PadTo([]byte{123}, 32))
+	require.DeepEqual(t, gas, uint64(123))
 
-	executionDenebHeader := &pb.ExecutionPayloadHeaderDeneb{BlockNumber: 1, ExcessDataGas: bytesutil.PadTo([]byte{223}, 32)}
+	executionDenebHeader := &pb.ExecutionPayloadHeaderDeneb{BlockNumber: 1, ExcessDataGas: 223}
 	eDenebHeader, err := WrappedExecutionPayloadHeaderDeneb(executionDenebHeader, 0)
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Deneb, block: &BeaconBlock{version: version.Deneb, body: &BeaconBlockBody{version: version.Deneb, isBlinded: true}}}
@@ -461,7 +461,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, eDenebHeader)
 	gas, err = eDenebHeader.ExcessDataGas()
 	require.NoError(t, err)
-	require.DeepEqual(t, gas, bytesutil.PadTo([]byte{223}, 32))
+	require.DeepEqual(t, gas, uint64(223))
 }
 
 func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {
