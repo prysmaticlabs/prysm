@@ -22,7 +22,7 @@ type Client struct {
 	*client.Client
 }
 
-// NewClient returns a new Client that includes functions for rest calls to keymanager APIs.
+// NewClient returns a new Client that includes functions for REST calls to keymanager APIs.
 func NewClient(host string, opts ...client.ClientOpt) (*Client, error) {
 	c, err := client.NewClient(host, opts...)
 	if err != nil {
