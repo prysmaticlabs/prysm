@@ -98,8 +98,8 @@ func TestGetProposerSettings(t *testing.T) {
 
 	err = getProposerSettings(cliCtx, os.Stdin)
 	require.NoError(t, err)
-	assert.LogsContain(t, hook, fmt.Sprintf("fee-recipient: %s", defaultfeerecipient))
-	assert.LogsContain(t, hook, "successfully created")
+	assert.LogsContain(t, hook, fmt.Sprintf("fee recipient is set to %s", defaultfeerecipient))
+	assert.LogsContain(t, hook, "Successfully created")
 	// clean up created file
 	err = os.Remove(file)
 	require.NoError(t, err)
