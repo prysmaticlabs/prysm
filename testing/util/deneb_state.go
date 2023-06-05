@@ -202,7 +202,6 @@ func buildGenesisBeaconStateDeneb(genesisTime uint64, preState state.BeaconState
 			PrevRandao:    make([]byte, 32),
 			BaseFeePerGas: make([]byte, 32),
 			BlockHash:     make([]byte, 32),
-			ExcessDataGas: make([]byte, 32),
 		},
 	}).HashTreeRoot()
 	if err != nil {
@@ -245,7 +244,6 @@ func buildGenesisBeaconStateDeneb(genesisTime uint64, preState state.BeaconState
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 		WithdrawalsRoot:  make([]byte, 32),
-		ExcessDataGas:    make([]byte, 32),
 	}
 
 	return state_native.InitializeFromProtoDeneb(st)
