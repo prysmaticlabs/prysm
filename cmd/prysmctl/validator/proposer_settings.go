@@ -98,7 +98,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 		if err := file.WriteFile(c.String(ProposerSettingsOutputFlag.Name), b); err != nil {
 			return err
 		}
-		log.Infof("successfully created `%s`. settings can be imported into validator client using --%s flag.", c.String(ProposerSettingsOutputFlag.Name), flags.ProposerSettingsFlag.Name)
+		log.Infof("Successfully created `%s`. Settings can be imported into validator client using --%s flag.", c.String(ProposerSettingsOutputFlag.Name), flags.ProposerSettingsFlag.Name)
 	}
 
 	return nil
