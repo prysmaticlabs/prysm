@@ -63,7 +63,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 	log.Infoln("===============DISPLAYING CURRENT PROPOSER SETTINGS===============")
 
 	for index := range validators {
-		log.Infof("validator: %s. fee-recipient: %s", validators[index], feeRecipients[index])
+		log.Infof("Validator: %s. Fee-recipient: %s", validators[index], feeRecipients[index])
 	}
 
 	if c.IsSet(ProposerSettingsOutputFlag.Name) {
