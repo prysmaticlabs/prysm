@@ -75,7 +75,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 				GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 			}
 		} else {
-			log.Infof("default builder settings can be included with the `--%s` flag", WithBuilderFlag.Name)
+			log.Infof("Default builder settings can be included with the `--%s` flag", WithBuilderFlag.Name)
 		}
 		proposerConfig := make(map[string]*validatorpb.ProposerOptionPayload)
 		for index, val := range validators {
