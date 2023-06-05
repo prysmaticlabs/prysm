@@ -478,7 +478,6 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 					PrevRandao:    make([]byte, fieldparams.RootLength),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
 					BlockHash:     make([]byte, fieldparams.RootLength),
-					ExcessDataGas: make([]byte, fieldparams.RootLength),
 				},
 			},
 		},
@@ -510,7 +509,8 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 		GasLimit:      2,
 		GasUsed:       3,
 		Timestamp:     uint64(timeStamp.Unix()),
-		ExcessDataGas: make([]byte, fieldparams.RootLength),
+		DataGasUsed:   4,
+		ExcessDataGas: 5,
 	}
 
 	kc := make([][]byte, 0)
