@@ -9,7 +9,7 @@ import (
 // ReqOption a request functional option.
 type ReqOption func(*http.Request)
 
-// WithSSZEncoding a request functional option that adds ssz encoding header.
+// WithSSZEncoding is a request functional option that adds SSZ encoding header.
 func WithSSZEncoding() ReqOption {
 	return func(req *http.Request) {
 		req.Header.Set("Accept", "application/octet-stream")
