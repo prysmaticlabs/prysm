@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -253,10 +254,13 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		if !ok {
 			return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
 		}
+		if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
+			return nil, status.Errorf(codes.InvalidArgument, "Too many blobs in block: %d", len(b.Deneb.Blobs))
+		}
 		scs := make([]*ethpb.BlobSidecar, len(b.Deneb.Blobs))
 		for i, blob := range b.Deneb.Blobs {
 			if err := vs.P2P.BroadcastBlob(ctx, blob.Message.Index, blob); err != nil {
-				log.WithError(err).Error("Could not broadcast blob")
+				log.WithError(err).Errorf("Could not broadcast blob index %d / %d", i, len(b.Deneb.Blobs))
 			}
 			scs[i] = blob.Message
 		}

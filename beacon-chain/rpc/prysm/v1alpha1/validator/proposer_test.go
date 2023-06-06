@@ -631,6 +631,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	tests := []struct {
 		name  string
 		block func([32]byte) *ethpb.GenericSignedBeaconBlock
+		err   string
 	}{
 		{
 			name: "phase0",
@@ -718,6 +719,26 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
+		{
+			name: "deneb block has too many blobs",
+			err:  "Too many blobs in block: 5",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockDeneb()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+					Block: blockToPropose,
+					Blobs: []*ethpb.SignedBlobSidecar{
+						{Message: &ethpb.BlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 4, Slot: 5, BlockParentRoot: parent[:]}},
+					},
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -740,11 +761,14 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
-			assert.NoError(t, err, "Could not propose block correctly")
-			if res == nil || len(res.BlockRoot) == 0 {
-				t.Error("No block root was returned")
+			if tt.err != "" { // Expecting an error
+				require.ErrorContains(t, tt.err, err)
+			} else {
+				assert.NoError(t, err, "Could not propose block correctly")
+				if res == nil || len(res.BlockRoot) == 0 {
+					t.Error("No block root was returned")
+				}
 			}
-
 			if tt.name == "deneb block has blobs" {
 				scs, err := db.BlobSidecarsBySlot(ctx, blockToPropose.GetDeneb().Block.Block.Slot)
 				require.NoError(t, err)
