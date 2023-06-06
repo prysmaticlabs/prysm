@@ -1,7 +1,6 @@
 package rewards
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 	coreblocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
 	"github.com/wealdtech/go-bytesutil"
 )
 
@@ -178,6 +178,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	network.WriteJson(w, response)
 }
 
+// TODO: Explain the flow
 func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 	segments := strings.Split(r.URL.Path, "/")
 	epoch, err := strconv.ParseUint(segments[len(segments)-1], 10, 64)
@@ -189,82 +190,75 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	var rawVals []string
-	if err = json.NewDecoder(r.Body).Decode(&rawVals); err != nil {
+	if primitives.Epoch(epoch) < params.BeaconConfig().AltairForkEpoch {
 		errJson := &network.DefaultErrorJson{
-			Message: "Could not decode validators: " + err.Error(),
+			Message: "Attestation rewards are not supported for Phase 0",
 			Code:    http.StatusBadRequest,
 		}
 		network.WriteError(w, errJson)
 		return
 	}
-
 	currentEpoch := uint64(slots.ToEpoch(s.TimeFetcher.CurrentSlot()))
-	if epoch > currentEpoch {
+	if epoch >= currentEpoch-1 {
 		errJson := &network.DefaultErrorJson{
-			Message: fmt.Sprintf("Epoch cannot be in the future. Current epoch is %d", currentEpoch),
+			Code:    http.StatusBadRequest,
+			Message: "Attestation rewards are available after two epoch transitions to ensure all attestation have a chance of inclusion",
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	epochStart, err := slots.EpochStart(primitives.Epoch(epoch + 2))
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get epoch's starting slot: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	st, err := s.Stater.StateBySlot(r.Context(), epochStart)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get state for epoch's starting slot: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	allVals, bal, err := altair.InitializePrecomputeValidators(r.Context(), st)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not initialize precompute validators: " + err.Error(),
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	allVals, bal, err = altair.ProcessEpochParticipation(r.Context(), st, bal, allVals)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not process epoch participation: " + err.Error(),
 			Code:    http.StatusBadRequest,
 		}
 		network.WriteError(w, errJson)
 		return
 	}
 
-	var st state.BeaconState
-
-	var participation []byte
-	// TODO: What to do in this case?
-	if epoch == currentEpoch {
-		st, err = s.HeadFetcher.HeadState(r.Context())
-		if err != nil {
+	var rawValIds []string
+	if r.Body != http.NoBody {
+		if err = json.NewDecoder(r.Body).Decode(&rawValIds); err != nil {
 			errJson := &network.DefaultErrorJson{
-				Message: "Could not get head state: " + err.Error(),
-				Code:    http.StatusInternalServerError,
-			}
-			network.WriteError(w, errJson)
-			return
-		}
-		participation, err = st.CurrentEpochParticipation()
-		if err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not get current epoch participation: " + err.Error(),
-				Code:    http.StatusInternalServerError,
-			}
-			network.WriteError(w, errJson)
-			return
-		}
-	} else {
-		epochStart, err := slots.EpochStart(primitives.Epoch(epoch + 1))
-		if err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not get epoch's starting slot: " + err.Error(),
-				Code:    http.StatusInternalServerError,
-			}
-			network.WriteError(w, errJson)
-			return
-		}
-		// We fetch the state for the next epoch and then retrieve previous epoch participation.
-		st, err = s.Stater.StateBySlot(r.Context(), epochStart)
-		if err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not get state for epoch's starting slot: " + err.Error(),
-				Code:    http.StatusInternalServerError,
-			}
-			network.WriteError(w, errJson)
-			return
-		}
-		participation, err = st.PreviousEpochParticipation()
-		if err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not get previous epoch participation: " + err.Error(),
-				Code:    http.StatusInternalServerError,
+				Message: "Could not decode validators: " + err.Error(),
+				Code:    http.StatusBadRequest,
 			}
 			network.WriteError(w, errJson)
 			return
 		}
 	}
-
-	vals := make([]primitives.ValidatorIndex, len(rawVals))
-	for i, v := range rawVals {
+	valIndices := make([]primitives.ValidatorIndex, len(rawValIds))
+	for i, v := range rawValIds {
 		index, err := strconv.ParseUint(v, 10, 64)
 		if err != nil {
 			pubkey, err := bytesutil.FromHexString(v)
@@ -277,105 +271,207 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			var ok bool
-			vals[i], ok = st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
+			valIndices[i], ok = st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
 			if !ok {
 				errJson := &network.DefaultErrorJson{
 					Message: fmt.Sprintf("No validator index found for pubkey %#x", pubkey),
-					Code:    http.StatusInternalServerError,
+					Code:    http.StatusBadRequest,
 				}
 				network.WriteError(w, errJson)
 				return
 			}
 		} else {
-			vals[i] = primitives.ValidatorIndex(index)
+			if i >= st.NumValidators() {
+				errJson := &network.DefaultErrorJson{
+					Message: fmt.Sprintf("Validator index %d is too large. Maximum allowed index is %d", i, st.NumValidators()-1),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
+			valIndices[i] = primitives.ValidatorIndex(index)
+		}
+	}
+	if len(valIndices) == 0 {
+		valIndices = make([]primitives.ValidatorIndex, len(allVals))
+		for i := 0; i < len(allVals); i++ {
+			valIndices[i] = primitives.ValidatorIndex(i)
+		}
+	}
+	var filteredVals []*precompute.Validator
+	if len(valIndices) == len(allVals) {
+		filteredVals = allVals
+	} else {
+		filteredVals = make([]*precompute.Validator, len(valIndices))
+		for i, valIx := range valIndices {
+			filteredVals[i] = allVals[valIx]
 		}
 	}
 
-	idealRewards, err := idealAttestationRewards(st)
+	idealRewards := make([]AttReward, 32)
+	idealVals := make([]*precompute.Validator, 32)
+	increment := params.BeaconConfig().EffectiveBalanceIncrement
+	for i := 1; i < 33; i++ {
+		effectiveBalance := uint64(i) * increment
+		idealVals[i-1] = &precompute.Validator{
+			IsActivePrevEpoch:            true,
+			IsSlashed:                    false,
+			CurrentEpochEffectiveBalance: effectiveBalance,
+			IsPrevEpochSourceAttester:    true,
+			IsPrevEpochTargetAttester:    true,
+			IsPrevEpochHeadAttester:      true,
+		}
+		idealRewards[i-1] = &IdealAttestationReward{EffectiveBalance: strconv.FormatUint(effectiveBalance, 10)}
+	}
+	err = attestationsDelta(idealRewards, st, bal, idealVals)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
-			Message: "Could not calculate ideal attestation rewards: " + err.Error(),
+			Message: "Could not get attestations delta: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 		network.WriteError(w, errJson)
 		return
 	}
-	totalRewards, err := totalAttestationRewards(r.Context(), st, vals)
 
+	totalRewards := make([]AttReward, len(valIndices))
+	for i, v := range valIndices {
+		totalRewards[i] = &TotalAttestationReward{ValidatorIndex: strconv.FormatUint(uint64(v), 10)}
+	}
+	err = attestationsDelta(totalRewards, st, bal, filteredVals)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get attestations delta: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	ir := make([]IdealAttestationReward, len(idealRewards))
+	for i, r := range idealRewards {
+		ir[i] = *r.(*IdealAttestationReward)
+	}
+	tr := make([]TotalAttestationReward, len(totalRewards))
+	for i, r := range totalRewards {
+		tr[i] = *r.(*TotalAttestationReward)
+	}
 	resp := &AttestationRewardsResponse{
 		Data: AttestationRewards{
-			IdealRewards: make([]IdealAttestationReward, len(rawVals)),
-			TotalRewards: make([]TotalAttestationReward, len(rawVals)),
+			IdealRewards: ir,
+			TotalRewards: tr,
 		},
 	}
-	targetIdx := params.BeaconConfig().TimelyTargetFlagIndex
-	sourceIdx := params.BeaconConfig().TimelySourceFlagIndex
-	headIdx := params.BeaconConfig().TimelyHeadFlagIndex
 
-	flags := participation[valIndex]
-	hasFlag, err := altair.HasValidatorFlag(flags, sourceIdx)
-	if err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: fmt.Sprintf("Could not get timely source flag for validator %d", valIndex),
-			Code:    http.StatusInternalServerError,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	hasFlag, err = altair.HasValidatorFlag(flags, headIdx)
-	if err != nil {
-		log.WithError(err).Error("Could not get timely Head flag")
-		return
-	}
-	hasFlag, err = altair.HasValidatorFlag(flags, targetIdx)
-	if err != nil {
-		log.WithError(err).Error("Could not get timely Target flag")
-		return
-	}
-
+	network.WriteJson(w, resp)
 }
 
-func attestationRewards(ctx context.Context, st state.BeaconState, indices []primitives.ValidatorIndex) (*AttestationRewards, error) {
-	totalActiveBalance, err := helpers.TotalActiveBalance(st)
+func attestationsDelta(
+	rewards []AttReward,
+	beaconState state.BeaconState,
+	bal *precompute.Balance,
+	vals []*precompute.Validator,
+) error {
+	cfg := params.BeaconConfig()
+	prevEpoch := time.PrevEpoch(beaconState)
+	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
+	increment := cfg.EffectiveBalanceIncrement
+	factor := cfg.BaseRewardFactor
+	baseRewardMultiplier := increment * factor / math.CachedSquareRoot(bal.ActiveCurrentEpoch)
+	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
+
+	// Modified in Altair and Bellatrix.
+	bias := cfg.InactivityScoreBias
+	inactivityPenaltyQuotient, err := beaconState.InactivityPenaltyQuotient()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get total active balance")
+		return err
 	}
-	effectiveBalanceIncrement := params.BeaconConfig().EffectiveBalanceIncrement
-	weightDenominator := params.BeaconConfig().WeightDenominator
-	activeIncrement := totalActiveBalance / effectiveBalanceIncrement
-	baseRewardPerIncrement, err := altair.BaseRewardPerIncrement(totalActiveBalance)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get base reward per increment")
-	}
+	inactivityDenominator := bias * inactivityPenaltyQuotient
 
-	flagWeights := map[uint8]uint64{
-		params.BeaconConfig().TimelyHeadFlagIndex:   params.BeaconConfig().TimelyHeadWeight,
-		params.BeaconConfig().TimelySourceFlagIndex: params.BeaconConfig().TimelySourceWeight,
-		params.BeaconConfig().TimelyTargetFlagIndex: params.BeaconConfig().TimelyTargetWeight,
-	}
-	ideal := make([]IdealAttestationReward, 32)
-
-	for i, w := range flagWeights {
-		for bal := 1; i < 33; i++ {
-			effectiveBalance := uint64(bal) * effectiveBalanceIncrement
-			baseReward := uint64(bal) * baseRewardPerIncrement
-			penalty := -(baseReward * w / weightDenominator)
-			switch i {
-			case params.BeaconConfig().TimelyHeadFlagIndex:
-
-			}
+	for i, r := range rewards {
+		err = attestationDelta(r, bal, vals[i], baseRewardMultiplier, inactivityDenominator, leak)
+		if err != nil {
+			return err
 		}
 	}
 
-	vals, err := precompute.Validators(ctx, st, indices)
-	if err != nil {
-		return nil, err
-	}
-	for _, v := range vals {
-		if precompute.EligibleForRewards(v) {
+	return nil
+}
 
-		}
+func attestationDelta(
+	reward AttReward,
+	bal *precompute.Balance,
+	val *precompute.Validator,
+	baseRewardMultiplier, inactivityDenominator uint64,
+	inactivityLeak bool) error {
+	// TODO: Move this outside
+	eligible := val.IsActivePrevEpoch || (val.IsSlashed && !val.IsWithdrawableCurrentEpoch)
+	// Per spec `ActiveCurrentEpoch` can't be 0 to process attestation delta.
+	if !eligible || bal.ActiveCurrentEpoch == 0 {
+		return nil
 	}
+
+	cfg := params.BeaconConfig()
+	increment := cfg.EffectiveBalanceIncrement
+	effectiveBalance := val.CurrentEpochEffectiveBalance
+	baseReward := (effectiveBalance / increment) * baseRewardMultiplier
+	activeIncrement := bal.ActiveCurrentEpoch / increment
+
+	weightDenominator := cfg.WeightDenominator
+	srcWeight := cfg.TimelySourceWeight
+	tgtWeight := cfg.TimelyTargetWeight
+	headWeight := cfg.TimelyHeadWeight
+	// Process source reward / penalty
+	if val.IsPrevEpochSourceAttester && !val.IsSlashed {
+		if inactivityLeak {
+			reward.SetSource("0")
+		} else {
+			n := baseReward * srcWeight * (bal.PrevEpochAttested / increment)
+			reward.SetSource(strconv.FormatUint(n/(activeIncrement*weightDenominator), 10))
+		}
+	} else {
+		reward.SetSource(strconv.FormatUint(-(baseReward * srcWeight / weightDenominator), 10))
+	}
+
+	// Process target reward / penalty
+	if val.IsPrevEpochTargetAttester && !val.IsSlashed {
+		if inactivityLeak {
+			reward.SetTarget("0")
+		} else {
+			n := baseReward * tgtWeight * (bal.PrevEpochTargetAttested / increment)
+			reward.SetTarget(strconv.FormatUint(n/(activeIncrement*weightDenominator), 10))
+		}
+	} else {
+		reward.SetTarget(strconv.FormatUint(-(baseReward * tgtWeight / weightDenominator), 10))
+	}
+
+	// Process head reward / penalty
+	if val.IsPrevEpochHeadAttester && !val.IsSlashed {
+		if inactivityLeak {
+			reward.SetHead("0")
+		} else {
+			n := baseReward * headWeight * (bal.PrevEpochHeadAttested / increment)
+			reward.SetHead(strconv.FormatUint(n/(activeIncrement*weightDenominator), 10))
+		}
+	} else {
+		reward.SetHead("0")
+	}
+
+	// Process finality delay penalty
+	// Apply an additional penalty to validators that did not vote on the correct target or slashed
+	if !val.IsPrevEpochTargetAttester || val.IsSlashed {
+		n, err := math.Mul64(effectiveBalance, val.InactivityScore)
+		if err != nil {
+			return err
+		}
+		r, err := strconv.ParseUint(reward.GetTarget(), 10, 64)
+		// This should never happen because we set the target reward earlier in this function.
+		if err != nil {
+			return err
+		}
+		reward.SetTarget(strconv.FormatUint(r-n/inactivityDenominator, 10))
+	}
+
+	return nil
 }
 
 func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) *network.DefaultErrorJson {
