@@ -30,5 +30,4 @@ const (
 	MaxBlobCommitmentsPerBlock            = 4096          // MaxBlobCommitmentsPerBlock defines the theoretical limit of blobs can be included in a block.
 	BlobLength                            = 131072        // BlobLength defines the byte length of a blob.
 	BlobSize                              = 131072        // defined to match blob.size in bazel ssz codegen
-	MaxBlobsPerBlock                      = 4             // MAX_BLOBS_PER_BLOCK
 )
