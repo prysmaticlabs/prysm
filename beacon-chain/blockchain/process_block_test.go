@@ -627,19 +627,6 @@ func TestEnsureRootNotZeroHashes(t *testing.T) {
 	assert.Equal(t, root, r, "Did not get wanted justified root")
 }
 
-func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
-	ctx := context.Background()
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	s, _ := util.DeterministicGenesisState(t, 1024)
-	service.head = &head{state: s}
-	require.NoError(t, s.SetSlot(2*params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(t, service.handleEpochBoundary(ctx, s))
-	require.Equal(t, 3*params.BeaconConfig().SlotsPerEpoch, service.nextEpochBoundarySlot)
-}
-
 func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 	service, tr := minimalTestService(t)
 	ctx, fcs := tr.ctx, tr.fcs
