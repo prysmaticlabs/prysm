@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -285,9 +284,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}()
 	}
 	defer reportAttestationInclusion(b)
-	if err := s.handleEpochBoundary(ctx, postState); err != nil {
-		return err
-	}
+
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
 }
@@ -480,52 +477,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 		return err
 	}
 	return s.saveHeadNoDB(ctx, lastB, lastBR, preState)
-}
-
-// Epoch boundary bookkeeping such as logging epoch summaries.
-func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
-	defer span.End()
-
-	var err error
-	if postState.Slot()+1 == s.nextEpochBoundarySlot {
-		copied := postState.Copy()
-		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
-		if err != nil {
-			return err
-		}
-		// Update caches for the next epoch at epoch boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(ctx, copied, coreTime.CurrentEpoch(copied)); err != nil {
-			return err
-		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
-			return err
-		}
-	} else if postState.Slot() >= s.nextEpochBoundarySlot {
-		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
-		if err != nil {
-			return err
-		}
-
-		// Update caches at epoch boundary slot.
-		// The following updates have shortcut to return nil cheaply if fulfilled during boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
-			return err
-		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
-			return err
-		}
-
-		headSt, err := s.HeadState(ctx)
-		if err != nil {
-			return err
-		}
-		if err := reportEpochMetrics(ctx, postState, headSt); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // This feeds in the block to fork choice store. It's allows fork choice store
