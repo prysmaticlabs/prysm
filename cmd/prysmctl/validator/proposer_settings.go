@@ -24,22 +24,22 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "prysmctl.getProposerSettings")
 	defer span.End()
 	if !c.IsSet(ValidatorHostFlag.Name) {
-		return ErrNoFlag(ValidatorHostFlag.Name)
+		return errNoFlag(ValidatorHostFlag.Name)
 	}
 	if !c.IsSet(TokenFlag.Name) {
-		return ErrNoFlag(TokenFlag.Name)
+		return errNoFlag(TokenFlag.Name)
 	}
 	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient.Hex()
 	if c.IsSet(ProposerSettingsOutputFlag.Name) {
 		if c.IsSet(DefaultFeeRecipientFlag.Name) {
 			recipient := c.String(DefaultFeeRecipientFlag.Name)
-			if err := ValidateIsExecutionAddress(recipient); err != nil {
+			if err := validateIsExecutionAddress(recipient); err != nil {
 				return err
 			}
 			defaultFeeRecipient = recipient
 		} else {
 			promptText := "Please enter a default fee recipient address (an ethereum address in hex format)"
-			resp, err := prompt.ValidatePrompt(r, promptText, ValidateIsExecutionAddress)
+			resp, err := prompt.ValidatePrompt(r, promptText, validateIsExecutionAddress)
 			if err != nil {
 				return err
 			}
@@ -104,7 +104,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 	return nil
 }
 
-func ValidateIsExecutionAddress(input string) error {
+func validateIsExecutionAddress(input string) error {
 	if !bytesutil.IsHex([]byte(input)) || !(len(input) == common.AddressLength*2+2) {
 		return errors.New("no default address entered")
 	}
