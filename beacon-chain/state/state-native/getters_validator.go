@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -279,21 +277,4 @@ func (b *BeaconState) inactivityScoresVal() []uint64 {
 	res := make([]uint64, len(b.inactivityScores))
 	copy(res, b.inactivityScores)
 	return res
-}
-
-// LastActivatedValidatorIndex provides the validator index that was last known in the state
-func (b *BeaconState) LastActivatedValidatorIndex() (primitives.ValidatorIndex, error) {
-	var lastActivatedvalidatorIndex primitives.ValidatorIndex
-	// linear search because status are not sorted
-	for j := b.NumValidators() - 1; j >= 0; j-- {
-		val, err := b.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(j))
-		if err != nil {
-			return 0, err
-		}
-		if helpers.IsActiveValidatorUsingTrie(val, time.CurrentEpoch(b)) {
-			lastActivatedvalidatorIndex = primitives.ValidatorIndex(j)
-			break
-		}
-	}
-	return lastActivatedvalidatorIndex, nil
 }

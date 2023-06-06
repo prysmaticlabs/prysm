@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -45,7 +46,8 @@ func (vs *Server) ValidatorStatus(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey, headState.LastActivatedValidatorIndex)
+
+	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey, func() (primitives.ValidatorIndex, error) { return helpers.LastActivatedValidatorIndex(ctx, headState) })
 	return vStatus, nil
 }
 
@@ -85,9 +87,9 @@ func (vs *Server) MultipleValidatorStatus(
 	// Fetch statuses from beacon state.
 	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubKeys))
 	indices := make([]primitives.ValidatorIndex, len(pubKeys))
-	lastActivated, err := headState.LastActivatedValidatorIndex()
+	lastActivated, hpErr := helpers.LastActivatedValidatorIndex(ctx, headState)
 	for i, pubKey := range pubKeys {
-		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey, func() (primitives.ValidatorIndex, error) { return lastActivated, err })
+		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey, func() (primitives.ValidatorIndex, error) { return lastActivated, hpErr })
 	}
 
 	return &ethpb.MultipleValidatorStatusResponse{
@@ -223,11 +225,16 @@ func (vs *Server) activationStatus(
 	}
 	activeValidatorExists := false
 	statusResponses := make([]*ethpb.ValidatorActivationResponse_Status, len(pubKeys))
+	// only run calculation of last activated once per state
+	index, hpErr := helpers.LastActivatedValidatorIndex(ctx, headState)
+	lastActivatedFn := func() (primitives.ValidatorIndex, error) {
+		return index, hpErr
+	}
 	for i, pubKey := range pubKeys {
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
-		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey, headState.LastActivatedValidatorIndex)
+		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey, lastActivatedFn)
 		if vStatus == nil {
 			continue
 		}

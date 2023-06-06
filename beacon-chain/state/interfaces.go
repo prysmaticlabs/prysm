@@ -68,7 +68,6 @@ type ReadOnlyBeaconState interface {
 	IsNil() bool
 	Version() int
 	LatestExecutionPayloadHeader() (interfaces.ExecutionData, error)
-	LastActivatedValidatorIndex() (primitives.ValidatorIndex, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
