@@ -213,7 +213,7 @@ func (s *Service) Start() {
 		// Set trusted peers for those that are provided as static addresses.
 		pids := peerIdsFromMultiAddrs(addrs)
 		s.peers.SetTrustedPeers(pids)
-
+		peersToWatch = append(peersToWatch, s.cfg.StaticPeers...)
 		s.connectWithAllPeers(addrs)
 	}
 	// Initialize metadata according to the
