@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	blocktest "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks/testing"
@@ -66,11 +66,7 @@ func TestMarshalToEnvelope(t *testing.T) {
 }
 
 func TestFallbackVersionCheck(t *testing.T) {
-	c := &Client{
-		hc:      &http.Client{},
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
-	c.hc.Transport = &testRT{rt: func(req *http.Request) (*http.Response, error) {
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
 		res := &http.Response{Request: req}
 		switch req.URL.Path {
 		case getNodeVersionPath:
@@ -88,12 +84,13 @@ func TestFallbackVersionCheck(t *testing.T) {
 		case getWeakSubjectivityPath:
 			res.StatusCode = http.StatusNotFound
 		}
-
 		return res, nil
 	}}
 
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 	ctx := context.Background()
-	_, err := ComputeWeakSubjectivityCheckpoint(ctx, c)
+	_, err = ComputeWeakSubjectivityCheckpoint(ctx, c)
 	require.ErrorIs(t, err, errUnsupportedPrysmCheckpointVersion)
 }
 
@@ -170,44 +167,41 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 		Epoch:     epoch,
 	}
 
-	hc := &http.Client{
-		Transport: &testRT{rt: func(req *http.Request) (*http.Response, error) {
-			res := &http.Response{Request: req}
-			switch req.URL.Path {
-			case getWeakSubjectivityPath:
-				res.StatusCode = http.StatusOK
-				cp := struct {
-					Epoch string `json:"epoch"`
-					Root  string `json:"root"`
-				}{
-					Epoch: fmt.Sprintf("%d", slots.ToEpoch(b.Block().Slot())),
-					Root:  fmt.Sprintf("%#x", bRoot),
-				}
-				wsr := struct {
-					Checkpoint interface{} `json:"ws_checkpoint"`
-					StateRoot  string      `json:"state_root"`
-				}{
-					Checkpoint: cp,
-					StateRoot:  fmt.Sprintf("%#x", wRoot),
-				}
-				rb, err := marshalToEnvelope(wsr)
-				require.NoError(t, err)
-				res.Body = io.NopCloser(bytes.NewBuffer(rb))
-			case renderGetStatePath(IdFromSlot(wSlot)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(wsSerialized))
-			case renderGetBlockPath(IdFromRoot(bRoot)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(serBlock))
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
+		res := &http.Response{Request: req}
+		switch req.URL.Path {
+		case getWeakSubjectivityPath:
+			res.StatusCode = http.StatusOK
+			cp := struct {
+				Epoch string `json:"epoch"`
+				Root  string `json:"root"`
+			}{
+				Epoch: fmt.Sprintf("%d", slots.ToEpoch(b.Block().Slot())),
+				Root:  fmt.Sprintf("%#x", bRoot),
 			}
+			wsr := struct {
+				Checkpoint interface{} `json:"ws_checkpoint"`
+				StateRoot  string      `json:"state_root"`
+			}{
+				Checkpoint: cp,
+				StateRoot:  fmt.Sprintf("%#x", wRoot),
+			}
+			rb, err := marshalToEnvelope(wsr)
+			require.NoError(t, err)
+			res.Body = io.NopCloser(bytes.NewBuffer(rb))
+		case renderGetStatePath(IdFromSlot(wSlot)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(wsSerialized))
+		case renderGetBlockPath(IdFromRoot(bRoot)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(serBlock))
+		}
 
-			return res, nil
-		}},
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
+		return res, nil
+	}}
+
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 
 	wsd, err := ComputeWeakSubjectivityCheckpoint(ctx, c)
 	require.NoError(t, err)
@@ -266,42 +260,39 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 	wsSerialized, err := wst.MarshalSSZ()
 	require.NoError(t, err)
 
-	hc := &http.Client{
-		Transport: &testRT{rt: func(req *http.Request) (*http.Response, error) {
-			res := &http.Response{Request: req}
-			switch req.URL.Path {
-			case getNodeVersionPath:
-				res.StatusCode = http.StatusOK
-				b := bytes.NewBuffer(nil)
-				d := struct {
-					Version string `json:"version"`
-				}{
-					Version: "Lighthouse/v0.1.5 (Linux x86_64)",
-				}
-				encoded, err := marshalToEnvelope(d)
-				require.NoError(t, err)
-				b.Write(encoded)
-				res.Body = io.NopCloser(b)
-			case getWeakSubjectivityPath:
-				res.StatusCode = http.StatusNotFound
-			case renderGetStatePath(IdHead):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(serialized))
-			case renderGetStatePath(IdFromSlot(wSlot)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(wsSerialized))
-			case renderGetBlockPath(IdFromRoot(bRoot)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(serBlock))
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
+		res := &http.Response{Request: req}
+		switch req.URL.Path {
+		case getNodeVersionPath:
+			res.StatusCode = http.StatusOK
+			b := bytes.NewBuffer(nil)
+			d := struct {
+				Version string `json:"version"`
+			}{
+				Version: "Lighthouse/v0.1.5 (Linux x86_64)",
 			}
+			encoded, err := marshalToEnvelope(d)
+			require.NoError(t, err)
+			b.Write(encoded)
+			res.Body = io.NopCloser(b)
+		case getWeakSubjectivityPath:
+			res.StatusCode = http.StatusNotFound
+		case renderGetStatePath(IdHead):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(serialized))
+		case renderGetStatePath(IdFromSlot(wSlot)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(wsSerialized))
+		case renderGetBlockPath(IdFromRoot(bRoot)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(serBlock))
+		}
 
-			return res, nil
-		}},
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
+		return res, nil
+	}}
+
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 
 	wsPub, err := ComputeWeakSubjectivityCheckpoint(ctx, c)
 	require.NoError(t, err)
@@ -315,21 +306,16 @@ func TestGetWeakSubjectivityEpochFromHead(t *testing.T) {
 	st, expectedEpoch := defaultTestHeadState(t, params.MainnetConfig())
 	serialized, err := st.MarshalSSZ()
 	require.NoError(t, err)
-	hc := &http.Client{
-		Transport: &testRT{rt: func(req *http.Request) (*http.Response, error) {
-			res := &http.Response{Request: req}
-			switch req.URL.Path {
-			case renderGetStatePath(IdHead):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(serialized))
-			}
-			return res, nil
-		}},
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
+		res := &http.Response{Request: req}
+		if req.URL.Path == renderGetStatePath(IdHead) {
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(serialized))
+		}
+		return res, nil
+	}}
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 	actualEpoch, err := getWeakSubjectivityEpochFromHead(context.Background(), c)
 	require.NoError(t, err)
 	require.Equal(t, expectedEpoch, actualEpoch)
@@ -448,29 +434,24 @@ func TestDownloadFinalizedData(t *testing.T) {
 	ms, err := st.MarshalSSZ()
 	require.NoError(t, err)
 
-	hc := &http.Client{
-		Transport: &testRT{rt: func(req *http.Request) (*http.Response, error) {
-			res := &http.Response{Request: req}
-			switch req.URL.Path {
-			case renderGetStatePath(IdFinalized):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(ms))
-			case renderGetBlockPath(IdFromRoot(br)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(mb))
-			default:
-				res.StatusCode = http.StatusInternalServerError
-				res.Body = io.NopCloser(bytes.NewBufferString(""))
-			}
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
+		res := &http.Response{Request: req}
+		switch req.URL.Path {
+		case renderGetStatePath(IdFinalized):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(ms))
+		case renderGetBlockPath(IdFromRoot(br)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(mb))
+		default:
+			res.StatusCode = http.StatusInternalServerError
+			res.Body = io.NopCloser(bytes.NewBufferString(""))
+		}
 
-			return res, nil
-		}},
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
-
+		return res, nil
+	}}
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 	// sanity check before we go through checkpoint
 	// make sure we can download the state and unmarshal it with the VersionedUnmarshaler
 	sb, err := c.GetState(ctx, IdFinalized)

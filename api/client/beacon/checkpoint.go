@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
+	base "github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -140,7 +141,7 @@ func ComputeWeakSubjectivityCheckpoint(ctx context.Context, client *Client) (*We
 	ws, err := client.GetWeakSubjectivity(ctx)
 	if err != nil {
 		// a 404/405 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
-		if !errors.Is(err, ErrNotOK) {
+		if !errors.Is(err, base.ErrNotOK) {
 			return nil, errors.Wrap(err, "unexpected API response for prysm-only weak subjectivity checkpoint API")
 		}
 		// fall back to vanilla Beacon Node API method
