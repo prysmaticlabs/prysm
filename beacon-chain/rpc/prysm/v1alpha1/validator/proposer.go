@@ -19,11 +19,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -214,11 +216,74 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
+
 	blk, err := blocks.NewSignedBeaconBlock(req.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
 	}
-	return vs.proposeGenericBeaconBlock(ctx, blk)
+
+	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create unblinder")
+	}
+	blk, err = unblinder.unblindBuilderBlock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not unblind builder block")
+	}
+
+	// Broadcast the new block to the network.
+	blkPb, err := blk.Proto()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get protobuf block")
+	}
+	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
+		return nil, fmt.Errorf("could not broadcast block: %v", err)
+	}
+
+	if blk.Version() >= version.Deneb {
+		b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
+		if !ok {
+			return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
+		}
+		if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
+			return nil, status.Errorf(codes.InvalidArgument, "Too many blobs in block: %d", len(b.Deneb.Blobs))
+		}
+		scs := make([]*ethpb.BlobSidecar, len(b.Deneb.Blobs))
+		for i, blob := range b.Deneb.Blobs {
+			if err := vs.P2P.BroadcastBlob(ctx, blob.Message.Index, blob); err != nil {
+				log.WithError(err).Errorf("Could not broadcast blob index %d / %d", i, len(b.Deneb.Blobs))
+			}
+			scs[i] = blob.Message
+		}
+		if len(scs) > 0 {
+			if err := vs.BeaconDB.SaveBlobSidecar(ctx, scs); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash block: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"blockRoot": hex.EncodeToString(root[:]),
+	}).Debug("Broadcasting block")
+
+	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
+		return nil, fmt.Errorf("could not process beacon block: %v", err)
+	}
+
+	log.WithField("slot", blk.Block().Slot()).Debugf(
+		"Block proposal received via RPC")
+	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
+		Type: blockfeed.ReceivedBlock,
+		Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
+	})
+
+	return &ethpb.ProposeResponse{
+		BlockRoot: root[:],
+	}, nil
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
@@ -297,52 +362,6 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}
 	return &ethpb.FeeRecipientByPubKeyResponse{
 		FeeRecipient: address.Bytes(),
-	}, nil
-}
-
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
-	defer span.End()
-
-	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create unblinder")
-	}
-	blk, err = unblinder.unblindBuilderBlock(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not unblind builder block")
-	}
-
-	// Broadcast the new block to the network.
-	blkPb, err := blk.Proto()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get protobuf block")
-	}
-	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
-		return nil, fmt.Errorf("could not broadcast block: %v", err)
-	}
-	root, err := blk.Block().HashTreeRoot()
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash block: %v", err)
-	}
-
-	log.WithFields(logrus.Fields{
-		"blockRoot": hex.EncodeToString(root[:]),
-	}).Debug("Broadcasting block")
-
-	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
-		return nil, fmt.Errorf("could not process beacon block: %v", err)
-	}
-
-	log.WithField("slot", blk.Block().Slot()).Debugf(
-		"Block proposal received via RPC")
-	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.ReceivedBlock,
-		Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
-	})
-
-	return &ethpb.ProposeResponse{
-		BlockRoot: root[:],
 	}, nil
 }
 
