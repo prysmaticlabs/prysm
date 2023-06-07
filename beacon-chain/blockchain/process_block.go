@@ -498,15 +498,11 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err := helpers.UpdateCommitteeCache(ctx, copied, coreTime.CurrentEpoch(copied)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
+		e := coreTime.CurrentEpoch(copied)
+		if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e); err != nil {
 			return err
 		}
-
-		if err := copied.SetSlot(copied.Slot() + params.BeaconConfig().SlotsPerEpoch); err != nil {
-			return err
-		}
-		// This is a no-op for caching proposer indices for epoch + 1.
-		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e+1); err != nil {
 			log.Warn(ctx, "Failed to cache next epoch proposers", "err", err)
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
@@ -520,7 +516,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err := helpers.UpdateCommitteeCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 
