@@ -496,21 +496,20 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
 	}
-
+	builderConfigFromFlag, err := BuilderSettingsFromFlags(cliCtx)
+	if err != nil {
+		return nil, err
+	}
 	// is overridden by file and URL flags
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
-		if err != nil {
-			return nil, err
-		}
 		fileConfig = &validatorpb.ProposerSettingsPayload{
 			ProposerConfig: nil,
 			DefaultConfig: &validatorpb.ProposerOptionPayload{
 				FeeRecipient: suggestedFee,
-				Builder:      builderConfig.ToPayload(),
+				Builder:      builderConfigFromFlag.ToPayload(),
 			},
 		}
 	}
@@ -531,11 +530,30 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		// checks db if proposer settings exist if none is provided.
 		settings, err := db.ProposerSettings(cliCtx.Context)
 		if err == nil {
+			// override the db settings with the results on whether or not the --enable-builder flag is provided.
+			// if the user does not which for settings saved in the db to be reset
+			if builderConfigFromFlag == nil {
+				log.Infof("proposer settings loaded from db. validator registration to builder is not enabled, please use the --%s flag if you wish to use a builder.", flags.EnableBuilderFlag.Name)
+			}
+			if settings.ProposeConfig != nil {
+				for key := range settings.ProposeConfig {
+					settings.ProposeConfig[key].BuilderConfig = builderConfigFromFlag
+				}
+			}
+			if settings.DefaultConfig != nil {
+				settings.DefaultConfig.BuilderConfig = builderConfigFromFlag
+			}
+
 			return settings, nil
 		}
 
 		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
-			return nil, fmt.Errorf("%s flag can only be used when a default fee recipient is present on the validator client", flags.EnableBuilderFlag.Name)
+			// if there are no proposer settings provided, create a default where fee recipient is not populated, this will be skipped for validator registration on validators that don't have a fee recipient set.
+			return &validatorServiceConfig.ProposerSettings{
+				DefaultConfig: &validatorServiceConfig.ProposerOption{
+					BuilderConfig: builderConfigFromFlag,
+				},
+			}, nil
 		}
 		return nil, nil
 	}
@@ -563,11 +581,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		BuilderConfig: validatorServiceConfig.ToBuilderConfig(fileConfig.DefaultConfig.Builder),
 	}
 	if vpSettings.DefaultConfig.BuilderConfig == nil {
-		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
-		if err != nil {
-			return nil, err
-		}
-		vpSettings.DefaultConfig.BuilderConfig = builderConfig
+		vpSettings.DefaultConfig.BuilderConfig = builderConfigFromFlag
 	}
 
 	if vpSettings.DefaultConfig.BuilderConfig != nil {
@@ -600,14 +614,12 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
 				return nil, err
 			}
-			if option.Builder != nil {
-				option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
+			if builderConfigFromFlag != nil {
+				option.Builder = builderConfigFromFlag.ToPayload()
 			} else {
-				builderConfig, err := BuilderSettingsFromFlags(cliCtx)
-				if err != nil {
-					return nil, err
+				if option.Builder != nil {
+					option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
 				}
-				option.Builder = builderConfig.ToPayload()
 			}
 			o := &validatorServiceConfig.ProposerOption{
 				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
