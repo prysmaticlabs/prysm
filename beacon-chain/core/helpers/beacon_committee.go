@@ -344,9 +344,6 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 	if epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		return nil
 	}
-	if epoch == 0 {
-		return errors.New("cannot update proposer indices for genesis epoch")
-	}
 
 	// Use state root from (current_epoch - 1))
 	s, err := slots.EpochEnd(epoch - 1)
