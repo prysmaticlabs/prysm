@@ -552,7 +552,7 @@ func TestProposerSettings(t *testing.T) {
 			validatorRegistrationEnabled: true,
 		},
 		{
-			name: "Enable Builder flag does not override completed builder config",
+			name: "Enable Builder flag does override completed builder config",
 			args: args{
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.yaml",
@@ -580,7 +580,7 @@ func TestProposerSettings(t *testing.T) {
 							FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						},
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
-							Enabled:  false,
+							Enabled:  true,
 							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
@@ -694,15 +694,4 @@ func TestProposerSettings(t *testing.T) {
 			require.DeepEqual(t, w, got)
 		})
 	}
-}
-
-// return an error if the user is using builder settings without any default fee recipient
-func TestProposerSettings_EnableBuilder_noFeeRecipient(t *testing.T) {
-	validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.Bool(flags.EnableBuilderFlag.Name, true, "")
-	cliCtx := cli.NewContext(&app, set, nil)
-	_, err := proposerSettings(cliCtx, validatorDB)
-	require.ErrorContains(t, "can only be used when a default fee recipient is present on the validator client", err)
 }

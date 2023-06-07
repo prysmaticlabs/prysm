@@ -580,12 +580,13 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		},
 		BuilderConfig: validatorServiceConfig.ToBuilderConfig(fileConfig.DefaultConfig.Builder),
 	}
-	if vpSettings.DefaultConfig.BuilderConfig == nil {
-		vpSettings.DefaultConfig.BuilderConfig = builderConfigFromFlag
-	}
 
-	if vpSettings.DefaultConfig.BuilderConfig != nil {
-		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
+	if builderConfigFromFlag != nil {
+		config := builderConfigFromFlag
+		if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && vpSettings.DefaultConfig.BuilderConfig != nil {
+			config.GasLimit = vpSettings.DefaultConfig.BuilderConfig.GasLimit
+		}
+		vpSettings.DefaultConfig.BuilderConfig = config
 	}
 
 	if psExists {
@@ -615,7 +616,11 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 				return nil, err
 			}
 			if builderConfigFromFlag != nil {
-				option.Builder = builderConfigFromFlag.ToPayload()
+				config := builderConfigFromFlag.ToPayload()
+				if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && option.Builder != nil {
+					config.GasLimit = option.Builder.GasLimit
+				}
+				option.Builder = config
 			} else {
 				if option.Builder != nil {
 					option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
