@@ -8,22 +8,17 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"go.opencensus.io/trace"
 )
 
 type nextSlotCache struct {
 	sync.Mutex
-	prevRoot         []byte
-	lastRoot         []byte
-	prevState        state.BeaconState
-	lastState        state.BeaconState
-	nextBoundarySlot types.Slot
+	prevRoot  []byte
+	lastRoot  []byte
+	prevState state.BeaconState
+	lastState state.BeaconState
 }
 
 var (
@@ -76,13 +71,6 @@ func UpdateNextSlotCache(ctx context.Context, root []byte, state state.BeaconSta
 	nsc.lastRoot = bytesutil.SafeCopyBytes(root)
 	nsc.lastState = copied
 
-	// update the shuffling caches in the background.
-	go func() {
-		if err := updateShufflingCaches(ctx, copied); err != nil {
-			log.WithError(err).Error("could not update shuffling caches")
-		}
-	}()
-
 	return nil
 }
 
@@ -96,27 +84,12 @@ func LastCachedState() ([]byte, state.BeaconState) {
 	return bytesutil.SafeCopyBytes(nsc.lastRoot), nsc.lastState.Copy()
 }
 
-// updateShufflingCache updates the caches with respect the validator shuffling.
-// 1.) committee cache
-// 2.) proposer indices cache
-// no-op if the state slot is less than next boundary slot.
-func updateShufflingCaches(ctx context.Context, st state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "transition.updateShufflingCaches")
-	defer span.End()
+func LastCachedStateSlot() types.Slot {
+	nsc.Lock()
+	defer nsc.Unlock()
 
-	var err error
-	if st.Slot() >= nsc.nextBoundarySlot {
-		if err := helpers.UpdateCommitteeCache(ctx, st, coreTime.CurrentEpoch(st)); err != nil {
-			return err
-		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, st); err != nil {
-			return err
-		}
-		nsc.nextBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(st))
-		if err != nil {
-			return err
-		}
+	if nsc.lastState == nil {
+		return 0
 	}
-
-	return nil
+	return nsc.lastState.Slot()
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -217,6 +218,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			defer cancel()
 			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
 				log.WithError(err).Debug("could not update next slot state cache")
+			}
+			if err := s.updateShufflingCaches(ctx); err != nil {
+				log.WithError(err).Debug("could not update shuffling caches")
 			}
 		}()
 	}
@@ -647,6 +651,12 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		log.WithError(err).Debug("could not update next slot state cache")
 	}
 
+	go func() {
+		if err := s.updateShufflingCaches(ctx); err != nil {
+			log.WithError(err).Debug("could not update shuffling caches")
+		}
+	}()
+
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
@@ -670,4 +680,32 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 	}
+}
+
+// updateShufflingCache updates the following caches with respect the validator shuffling.
+// 1.) committee cache
+// 2.) proposer indices cache
+// no-op if the last cached next slot state is less than next boundary slot.
+func (s *Service) updateShufflingCaches(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "transition.updateShufflingCaches")
+	defer span.End()
+
+	transition.LastCachedState()
+
+	var err error
+	if transition.LastCachedStateSlot() >= s.nextEpochBoundarySlot {
+		_, st := transition.LastCachedState()
+		if err := helpers.UpdateCommitteeCache(ctx, st, coreTime.CurrentEpoch(st)); err != nil {
+			return err
+		}
+		if err := helpers.UpdateProposerIndicesInCache(ctx, st); err != nil {
+			return err
+		}
+		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(st))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
