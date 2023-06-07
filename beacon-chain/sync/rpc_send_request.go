@@ -95,6 +95,10 @@ func SendBeaconBlocksByRootRequest(
 	ctx context.Context, clock blockchain.TemporalOracle, p2pProvider p2p.P2P, pid peer.ID,
 	req *p2ptypes.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
 ) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
+	if uint64(len(*req)) > params.BeaconNetworkConfig().MaxRequestBlobsSidecars {
+		return nil, errors.Wrapf(p2ptypes.ErrMaxBlobReqExceeded, "length=%d", len(*req))
+	}
+
 	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, slots.ToEpoch(clock.CurrentSlot()))
 	if err != nil {
 		return nil, err
