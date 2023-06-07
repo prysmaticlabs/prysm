@@ -34,7 +34,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DataVotes:               b.eth1DataVotes,
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validators,
-			Balances:                    b.balances,
+			Balances:                    b.balances.Value(b),
 			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashings,
 			PreviousEpochAttestations:   b.previousEpochAttestations,
@@ -58,7 +58,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DataVotes:               b.eth1DataVotes,
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validators,
-			Balances:                    b.balances,
+			Balances:                    b.balances.Value(b),
 			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashings,
 			PreviousEpochParticipation:  b.previousEpochParticipation,
@@ -85,7 +85,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validators,
-			Balances:                     b.balances,
+			Balances:                     b.balances.Value(b),
 			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
@@ -113,7 +113,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validators,
-			Balances:                     b.balances,
+			Balances:                     b.balances.Value(b),
 			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
@@ -170,6 +170,10 @@ func (b *BeaconState) ToProto() interface{} {
 		copy(rmCopy[i], v)
 	}
 
+	balances := b.balances.Value(b)
+	balancesCopy := make([]uint64, len(balances))
+	copy(balancesCopy, balances)
+
 	switch b.version {
 	case version.Phase0:
 		return &ethpb.BeaconState{
@@ -185,7 +189,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1DataVotes:               b.eth1DataVotesVal(),
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validatorsVal(),
-			Balances:                    b.balancesVal(),
+			Balances:                    balancesCopy,
 			RandaoMixes:                 rmCopy,
 			Slashings:                   b.slashingsVal(),
 			PreviousEpochAttestations:   b.previousEpochAttestationsVal(),
@@ -209,7 +213,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1DataVotes:               b.eth1DataVotesVal(),
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validatorsVal(),
-			Balances:                    b.balancesVal(),
+			Balances:                    balancesCopy,
 			RandaoMixes:                 rmCopy,
 			Slashings:                   b.slashingsVal(),
 			PreviousEpochParticipation:  b.previousEpochParticipationVal(),
@@ -236,7 +240,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
-			Balances:                     b.balancesVal(),
+			Balances:                     balancesCopy,
 			RandaoMixes:                  rmCopy,
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
@@ -264,7 +268,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
-			Balances:                     b.balancesVal(),
+			Balances:                     balancesCopy,
 			RandaoMixes:                  rmCopy,
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),

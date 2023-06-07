@@ -63,7 +63,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.LatestBlockHeader.RealPosition()] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	bRoots := make([][]byte, state.blockRoots.Len())
+	bRoots := make([][]byte, state.blockRoots.Len(state))
 	br := state.blockRoots.Value(state)
 	for i := range bRoots {
 		bRoots[i] = br[i][:]
@@ -75,7 +75,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.BlockRoots.RealPosition()] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	sRoots := make([][]byte, state.stateRoots.Len())
+	sRoots := make([][]byte, state.stateRoots.Len(state))
 	sr := state.stateRoots.Value(state)
 	for i := range sRoots {
 		sRoots[i] = sr[i][:]
@@ -125,14 +125,14 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.Validators.RealPosition()] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balances)
+	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balances.Value(state))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}
 	fieldRoots[types.Balances.RealPosition()] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	mixes := make([][]byte, state.randaoMixes.Len())
+	mixes := make([][]byte, state.randaoMixes.Len(state))
 	m := state.randaoMixes.Value(state)
 	for i := range mixes {
 		mixes[i] = m[i][:]

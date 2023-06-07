@@ -43,5 +43,5 @@ func (b *BeaconState) RandaoMixesLength() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.randaoMixes.Len()
+	return b.randaoMixes.Len(b)
 }

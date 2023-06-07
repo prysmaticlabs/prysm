@@ -49,7 +49,7 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 		return nil, err
 	}
 
-	if err := validateElements(field, dataType, elements, length); err != nil {
+	if err := validateElements(state, field, dataType, elements, length); err != nil {
 		return nil, err
 	}
 	switch dataType {
@@ -60,7 +60,7 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 		}
 		var l int
 		if field == types.RandaoMixes || field == types.BlockRoots || field == types.StateRoots {
-			l = elements.(multi_value_slice.MultiValueSlice).Len()
+			l = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
 		} else {
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
@@ -74,6 +74,12 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 			numOfElems:  l,
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
+		var l int
+		if field == types.Balances {
+			l = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
+		} else {
+			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
@@ -81,7 +87,7 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
+			numOfElems:  l,
 		}, nil
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
@@ -115,7 +121,7 @@ func (f *FieldTrie) RecomputeTrie(state *BeaconState, indices []uint64, elements
 		}
 		var l int
 		if f.field == types.RandaoMixes || f.field == types.BlockRoots || f.field == types.StateRoots {
-			l = elements.(multi_value_slice.MultiValueSlice).Len()
+			l = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
 		} else {
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
@@ -155,7 +161,11 @@ func (f *FieldTrie) RecomputeTrie(state *BeaconState, indices []uint64, elements
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		if f.field == types.Balances {
+			f.numOfElems = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
+		} else {
+			f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
 		return stateutil.AddInMixin(fieldRoot, uint64(f.numOfElems))
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())

@@ -185,19 +185,7 @@ func (b *BeaconState) Balances() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.balancesVal()
-}
-
-// balancesVal of validators participating in consensus on the beacon chain.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) balancesVal() []uint64 {
-	if b.balances == nil {
-		return nil
-	}
-
-	res := make([]uint64, len(b.balances))
-	copy(res, b.balances)
-	return res
+	return b.balances.Value(b)
 }
 
 // BalanceAtIndex of validator with the provided index.
@@ -209,10 +197,7 @@ func (b *BeaconState) BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, err
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if uint64(len(b.balances)) <= uint64(idx) {
-		return 0, fmt.Errorf("index of %d does not exist", idx)
-	}
-	return b.balances[idx], nil
+	return b.balances.At(b, uint64(idx))
 }
 
 // BalancesLength returns the length of the balances slice.
@@ -224,7 +209,7 @@ func (b *BeaconState) BalancesLength() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.balancesLength()
+	return b.balances.Len(b)
 }
 
 // Slashings of validators on the beacon chain.

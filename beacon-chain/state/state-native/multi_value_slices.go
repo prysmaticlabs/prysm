@@ -8,35 +8,51 @@ import (
 type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte, *BeaconState]
 
 func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
-	items := make([]*multi_value_slice.MultiValue[[32]byte], fieldparams.RandaoMixesLength)
+	items := make([]*multi_value_slice.ShareableMultiValue[[32]byte], fieldparams.RandaoMixesLength)
 	for i, v := range mixes {
-		items[i] = &multi_value_slice.MultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
+		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
 	}
 	return &MultiValueRandaoMixes{
-		Items: items,
+		OriginalItems: items,
+		AppendedItems: []*multi_value_slice.MultiValue[[32]byte]{},
 	}
 }
 
 type MultiValueBlockRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
 
 func NewMultiValueBlockRoots(roots [][]byte) *MultiValueBlockRoots {
-	items := make([]*multi_value_slice.MultiValue[[32]byte], fieldparams.BlockRootsLength)
+	items := make([]*multi_value_slice.ShareableMultiValue[[32]byte], fieldparams.BlockRootsLength)
 	for i, v := range roots {
-		items[i] = &multi_value_slice.MultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
+		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
 	}
 	return &MultiValueBlockRoots{
-		Items: items,
+		OriginalItems: items,
+		AppendedItems: []*multi_value_slice.MultiValue[[32]byte]{},
 	}
 }
 
 type MultiValueStateRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
 
 func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
-	items := make([]*multi_value_slice.MultiValue[[32]byte], fieldparams.StateRootsLength)
+	items := make([]*multi_value_slice.ShareableMultiValue[[32]byte], fieldparams.StateRootsLength)
 	for i, v := range roots {
-		items[i] = &multi_value_slice.MultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
+		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
 	}
 	return &MultiValueStateRoots{
-		Items: items,
+		OriginalItems: items,
+		AppendedItems: []*multi_value_slice.MultiValue[[32]byte]{},
+	}
+}
+
+type MultiValueBalances = multi_value_slice.Slice[uint64, *BeaconState]
+
+func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
+	items := make([]*multi_value_slice.ShareableMultiValue[uint64], len(balances))
+	for i, v := range balances {
+		items[i] = &multi_value_slice.ShareableMultiValue[uint64]{Shared: v, Individual: nil}
+	}
+	return &MultiValueBalances{
+		OriginalItems: items,
+		AppendedItems: []*multi_value_slice.MultiValue[uint64]{},
 	}
 }
