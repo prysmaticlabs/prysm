@@ -176,34 +176,6 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 	return nil
 }
 
-func (b *BeaconState) ReadFromValidators(indices []primitives.ValidatorIndex, f func(idx int, val state.ReadOnlyValidator) error) error {
-	if b.validators == nil {
-		return errors.New("nil validators in state")
-	}
-	b.lock.RLock()
-	validators := b.validators
-	b.lock.RUnlock()
-
-	if len(indices) == 0 {
-		return b.ReadFromEveryValidator(f)
-	}
-
-	for i := range indices {
-		if i >= len(validators) {
-			e := NewValidatorIndexOutOfRangeError(primitives.ValidatorIndex(i))
-			return &e
-		}
-		v, err := NewValidator(validators[i])
-		if err != nil {
-			return err
-		}
-		if err := f(i, v); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Balances of validators participating in consensus on the beacon chain.
 func (b *BeaconState) Balances() []uint64 {
 	if b.balances == nil {

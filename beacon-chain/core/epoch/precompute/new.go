@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"go.opencensus.io/trace"
 )
 
@@ -57,41 +56,4 @@ func New(ctx context.Context, s state.BeaconState) ([]*Validator, *Balance, erro
 		return nil, nil, errors.Wrap(err, "failed to initialize precompute")
 	}
 	return pValidators, pBal, nil
-}
-
-func Validators(ctx context.Context, s state.BeaconState, indices []primitives.ValidatorIndex) ([]*Validator, error) {
-	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.Validators")
-	defer span.End()
-
-	pValidators := make([]*Validator, 0)
-	currentEpoch := time.CurrentEpoch(s)
-	prevEpoch := time.PrevEpoch(s)
-
-	if err := s.ReadFromValidators(indices, func(idx int, val state.ReadOnlyValidator) error {
-		// Was validator withdrawable or slashed
-		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
-		pVal := &Validator{
-			IsSlashed:                    val.Slashed(),
-			IsWithdrawableCurrentEpoch:   withdrawable,
-			CurrentEpochEffectiveBalance: val.EffectiveBalance(),
-		}
-		// Was validator active current epoch
-		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
-			pVal.IsActiveCurrentEpoch = true
-		}
-		// Was validator active previous epoch
-		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
-			pVal.IsActivePrevEpoch = true
-		}
-		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
-		// with the lower values
-		pVal.InclusionSlot = params.BeaconConfig().FarFutureSlot
-		pVal.InclusionDistance = params.BeaconConfig().FarFutureSlot
-
-		pValidators[idx] = pVal
-		return nil
-	}); err != nil {
-		return nil, errors.Wrap(err, "failed to initialize precompute")
-	}
-	return pValidators, nil
 }
