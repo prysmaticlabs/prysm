@@ -337,7 +337,7 @@ func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, 
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 // Input state is used to retrieve active validator indices.
-// Input epoch is the epoch to retrieve proposer indices for.
+// Input epoch is the epoch to retrieve proposer indices for
 func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
 	// The cache uses the state root at the (current epoch - 1)'s slot as key. (e.g. for epoch 2, the key is root at slot 63)
 	// Which is the reason why we skip genesis epoch.
