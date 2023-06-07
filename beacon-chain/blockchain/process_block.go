@@ -685,15 +685,18 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 // updateShufflingCache updates the following caches with respect the validator shuffling.
 // 1.) committee cache
 // 2.) proposer indices cache
-// no-op if the last cached next slot state is less than next boundary slot.
 func (s *Service) updateShufflingCaches(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "transition.updateShufflingCaches")
 	defer span.End()
 
-	transition.LastCachedState()
-
 	var err error
-	if transition.LastCachedStateSlot() >= s.nextEpochBoundarySlot {
+	lastCachedSlot := transition.LastCachedStateSlot()
+	lastCachedEpoch := slots.ToEpoch(lastCachedSlot)
+
+	// Allow cache update if one of the two condition meet
+	// 1.) last cached is great or equal than next epoch boundary slot
+	// 2.) current epoch is higher than last cached epoch. This handles the reorg case if one decides to build on latest block
+	if transition.LastCachedStateSlot() >= s.nextEpochBoundarySlot || slots.ToEpoch(s.CurrentSlot()) > lastCachedEpoch {
 		_, st := transition.LastCachedState()
 		if err := helpers.UpdateCommitteeCache(ctx, st, coreTime.CurrentEpoch(st)); err != nil {
 			return err
