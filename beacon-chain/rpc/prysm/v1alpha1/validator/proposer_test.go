@@ -631,6 +631,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	tests := []struct {
 		name  string
 		block func([32]byte) *ethpb.GenericSignedBeaconBlock
+		err   string
 	}{
 		{
 			name: "phase0",
@@ -678,6 +679,66 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
+		{
+			name: "bellatrix",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockBellatrix()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "deneb block no blob",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockDeneb()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+					Block: blockToPropose,
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "deneb block has blobs",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockDeneb()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+					Block: blockToPropose,
+					Blobs: []*ethpb.SignedBlobSidecar{
+						{Message: &ethpb.BlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
+					},
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "deneb block has too many blobs",
+			err:  "Too many blobs in block: 5",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockDeneb()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+					Block: blockToPropose,
+					Blobs: []*ethpb.SignedBlobSidecar{
+						{Message: &ethpb.BlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 4, Slot: 5, BlockParentRoot: parent[:]}},
+					},
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -690,17 +751,31 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			require.NoError(t, err)
 
 			c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+			db := dbutil.SetupDB(t)
 			proposerServer := &Server{
 				BlockReceiver: c,
 				BlockNotifier: c.BlockNotifier(),
 				P2P:           mockp2p.NewTestP2P(t),
 				BlockBuilder:  &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella()},
+				BeaconDB:      db,
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
-			assert.NoError(t, err, "Could not propose block correctly")
-			if res == nil || len(res.BlockRoot) == 0 {
-				t.Error("No block root was returned")
+			if tt.err != "" { // Expecting an error
+				require.ErrorContains(t, tt.err, err)
+			} else {
+				assert.NoError(t, err, "Could not propose block correctly")
+				if res == nil || len(res.BlockRoot) == 0 {
+					t.Error("No block root was returned")
+				}
+			}
+			if tt.name == "deneb block has blobs" {
+				scs, err := db.BlobSidecarsBySlot(ctx, blockToPropose.GetDeneb().Block.Block.Slot)
+				require.NoError(t, err)
+				assert.Equal(t, 4, len(scs))
+				for i, sc := range scs {
+					require.Equal(t, uint64(i), sc.Index)
+				}
 			}
 		})
 	}
