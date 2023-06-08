@@ -45,4 +45,5 @@ type Server struct {
 	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	BLSChangesPool                blstoexec.PoolManager
+	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
 }
