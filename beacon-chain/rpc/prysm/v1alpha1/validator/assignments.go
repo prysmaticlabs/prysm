@@ -146,8 +146,9 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 
 	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	nextValidatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
+	index, hpErr := helpers.LastActivatedValidatorIndex(ctx, s)
 	lastActivatedFn := func() (primitives.ValidatorIndex, error) {
-		return helpers.LastActivatedValidatorIndex(ctx, s)
+		return index, hpErr
 	}
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
@@ -196,6 +197,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			// Prune payload ID cache for any slots before request slot.
 			vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 		} else {
+
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
 			vStatus, _ := vs.validatorStatus(ctx, s, pubKey, lastActivatedFn)
 			assignment.Status = vStatus.Status
