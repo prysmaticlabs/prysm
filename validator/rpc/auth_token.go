@@ -151,7 +151,7 @@ func logValidatorWebAuth(validatorWebAddr, token string, tokenPath string) {
 		url.QueryEscape(token),
 	)
 	log.Infof(
-		"Once your validator process is runinng, navigate to the link below to authenticate with " +
+		"Once your validator process is running, navigate to the link below to authenticate with " +
 			"the Prysm web interface",
 	)
 	log.Info(webAuthURL)

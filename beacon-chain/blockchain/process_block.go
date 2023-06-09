@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -142,6 +141,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			return err
 		}
 	}
+
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
 		return err
 	}
@@ -208,12 +208,24 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			"headRoot":       fmt.Sprintf("%#x", headRoot),
 			"headWeight":     headWeight,
 		}).Debug("Head block is not the received block")
+	} else {
+		// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Debug("could not update next slot state cache")
+			}
+		}()
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	// verify conditions for FCU, notifies FCU, and saves the new head.
 	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
-	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
+	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
 	}
 
@@ -227,18 +239,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			Verified:    true,
 		},
 	})
-
-	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	go func() {
-		// Use a custom deadline here, since this method runs asynchronously.
-		// We ignore the parent method's context and instead create a new one
-		// with a custom deadline, therefore using the background context instead.
-		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-		defer cancel()
-		if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-			log.WithError(err).Debug("could not update next slot state cache")
-		}
-	}()
 
 	// Save justified check point to db.
 	postStateJustifiedEpoch := postState.CurrentJustifiedCheckpoint().Epoch
@@ -283,7 +283,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()
-
 	}
 	defer reportAttestationInclusion(b)
 	if err := s.handleEpochBoundary(ctx, postState); err != nil {
@@ -652,33 +651,24 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 // This routine checks if there is a cached proposer payload ID available for the next slot proposer.
 // If there is not, it will call forkchoice updated with the correct payload attribute then cache the payload ID.
-func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *event.Feed) {
-	// Wait for state to be initialized.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := stateFeed.Subscribe(stateChannel)
-	go func() {
+func (s *Service) runLateBlockTasks() {
+	_, err := s.clockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("runLateBlockTasks encountered an error waiting for initialization")
+		return
+	}
+	attThreshold := params.BeaconConfig().SecondsPerSlot / 3
+	ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
+	for {
 		select {
+		case <-ticker.C():
+			s.lateBlockTasks(s.ctx)
+
 		case <-s.ctx.Done():
-			stateSub.Unsubscribe()
+			log.Debug("Context closed, exiting routine")
 			return
-		case <-stateChannel:
-			stateSub.Unsubscribe()
-			break
 		}
-
-		attThreshold := params.BeaconConfig().SecondsPerSlot / 3
-		ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
-		for {
-			select {
-			case <-ticker.C():
-				s.lateBlockTasks(ctx)
-
-			case <-ctx.Done():
-				log.Debug("Context closed, exiting routine")
-				return
-			}
-		}
-	}()
+	}
 }
 
 // lateBlockTasks  is called 4 seconds into the slot and performs tasks
@@ -693,12 +683,26 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		Type: statefeed.MissedSlot,
 	})
 
+	headRoot := s.headRoot()
+	headState := s.headState(ctx)
+	lastRoot, lastState := transition.LastCachedState()
+	if lastState == nil {
+		lastRoot, lastState = headRoot[:], headState
+	}
+	// Copy all the field tries in our cached state in the event of late
+	// blocks.
+	lastState.CopyAllTries()
+	if err := transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
+		log.WithError(err).Debug("could not update next slot state cache")
+	}
+
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
 	if (!has && !features.Get().PrepareAllPayloads) || id != [8]byte{} {
 		return
 	}
+
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
@@ -706,8 +710,6 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		log.WithError(err).Debug("could not perform late block tasks: failed to retrieve head block")
 		return
 	}
-	headRoot := s.headRoot()
-	headState := s.headState(ctx)
 	s.headLock.RUnlock()
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
@@ -716,12 +718,5 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	})
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
-	}
-	lastRoot, lastState := transition.LastCachedState()
-	if lastState == nil {
-		lastRoot, lastState = headRoot[:], headState
-	}
-	if err = transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
-		log.WithError(err).Debug("could not update next slot state cache")
 	}
 }

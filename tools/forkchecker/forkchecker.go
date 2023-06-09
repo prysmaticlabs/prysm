@@ -78,7 +78,7 @@ func displayHeads(clients map[string]pb.BeaconChainClient) {
 	}
 }
 
-// compare heads between all RPC end points, log the missmatch if there's one.
+// compare heads between all RPC end points, log the mismatch if there's one.
 func compareHeads(clients map[string]pb.BeaconChainClient) {
 	endpt1 := randomEndpt(clients)
 	head1, err := clients[endpt1].GetChainHead(context.Background(), &emptypb.Empty{})
@@ -101,7 +101,7 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 			log.Fatal(err)
 		}
 		if !reflect.DeepEqual(head1, head2) {
-			log.Error("Uh oh! Heads missmatched!")
+			log.Error("Uh oh! Heads mismatched!")
 			logHead(endpt1, head1)
 			logHead(endpt2, head2)
 

@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -42,7 +43,17 @@ var (
 
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot, vIdx primitives.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, error) {
+func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (interfaces.ExecutionData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getLocalPayload")
+	defer span.End()
+
+	if blk.Version() < version.Bellatrix {
+		return nil, nil
+	}
+
+	slot := blk.Slot()
+	vIdx := blk.ProposerIndex()
+	headRoot := blk.ParentRoot()
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -121,11 +132,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 	// Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 	if st.Version() >= version.Altair {
 		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
-		justifiedBlockHash, err = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
-		if err != nil {
-			log.WithError(err).Error("Could not get unrealized justified payload block hash")
-			justifiedBlockHash = finalizedBlockHash // Don't fail block proposal if we can't get the justified block hash.
-		}
+		justifiedBlockHash = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
 	}
 
 	f := &enginev1.ForkchoiceState{
@@ -219,6 +226,27 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 	}
 
 	return vs.ExecutionEngineCaller.GetTerminalBlockHash(ctx, transitionTime)
+}
+
+func (vs *Server) getBuilderPayload(ctx context.Context,
+	slot primitives.Slot,
+	vIdx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getBuilderPayload")
+	defer span.End()
+
+	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil, nil
+	}
+	canUseBuilder, err := vs.canUseBuilder(ctx, slot, vIdx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to check if we can use the builder")
+	}
+	span.AddAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
+	if !canUseBuilder {
+		return nil, nil
+	}
+
+	return vs.getPayloadHeaderFromBuilder(ctx, slot, vIdx)
 }
 
 // activationEpochNotReached returns true if activation epoch has not been reach.

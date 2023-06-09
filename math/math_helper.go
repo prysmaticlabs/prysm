@@ -4,6 +4,7 @@ package math
 import (
 	"errors"
 	stdmath "math"
+	"math/big"
 	"math/bits"
 	"sync"
 
@@ -188,7 +189,7 @@ func Mod64(a, b uint64) (uint64, error) {
 	return val, nil
 }
 
-// Int returns the integer value of the uint64 argument. If there is an overlow, then an error is
+// Int returns the integer value of the uint64 argument. If there is an overflow, then an error is
 // returned.
 func Int(u uint64) (int, error) {
 	if u > stdmath.MaxInt {
@@ -208,7 +209,18 @@ func AddInt(i ...int) (int, error) {
 		}
 
 		sum += ii
-
 	}
 	return sum, nil
+}
+
+// WeiToGwei converts big int wei to uint64 gwei.
+// The input `v` is copied before being modified.
+func WeiToGwei(v *big.Int) uint64 {
+	if v == nil {
+		return 0
+	}
+	gweiPerEth := big.NewInt(1e9)
+	copied := big.NewInt(0).Set(v)
+	copied.Div(copied, gweiPerEth)
+	return copied.Uint64()
 }

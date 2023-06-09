@@ -10,8 +10,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -42,44 +40,6 @@ func TestAttestation_IsAggregator(t *testing.T) {
 		agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
 		require.NoError(t, err)
 		assert.Equal(t, false, agg, "Wanted aggregator false")
-	})
-}
-
-func TestAttestation_AggregateSignature(t *testing.T) {
-	t.Run("verified", func(t *testing.T) {
-		pubkeys := make([]bls.PublicKey, 0, 100)
-		atts := make([]*ethpb.Attestation, 0, 100)
-		msg := bytesutil.ToBytes32([]byte("hello"))
-		for i := 0; i < 100; i++ {
-			priv, err := bls.RandKey()
-			require.NoError(t, err)
-			pub := priv.PublicKey()
-			sig := priv.Sign(msg[:])
-			pubkeys = append(pubkeys, pub)
-			att := &ethpb.Attestation{Signature: sig.Marshal()}
-			atts = append(atts, att)
-		}
-		aggSig, err := helpers.AggregateSignature(atts)
-		require.NoError(t, err)
-		assert.Equal(t, true, aggSig.FastAggregateVerify(pubkeys, msg), "Signature did not verify")
-	})
-
-	t.Run("not verified", func(t *testing.T) {
-		pubkeys := make([]bls.PublicKey, 0, 100)
-		atts := make([]*ethpb.Attestation, 0, 100)
-		msg := []byte("hello")
-		for i := 0; i < 100; i++ {
-			priv, err := bls.RandKey()
-			require.NoError(t, err)
-			pub := priv.PublicKey()
-			sig := priv.Sign(msg)
-			pubkeys = append(pubkeys, pub)
-			att := &ethpb.Attestation{Signature: sig.Marshal()}
-			atts = append(atts, att)
-		}
-		aggSig, err := helpers.AggregateSignature(atts[0 : len(atts)-2])
-		require.NoError(t, err)
-		assert.Equal(t, false, aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)), "Signature not suppose to verify")
 	})
 }
 

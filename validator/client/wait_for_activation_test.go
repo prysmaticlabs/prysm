@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -9,7 +10,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/mock"
@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/v4/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	mock2 "github.com/stretchr/testify/mock"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
 )
@@ -28,18 +29,10 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
+	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
-		keyManager:      km,
+		keyManager:      newMockKeymanager(t, kp),
 		beaconClient:    beaconClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
@@ -47,7 +40,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
+			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -64,29 +57,21 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
+	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
-		keyManager:      km,
+		keyManager:      newMockKeymanager(t, kp),
 		beaconClient:    beaconClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
+			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, errors.New("failed stream")).Return(clientStream, nil)
 	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
-	resp := generateMockStatusResponse([][]byte{pubKey[:]})
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
@@ -97,30 +82,22 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
+	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
-		keyManager:      km,
+		keyManager:      newMockKeymanager(t, kp),
 		beaconClient:    beaconClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
+			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
 	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
 	// A stream fails the first time, but succeeds the second time.
-	resp := generateMockStatusResponse([][]byte{pubKey[:]})
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(
 		nil,
@@ -135,28 +112,20 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
+	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
-		keyManager:      km,
+		keyManager:      newMockKeymanager(t, kp),
 		genesisTime:     1,
 		beaconClient:    beaconClient,
 	}
-	resp := generateMockStatusResponse([][]byte{pubKey[:]})
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
+			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
 	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
@@ -173,27 +142,19 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-	}
+	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
-		keyManager:      km,
+		keyManager:      newMockKeymanager(t, kp),
 		beaconClient:    beaconClient,
 	}
-	resp := generateMockStatusResponse([][]byte{pubKey[:]})
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_EXITING
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
+			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
 	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
@@ -216,28 +177,23 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-			pubKey: privKey,
-		},
-		fetchNoKeys: true,
-	}
+
+	kp := randKeypair(t)
+	km := newMockKeymanager(t, kp)
+	km.fetchNoKeys = true
+
 	v := validator{
 		validatorClient: validatorClient,
 		keyManager:      km,
 		beaconClient:    beaconClient,
 	}
-	resp := generateMockStatusResponse([][]byte{pubKey[:]})
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{pubKey[:]},
+			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
 	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
@@ -251,26 +207,14 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 
 // Regression test for a scenario where you start with an inactive key and then import an active key.
 func TestWaitForActivation_AccountsChanged(t *testing.T) {
-	t.Skip("Flakey test. Skipping until we can figure out how to test this properly")
-
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	t.Run("Imported keymanager", func(t *testing.T) {
-		inactivePrivKey, err := bls.RandKey()
-		require.NoError(t, err)
-		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
-		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
-		activePrivKey, err := bls.RandKey()
-		require.NoError(t, err)
-		var activePubKey [fieldparams.BLSPubkeyLength]byte
-		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
-		km := &mockKeymanager{
-			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-				inactivePubKey: inactivePrivKey,
-			},
-		}
+		inactive := randKeypair(t)
+		active := randKeypair(t)
+		km := newMockKeymanager(t, inactive)
 		validatorClient := validatormock.NewMockValidatorClient(ctrl)
 		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
 		v := validator{
@@ -278,13 +222,13 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			keyManager:      km,
 			beaconClient:    beaconClient,
 		}
-		inactiveResp := generateMockStatusResponse([][]byte{inactivePubKey[:]})
+		inactiveResp := generateMockStatusResponse([][]byte{inactive.pub[:]})
 		inactiveResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		inactiveClientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 		validatorClient.EXPECT().WaitForActivation(
 			gomock.Any(),
 			&ethpb.ValidatorActivationRequest{
-				PublicKeys: [][]byte{inactivePubKey[:]},
+				PublicKeys: [][]byte{inactive.pub[:]},
 			},
 		).Return(inactiveClientStream, nil)
 		beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil).AnyTimes()
@@ -293,15 +237,21 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			nil,
 		).AnyTimes()
 
-		activeResp := generateMockStatusResponse([][]byte{inactivePubKey[:], activePubKey[:]})
+		activeResp := generateMockStatusResponse([][]byte{inactive.pub[:], active.pub[:]})
 		activeResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		activeResp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
 		activeClientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 		validatorClient.EXPECT().WaitForActivation(
 			gomock.Any(),
-			&ethpb.ValidatorActivationRequest{
-				PublicKeys: [][]byte{inactivePubKey[:], activePubKey[:]},
-			},
+			mock2.MatchedBy(func(req *ethpb.ValidatorActivationRequest) bool {
+				found := 0
+				for _, pk := range req.PublicKeys {
+					if bytes.Equal(pk, active.pub[:]) || bytes.Equal(pk, inactive.pub[:]) {
+						found++
+					}
+				}
+				return found == 2
+			}),
 		).Return(activeClientStream, nil)
 		activeClientStream.EXPECT().Recv().Return(
 			activeResp,
@@ -311,7 +261,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
-			km.keysMap[activePubKey] = activePrivKey
+			require.NoError(t, km.add(active))
 			km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
 		}()
 

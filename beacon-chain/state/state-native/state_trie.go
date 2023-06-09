@@ -669,13 +669,13 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	for i, f := range b.sharedFieldReferences {
-		refMap[i.String(b.version)] = uint64(f.Refs())
+		refMap[i.String()] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
 		numOfRefs := uint64(f.FieldReference().Refs())
 		f.RLock()
 		if !f.Empty() {
-			refMap[i.String(b.version)+"_trie"] = numOfRefs
+			refMap[i.String()+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
 	}
@@ -691,7 +691,7 @@ func (b *BeaconState) IsNil() bool {
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("field", field.String(b.version)))
+	span.AddAttributes(trace.StringAttribute("field", field.String()))
 
 	switch field {
 	case types.GenesisTime:
@@ -840,6 +840,26 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	return [32]byte{}, errors.New("invalid field index provided")
 }
 
+// CopyAllTries copies our field tries from the state. This is used to
+// remove shared field tries which have references to other states and
+// only have this copied set referencing to the current state.
+func (b *BeaconState) CopyAllTries() {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	for fldIdx, fieldTrie := range b.stateFieldLeaves {
+		if fieldTrie.FieldReference() != nil {
+			fieldTrie.Lock()
+			if fieldTrie.FieldReference().Refs() > 1 {
+				fieldTrie.FieldReference().MinusRef()
+				newTrie := fieldTrie.CopyTrie()
+				b.stateFieldLeaves[fldIdx] = newTrie
+			}
+			fieldTrie.Unlock()
+		}
+	}
+}
+
 func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
 	fTrieMutex := fTrie.RWMutex
@@ -899,7 +919,6 @@ func finalizerCleanup(b *BeaconState) {
 		if b.stateFieldLeaves[field].FieldReference() != nil {
 			b.stateFieldLeaves[field].FieldReference().MinusRef()
 		}
-
 	}
 	for i := range b.dirtyFields {
 		delete(b.dirtyFields, i)

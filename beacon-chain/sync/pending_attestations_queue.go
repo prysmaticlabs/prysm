@@ -21,6 +21,7 @@ import (
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
 var processPendingAttsPeriod = slots.DivideSlotBy(2 /* twice per slot */)
+var pendingAttsLimit = 10000
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
@@ -46,7 +47,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
-	s.validatePendingAtts(ctx, s.cfg.chain.CurrentSlot())
+	s.validatePendingAtts(ctx, s.cfg.clock.CurrentSlot())
 
 	s.pendingAttsLock.RLock()
 	roots := make([][32]byte, 0, len(s.blkRootToPendingAtts))
@@ -76,7 +77,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		} else {
 			// Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
-				"currentSlot": s.cfg.chain.CurrentSlot(),
+				"currentSlot": s.cfg.clock.CurrentSlot(),
 				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
 				"attCount":    len(attestations),
 				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
@@ -164,6 +165,16 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 
 	s.pendingAttsLock.Lock()
 	defer s.pendingAttsLock.Unlock()
+
+	numOfPendingAtts := 0
+	for _, v := range s.blkRootToPendingAtts {
+		numOfPendingAtts += len(v)
+	}
+	// Exit early if we exceed the pending attestations limit.
+	if numOfPendingAtts >= pendingAttsLimit {
+		return
+	}
+
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
 		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}

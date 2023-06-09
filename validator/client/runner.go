@@ -53,12 +53,13 @@ func run(ctx context.Context, v iface.Validator) {
 		log.WithError(err).Fatal("Could not get keymanager")
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
+	// check if proposer settings is still nil
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if v.ProposerSettings() != nil {
 		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
 			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
 		deadline := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-		if err := v.PushProposerSettings(ctx, km, deadline); err != nil {
+		if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
 			if errors.Is(err, ErrBuilderValidatorRegistration) {
 				log.WithError(err).Warn("Push proposer settings error")
 			} else {
@@ -89,17 +90,7 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 		case currentKeys := <-accountsChangedChan:
-			anyActive, err := v.HandleKeyReload(ctx, currentKeys)
-			if err != nil {
-				log.WithError(err).Error("Could not properly handle reloaded keys")
-			}
-			if !anyActive {
-				log.Warn("No active keys found. Waiting for activation...")
-				err := v.WaitForActivation(ctx, accountsChangedChan)
-				if err != nil {
-					log.WithError(err).Warn("Could not wait for validator activation")
-				}
-			}
+			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 			allExited, err := v.AllValidatorsAreExited(ctx)
@@ -127,9 +118,9 @@ func run(ctx context.Context, v iface.Validator) {
 
 			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
 				go func() {
-					//deadline set for end of epoch
+					// deadline set for end of epoch
 					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
-					if err := v.PushProposerSettings(ctx, km, epochDeadline); err != nil {
+					if err := v.PushProposerSettings(ctx, km, slot, epochDeadline); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")
 					}
 				}()
@@ -150,6 +141,20 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
+		}
+	}
+}
+
+func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byte, ac chan [][fieldparams.BLSPubkeyLength]byte) {
+	anyActive, err := v.HandleKeyReload(ctx, current)
+	if err != nil {
+		log.WithError(err).Error("Could not properly handle reloaded keys")
+	}
+	if !anyActive {
+		log.Warn("No active keys found. Waiting for activation...")
+		err := v.WaitForActivation(ctx, ac)
+		if err != nil {
+			log.WithError(err).Warn("Could not wait for validator activation")
 		}
 	}
 }

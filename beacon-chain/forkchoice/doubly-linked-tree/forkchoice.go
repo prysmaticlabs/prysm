@@ -228,10 +228,44 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primi
 	return n.root, nil
 }
 
+// IsViableForCheckpoint returns whether the root passed is a checkpoint root for any
+// known chain in forkchoice.
+func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
+	node, ok := f.store.nodeByRoot[cp.Root]
+	if !ok || node == nil {
+		return false, nil
+	}
+	epochStart, err := slots.EpochStart(cp.Epoch)
+	if err != nil {
+		return false, err
+	}
+	if node.slot > epochStart {
+		return false, nil
+	}
+
+	if len(node.children) == 0 {
+		return true, nil
+	}
+	if node.slot == epochStart {
+		return true, nil
+	}
+	nodeEpoch := slots.ToEpoch(node.slot)
+	if nodeEpoch >= cp.Epoch {
+		return false, nil
+	}
+	for _, child := range node.children {
+		if child.slot > epochStart {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // updateBalances updates the balances that directly voted for each block taking into account the
 // validators' latest votes.
 func (f *ForkChoice) updateBalances() error {
 	newBalances := f.justifiedBalances
+	zHash := params.BeaconConfig().ZeroHash
 
 	for index, vote := range f.votes {
 		// Skip if validator has been slashed
@@ -240,7 +274,7 @@ func (f *ForkChoice) updateBalances() error {
 		}
 		// Skip if validator has never voted for current root and next root (i.e. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
-		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
+		if vote.currentRoot == zHash && vote.nextRoot == zHash {
 			continue
 		}
 
@@ -260,7 +294,7 @@ func (f *ForkChoice) updateBalances() error {
 			// Ignore the vote if the root is not in fork choice
 			// store, that means we have not seen the block before.
 			nextNode, ok := f.store.nodeByRoot[vote.nextRoot]
-			if ok && vote.nextRoot != params.BeaconConfig().ZeroHash {
+			if ok && vote.nextRoot != zHash {
 				// Protection against nil node
 				if nextNode == nil {
 					return errors.Wrap(ErrNilNode, "could not update balances")
@@ -269,7 +303,7 @@ func (f *ForkChoice) updateBalances() error {
 			}
 
 			currentNode, ok := f.store.nodeByRoot[vote.currentRoot]
-			if ok && vote.currentRoot != params.BeaconConfig().ZeroHash {
+			if ok && vote.currentRoot != zHash {
 				// Protection against nil node
 				if currentNode == nil {
 					return errors.Wrap(ErrNilNode, "could not update balances")
@@ -509,14 +543,14 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 }
 
 // UnrealizedJustifiedPayloadBlockHash returns the hash of the payload at the unrealized justified checkpoint
-func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() ([32]byte, error) {
+func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 	root := f.store.unrealizedJustifiedCheckpoint.Root
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
 		// This should not happen
-		return [32]byte{}, ErrNilNode
+		return [32]byte{}
 	}
-	return node.payloadHash, nil
+	return node.payloadHash
 }
 
 // ForkChoiceDump returns a full dump of forkchoice.
@@ -560,7 +594,6 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 		ForkChoiceNodes:               nodes,
 	}
 	return resp, nil
-
 }
 
 // SetBalancesByRooter sets the balanceByRoot handler in forkchoice
@@ -594,4 +627,13 @@ func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte)
 	}
 	f.store.committeeWeight /= uint64(params.BeaconConfig().SlotsPerEpoch)
 	return nil
+}
+
+// Slot returns the slot of the given root if it's known to forkchoice
+func (f *ForkChoice) Slot(root [32]byte) (primitives.Slot, error) {
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return 0, ErrNilNode
+	}
+	return n.slot, nil
 }

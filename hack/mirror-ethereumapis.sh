@@ -70,7 +70,7 @@ if git diff-index --quiet HEAD --; then
    echo "nothing to push, exiting early"
    exit 0
 else
-   echo "changes detected, commiting and pushing to ethereumapis"
+   echo "changes detected, committing and pushing to ethereumapis"
 fi
 
 # Push to the mirror repository

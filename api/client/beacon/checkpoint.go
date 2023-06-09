@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
+	base "github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -126,7 +127,7 @@ type WeakSubjectivityData struct {
 }
 
 // CheckpointString returns the standard string representation of a Checkpoint.
-// The format is a a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
+// The format is a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
 // "0x1c35540cac127315fabb6bf29181f2ae0de1a3fc909d2e76ba771e61312cc49a:74888"
 func (wsd *WeakSubjectivityData) CheckpointString() string {
 	return fmt.Sprintf("%#x:%d", wsd.BlockRoot, wsd.Epoch)
@@ -140,7 +141,7 @@ func ComputeWeakSubjectivityCheckpoint(ctx context.Context, client *Client) (*We
 	ws, err := client.GetWeakSubjectivity(ctx)
 	if err != nil {
 		// a 404/405 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
-		if !errors.Is(err, ErrNotOK) {
+		if !errors.Is(err, base.ErrNotOK) {
 			return nil, errors.Wrap(err, "unexpected API response for prysm-only weak subjectivity checkpoint API")
 		}
 		// fall back to vanilla Beacon Node API method

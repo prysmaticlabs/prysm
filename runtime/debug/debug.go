@@ -354,7 +354,11 @@ func startPProf(address string) {
 	http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
 	log.WithField("addr", fmt.Sprintf("http://%s/debug/pprof", address)).Info("Starting pprof server")
 	go func() {
-		if err := http.ListenAndServe(address, nil); err != nil {
+		srv := &http.Server{
+			Addr:              address,
+			ReadHeaderTimeout: 3 * time.Second,
+		}
+		if err := srv.ListenAndServe(); err != nil {
 			log.Error("Failure in running pprof server", "err", err)
 		}
 	}()

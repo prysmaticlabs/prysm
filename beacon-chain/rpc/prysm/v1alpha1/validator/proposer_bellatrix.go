@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -12,19 +12,18 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
@@ -33,96 +32,101 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 	Help: "The number of get payload misses for validator requests to builder",
 })
 
+// emptyTransactionsRoot represents the returned value of ssz.TransactionsRoot([][]byte{}) and
+// can be used as a constant to avoid recomputing this value in every call.
+var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225}
+
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, headState state.BeaconState) error {
-	idx := blk.Block().ProposerIndex()
+func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData) error {
+	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
+	defer span.End()
+
 	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
 
-	canUseBuilder, err := vs.canUseBuilder(ctx, slot, idx)
-	if err != nil {
-		log.WithError(err).Warn("Proposer: failed to check if builder can be used")
-	} else if canUseBuilder {
-		builderPayload, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
+	if localPayload == nil {
+		return errors.New("local payload is nil")
+	}
+
+	// Use local payload if builder payload is nil.
+	if builderPayload == nil {
+		return blk.SetExecution(localPayload)
+	}
+
+	switch {
+	case blk.Version() >= version.Capella:
+		// Compare payload values between local and builder. Default to the local value if it is higher.
+		localValueGwei, err := localPayload.ValueInGwei()
 		if err != nil {
-			builderGetPayloadMissCount.Inc()
-			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
-		} else {
-			switch {
-			case blk.Version() >= version.Capella:
-				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
-				if err != nil {
-					return errors.Wrap(err, "failed to get execution payload")
-				}
-				// Compare payload values between local and builder. Default to the local value if it is higher.
-				v, err := localPayload.Value()
-				if err != nil {
-					return errors.Wrap(err, "failed to get local payload value")
-				}
-				localValue := v.Uint64()
-				v, err = builderPayload.Value()
-				if err != nil {
-					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-					v = big.NewInt(0)                                                        // Default to local if can't get builder value.
-				}
-				builderValue := v.Uint64()
+			return errors.Wrap(err, "failed to get local payload value")
+		}
+		builderValueGwei, err := builderPayload.ValueInGwei()
+		if err != nil {
+			log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+			return blk.SetExecution(localPayload)
+		}
 
-				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
-				if err != nil {
-					return errors.Wrap(err, "failed to match withdrawals root")
-				}
+		withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			log.WithError(err).Warn("Proposer: failed to match withdrawals root")
+			return blk.SetExecution(localPayload)
+		}
 
-				// Use builder payload if the following in true:
-				// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
-				boost := params.BeaconConfig().LocalBlockValueBoost
-				higherValueBuilder := builderValue*100 > localValue*(100+boost)
+		// Use builder payload if the following in true:
+		// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
+		boost := params.BeaconConfig().LocalBlockValueBoost
+		higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
 
-				// If we can't get the builder value, just use local block.
-				if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
-					blk.SetBlinded(true)
-					if err := blk.SetExecution(builderPayload); err != nil {
-						log.WithError(err).Warn("Proposer: failed to set builder payload")
-						blk.SetBlinded(false)
-					} else {
-						return nil
-					}
-				}
-				if !higherValueBuilder {
-					log.WithFields(logrus.Fields{
-						"localGweiValue":       localValue,
-						"localBoostPercentage": 100 + boost,
-						"builderGweiValue":     builderValue,
-					}).Warn("Proposer: using local execution payload because higher value")
-				}
+		// If we can't get the builder value, just use local block.
+		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
+			blk.SetBlinded(true)
+			if err := blk.SetExecution(builderPayload); err != nil {
+				log.WithError(err).Warn("Proposer: failed to set builder payload")
+				blk.SetBlinded(false)
 				return blk.SetExecution(localPayload)
-			default: // Bellatrix case.
-				blk.SetBlinded(true)
-				if err := blk.SetExecution(builderPayload); err != nil {
-					log.WithError(err).Warn("Proposer: failed to set builder payload")
-					blk.SetBlinded(false)
-				} else {
-					return nil
-				}
+			} else {
+				return nil
 			}
 		}
+		if !higherValueBuilder {
+			log.WithFields(logrus.Fields{
+				"localGweiValue":       localValueGwei,
+				"localBoostPercentage": boost,
+				"builderGweiValue":     builderValueGwei,
+			}).Warn("Proposer: using local execution payload because higher value")
+		}
+		span.AddAttributes(
+			trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
+			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
+		)
+		return blk.SetExecution(localPayload)
+	default: // Bellatrix case.
+		blk.SetBlinded(true)
+		if err := blk.SetExecution(builderPayload); err != nil {
+			log.WithError(err).Warn("Proposer: failed to set builder payload")
+			blk.SetBlinded(false)
+			return blk.SetExecution(localPayload)
+		} else {
+			return nil
+		}
 	}
-
-	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
-	if err != nil {
-		return errors.Wrap(err, "failed to get execution payload")
-	}
-	return blk.SetExecution(executionData)
 }
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
 func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPayloadHeaderFromBuilder")
+	defer span.End()
+
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil, errors.New("can't get payload header from builder before bellatrix epoch")
 	}
@@ -151,9 +155,18 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if signedBid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
-	if signedBid.Version() != b.Version() {
-		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d", signedBid.Version(), b.Version())
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get fork information")
 	}
+	forkName, ok := params.BeaconConfig().ForkVersionNames[bytesutil.ToBytes4(fork.CurrentVersion)]
+	if !ok {
+		return nil, errors.New("unable to find current fork in schedule")
+	}
+	if !strings.EqualFold(version.String(signedBid.Version()), forkName) {
+		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
+	}
+
 	bid, err := signedBid.Message()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid")
@@ -167,10 +180,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
 
-	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
-	if err != nil {
-		return nil, err
-	}
 	header, err := bid.Header()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid header")
@@ -179,7 +188,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get transaction root")
 	}
-	if bytesutil.ToBytes32(txRoot) == emptyRoot {
+	if bytesutil.ToBytes32(txRoot) == emptyTransactionsRoot {
 		return nil, errors.New("builder returned header with an empty tx root")
 	}
 
@@ -200,134 +209,21 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 
 	log.WithFields(logrus.Fields{
-		"value":         v.String(),
-		"builderPubKey": fmt.Sprintf("%#x", bid.Pubkey()),
-		"blockHash":     fmt.Sprintf("%#x", header.BlockHash()),
+		"value":              v.String(),
+		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
+		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
+		"slot":               slot,
+		"validator":          idx,
+		"sinceSlotStartTime": time.Since(t),
 	}).Info("Received header with bid")
+
+	span.AddAttributes(
+		trace.StringAttribute("value", v.String()),
+		trace.StringAttribute("builderPubKey", fmt.Sprintf("%#x", bid.Pubkey())),
+		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),
+	)
+
 	return header, nil
-}
-
-// This function retrieves the full payload block using the input blind block. This input must be versioned as
-// bellatrix blind block. The output block will contain the full payload. The original header block
-// will be returned the block builder is not configured.
-func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ReadOnlySignedBeaconBlock, error) {
-	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
-	}
-
-	// No-op if the input block is not version blind and bellatrix.
-	if b.Version() != version.Bellatrix || !b.IsBlinded() {
-		return b, nil
-	}
-	// No-op nothing if the builder has not been configured.
-	if !vs.BlockBuilder.Configured() {
-		return b, nil
-	}
-
-	agg, err := b.Block().Body().SyncAggregate()
-	if err != nil {
-		return nil, err
-	}
-	h, err := b.Block().Body().Execution()
-	if err != nil {
-		return nil, err
-	}
-	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
-	if !ok {
-		return nil, errors.New("execution data must be execution payload header")
-	}
-	parentRoot := b.Block().ParentRoot()
-	stateRoot := b.Block().StateRoot()
-	randaoReveal := b.Block().Body().RandaoReveal()
-	graffiti := b.Block().Body().Graffiti()
-	sig := b.Signature()
-	psb := &ethpb.SignedBlindedBeaconBlockBellatrix{
-		Block: &ethpb.BlindedBeaconBlockBellatrix{
-			Slot:          b.Block().Slot(),
-			ProposerIndex: b.Block().ProposerIndex(),
-			ParentRoot:    parentRoot[:],
-			StateRoot:     stateRoot[:],
-			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           randaoReveal[:],
-				Eth1Data:               b.Block().Body().Eth1Data(),
-				Graffiti:               graffiti[:],
-				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
-				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
-				Attestations:           b.Block().Body().Attestations(),
-				Deposits:               b.Block().Body().Deposits(),
-				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
-				SyncAggregate:          agg,
-				ExecutionPayloadHeader: header,
-			},
-		},
-		Signature: sig[:],
-	}
-
-	sb, err := consensusblocks.NewSignedBeaconBlock(psb)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create signed block")
-	}
-	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
-	if err != nil {
-		return nil, err
-	}
-	headerRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	payloadRoot, err := payload.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	if headerRoot != payloadRoot {
-		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
-			"%#x != %#x", headerRoot, payloadRoot)
-	}
-
-	pbPayload, err := payload.PbBellatrix()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get payload")
-	}
-	bb := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:          psb.Block.Slot,
-			ProposerIndex: psb.Block.ProposerIndex,
-			ParentRoot:    psb.Block.ParentRoot,
-			StateRoot:     psb.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:      psb.Block.Body.RandaoReveal,
-				Eth1Data:          psb.Block.Body.Eth1Data,
-				Graffiti:          psb.Block.Body.Graffiti,
-				ProposerSlashings: psb.Block.Body.ProposerSlashings,
-				AttesterSlashings: psb.Block.Body.AttesterSlashings,
-				Attestations:      psb.Block.Body.Attestations,
-				Deposits:          psb.Block.Body.Deposits,
-				VoluntaryExits:    psb.Block.Body.VoluntaryExits,
-				SyncAggregate:     agg,
-				ExecutionPayload:  pbPayload,
-			},
-		},
-		Signature: psb.Signature,
-	}
-	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
-	if err != nil {
-		return nil, err
-	}
-
-	txs, err := payload.Transactions()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get transactions from payload")
-	}
-	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
-		"gasUsed":      h.GasUsed,
-		"slot":         b.Block().Slot(),
-		"txs":          len(txs),
-	}).Info("Retrieved full payload from builder")
-
-	return wb, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.

@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
 )
 
-var maxKeys = 1000000
+var maxKeys = 1_000_000
 var pubkeyCache = lruwrpr.New(maxKeys)
 
 // PublicKey used in the BLS signature scheme.
@@ -92,7 +92,6 @@ func (p *PublicKey) Equals(p2 common.PublicKey) bool {
 
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
-
 	agg := new(blstAggregatePublicKey)
 	// No group check here since it is checked at decompression time
 	agg.Add(p.p, false)

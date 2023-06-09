@@ -27,7 +27,7 @@ const (
 // 1. Parse a path to the validator's datadir from the CLI context.
 // 2. Open the validator database.
 // 3. Call the function which actually exports the data from
-// from the validator's db into an EIP standard slashing protection format
+// the validator's db into an EIP standard slashing protection format
 // 4. Format and save the JSON file to a user's specified output directory.
 func exportSlashingProtectionJSON(cliCtx *cli.Context) error {
 	log.Info(

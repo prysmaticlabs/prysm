@@ -6,13 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/big"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -37,7 +35,6 @@ const (
 var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 var errMalformedRequest = errors.New("required request data are missing")
 var errNotBlinded = errors.New("submitted block is not blinded")
-var submitBlindedBlockTimeout = 3 * time.Second
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -246,7 +243,6 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	default:
 		return nil, fmt.Errorf("unsupported header version %s", strings.ToLower(v.Version))
 	}
-
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
@@ -294,8 +290,6 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 			return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
 		}
 
-		ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
-		defer cancel()
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Bellatrix))
 		}
@@ -307,6 +301,9 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		ep := &ExecPayloadResponse{}
 		if err := json.Unmarshal(rb, ep); err != nil {
 			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
+		}
+		if strings.ToLower(ep.Version) != version.String(version.Bellatrix) {
+			return nil, errors.New("not a bellatrix payload")
 		}
 		p, err := ep.ToProto()
 		if err != nil {
@@ -324,8 +321,6 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 			return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockCapella value body in SubmitBlindedBlockCapella")
 		}
 
-		ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
-		defer cancel()
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Capella))
 		}
@@ -338,11 +333,14 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err := json.Unmarshal(rb, ep); err != nil {
 			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockCapella response")
 		}
+		if strings.ToLower(ep.Version) != version.String(version.Capella) {
+			return nil, errors.New("not a capella payload")
+		}
 		p, err := ep.ToProto()
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not extract proto message from payload")
 		}
-		return blocks.WrappedExecutionPayloadCapella(p, big.NewInt(0))
+		return blocks.WrappedExecutionPayloadCapella(p, 0)
 	default:
 		return nil, fmt.Errorf("unsupported block version %s", version.String(sb.Version()))
 	}

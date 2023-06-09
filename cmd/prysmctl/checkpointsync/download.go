@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -45,7 +46,7 @@ func cliActionDownload(_ *cli.Context) error {
 	ctx := context.Background()
 	f := downloadFlags
 
-	opts := []beacon.ClientOpt{beacon.WithTimeout(f.Timeout)}
+	opts := []client.ClientOpt{client.WithTimeout(f.Timeout)}
 	client, err := beacon.NewClient(downloadFlags.BeaconNodeHost, opts...)
 	if err != nil {
 		return err
@@ -65,13 +66,13 @@ func cliActionDownload(_ *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("saved ssz-encoded block to to %s", blockPath)
+	log.Printf("saved ssz-encoded block to %s", blockPath)
 
 	statePath, err := od.SaveState(cwd)
 	if err != nil {
 		return err
 	}
-	log.Printf("saved ssz-encoded state to to %s", statePath)
+	log.Printf("saved ssz-encoded state to %s", statePath)
 
 	return nil
 }
