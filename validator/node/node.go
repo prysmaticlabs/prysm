@@ -530,20 +530,8 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		// checks db if proposer settings exist if none is provided.
 		settings, err := db.ProposerSettings(cliCtx.Context)
 		if err == nil {
-			// override the db settings with the results on whether or not the --enable-builder flag is provided.
-			// if the user does not which for settings saved in the db to be reset
-			if builderConfigFromFlag == nil {
-				log.Infof("proposer settings loaded from db. validator registration to builder is not enabled, please use the --%s flag if you wish to use a builder.", flags.EnableBuilderFlag.Name)
-			}
-			if settings.ProposeConfig != nil {
-				for key := range settings.ProposeConfig {
-					settings.ProposeConfig[key].BuilderConfig = builderConfigFromFlag
-				}
-			}
-			if settings.DefaultConfig != nil {
-				settings.DefaultConfig.BuilderConfig = builderConfigFromFlag
-			}
-
+			// process any overrides to builder settings
+			overrideBuilderSettings(settings, builderConfigFromFlag)
 			return settings, nil
 		}
 
@@ -649,6 +637,22 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		}
 	}
 	return vpSettings, nil
+}
+
+func overrideBuilderSettings(settings *validatorServiceConfig.ProposerSettings, builderConfigFromFlag *validatorServiceConfig.BuilderConfig) {
+	// override the db settings with the results on whether or not the --enable-builder flag is provided.
+	// if the user does not which for settings saved in the db to be reset
+	if builderConfigFromFlag == nil {
+		log.Infof("proposer settings loaded from db. validator registration to builder is not enabled, please use the --%s flag if you wish to use a builder.", flags.EnableBuilderFlag.Name)
+	}
+	if settings.ProposeConfig != nil {
+		for key := range settings.ProposeConfig {
+			settings.ProposeConfig[key].BuilderConfig = builderConfigFromFlag
+		}
+	}
+	if settings.DefaultConfig != nil {
+		settings.DefaultConfig.BuilderConfig = builderConfigFromFlag
+	}
 }
 
 func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.BuilderConfig, error) {
