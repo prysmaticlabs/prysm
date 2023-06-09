@@ -994,7 +994,7 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *validator
 
 // MigrateFromBeaconNodeProposerSettings tries to collect fee recipient information from the beacon node to construct the proposer settings on the validator client.
 func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (*validatorserviceconfig.ProposerSettings, error) {
-	if v.proposerSettings {
+	if v.proposerSettings != nil {
 		return nil, errors.New("proposer settings exist, can not migrate")
 	}
 	km, err := v.Keymanager()
