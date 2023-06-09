@@ -100,6 +100,17 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: phBlk}
+	case version.Deneb:
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockDeneb)
+		if !ok {
+			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockDeneb")
+			return nil
+		}
+		b.Block = &ethpb.StreamBlocksResponse_DenebBlock{DenebBlock: phBlk}
 	}
 
 	if err := stream.Send(b); err != nil {
@@ -149,6 +160,8 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		b.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{BellatrixBlock: p}
 	case *ethpb.SignedBeaconBlockCapella:
 		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: p}
+	case *ethpb.SignedBeaconBlockDeneb:
+		b.Block = &ethpb.StreamBlocksResponse_DenebBlock{DenebBlock: p}
 	default:
 		log.Errorf("Unknown block type %T", p)
 	}
