@@ -102,11 +102,7 @@ func run(ctx context.Context, v iface.Validator) {
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
 			if err := v.UpdateDuties(ctx, slot); err != nil {
-				if errors.Is(err, ErrValidatorsAllExited) {
-					log.Info(ErrValidatorsAllExited)
-				} else {
-					handleAssignmentError(err, slot)
-				}
+				handleAssignmentError(err, slot)
 				cancel()
 				span.End()
 				continue
@@ -272,7 +268,9 @@ func isConnectionError(err error) bool {
 }
 
 func handleAssignmentError(err error, slot primitives.Slot) {
-	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
+	if errors.Is(err, ErrValidatorsAllExited) {
+		log.Warn(ErrValidatorsAllExited)
+	} else if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,
 		).Warn("Validator not yet assigned to epoch")
