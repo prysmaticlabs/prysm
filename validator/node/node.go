@@ -527,23 +527,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 
 	// nothing is set, so just return nil
 	if fileConfig == nil {
-		// checks db if proposer settings exist if none is provided.
-		settings, err := db.ProposerSettings(cliCtx.Context)
-		if err == nil {
-			// process any overrides to builder settings
-			overrideBuilderSettings(settings, builderConfigFromFlag)
-			return settings, nil
-		}
-
-		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
-			// if there are no proposer settings provided, create a default where fee recipient is not populated, this will be skipped for validator registration on validators that don't have a fee recipient set.
-			return &validatorServiceConfig.ProposerSettings{
-				DefaultConfig: &validatorServiceConfig.ProposerOption{
-					BuilderConfig: builderConfigFromFlag,
-				},
-			}, nil
-		}
-		return nil, nil
+		return handleNoProposerSettingsFlagsProvided(cliCtx, db, builderConfigFromFlag)
 	}
 	// convert file config to proposer config for internal use
 	vpSettings := &validatorServiceConfig.ProposerSettings{}
@@ -637,6 +621,28 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		}
 	}
 	return vpSettings, nil
+}
+
+func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
+	db iface.ValidatorDB,
+	builderConfigFromFlag *validatorServiceConfig.BuilderConfig) (*validatorServiceConfig.ProposerSettings, error) {
+	// checks db if proposer settings exist if none is provided.
+	settings, err := db.ProposerSettings(cliCtx.Context)
+	if err == nil {
+		// process any overrides to builder settings
+		overrideBuilderSettings(settings, builderConfigFromFlag)
+		return settings, nil
+	}
+
+	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+		// if there are no proposer settings provided, create a default where fee recipient is not populated, this will be skipped for validator registration on validators that don't have a fee recipient set.
+		return &validatorServiceConfig.ProposerSettings{
+			DefaultConfig: &validatorServiceConfig.ProposerOption{
+				BuilderConfig: builderConfigFromFlag,
+			},
+		}, nil
+	}
+	return nil, nil
 }
 
 func overrideBuilderSettings(settings *validatorServiceConfig.ProposerSettings, builderConfigFromFlag *validatorServiceConfig.BuilderConfig) {
