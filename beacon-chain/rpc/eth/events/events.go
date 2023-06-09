@@ -299,7 +299,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 				},
 			},
 		})
-	case version.Capella:
+	case version.Capella, version.Deneb:
 		withdrawals, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			return err
