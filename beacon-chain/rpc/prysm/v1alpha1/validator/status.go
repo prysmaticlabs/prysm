@@ -23,6 +23,7 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
+var errHeadstateDoesNotExist = errors.New("head state does not exist")
 var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 var nonExistentIndex = primitives.ValidatorIndex(^uint64(0))
 
@@ -348,6 +349,9 @@ func (vs *Server) validatorStatus(
 				}
 			}
 		}
+		if lastActiveValidatorFn == nil {
+			return resp, idx
+		}
 		lastActivatedvalidatorIndex, err := lastActiveValidatorFn()
 		if err != nil {
 			return resp, idx
@@ -390,7 +394,7 @@ func checkValidatorsAreRecent(headEpoch primitives.Epoch, req *ethpb.DoppelGange
 
 func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, primitives.ValidatorIndex, error) {
 	if headState == nil || headState.IsNil() {
-		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
+		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errHeadstateDoesNotExist
 	}
 	idx, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok || uint64(idx) >= uint64(headState.NumValidators()) {

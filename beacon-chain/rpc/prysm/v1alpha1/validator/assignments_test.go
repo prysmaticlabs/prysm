@@ -361,6 +361,57 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	assert.Equal(t, false, res.NextEpochDuties[0].IsSyncCommittee)
 }
 
+func TestGetDuties_PendingPubKey(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.AltairForkEpoch = primitives.Epoch(0)
+	params.OverrideBeaconConfig(cfg)
+
+	genesis := util.NewBeaconBlock()
+	deposits, _, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	bs, err := util.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	require.NoError(t, err)
+	h := &ethpb.BeaconBlockHeader{
+		StateRoot:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+		ParentRoot: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		BodyRoot:   bytesutil.PadTo([]byte{'c'}, fieldparams.RootLength),
+	}
+	require.NoError(t, bs.SetLatestBlockHeader(h))
+	require.NoError(t, err, "Could not setup genesis bs")
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*primitives.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)-1))
+	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
+
+	slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().SecondsPerSlot
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Genesis: time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second),
+	}
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+
+	vs := &Server{
+		HeadFetcher:            chain,
+		TimeFetcher:            chain,
+		Eth1InfoFetcher:        &mockExecution.Chain{},
+		SyncChecker:            &mockSync.Sync{IsSyncing: false},
+		DepositFetcher:         depositCache,
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+	}
+
+	unknownPubkey := bytesutil.PadTo([]byte{'u'}, 48)
+	req := &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{unknownPubkey},
+	}
+	res, err := vs.GetDuties(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, false, res.CurrentEpochDuties[0].IsSyncCommittee)
+	assert.Equal(t, false, res.NextEpochDuties[0].IsSyncCommittee)
+}
+
 func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
 	chain := &mockChain.ChainService{
 		Genesis: time.Now(),
