@@ -570,7 +570,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
 
-	util.WaitTimeout(&wg, 3*time.Second)
+	util.WaitTimeout(&wg, 2*time.Second)
 
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch+1, v.duties.Duties[0].ProposerSlots[0], "Unexpected validator assignments")
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, v.duties.Duties[0].AttesterSlot, "Unexpected validator assignments")
@@ -618,7 +618,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
 
-	util.WaitTimeout(&wg, 3*time.Second)
+	util.WaitTimeout(&wg, 2*time.Second)
 
 	for range blacklistedPublicKeys {
 		assert.LogsContain(t, hook, "Not including slashable public key")
@@ -736,7 +736,7 @@ func TestUpdateDuties_NOT_AllValidatorsExited(t *testing.T) {
 		return nil, nil
 	}).AnyTimes()
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
-	util.WaitTimeout(&wg, 3*time.Second)
+	util.WaitTimeout(&wg, 2*time.Second)
 }
 
 func TestRolesAt_OK(t *testing.T) {
