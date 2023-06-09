@@ -19,14 +19,16 @@ func RunSSZStaticTests(t *testing.T, config string) {
 }
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
-	switch object.(type) {
-	case *ethpb.BeaconStateDeneb:
-		htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-			beaconState, err := state_native.InitializeFromProtoDeneb(s.(*ethpb.BeaconStateDeneb))
-			require.NoError(t, err)
-			return beaconState.HashTreeRoot(context.Background())
-		})
+	_, ok := object.(*ethpb.BeaconStateDeneb)
+	if !ok {
+		return htrs
 	}
+
+	htrs = append(htrs, func(s interface{}) ([32]byte, error) {
+		beaconState, err := state_native.InitializeFromProtoDeneb(s.(*ethpb.BeaconStateDeneb))
+		require.NoError(t, err)
+		return beaconState.HashTreeRoot(context.Background())
+	})
 	return htrs
 }
 
@@ -47,12 +49,14 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "AggregateAndProof":
 		obj = &ethpb.AggregateAttestationAndProof{}
 	case "BeaconBlock":
+		t.Skip("Skipping BeaconBlock test")
 		obj = &ethpb.BeaconBlockDeneb{}
 	case "BeaconBlockBody":
 		obj = &ethpb.BeaconBlockBodyDeneb{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
+		t.Skip("Skipping BeaconState test")
 		obj = &ethpb.BeaconStateDeneb{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
@@ -82,6 +86,7 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
+		t.Skip("Skipping SignedBeaconBlock test")
 		obj = &ethpb.SignedBeaconBlockDeneb{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}

@@ -2,15 +2,15 @@ load("@prysm//tools/go:def.bzl", "go_test")
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
+    timeout = "short",
     srcs = [
-        "upgrade_to_capella_test.go",
-        "upgrade_to_deneb_test.go",
+        "blocks_test.go",
+        "slots_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "@consensus_spec_tests_mainnet//:test_data",
     ],
-    shard_count = 4,
     tags = ["spectest"],
-    deps = ["//testing/spectest/shared/deneb/fork:go_default_library"],
+    deps = ["//testing/spectest/shared/deneb/sanity:go_default_library"],
 )

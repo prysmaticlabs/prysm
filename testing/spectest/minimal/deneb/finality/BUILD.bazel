@@ -3,10 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_test")
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = [
-        "upgrade_to_capella_test.go",
-        "upgrade_to_deneb_test.go",
-    ],
+    srcs = ["finality_test.go"],
     data = glob(["*.yaml"]) + [
         "@consensus_spec_tests_minimal//:test_data",
     ],
@@ -16,5 +13,5 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = ["//testing/spectest/shared/deneb/fork:go_default_library"],
+    deps = ["//testing/spectest/shared/deneb/finality:go_default_library"],
 )
