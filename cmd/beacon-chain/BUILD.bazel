@@ -80,12 +80,6 @@ go_image_debug(
 
 container_bundle(
     name = "image_bundle_debug",
-    images = {
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:latest-debug": ":image_debug",
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:{DOCKER_TAG}-debug": ":image_debug",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:latest-debug": ":image_debug",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}-debug": ":image_debug",
-    },
     tags = ["manual"],
     visibility = ["//beacon-chain:__pkg__"],
 )
@@ -99,12 +93,6 @@ go_image_alpine(
 
 container_bundle(
     name = "image_bundle_alpine",
-    images = {
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:latest-alpine": ":image_alpine",
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:{DOCKER_TAG}-alpine": ":image_alpine",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:latest-alpine": ":image_alpine",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}-alpine": ":image_alpine",
-    },
     tags = ["manual"],
     visibility = ["//beacon-chain:__pkg__"],
 )
