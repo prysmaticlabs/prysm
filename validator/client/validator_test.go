@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
@@ -688,7 +689,7 @@ func TestUpdateDuties_NOT_AllValidatorsExited(t *testing.T) {
 				ValidatorIndex: 200,
 				CommitteeIndex: 100,
 				Committee:      []primitives.ValidatorIndex{0, 1, 2, 3},
-				PublicKey:      []byte("testPubKey_1"),
+				PublicKey:      []byte("testPubKey_2"),
 				ProposerSlots:  []primitives.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
 				Status:         ethpb.ValidatorStatus_EXITING,
 			},
@@ -697,23 +698,45 @@ func TestUpdateDuties_NOT_AllValidatorsExited(t *testing.T) {
 				ValidatorIndex: 201,
 				CommitteeIndex: 101,
 				Committee:      []primitives.ValidatorIndex{0, 1, 2, 3},
-				PublicKey:      []byte("testPubKey_2"),
+				PublicKey:      []byte("testPubKey_3"),
 				ProposerSlots:  []primitives.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
 				Status:         ethpb.ValidatorStatus_EXITED,
 			},
 		},
 	}
+	cache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1920, // number of keys to track.
+		MaxCost:     192,  // maximum cost of cache, 1 item = 1 cost.
+		BufferItems: 64,   // number of keys per Get buffer.
+	})
+	require.NoError(t, err)
+
 	v := validator{
 		keyManager:      newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
+		domainDataCache: cache,
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
 
+	var wg sync.WaitGroup
+	wg.Add(3)
+	client.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/).AnyTimes()
+	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*emptypb.Empty, error) {
+		wg.Done()
+		return nil, nil
+	}).AnyTimes()
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
-
+	util.WaitTimeout(&wg, 3*time.Second)
 }
 
 func TestRolesAt_OK(t *testing.T) {
