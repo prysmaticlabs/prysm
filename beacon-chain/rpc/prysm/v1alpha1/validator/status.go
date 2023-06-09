@@ -227,15 +227,12 @@ func (vs *Server) activationStatus(
 	activeValidatorExists := false
 	statusResponses := make([]*ethpb.ValidatorActivationResponse_Status, len(pubKeys))
 	// only run calculation of last activated once per state
-	index, hpErr := helpers.LastActivatedValidatorIndex(ctx, headState)
-	lastActivatedFn := func() (primitives.ValidatorIndex, error) {
-		return index, hpErr
-	}
+	lastActivated, hpErr := helpers.LastActivatedValidatorIndex(ctx, headState)
 	for i, pubKey := range pubKeys {
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
-		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey, lastActivatedFn)
+		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey, func() (primitives.ValidatorIndex, error) { return lastActivated, hpErr })
 		if vStatus == nil {
 			continue
 		}
