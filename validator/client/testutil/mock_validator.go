@@ -212,14 +212,6 @@ func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[fieldparams.B
 	return fv.PubkeysToStatusesMap
 }
 
-// AllValidatorsAreExited for mocking
-func (_ *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
-	if ctx.Value(AllValidatorsAreExitedCtxKey) == nil {
-		return false, nil
-	}
-	return ctx.Value(AllValidatorsAreExitedCtxKey).(bool), nil
-}
-
 // Keymanager for mocking
 func (fv *FakeValidator) Keymanager() (keymanager.IKeymanager, error) {
 	return fv.Km, nil

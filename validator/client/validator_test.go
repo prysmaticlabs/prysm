@@ -624,6 +624,98 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	}
 }
 
+func TestUpdateDuties_AllValidatorsExited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	slot := params.BeaconConfig().SlotsPerEpoch
+	resp := &ethpb.DutiesResponse{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				Committee:      []primitives.ValidatorIndex{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_1"),
+				ProposerSlots:  []primitives.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
+				Status:         ethpb.ValidatorStatus_EXITED,
+			},
+			{
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 201,
+				CommitteeIndex: 101,
+				Committee:      []primitives.ValidatorIndex{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_2"),
+				ProposerSlots:  []primitives.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
+				Status:         ethpb.ValidatorStatus_EXITED,
+			},
+		},
+	}
+	v := validator{
+		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		validatorClient: client,
+	}
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	err := v.UpdateDuties(context.Background(), slot)
+	require.ErrorContains(t, ErrValidatorsAllExited.Error(), err)
+
+}
+
+func TestUpdateDuties_NOT_AllValidatorsExited(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	slot := params.BeaconConfig().SlotsPerEpoch
+	resp := &ethpb.DutiesResponse{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				Committee:      []primitives.ValidatorIndex{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_1"),
+				ProposerSlots:  []primitives.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
+				Status:         ethpb.ValidatorStatus_ACTIVE,
+			},
+			{
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				Committee:      []primitives.ValidatorIndex{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_1"),
+				ProposerSlots:  []primitives.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
+				Status:         ethpb.ValidatorStatus_EXITING,
+			},
+			{
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 201,
+				CommitteeIndex: 101,
+				Committee:      []primitives.ValidatorIndex{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_2"),
+				ProposerSlots:  []primitives.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
+				Status:         ethpb.ValidatorStatus_EXITED,
+			},
+		},
+	}
+	v := validator{
+		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		validatorClient: client,
+	}
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+
+}
+
 func TestRolesAt_OK(t *testing.T) {
 	v, m, validatorKey, finish := setup(t)
 	defer finish()
@@ -847,114 +939,6 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestAllValidatorsAreExited_AllExited(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := validatormock.NewMockValidatorClient(ctrl)
-
-	statuses := []*ethpb.ValidatorStatusResponse{
-		{Status: ethpb.ValidatorStatus_EXITED},
-		{Status: ethpb.ValidatorStatus_EXITED},
-	}
-
-	client.EXPECT().MultipleValidatorStatus(
-		gomock.Any(), // ctx
-		gomock.Any(), // request
-	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
-
-	v := validator{keyManager: genMockKeymanager(t, 2), validatorClient: client}
-	exited, err := v.AllValidatorsAreExited(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, true, exited)
-}
-
-func TestAllValidatorsAreExited_NotAllExited(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := validatormock.NewMockValidatorClient(ctrl)
-
-	statuses := []*ethpb.ValidatorStatusResponse{
-		{Status: ethpb.ValidatorStatus_ACTIVE},
-		{Status: ethpb.ValidatorStatus_EXITED},
-	}
-
-	client.EXPECT().MultipleValidatorStatus(
-		gomock.Any(), // ctx
-		gomock.Any(), // request
-	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
-
-	v := validator{keyManager: genMockKeymanager(t, 2), validatorClient: client}
-	exited, err := v.AllValidatorsAreExited(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, false, exited)
-}
-
-func TestAllValidatorsAreExited_PartialResult(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := validatormock.NewMockValidatorClient(ctrl)
-
-	statuses := []*ethpb.ValidatorStatusResponse{
-		{Status: ethpb.ValidatorStatus_EXITED},
-	}
-
-	client.EXPECT().MultipleValidatorStatus(
-		gomock.Any(), // ctx
-		gomock.Any(), // request
-	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
-
-	v := validator{keyManager: genMockKeymanager(t, 2), validatorClient: client}
-	exited, err := v.AllValidatorsAreExited(context.Background())
-	require.ErrorContains(t, "number of status responses did not match number of requested keys", err)
-	assert.Equal(t, false, exited)
-}
-
-func TestAllValidatorsAreExited_NoKeys(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := validatormock.NewMockValidatorClient(ctrl)
-	v := validator{keyManager: genMockKeymanager(t, 0), validatorClient: client}
-	exited, err := v.AllValidatorsAreExited(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, false, exited)
-}
-
-// TestAllValidatorsAreExited_CorrectRequest is a regression test that checks if the request contains the correct keys
-func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := validatormock.NewMockValidatorClient(ctrl)
-
-	// Create two different public keys
-	pubKey0 := [fieldparams.BLSPubkeyLength]byte{1, 2, 3, 4}
-	pubKey1 := [fieldparams.BLSPubkeyLength]byte{6, 7, 8, 9}
-	// This is the request expected from AllValidatorsAreExited()
-	request := &ethpb.MultipleValidatorStatusRequest{
-		PublicKeys: [][]byte{
-			pubKey0[:],
-			pubKey1[:],
-		},
-	}
-	statuses := []*ethpb.ValidatorStatusResponse{
-		{Status: ethpb.ValidatorStatus_ACTIVE},
-		{Status: ethpb.ValidatorStatus_EXITED},
-	}
-
-	client.EXPECT().MultipleValidatorStatus(
-		gomock.Any(), // ctx
-		request,      // request
-	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
-
-	// If AllValidatorsAreExited does not create the expected request, this test will fail
-	v := validator{
-		keyManager:      newMockKeymanager(t, keypair{pub: pubKey0}, keypair{pub: pubKey1}),
-		validatorClient: client,
-	}
-	exited, err := v.AllValidatorsAreExited(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, false, exited)
 }
 
 func TestService_ReceiveBlocks_NilBlock(t *testing.T) {

@@ -104,9 +104,9 @@ func run(ctx context.Context, v iface.Validator) {
 			if err := v.UpdateDuties(ctx, slot); err != nil {
 				if errors.Is(err, ErrValidatorsAllExited) {
 					log.Info(ErrValidatorsAllExited)
-					continue
+				} else {
+					handleAssignmentError(err, slot)
 				}
-				handleAssignmentError(err, slot)
 				cancel()
 				span.End()
 				continue
