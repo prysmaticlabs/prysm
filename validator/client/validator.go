@@ -56,6 +56,7 @@ import (
 var (
 	keyRefetchPeriod                = 30 * time.Second
 	ErrBuilderValidatorRegistration = errors.New("Builder API validator registration unsuccessful")
+	ErrValidatorsAllExited          = errors.New("All validators are exited, no more work to perform...")
 )
 
 var (
@@ -601,6 +602,16 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		v.duties = nil // Clear assignments so we know to retry the request.
 		log.Error(err)
 		return err
+	}
+
+	allExitedCounter := 0
+	for i := range resp.CurrentEpochDuties {
+		if resp.CurrentEpochDuties[i].Status == ethpb.ValidatorStatus_EXITED {
+			allExitedCounter++
+		}
+	}
+	if allExitedCounter != 0 && allExitedCounter == len(resp.CurrentEpochDuties) {
+		return ErrValidatorsAllExited
 	}
 
 	v.duties = resp
