@@ -156,6 +156,7 @@ go_test(
         "//validator/keymanager/remote-web3signer:go_default_library",
         "//validator/slashing-protection-history:go_default_library",
         "//validator/testing:go_default_library",
+        "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
