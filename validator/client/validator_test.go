@@ -949,6 +949,37 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	require.Equal(t, slot, v.highestValidSlot)
 }
 
+func TestService_ReceiveBlocks_SetHighestDeneb(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	v := validator{
+		validatorClient: client,
+		blockFeed:       new(event.Feed),
+	}
+	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+	client.EXPECT().StreamBlocksAltair(
+		gomock.Any(),
+		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
+	).Return(stream, nil)
+	stream.EXPECT().Context().Return(ctx).AnyTimes()
+	slot := primitives.Slot(100)
+	stream.EXPECT().Recv().Return(
+		&ethpb.StreamBlocksResponse{
+			Block: &ethpb.StreamBlocksResponse_DenebBlock{
+				DenebBlock: &ethpb.SignedBeaconBlockDeneb{Block: &ethpb.BeaconBlockDeneb{Slot: slot, Body: &ethpb.BeaconBlockBodyDeneb{}}}},
+		},
+		nil,
+	).Do(func() {
+		cancel()
+	})
+	connectionErrorChannel := make(chan error)
+	v.ReceiveBlocks(ctx, connectionErrorChannel)
+	require.Equal(t, slot, v.highestValidSlot)
+}
+
 type doppelGangerRequestMatcher struct {
 	req *ethpb.DoppelGangerRequest
 }
