@@ -104,20 +104,6 @@ docker_push(
     visibility = ["//beacon-chain:__pkg__"],
 )
 
-docker_push(
-    name = "push_images_debug",
-    bundle = ":image_bundle_debug",
-    tags = ["manual"],
-    visibility = ["//beacon-chain:__pkg__"],
-)
-
-docker_push(
-    name = "push_images_alpine",
-    bundle = ":image_bundle_alpine",
-    tags = ["manual"],
-    visibility = ["//beacon-chain:__pkg__"],
-)
-
 go_binary(
     name = "beacon-chain",
     embed = [":go_default_library"],
