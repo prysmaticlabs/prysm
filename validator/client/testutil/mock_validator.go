@@ -57,11 +57,6 @@ type FakeValidator struct {
 	Km                                keymanager.IKeymanager
 }
 
-type ctxKey string
-
-// AllValidatorsAreExitedCtxKey represents the metadata context key used for exits.
-var AllValidatorsAreExitedCtxKey = ctxKey("exited")
-
 // Done for mocking.
 func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true
