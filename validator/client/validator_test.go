@@ -722,7 +722,7 @@ func TestUpdateDuties_NOT_AllValidatorsExited(t *testing.T) {
 	).Return(resp, nil)
 
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(1)
 	client.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
