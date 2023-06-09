@@ -2429,3 +2429,43 @@ func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 
 	assert.Equal(t, 0, len(actual))
 }
+
+func TestValidator_MigrateProposerSettings_OK_WithBuilderSettings(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ctx := context.Background()
+	client := validatormock.NewMockValidatorClient(ctrl)
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	numValidators := 3
+	km := genMockKeymanager(t, numValidators)
+	v := validator{
+		validatorClient: client,
+		db:              db,
+		km:              km,
+		proposerSettings: &validatorserviceconfig.ProposerSettings{
+			DefaultConfig: &validatorserviceconfig.ProposerOption{
+				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					Enabled: true,
+				},
+			},
+		},
+	}
+	feeRecipient1, err := hexutil.Decode("0xb698D697092822185bF0311052215d5B5e1F3934")
+	require.NoError(t, err)
+	feeRecipient2, err := hexutil.Decode("0xb698D697092822185bF0311052215d5B5e1F3935")
+	require.NoError(t, err)
+	feeRecipient3, err := hexutil.Decode("0xb698D697092822185bF0311052215d5B5e1F3936")
+	require.NoError(t, err)
+	keys,err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	client.EXPECT().GetFeeRecipientByPubKey(gomock.Any(),
+		&ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[0][:]}).Return(&ethpb.FeeRecipientByPubKeyResponse{FeeRecipient: feeRecipient1}, nil)
+	client.EXPECT().GetFeeRecipientByPubKey(gomock.Any(),
+		&ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[1][:]}).Return(&ethpb.FeeRecipientByPubKeyResponse{FeeRecipient: feeRecipient2}, nil)
+	client.EXPECT().GetFeeRecipientByPubKey(gomock.Any(),
+		&ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[2][:]}).Return(&ethpb.FeeRecipientByPubKeyResponse{FeeRecipient: feeRecipient3}, nil)
+
+	settings, err := v.MigrateFromBeaconNodeProposerSettings(ctx)
+	require.NoError(t, err)
+	require.Equal(t,settings.ProposeConfig = )
+}
