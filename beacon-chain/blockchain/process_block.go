@@ -704,6 +704,9 @@ func (s *Service) updateShufflingCaches(ctx context.Context) error {
 		if err := helpers.UpdateProposerIndicesInCache(ctx, st); err != nil {
 			return err
 		}
+		if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e+1); err != nil {
+			log.Warn(ctx, "Failed to cache next epoch proposers", "err", err)
+		}
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(st))
 		if err != nil {
 			return err
