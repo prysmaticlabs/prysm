@@ -3,15 +3,19 @@ package initialsync
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -69,10 +73,18 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 		log.Debug("Already synced to finalized epoch")
 		return nil
 	}
+
+	vr := s.clock.GenesisValidatorsRoot()
+	ctxMap, err := sync.ContextByteVersionsForValRoot(vr)
+	if err != nil {
+		return errors.Wrapf(err, "unable to initialize context version map using genesis validator root = %#x", vr)
+	}
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.cfg.P2P,
 		db:                  s.cfg.DB,
 		chain:               s.cfg.Chain,
+		clock:               s.clock,
+		ctxMap:              ctxMap,
 		highestExpectedSlot: highestFinalizedSlot,
 		mode:                modeStopOnFinalizedEpoch,
 	})
@@ -81,6 +93,9 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 	}
 
 	for data := range queue.fetchedData {
+		// If blobs are available. Verify blobs and blocks are consistence.
+		// We can't import a block if there's no associated blob within DA bound.
+		// The blob has to pass aggregated proof check.
 		s.processFetchedData(ctx, genesis, s.cfg.Chain.HeadSlot(), data)
 	}
 
@@ -98,10 +113,17 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 // syncToNonFinalizedEpoch sync from head to best known non-finalized epoch supported by majority
 // of peers (no less than MinimumSyncPeers*2 peers).
 func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time) error {
+	vr := s.clock.GenesisValidatorsRoot()
+	ctxMap, err := sync.ContextByteVersionsForValRoot(vr)
+	if err != nil {
+		return errors.Wrapf(err, "unable to initialize context version map using genesis validator root = %#x", vr)
+	}
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.cfg.P2P,
 		db:                  s.cfg.DB,
 		chain:               s.cfg.Chain,
+		clock:               s.clock,
+		ctxMap:              ctxMap,
 		highestExpectedSlot: slots.Since(genesis),
 		mode:                modeNonConstrained,
 	})
@@ -128,7 +150,7 @@ func (s *Service) processFetchedData(
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	// Use Batch Block Verify to process and verify batches directly.
-	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.cfg.Chain.ReceiveBlockBatch); err != nil {
+	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.cfg.Chain.ReceiveBlockBatch, data.blobMap); err != nil {
 		log.WithError(err).Warn("Skip processing batched blocks")
 	}
 }
@@ -244,48 +266,96 @@ func (s *Service) processBlock(
 	return blockReceiver(ctx, blk, blkRoot)
 }
 
+var ErrMissingBlobsForBlockCommitments = errors.New("blobs unavailable for processing block with kzg commitments")
+var ErrMisalignedIndices = errors.New("unexpected ordering of blobs for block")
+var ErrBlobCommitmentMismatch = errors.New("kzg_commitment in blob does not match block")
+
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []interfaces.ReadOnlySignedBeaconBlock, bFunc batchBlockReceiverFn) error {
+	blks []interfaces.ReadOnlySignedBeaconBlock, bFunc batchBlockReceiverFn, blobs map[[32]byte][]*ethpb.BlobSidecar) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
-	firstBlock := blks[0]
-	blkRoot, err := firstBlock.Block().HashTreeRoot()
-	if err != nil {
+	blockRoots := make([][32]byte, 0)
+	unprocessed := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
+	for i := range blks {
+		b := blks[i]
+		root, err := b.Block().HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		if s.isProcessedBlock(ctx, b, root) {
+			continue
+		}
+		if len(blockRoots) > 0 {
+			max := len(blockRoots) - 1
+			proot := blockRoots[max]
+			if proot != b.Block().ParentRoot() {
+				pblock := unprocessed[max]
+				return fmt.Errorf("expected linear block list with parent root of %#x (slot %d) but received %#x (slot %d)",
+					proot, pblock.Block().Slot(), b.Block().ParentRoot(), b.Block().Slot())
+			}
+		}
+		blockRoots = append(blockRoots, root)
+		unprocessed = append(unprocessed, b)
+
+		// TODO: This blob processing should be moved down into blocks_fetcher.go so that we can
+		// try other peers if we get blobs that don't match the block commitments.
+		denebB, err := b.PbDenebBlock()
+		if err != nil {
+			if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
+				// expected for pre-deneb blocks
+				continue
+			}
+			return errors.Wrapf(err, "unexpected error when checking if block root=%#x is post-deneb", root)
+		}
+		kcs := denebB.GetBlock().GetBody().BlobKzgCommitments
+		if len(kcs) == 0 {
+			continue
+		}
+		bblobs := blobs[root]
+		if len(bblobs) != len(kcs) {
+			return errors.Wrapf(ErrMissingBlobsForBlockCommitments, "block root %#x, %d commitments, %d blobs", root, len(kcs), len(bblobs))
+		}
+		// make sure commitments match
+		for ci, kc := range kcs {
+			blobi := bblobs[ci]
+			if blobi.Index != uint64(ci) {
+				return errors.Wrapf(ErrMisalignedIndices, "block root %#x, block commitment %#x, offset %d, blob commitment %#x, Index=%d",
+					root, kc, ci, blobi.KzgCommitment, blobi.Index)
+			}
+			if bytesutil.ToBytes48(kc) != bytesutil.ToBytes48(blobi.KzgCommitment) {
+				return errors.Wrapf(ErrBlobCommitmentMismatch, "block root %#x, Index %d, block commitment=%#x, blob commitment=%#x",
+					root, ci, kc, blobi.KzgCommitment)
+			}
+		}
+	}
+
+	if len(unprocessed) == 0 {
+		maxIncoming := blks[len(blks)-1]
+		maxRoot, err := maxIncoming.Block().HashTreeRoot()
+		if err != nil {
+			log.Errorf("TODO: use ROBlock so this kind of silly error handling isn't needed")
+		}
+		headSlot := s.cfg.Chain.HeadSlot()
+		return fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, maxIncoming.Block().Slot(), maxRoot, errBlockAlreadyProcessed)
+	}
+	if !s.cfg.Chain.HasBlock(ctx, unprocessed[0].Block().ParentRoot()) {
+		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, unprocessed[0].Block().ParentRoot(), unprocessed[0].Block().Slot())
+	}
+	s.logBatchSyncStatus(genesis, unprocessed, blockRoots[0])
+	for _, root := range blockRoots {
+		scs, has := blobs[root]
+		if !has {
+			continue
+		}
+		if err := s.cfg.DB.SaveBlobSidecar(ctx, scs); err != nil {
+			return errors.Wrapf(err, "failed to save blobs for block %#x", root)
+		}
+	}
+	if err := bFunc(ctx, unprocessed, blockRoots); err != nil {
 		return err
 	}
-	headSlot := s.cfg.Chain.HeadSlot()
-	for headSlot >= firstBlock.Block().Slot() && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
-		if len(blks) == 1 {
-			return fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, firstBlock.Block().Slot(), blkRoot, errBlockAlreadyProcessed)
-		}
-		blks = blks[1:]
-		firstBlock = blks[0]
-		blkRoot, err = firstBlock.Block().HashTreeRoot()
-		if err != nil {
-			return err
-		}
-	}
-	s.logBatchSyncStatus(genesis, blks, blkRoot)
-	parentRoot := firstBlock.Block().ParentRoot()
-	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
-		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
-	}
-	blockRoots := make([][32]byte, len(blks))
-	blockRoots[0] = blkRoot
-	for i := 1; i < len(blks); i++ {
-		b := blks[i]
-		if b.Block().ParentRoot() != blockRoots[i-1] {
-			return fmt.Errorf("expected linear block list with parent root of %#x but received %#x",
-				blockRoots[i-1][:], b.Block().ParentRoot())
-		}
-		blkRoot, err := b.Block().HashTreeRoot()
-		if err != nil {
-			return err
-		}
-		blockRoots[i] = blkRoot
-	}
-	return bFunc(ctx, blks, blockRoots)
+	return nil
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
