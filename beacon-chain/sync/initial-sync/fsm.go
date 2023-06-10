@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	blocks2 "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -42,12 +42,14 @@ type stateMachineManager struct {
 // stateMachine holds a state of a single block processing FSM.
 // Each FSM allows deterministic state transitions: State(S) x Event(E) -> Actions (A), State(S').
 type stateMachine struct {
-	smm     *stateMachineManager
-	start   primitives.Slot
-	state   stateID
-	pid     peer.ID
-	blocks  []interfaces.ReadOnlySignedBeaconBlock
-	updated time.Time
+	smm      *stateMachineManager
+	start    primitives.Slot
+	state    stateID
+	pid      peer.ID
+	blocks   []blocks2.ROBlock
+	bwb      []BlockWithVerifiedBlobs
+	blobsPid peer.ID
+	updated  time.Time
 }
 
 // eventHandlerFn is an event handler function's signature.
@@ -78,7 +80,7 @@ func (smm *stateMachineManager) addStateMachine(startSlot primitives.Slot) *stat
 		smm:     smm,
 		start:   startSlot,
 		state:   stateNew,
-		blocks:  []interfaces.ReadOnlySignedBeaconBlock{},
+		bwb:     []BlockWithVerifiedBlobs{},
 		updated: prysmTime.Now(),
 	}
 	smm.recalculateMachineAttribs()
@@ -90,7 +92,7 @@ func (smm *stateMachineManager) removeStateMachine(startSlot primitives.Slot) er
 	if _, ok := smm.machines[startSlot]; !ok {
 		return fmt.Errorf("state for machine %v is not found", startSlot)
 	}
-	smm.machines[startSlot].blocks = nil
+	smm.machines[startSlot].bwb = nil
 	delete(smm.machines, startSlot)
 	smm.recalculateMachineAttribs()
 	return nil

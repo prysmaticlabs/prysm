@@ -22,6 +22,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -182,7 +183,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 	}
 	parentRoot := block.Block().ParentRoot()
 	if !bytes.Equal(s.Root, parentRoot[:]) {
-		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
+		return errors.Errorf("ReceiveBlockInitialSync wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 	}
 	if err := s.State.SetSlot(block.Block().Slot()); err != nil {
 		return err
@@ -204,7 +205,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, _ [][32]byte) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []blocks.ROBlock) error {
 	if s.State == nil {
 		return ErrNilState
 	}
