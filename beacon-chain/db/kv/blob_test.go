@@ -232,7 +232,7 @@ func TestStore_verifySideCars(t *testing.T) {
 		error string
 	}{
 		{name: "empty", scs: []*ethpb.BlobSidecar{}, error: "nil or empty blob sidecars"},
-		{name: "too many sidecars", scs: generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock+1), error: "too many sidecars: 5 > 4"},
+		{name: "too many sidecars", scs: generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock+1), error: "too many sidecars: 7 > 6"},
 		{name: "invalid slot", scs: []*ethpb.BlobSidecar{{Slot: 1}, {Slot: 2}}, error: "sidecar slot mismatch: 2 != 1"},
 		{name: "invalid proposer index", scs: []*ethpb.BlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, error: "sidecar proposer index mismatch: 2 != 1"},
 		{name: "invalid root", scs: []*ethpb.BlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, error: "sidecar root mismatch: 02 != 01"},
