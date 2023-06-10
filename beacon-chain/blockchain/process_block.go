@@ -194,6 +194,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		log.WithError(err).Warn("Could not update head")
 	}
 	if blockRoot != headRoot {
+
+		// Update caches on reorg
+		s.updateShufflingCachesOnReorg(ctx)
+
 		receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
@@ -693,18 +697,16 @@ func (s *Service) updateShufflingCaches(ctx context.Context) error {
 	lastCachedSlot := transition.LastCachedStateSlot()
 	lastCachedEpoch := slots.ToEpoch(lastCachedSlot)
 
-	// Allow cache update if one of the two condition meet
-	// 1.) last cached is great or equal than next epoch boundary slot
-	// 2.) current epoch is higher than last cached epoch. This handles the reorg case if one decides to build on latest block
-	if transition.LastCachedStateSlot() >= s.nextEpochBoundarySlot || slots.ToEpoch(s.CurrentSlot()) > lastCachedEpoch {
+	// Allow cache update if the last cached is great or equal than next epoch boundary slot
+	if transition.LastCachedStateSlot() >= s.nextEpochBoundarySlot {
 		_, st := transition.LastCachedState()
 		if err := helpers.UpdateCommitteeCache(ctx, st, coreTime.CurrentEpoch(st)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, st); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, st, lastCachedEpoch); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e+1); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, st, lastCachedEpoch+1); err != nil {
 			log.Warn(ctx, "Failed to cache next epoch proposers", "err", err)
 		}
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(st))
@@ -714,4 +716,31 @@ func (s *Service) updateShufflingCaches(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Service) updateShufflingCachesOnReorg(ctx context.Context) {
+	ctx, span := trace.StartSpan(ctx, "transition.updateShufflingCachesOnReorg")
+	defer span.End()
+
+	headState := s.headState(ctx)
+	// the head state could be epochs older, and we want to get it to current epoch slot.
+	currentEpoch := slots.ToEpoch(s.CurrentSlot())
+	currentEpochStartSlot, err := slots.EpochStart(currentEpoch)
+	if err != nil {
+		log.WithError(err).Error("could not get epoch end slot to update shuffling caches on reorg")
+	}
+	headState, err = transition.ProcessSlots(ctx, headState, currentEpochStartSlot)
+	if err != nil {
+		log.WithError(err).Error("could not process slots to head state on reorg")
+	}
+
+	if err := helpers.UpdateCommitteeCache(ctx, headState, coreTime.CurrentEpoch(headState)); err != nil {
+		log.WithError(err).Error("could not update committee cache on reorg")
+	}
+	if err := helpers.UpdateProposerIndicesInCache(ctx, headState, coreTime.CurrentEpoch(headState)); err != nil {
+		log.WithError(err).Error("could not process slots to update shuffling caches on reorg")
+	}
+	if err := helpers.UpdateProposerIndicesInCache(ctx, headState, coreTime.CurrentEpoch(headState)+1); err != nil {
+		log.WithError(err).Error("could not process slots to next epoch to update shuffling caches on reorg")
+	}
 }
