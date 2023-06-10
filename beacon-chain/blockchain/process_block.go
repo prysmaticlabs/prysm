@@ -195,8 +195,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 	if blockRoot != headRoot {
 
-		// Update caches on reorg
-		s.updateShufflingCachesOnReorg(ctx)
+		go func() {
+			// Update caches on reorg
+			s.updateShufflingCachesOnReorg(ctx)
+		}()
 
 		receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 		if err != nil {
