@@ -302,7 +302,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		// try other peers if we get blobs that don't match the block commitments.
 		denebB, err := b.PbDenebBlock()
 		if err != nil {
-			if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
+			if errors.Is(err, consensus_types.ErrUnsupportedField) {
 				// expected for pre-deneb blocks
 				continue
 			}

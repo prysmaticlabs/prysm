@@ -336,7 +336,7 @@ func blobRequestsForBlocks(blocks []interfaces.ReadOnlySignedBeaconBlock) (*p2pp
 	for i, bl := range blocks {
 		commits, err := bl.Block().Body().BlobKzgCommitments()
 		if err != nil {
-			if errors.Is(err, consensus_types.ErrUnsupportedGetter) {
+			if errors.Is(err, consensus_types.ErrUnsupportedField) {
 				continue
 			}
 			return nil, err
