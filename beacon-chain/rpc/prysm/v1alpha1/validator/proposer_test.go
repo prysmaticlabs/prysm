@@ -721,7 +721,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 		},
 		{
 			name: "deneb block has too many blobs",
-			err:  "Too many blobs in block: 5",
+			err:  "Too many blobs in block: 7",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBeaconBlockDeneb()
 				blockToPropose.Block.Slot = 5
@@ -734,6 +734,8 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 						{Message: &ethpb.BlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
 						{Message: &ethpb.BlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
 						{Message: &ethpb.BlobSidecar{Index: 4, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 5, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 6, Slot: 5, BlockParentRoot: parent[:]}},
 					},
 				}}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
