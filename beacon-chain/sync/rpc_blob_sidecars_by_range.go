@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"math"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
@@ -110,7 +111,14 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 	return nil
 }
 
-func blobsByRangeMinStartSlot(current primitives.Slot) (primitives.Slot, error) {
+// BlobsByRangeMinStartSlot returns the lowest slot that we should expect peers to respect as the
+// start slot in a BlobSidecarsByRange request. This can be used to validate incoming requests and
+// to avoid pestering peers with requests for blobs that are outside the retention window.
+func BlobsByRangeMinStartSlot(current primitives.Slot) (primitives.Slot, error) {
+	// Avoid overflow if we're running on a config where deneb is set to far future epoch.
+	if params.BeaconConfig().DenebForkEpoch == math.MaxUint64 {
+		return primitives.Slot(math.MaxUint64), nil
+	}
 	minReqEpochs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	currEpoch := slots.ToEpoch(current)
 	minStart := params.BeaconConfig().DenebForkEpoch
@@ -156,9 +164,9 @@ func validateBlobsByRange(r *pb.BlobSidecarsByRangeRequest, current primitives.S
 	// [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
 	// where current_epoch is defined by the current wall-clock time,
 	// and clients MUST support serving requests of blobs on this range.
-	minStartSlot, err := blobsByRangeMinStartSlot(current)
+	minStartSlot, err := BlobsByRangeMinStartSlot(current)
 	if err != nil {
-		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "blobsByRangeMinStartSlot error")
+		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "BlobsByRangeMinStartSlot error")
 	}
 	if rp.start > maxStart {
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "start > maxStart")
