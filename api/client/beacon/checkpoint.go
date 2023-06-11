@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -18,6 +19,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
 )
+
+var errCheckpointBlockMismatch = errors.New("mismatch between checkpoint sync state and block")
 
 // OriginData represents the BeaconState and ReadOnlySignedBeaconBlock necessary to start an empty Beacon Node
 // using Checkpoint Sync.
@@ -75,37 +78,40 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	if err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")
 	}
-	if s.Slot() != s.LatestBlockHeader().Slot {
-		return nil, fmt.Errorf("finalized state slot does not match latest block header slot %d != %d", s.Slot(), s.LatestBlockHeader().Slot)
-	}
 
-	sr, err := s.HashTreeRoot(ctx)
+	slot := s.LatestBlockHeader().Slot
+	bb, err := client.GetBlock(ctx, IdFromSlot(slot))
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compute htr for finalized state at slot=%d", s.Slot())
-	}
-	header := s.LatestBlockHeader()
-	header.StateRoot = sr[:]
-	br, err := header.HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "error while computing block root using state data")
-	}
-
-	bb, err := client.GetBlock(ctx, IdFromRoot(br))
-	if err != nil {
-		return nil, errors.Wrapf(err, "error requesting block by root = %#x", br)
+		return nil, errors.Wrapf(err, "error requesting block by slot = %d", slot)
 	}
 	b, err := vu.UnmarshalBeaconBlock(bb)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal block to a supported type using the detected fork schedule")
 	}
-	realBlockRoot, err := b.Block().HashTreeRoot()
+	br, err := b.Block().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing hash_tree_root of retrieved block")
 	}
+	bodyRoot, err := b.Block().Body().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "error computing hash_tree_root of retrieved block body")
+	}
 
-	log.Printf("BeaconState slot=%d, Block slot=%d", s.Slot(), b.Block().Slot())
-	log.Printf("BeaconState htr=%#x, Block state_root=%#x", sr, b.Block().StateRoot())
-	log.Printf("BeaconState latest_block_header htr=%#x, block htr=%#x", br, realBlockRoot)
+	sbr := bytesutil.ToBytes32(s.LatestBlockHeader().BodyRoot)
+	if sbr != bodyRoot {
+		return nil, errors.Wrapf(errCheckpointBlockMismatch, "state body root = %#x, block body root = %#x", sbr, bodyRoot)
+	}
+	sr, err := s.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compute htr for finalized state at slot=%d", s.Slot())
+	}
+
+	log.
+		WithField("block_slot", b.Block().Slot()).
+		WithField("state_slot", s.Slot()).
+		WithField("state_root", sr).
+		WithField("block_root", br).
+		Info("Downloaded checkpoint sync state and block.")
 	return &OriginData{
 		st: s,
 		b:  b,
