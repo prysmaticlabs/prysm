@@ -1,0 +1,11 @@
+diff --git a/p2p/net/swarm/swarm_conn.go b/p2p/net/swarm/swarm_conn.go
+index 0e79da1b..e770381a 100644
+--- a/p2p/net/swarm/swarm_conn.go
++++ b/p2p/net/swarm/swarm_conn.go
+@@ -130,6 +130,7 @@ func (c *Conn) start() {
+
+ 				// We only get an error here when the swarm is closed or closing.
+ 				if err != nil {
++					scope.Done()
+ 					return
+ 				}
