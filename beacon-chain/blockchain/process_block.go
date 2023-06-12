@@ -194,7 +194,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		log.WithError(err).Warn("Could not update head")
 	}
 	if blockRoot != headRoot {
-
 		go func() {
 			// Update caches on reorg
 			s.updateShufflingCachesOnReorg(ctx)
