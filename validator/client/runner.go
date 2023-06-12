@@ -93,14 +93,6 @@ func run(ctx context.Context, v iface.Validator) {
 			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
-			allExited, err := v.AllValidatorsAreExited(ctx)
-			if err != nil {
-				log.WithError(err).Error("Could not check if validators are exited")
-			}
-			if allExited {
-				log.Info("All validators are exited, no more work to perform...")
-				continue
-			}
 
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
@@ -276,7 +268,9 @@ func isConnectionError(err error) bool {
 }
 
 func handleAssignmentError(err error, slot primitives.Slot) {
-	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
+	if errors.Is(err, ErrValidatorsAllExited) {
+		log.Warn(ErrValidatorsAllExited)
+	} else if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,
 		).Warn("Validator not yet assigned to epoch")
