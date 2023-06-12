@@ -181,7 +181,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 // TODO: Explain the flow
 func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 	segments := strings.Split(r.URL.Path, "/")
-	epoch, err := strconv.ParseUint(segments[len(segments)-1], 10, 64)
+	requestedEpoch, err := strconv.ParseUint(segments[len(segments)-1], 10, 64)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: "Could not decode epoch: " + err.Error(),
@@ -190,7 +190,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	if primitives.Epoch(epoch) < params.BeaconConfig().AltairForkEpoch {
+	if primitives.Epoch(requestedEpoch) < params.BeaconConfig().AltairForkEpoch {
 		errJson := &network.DefaultErrorJson{
 			Message: "Attestation rewards are not supported for Phase 0",
 			Code:    http.StatusBadRequest,
@@ -199,25 +199,25 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	currentEpoch := uint64(slots.ToEpoch(s.TimeFetcher.CurrentSlot()))
-	if epoch >= currentEpoch-1 {
+	if requestedEpoch+1 >= currentEpoch {
 		errJson := &network.DefaultErrorJson{
 			Code:    http.StatusBadRequest,
-			Message: "Attestation rewards are available after two epoch transitions to ensure all attestation have a chance of inclusion",
+			Message: "Attestation rewards are available after two epoch transitions to ensure all attestations have a chance of inclusion",
 		}
 		network.WriteError(w, errJson)
 		return
 	}
 
-	epochStart, err := slots.EpochStart(primitives.Epoch(epoch + 2))
+	nextEpochEnd, err := slots.EpochEnd(primitives.Epoch(requestedEpoch + 1))
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
-			Message: "Could not get epoch's starting slot: " + err.Error(),
+			Message: "Could not get next epoch's ending slot: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 		network.WriteError(w, errJson)
 		return
 	}
-	st, err := s.Stater.StateBySlot(r.Context(), epochStart)
+	st, err := s.Stater.StateBySlot(r.Context(), nextEpochEnd)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: "Could not get state for epoch's starting slot: " + err.Error(),
@@ -388,7 +388,7 @@ func attestationsDelta(
 	inactivityDenominator := bias * inactivityPenaltyQuotient
 
 	for i, r := range rewards {
-		err = attestationDelta(r, bal, vals[i], baseRewardMultiplier, inactivityDenominator, leak)
+		err = singleAttDelta(r, bal, vals[i], baseRewardMultiplier, inactivityDenominator, leak)
 		if err != nil {
 			return err
 		}
@@ -397,7 +397,7 @@ func attestationsDelta(
 	return nil
 }
 
-func attestationDelta(
+func singleAttDelta(
 	reward AttReward,
 	bal *precompute.Balance,
 	val *precompute.Validator,
