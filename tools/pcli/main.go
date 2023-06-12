@@ -282,10 +282,9 @@ func benchmarkHash(sszPath string, sszType string) {
 		if err != nil {
 			log.Fatal("couldn't hash")
 		}
-		fmt.Printf("Duration: %v HTR: %#x\n", time.Now().Sub(start), root)
+		fmt.Printf("Duration: %v HTR: %#x\n", time.Since(start), root)
 		return
 	default:
 		log.Fatal("Invalid type")
 	}
-
 }
