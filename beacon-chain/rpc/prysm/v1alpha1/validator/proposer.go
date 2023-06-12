@@ -347,6 +347,10 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 
+	if blk.Block().Slot()%params.BeaconConfig().SlotsPerEpoch == 0 {
+		time.Sleep(4 * time.Second)
+	}
+
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
 		log.WithField("slot", blk.Block().Slot()).Debugf(

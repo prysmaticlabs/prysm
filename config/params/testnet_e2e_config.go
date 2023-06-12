@@ -21,7 +21,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.MaxValidatorsPerWithdrawalsSweep = 128
 
 	// Time parameters.
-	e2eConfig.SecondsPerSlot = 10
+	e2eConfig.SecondsPerSlot = 12
 	e2eConfig.SlotsPerEpoch = 6
 	e2eConfig.SqrRootSlotsPerEpoch = 2
 	e2eConfig.SecondsPerETH1Block = 2
