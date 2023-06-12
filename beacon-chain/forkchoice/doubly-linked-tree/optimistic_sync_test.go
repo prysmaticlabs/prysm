@@ -5,24 +5,23 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 // We test the algorithm to update a node from SYNCING to INVALID
 // We start with the same diagram as above:
 //
-//                E -- F
-//               /
-//         C -- D
-//        /      \
-//  A -- B        G -- H -- I
-//        \        \
-//         J        -- K -- L
+//	              E -- F
+//	             /
+//	       C -- D
+//	      /      \
+//	A -- B        G -- H -- I
+//	      \        \
+//	       J        -- K -- L
 //
 // And every block in the Fork choice is optimistic.
-//
 func TestPruneInvalid(t *testing.T) {
 	tests := []struct {
 		root             [32]byte // the root of the new INVALID block
@@ -238,19 +237,15 @@ func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
 	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	f.store.proposerBoostLock.Lock()
 	f.store.proposerBoostRoot = [32]byte{'c'}
 	f.store.previousProposerBoostScore = 10
 	f.store.previousProposerBoostRoot = [32]byte{'b'}
-	f.store.proposerBoostLock.Unlock()
 
 	_, err = f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'A'})
 	require.NoError(t, err)
-	f.store.proposerBoostLock.RLock()
 	require.Equal(t, uint64(0), f.store.previousProposerBoostScore)
 	require.DeepEqual(t, [32]byte{}, f.store.proposerBoostRoot)
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash, f.store.previousProposerBoostRoot)
-	f.store.proposerBoostLock.RUnlock()
 }
 
 // This is a regression test (10565)
@@ -286,12 +281,12 @@ func TestSetOptimisticToInvalid_CorrectChildren(t *testing.T) {
 
 // Pow       |      Pos
 //
-//  CA -- A -- B -- C-----D
-//   \          \--------------E
-//    \
-//     ----------------------F -- G
-// B is INVALID
+//	CA -- A -- B -- C-----D
+//	 \          \--------------E
+//	  \
+//	   ----------------------F -- G
 //
+// B is INVALID
 func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
@@ -339,12 +334,12 @@ func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 
 // Pow       |      Pos
 //
-//  CA -------- B -- C-----D
-//   \           \--------------E
-//    \
-//     --A -------------------------F -- G
-// B is INVALID
+//	CA -------- B -- C-----D
+//	 \           \--------------E
+//	  \
+//	   --A -------------------------F -- G
 //
+// B is INVALID
 func TestSetOptimisticToInvalid_ForkAtMerge_bis(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)

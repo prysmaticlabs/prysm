@@ -20,12 +20,11 @@ import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
 
 import "proto/eth/v1/beacon_chain.proto";
-import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v2/beacon_state.proto";
 import "proto/eth/v2/ssz.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
-option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/service";
+option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/service";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconDebugServiceProto";
 option java_package = "org.ethereum.eth.service";
@@ -76,9 +75,9 @@ service BeaconDebug {
   // GetForkChoice returns a dump fork choice store.
   //
   // This function is not a part of the official Beacon APIs.
-  rpc GetForkChoice(google.protobuf.Empty) returns (v1.ForkChoiceResponse) {
+  rpc GetForkChoice(google.protobuf.Empty) returns (v1.ForkChoiceDump) {
     option (google.api.http) = {
-      get: "/internal/eth/v1/debug/beacon/forkchoice"
+      get: "/internal/eth/v1/debug/fork_choice"
     };
   }
 }

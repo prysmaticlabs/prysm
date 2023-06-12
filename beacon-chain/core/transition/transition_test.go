@@ -6,25 +6,25 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func init() {
@@ -35,7 +35,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	base := &ethpb.BeaconState{
 		Slot: 5,
 	}
-	beaconState, err := v1.InitializeFromProto(base)
+	beaconState, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -212,13 +212,13 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	err = beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
 	require.NoError(t, err)
 	cp := beaconState.CurrentJustifiedCheckpoint()
-	mockRoot := [32]byte{}
+	var mockRoot [32]byte
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 
-	proposerSlashIdx := types.ValidatorIndex(3)
+	proposerSlashIdx := primitives.ValidatorIndex(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	err = beaconState.SetSlot(slotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)) + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
@@ -369,7 +369,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 }
 
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
-	epoch := types.Epoch(1)
+	epoch := primitives.Epoch(1)
 
 	atts := []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}, InclusionDelay: 1}}
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
@@ -383,7 +383,7 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
-	s, err := v1.InitializeFromProto(base)
+	s, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	require.NoError(t, s.SetValidators([]*ethpb.Validator{}))
 	newState, err := transition.ProcessEpochPrecompute(context.Background(), s)
@@ -402,7 +402,7 @@ func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.ProposerSlashings), params.BeaconConfig().MaxProposerSlashings)
-	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	s, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -421,7 +421,7 @@ func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of attester slashings (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.AttesterSlashings), params.BeaconConfig().MaxAttesterSlashings)
-	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	s, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -439,7 +439,7 @@ func TestProcessBlock_OverMaxAttestations(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of attestations (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.Attestations), params.BeaconConfig().MaxAttestations)
-	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	s, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -458,7 +458,7 @@ func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
 	}
 	want := fmt.Sprintf("number of voluntary exits (%d) in block body exceeds allowed threshold of %d",
 		len(b.Block.Body.VoluntaryExits), maxExits)
-	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	s, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -471,7 +471,7 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 		Eth1Data:         &ethpb.Eth1Data{DepositCount: 100},
 		Eth1DepositIndex: 98,
 	}
-	s, err := v1.InitializeFromProto(base)
+	s, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	b := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -489,8 +489,8 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 }
 
 func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
-	slot := types.Slot(2)
-	parentState, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: slot})
+	slot := primitives.Slot(2)
+	parentState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
 	_, err = transition.ProcessSlots(context.Background(), parentState, slot)
@@ -498,8 +498,8 @@ func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 }
 
 func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
-	slot := types.Slot(2)
-	parentState, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: slot})
+	slot := primitives.Slot(2)
+	parentState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
 	_, err = transition.ProcessSlots(context.Background(), parentState, slot-1)
@@ -634,7 +634,7 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	r := []byte{'a'}
 	s, err := transition.ProcessSlotsUsingNextSlotCache(context.Background(), s, r, 5)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(5), s.Slot())
+	require.Equal(t, primitives.Slot(5), s.Slot())
 }
 
 func TestProcessSlotsConditionally(t *testing.T) {
@@ -645,20 +645,20 @@ func TestProcessSlotsConditionally(t *testing.T) {
 		require.NoError(t, s.SetSlot(5))
 		s, err := transition.ProcessSlotsIfPossible(ctx, s, 4)
 		require.NoError(t, err)
-		assert.Equal(t, types.Slot(5), s.Slot())
+		assert.Equal(t, primitives.Slot(5), s.Slot())
 	})
 
 	t.Run("target slot equal current slot", func(t *testing.T) {
 		require.NoError(t, s.SetSlot(5))
 		s, err := transition.ProcessSlotsIfPossible(ctx, s, 5)
 		require.NoError(t, err)
-		assert.Equal(t, types.Slot(5), s.Slot())
+		assert.Equal(t, primitives.Slot(5), s.Slot())
 	})
 
 	t.Run("target slot above current slot", func(t *testing.T) {
 		require.NoError(t, s.SetSlot(5))
 		s, err := transition.ProcessSlotsIfPossible(ctx, s, 6)
 		require.NoError(t, err)
-		assert.Equal(t, types.Slot(6), s.Slot())
+		assert.Equal(t, primitives.Slot(6), s.Slot())
 	})
 }

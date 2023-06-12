@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	mock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
-	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
+	constant "github.com/prysmaticlabs/prysm/v4/validator/testing"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
 )
@@ -36,7 +36,7 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "mnemonicpass", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, DefaultMnemonicLanguage, "mnemonicpass", numAccounts)
 	require.NoError(t, err)
 	without25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
@@ -51,7 +51,7 @@ func TestDerivedKeymanager_MnemnonicPassphrase_DifferentResults(t *testing.T) {
 	})
 	require.NoError(t, err)
 	// No mnemonic passphrase this time.
-	err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 	with25thWord, err := km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
@@ -70,14 +70,14 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	wanted := bip39.NewSeed(mnemonic, "")
 
-	got, err := seedFromMnemonic(mnemonic, "" /* no passphrase */)
+	got, err := seedFromMnemonic(mnemonic, DefaultMnemonicLanguage, "" /* no passphrase */)
 	require.NoError(t, err)
 	// Ensure the derived seed matches.
 	assert.DeepEqual(t, wanted, got)
 }
 
 func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
-	derivedSeed, err := seedFromMnemonic(constant.TestMnemonic, "")
+	derivedSeed, err := seedFromMnemonic(constant.TestMnemonic, DefaultMnemonicLanguage, "")
 	require.NoError(t, err)
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
@@ -91,7 +91,7 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 
 	// Fetch the public keys.
@@ -103,7 +103,7 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		privKey, err := util.PrivateKeyFromSeedAndPath(derivedSeed, fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i))
 		require.NoError(t, err)
-		pubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var pubKey [fieldparams.BLSPubkeyLength]byte
 		copy(pubKey[:], privKey.PublicKey().Marshal())
 		wantedPubKeys[i] = pubKey
 	}
@@ -116,7 +116,7 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 }
 
 func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
-	derivedSeed, err := seedFromMnemonic(constant.TestMnemonic, "")
+	derivedSeed, err := seedFromMnemonic(constant.TestMnemonic, DefaultMnemonicLanguage, "")
 	require.NoError(t, err)
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
@@ -130,7 +130,7 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 
 	// Fetch the private keys.
@@ -142,7 +142,7 @@ func TestDerivedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		privKey, err := util.PrivateKeyFromSeedAndPath(derivedSeed, fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i))
 		require.NoError(t, err)
-		privKeyBytes := [32]byte{}
+		var privKeyBytes [32]byte
 		copy(privKeyBytes[:], privKey.Marshal())
 		wantedPrivKeys[i] = privKeyBytes
 	}
@@ -167,7 +167,7 @@ func TestDerivedKeymanager_Sign(t *testing.T) {
 	})
 	require.NoError(t, err)
 	numAccounts := 5
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
+	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 
 	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)

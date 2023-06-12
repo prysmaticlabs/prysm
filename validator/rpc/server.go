@@ -11,15 +11,16 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/io/logs"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/client"
-	"github.com/prysmaticlabs/prysm/v3/validator/db"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/io/logs"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -57,9 +58,9 @@ type Config struct {
 type Server struct {
 	logsStreamer              logs.Streamer
 	streamLogsBufferSize      int
-	beaconChainClient         ethpb.BeaconChainClient
-	beaconNodeClient          ethpb.NodeClient
-	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
+	beaconChainClient         iface.BeaconChainClient
+	beaconNodeClient          iface.NodeClient
+	beaconNodeValidatorClient iface.ValidatorClient
 	beaconNodeHealthClient    ethpb.HealthClient
 	valDB                     db.Database
 	ctx                       context.Context
@@ -90,6 +91,8 @@ type Server struct {
 	validatorMonitoringPort   int
 	validatorGatewayHost      string
 	validatorGatewayPort      int
+	beaconApiEndpoint         string
+	beaconApiTimeout          time.Duration
 }
 
 // NewServer instantiates a new gRPC server.

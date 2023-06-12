@@ -2,20 +2,21 @@
 package forks
 
 import (
+	"bytes"
 	"math"
 	"sort"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// IsForkNextEpoch checks if an alloted fork is in the following epoch.
+// IsForkNextEpoch checks if an allotted fork is in the following epoch.
 func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool, error) {
 	if genesisTime.IsZero() {
 		return false, errors.New("genesis time is not set")
@@ -40,7 +41,7 @@ func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool,
 
 // ForkDigestFromEpoch retrieves the fork digest from the current schedule determined
 // by the provided epoch.
-func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte) ([4]byte, error) {
+func ForkDigestFromEpoch(currentEpoch primitives.Epoch, genesisValidatorsRoot []byte) ([4]byte, error) {
 	if len(genesisValidatorsRoot) == 0 {
 		return [4]byte{}, errors.New("genesis validators root is not set")
 	}
@@ -82,13 +83,13 @@ func CreateForkDigest(
 // Fork given a target epoch,
 // returns the active fork version during this epoch.
 func Fork(
-	targetEpoch types.Epoch,
+	targetEpoch primitives.Epoch,
 ) (*ethpb.Fork, error) {
 	currentForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	previousForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
-	forkEpoch := types.Epoch(0)
+	forkEpoch := primitives.Epoch(0)
 	for _, forkVersion := range sortedForkVersions {
 		epoch, ok := fSchedule[forkVersion]
 		if !ok {
@@ -109,7 +110,7 @@ func Fork(
 
 // RetrieveForkDataFromDigest performs the inverse, where it tries to determine the fork version
 // and epoch from a provided digest by looping through our current fork schedule.
-func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, types.Epoch, error) {
+func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, primitives.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	for v, e := range fSchedule {
 		rDigest, err := signing.ComputeForkDigest(v[:], genesisValidatorsRoot)
@@ -125,11 +126,11 @@ func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([
 
 // NextForkData retrieves the next fork data according to the
 // provided current epoch.
-func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch, error) {
+func NextForkData(currEpoch primitives.Epoch) ([4]byte, primitives.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
-	nextForkEpoch := types.Epoch(math.MaxUint64)
-	nextForkVersion := [4]byte{}
+	nextForkEpoch := primitives.Epoch(math.MaxUint64)
+	var nextForkVersion [4]byte
 	for _, forkVersion := range sortedForkVersions {
 		epoch, ok := fSchedule[forkVersion]
 		if !ok {
@@ -157,7 +158,7 @@ func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch, error) {
 
 // SortedForkVersions sorts the provided fork schedule in ascending order
 // by epoch.
-func SortedForkVersions(forkSchedule map[[4]byte]types.Epoch) [][4]byte {
+func SortedForkVersions(forkSchedule map[[4]byte]primitives.Epoch) [][4]byte {
 	sortedVersions := make([][4]byte, len(forkSchedule))
 	i := 0
 	for k := range forkSchedule {
@@ -165,7 +166,19 @@ func SortedForkVersions(forkSchedule map[[4]byte]types.Epoch) [][4]byte {
 		i++
 	}
 	sort.Slice(sortedVersions, func(a, b int) bool {
-		return forkSchedule[sortedVersions[a]] < forkSchedule[sortedVersions[b]]
+		// va == "version" a, ie the [4]byte version id
+		va, vb := sortedVersions[a], sortedVersions[b]
+		// ea == "epoch" a, ie the types.Epoch corresponding to va
+		ea, eb := forkSchedule[va], forkSchedule[vb]
+		// Try to sort by epochs first, which works fine when epochs are all distinct.
+		// in the case of testnets starting from a given fork, all epochs leading to the fork will be zero.
+		if ea != eb {
+			return ea < eb
+		}
+		// If the epochs are equal, break the tie with a lexicographic comparison of the fork version bytes.
+		// eg 2 versions both with a fork epoch of 0, 0x00000000 would come before 0x01000000.
+		// sort.Slice takes a 'less' func, ie `return a < b`, and when va < vb, bytes.Compare will return -1
+		return bytes.Compare(va[:], vb[:]) < 0
 	})
 	return sortedVersions
 }

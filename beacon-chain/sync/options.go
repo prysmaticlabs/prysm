@@ -1,18 +1,19 @@
 package sync
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 )
 
 type Option func(s *Service) error
@@ -66,6 +67,13 @@ func WithSyncCommsPool(syncCommsPool synccommittee.Pool) Option {
 	}
 }
 
+func WithBlsToExecPool(blsToExecPool blstoexec.PoolManager) Option {
+	return func(s *Service) error {
+		s.cfg.blsToExecPool = blsToExecPool
+		return nil
+	}
+}
+
 func WithChainService(chain blockchainService) Option {
 	return func(s *Service) error {
 		s.cfg.chain = chain
@@ -76,13 +84,6 @@ func WithChainService(chain blockchainService) Option {
 func WithInitialSync(initialSync Checker) Option {
 	return func(s *Service) error {
 		s.cfg.initialSync = initialSync
-		return nil
-	}
-}
-
-func WithStateNotifier(stateNotifier statefeed.Notifier) Option {
-	return func(s *Service) error {
-		s.cfg.stateNotifier = stateNotifier
 		return nil
 	}
 }
@@ -125,6 +126,20 @@ func WithSlasherBlockHeadersFeed(slasherBlockHeadersFeed *event.Feed) Option {
 func WithExecutionPayloadReconstructor(r execution.ExecutionPayloadReconstructor) Option {
 	return func(s *Service) error {
 		s.cfg.executionPayloadReconstructor = r
+		return nil
+	}
+}
+
+func WithClockWaiter(cw startup.ClockWaiter) Option {
+	return func(s *Service) error {
+		s.clockWaiter = cw
+		return nil
+	}
+}
+
+func WithInitialSyncComplete(c chan struct{}) Option {
+	return func(s *Service) error {
+		s.initialSyncComplete = c
 		return nil
 	}
 }

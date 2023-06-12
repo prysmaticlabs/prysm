@@ -6,18 +6,18 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/math"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 const maxRandomByte = uint64(1<<8 - 1)
@@ -47,13 +47,14 @@ func ValidateNilSyncContribution(s *ethpb.SignedContributionAndProof) error {
 //
 // Spec code:
 // def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
-//    """
-//    Return the next sync committee, with possible pubkey duplicates.
-//    """
-//    indices = get_next_sync_committee_indices(state)
-//    pubkeys = [state.validators[index].pubkey for index in indices]
-//    aggregate_pubkey = bls.AggregatePKs(pubkeys)
-//    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
+//
+//	"""
+//	Return the next sync committee, with possible pubkey duplicates.
+//	"""
+//	indices = get_next_sync_committee_indices(state)
+//	pubkeys = [state.validators[index].pubkey for index in indices]
+//	aggregate_pubkey = bls.AggregatePKs(pubkeys)
+//	return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
 func NextSyncCommittee(ctx context.Context, s state.BeaconState) (*ethpb.SyncCommittee, error) {
 	indices, err := NextSyncCommitteeIndices(ctx, s)
 	if err != nil {
@@ -78,27 +79,28 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconState) (*ethpb.SyncCom
 //
 // Spec code:
 // def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorIndex]:
-//    """
-//    Return the sync committee indices, with possible duplicates, for the next sync committee.
-//    """
-//    epoch = Epoch(get_current_epoch(state) + 1)
 //
-//    MAX_RANDOM_BYTE = 2**8 - 1
-//    active_validator_indices = get_active_validator_indices(state, epoch)
-//    active_validator_count = uint64(len(active_validator_indices))
-//    seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
-//    i = 0
-//    sync_committee_indices: List[ValidatorIndex] = []
-//    while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
-//        shuffled_index = compute_shuffled_index(uint64(i % active_validator_count), active_validator_count, seed)
-//        candidate_index = active_validator_indices[shuffled_index]
-//        random_byte = hash(seed + uint_to_bytes(uint64(i // 32)))[i % 32]
-//        effective_balance = state.validators[candidate_index].effective_balance
-//        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
-//            sync_committee_indices.append(candidate_index)
-//        i += 1
-//    return sync_committee_indices
-func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]types.ValidatorIndex, error) {
+//	"""
+//	Return the sync committee indices, with possible duplicates, for the next sync committee.
+//	"""
+//	epoch = Epoch(get_current_epoch(state) + 1)
+//
+//	MAX_RANDOM_BYTE = 2**8 - 1
+//	active_validator_indices = get_active_validator_indices(state, epoch)
+//	active_validator_count = uint64(len(active_validator_indices))
+//	seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
+//	i = 0
+//	sync_committee_indices: List[ValidatorIndex] = []
+//	while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
+//	    shuffled_index = compute_shuffled_index(uint64(i % active_validator_count), active_validator_count, seed)
+//	    candidate_index = active_validator_indices[shuffled_index]
+//	    random_byte = hash(seed + uint_to_bytes(uint64(i // 32)))[i % 32]
+//	    effective_balance = state.validators[candidate_index].effective_balance
+//	    if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
+//	        sync_committee_indices.append(candidate_index)
+//	    i += 1
+//	return sync_committee_indices
+func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]primitives.ValidatorIndex, error) {
 	epoch := coreTime.NextEpoch(s)
 	indices, err := helpers.ActiveValidatorIndices(ctx, s, epoch)
 	if err != nil {
@@ -111,10 +113,10 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]types
 	count := uint64(len(indices))
 	cfg := params.BeaconConfig()
 	syncCommitteeSize := cfg.SyncCommitteeSize
-	cIndices := make([]types.ValidatorIndex, 0, syncCommitteeSize)
+	cIndices := make([]primitives.ValidatorIndex, 0, syncCommitteeSize)
 	hashFunc := hash.CustomSHA256Hasher()
 
-	for i := types.ValidatorIndex(0); uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize; i++ {
+	for i := primitives.ValidatorIndex(0); uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize; i++ {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -144,19 +146,20 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]types
 // SyncSubCommitteePubkeys returns the pubkeys participating in a sync subcommittee.
 //
 // def get_sync_subcommittee_pubkeys(state: BeaconState, subcommittee_index: uint64) -> Sequence[BLSPubkey]:
-//    # Committees assigned to `slot` sign for `slot - 1`
-//    # This creates the exceptional logic below when transitioning between sync committee periods
-//    next_slot_epoch = compute_epoch_at_slot(Slot(state.slot + 1))
-//    if compute_sync_committee_period(get_current_epoch(state)) == compute_sync_committee_period(next_slot_epoch):
-//        sync_committee = state.current_sync_committee
-//    else:
-//        sync_committee = state.next_sync_committee
 //
-//    # Return pubkeys for the subcommittee index
-//    sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
-//    i = subcommittee_index * sync_subcommittee_size
-//    return sync_committee.pubkeys[i:i + sync_subcommittee_size]
-func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types.CommitteeIndex) ([][]byte, error) {
+//	# Committees assigned to `slot` sign for `slot - 1`
+//	# This creates the exceptional logic below when transitioning between sync committee periods
+//	next_slot_epoch = compute_epoch_at_slot(Slot(state.slot + 1))
+//	if compute_sync_committee_period(get_current_epoch(state)) == compute_sync_committee_period(next_slot_epoch):
+//	    sync_committee = state.current_sync_committee
+//	else:
+//	    sync_committee = state.next_sync_committee
+//
+//	# Return pubkeys for the subcommittee index
+//	sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
+//	i = subcommittee_index * sync_subcommittee_size
+//	return sync_committee.pubkeys[i:i + sync_subcommittee_size]
+func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx primitives.CommitteeIndex) ([][]byte, error) {
 	cfg := params.BeaconConfig()
 	subCommSize := cfg.SyncCommitteeSize / cfg.SyncCommitteeSubnetCount
 	i := uint64(subComIdx) * subCommSize
@@ -172,8 +175,9 @@ func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types
 // aggregator.
 //
 // def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
-//    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
-//    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
+//
+//	modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
+//	return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 	if len(sig) != fieldparams.BLSSignatureLength {
 		return false, errors.New("incorrect sig length")
@@ -186,7 +190,7 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 }
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
-func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
+func ValidateSyncMessageTime(slot primitives.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
 	if err := slots.ValidateClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}

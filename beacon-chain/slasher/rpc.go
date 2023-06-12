@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // HighestAttestations committed for an input list of validator indices.
 func (s *Service) HighestAttestations(
-	ctx context.Context, validatorIndices []types.ValidatorIndex,
+	ctx context.Context, validatorIndices []primitives.ValidatorIndex,
 ) ([]*ethpb.HighestAttestation, error) {
 	atts, err := s.serviceCfg.Database.HighestAttestations(ctx, validatorIndices)
 	if err != nil {

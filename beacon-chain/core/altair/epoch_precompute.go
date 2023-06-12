@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	"go.opencensus.io/trace"
 )
 
@@ -68,9 +68,10 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 // For fully inactive validators and perfect active validators, the effect is the same as before Altair.
 // For a validator is inactive and the chain fails to finalize, the inactivity score increases by a fixed number, the total loss after N epochs is proportional to N**2/2.
 // For imperfectly active validators. The inactivity score's behavior is specified by this function:
-//    If a validator fails to submit an attestation with the correct target, their inactivity score goes up by 4.
-//    If they successfully submit an attestation with the correct source and target, their inactivity score drops by 1
-//    If the chain has recently finalized, each validator's score drops by 16.
+//
+//	If a validator fails to submit an attestation with the correct target, their inactivity score goes up by 4.
+//	If they successfully submit an attestation with the correct source and target, their inactivity score drops by 1
+//	If the chain has recently finalized, each validator's score drops by 16.
 func ProcessInactivityScores(
 	ctx context.Context,
 	beaconState state.BeaconState,
@@ -132,12 +133,13 @@ func ProcessInactivityScores(
 // it also tracks and updates epoch attesting balances.
 // Spec code:
 // if epoch == get_current_epoch(state):
-//        epoch_participation = state.current_epoch_participation
-//    else:
-//        epoch_participation = state.previous_epoch_participation
-//    active_validator_indices = get_active_validator_indices(state, epoch)
-//    participating_indices = [i for i in active_validator_indices if has_flag(epoch_participation[i], flag_index)]
-//    return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
+//
+//	    epoch_participation = state.current_epoch_participation
+//	else:
+//	    epoch_participation = state.previous_epoch_participation
+//	active_validator_indices = get_active_validator_indices(state, epoch)
+//	participating_indices = [i for i in active_validator_indices if has_flag(epoch_participation[i], flag_index)]
+//	return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
 func ProcessEpochParticipation(
 	ctx context.Context,
 	beaconState state.BeaconState,
@@ -206,7 +208,7 @@ func ProcessEpochParticipation(
 }
 
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
-// This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
+// This is an optimized version by passing in precomputed validator attesting records and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(
 	beaconState state.BeaconState,
 	bal *precompute.Balance,
@@ -263,7 +265,7 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
 	increment := cfg.EffectiveBalanceIncrement
 	factor := cfg.BaseRewardFactor
-	baseRewardMultiplier := increment * factor / math.IntegerSquareRoot(bal.ActiveCurrentEpoch)
+	baseRewardMultiplier := increment * factor / math.CachedSquareRoot(bal.ActiveCurrentEpoch)
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 
 	// Modified in Altair and Bellatrix.

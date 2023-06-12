@@ -3,17 +3,17 @@ package execution
 import (
 	"context"
 	"fmt"
-	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v3/io/logs"
-	"github.com/prysmaticlabs/prysm/v3/network"
-	"github.com/prysmaticlabs/prysm/v3/network/authorization"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v4/io/logs"
+	"github.com/prysmaticlabs/prysm/v4/network"
+	"github.com/prysmaticlabs/prysm/v4/network/authorization"
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpoint network.Endpoint) error {
@@ -25,7 +25,6 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	fetcher := ethclient.NewClient(client)
 	s.rpcClient = client
 	s.httpLogger = fetcher
-	s.eth1DataFetcher = fetcher
 
 	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, fetcher)
 	if err != nil {
@@ -37,7 +36,13 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	// Ensure we have the correct chain and deposit IDs.
 	if err := ensureCorrectExecutionChain(ctx, fetcher); err != nil {
 		client.Close()
-		return errors.Wrap(err, "could not make initial request to verify execution chain ID")
+		errStr := err.Error()
+		if strings.Contains(errStr, "401 Unauthorized") {
+			errStr = "could not verify execution chain ID as your connection is not authenticated. " +
+				"If connecting to your execution client via HTTP, you will need to set up JWT authentication. " +
+				"See our documentation here https://docs.prylabs.network/docs/execution-node/authentication"
+		}
+		return errors.Wrap(err, errStr)
 	}
 	s.updateConnectedETH1(true)
 	s.runError = nil
@@ -82,13 +87,13 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 
 // Forces to retry an execution client connection.
 func (s *Service) retryExecutionClientConnection(ctx context.Context, err error) {
-	s.runError = err
+	s.runError = errors.Wrap(err, "retryExecutionClientConnection")
 	s.updateConnectedETH1(false)
 	// Back off for a while before redialing.
 	time.Sleep(backOffPeriod)
 	currClient := s.rpcClient
 	if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
-		s.runError = err
+		s.runError = errors.Wrap(err, "setupExecutionClientConnections")
 		return
 	}
 	// Close previous client, if connection was successful.
@@ -101,25 +106,9 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 
 // Initializes an RPC connection with authentication headers.
 func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.Endpoint) (*gethRPC.Client, error) {
-	// Need to handle ipc and http
-	var client *gethRPC.Client
-	u, err := url.Parse(endpoint.Url)
+	client, err := network.NewExecutionRPCClient(ctx, endpoint)
 	if err != nil {
 		return nil, err
-	}
-	switch u.Scheme {
-	case "http", "https":
-		client, err = gethRPC.DialHTTPWithClient(endpoint.Url, endpoint.HttpClient())
-		if err != nil {
-			return nil, err
-		}
-	case "", "ipc":
-		client, err = gethRPC.DialIPC(ctx, endpoint.Url)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("no known transport for URL scheme %q", u.Scheme)
 	}
 	if endpoint.Auth.Method != authorization.None {
 		header, err := endpoint.Auth.ToHeaderValue()
@@ -127,6 +116,16 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 			return nil, err
 		}
 		client.SetHeader("Authorization", header)
+	}
+	for _, h := range s.cfg.headers {
+		if h != "" {
+			keyValue := strings.Split(h, "=")
+			if len(keyValue) < 2 {
+				log.Warnf("Incorrect HTTP header flag format. Skipping %v", keyValue[0])
+				continue
+			}
+			client.SetHeader(keyValue[0], strings.Join(keyValue[1:], "="))
+		}
 	}
 	return client, nil
 }

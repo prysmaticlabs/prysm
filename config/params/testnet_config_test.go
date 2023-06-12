@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func testnetConfigFilePath(t *testing.T, network string) string {
@@ -25,7 +25,7 @@ func TestE2EConfigParity(t *testing.T) {
 	yamlDir := filepath.Join(testDir, "config.yaml")
 
 	testCfg := params.E2EMainnetTestConfig()
-	yamlObj := params.E2EMainnetConfigYaml()
+	yamlObj := params.ConfigToYaml(params.E2EMainnetTestConfig())
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
 
 	require.NoError(t, params.LoadChainConfigFile(yamlDir, params.MainnetConfig().Copy()))
@@ -76,8 +76,7 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.ShardCommitteePeriod, actual.ShardCommitteePeriod)
 	require.DeepEqual(t, expected.MinEpochsToInactivityPenalty, actual.MinEpochsToInactivityPenalty)
 	require.DeepEqual(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance)
-	require.DeepEqual(t, expected.SafeSlotsToUpdateJustified, actual.SafeSlotsToUpdateJustified)
-	require.DeepEqual(t, expected.SafeSlotsToImportOptimistically, actual.SafeSlotsToImportOptimistically)
+	require.DeepEqual(t, expected.DeprecatedSafeSlotsToUpdateJustified, actual.DeprecatedSafeSlotsToUpdateJustified)
 	require.DeepEqual(t, expected.SecondsPerETH1Block, actual.SecondsPerETH1Block)
 	require.DeepEqual(t, expected.ProposerScoreBoost, actual.ProposerScoreBoost)
 	require.DeepEqual(t, expected.IntervalsPerSlot, actual.IntervalsPerSlot)
@@ -101,6 +100,7 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.MaxAttestations, actual.MaxAttestations)
 	require.DeepEqual(t, expected.MaxDeposits, actual.MaxDeposits)
 	require.DeepEqual(t, expected.MaxVoluntaryExits, actual.MaxVoluntaryExits)
+	require.DeepEqual(t, expected.MaxWithdrawalsPerPayload, actual.MaxWithdrawalsPerPayload)
 	require.DeepEqual(t, expected.DomainBeaconProposer, actual.DomainBeaconProposer)
 	require.DeepEqual(t, expected.DomainRandao, actual.DomainRandao)
 	require.DeepEqual(t, expected.DomainBeaconAttester, actual.DomainBeaconAttester)
@@ -126,6 +126,7 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.BeaconStateFieldCount, actual.BeaconStateFieldCount)
 	require.DeepEqual(t, expected.BeaconStateAltairFieldCount, actual.BeaconStateAltairFieldCount)
 	require.DeepEqual(t, expected.BeaconStateBellatrixFieldCount, actual.BeaconStateBellatrixFieldCount)
+	require.DeepEqual(t, expected.BeaconStateCapellaFieldCount, actual.BeaconStateCapellaFieldCount)
 	require.DeepEqual(t, expected.WeakSubjectivityPeriod, actual.WeakSubjectivityPeriod)
 	require.DeepEqual(t, expected.PruneSlasherStoragePeriod, actual.PruneSlasherStoragePeriod)
 	require.DeepEqual(t, expected.SlashingProtectionPruningEpochs, actual.SlashingProtectionPruningEpochs)
@@ -134,8 +135,6 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.AltairForkEpoch, actual.AltairForkEpoch)
 	require.DeepEqual(t, expected.BellatrixForkVersion, actual.BellatrixForkVersion)
 	require.DeepEqual(t, expected.BellatrixForkEpoch, actual.BellatrixForkEpoch)
-	require.DeepEqual(t, expected.ShardingForkVersion, actual.ShardingForkVersion)
-	require.DeepEqual(t, expected.ShardingForkEpoch, actual.ShardingForkEpoch)
 	require.DeepEqual(t, expected.ForkVersionSchedule, actual.ForkVersionSchedule)
 	require.DeepEqual(t, expected.SafetyDecay, actual.SafetyDecay)
 	require.DeepEqual(t, expected.TimelySourceFlagIndex, actual.TimelySourceFlagIndex)

@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/async"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/async"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
@@ -37,7 +37,7 @@ func (s *Service) processPendingBlocksQueue() {
 	locker := new(sync.Mutex)
 	async.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
 		// Don't process the pending blocks if genesis time has not been set. The chain is not ready.
-		if !s.isGenesisTimeSet() {
+		if !s.chainIsStarted() {
 			return
 		}
 		locker.Lock()
@@ -69,7 +69,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	for _, slot := range ss {
 		// process the blocks during their respective slot.
 		// otherwise wait for the right slot to process the block.
-		if slot > s.cfg.chain.CurrentSlot() {
+		if slot > s.cfg.clock.CurrentSlot() {
 			continue
 		}
 
@@ -114,7 +114,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			s.pendingQueueLock.RLock()
-			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
+			inPendingQueue := s.seenPendingBlocks[b.Block().ParentRoot()]
 			s.pendingQueueLock.RUnlock()
 
 			keepProcessing, err := s.checkIfBlockIsBad(ctx, span, slot, b, blkRoot)
@@ -125,17 +125,18 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			parentInDb := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, b.Block().ParentRoot())
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache
 			// and has peer in the peer list.
+			parentRoot := b.Block().ParentRoot()
 			if !inPendingQueue && !parentInDb && hasPeer {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block().Slot(),
-					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block().ParentRoot())),
+					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(parentRoot[:])),
 				}).Debug("Requesting parent block")
-				parentRoots = append(parentRoots, bytesutil.ToBytes32(b.Block().ParentRoot()))
+				parentRoots = append(parentRoots, b.Block().ParentRoot())
 
 				span.End()
 				continue
@@ -209,11 +210,11 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 func (s *Service) checkIfBlockIsBad(
 	ctx context.Context,
 	span *trace.Span,
-	slot types.Slot,
-	b interfaces.SignedBeaconBlock,
+	slot primitives.Slot,
+	b interfaces.ReadOnlySignedBeaconBlock,
 	blkRoot [32]byte,
 ) (keepProcessing bool, err error) {
-	parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
+	parentIsBad := s.hasBadBlock(b.Block().ParentRoot())
 	blockIsBad := s.hasBadBlock(blkRoot)
 	// Check if parent is a bad block.
 	if parentIsBad || blockIsBad {
@@ -247,7 +248,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(bestPeers) == 0 {
 		return nil
 	}
-	roots = s.dedupRoots(roots)
+	roots = dedupRoots(roots)
 	// Randomly choose a peer to query from our best peers. If that peer cannot return
 	// all the requested blocks, we randomly select another peer.
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
@@ -279,13 +280,13 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	return nil
 }
 
-func (s *Service) sortedPendingSlots() []types.Slot {
+func (s *Service) sortedPendingSlots() []primitives.Slot {
 	s.pendingQueueLock.RLock()
 	defer s.pendingQueueLock.RUnlock()
 
 	items := s.slotToPendingBlocks.Items()
 
-	ss := make([]types.Slot, 0, len(items))
+	ss := make([]primitives.Slot, 0, len(items))
 	for k := range items {
 		slot := cacheKeyToSlot(k)
 		ss = append(ss, slot)
@@ -316,7 +317,7 @@ func (s *Service) validatePendingSlots() error {
 		for _, b := range blks {
 			epoch := slots.ToEpoch(slot)
 			// remove all descendant blocks of old blocks
-			if oldBlockRoots[bytesutil.ToBytes32(b.Block().ParentRoot())] {
+			if oldBlockRoots[b.Block().ParentRoot()] {
 				root, err := b.Block().HashTreeRoot()
 				if err != nil {
 					return err
@@ -352,7 +353,7 @@ func (s *Service) clearPendingSlots() {
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces.ReadOnlySignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	blks := s.pendingBlocksInCache(slot)
@@ -365,7 +366,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 		return err
 	}
 
-	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.ReadOnlySignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
 		blkPb, err := blk.Proto()
 		if err != nil {
@@ -397,7 +398,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(_ types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) insertBlockToPendingQueue(_ primitives.Slot, b interfaces.ReadOnlySignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
@@ -413,21 +414,21 @@ func (s *Service) insertBlockToPendingQueue(_ types.Slot, b interfaces.SignedBea
 }
 
 // This returns signed beacon blocks given input key from slotToPendingBlocks.
-func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaconBlock {
+func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.ReadOnlySignedBeaconBlock {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlocks.Get(k)
 	if !ok {
-		return []interfaces.SignedBeaconBlock{}
+		return []interfaces.ReadOnlySignedBeaconBlock{}
 	}
-	blks, ok := value.([]interfaces.SignedBeaconBlock)
+	blks, ok := value.([]interfaces.ReadOnlySignedBeaconBlock)
 	if !ok {
-		return []interfaces.SignedBeaconBlock{}
+		return []interfaces.ReadOnlySignedBeaconBlock{}
 	}
 	return blks
 }
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
-func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
+func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) error {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
@@ -444,20 +445,27 @@ func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
 	return nil
 }
 
-// Returns true if the genesis time has been set in chain service.
-// Without the genesis time, the chain does not start.
-func (s *Service) isGenesisTimeSet() bool {
-	return s.cfg.chain.GenesisTime().Unix() != 0
-}
-
 // This converts input string to slot.
-func cacheKeyToSlot(s string) types.Slot {
+func cacheKeyToSlot(s string) primitives.Slot {
 	b := []byte(s)
 	return bytesutil.BytesToSlotBigEndian(b)
 }
 
 // This converts input slot to a key to be used for slotToPendingBlocks cache.
-func slotToCacheKey(s types.Slot) string {
+func slotToCacheKey(s primitives.Slot) string {
 	b := bytesutil.SlotToBytesBigEndian(s)
 	return string(b)
+}
+
+func dedupRoots(roots [][32]byte) [][32]byte {
+	newRoots := make([][32]byte, 0, len(roots))
+	rootMap := make(map[[32]byte]bool, len(roots))
+	for i, r := range roots {
+		if rootMap[r] {
+			continue
+		}
+		rootMap[r] = true
+		newRoots = append(newRoots, roots[i])
+	}
+	return newRoots
 }

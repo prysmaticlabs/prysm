@@ -4,28 +4,26 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	coreBlock "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
@@ -34,420 +32,241 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 	Help: "The number of get payload misses for validator requests to builder",
 })
 
+// emptyTransactionsRoot represents the returned value of ssz.TransactionsRoot([][]byte{}) and
+// can be used as a constant to avoid recomputing this value in every call.
+var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225}
+
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
 
-func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	altairBlk, err := vs.BuildAltairBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, err
+// Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
+func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData) error {
+	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
+	defer span.End()
+
+	slot := blk.Block().Slot()
+	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil
 	}
 
-	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
-	if registered && err == nil {
-		builderReady, b, err := vs.GetAndBuildBlindBlock(ctx, altairBlk)
+	if localPayload == nil {
+		return errors.New("local payload is nil")
+	}
+
+	// Use local payload if builder payload is nil.
+	if builderPayload == nil {
+		return blk.SetExecution(localPayload)
+	}
+
+	switch {
+	case blk.Version() >= version.Capella:
+		// Compare payload values between local and builder. Default to the local value if it is higher.
+		localValueGwei, err := localPayload.ValueInGwei()
 		if err != nil {
-			// In the event of an error, the node should fall back to default execution engine for building block.
-			log.WithError(err).Error("Failed to build a block from external builder, falling " +
-				"back to local execution client")
-			builderGetPayloadMissCount.Inc()
-		} else if builderReady {
-			return b, nil
+			return errors.Wrap(err, "failed to get local payload value")
 		}
-	} else if err != nil {
-		log.WithFields(logrus.Fields{
-			"slot":           req.Slot,
-			"validatorIndex": altairBlk.ProposerIndex,
-		}).Errorf("Could not determine validator has registered. Default to local execution client: %v", err)
-	}
-	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
-	if err != nil {
-		return nil, err
-	}
+		builderValueGwei, err := builderPayload.ValueInGwei()
+		if err != nil {
+			log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+			return blk.SetExecution(localPayload)
+		}
 
-	blk := &ethpb.BeaconBlockBellatrix{
-		Slot:          altairBlk.Slot,
-		ProposerIndex: altairBlk.ProposerIndex,
-		ParentRoot:    altairBlk.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BeaconBlockBodyBellatrix{
-			RandaoReveal:      altairBlk.Body.RandaoReveal,
-			Eth1Data:          altairBlk.Body.Eth1Data,
-			Graffiti:          altairBlk.Body.Graffiti,
-			ProposerSlashings: altairBlk.Body.ProposerSlashings,
-			AttesterSlashings: altairBlk.Body.AttesterSlashings,
-			Attestations:      altairBlk.Body.Attestations,
-			Deposits:          altairBlk.Body.Deposits,
-			VoluntaryExits:    altairBlk.Body.VoluntaryExits,
-			SyncAggregate:     altairBlk.Body.SyncAggregate,
-			ExecutionPayload:  payload,
-		},
+		withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			log.WithError(err).Warn("Proposer: failed to match withdrawals root")
+			return blk.SetExecution(localPayload)
+		}
+
+		// Use builder payload if the following in true:
+		// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
+		boost := params.BeaconConfig().LocalBlockValueBoost
+		higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
+
+		// If we can't get the builder value, just use local block.
+		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
+			blk.SetBlinded(true)
+			if err := blk.SetExecution(builderPayload); err != nil {
+				log.WithError(err).Warn("Proposer: failed to set builder payload")
+				blk.SetBlinded(false)
+				return blk.SetExecution(localPayload)
+			} else {
+				return nil
+			}
+		}
+		if !higherValueBuilder {
+			log.WithFields(logrus.Fields{
+				"localGweiValue":       localValueGwei,
+				"localBoostPercentage": boost,
+				"builderGweiValue":     builderValueGwei,
+			}).Warn("Proposer: using local execution payload because higher value")
+		}
+		span.AddAttributes(
+			trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
+			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
+		)
+		return blk.SetExecution(localPayload)
+	default: // Bellatrix case.
+		blk.SetBlinded(true)
+		if err := blk.SetExecution(builderPayload); err != nil {
+			log.WithError(err).Warn("Proposer: failed to set builder payload")
+			blk.SetBlinded(false)
+			return blk.SetExecution(localPayload)
+		} else {
+			return nil
+		}
 	}
-	// Compute state root with the newly constructed block.
-	wsb, err := consensusblocks.NewSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		interop.WriteBlockToDisk(wsb, true /*failed*/)
-		return nil, fmt.Errorf("could not compute state root: %v", err)
-	}
-	blk.StateRoot = stateRoot
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
 }
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPayloadHeaderFromBuilder")
+	defer span.End()
+
+	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil, errors.New("can't get payload header from builder before bellatrix epoch")
+	}
+
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if blocks.IsPreBellatrixVersion(b.Version()) {
-		return nil, nil
-	}
 
 	h, err := b.Block().Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get execution header")
 	}
 	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
 	if err != nil {
 		return nil, err
 	}
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
+
+	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
+	defer cancel()
+
+	signedBid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
 	}
-	if bid == nil || bid.Message == nil {
+	if signedBid.IsNil() {
+		return nil, errors.New("builder returned nil bid")
+	}
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get fork information")
+	}
+	forkName, ok := params.BeaconConfig().ForkVersionNames[bytesutil.ToBytes4(fork.CurrentVersion)]
+	if !ok {
+		return nil, errors.New("unable to find current fork in schedule")
+	}
+	if !strings.EqualFold(version.String(signedBid.Version()), forkName) {
+		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
+	}
+
+	bid, err := signedBid.Message()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get bid")
+	}
+	if bid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := bid.Message.Value
-
-	if new(big.Int).SetBytes(bytesutil.ReverseByteOrder(v)).String() == "0" {
+	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
+	if v.String() == "0" {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
 
-	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
+	header, err := bid.Header()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get bid header")
 	}
-
-	if bytesutil.ToBytes32(bid.Message.Header.TransactionsRoot) == emptyRoot {
+	txRoot, err := header.TransactionsRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get transaction root")
+	}
+	if bytesutil.ToBytes32(txRoot) == emptyTransactionsRoot {
 		return nil, errors.New("builder returned header with an empty tx root")
 	}
 
-	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
-		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
+	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
 	if err != nil {
 		return nil, err
 	}
-	if bid.Message.Header.Timestamp != uint64(t.Unix()) {
-		return nil, fmt.Errorf("incorrect timestamp %d != %d", bid.Message.Header.Timestamp, uint64(t.Unix()))
+	if header.Timestamp() != uint64(t.Unix()) {
+		return nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
 	}
 
-	if err := vs.validateBuilderSignature(bid); err != nil {
+	if err := validateBuilderSignature(signedBid); err != nil {
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
 	log.WithFields(logrus.Fields{
-		"bid":           bytesutil.BytesToUint64BigEndian(bid.Message.Value),
-		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
-		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
+		"value":              v.String(),
+		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
+		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
+		"slot":               slot,
+		"validator":          idx,
+		"sinceSlotStartTime": time.Since(t),
 	}).Info("Received header with bid")
-	return bid.Message.Header, nil
-}
 
-// This function constructs the builder block given the input altair block and the header. It returns a generic beacon block for signing
-func (vs *Server) buildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair, h *enginev1.ExecutionPayloadHeader) (*ethpb.GenericBeaconBlock, error) {
-	if b == nil || b.Body == nil {
-		return nil, errors.New("nil block")
-	}
-	if h == nil {
-		return nil, errors.New("nil header")
-	}
-
-	blk := &ethpb.BlindedBeaconBlockBellatrix{
-		Slot:          b.Slot,
-		ProposerIndex: b.ProposerIndex,
-		ParentRoot:    b.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-			RandaoReveal:           b.Body.RandaoReveal,
-			Eth1Data:               b.Body.Eth1Data,
-			Graffiti:               b.Body.Graffiti,
-			ProposerSlashings:      b.Body.ProposerSlashings,
-			AttesterSlashings:      b.Body.AttesterSlashings,
-			Attestations:           b.Body.Attestations,
-			Deposits:               b.Body.Deposits,
-			VoluntaryExits:         b.Body.VoluntaryExits,
-			SyncAggregate:          b.Body.SyncAggregate,
-			ExecutionPayloadHeader: h,
-		},
-	}
-	wsb, err := consensusblocks.NewSignedBeaconBlock(
-		&ethpb.SignedBlindedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
+	span.AddAttributes(
+		trace.StringAttribute("value", v.String()),
+		trace.StringAttribute("builderPubKey", fmt.Sprintf("%#x", bid.Pubkey())),
+		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),
 	)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute state root")
-	}
-	blk.StateRoot = stateRoot
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: blk}}, nil
-}
 
-// This function retrieves the full payload block using the input blind block. This input must be versioned as
-// bellatrix blind block. The output block will contain the full payload. The original header block
-// will be returned the block builder is not configured.
-func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
-	if err := coreBlock.BeaconBlockIsNil(b); err != nil {
-		return nil, err
-	}
-
-	// No-op if the input block is not version blind and bellatrix.
-	if b.Version() != version.Bellatrix || !b.IsBlinded() {
-		return b, nil
-	}
-	// No-op nothing if the builder has not been configured.
-	if !vs.BlockBuilder.Configured() {
-		return b, nil
-	}
-
-	agg, err := b.Block().Body().SyncAggregate()
-	if err != nil {
-		return nil, err
-	}
-	h, err := b.Block().Body().Execution()
-	if err != nil {
-		return nil, err
-	}
-	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
-	if !ok {
-		return nil, errors.New("execution data must be execution payload header")
-	}
-	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
-		Block: &ethpb.BlindedBeaconBlockBellatrix{
-			Slot:          b.Block().Slot(),
-			ProposerIndex: b.Block().ProposerIndex(),
-			ParentRoot:    b.Block().ParentRoot(),
-			StateRoot:     b.Block().StateRoot(),
-			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           b.Block().Body().RandaoReveal(),
-				Eth1Data:               b.Block().Body().Eth1Data(),
-				Graffiti:               b.Block().Body().Graffiti(),
-				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
-				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
-				Attestations:           b.Block().Body().Attestations(),
-				Deposits:               b.Block().Body().Deposits(),
-				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
-				SyncAggregate:          agg,
-				ExecutionPayloadHeader: header,
-			},
-		},
-		Signature: b.Signature(),
-	}
-
-	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
-	if err != nil {
-		return nil, err
-	}
-	headerRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	payloadRoot, err := payload.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	if headerRoot != payloadRoot {
-		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
-			"%#x != %#x", headerRoot, payloadRoot)
-	}
-
-	bb := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:          sb.Block.Slot,
-			ProposerIndex: sb.Block.ProposerIndex,
-			ParentRoot:    sb.Block.ParentRoot,
-			StateRoot:     sb.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:      sb.Block.Body.RandaoReveal,
-				Eth1Data:          sb.Block.Body.Eth1Data,
-				Graffiti:          sb.Block.Body.Graffiti,
-				ProposerSlashings: sb.Block.Body.ProposerSlashings,
-				AttesterSlashings: sb.Block.Body.AttesterSlashings,
-				Attestations:      sb.Block.Body.Attestations,
-				Deposits:          sb.Block.Body.Deposits,
-				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
-				SyncAggregate:     agg,
-				ExecutionPayload:  payload,
-			},
-		},
-		Signature: sb.Signature,
-	}
-	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
-	if err != nil {
-		return nil, err
-	}
-
-	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
-		"gasUsed":      h.GasUsed,
-		"slot":         b.Block().Slot(),
-		"txs":          len(payload.Transactions),
-	}).Info("Retrieved full payload from builder")
-
-	return wb, nil
-}
-
-// readyForBuilder returns true if builder is allowed to be used. Builder is only allowed to be use after the
-// first finalized checkpt has been execution-enabled.
-func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
-	cp := vs.FinalizationFetcher.FinalizedCheckpt()
-	// Checkpoint root is zero means we are still at genesis epoch.
-	if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash {
-		return false, nil
-	}
-	b, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
-	if err != nil {
-		return false, err
-	}
-	if err = coreBlock.BeaconBlockIsNil(b); err != nil {
-		return false, err
-	}
-	return blocks.IsExecutionBlock(b.Block().Body())
-}
-
-// circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
-func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
-	if vs.ForkFetcher == nil || vs.ForkFetcher.ForkChoicer() == nil {
-		return true, errors.New("no fork choicer configured")
-	}
-
-	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
-	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
-	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
-	diff, err := s.SafeSubSlot(highestReceivedSlot)
-	if err != nil {
-		return true, err
-	}
-	if diff > maxConsecutiveSkipSlotsAllowed {
-		log.WithFields(logrus.Fields{
-			"currentSlot":                    s,
-			"highestReceivedSlot":            highestReceivedSlot,
-			"maxConsecutiveSkipSlotsAllowed": maxConsecutiveSkipSlotsAllowed,
-		}).Warn("Builder circuit breaker activated due to missing consecutive slot")
-		return true, nil
-	}
-
-	// Not much reason to check missed slots epoch rolling window if input slot is less than epoch.
-	if s < params.BeaconConfig().SlotsPerEpoch {
-		return false, nil
-	}
-
-	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `MaxBuilderEpochMissedSlots`.
-	receivedCount, err := vs.ForkFetcher.ForkChoicer().ReceivedBlocksLastEpoch()
-	if err != nil {
-		return true, err
-	}
-	maxEpochSkipSlotsAllowed := params.BeaconConfig().MaxBuilderEpochMissedSlots
-	diff, err = params.BeaconConfig().SlotsPerEpoch.SafeSub(receivedCount)
-	if err != nil {
-		return true, err
-	}
-	if diff > maxEpochSkipSlotsAllowed {
-		log.WithFields(logrus.Fields{
-			"totalMissed":              diff,
-			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,
-		}).Warn("Builder circuit breaker activated due to missing enough slots last epoch")
-		return true, nil
-	}
-
-	return false, nil
-}
-
-// GetAndBuildBlindBlock builds blind block from builder network. Returns a boolean status, built block and error.
-// If the status is false that means builder the header block is disallowed.
-// This routine is time limited by `blockBuilderTimeout`.
-func (vs *Server) GetAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
-	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
-	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
-		return false, nil, nil
-	}
-	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
-	defer cancel()
-	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
-	ready, err := vs.readyForBuilder(ctx)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not determine if builder is ready")
-	}
-	if !ready {
-		return false, nil, nil
-	}
-
-	circuitBreak, err := vs.circuitBreakBuilder(b.Slot)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not determine if builder circuit breaker condition")
-	}
-	if circuitBreak {
-		return false, nil, nil
-	}
-
-	h, err := vs.getPayloadHeaderFromBuilder(ctx, b.Slot, b.ProposerIndex)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not get payload header")
-	}
-	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
-		"gasUsed":      h.GasUsed,
-		"slot":         b.Slot,
-	}).Info("Retrieved header from builder")
-	gb, err := vs.buildBlindBlock(ctx, b, h)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
-	}
-	return true, gb, nil
-}
-
-// validatorRegistered returns true if validator with index `id` was previously registered in the database.
-func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorIndex) (bool, error) {
-	if vs.BeaconDB == nil {
-		return false, errors.New("nil beacon db")
-	}
-	_, err := vs.BeaconDB.RegistrationByValidatorID(ctx, id)
-	switch {
-	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-		return false, nil
-	case err != nil:
-		return false, err
-	}
-	return true, nil
+	return header, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
-func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
+func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
 		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
-	if bid == nil || bid.Message == nil {
+	if signedBid.IsNil() {
 		return errors.New("nil builder bid")
 	}
-	return signing.VerifySigningRoot(bid.Message, bid.Message.Pubkey, bid.Signature, d)
+	bid, err := signedBid.Message()
+	if err != nil {
+		return errors.Wrap(err, "could not get bid")
+	}
+	if bid.IsNil() {
+		return errors.New("builder returned nil bid")
+	}
+	return signing.VerifySigningRoot(bid, bid.Pubkey(), signedBid.Signature(), d)
+}
+
+func matchingWithdrawalsRoot(local, builder interfaces.ExecutionData) (bool, error) {
+	wds, err := local.Withdrawals()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get local withdrawals")
+	}
+	br, err := builder.WithdrawalsRoot()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get builder withdrawals root")
+	}
+	wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
+	if err != nil {
+		return false, errors.Wrap(err, "could not compute local withdrawals root")
+	}
+
+	if !bytes.Equal(br, wr[:]) {
+		log.WithFields(logrus.Fields{
+			"local":   fmt.Sprintf("%#x", wr),
+			"builder": fmt.Sprintf("%#x", br),
+		}).Warn("Proposer: withdrawal roots don't match, using local block")
+		return false, nil
+	}
+	return true, nil
 }

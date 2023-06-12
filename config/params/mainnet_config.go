@@ -4,8 +4,8 @@ import (
 	"math"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
@@ -111,12 +111,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ShardCommitteePeriod:             256,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
-	SafeSlotsToUpdateJustified:       8,
-	SafeSlotsToImportOptimistically:  128,
 
 	// Fork choice algorithm constants.
-	ProposerScoreBoost: 40,
-	IntervalsPerSlot:   3,
+	ProposerScoreBoost:              40,
+	ReorgWeightThreshold:            20,
+	ReorgParentWeightThreshold:      160,
+	ReorgMaxEpochsSinceFinalization: 2,
+	IntervalsPerSlot:                3,
 
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.
@@ -150,11 +151,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ProportionalSlashingMultiplier: 1,
 
 	// Max operations per block constants.
-	MaxProposerSlashings: 16,
-	MaxAttesterSlashings: 2,
-	MaxAttestations:      128,
-	MaxDeposits:          16,
-	MaxVoluntaryExits:    16,
+	MaxProposerSlashings:             16,
+	MaxAttesterSlashings:             2,
+	MaxAttestations:                  128,
+	MaxDeposits:                      16,
+	MaxVoluntaryExits:                16,
+	MaxWithdrawalsPerPayload:         16,
+	MaxBlsToExecutionChanges:         16,
+	MaxValidatorsPerWithdrawalsSweep: 16384,
 
 	// BLS domain values.
 	DomainBeaconProposer:              bytesutil.Uint32ToBytes4(0x00000000),
@@ -189,6 +193,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateFieldCount:          21,
 	BeaconStateAltairFieldCount:    24,
 	BeaconStateBellatrixFieldCount: 25,
+	BeaconStateCapellaFieldCount:   28,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -206,9 +211,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
-	CapellaForkEpoch:     math.MaxUint64,
-	ShardingForkVersion:  []byte{4, 0, 0, 0},
-	ShardingForkEpoch:    math.MaxUint64,
+	CapellaForkEpoch:     194048,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -254,7 +257,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Mevboost circuit breaker
 	MaxBuilderConsecutiveMissedSlots: 3,
-	MaxBuilderEpochMissedSlots:       8,
+	MaxBuilderEpochMissedSlots:       5,
+	// Execution engine timeout value
+	ExecutionEngineTimeoutValue: 8, // 8 seconds default based on: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
@@ -267,21 +272,21 @@ func MainnetTestConfig() *BeaconChainConfig {
 	return mn
 }
 
-// FillTestVersions replaces the byte in the last position of each fork version
-// so that
+// FillTestVersions replaces the fork schedule in the given BeaconChainConfig with test values, using the given
+// byte argument as the high byte (common across forks).
 func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.GenesisForkVersion = make([]byte, fieldparams.VersionLength)
 	c.AltairForkVersion = make([]byte, fieldparams.VersionLength)
 	c.BellatrixForkVersion = make([]byte, fieldparams.VersionLength)
-	c.ShardingForkVersion = make([]byte, fieldparams.VersionLength)
+	c.CapellaForkVersion = make([]byte, fieldparams.VersionLength)
 
 	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
 	c.AltairForkVersion[fieldparams.VersionLength-1] = b
 	c.BellatrixForkVersion[fieldparams.VersionLength-1] = b
-	c.ShardingForkVersion[fieldparams.VersionLength-1] = b
+	c.CapellaForkVersion[fieldparams.VersionLength-1] = b
 
 	c.GenesisForkVersion[0] = 0
 	c.AltairForkVersion[0] = 1
 	c.BellatrixForkVersion[0] = 2
-	c.ShardingForkVersion[0] = 3
+	c.CapellaForkVersion[0] = 3
 }

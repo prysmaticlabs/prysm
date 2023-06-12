@@ -3,17 +3,15 @@ package stateutil_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestReturnTrieLayer_OK(t *testing.T) {
@@ -25,11 +23,6 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 	assert.NoError(t, err)
 	newRoot := *layers[len(layers)-1][0]
 	assert.Equal(t, root, newRoot)
-
-	flags := &features.Flags{}
-	flags.EnableVectorizedHTR = true
-	reset := features.InitWithReset(flags)
-	defer reset()
 
 	layers, err = stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
 	assert.NoError(t, err)
@@ -53,11 +46,6 @@ func BenchmarkReturnTrieLayer_NormalAlgorithm(b *testing.B) {
 }
 
 func BenchmarkReturnTrieLayer_VectorizedAlgorithm(b *testing.B) {
-	flags := &features.Flags{}
-	flags.EnableVectorizedHTR = true
-	reset := features.InitWithReset(flags)
-	defer reset()
-
 	newState, _ := util.DeterministicGenesisState(b, 32)
 	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(b, err)
@@ -76,11 +64,10 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
-	hasher := hash.CustomSHA256Hasher()
 	validators := newState.Validators()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
-		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
+		rt, err := stateutil.ValidatorRootWithHasher(val)
 		require.NoError(t, err)
 		roots = append(roots, rt)
 	}
@@ -89,11 +76,6 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	newRoot, err = stateutil.AddInMixin(newRoot, uint64(len(validators)))
 	require.NoError(t, err)
 	assert.Equal(t, root, newRoot)
-
-	flags := &features.Flags{}
-	flags.EnableVectorizedHTR = true
-	reset := features.InitWithReset(flags)
-	defer reset()
 
 	layers = stateutil.ReturnTrieLayerVariable(roots, params.BeaconConfig().ValidatorRegistryLimit)
 	lastRoot := *layers[len(layers)-1][0]
@@ -107,11 +89,10 @@ func BenchmarkReturnTrieLayerVariable_NormalAlgorithm(b *testing.B) {
 	newState, _ := util.DeterministicGenesisState(b, 16000)
 	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(b, err)
-	hasher := hash.CustomSHA256Hasher()
 	validators := newState.Validators()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
-		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
+		rt, err := stateutil.ValidatorRootWithHasher(val)
 		require.NoError(b, err)
 		roots = append(roots, rt)
 	}
@@ -126,19 +107,14 @@ func BenchmarkReturnTrieLayerVariable_NormalAlgorithm(b *testing.B) {
 }
 
 func BenchmarkReturnTrieLayerVariable_VectorizedAlgorithm(b *testing.B) {
-	flags := &features.Flags{}
-	flags.EnableVectorizedHTR = true
-	reset := features.InitWithReset(flags)
-	defer reset()
 
 	newState, _ := util.DeterministicGenesisState(b, 16000)
 	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(b, err)
-	hasher := hash.CustomSHA256Hasher()
 	validators := newState.Validators()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
-		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
+		rt, err := stateutil.ValidatorRootWithHasher(val)
 		require.NoError(b, err)
 		roots = append(roots, rt)
 	}
@@ -174,10 +150,9 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	validators := newState.Validators()
-	hasher := hash.CustomSHA256Hasher()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
-		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
+		rt, err := stateutil.ValidatorRootWithHasher(val)
 		require.NoError(t, err)
 		roots = append(roots, rt)
 	}
@@ -195,14 +170,14 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	val2.ExitEpoch = 40
 
 	changedVals := []*ethpb.Validator{val1, val2}
-	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
-	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(primitives.ValidatorIndex(changedIdx[0]), changedVals[0]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(primitives.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
 	roots = make([][32]byte, 0, len(changedVals))
 	for _, val := range changedVals {
-		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
+		rt, err := stateutil.ValidatorRootWithHasher(val)
 		require.NoError(t, err)
 		roots = append(roots, rt)
 	}
@@ -216,9 +191,7 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 func TestMerkleizeTrieLeaves_BadHashLayer(t *testing.T) {
 	hashLayer := make([][32]byte, 12)
 	layers := make([][][32]byte, 20)
-	_, _, err := stateutil.MerkleizeTrieLeaves(layers, hashLayer, func(bytes []byte) [32]byte {
-		return [32]byte{}
-	})
+	_, _, err := stateutil.MerkleizeTrieLeaves(layers, hashLayer)
 	assert.ErrorContains(t, "hash layer is a non power of 2", err)
 }
 

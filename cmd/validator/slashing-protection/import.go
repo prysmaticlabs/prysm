@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
-	slashingprotection "github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
 	"github.com/urfave/cli/v2"
 )
 
@@ -22,7 +22,7 @@ import (
 // 2. Open the validator database.
 // 3. Read the JSON file from user input.
 // 4. Call the function which actually imports the data from
-// from the standard slashing protection JSON file into our database.
+// the standard slashing protection JSON file into our database.
 func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	var err error
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)

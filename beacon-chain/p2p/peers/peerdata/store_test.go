@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestStore_GetSetDelete(t *testing.T) {
@@ -79,4 +79,21 @@ func TestStore_PeerDataGetOrCreate(t *testing.T) {
 	assert.Equal(t, 0, peerData.BadResponses)
 	assert.Equal(t, uint64(0), peerData.ProcessedBlocks)
 	require.Equal(t, 1, len(store.Peers()))
+}
+
+func TestStore_TrustedPeers(t *testing.T) {
+	store := peerdata.NewStore(context.Background(), &peerdata.StoreConfig{
+		MaxPeers: 12,
+	})
+
+	pid1 := peer.ID("00001")
+	pid2 := peer.ID("00002")
+	pid3 := peer.ID("00003")
+
+	tPeers := []peer.ID{pid1, pid2, pid3}
+	store.SetTrustedPeers(tPeers)
+
+	assert.Equal(t, true, store.IsTrustedPeer(pid1))
+	assert.Equal(t, true, store.IsTrustedPeer(pid2))
+	assert.Equal(t, true, store.IsTrustedPeer(pid3))
 }

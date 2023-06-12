@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // PoolInserter is capable of inserting new slashing objects into the operations pool.
@@ -38,12 +38,12 @@ type Pool struct {
 	lock                    sync.RWMutex
 	pendingProposerSlashing []*ethpb.ProposerSlashing
 	pendingAttesterSlashing []*PendingAttesterSlashing
-	included                map[types.ValidatorIndex]bool
+	included                map[primitives.ValidatorIndex]bool
 }
 
 // PendingAttesterSlashing represents an attester slashing in the operation pool.
 // Allows for easy binary searching of included validator indexes.
 type PendingAttesterSlashing struct {
 	attesterSlashing *ethpb.AttesterSlashing
-	validatorToSlash types.ValidatorIndex
+	validatorToSlash primitives.ValidatorIndex
 }

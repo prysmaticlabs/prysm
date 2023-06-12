@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
 )
 
 var (
@@ -38,9 +38,10 @@ type StoreConfig struct {
 // the mutex when accessing data.
 type Store struct {
 	sync.RWMutex
-	ctx    context.Context
-	config *StoreConfig
-	peers  map[peer.ID]*PeerData
+	ctx          context.Context
+	config       *StoreConfig
+	peers        map[peer.ID]*PeerData
+	trustedPeers map[peer.ID]bool
 }
 
 // PeerData aggregates protocol and application level info about a single peer.
@@ -69,9 +70,10 @@ type PeerData struct {
 // NewStore creates new peer data store.
 func NewStore(ctx context.Context, config *StoreConfig) *Store {
 	return &Store{
-		ctx:    ctx,
-		config: config,
-		peers:  make(map[peer.ID]*PeerData),
+		ctx:          ctx,
+		config:       config,
+		peers:        make(map[peer.ID]*PeerData),
+		trustedPeers: make(map[peer.ID]bool),
 	}
 }
 
@@ -105,10 +107,23 @@ func (s *Store) DeletePeerData(pid peer.ID) {
 	delete(s.peers, pid)
 }
 
+// SetTrustedPeers sets our desired trusted peer set.
+func (s *Store) SetTrustedPeers(peers []peer.ID) {
+	for _, p := range peers {
+		s.trustedPeers[p] = true
+	}
+}
+
 // Peers returns map of peer data objects.
 // Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) Peers() map[peer.ID]*PeerData {
 	return s.peers
+}
+
+// IsTrustedPeer checks that the provided peer
+// is in our trusted peer set.
+func (s *Store) IsTrustedPeer(p peer.ID) bool {
+	return s.trustedPeers[p]
 }
 
 // Config exposes store configuration params.

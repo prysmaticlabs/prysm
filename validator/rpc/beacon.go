@@ -10,10 +10,14 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -38,26 +42,35 @@ func (s *Server) registerBeaconClient() error {
 
 	s.ctx = grpcutil.AppendHeaders(s.ctx, s.clientGrpcHeaders)
 
-	conn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
+	grpcConn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
 	if err != nil {
 		return errors.Wrapf(err, "could not dial endpoint: %s", s.beaconClientEndpoint)
 	}
 	if s.clientWithCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
-	s.beaconChainClient = ethpb.NewBeaconChainClient(conn)
-	s.beaconNodeClient = ethpb.NewNodeClient(conn)
-	s.beaconNodeHealthClient = ethpb.NewHealthClient(conn)
-	s.beaconNodeValidatorClient = ethpb.NewBeaconNodeValidatorClient(conn)
+	s.beaconNodeHealthClient = ethpb.NewHealthClient(grpcConn)
+
+	conn := validatorHelpers.NewNodeConnection(
+		grpcConn,
+		s.beaconApiEndpoint,
+		s.beaconApiTimeout,
+	)
+
+	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn)
+	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn)
+	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
 	return nil
 }
 
 // GetBeaconStatus retrieves information about the beacon node gRPC connection
 // and certain chain metadata, such as the genesis time, the chain head, and the
 // deposit contract address.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validatorpb.BeaconStatusResponse, error) {
 	syncStatus, err := s.beaconNodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
+		//nolint:nilerr
 		return &validatorpb.BeaconStatusResponse{
 			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
 			Connected:          false,
@@ -85,6 +98,7 @@ func (s *Server) GetBeaconStatus(ctx context.Context, _ *empty.Empty) (*validato
 }
 
 // GetValidatorParticipation is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
@@ -92,6 +106,7 @@ func (s *Server) GetValidatorParticipation(
 }
 
 // GetValidatorPerformance is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
@@ -99,6 +114,7 @@ func (s *Server) GetValidatorPerformance(
 }
 
 // GetValidatorBalances is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidatorBalances(
 	ctx context.Context, req *ethpb.ListValidatorBalancesRequest,
 ) (*ethpb.ValidatorBalances, error) {
@@ -106,6 +122,7 @@ func (s *Server) GetValidatorBalances(
 }
 
 // GetValidators is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidators(
 	ctx context.Context, req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
@@ -113,6 +130,7 @@ func (s *Server) GetValidators(
 }
 
 // GetValidatorQueue is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetValidatorQueue(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpb.ValidatorQueue, error) {
@@ -120,6 +138,7 @@ func (s *Server) GetValidatorQueue(
 }
 
 // GetPeers is a wrapper around the /eth/v1alpha1 endpoint of the same name.
+// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 func (s *Server) GetPeers(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpb.Peers, error) {

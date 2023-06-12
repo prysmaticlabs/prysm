@@ -1,19 +1,20 @@
 package forks
 
 import (
+	"bytes"
 	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // ForkScheduleEntry is a Version+Epoch tuple for sorted storage in an OrderedSchedule
 type ForkScheduleEntry struct {
 	Version [fieldparams.VersionLength]byte
-	Epoch   types.Epoch
+	Epoch   primitives.Epoch
 	Name    string
 }
 
@@ -28,10 +29,15 @@ func (o OrderedSchedule) Len() int { return len(o) }
 func (o OrderedSchedule) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
 
 // Less implements the Less method of sort.Interface
-func (o OrderedSchedule) Less(i, j int) bool { return o[i].Epoch < o[j].Epoch }
+func (o OrderedSchedule) Less(i, j int) bool {
+	if o[i].Epoch == o[j].Epoch {
+		return bytes.Compare(o[i].Version[:], o[j].Version[:]) < 0
+	}
+	return o[i].Epoch < o[j].Epoch
+}
 
 // VersionForEpoch finds the Version with the highest epoch <= the given epoch
-func (o OrderedSchedule) VersionForEpoch(epoch types.Epoch) ([fieldparams.VersionLength]byte, error) {
+func (o OrderedSchedule) VersionForEpoch(epoch primitives.Epoch) ([fieldparams.VersionLength]byte, error) {
 	for i := len(o) - 1; i >= 0; i-- {
 		if o[i].Epoch <= epoch {
 			return o[i].Version, nil

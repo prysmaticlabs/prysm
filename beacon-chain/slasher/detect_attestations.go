@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -16,7 +16,7 @@ import (
 // Takes in a list of indexed attestation wrappers and returns any
 // found attester slashings to the caller.
 func (s *Service) checkSlashableAttestations(
-	ctx context.Context, currentEpoch types.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
+	ctx context.Context, currentEpoch primitives.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 
@@ -72,11 +72,11 @@ func (s *Service) checkSlashableAttestations(
 // as the current epoch in time, we perform slashing detection.
 // The process is as follows given a list of attestations:
 //
-// 1. Check for attester double votes using the list of attestations.
-// 2. Group the attestations by chunk index.
-// 3. Update the min and max spans for those grouped attestations, check if any slashings are
-//    found in the process
-// 4. Update the latest written epoch for all validators involved to the current epoch.
+//  1. Check for attester double votes using the list of attestations.
+//  2. Group the attestations by chunk index.
+//  3. Update the min and max spans for those grouped attestations, check if any slashings are
+//     found in the process
+//  4. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
 func (s *Service) detectAllAttesterSlashings(
@@ -84,7 +84,6 @@ func (s *Service) detectAllAttesterSlashings(
 	args *chunkUpdateArgs,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
-
 	// Map of updated chunks by chunk index, which will be saved at the end.
 	updatedChunks := make(map[uint64]Chunker)
 	groupedAtts := s.groupByChunkIndex(attestations)
@@ -209,7 +208,7 @@ func (s *Service) epochUpdateForValidator(
 	ctx context.Context,
 	args *chunkUpdateArgs,
 	updatedChunks map[uint64]Chunker,
-	validatorIndex types.ValidatorIndex,
+	validatorIndex primitives.ValidatorIndex,
 ) error {
 	epoch := s.latestEpochWrittenForValidator[validatorIndex]
 	if epoch == 0 {
@@ -239,13 +238,13 @@ func (s *Service) epochUpdateForValidator(
 }
 
 // Updates spans and detects any slashable attester offenses along the way.
-// 1. Determine the chunks we need to use for updating for the validator indices
-//    in a validator chunk index, then retrieve those chunks from the database.
-// 2. Using the chunks from step (1):
-//      for every attestation by chunk index:
-//        for each validator in the attestation's attesting indices:
-//          - Check if the attestation is slashable, if so return a slashing object.
-// 3. Save the updated chunks to disk.
+//  1. Determine the chunks we need to use for updating for the validator indices
+//     in a validator chunk index, then retrieve those chunks from the database.
+//  2. Using the chunks from step (1):
+//     for every attestation by chunk index:
+//     for each validator in the attestation's attesting indices:
+//     - Check if the attestation is slashable, if so return a slashing object.
+//  3. Save the updated chunks to disk.
 func (s *Service) updateSpans(
 	ctx context.Context,
 	updatedChunks map[uint64]Chunker,
@@ -261,7 +260,7 @@ func (s *Service) updateSpans(
 	for _, attestationBatch := range attestationsByChunkIdx {
 		for _, att := range attestationBatch {
 			for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
-				validatorIndex := types.ValidatorIndex(validatorIdx)
+				validatorIndex := primitives.ValidatorIndex(validatorIdx)
 				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
 				// Every validator chunk index represents a range of validators.
@@ -308,7 +307,7 @@ func (s *Service) updateSpans(
 func (s *Service) applyAttestationForValidator(
 	ctx context.Context,
 	args *chunkUpdateArgs,
-	validatorIndex types.ValidatorIndex,
+	validatorIndex primitives.ValidatorIndex,
 	chunksByChunkIdx map[uint64]Chunker,
 	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {

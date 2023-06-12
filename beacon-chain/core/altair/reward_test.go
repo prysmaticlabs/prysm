@@ -4,22 +4,24 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func Test_BaseReward(t *testing.T) {
+	helpers.ClearCache()
 	genState := func(valCount uint64) state.ReadOnlyBeaconState {
 		s, _ := util.DeterministicGenesisStateAltair(t, valCount)
 		return s
 	}
 	tests := []struct {
 		name      string
-		valIdx    types.ValidatorIndex
+		valIdx    primitives.ValidatorIndex
 		st        state.ReadOnlyBeaconState
 		want      uint64
 		errString string
@@ -66,10 +68,11 @@ func Test_BaseReward(t *testing.T) {
 }
 
 func Test_BaseRewardWithTotalBalance(t *testing.T) {
+	helpers.ClearCache()
 	s, _ := util.DeterministicGenesisStateAltair(t, 1)
 	tests := []struct {
 		name          string
-		valIdx        types.ValidatorIndex
+		valIdx        primitives.ValidatorIndex
 		activeBalance uint64
 		want          uint64
 		errString     string
@@ -137,6 +140,7 @@ func Test_BaseRewardWithTotalBalance(t *testing.T) {
 }
 
 func Test_BaseRewardPerIncrement(t *testing.T) {
+	helpers.ClearCache()
 	tests := []struct {
 		name          string
 		activeBalance uint64

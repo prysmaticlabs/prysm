@@ -7,18 +7,19 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -44,13 +45,13 @@ func setupService(t *testing.T) *Service {
 		ValidatorsRoot: [32]byte{},
 	}
 
-	trackedVals := map[types.ValidatorIndex]bool{
+	trackedVals := map[primitives.ValidatorIndex]bool{
 		1:  true,
 		2:  true,
 		12: true,
 		15: true,
 	}
-	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
+	latestPerformance := map[primitives.ValidatorIndex]ValidatorLatestPerformance{
 		1: {
 			balance: 32000000000,
 		},
@@ -64,7 +65,7 @@ func setupService(t *testing.T) *Service {
 			balance: 31900000000,
 		},
 	}
-	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
+	aggregatedPerformance := map[primitives.ValidatorIndex]ValidatorAggregatedPerformance{
 		1: {
 			startEpoch:                      0,
 			startBalance:                    31700000000,
@@ -82,16 +83,17 @@ func setupService(t *testing.T) *Service {
 		12: {},
 		15: {},
 	}
-	trackedSyncCommitteeIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
+	trackedSyncCommitteeIndices := map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 		1:  {0, 1, 2, 3},
 		12: {4, 5},
 	}
 	return &Service{
 		config: &ValidatorMonitorConfig{
-			StateGen:            stategen.New(beaconDB),
+			StateGen:            stategen.New(beaconDB, doublylinkedtree.New()),
 			StateNotifier:       chainService.StateNotifier(),
 			HeadFetcher:         chainService,
 			AttestationNotifier: chainService.OperationNotifier(),
+			InitialSyncComplete: make(chan struct{}),
 		},
 
 		ctx:                         context.Background(),
@@ -105,13 +107,13 @@ func setupService(t *testing.T) *Service {
 
 func TestTrackedIndex(t *testing.T) {
 	s := &Service{
-		TrackedValidators: map[types.ValidatorIndex]bool{
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
 			1: true,
 			2: true,
 		},
 	}
-	require.Equal(t, s.trackedIndex(types.ValidatorIndex(1)), true)
-	require.Equal(t, s.trackedIndex(types.ValidatorIndex(3)), false)
+	require.Equal(t, s.trackedIndex(primitives.ValidatorIndex(1)), true)
+	require.Equal(t, s.trackedIndex(primitives.ValidatorIndex(3)), false)
 }
 
 func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
@@ -121,7 +123,7 @@ func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 
 	s.updateSyncCommitteeTrackedVals(state)
 	require.LogsDoNotContain(t, hook, "Sync committee assignments will not be reported")
-	newTrackedSyncIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
+	newTrackedSyncIndices := map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 		1: {1, 3, 4},
 		2: {2},
 	}
@@ -130,7 +132,7 @@ func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 
 func TestNewService(t *testing.T) {
 	config := &ValidatorMonitorConfig{}
-	var tracked []types.ValidatorIndex
+	var tracked []primitives.ValidatorIndex
 	ctx := context.Background()
 	_, err := NewService(ctx, config, tracked)
 	require.NoError(t, err)
@@ -139,34 +141,9 @@ func TestNewService(t *testing.T) {
 func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
 	s.Start()
-
-	go func() {
-		select {
-		case stateEvent := <-stateChannel:
-			if stateEvent.Type == statefeed.Synced {
-				_, ok := stateEvent.Data.(*statefeed.SyncedData)
-				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
-			}
-		case <-s.ctx.Done():
-		}
-		wg.Done()
-	}()
-
-	for sent := 0; sent == 0; {
-		sent = s.config.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: time.Now(),
-			},
-		})
-	}
+	close(s.config.InitialSyncComplete)
 
 	// wait for Logrus
 	time.Sleep(1000 * time.Millisecond)
@@ -186,7 +163,7 @@ func TestInitializePerformanceStructures(t *testing.T) {
 	epoch := slots.ToEpoch(state.Slot())
 	s.initializePerformanceStructures(state, epoch)
 	require.LogsDoNotContain(t, hook, "Could not fetch starting balance")
-	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
+	latestPerformance := map[primitives.ValidatorIndex]ValidatorLatestPerformance{
 		1: {
 			balance: 32000000000,
 		},
@@ -200,7 +177,7 @@ func TestInitializePerformanceStructures(t *testing.T) {
 			balance: 32000000000,
 		},
 	}
-	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
+	aggregatedPerformance := map[primitives.ValidatorIndex]ValidatorAggregatedPerformance{
 		1: {
 			startBalance: 32000000000,
 		},
@@ -266,49 +243,40 @@ func TestMonitorRoutine(t *testing.T) {
 }
 
 func TestWaitForSync(t *testing.T) {
-	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{ctx: ctx}
+	syncChan := make(chan struct{})
 
 	go func() {
-		err := s.waitForSync(stateChannel, stateSub)
-		require.NoError(t, err)
-		wg.Done()
+		// Failsafe to make sure tests never get deadlocked; we should always go through the happy path before 500ms.
+		// Otherwise, the NoError assertion below will fail.
+		time.Sleep(500 * time.Millisecond)
+		cancel()
 	}()
+	go func() {
+		close(syncChan)
+	}()
+	require.NoError(t, s.waitForSync(syncChan))
+}
 
-	stateChannel <- &feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: time.Now(),
-		},
-	}
+func TestWaitForSyncCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Service{ctx: ctx}
+	syncChan := make(chan struct{})
+
+	cancel()
+	require.ErrorIs(t, s.waitForSync(syncChan), errContextClosedWhileWaiting)
 }
 
 func TestRun(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	go func() {
-		s.run(stateChannel, stateSub)
-		wg.Done()
+		s.run()
 	}()
+	close(s.config.InitialSyncComplete)
 
-	stateChannel <- &feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: time.Now(),
-		},
-	}
-	//wait for Logrus
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
 }

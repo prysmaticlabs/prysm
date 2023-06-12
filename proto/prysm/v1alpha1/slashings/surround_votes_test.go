@@ -3,8 +3,8 @@ package slashings
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 func TestIsSurround(t *testing.T) {
@@ -83,7 +83,7 @@ func TestIsSurround(t *testing.T) {
 	}
 }
 
-func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
+func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: source},

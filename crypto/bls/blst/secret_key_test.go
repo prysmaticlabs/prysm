@@ -8,11 +8,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
@@ -88,7 +88,7 @@ func TestSerialize(t *testing.T) {
 
 func TestZeroKey(t *testing.T) {
 	// Is Zero
-	zKey := [32]byte{}
+	var zKey [32]byte
 	assert.Equal(t, true, blst.IsZero(zKey[:]))
 
 	// Is Not Zero

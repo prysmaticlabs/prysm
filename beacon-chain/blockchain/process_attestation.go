@@ -5,12 +5,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -19,24 +18,25 @@ import (
 // The delay is handled by the caller in `processAttestations`.
 //
 // Spec pseudocode definition:
-//   def on_attestation(store: Store, attestation: Attestation) -> None:
-//    """
-//    Run ``on_attestation`` upon receiving a new ``attestation`` from either within a block or directly on the wire.
 //
-//    An ``attestation`` that is asserted as invalid may be valid at a later time,
-//    consider scheduling it for later processing in such case.
-//    """
-//    validate_on_attestation(store, attestation)
-//    store_target_checkpoint_state(store, attestation.data.target)
+//	def on_attestation(store: Store, attestation: Attestation) -> None:
+//	 """
+//	 Run ``on_attestation`` upon receiving a new ``attestation`` from either within a block or directly on the wire.
 //
-//    # Get state at the `target` to fully validate attestation
-//    target_state = store.checkpoint_states[attestation.data.target]
-//    indexed_attestation = get_indexed_attestation(target_state, attestation)
-//    assert is_valid_indexed_attestation(target_state, indexed_attestation)
+//	 An ``attestation`` that is asserted as invalid may be valid at a later time,
+//	 consider scheduling it for later processing in such case.
+//	 """
+//	 validate_on_attestation(store, attestation)
+//	 store_target_checkpoint_state(store, attestation.data.target)
 //
-//    # Update latest messages for attesting indices
-//    update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
-func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+//	 # Get state at the `target` to fully validate attestation
+//	 target_state = store.checkpoint_states[attestation.data.target]
+//	 indexed_attestation = get_indexed_attestation(target_state, attestation)
+//	 assert is_valid_indexed_attestation(target_state, indexed_attestation)
+//
+//	 # Update latest messages for attesting indices
+//	 update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
+func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation, disparity time.Duration) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
@@ -62,7 +62,7 @@ func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	genesisTime := uint64(s.genesisTime.Unix())
 
 	// Verify attestation target is from current epoch or previous epoch.
-	if err := verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Unix()), tgt); err != nil {
+	if err := verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Add(disparity).Unix()), tgt); err != nil {
 		return err
 	}
 
@@ -71,11 +71,11 @@ func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 		return errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
-	// Note that LMG GHOST and FFG consistency check is ignored because it was performed in sync's validation pipeline:
+	// Note that LMD GHOST and FFG consistency check is ignored because it was performed in sync's validation pipeline:
 	// validate_aggregate_proof.go and validate_beacon_attestation.go
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := slots.VerifyTime(genesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(genesisTime, a.Data.Slot+1, disparity); err != nil {
 		return err
 	}
 

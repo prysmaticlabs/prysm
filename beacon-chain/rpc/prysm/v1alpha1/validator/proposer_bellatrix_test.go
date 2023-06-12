@@ -2,101 +2,281 @@ package validator
 
 import (
 	"context"
+	"math/big"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
-	blockchainTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
-	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
+	blockchainTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	powtesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestServer_buildHeaderBlock(t *testing.T) {
-	db := dbTest.SetupDB(t)
+func TestServer_setExecutionData(t *testing.T) {
+	hook := logTest.NewGlobal()
+
 	ctx := context.Background()
-
+	cfg := params.BeaconConfig().Copy()
+	cfg.BellatrixForkEpoch = 0
+	cfg.CapellaForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, keys := util.DeterministicGenesisStateAltair(t, 16384)
-	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
-	copiedState := beaconState.Copy()
 
-	proposerServer := &Server{
-		BeaconDB: db,
-		StateGen: stategen.New(db),
+	beaconDB := dbTest.SetupDB(t)
+	capellaTransitionState, _ := util.DeterministicGenesisStateCapella(t, 1)
+	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&v1.ExecutionPayloadHeaderCapella{BlockNumber: 1}, 0)
+	require.NoError(t, err)
+	require.NoError(t, capellaTransitionState.SetLatestExecutionPayloadHeader(wrappedHeaderCapella))
+	b2pbCapella := util.NewBeaconBlockCapella()
+	b2rCapella, err := b2pbCapella.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b2pbCapella)
+	require.NoError(t, capellaTransitionState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Root: b2rCapella[:],
+	}))
+	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []common.Address{{}}))
+
+	withdrawals := []*v1.Withdrawal{{
+		Index:          1,
+		ValidatorIndex: 2,
+		Address:        make([]byte, fieldparams.FeeRecipientLength),
+		Amount:         3,
+	}}
+	id := &v1.PayloadIDBytes{0x1}
+	vs := &Server{
+		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals}, BlockValue: 0},
+		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
+		FinalizationFetcher:    &blockchainTest.ChainService{},
+		BeaconDB:               beaconDB,
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true, Cfg: &builderTest.Config{BeaconDB: beaconDB}},
+		ForkchoiceFetcher:      &blockchainTest.ChainService{},
 	}
-	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
-	require.NoError(t, err)
-	r := bytesutil.ToBytes32(b.Block.ParentRoot)
-	util.SaveBlock(t, ctx, proposerServer.BeaconDB, b)
-	require.NoError(t, proposerServer.BeaconDB.SaveState(ctx, beaconState, r))
 
-	b1, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
-	require.NoError(t, err)
+	t.Run("No builder configured. Use local block", func(t *testing.T) {
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
+	})
+	t.Run("Builder configured. Builder Block has higher value. Incorrect withdrawals", func(t *testing.T) {
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(time.Now().Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+		ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
+		require.NoError(t, err)
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		bid := &ethpb.BuilderBidCapella{
+			Header: &v1.ExecutionPayloadHeaderCapella{
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       make([]byte, fieldparams.RootLength),
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: bytesutil.PadTo([]byte{1}, fieldparams.RootLength),
+				ParentHash:       params.BeaconConfig().ZeroHash[:],
+				Timestamp:        uint64(ti.Unix()),
+				BlockNumber:      2,
+				WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+			},
+			Pubkey: sk.PublicKey().Marshal(),
+			Value:  bytesutil.PadTo([]byte{1}, 32),
+		}
+		d := params.BeaconConfig().DomainApplicationBuilder
+		domain, err := signing.ComputeDomain(d, nil, nil)
+		require.NoError(t, err)
+		sr, err := signing.ComputeSigningRoot(bid, domain)
+		require.NoError(t, err)
+		sBid := &ethpb.SignedBuilderBidCapella{
+			Message:   bid,
+			Signature: sk.Sign(sr[:]).Marshal(),
+		}
+		vs.BlockBuilder = &builderTest.MockBuilderService{
+			BidCapella:    sBid,
+			HasConfigured: true,
+			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+		}
+		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+		require.NoError(t, err)
+		chain := &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New(), Genesis: time.Now(), Block: wb}
+		vs.ForkchoiceFetcher = chain
+		vs.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
+		vs.TimeFetcher = chain
+		vs.HeadFetcher = chain
+		b := blk.Block()
 
-	vs := &Server{StateGen: stategen.New(db), BeaconDB: db}
-	h := &v1.ExecutionPayloadHeader{
-		BlockNumber:      123,
-		GasLimit:         456,
-		GasUsed:          789,
-		ParentHash:       make([]byte, fieldparams.RootLength),
-		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:       make([]byte, fieldparams.RootLength),
-		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-		BlockHash:        make([]byte, fieldparams.RootLength),
-		TransactionsRoot: make([]byte, fieldparams.RootLength),
-		ExtraData:        make([]byte, 0),
-	}
-	got, err := vs.buildBlindBlock(ctx, b1.Block, h)
-	require.NoError(t, err)
-	require.DeepEqual(t, h, got.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
+	})
+	t.Run("Builder configured. Builder Block has higher value. Correct withdrawals.", func(t *testing.T) {
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
+		require.NoError(t, err)
+		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(time.Now().Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+		ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
+		require.NoError(t, err)
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		builderValue := bytesutil.ReverseByteOrder(big.NewInt(1e9).Bytes())
+		bid := &ethpb.BuilderBidCapella{
+			Header: &v1.ExecutionPayloadHeaderCapella{
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       make([]byte, fieldparams.RootLength),
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: bytesutil.PadTo([]byte{1}, fieldparams.RootLength),
+				ParentHash:       params.BeaconConfig().ZeroHash[:],
+				Timestamp:        uint64(ti.Unix()),
+				BlockNumber:      2,
+				WithdrawalsRoot:  wr[:],
+			},
+			Pubkey: sk.PublicKey().Marshal(),
+			Value:  bytesutil.PadTo(builderValue, 32),
+		}
+		d := params.BeaconConfig().DomainApplicationBuilder
+		domain, err := signing.ComputeDomain(d, nil, nil)
+		require.NoError(t, err)
+		sr, err := signing.ComputeSigningRoot(bid, domain)
+		require.NoError(t, err)
+		sBid := &ethpb.SignedBuilderBidCapella{
+			Message:   bid,
+			Signature: sk.Sign(sr[:]).Marshal(),
+		}
+		vs.BlockBuilder = &builderTest.MockBuilderService{
+			BidCapella:    sBid,
+			HasConfigured: true,
+			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+		}
+		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		chain := &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New(), Genesis: time.Now(), Block: wb}
+		vs.ForkFetcher = chain
+		vs.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
+		vs.TimeFetcher = chain
+		vs.HeadFetcher = chain
 
-	_, err = vs.buildBlindBlock(ctx, nil, h)
-	require.ErrorContains(t, "nil block", err)
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
+	})
+	t.Run("Builder configured. Local block has higher value", func(t *testing.T) {
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2}
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
 
-	_, err = vs.buildBlindBlock(ctx, b1.Block, nil)
-	require.ErrorContains(t, "nil header", err)
+		require.LogsContain(t, hook, "builderGweiValue=1 localBoostPercentage=0 localGweiValue=2")
+	})
+	t.Run("Builder configured. Local block and boost has higher value", func(t *testing.T) {
+		cfg := params.BeaconConfig().Copy()
+		cfg.LocalBlockValueBoost = 1 // Boost 1%.
+		params.OverrideBeaconConfig(cfg)
+
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 1}
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
+
+		require.LogsContain(t, hook, "builderGweiValue=1 localBoostPercentage=1 localGweiValue=1")
+	})
+	t.Run("Builder configured. Builder returns fault. Use local block", func(t *testing.T) {
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		require.NoError(t, err)
+		vs.BlockBuilder = &builderTest.MockBuilderService{
+			ErrGetHeader:  errors.New("fault"),
+			HasConfigured: true,
+			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+		}
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: 0}
+		b := blk.Block()
+		localPayload, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(4), e.BlockNumber()) // Local block
+	})
 }
-
 func TestServer_getPayloadHeader(t *testing.T) {
+	genesis := time.Now().Add(-time.Duration(params.BeaconConfig().SlotsPerEpoch) * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	params.SetupTestConfigCleanup(t)
+	bc := params.BeaconConfig()
+	bc.BellatrixForkEpoch = 1
+	params.OverrideBeaconConfig(bc)
+	fakeCapellaEpoch := primitives.Epoch(10)
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.CapellaForkVersion = []byte{'A', 'B', 'C', 'Z'}
+	cfg.CapellaForkEpoch = fakeCapellaEpoch
+	cfg.InitializeForkSchedule()
+	params.OverrideBeaconConfig(cfg)
 	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
 	require.NoError(t, err)
 	ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
@@ -129,36 +309,74 @@ func TestServer_getPayloadHeader(t *testing.T) {
 		Message:   bid,
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
+	withdrawals := []*v1.Withdrawal{{
+		Index:          1,
+		ValidatorIndex: 2,
+		Address:        make([]byte, fieldparams.FeeRecipientLength),
+		Amount:         3,
+	}}
+	wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	require.NoError(t, err)
+
+	tiCapella, err := slots.ToTime(uint64(genesis.Unix()), primitives.Slot(fakeCapellaEpoch)*params.BeaconConfig().SlotsPerEpoch)
+	require.NoError(t, err)
+	bidCapella := &ethpb.BuilderBidCapella{
+		Header: &v1.ExecutionPayloadHeaderCapella{
+			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:        make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:       make([]byte, fieldparams.RootLength),
+			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+			BlockHash:        make([]byte, fieldparams.RootLength),
+			TransactionsRoot: bytesutil.PadTo([]byte{1}, fieldparams.RootLength),
+			ParentHash:       params.BeaconConfig().ZeroHash[:],
+			Timestamp:        uint64(tiCapella.Unix()),
+			WithdrawalsRoot:  wr[:],
+		},
+		Pubkey: sk.PublicKey().Marshal(),
+		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+	}
+	srCapella, err := signing.ComputeSigningRoot(bidCapella, domain)
+	require.NoError(t, err)
+	sBidCapella := &ethpb.SignedBuilderBidCapella{
+		Message:   bidCapella,
+		Signature: sk.Sign(srCapella[:]).Marshal(),
+	}
 
 	require.NoError(t, err)
 	tests := []struct {
-		name           string
-		head           interfaces.SignedBeaconBlock
-		mock           *builderTest.MockBuilderService
-		fetcher        *blockchainTest.ChainService
-		err            string
-		returnedHeader *v1.ExecutionPayloadHeader
+		name                  string
+		head                  interfaces.ReadOnlySignedBeaconBlock
+		mock                  *builderTest.MockBuilderService
+		fetcher               *blockchainTest.ChainService
+		err                   string
+		returnedHeader        *v1.ExecutionPayloadHeader
+		returnedHeaderCapella *v1.ExecutionPayloadHeaderCapella
 	}{
 		{
-			name: "head is not bellatrix ready",
+			name: "can't request before bellatrix epoch",
 			mock: &builderTest.MockBuilderService{},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 					require.NoError(t, err)
 					return wb
 				}(),
 			},
+			err: "can't get payload header from builder before bellatrix epoch",
 		},
 		{
 			name: "get header failed",
 			mock: &builderTest.MockBuilderService{
 				ErrGetHeader: errors.New("can't get header"),
+				Bid:          sBid,
 			},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 					return wb
 				}(),
 			},
@@ -176,9 +394,10 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				},
 			},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 					return wb
 				}(),
 			},
@@ -198,9 +417,10 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				},
 			},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 					return wb
 				}(),
 			},
@@ -212,609 +432,74 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				Bid: sBid,
 			},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
 					return wb
 				}(),
 			},
 			returnedHeader: bid.Header,
 		},
+		{
+			name: "wrong bid version",
+			mock: &builderTest.MockBuilderService{
+				BidCapella: sBidCapella,
+			},
+			fetcher: &blockchainTest.ChainService{
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
+					return wb
+				}(),
+			},
+			err: "is different from head block version",
+		},
+		{
+			name: "different bid version during hard fork",
+			mock: &builderTest.MockBuilderService{
+				BidCapella: sBidCapella,
+			},
+			fetcher: &blockchainTest.ChainService{
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					require.NoError(t, err)
+					wb.SetSlot(primitives.Slot(fakeCapellaEpoch) * params.BeaconConfig().SlotsPerEpoch)
+					return wb
+				}(),
+			},
+			returnedHeaderCapella: bidCapella.Header,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			vs := &Server{BlockBuilder: tc.mock, HeadFetcher: tc.fetcher, TimeFetcher: &blockchainTest.ChainService{
-				Genesis: time.Now(),
+				Genesis: genesis,
 			}}
-			h, err := vs.getPayloadHeaderFromBuilder(context.Background(), 0, 0)
+			hb, err := vs.HeadFetcher.HeadBlock(context.Background())
+			require.NoError(t, err)
+			h, err := vs.getPayloadHeaderFromBuilder(context.Background(), hb.Block().Slot(), 0)
 			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {
 				require.NoError(t, err)
-				require.DeepEqual(t, tc.returnedHeader, h)
-			}
-		})
-	}
-}
-
-func TestServer_getBuilderBlock(t *testing.T) {
-	p := emptyPayload()
-	p.GasLimit = 123
-
-	tests := []struct {
-		name        string
-		blk         interfaces.SignedBeaconBlock
-		mock        *builderTest.MockBuilderService
-		err         string
-		returnedBlk interfaces.SignedBeaconBlock
-	}{
-		{
-			name: "nil block",
-			blk:  nil,
-			err:  "signed beacon block can't be nil",
-		},
-		{
-			name: "old block version",
-			blk: func() interfaces.SignedBeaconBlock {
-				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-				require.NoError(t, err)
-				return wb
-			}(),
-			returnedBlk: func() interfaces.SignedBeaconBlock {
-				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-				require.NoError(t, err)
-				return wb
-			}(),
-		},
-		{
-			name: "not configured",
-			blk: func() interfaces.SignedBeaconBlock {
-				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
-				require.NoError(t, err)
-				return wb
-			}(),
-			mock: &builderTest.MockBuilderService{
-				HasConfigured: false,
-			},
-			returnedBlk: func() interfaces.SignedBeaconBlock {
-				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
-				require.NoError(t, err)
-				return wb
-			}(),
-		},
-		{
-			name: "submit blind block error",
-			blk: func() interfaces.SignedBeaconBlock {
-				b := util.NewBlindedBeaconBlockBellatrix()
-				b.Block.Slot = 1
-				b.Block.ProposerIndex = 2
-				wb, err := blocks.NewSignedBeaconBlock(b)
-				require.NoError(t, err)
-				return wb
-			}(),
-			mock: &builderTest.MockBuilderService{
-				HasConfigured:         true,
-				ErrSubmitBlindedBlock: errors.New("can't submit"),
-			},
-			err: "can't submit",
-		},
-		{
-			name: "head and payload root mismatch",
-			blk: func() interfaces.SignedBeaconBlock {
-				b := util.NewBlindedBeaconBlockBellatrix()
-				b.Block.Slot = 1
-				b.Block.ProposerIndex = 2
-				wb, err := blocks.NewSignedBeaconBlock(b)
-				require.NoError(t, err)
-				return wb
-			}(),
-			mock: &builderTest.MockBuilderService{
-				HasConfigured: true,
-				Payload:       p,
-			},
-			returnedBlk: func() interfaces.SignedBeaconBlock {
-				b := util.NewBeaconBlockBellatrix()
-				b.Block.Slot = 1
-				b.Block.ProposerIndex = 2
-				b.Block.Body.ExecutionPayload = p
-				wb, err := blocks.NewSignedBeaconBlock(b)
-				require.NoError(t, err)
-				return wb
-			}(),
-			err: "header and payload root do not match",
-		},
-		{
-			name: "can get payload",
-			blk: func() interfaces.SignedBeaconBlock {
-				b := util.NewBlindedBeaconBlockBellatrix()
-				b.Block.Slot = 1
-				b.Block.ProposerIndex = 2
-				txRoot, err := ssz.TransactionsRoot([][]byte{})
-				require.NoError(t, err)
-				b.Block.Body.ExecutionPayloadHeader = &v1.ExecutionPayloadHeader{
-					ParentHash:       make([]byte, fieldparams.RootLength),
-					FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-					StateRoot:        make([]byte, fieldparams.RootLength),
-					ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-					LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-					PrevRandao:       make([]byte, fieldparams.RootLength),
-					BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-					BlockHash:        make([]byte, fieldparams.RootLength),
-					TransactionsRoot: txRoot[:],
-					GasLimit:         123,
+				if tc.returnedHeader != nil {
+					want, err := blocks.WrappedExecutionPayloadHeader(tc.returnedHeader)
+					require.NoError(t, err)
+					require.DeepEqual(t, want, h)
 				}
-				wb, err := blocks.NewSignedBeaconBlock(b)
-				require.NoError(t, err)
-				return wb
-			}(),
-			mock: &builderTest.MockBuilderService{
-				HasConfigured: true,
-				Payload:       p,
-			},
-			returnedBlk: func() interfaces.SignedBeaconBlock {
-				b := util.NewBeaconBlockBellatrix()
-				b.Block.Slot = 1
-				b.Block.ProposerIndex = 2
-				b.Block.Body.ExecutionPayload = p
-				wb, err := blocks.NewSignedBeaconBlock(b)
-				require.NoError(t, err)
-				return wb
-			}(),
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			vs := &Server{BlockBuilder: tc.mock}
-			gotBlk, err := vs.unblindBuilderBlock(context.Background(), tc.blk)
-			if tc.err != "" {
-				require.ErrorContains(t, tc.err, err)
-			} else {
-				require.NoError(t, err)
-				require.DeepEqual(t, tc.returnedBlk, gotBlk)
+				if tc.returnedHeaderCapella != nil {
+					want, err := blocks.WrappedExecutionPayloadHeaderCapella(tc.returnedHeaderCapella, 0) // value is a mock
+					require.NoError(t, err)
+					require.DeepEqual(t, want, h)
+				}
 			}
 		})
 	}
-}
-
-func TestServer_readyForBuilder(t *testing.T) {
-	ctx := context.Background()
-	vs := &Server{BeaconDB: dbTest.SetupDB(t)}
-	cs := &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}} // Checkpoint root is zeros.
-	vs.FinalizationFetcher = cs
-	ready, err := vs.readyForBuilder(ctx)
-	require.NoError(t, err)
-	require.Equal(t, false, ready)
-
-	b := util.NewBeaconBlockBellatrix()
-	wb, err := blocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
-	wbr, err := wb.Block().HashTreeRoot()
-	require.NoError(t, err)
-
-	b1 := util.NewBeaconBlockBellatrix()
-	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := blocks.NewSignedBeaconBlock(b1)
-	require.NoError(t, err)
-	wbr1, err := wb1.Block().HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, vs.BeaconDB.SaveBlock(ctx, wb))
-	require.NoError(t, vs.BeaconDB.SaveBlock(ctx, wb1))
-
-	// Ready is false given finalized block does not have execution.
-	cs = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr[:]}}
-	vs.FinalizationFetcher = cs
-	ready, err = vs.readyForBuilder(ctx)
-	require.NoError(t, err)
-	require.Equal(t, false, ready)
-
-	// Ready is true given finalized block has execution.
-	cs = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}}
-	vs.FinalizationFetcher = cs
-	ready, err = vs.readyForBuilder(ctx)
-	require.NoError(t, err)
-	require.Equal(t, true, ready)
-}
-
-func TestServer_getAndBuildHeaderBlock(t *testing.T) {
-	ctx := context.Background()
-	vs := &Server{}
-
-	// Nil builder
-	ready, _, err := vs.GetAndBuildBlindBlock(ctx, nil)
-	require.NoError(t, err)
-	require.Equal(t, false, ready)
-
-	// Not configured
-	vs.BlockBuilder = &builderTest.MockBuilderService{}
-	ready, _, err = vs.GetAndBuildBlindBlock(ctx, nil)
-	require.NoError(t, err)
-	require.Equal(t, false, ready)
-
-	// Block is not ready
-	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true}
-	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}}
-	ready, _, err = vs.GetAndBuildBlindBlock(ctx, nil)
-	require.NoError(t, err)
-	require.Equal(t, false, ready)
-
-	// Failed to get header
-	b1 := util.NewBeaconBlockBellatrix()
-	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := blocks.NewSignedBeaconBlock(b1)
-	require.NoError(t, err)
-	wbr1, err := wb1.Block().HashTreeRoot()
-	require.NoError(t, err)
-	vs.BeaconDB = dbTest.SetupDB(t)
-	require.NoError(t, vs.BeaconDB.SaveBlock(ctx, wb1))
-	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}}
-	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
-	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
-	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
-	ready, _, err = vs.GetAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
-	require.ErrorContains(t, "could not get payload", err)
-	require.Equal(t, false, ready)
-
-	// Block built and validated!
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, keys := util.DeterministicGenesisStateAltair(t, 16384)
-	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
-	copiedState := beaconState.Copy()
-
-	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
-	require.NoError(t, err)
-	r := bytesutil.ToBytes32(b.Block.ParentRoot)
-	util.SaveBlock(t, ctx, vs.BeaconDB, b)
-	require.NoError(t, vs.BeaconDB.SaveState(ctx, beaconState, r))
-
-	altairBlk, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
-	require.NoError(t, err)
-
-	ts := uint64(time.Now().Unix()) + uint64(altairBlk.Block.Slot)*params.BeaconConfig().SecondsPerSlot
-	h := &v1.ExecutionPayloadHeader{
-		BlockNumber:      123,
-		GasLimit:         456,
-		GasUsed:          789,
-		ParentHash:       make([]byte, fieldparams.RootLength),
-		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:       make([]byte, fieldparams.RootLength),
-		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-		BlockHash:        make([]byte, fieldparams.RootLength),
-		TransactionsRoot: make([]byte, fieldparams.RootLength),
-		Timestamp:        ts,
-	}
-
-	vs.StateGen = stategen.New(vs.BeaconDB)
-	vs.GenesisFetcher = &blockchainTest.ChainService{}
-	vs.ForkFetcher = &blockchainTest.ChainService{Fork: &ethpb.Fork{}}
-
-	sk, err := bls.RandKey()
-	require.NoError(t, err)
-	bid := &ethpb.BuilderBid{
-		Header: &v1.ExecutionPayloadHeader{
-			BlockNumber:      123,
-			GasLimit:         456,
-			GasUsed:          789,
-			ParentHash:       make([]byte, fieldparams.RootLength),
-			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:        make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-			PrevRandao:       make([]byte, fieldparams.RootLength),
-			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-			BlockHash:        make([]byte, fieldparams.RootLength),
-			TransactionsRoot: make([]byte, fieldparams.RootLength),
-			Timestamp:        ts,
-		},
-		Pubkey: sk.PublicKey().Marshal(),
-		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
-	}
-	d := params.BeaconConfig().DomainApplicationBuilder
-	domain, err := signing.ComputeDomain(d, nil, nil)
-	require.NoError(t, err)
-	sr, err := signing.ComputeSigningRoot(bid, domain)
-	require.NoError(t, err)
-	sBid := &ethpb.SignedBuilderBid{
-		Message:   bid,
-		Signature: sk.Sign(sr[:]).Marshal(),
-	}
-	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
-	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
-	ready, builtBlk, err := vs.GetAndBuildBlindBlock(ctx, altairBlk.Block)
-	require.NoError(t, err)
-	require.Equal(t, true, ready)
-	require.DeepEqual(t, h, builtBlk.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
-}
-
-func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	ctx := context.Background()
-	hook := logTest.NewGlobal()
-
-	terminalBlockHash := bytesutil.PadTo([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 32)
-	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
-	cfg.BellatrixForkEpoch = 2
-	cfg.AltairForkEpoch = 1
-	cfg.TerminalBlockHash = common.BytesToHash(terminalBlockHash)
-	cfg.TerminalBlockHashActivationEpoch = 2
-	params.OverrideBeaconConfig(cfg)
-
-	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err, "Could not hash genesis state")
-
-	genesis := consensusblocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := blocks.NewSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-	parentRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
-
-	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
-	require.NoError(t, err)
-
-	emptyPayload := &v1.ExecutionPayload{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-	}
-	blk := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:       bellatrixSlot + 1,
-			ParentRoot: parentRoot[:],
-			StateRoot:  genesis.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:     genesis.Block.Body.RandaoReveal,
-				Graffiti:         genesis.Block.Body.Graffiti,
-				Eth1Data:         genesis.Block.Body.Eth1Data,
-				SyncAggregate:    &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
-				ExecutionPayload: emptyPayload,
-			},
-		},
-		Signature: genesis.Signature,
-	}
-
-	blkRoot, err := blk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
-
-	proposerServer := &Server{
-		HeadFetcher:       &blockchainTest.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false},
-		TimeFetcher:       &blockchainTest.ChainService{Genesis: time.Now()},
-		SyncChecker:       &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:     &blockchainTest.ChainService{},
-		HeadUpdater:       &blockchainTest.ChainService{},
-		ChainStartFetcher: &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		MockEth1Votes:     true,
-		AttPool:           attestations.NewPool(),
-		SlashingsPool:     slashings.NewPool(),
-		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
-		SyncCommitteePool: synccommittee.NewStore(),
-		ExecutionEngineCaller: &mockExecution.EngineClient{
-			PayloadIDBytes:   &v1.PayloadIDBytes{1},
-			ExecutionPayload: emptyPayload,
-		},
-		BeaconDB:               db,
-		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
-		BlockBuilder:           &builderTest.MockBuilderService{},
-	}
-	proposerServer.ProposerSlotIndexCache.SetProposerAndPayloadIDs(65, 40, [8]byte{'a'}, parentRoot)
-
-	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
-	require.NoError(t, err)
-
-	block, err := proposerServer.getBellatrixBeaconBlock(ctx, &ethpb.BlockRequest{
-		Slot:         bellatrixSlot + 1,
-		RandaoReveal: randaoReveal,
-	})
-	require.NoError(t, err)
-	bellatrixBlk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Bellatrix)
-	require.Equal(t, true, ok)
-	require.LogsContain(t, hook, "Computed state root")
-	require.DeepEqual(t, emptyPayload, bellatrixBlk.Bellatrix.Body.ExecutionPayload) // Payload should equal.
-}
-
-func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	ctx := context.Background()
-	hook := logTest.NewGlobal()
-
-	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
-	cfg.BellatrixForkEpoch = 2
-	cfg.AltairForkEpoch = 1
-	params.OverrideBeaconConfig(cfg)
-
-	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err, "Could not hash genesis state")
-
-	genesis := consensusblocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := blocks.NewSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-	parentRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
-
-	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
-	require.NoError(t, err)
-
-	emptyPayload := &v1.ExecutionPayload{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-	}
-	blk := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:       bellatrixSlot + 1,
-			ParentRoot: parentRoot[:],
-			StateRoot:  genesis.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:     genesis.Block.Body.RandaoReveal,
-				Graffiti:         genesis.Block.Body.Graffiti,
-				Eth1Data:         genesis.Block.Body.Eth1Data,
-				SyncAggregate:    &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
-				ExecutionPayload: emptyPayload,
-			},
-		},
-		Signature: genesis.Signature,
-	}
-
-	blkRoot, err := blk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
-
-	b1 := util.NewBeaconBlockBellatrix()
-	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := blocks.NewSignedBeaconBlock(b1)
-	require.NoError(t, err)
-	wbr1, err := wb1.Block().HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wb1))
-
-	random, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
-	require.NoError(t, err)
-
-	tstamp, err := slots.ToTime(beaconState.GenesisTime(), bellatrixSlot+1)
-	require.NoError(t, err)
-	h := &v1.ExecutionPayloadHeader{
-		BlockNumber:      123,
-		GasLimit:         456,
-		GasUsed:          789,
-		ParentHash:       make([]byte, fieldparams.RootLength),
-		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:       random,
-		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-		BlockHash:        make([]byte, fieldparams.RootLength),
-		TransactionsRoot: make([]byte, fieldparams.RootLength),
-		ExtraData:        make([]byte, 0),
-		Timestamp:        uint64(tstamp.Unix()),
-	}
-
-	proposerServer := &Server{
-		FinalizationFetcher: &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}},
-		HeadFetcher:         &blockchainTest.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false, Block: wb1},
-		TimeFetcher:         &blockchainTest.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0)},
-		SyncChecker:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       &blockchainTest.ChainService{},
-		HeadUpdater:         &blockchainTest.ChainService{},
-		ForkFetcher:         &blockchainTest.ChainService{Fork: &ethpb.Fork{}},
-		GenesisFetcher:      &blockchainTest.ChainService{},
-		ChainStartFetcher:   &mockExecution.Chain{},
-		Eth1InfoFetcher:     &mockExecution.Chain{},
-		MockEth1Votes:       true,
-		AttPool:             attestations.NewPool(),
-		SlashingsPool:       slashings.NewPool(),
-		ExitPool:            voluntaryexits.NewPool(),
-		StateGen:            stategen.New(db),
-		SyncCommitteePool:   synccommittee.NewStore(),
-		ExecutionEngineCaller: &mockExecution.EngineClient{
-			PayloadIDBytes:   &v1.PayloadIDBytes{1},
-			ExecutionPayload: emptyPayload,
-		},
-		BeaconDB: db,
-	}
-	sk, err := bls.RandKey()
-	require.NoError(t, err)
-	bid := &ethpb.BuilderBid{
-		Header: h,
-		Pubkey: sk.PublicKey().Marshal(),
-		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
-	}
-	d := params.BeaconConfig().DomainApplicationBuilder
-	domain, err := signing.ComputeDomain(d, nil, nil)
-	require.NoError(t, err)
-	sr, err := signing.ComputeSigningRoot(bid, domain)
-	require.NoError(t, err)
-	sBid := &ethpb.SignedBuilderBid{
-		Message:   bid,
-		Signature: sk.Sign(sr[:]).Marshal(),
-	}
-	proposerServer.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
-	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
-	require.NoError(t, err)
-
-	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{40},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
-
-	params.SetupTestConfigCleanup(t)
-	cfg.MaxBuilderConsecutiveMissedSlots = bellatrixSlot + 1
-	cfg.MaxBuilderEpochMissedSlots = 32
-	params.OverrideBeaconConfig(cfg)
-
-	block, err := proposerServer.getBellatrixBeaconBlock(ctx, &ethpb.BlockRequest{
-		Slot:         bellatrixSlot + 1,
-		RandaoReveal: randaoReveal,
-	})
-	require.NoError(t, err)
-	bellatrixBlk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_BlindedBellatrix)
-	require.Equal(t, true, ok)
-	require.LogsContain(t, hook, "Computed state root")
-	require.DeepEqual(t, h, bellatrixBlk.BlindedBellatrix.Body.ExecutionPayloadHeader) // Payload header should equal.
-}
-
-func TestServer_validatorRegistered(t *testing.T) {
-	proposerServer := &Server{}
-	ctx := context.Background()
-
-	reg, err := proposerServer.validatorRegistered(ctx, 0)
-	require.ErrorContains(t, "nil beacon db", err)
-	require.Equal(t, false, reg)
-
-	proposerServer.BeaconDB = dbTest.SetupDB(t)
-	reg, err = proposerServer.validatorRegistered(ctx, 0)
-	require.NoError(t, err)
-	require.Equal(t, false, reg)
-
-	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
-	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
-	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{0, 1},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}, {FeeRecipient: f, Pubkey: p}}))
-
-	reg, err = proposerServer.validatorRegistered(ctx, 0)
-	require.NoError(t, err)
-	require.Equal(t, true, reg)
-	reg, err = proposerServer.validatorRegistered(ctx, 1)
-	require.NoError(t, err)
-	require.Equal(t, true, reg)
 }
 
 func TestServer_validateBuilderSignature(t *testing.T) {
-	s := &Server{}
 	sk, err := bls.RandKey()
 	require.NoError(t, err)
 	bid := &ethpb.BuilderBid{
@@ -838,84 +523,73 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)
-	sBid := &ethpb.SignedBuilderBid{
+	pbBid := &ethpb.SignedBuilderBid{
 		Message:   bid,
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
-	require.NoError(t, s.validateBuilderSignature(sBid))
+	sBid, err := builder.WrappedSignedBuilderBid(pbBid)
+	require.NoError(t, err)
+	require.NoError(t, validateBuilderSignature(sBid))
 
-	sBid.Message.Value = make([]byte, 32)
-	require.ErrorIs(t, s.validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
+	pbBid.Message.Value = make([]byte, 32)
+	sBid, err = builder.WrappedSignedBuilderBid(pbBid)
+	require.NoError(t, err)
+	require.ErrorIs(t, validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
 }
 
-func TestServer_circuitBreakBuilder(t *testing.T) {
-	hook := logTest.NewGlobal()
-	s := &Server{}
-	_, err := s.circuitBreakBuilder(0)
-	require.ErrorContains(t, "no fork choicer configured", err)
-
-	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
-	s.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
-	b, err := s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
-	require.NoError(t, err)
-	require.Equal(t, true, b)
-	require.LogsContain(t, hook, "Builder circuit breaker activated due to missing consecutive slot")
-
-	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	ctx := context.Background()
-	st, blkRoot, err := createState(1, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
-	b, err = s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
-	require.NoError(t, err)
-	require.Equal(t, false, b)
-
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	st, blkRoot, err = createState(params.BeaconConfig().SlotsPerEpoch, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
-	b, err = s.circuitBreakBuilder(params.BeaconConfig().SlotsPerEpoch + 1)
-	require.NoError(t, err)
-	require.Equal(t, true, b)
-	require.LogsContain(t, hook, "Builder circuit breaker activated due to missing enough slots last epoch")
-
-	want := params.BeaconConfig().SlotsPerEpoch - params.BeaconConfig().MaxBuilderEpochMissedSlots
-	for i := types.Slot(2); i <= want+2; i++ {
-		st, blkRoot, err = createState(i, [32]byte{byte(i)}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
+func Test_matchingWithdrawalsRoot(t *testing.T) {
+	t.Run("could not get local withdrawals", func(t *testing.T) {
+		local := &v1.ExecutionPayload{}
+		p, err := blocks.WrappedExecutionPayload(local)
 		require.NoError(t, err)
-		require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
-	}
-	b, err = s.circuitBreakBuilder(params.BeaconConfig().SlotsPerEpoch + 1)
-	require.NoError(t, err)
-	require.Equal(t, false, b)
+		_, err = matchingWithdrawalsRoot(p, p)
+		require.ErrorContains(t, "could not get local withdrawals", err)
+	})
+	t.Run("could not get builder withdrawals root", func(t *testing.T) {
+		local := &v1.ExecutionPayloadCapella{}
+		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
+		require.NoError(t, err)
+		header := &v1.ExecutionPayloadHeader{}
+		h, err := blocks.WrappedExecutionPayloadHeader(header)
+		require.NoError(t, err)
+		_, err = matchingWithdrawalsRoot(p, h)
+		require.ErrorContains(t, "could not get builder withdrawals root", err)
+	})
+	t.Run("withdrawals mismatch", func(t *testing.T) {
+		local := &v1.ExecutionPayloadCapella{}
+		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
+		require.NoError(t, err)
+		header := &v1.ExecutionPayloadHeaderCapella{}
+		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, 0)
+		require.NoError(t, err)
+		matched, err := matchingWithdrawalsRoot(p, h)
+		require.NoError(t, err)
+		require.Equal(t, false, matched)
+	})
+	t.Run("withdrawals match", func(t *testing.T) {
+		wds := []*v1.Withdrawal{{
+			Index:          1,
+			ValidatorIndex: 2,
+			Address:        make([]byte, fieldparams.FeeRecipientLength),
+			Amount:         3,
+		}}
+		local := &v1.ExecutionPayloadCapella{Withdrawals: wds}
+		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
+		require.NoError(t, err)
+		header := &v1.ExecutionPayloadHeaderCapella{}
+		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		header.WithdrawalsRoot = wr[:]
+		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, 0)
+		require.NoError(t, err)
+		matched, err := matchingWithdrawalsRoot(p, h)
+		require.NoError(t, err)
+		require.Equal(t, true, matched)
+	})
 }
 
-func createState(
-	slot types.Slot,
-	blockRoot [32]byte,
-	parentRoot [32]byte,
-	payloadHash [32]byte,
-	justified *ethpb.Checkpoint,
-	finalized *ethpb.Checkpoint,
-) (state.BeaconState, [32]byte, error) {
-
-	base := &ethpb.BeaconStateBellatrix{
-		Slot:                       slot,
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		BlockRoots:                 make([][]byte, 1),
-		CurrentJustifiedCheckpoint: justified,
-		FinalizedCheckpoint:        finalized,
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
-			BlockHash: payloadHash[:],
-		},
-		LatestBlockHeader: &ethpb.BeaconBlockHeader{
-			ParentRoot: parentRoot[:],
-		},
-	}
-
-	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
-	st, err := v3.InitializeFromProto(base)
-	return st, blockRoot, err
+func TestEmptyTransactionsRoot(t *testing.T) {
+	r, err := ssz.TransactionsRoot([][]byte{})
+	require.NoError(t, err)
+	require.DeepEqual(t, r, emptyTransactionsRoot)
 }

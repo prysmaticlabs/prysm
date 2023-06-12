@@ -4,7 +4,9 @@ package math
 import (
 	"errors"
 	stdmath "math"
+	"math/big"
 	"math/bits"
+	"sync"
 
 	"github.com/thomaso-mirodin/intmath/u64"
 )
@@ -26,6 +28,12 @@ var (
 	ErrMulOverflow  = errors.New("multiplication overflows")
 	ErrAddOverflow  = errors.New("addition overflows")
 	ErrSubUnderflow = errors.New("subtraction underflow")
+
+	// Sensible guess for 500 000 validators
+	cachedSquareRoot = struct {
+		sync.Mutex
+		squareRoot, balance uint64
+	}{squareRoot: 126491106, balance: 15999999897103236}
 )
 
 // Common square root values.
@@ -41,6 +49,28 @@ var squareRootTable = map[uint64]uint64{
 	262144:  512,
 	1048576: 1024,
 	4194304: 2048,
+}
+
+// CachedSquareRoot implements Newton's algorithm to compute the square root of
+// the given uint64 starting from the last cached value
+func CachedSquareRoot(balance uint64) uint64 {
+	if balance == 0 {
+		return 0
+	}
+	cachedSquareRoot.Lock()
+	defer cachedSquareRoot.Unlock()
+	if balance == cachedSquareRoot.balance {
+		return cachedSquareRoot.squareRoot
+	}
+	cachedSquareRoot.balance = balance
+	val := balance / cachedSquareRoot.squareRoot
+	for {
+		cachedSquareRoot.squareRoot = (cachedSquareRoot.squareRoot + val) / 2
+		val = balance / cachedSquareRoot.squareRoot
+		if cachedSquareRoot.squareRoot <= val {
+			return cachedSquareRoot.squareRoot
+		}
+	}
 }
 
 // IntegerSquareRoot defines a function that returns the
@@ -159,7 +189,7 @@ func Mod64(a, b uint64) (uint64, error) {
 	return val, nil
 }
 
-// Int returns the integer value of the uint64 argument. If there is an overlow, then an error is
+// Int returns the integer value of the uint64 argument. If there is an overflow, then an error is
 // returned.
 func Int(u uint64) (int, error) {
 	if u > stdmath.MaxInt {
@@ -179,7 +209,18 @@ func AddInt(i ...int) (int, error) {
 		}
 
 		sum += ii
-
 	}
 	return sum, nil
+}
+
+// WeiToGwei converts big int wei to uint64 gwei.
+// The input `v` is copied before being modified.
+func WeiToGwei(v *big.Int) uint64 {
+	if v == nil {
+		return 0
+	}
+	gweiPerEth := big.NewInt(1e9)
+	copied := big.NewInt(0).Set(v)
+	copied.Div(copied, gweiPerEth)
+	return copied.Uint64()
 }

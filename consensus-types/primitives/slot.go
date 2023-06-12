@@ -1,10 +1,10 @@
-package types
+package primitives
 
 import (
 	"fmt"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v4/math"
 )
 
 var _ fssz.HashRoot = (Slot)(0)

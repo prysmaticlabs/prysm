@@ -9,45 +9,46 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	p2pt "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	p2pTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	beaconsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
 type testCache struct {
 	sync.RWMutex
-	rootCache       map[types.Slot][32]byte
-	parentSlotCache map[types.Slot]types.Slot
+	rootCache       map[primitives.Slot][32]byte
+	parentSlotCache map[primitives.Slot]primitives.Slot
 }
 
 var cache = &testCache{}
 
 type peerData struct {
-	blocks         []types.Slot // slots that peer has blocks
-	finalizedEpoch types.Epoch
-	headSlot       types.Slot
-	failureSlots   []types.Slot // slots at which the peer will return an error
+	blocks         []primitives.Slot // slots that peer has blocks
+	finalizedEpoch primitives.Epoch
+	headSlot       primitives.Slot
+	failureSlots   []primitives.Slot // slots at which the peer will return an error
 	forkedPeer     bool
 }
 
@@ -72,7 +73,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
+func initializeTestServices(t *testing.T, slots []primitives.Slot, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
 	cache.initializeRootCache(slots, t)
 	beaconDB := dbtest.SetupDB(t)
 
@@ -100,36 +101,36 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 }
 
 // makeGenesisTime where now is the current slot.
-func makeGenesisTime(currentSlot types.Slot) time.Time {
+func makeGenesisTime(currentSlot primitives.Slot) time.Time {
 	return prysmTime.Now().Add(-1 * time.Second * time.Duration(currentSlot) * time.Duration(params.BeaconConfig().SecondsPerSlot))
 }
 
 // sanity test on helper function
 func TestMakeGenesisTime(t *testing.T) {
-	currentSlot := types.Slot(64)
+	currentSlot := primitives.Slot(64)
 	gt := makeGenesisTime(currentSlot)
 	require.Equal(t, currentSlot, slots.Since(gt))
 }
 
 // helper function for sequences of block slots
-func makeSequence(start, end types.Slot) []types.Slot {
+func makeSequence(start, end primitives.Slot) []primitives.Slot {
 	if end < start {
 		panic("cannot make sequence where end is before start")
 	}
-	seq := make([]types.Slot, 0, end-start+1)
+	seq := make([]primitives.Slot, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		seq = append(seq, i)
 	}
 	return seq
 }
 
-func (c *testCache) initializeRootCache(reqSlots []types.Slot, t *testing.T) {
+func (c *testCache) initializeRootCache(reqSlots []primitives.Slot, t *testing.T) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.rootCache = make(map[types.Slot][32]byte)
-	c.parentSlotCache = make(map[types.Slot]types.Slot)
-	parentSlot := types.Slot(0)
+	c.rootCache = make(map[primitives.Slot][32]byte)
+	c.parentSlotCache = make(map[primitives.Slot]primitives.Slot)
+	parentSlot := primitives.Slot(0)
 
 	genesisBlock := util.NewBeaconBlock().Block
 	genesisRoot, err := genesisBlock.HashTreeRoot()
@@ -151,7 +152,7 @@ func (c *testCache) initializeRootCache(reqSlots []types.Slot, t *testing.T) {
 // sanity test on helper function
 func TestMakeSequence(t *testing.T) {
 	got := makeSequence(3, 5)
-	want := []types.Slot{3, 4, 5}
+	want := []primitives.Slot{3, 4, 5}
 	require.DeepEqual(t, want, got)
 }
 
@@ -216,11 +217,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			ret = ret[:req.Count]
 		}
 
-		mChain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		for i := 0; i < len(ret); i++ {
 			wsb, err := blocks.NewSignedBeaconBlock(ret[i])
 			require.NoError(t, err)
-			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wsb))
+			assert.NoError(t, beaconsync.WriteBlockChunk(stream, startup.NewClock(time.Now(), [32]byte{}), p.Encoding(), wsb))
 		}
 	})
 
@@ -257,7 +257,7 @@ func extendBlockSequence(t *testing.T, inSeq []*ethpb.SignedBeaconBlock, size in
 	// Extend block chain sequentially.
 	for slot := startSlot; slot < len(outSeq); slot++ {
 		outSeq[slot] = util.NewBeaconBlock()
-		outSeq[slot].Block.Slot = types.Slot(slot)
+		outSeq[slot].Block.Slot = primitives.Slot(slot)
 		parentRoot, err := outSeq[slot-1].Block.HashTreeRoot()
 		require.NoError(t, err)
 		outSeq[slot].Block.ParentRoot = parentRoot[:]
@@ -271,7 +271,7 @@ func extendBlockSequence(t *testing.T, inSeq []*ethpb.SignedBeaconBlock, size in
 
 // connectPeerHavingBlocks connect host with a peer having provided blocks.
 func connectPeerHavingBlocks(
-	t *testing.T, host *p2pt.TestP2P, blks []*ethpb.SignedBeaconBlock, finalizedSlot types.Slot,
+	t *testing.T, host *p2pt.TestP2P, blks []*ethpb.SignedBeaconBlock, finalizedSlot primitives.Slot,
 	peerStatus *peers.Status,
 ) peer.ID {
 	p := p2pt.NewTestP2P(t)
@@ -285,14 +285,13 @@ func connectPeerHavingBlocks(
 		req := &ethpb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
-		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 			if uint64(i) >= uint64(len(blks)) {
 				break
 			}
-			chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 			wsb, err := blocks.NewSignedBeaconBlock(blks[i])
 			require.NoError(t, err)
-			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wsb))
+			require.NoError(t, beaconsync.WriteBlockChunk(stream, startup.NewClock(time.Now(), [32]byte{}), p.Encoding(), wsb))
 		}
 	})
 

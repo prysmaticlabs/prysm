@@ -5,32 +5,31 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	runtimeDebug "runtime/debug"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/node"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	blockchaincmd "github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/blockchain"
-	dbcommands "github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	jwtcommands "github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/jwt"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/checkpoint"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/io/logs"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/journald"
-	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
-	"github.com/prysmaticlabs/prysm/v3/runtime/fdlimits"
-	prefixed "github.com/prysmaticlabs/prysm/v3/runtime/logging/logrus-prefixed-formatter"
-	_ "github.com/prysmaticlabs/prysm/v3/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/v3/runtime/tos"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/node"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	blockchaincmd "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/blockchain"
+	dbcommands "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	jwtcommands "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/jwt"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/genesis"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/io/logs"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/journald"
+	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v4/runtime/fdlimits"
+	prefixed "github.com/prysmaticlabs/prysm/v4/runtime/logging/logrus-prefixed-formatter"
+	_ "github.com/prysmaticlabs/prysm/v4/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/v4/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -38,7 +37,7 @@ import (
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.ExecutionEngineEndpoint,
-	flags.HTTPWeb3ProviderFlag,
+	flags.ExecutionEngineHeaders,
 	flags.ExecutionJWTSecretFlag,
 	flags.RPCHost,
 	flags.RPCPort,
@@ -55,11 +54,11 @@ var appFlags = []cli.Flag{
 	flags.BlockBatchLimit,
 	flags.BlockBatchLimitBurstFactor,
 	flags.InteropMockEth1DataVotesFlag,
-	flags.InteropGenesisStateFlag,
 	flags.InteropNumValidatorsFlag,
 	flags.InteropGenesisTimeFlag,
 	flags.SlotsPerArchivedPoint,
 	flags.EnableDebugRPCEndpoints,
+	flags.EnableRegistrationCache,
 	flags.SubscribeToAllSubnets,
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
@@ -74,6 +73,7 @@ var appFlags = []cli.Flag{
 	flags.MevRelayEndpoint,
 	flags.MaxBuilderEpochMissedSlots,
 	flags.MaxBuilderConsecutiveMissedSlots,
+	flags.EngineEndpointTimeoutSeconds,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
@@ -89,6 +89,7 @@ var appFlags = []cli.Flag{
 	cmd.P2PHostDNS,
 	cmd.P2PMaxPeers,
 	cmd.P2PPrivKey,
+	cmd.P2PStaticID,
 	cmd.P2PMetadata,
 	cmd.P2PAllowList,
 	cmd.P2PDenyList,
@@ -128,6 +129,7 @@ var appFlags = []cli.Flag{
 	checkpoint.RemoteURL,
 	genesis.StatePath,
 	genesis.BeaconAPIURL,
+	flags.SlasherDirFlag,
 }
 
 func init() {
@@ -138,7 +140,12 @@ func main() {
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum"
-	app.Action = startNode
+	app.Action = func(ctx *cli.Context) error {
+		if err := startNode(ctx); err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
+		return nil
+	}
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		dbcommands.Commands,
@@ -188,13 +195,9 @@ func main() {
 		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
 			return err
 		}
-		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
-			return err
-		}
 		if ctx.IsSet(flags.SetGCPercent.Name) {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
 		}
-		runtime.GOMAXPROCS(runtime.NumCPU())
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}

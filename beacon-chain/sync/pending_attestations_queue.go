@@ -6,20 +6,22 @@ import (
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/v3/async"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/async"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
 var processPendingAttsPeriod = slots.DivideSlotBy(2 /* twice per slot */)
+var pendingAttsLimit = 10000
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
@@ -45,7 +47,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
-	s.validatePendingAtts(ctx, s.cfg.chain.CurrentSlot())
+	s.validatePendingAtts(ctx, s.cfg.clock.CurrentSlot())
 
 	s.pendingAttsLock.RLock()
 	roots := make([][32]byte, 0, len(s.blkRootToPendingAtts))
@@ -75,7 +77,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		} else {
 			// Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
-				"currentSlot": s.cfg.chain.CurrentSlot(),
+				"currentSlot": s.cfg.clock.CurrentSlot(),
 				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
 				"attCount":    len(attestations),
 				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
@@ -115,8 +117,8 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 			// This is an important validation before retrieving attestation pre state to defend against
 			// attestation's target intentionally reference checkpoint that's long ago.
 			// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-			if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
-				log.WithError(err).Debug("Could not verify finalized consistency")
+			if !s.cfg.chain.InForkchoice(bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)) {
+				log.WithError(blockchain.ErrNotDescendantOfFinalized).Debug("Could not verify finalized consistency")
 				continue
 			}
 			if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
@@ -163,6 +165,16 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 
 	s.pendingAttsLock.Lock()
 	defer s.pendingAttsLock.Unlock()
+
+	numOfPendingAtts := 0
+	for _, v := range s.blkRootToPendingAtts {
+		numOfPendingAtts += len(v)
+	}
+	// Exit early if we exceed the pending attestations limit.
+	if numOfPendingAtts >= pendingAttsLimit {
+		return
+	}
+
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
 		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}
@@ -183,7 +195,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 // If not valid, a node will remove it in the queue in place. The validity
 // check specifies the pending attestation could not fall one epoch behind
 // of the current slot.
-func (s *Service) validatePendingAtts(ctx context.Context, slot types.Slot) {
+func (s *Service) validatePendingAtts(ctx context.Context, slot primitives.Slot) {
 	ctx, span := trace.StartSpan(ctx, "validatePendingAtts")
 	defer span.End()
 

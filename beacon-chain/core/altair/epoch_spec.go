@@ -3,21 +3,23 @@ package altair
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	log "github.com/sirupsen/logrus"
 )
 
 // ProcessSyncCommitteeUpdates  processes sync client committee updates for the beacon state.
 //
+// nolint:dupword
 // Spec code:
 // def process_sync_committee_updates(state: BeaconState) -> None:
-//    next_epoch = get_current_epoch(state) + Epoch(1)
-//    if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0:
-//        state.current_sync_committee = state.next_sync_committee
-//        state.next_sync_committee = get_next_sync_committee(state)
+//
+//	next_epoch = get_current_epoch(state) + Epoch(1)
+//	if next_epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD == 0:
+//	    state.current_sync_committee = state.next_sync_committee
+//	    state.next_sync_committee = get_next_sync_committee(state)
 func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconState) (state.BeaconState, error) {
 	nextEpoch := time.NextEpoch(beaconState)
 	if nextEpoch%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
@@ -44,10 +46,12 @@ func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconSt
 
 // ProcessParticipationFlagUpdates processes participation flag updates by rotating current to previous.
 //
+// nolint:dupword
 // Spec code:
 // def process_participation_flag_updates(state: BeaconState) -> None:
-//    state.previous_epoch_participation = state.current_epoch_participation
-//    state.current_epoch_participation = [ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
+//
+//	state.previous_epoch_participation = state.current_epoch_participation
+//	state.current_epoch_participation = [ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
 func ProcessParticipationFlagUpdates(beaconState state.BeaconState) (state.BeaconState, error) {
 	c, err := beaconState.CurrentEpochParticipation()
 	if err != nil {

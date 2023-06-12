@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/io/prompt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -37,10 +37,6 @@ var (
 
 // VerifyTosAcceptedOrPrompt check if Tos was accepted before or asks to accept.
 func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
-	if ctx.Bool(cmd.E2EConfigFlag.Name) {
-		return nil
-	}
-
 	if file.FileExists(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)) {
 		return nil
 	}

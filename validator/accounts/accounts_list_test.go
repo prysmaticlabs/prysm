@@ -1,67 +1,110 @@
 package accounts
 
 import (
-	"context"
+	"flag"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/mock"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
-	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
+	constant "github.com/prysmaticlabs/prysm/v4/validator/testing"
+	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-type mockRemoteKeymanager struct {
-	publicKeys [][fieldparams.BLSPubkeyLength]byte
-	opts       *remote.KeymanagerOpts
+const (
+	passwordFileName = "password.txt"
+	password         = "OhWOWthisisatest42!$"
+)
+
+type testWalletConfig struct {
+	exitAll                 bool
+	skipDepositConfirm      bool
+	keymanagerKind          keymanager.Kind
+	numAccounts             int64
+	grpcHeaders             string
+	privateKeyFile          string
+	accountPasswordFile     string
+	walletPasswordFile      string
+	backupPasswordFile      string
+	backupPublicKeys        string
+	voluntaryExitPublicKeys string
+	deletePublicKeys        string
+	keysDir                 string
+	backupDir               string
+	passwordsDir            string
+	walletDir               string
 }
 
-func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	return m.publicKeys, nil
+func setupWalletCtx(
+	tb testing.TB,
+	cfg *testWalletConfig,
+) *cli.Context {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.WalletDirFlag.Name, cfg.walletDir, "")
+	set.String(flags.KeysDirFlag.Name, cfg.keysDir, "")
+	set.String(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String(), "")
+	set.String(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys, "")
+	set.String(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys, "")
+	set.String(flags.BackupDirFlag.Name, cfg.backupDir, "")
+	set.String(flags.BackupPasswordFile.Name, cfg.backupPasswordFile, "")
+	set.String(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys, "")
+	set.String(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile, "")
+	set.String(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile, "")
+	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
+	set.Bool(flags.SkipDepositConfirmationFlag.Name, cfg.skipDepositConfirm, "")
+	set.Bool(flags.SkipMnemonic25thWordCheckFlag.Name, true, "")
+	set.Bool(flags.ExitAllFlag.Name, cfg.exitAll, "")
+	set.String(flags.GrpcHeadersFlag.Name, cfg.grpcHeaders, "")
+
+	if cfg.privateKeyFile != "" {
+		set.String(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile, "")
+		assert.NoError(tb, set.Set(flags.ImportPrivateKeyFileFlag.Name, cfg.privateKeyFile))
+	}
+	assert.NoError(tb, set.Set(flags.WalletDirFlag.Name, cfg.walletDir))
+	assert.NoError(tb, set.Set(flags.SkipMnemonic25thWordCheckFlag.Name, "true"))
+	assert.NoError(tb, set.Set(flags.KeysDirFlag.Name, cfg.keysDir))
+	assert.NoError(tb, set.Set(flags.KeymanagerKindFlag.Name, cfg.keymanagerKind.String()))
+	assert.NoError(tb, set.Set(flags.DeletePublicKeysFlag.Name, cfg.deletePublicKeys))
+	assert.NoError(tb, set.Set(flags.VoluntaryExitPublicKeysFlag.Name, cfg.voluntaryExitPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupDirFlag.Name, cfg.backupDir))
+	assert.NoError(tb, set.Set(flags.BackupPublicKeysFlag.Name, cfg.backupPublicKeys))
+	assert.NoError(tb, set.Set(flags.BackupPasswordFile.Name, cfg.backupPasswordFile))
+	assert.NoError(tb, set.Set(flags.WalletPasswordFileFlag.Name, cfg.walletPasswordFile))
+	assert.NoError(tb, set.Set(flags.AccountPasswordFileFlag.Name, cfg.accountPasswordFile))
+	assert.NoError(tb, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
+	assert.NoError(tb, set.Set(flags.SkipDepositConfirmationFlag.Name, strconv.FormatBool(cfg.skipDepositConfirm)))
+	assert.NoError(tb, set.Set(flags.ExitAllFlag.Name, strconv.FormatBool(cfg.exitAll)))
+	assert.NoError(tb, set.Set(flags.GrpcHeadersFlag.Name, cfg.grpcHeaders))
+	return cli.NewContext(&app, set, nil)
 }
 
-func (_ *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
-	return nil, nil
-}
-
-func (_ *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
-	return nil
-}
-
-func (_ *mockRemoteKeymanager) ExtractKeystores(
-	_ context.Context, _ []bls.PublicKey, _ string,
-) ([]*keymanager.Keystore, error) {
-	return nil, nil
-}
-
-func (km *mockRemoteKeymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
-	return remote.ListKeymanagerAccountsImpl(ctx, cfg, km, km.opts)
-}
-
-func (*mockRemoteKeymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
-	return nil, nil
+func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
+	walletDir := filepath.Join(t.TempDir(), "wallet")
+	passwordsDir := filepath.Join(t.TempDir(), "passwords")
+	passwordFileDir := filepath.Join(t.TempDir(), "passwordFile")
+	require.NoError(t, os.MkdirAll(passwordFileDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
+	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
+	require.NoError(t, os.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	return walletDir, passwordsDir, passwordFilePath
 }
 
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
@@ -90,13 +133,14 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 		keymanagerKind:     keymanager.Local,
 		walletPasswordFile: walletPasswordFile,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: "Passwordz0320$",
-		},
-	})
+	opts := []Option{
+		WithWalletDir(walletDir),
+		WithKeymanagerType(keymanager.Local),
+		WithWalletPassword("Passwordz0320$"),
+	}
+	acc, err := NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 	km, err := local.NewKeymanager(
 		cliCtx.Context,
@@ -235,6 +279,44 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 		keyFound := strings.Contains(lines[lineNumber], keyString)
 		assert.Equal(t, true, keyFound, "Private Key %s not found on line number %d", keyString, lineNumber)
 	}
+
+	rescueStdout = os.Stdout
+	r, writer, err = os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = writer
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := validatormock.NewMockValidatorClient(ctrl)
+	var pks [][]byte
+	for i := range pubKeys {
+		pks = append(pks, pubKeys[i][:])
+	}
+	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
+	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
+
+	m.
+		EXPECT().
+		MultipleValidatorStatus(gomock.Any(), gomock.Eq(req)).
+		Return(resp, nil)
+
+	require.NoError(
+		t,
+		listValidatorIndices(
+			cliCtx.Context,
+			km,
+			m,
+		),
+	)
+	require.NoError(t, writer.Close())
+	out, err = io.ReadAll(r)
+	require.NoError(t, err)
+	os.Stdout = rescueStdout
+
+	expectedStdout := au.BrightGreen("Validator indices:").Bold().String() +
+		fmt.Sprintf("\n%#x: %d", pubKeys[0][0:4], 1) +
+		fmt.Sprintf("\n%#x: %d\n", pubKeys[2][0:4], 2)
+	require.Equal(t, expectedStdout, string(out))
 }
 
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
@@ -245,13 +327,14 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keymanagerKind:     keymanager.Derived,
 		walletPasswordFile: passwordFilePath,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: "Passwordz0320$",
-		},
-	})
+	opts := []Option{
+		WithWalletDir(walletDir),
+		WithKeymanagerType(keymanager.Derived),
+		WithWalletPassword("Passwordz0320$"),
+	}
+	acc, err := NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 
 	km, err := derived.NewKeymanager(
@@ -264,7 +347,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
-	err = km.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
@@ -376,176 +459,4 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keyFound := strings.Contains(lines[lineNumber], keyString)
 		assert.Equal(t, true, keyFound, "Validating Private Key %s not found on line number %d", keyString, lineNumber)
 	}
-}
-
-func TestListAccounts_RemoteKeymanager(t *testing.T) {
-	walletDir, _, _ := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		keymanagerKind: keymanager.Remote,
-	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Remote,
-			WalletPassword: password,
-		},
-	})
-	require.NoError(t, err)
-
-	rescueStdout := os.Stdout
-	r, writer, err := os.Pipe()
-	require.NoError(t, err)
-	os.Stdout = writer
-
-	numAccounts := 3
-	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
-	for i := 0; i < numAccounts; i++ {
-		key := make([]byte, 48)
-		copy(key, strconv.Itoa(i))
-		pubKeys[i] = bytesutil.ToBytes48(key)
-	}
-	km := &mockRemoteKeymanager{
-		publicKeys: pubKeys,
-		opts: &remote.KeymanagerOpts{
-			RemoteCertificate: &remote.CertificateConfig{
-				RequireTls:     true,
-				ClientCertPath: "/tmp/client.crt",
-				ClientKeyPath:  "/tmp/client.key",
-				CACertPath:     "/tmp/ca.crt",
-			},
-			RemoteAddr: "localhost:4000",
-		},
-	}
-	// We call the list remote keymanager accounts function.
-	require.NoError(t,
-		km.ListKeymanagerAccounts(context.Background(),
-			keymanager.ListKeymanagerAccountConfig{
-				KeymanagerConfigFileName: wallet.KeymanagerConfigFileName,
-			}))
-
-	require.NoError(t, writer.Close())
-	out, err := io.ReadAll(r)
-	require.NoError(t, err)
-	os.Stdout = rescueStdout
-
-	// Get stdout content and split to lines
-	newLine := fmt.Sprintln()
-	lines := strings.Split(string(out), newLine)
-
-	// Expected output example:
-	/*
-		(keymanager kind) remote signer
-		(configuration file path) /tmp/79336/wallet/remote/keymanageropts.json
-
-		Configuration options
-		Remote gRPC address: localhost:4000
-		Require TLS: true
-		Client cert path: /tmp/client.crt
-		Client key path: /tmp/client.key
-		CA cert path: /tmp/ca.crt
-
-		Showing 3 validator accounts
-
-		equally-primary-foal
-		[validating public key] 0x300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-
-
-		rationally-charmed-werewolf
-		[validating public key] 0x310000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-
-
-	*/
-
-	// Expected output format definition
-	const prologLength = 11
-	const configOffset = 4
-	const configLength = 5
-	const accountLength = 4
-	const nameOffset = 1
-	const keyOffset = 2
-	const epilogLength = 1
-
-	// Require the output has correct number of lines
-	lineCount := prologLength + accountLength*numAccounts + epilogLength
-	require.Equal(t, lineCount, len(lines))
-
-	// Assert the keymanager kind is printed on the first line.
-	kindString := w.KeymanagerKind().String()
-	kindFound := strings.Contains(lines[0], kindString)
-	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
-
-	// Assert that Configuration is printed in the right position
-	configLines := lines[configOffset:(configOffset + configLength)]
-	configExpected := km.opts.String()
-	configActual := fmt.Sprintln(strings.Join(configLines, newLine))
-	assert.Equal(t, configExpected, configActual, "Configuration not found at the expected position")
-
-	// Assert that account names are printed on the correct lines
-	for i := 0; i < numAccounts; i++ {
-		lineNumber := prologLength + accountLength*i + nameOffset
-		accountName := petnames.DeterministicName(pubKeys[i][:], "-")
-		accountNameFound := strings.Contains(lines[lineNumber], accountName)
-		assert.Equal(t, true, accountNameFound, "Account Name %s not found on line number %d", accountName, lineNumber)
-	}
-
-	// Assert that public keys are printed on the correct lines
-	for i, key := range pubKeys {
-		lineNumber := prologLength + accountLength*i + keyOffset
-		keyString := fmt.Sprintf("%#x", key)
-		keyFound := strings.Contains(lines[lineNumber], keyString)
-		assert.Equal(t, true, keyFound, "Public Key %s not found on line number %d", keyString, lineNumber)
-	}
-}
-
-func TestListAccounts_ListValidatorIndices(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	numAccounts := 3
-	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
-	pks := make([][]byte, numAccounts)
-
-	for i := 0; i < numAccounts; i++ {
-		key := make([]byte, 48)
-		copy(key, strconv.Itoa(i))
-		pubKeys[i] = bytesutil.ToBytes48(key)
-		pks[i] = key
-	}
-
-	km := &mockRemoteKeymanager{
-		publicKeys: pubKeys,
-	}
-
-	rescueStdout := os.Stdout
-	r, writer, err := os.Pipe()
-	require.NoError(t, err)
-	os.Stdout = writer
-
-	m := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
-	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
-	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
-
-	m.
-		EXPECT().
-		MultipleValidatorStatus(gomock.Eq(context.Background()), gomock.Eq(req)).
-		Return(resp, nil)
-
-	require.NoError(
-		t,
-		listValidatorIndices(
-			context.Background(),
-			km,
-			m,
-		),
-	)
-
-	require.NoError(t, writer.Close())
-	out, err := io.ReadAll(r)
-	require.NoError(t, err)
-	os.Stdout = rescueStdout
-
-	expectedStdout := au.BrightGreen("Validator indices:").Bold().String() + "\n0x30000000: 1\n0x32000000: 2\n"
-	require.Equal(t, expectedStdout, string(out))
 }

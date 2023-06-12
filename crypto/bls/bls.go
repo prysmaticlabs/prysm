@@ -1,12 +1,12 @@
 // Package bls implements a go-wrapper around a library implementing the
-// the BLS12-381 curve and signature scheme. This package exposes a public API for
+// BLS12-381 curve and signature scheme. This package exposes a public API for
 // verifying and aggregating BLS signatures used by Ethereum.
 package bls
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/herumi"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/herumi"
 )
 
 // Initialize herumi temporarily while we transition to blst for ethdo.
@@ -22,6 +22,13 @@ func SecretKeyFromBytes(privKey []byte) (SecretKey, error) {
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
 func PublicKeyFromBytes(pubKey []byte) (PublicKey, error) {
 	return blst.PublicKeyFromBytes(pubKey)
+}
+
+// SignatureFromBytesNoValidation creates a BLS signature from a LittleEndian byte slice.
+// It does not check validity of the signature, use only when the byte slice has
+// already been verified
+func SignatureFromBytesNoValidation(sig []byte) (Signature, error) {
+	return blst.SignatureFromBytesNoValidation(sig)
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
@@ -52,6 +59,11 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 // AggregateCompressedSignatures converts a list of compressed signatures into a single, aggregated sig.
 func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
 	return blst.AggregateCompressedSignatures(multiSigs)
+}
+
+// VerifySignature verifies a single signature. For performance reason, always use VerifyMultipleSignatures if possible.
+func VerifySignature(sig []byte, msg [32]byte, pubKey common.PublicKey) (bool, error) {
+	return blst.VerifySignature(sig, msg, pubKey)
 }
 
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.

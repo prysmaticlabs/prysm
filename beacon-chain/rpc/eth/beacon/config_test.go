@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -31,8 +32,6 @@ func TestGetSpec(t *testing.T) {
 	config.HysteresisQuotient = 9
 	config.HysteresisDownwardMultiplier = 10
 	config.HysteresisUpwardMultiplier = 11
-	config.SafeSlotsToImportOptimistically = 128
-	config.SafeSlotsToUpdateJustified = 12
 	config.Eth1FollowDistance = 13
 	config.TargetAggregatorsPerCommittee = 14
 	config.RandomSubnetsPerValidator = 15
@@ -50,8 +49,6 @@ func TestGetSpec(t *testing.T) {
 	config.AltairForkEpoch = 100
 	config.BellatrixForkVersion = []byte("BellatrixForkVersion")
 	config.BellatrixForkEpoch = 101
-	config.ShardingForkVersion = []byte("ShardingForkVersion")
-	config.ShardingForkEpoch = 102
 	config.CapellaForkVersion = []byte("CapellaForkVersion")
 	config.CapellaForkEpoch = 103
 	config.BLSWithdrawalPrefixByte = byte('b')
@@ -104,6 +101,9 @@ func TestGetSpec(t *testing.T) {
 	config.TerminalBlockHashActivationEpoch = 72
 	config.TerminalTotalDifficulty = "73"
 	config.DefaultFeeRecipient = common.HexToAddress("DefaultFeeRecipient")
+	config.MaxWithdrawalsPerPayload = 74
+	config.MaxBlsToExecutionChanges = 75
+	config.MaxValidatorsPerWithdrawalsSweep = 76
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -136,7 +136,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 102, len(resp.Data))
+	assert.Equal(t, 108, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -166,7 +166,7 @@ func TestGetSpec(t *testing.T) {
 		case "HYSTERESIS_UPWARD_MULTIPLIER":
 			assert.Equal(t, "11", v)
 		case "SAFE_SLOTS_TO_UPDATE_JUSTIFIED":
-			assert.Equal(t, "12", v)
+			assert.Equal(t, "0", v)
 		case "ETH1_FOLLOW_DISTANCE":
 			assert.Equal(t, "13", v)
 		case "TARGET_AGGREGATORS_PER_COMMITTEE":
@@ -201,10 +201,6 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("BellatrixForkVersion")), v)
 		case "BELLATRIX_FORK_EPOCH":
 			assert.Equal(t, "101", v)
-		case "SHARDING_FORK_VERSION":
-			assert.Equal(t, "0x"+hex.EncodeToString([]byte("ShardingForkVersion")), v)
-		case "SHARDING_FORK_EPOCH":
-			assert.Equal(t, "102", v)
 		case "CAPELLA_FORK_VERSION":
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("CapellaForkVersion")), v)
 		case "CAPELLA_FORK_EPOCH":
@@ -335,6 +331,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x08000000", v)
 		case "DOMAIN_CONTRIBUTION_AND_PROOF":
 			assert.Equal(t, "0x09000000", v)
+		case "DOMAIN_BLS_TO_EXECUTION_CHANGE":
+			assert.Equal(t, "0x0a000000", v)
+		case "DOMAIN_APPLICATION_BUILDER":
+			assert.Equal(t, "0x00000001", v)
 		case "TRANSITION_TOTAL_DIFFICULTY":
 			assert.Equal(t, "0", v)
 		case "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH":
@@ -355,8 +355,19 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "40", v)
 		case "INTERVALS_PER_SLOT":
 			assert.Equal(t, "3", v)
+		case "MAX_WITHDRAWALS_PER_PAYLOAD":
+			assert.Equal(t, "74", v)
+		case "MAX_BLS_TO_EXECUTION_CHANGES":
+			assert.Equal(t, "75", v)
+		case "MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP":
+			assert.Equal(t, "76", v)
+		case "REORG_MAX_EPOCHS_SINCE_FINALIZATION":
+			assert.Equal(t, "2", v)
+		case "REORG_WEIGHT_THRESHOLD":
+			assert.Equal(t, "20", v)
+		case "REORG_PARENT_WEIGHT_THRESHOLD":
+			assert.Equal(t, "160", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
-			assert.Equal(t, "128", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
@@ -381,15 +392,15 @@ func TestGetDepositContract(t *testing.T) {
 
 func TestForkSchedule_Ok(t *testing.T) {
 	genesisForkVersion := []byte("Genesis")
-	firstForkVersion, firstForkEpoch := []byte("Firs"), types.Epoch(100)
-	secondForkVersion, secondForkEpoch := []byte("Seco"), types.Epoch(200)
-	thirdForkVersion, thirdForkEpoch := []byte("Thir"), types.Epoch(300)
+	firstForkVersion, firstForkEpoch := []byte("Firs"), primitives.Epoch(100)
+	secondForkVersion, secondForkEpoch := []byte("Seco"), primitives.Epoch(200)
+	thirdForkVersion, thirdForkEpoch := []byte("Thir"), primitives.Epoch(300)
 
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig().Copy()
 	config.GenesisForkVersion = genesisForkVersion
 	// Create fork schedule adding keys in non-sorted order.
-	schedule := make(map[[4]byte]types.Epoch, 3)
+	schedule := make(map[[4]byte]primitives.Epoch, 3)
 	schedule[bytesutil.ToBytes4(secondForkVersion)] = secondForkEpoch
 	schedule[bytesutil.ToBytes4(firstForkVersion)] = firstForkEpoch
 	schedule[bytesutil.ToBytes4(thirdForkVersion)] = thirdForkEpoch
@@ -418,6 +429,6 @@ func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	s := &Server{}
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	// Genesis and Altair.
-	assert.Equal(t, 3, len(resp.Data))
+	os := forks.NewOrderedSchedule(params.BeaconConfig())
+	assert.Equal(t, os.Len(), len(resp.Data))
 }

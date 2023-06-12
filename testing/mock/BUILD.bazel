@@ -7,8 +7,6 @@ go_library(
     srcs = [
         "beacon_altair_validator_client_mock.go",
         "beacon_altair_validator_server_mock.go",
-        "beacon_chain_altair_client_mock.go",
-        "beacon_chain_altair_service_mock.go",
         "beacon_chain_service_mock.go",
         "beacon_service_mock.go",
         "beacon_validator_client_mock.go",
@@ -18,7 +16,7 @@ go_library(
         "node_service_mock.go",
         "slasher_client_mock.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/testing/mock",
+    importpath = "github.com/prysmaticlabs/prysm/v4/testing/mock",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/service:go_default_library",

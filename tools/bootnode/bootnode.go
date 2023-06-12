@@ -27,21 +27,21 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/async"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/io/logs"
-	"github.com/prysmaticlabs/prysm/v3/network"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	_ "github.com/prysmaticlabs/prysm/v3/runtime/maxprocs"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/async"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v4/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/io/logs"
+	"github.com/prysmaticlabs/prysm/v4/network"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	_ "github.com/prysmaticlabs/prysm/v4/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -114,7 +114,13 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/p2p", handler.httpHandler)
 
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), mux); err != nil {
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%d", *metricsPort),
+		ReadHeaderTimeout: 3 * time.Second,
+		Handler:           mux,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
 		log.WithError(err).Fatal("Failed to start server")
 	}
 
@@ -253,7 +259,6 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
-
 	} else {
 		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {

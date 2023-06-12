@@ -2,19 +2,21 @@ package client
 
 import (
 	"context"
+	"math/bits"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v3/validator/client/testutil"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote/mock"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -50,9 +52,9 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 	time.Sleep(time.Duration(retry*6) * backOffPeriod)
 	cancel()
 	// every call will fail retry=10 times so first one will be called 4 * retry=10.
-	assert.Equal(t, retry*4, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
-	assert.Equal(t, retry*3, v.WaitForSyncCalled, "Expected WaitForSync() to be called")
-	assert.Equal(t, retry*2, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
+	assert.Equal(t, retry*3, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
+	assert.Equal(t, retry*2, v.WaitForSyncCalled, "Expected WaitForSync() to be called")
+	assert.Equal(t, retry, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 	assert.Equal(t, retry, v.CanonicalHeadSlotCalled, "Expected WaitForActivation() to be called")
 	assert.Equal(t, retry, v.ReceiveBlocksCalled, "Expected WaitForActivation() to be called")
 }
@@ -67,8 +69,8 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := types.Slot(55)
-	ticker := make(chan types.Slot)
+	slot := primitives.Slot(55)
+	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -87,8 +89,8 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := types.Slot(55)
-	ticker := make(chan types.Slot)
+	slot := primitives.Slot(55)
+	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -106,8 +108,8 @@ func TestRoleAt_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := types.Slot(55)
-	ticker := make(chan types.Slot)
+	slot := primitives.Slot(55)
+	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -125,8 +127,8 @@ func TestAttests_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := types.Slot(55)
-	ticker := make(chan types.Slot)
+	slot := primitives.Slot(55)
+	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []iface.ValidatorRole{iface.RoleAttester}
 	go func() {
@@ -145,8 +147,8 @@ func TestProposes_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := types.Slot(55)
-	ticker := make(chan types.Slot)
+	slot := primitives.Slot(55)
+	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []iface.ValidatorRole{iface.RoleProposer}
 	go func() {
@@ -165,8 +167,8 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	slot := types.Slot(55)
-	ticker := make(chan types.Slot)
+	slot := primitives.Slot(55)
+	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	v.RolesAtRet = []iface.ValidatorRole{iface.RoleAttester, iface.RoleProposer}
 	go func() {
@@ -183,76 +185,57 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
 
-func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), testutil.AllValidatorsAreExitedCtxKey, true))
-	hook := logTest.NewGlobal()
-
-	slot := types.Slot(55)
-	ticker := make(chan types.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- slot
-
-		cancel()
-	}()
-	run(ctx, v)
-	assert.LogsContain(t, hook, "All validators are exited")
-}
-
 func TestKeyReload_ActiveKey(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
-	go func() {
-		km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
-
-		cancel()
-	}()
-	run(ctx, v)
+	ac := make(chan [][fieldparams.BLSPubkeyLength]byte)
+	current := [][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey}
+	onAccountsChanged(ctx, v, current, ac)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
-	// We expect that WaitForActivation will only be called once,
-	// at the very beginning, and not after account changes.
-	assert.Equal(t, 1, v.WaitForActivationCalled)
+	// HandleKeyReloadCalled in the FakeValidator returns true if one of the keys is equal to the
+	// ActiveKey. WaitForActivation is only called if none of the keys are active, so it shouldn't be called at all.
+	assert.Equal(t, 0, v.WaitForActivationCalled)
 }
 
 func TestKeyReload_NoActiveKey(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	na := notActive(t)
+	ctx := context.Background()
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
-	go func() {
-		km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
-
-		cancel()
-	}()
-	run(ctx, v)
+	ac := make(chan [][fieldparams.BLSPubkeyLength]byte)
+	current := [][fieldparams.BLSPubkeyLength]byte{na}
+	onAccountsChanged(ctx, v, current, ac)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
-	assert.Equal(t, 2, v.WaitForActivationCalled)
+	// HandleKeyReloadCalled in the FakeValidator returns true if one of the keys is equal to the
+	// ActiveKey. Since we are using a key we know is not active, it should return false, which
+	// should cause the account change handler to call WaitForActivationCalled.
+	assert.Equal(t, 1, v.WaitForActivationCalled)
 }
 
-func TestKeyReload_RemoteKeymanager(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	km := mock.NewMock()
-	v := &testutil.FakeValidator{Km: &km}
-
-	ticker := make(chan types.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- types.Slot(55)
-
-		cancel()
-	}()
-	run(ctx, v)
-	assert.Equal(t, true, km.ReloadPublicKeysCalled)
+func notActive(t *testing.T) [fieldparams.BLSPubkeyLength]byte {
+	var r [fieldparams.BLSPubkeyLength]byte
+	copy(r[:], testutil.ActiveKey[:])
+	for i := 0; i < len(r); i++ {
+		r[i] = bits.Reverse8(r[i])
+	}
+	require.DeepNotEqual(t, r, testutil.ActiveKey)
+	return r
 }
 
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+		DefaultConfig: &validatorserviceconfig.ProposerOption{
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			},
+		},
+	})
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch
-	ticker := make(chan types.Slot)
+	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
@@ -264,16 +247,71 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	assert.LogsContain(t, hook, "updated proposer settings")
 }
 
+func TestUpdateProposerSettingsAt_EpochEndExceeded(t *testing.T) {
+	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot+1) * time.Second}
+	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+		DefaultConfig: &validatorserviceconfig.ProposerOption{
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			},
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	hook := logTest.NewGlobal()
+	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
+	ticker := make(chan primitives.Slot)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+		cancel()
+	}()
+
+	run(ctx, v)
+	// can't test "Failed to update proposer settings" because of log.fatal
+	assert.LogsContain(t, hook, "deadline exceeded")
+}
+
+func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
+	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second}
+	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+		DefaultConfig: &validatorserviceconfig.ProposerOption{
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			},
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	hook := logTest.NewGlobal()
+	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
+	ticker := make(chan primitives.Slot)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+		cancel()
+	}()
+
+	run(ctx, v)
+	// can't test "Failed to update proposer settings" because of log.fatal
+	assert.LogsContain(t, hook, "Mock updated proposer settings")
+}
+
 func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *testing.T) {
 	errSomeotherError := errors.New("some internal error")
 	v := &testutil.FakeValidator{
 		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeotherError.Error()),
 		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 	}
+	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+		DefaultConfig: &validatorserviceconfig.ProposerOption{
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			},
+		},
+	})
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch
-	ticker := make(chan types.Slot)
+	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot

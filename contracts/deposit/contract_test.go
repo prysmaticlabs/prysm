@@ -7,11 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	depositcontract "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
-	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	depositcontract "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v4/contracts/deposit/mock"
+	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestSetupRegistrationContract_OK(t *testing.T) {
@@ -78,7 +78,7 @@ func TestValidatorRegister_OK(t *testing.T) {
 		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx)
 	}
 
-	assert.Equal(t, uint64(0), merkleTreeIndex[0], "Deposit event total desposit count miss matched")
-	assert.Equal(t, uint64(1), merkleTreeIndex[1], "Deposit event total desposit count miss matched")
-	assert.Equal(t, uint64(2), merkleTreeIndex[2], "Deposit event total desposit count miss matched")
+	assert.Equal(t, uint64(0), merkleTreeIndex[0], "Deposit event total deposit count mismatched")
+	assert.Equal(t, uint64(1), merkleTreeIndex[1], "Deposit event total deposit count mismatched")
+	assert.Equal(t, uint64(2), merkleTreeIndex[2], "Deposit event total deposit count mismatched")
 }

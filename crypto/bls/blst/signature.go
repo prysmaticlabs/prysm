@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	blst "github.com/supranational/blst/bindings/go"
 )
 
@@ -24,14 +24,34 @@ type Signature struct {
 	s *blstSignature
 }
 
-// SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
-func SignatureFromBytes(sig []byte) (common.Signature, error) {
+// signatureFromBytesNoValidation creates a BLS signature from a LittleEndian
+// byte slice. It does not validate that the signature is in the BLS group
+func signatureFromBytesNoValidation(sig []byte) (*blstSignature, error) {
 	if len(sig) != fieldparams.BLSSignatureLength {
 		return nil, fmt.Errorf("signature must be %d bytes", fieldparams.BLSSignatureLength)
 	}
 	signature := new(blstSignature).Uncompress(sig)
 	if signature == nil {
 		return nil, errors.New("could not unmarshal bytes into signature")
+	}
+	return signature, nil
+}
+
+// SignatureFromBytesNoValidation creates a BLS signature from a LittleEndian
+// byte slice. It does not validate that the signature is in the BLS group
+func SignatureFromBytesNoValidation(sig []byte) (common.Signature, error) {
+	signature, err := signatureFromBytesNoValidation(sig)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create signature from byte slice")
+	}
+	return &Signature{s: signature}, nil
+}
+
+// SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
+func SignatureFromBytes(sig []byte) (common.Signature, error) {
+	signature, err := signatureFromBytesNoValidation(sig)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create signature from byte slice")
 	}
 	// Group check signature. Do not check for infinity since an aggregated signature
 	// could be infinite.
@@ -85,8 +105,9 @@ func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error)
 //
 // In IETF draft BLS specification:
 // Verify(PK, message, signature) -> VALID or INVALID: a verification
-//      algorithm that outputs VALID if signature is a valid signature of
-//      message under public key PK, and INVALID otherwise.
+//
+//	algorithm that outputs VALID if signature is a valid signature of
+//	message under public key PK, and INVALID otherwise.
 //
 // In the Ethereum proof of stake specification:
 // def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
@@ -103,10 +124,11 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 //
 // In IETF draft BLS specification:
 // AggregateVerify((PK_1, message_1), ..., (PK_n, message_n),
-//      signature) -> VALID or INVALID: an aggregate verification
-//      algorithm that outputs VALID if signature is a valid aggregated
-//      signature for a collection of public keys and messages, and
-//      outputs INVALID otherwise.
+//
+//	signature) -> VALID or INVALID: an aggregate verification
+//	algorithm that outputs VALID if signature is a valid aggregated
+//	signature for a collection of public keys and messages, and
+//	outputs INVALID otherwise.
 //
 // In the Ethereum proof of stake specification:
 // def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> bool
@@ -134,9 +156,10 @@ func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 //
 // In IETF draft BLS specification:
 // FastAggregateVerify(PK_1, ..., PK_n, message, signature) -> VALID
-//      or INVALID: a verification algorithm for the aggregate of multiple
-//      signatures on the same message.  This function is faster than
-//      AggregateVerify.
+//
+//	or INVALID: a verification algorithm for the aggregate of multiple
+//	signatures on the same message.  This function is faster than
+//	AggregateVerify.
 //
 // In the Ethereum proof of stake specification:
 // def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
@@ -156,12 +179,13 @@ func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 //
 // Spec code:
 // def eth2_fast_aggregate_verify(pubkeys: Sequence[BLSPubkey], message: Bytes32, signature: BLSSignature) -> bool:
-//    """
-//    Wrapper to ``bls.FastAggregateVerify`` accepting the ``G2_POINT_AT_INFINITY`` signature when ``pubkeys`` is empty.
-//    """
-//    if len(pubkeys) == 0 and signature == G2_POINT_AT_INFINITY:
-//        return True
-//    return bls.FastAggregateVerify(pubkeys, message, signature)
+//
+//	"""
+//	Wrapper to ``bls.FastAggregateVerify`` accepting the ``G2_POINT_AT_INFINITY`` signature when ``pubkeys`` is empty.
+//	"""
+//	if len(pubkeys) == 0 and signature == G2_POINT_AT_INFINITY:
+//	    return True
+//	return bls.FastAggregateVerify(pubkeys, message, signature)
 func (s *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
 	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), common.InfiniteSignature[:]) {
 		return true
@@ -190,6 +214,15 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	signature := new(blstAggregateSignature)
 	signature.Aggregate(rawSigs, false)
 	return &Signature{s: signature.ToAffine()}
+}
+
+// VerifySignature verifies a single signature using public key and message.
+func VerifySignature(sig []byte, msg [32]byte, pubKey common.PublicKey) (bool, error) {
+	rSig, err := SignatureFromBytes(sig)
+	if err != nil {
+		return false, err
+	}
+	return rSig.Verify(pubKey, msg[:]), nil
 }
 
 // VerifyMultipleSignatures verifies a non-singular set of signatures and its respective pubkeys and messages.

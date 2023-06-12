@@ -4,9 +4,9 @@ import (
 	"io"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 )
 
 const (
@@ -26,7 +26,7 @@ type Streamer interface {
 	LogsFeed() *event.Feed
 }
 
-// StreamServer defines a a websocket server which can receive events from
+// StreamServer defines a websocket server which can receive events from
 // a feed and write them to open websocket connections.
 type StreamServer struct {
 	feed  *event.Feed
@@ -56,7 +56,7 @@ func (ss *StreamServer) GetLastFewLogs() [][]byte {
 	return messages
 }
 
-// LogsFeed returns a feed callers can subscribe to to receive logs via a channel.
+// LogsFeed returns a feed callers can subscribe to receive logs via a channel.
 func (ss *StreamServer) LogsFeed() *event.Feed {
 	return ss.feed
 }

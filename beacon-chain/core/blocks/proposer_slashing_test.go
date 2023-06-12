@@ -5,27 +5,27 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	v "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 
 	beaconState, _ := util.DeterministicGenesisState(t, 20)
-	currentSlot := types.Slot(0)
+	currentSlot := primitives.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
 			Header_1: &ethpb.SignedBeaconBlockHeader{
@@ -58,7 +58,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 
 	beaconState, _ := util.DeterministicGenesisState(t, 2)
-	currentSlot := types.Slot(0)
+	currentSlot := primitives.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
 			Header_1: &ethpb.SignedBeaconBlockHeader{
@@ -97,7 +97,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 			WithdrawableEpoch: 0,
 		},
 	}
-	currentSlot := types.Slot(0)
+	currentSlot := primitives.Slot(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
 			Header_1: &ethpb.SignedBeaconBlockHeader{
@@ -119,7 +119,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})
@@ -142,7 +142,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
-	proposerIdx := types.ValidatorIndex(1)
+	proposerIdx := primitives.ValidatorIndex(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
@@ -190,7 +190,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 100)
-	proposerIdx := types.ValidatorIndex(1)
+	proposerIdx := primitives.ValidatorIndex(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
@@ -238,7 +238,55 @@ func TestProcessProposerSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
-	proposerIdx := types.ValidatorIndex(1)
+	proposerIdx := primitives.ValidatorIndex(1)
+
+	header1 := &ethpb.SignedBeaconBlockHeader{
+		Header: util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerIdx,
+			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
+		}),
+	}
+	var err error
+	header1.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	header2 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerIdx,
+			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
+		},
+	})
+	header2.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	slashings := []*ethpb.ProposerSlashing{
+		{
+			Header_1: header1,
+			Header_2: header2,
+		},
+	}
+
+	block := util.NewBeaconBlock()
+	block.Block.Body.ProposerSlashings = slashings
+
+	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Block.Body.ProposerSlashings, v.SlashValidator)
+	require.NoError(t, err)
+
+	newStateVals := newState.Validators()
+	if newStateVals[1].ExitEpoch != beaconState.Validators()[1].ExitEpoch {
+		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
+			newStateVals[1].ExitEpoch, beaconState.Validators()[1].ExitEpoch)
+	}
+
+	require.Equal(t, uint64(31000000000), newState.Balances()[1])
+	require.Equal(t, uint64(32000000000), newState.Balances()[2])
+}
+
+func TestProcessProposerSlashings_AppliesCorrectStatusCapella(t *testing.T) {
+	// We test the case when data is correct and verify the validator
+	// registry has been updated.
+	beaconState, privKeys := util.DeterministicGenesisStateCapella(t, 100)
+	proposerIdx := primitives.ValidatorIndex(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
@@ -289,7 +337,7 @@ func TestVerifyProposerSlashing(t *testing.T) {
 	}
 
 	beaconState, sks := util.DeterministicGenesisState(t, 2)
-	currentSlot := types.Slot(0)
+	currentSlot := primitives.Slot(0)
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 	rand1, err := bls.RandKey()
 	require.NoError(t, err)

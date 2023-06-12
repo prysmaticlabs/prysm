@@ -46,12 +46,13 @@ type BlockAltairSignRequest struct {
 	BeaconBlock *BeaconBlockAltairBlockV2 `json:"beacon_block" validate:"required"`
 }
 
-// BlockBellatrixSignRequest is a request object for web3signer sign api for supporting Bellatrix fork.
-type BlockBellatrixSignRequest struct {
-	Type        string                       `json:"type" validate:"required"`
-	ForkInfo    *ForkInfo                    `json:"fork_info" validate:"required"`
-	SigningRoot hexutil.Bytes                `json:"signingRoot"`
-	BeaconBlock *BeaconBlockBellatrixBlockV2 `json:"beacon_block" validate:"required"`
+// BlockV2BlindedSignRequest is a request object for web3signer sign api
+// Supports Bellatrix(merge) and Capella
+type BlockV2BlindedSignRequest struct {
+	Type        string                `json:"type" validate:"required"`
+	ForkInfo    *ForkInfo             `json:"fork_info" validate:"required"`
+	SigningRoot hexutil.Bytes         `json:"signingRoot"`
+	BeaconBlock *BeaconBlockV2Blinded `json:"beacon_block" validate:"required"`
 }
 
 // DepositSignRequest Not currently supported by Prysm.
@@ -249,7 +250,7 @@ type VoluntaryExit struct {
 
 // BeaconBlockAltairBlockV2 a sub property of BlockAltairSignRequest.
 type BeaconBlockAltairBlockV2 struct {
-	Version string             `json:"version"`
+	Version string             `json:"version" enum:"true"`
 	Block   *BeaconBlockAltair `json:"block"`
 }
 
@@ -275,9 +276,10 @@ type BeaconBlockBodyAltair struct {
 	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
 }
 
-// BeaconBlockBellatrixBlockV2 a field of BlockBellatrixSignRequest.
-type BeaconBlockBellatrixBlockV2 struct {
-	Version     string             `json:"version"`
+// BeaconBlockV2Blinded a field of BlockV2BlindedSignRequest.
+// Supports Bellatrix(merge) and Capella
+type BeaconBlockV2Blinded struct {
+	Version     string             `json:"version" enum:"true"`
 	BlockHeader *BeaconBlockHeader `json:"block_header"`
 }
 
@@ -289,7 +291,7 @@ type SyncAggregate struct {
 
 // BeaconBlockBlockV2 a sub property of BlockV2SignRequest.
 type BeaconBlockBlockV2 struct {
-	Version string       `json:"version"`
+	Version string       `json:"version" enum:"true"`
 	Block   *BeaconBlock `json:"beacon_block"`
 }
 

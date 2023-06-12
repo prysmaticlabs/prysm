@@ -5,28 +5,37 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/go-bitfield"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	blockchainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits/mock"
-	p2pMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
+	blstoexecmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec/mock"
+	slashingsmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits/mock"
+	p2pMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -151,7 +160,7 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("slot request", func(t *testing.T) {
-		slot := eth2types.Slot(2)
+		slot := primitives.Slot(2)
 		req := &ethpbv1.AttestationsPoolRequest{
 			Slot: &slot,
 		}
@@ -164,7 +173,7 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("index request", func(t *testing.T) {
-		index := eth2types.CommitteeIndex(4)
+		index := primitives.CommitteeIndex(4)
 		req := &ethpbv1.AttestationsPoolRequest{
 			CommitteeIndex: &index,
 		}
@@ -177,8 +186,8 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("both slot + index request", func(t *testing.T) {
-		slot := eth2types.Slot(2)
-		index := eth2types.CommitteeIndex(4)
+		slot := primitives.Slot(2)
+		index := primitives.CommitteeIndex(4)
 		req := &ethpbv1.AttestationsPoolRequest{
 			Slot:           &slot,
 			CommitteeIndex: &index,
@@ -443,6 +452,9 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+	assert.Equal(t, true, ok)
 }
 
 func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
@@ -517,6 +529,9 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+	assert.Equal(t, true, ok)
 }
 
 func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
@@ -566,7 +581,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	require.NoError(t, err)
 	validator := &ethpbv1alpha1.Validator{
 		PublicKey:         keys[0].PublicKey().Marshal(),
-		WithdrawableEpoch: eth2types.Epoch(1),
+		WithdrawableEpoch: primitives.Epoch(1),
 	}
 	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = []*ethpbv1alpha1.Validator{validator}
@@ -624,6 +639,9 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1ProposerSlashingToV1Alpha1(slashing), pendingSlashings[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
+	assert.Equal(t, true, ok)
 }
 
 func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
@@ -686,6 +704,13 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 
 	_, err = s.SubmitProposerSlashing(ctx, slashing)
 	require.NoError(t, err)
+	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, migration.V1ProposerSlashingToV1Alpha1(slashing), pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
+	assert.Equal(t, true, ok)
 }
 
 func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
@@ -761,7 +786,8 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 
 	_, err = s.SubmitVoluntaryExit(ctx, exit)
 	require.NoError(t, err)
-	pendingExits := s.VoluntaryExitsPool.PendingExits(bs, bs.Slot(), true)
+	pendingExits, err := s.VoluntaryExitsPool.PendingExits()
+	require.NoError(t, err)
 	require.Equal(t, 1, len(pendingExits))
 	assert.DeepEqual(t, migration.V1ExitToV1Alpha1(exit), pendingExits[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
@@ -981,6 +1007,8 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	for _, r := range [][32]byte{actualAtt1, actualAtt2} {
 		assert.Equal(t, true, reflect.DeepEqual(expectedAtt1, r) || reflect.DeepEqual(expectedAtt2, r))
 	}
+
+	require.Equal(t, 2, s.AttestationsPool.UnaggregatedAttestationCount())
 }
 
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
@@ -1081,6 +1109,8 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	broadcastRoot, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, expectedAtt, broadcastRoot)
+
+	require.Equal(t, 1, s.AttestationsPool.UnaggregatedAttestationCount())
 }
 
 func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
@@ -1153,7 +1183,334 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 	require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 	assert.DeepEqual(
 		t,
-		[]string{"{\"failures\":[{\"index\":0,\"message\":\"Incorrect attestation signature: signature must be 96 bytes\"}]}"},
+		[]string{"{\"failures\":[{\"index\":0,\"message\":\"Incorrect attestation signature: could not create signature from byte slice: signature must be 96 bytes\"}]}"},
 		v,
 	)
+}
+
+func TestListBLSToExecutionChanges(t *testing.T) {
+	change1 := &ethpbv1alpha1.SignedBLSToExecutionChange{
+		Message: &ethpbv1alpha1.BLSToExecutionChange{
+			ValidatorIndex:     1,
+			FromBlsPubkey:      bytesutil.PadTo([]byte("pubkey1"), 48),
+			ToExecutionAddress: bytesutil.PadTo([]byte("address1"), 20),
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	change2 := &ethpbv1alpha1.SignedBLSToExecutionChange{
+		Message: &ethpbv1alpha1.BLSToExecutionChange{
+			ValidatorIndex:     2,
+			FromBlsPubkey:      bytesutil.PadTo([]byte("pubkey2"), 48),
+			ToExecutionAddress: bytesutil.PadTo([]byte("address2"), 20),
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+
+	s := &Server{
+		BLSChangesPool: &blstoexecmock.PoolMock{Changes: []*ethpbv1alpha1.SignedBLSToExecutionChange{change1, change2}},
+	}
+
+	resp, err := s.ListBLSToExecutionChanges(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
+	require.Equal(t, 2, len(resp.Data))
+	assert.DeepEqual(t, migration.V1Alpha1SignedBLSToExecChangeToV2(change1), resp.Data[0])
+	assert.DeepEqual(t, migration.V1Alpha1SignedBLSToExecChangeToV2(change2), resp.Data[1])
+}
+
+func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
+	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconConfig().Copy()
+	// Required for correct committee size calculation.
+	c.CapellaForkEpoch = c.BellatrixForkEpoch.Add(2)
+	params.OverrideBeaconConfig(c)
+
+	spb := &ethpbv1alpha1.BeaconStateCapella{
+		Fork: &ethpbv1alpha1.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		},
+	}
+	numValidators := 10
+	validators := make([]*ethpbv1alpha1.Validator, numValidators)
+	blsChanges := make([]*ethpbv2.BLSToExecutionChange, numValidators)
+	spb.Balances = make([]uint64, numValidators)
+	privKeys := make([]common.SecretKey, numValidators)
+	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
+	executionAddress := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13}
+
+	for i := range validators {
+		v := &ethpbv1alpha1.Validator{}
+		v.EffectiveBalance = maxEffectiveBalance
+		v.WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+		v.WithdrawalCredentials = make([]byte, 32)
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		privKeys[i] = priv
+		pubkey := priv.PublicKey().Marshal()
+
+		message := &ethpbv2.BLSToExecutionChange{
+			ToExecutionAddress: executionAddress,
+			ValidatorIndex:     primitives.ValidatorIndex(i),
+			FromBlsPubkey:      pubkey,
+		}
+
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		copy(v.WithdrawalCredentials, digest[:])
+		validators[i] = v
+		blsChanges[i] = message
+	}
+	spb.Validators = validators
+	slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+	require.NoError(t, err)
+	spb.Slot = slot
+	st, err := state_native.InitializeFromProtoCapella(spb)
+	require.NoError(t, err)
+
+	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
+	for i, message := range blsChanges {
+		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		require.NoError(t, err)
+
+		signed := &ethpbv2.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		signedChanges[i] = signed
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	chainService := &blockchainmock.ChainService{State: st}
+	s := &Server{
+		HeadFetcher:       chainService,
+		ChainInfoFetcher:  chainService,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &blockchainmock.MockOperationNotifier{},
+		BLSChangesPool:    blstoexec.NewPool(),
+	}
+
+	_, err = s.SubmitSignedBLSToExecutionChanges(ctx, &ethpbv2.SubmitBLSToExecutionChangesRequest{
+		Changes: signedChanges,
+	})
+	require.NoError(t, err)
+	time.Sleep(100 * time.Millisecond) // Delay to let the routine start
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages))
+
+	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
+	require.Equal(t, len(poolChanges), len(signedChanges))
+	require.NoError(t, err)
+	for i, v1alphaChange := range poolChanges {
+		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(v1alphaChange)
+		require.DeepEqual(t, v2Change, signedChanges[i])
+	}
+}
+
+func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
+	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconConfig().Copy()
+	// Required for correct committee size calculation.
+	c.CapellaForkEpoch = c.BellatrixForkEpoch.Add(2)
+	params.OverrideBeaconConfig(c)
+
+	spb := &ethpbv1alpha1.BeaconStateBellatrix{
+		Fork: &ethpbv1alpha1.Fork{
+			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
+			PreviousVersion: params.BeaconConfig().AltairForkVersion,
+			Epoch:           params.BeaconConfig().BellatrixForkEpoch,
+		},
+	}
+	numValidators := 10
+	validators := make([]*ethpbv1alpha1.Validator, numValidators)
+	blsChanges := make([]*ethpbv2.BLSToExecutionChange, numValidators)
+	spb.Balances = make([]uint64, numValidators)
+	privKeys := make([]common.SecretKey, numValidators)
+	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
+	executionAddress := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13}
+
+	for i := range validators {
+		v := &ethpbv1alpha1.Validator{}
+		v.EffectiveBalance = maxEffectiveBalance
+		v.WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+		v.WithdrawalCredentials = make([]byte, 32)
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		privKeys[i] = priv
+		pubkey := priv.PublicKey().Marshal()
+
+		message := &ethpbv2.BLSToExecutionChange{
+			ToExecutionAddress: executionAddress,
+			ValidatorIndex:     primitives.ValidatorIndex(i),
+			FromBlsPubkey:      pubkey,
+		}
+
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		copy(v.WithdrawalCredentials, digest[:])
+		validators[i] = v
+		blsChanges[i] = message
+	}
+	spb.Validators = validators
+	slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+	require.NoError(t, err)
+	spb.Slot = slot
+	st, err := state_native.InitializeFromProtoBellatrix(spb)
+	require.NoError(t, err)
+
+	spc := &ethpbv1alpha1.BeaconStateCapella{
+		Fork: &ethpbv1alpha1.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		},
+	}
+	slot, err = slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+	require.NoError(t, err)
+	spc.Slot = slot
+
+	stc, err := state_native.InitializeFromProtoCapella(spc)
+	require.NoError(t, err)
+
+	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
+	for i, message := range blsChanges {
+		signature, err := signing.ComputeDomainAndSign(stc, prysmtime.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		require.NoError(t, err)
+
+		signed := &ethpbv2.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		signedChanges[i] = signed
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	chainService := &blockchainmock.ChainService{State: st}
+	s := &Server{
+		HeadFetcher:       chainService,
+		ChainInfoFetcher:  chainService,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &blockchainmock.MockOperationNotifier{},
+		BLSChangesPool:    blstoexec.NewPool(),
+	}
+
+	_, err = s.SubmitSignedBLSToExecutionChanges(ctx, &ethpbv2.SubmitBLSToExecutionChangesRequest{
+		Changes: signedChanges,
+	})
+	require.NoError(t, err)
+
+	// Check that we didn't broadcast the messages but did in fact fill in
+	// the pool
+	assert.Equal(t, false, broadcaster.BroadcastCalled)
+
+	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
+	require.Equal(t, len(poolChanges), len(signedChanges))
+	require.NoError(t, err)
+	for i, v1alphaChange := range poolChanges {
+		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(v1alphaChange)
+		require.DeepEqual(t, v2Change, signedChanges[i])
+	}
+}
+
+func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
+	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconConfig().Copy()
+	// Required for correct committee size calculation.
+	c.CapellaForkEpoch = c.BellatrixForkEpoch.Add(2)
+	params.OverrideBeaconConfig(c)
+
+	spb := &ethpbv1alpha1.BeaconStateCapella{
+		Fork: &ethpbv1alpha1.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		},
+	}
+	numValidators := 10
+	validators := make([]*ethpbv1alpha1.Validator, numValidators)
+	blsChanges := make([]*ethpbv2.BLSToExecutionChange, numValidators)
+	spb.Balances = make([]uint64, numValidators)
+	privKeys := make([]common.SecretKey, numValidators)
+	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
+	executionAddress := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13}
+
+	for i := range validators {
+		v := &ethpbv1alpha1.Validator{}
+		v.EffectiveBalance = maxEffectiveBalance
+		v.WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+		v.WithdrawalCredentials = make([]byte, 32)
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		privKeys[i] = priv
+		pubkey := priv.PublicKey().Marshal()
+
+		message := &ethpbv2.BLSToExecutionChange{
+			ToExecutionAddress: executionAddress,
+			ValidatorIndex:     primitives.ValidatorIndex(i),
+			FromBlsPubkey:      pubkey,
+		}
+
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		copy(v.WithdrawalCredentials, digest[:])
+		validators[i] = v
+		blsChanges[i] = message
+	}
+	spb.Validators = validators
+	slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+	require.NoError(t, err)
+	spb.Slot = slot
+	st, err := state_native.InitializeFromProtoCapella(spb)
+	require.NoError(t, err)
+
+	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
+	for i, message := range blsChanges {
+		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		require.NoError(t, err)
+
+		signed := &ethpbv2.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		signedChanges[i] = signed
+	}
+	signedChanges[1].Signature[0] = 0x00
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	chainService := &blockchainmock.ChainService{State: st}
+	s := &Server{
+		HeadFetcher:       chainService,
+		ChainInfoFetcher:  chainService,
+		AttestationsPool:  attestations.NewPool(),
+		Broadcaster:       broadcaster,
+		OperationNotifier: &blockchainmock.MockOperationNotifier{},
+		BLSChangesPool:    blstoexec.NewPool(),
+	}
+
+	_, err = s.SubmitSignedBLSToExecutionChanges(ctx, &ethpbv2.SubmitBLSToExecutionChangesRequest{
+		Changes: signedChanges,
+	})
+	time.Sleep(10 * time.Millisecond) // Delay to allow the routine to start
+	require.ErrorContains(t, "One or more BLSToExecutionChange failed validation", err)
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages)+1)
+
+	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
+	require.Equal(t, len(poolChanges)+1, len(signedChanges))
+	require.NoError(t, err)
+
+	v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(poolChanges[0])
+	require.DeepEqual(t, v2Change, signedChanges[0])
+	for i := 2; i < numValidators; i++ {
+		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(poolChanges[i-1])
+		require.DeepEqual(t, v2Change, signedChanges[i])
+	}
 }

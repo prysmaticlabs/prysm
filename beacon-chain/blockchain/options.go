@@ -1,20 +1,22 @@
 package blockchain
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type Option func(s *Service) error
@@ -99,6 +101,14 @@ func WithSlashingPool(p slashings.PoolManager) Option {
 	}
 }
 
+// WithBLSToExecPool to keep track of BLS to Execution address changes.
+func WithBLSToExecPool(p blstoexec.PoolManager) Option {
+	return func(s *Service) error {
+		s.cfg.BLSToExecPool = p
+		return nil
+	}
+}
+
 // WithP2PBroadcaster to broadcast messages after appropriate processing.
 func WithP2PBroadcaster(p p2p.Broadcaster) Option {
 	return func(s *Service) error {
@@ -147,17 +157,18 @@ func WithSlasherAttestationsFeed(f *event.Feed) Option {
 	}
 }
 
-func withStateBalanceCache(c *stateBalanceCache) Option {
-	return func(s *Service) error {
-		s.justifiedBalances = c
-		return nil
-	}
-}
-
 // WithFinalizedStateAtStartUp to store finalized state at start up.
 func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
 	return func(s *Service) error {
 		s.cfg.FinalizedStateAtStartUp = st
+		return nil
+	}
+}
+
+func WithClockSynchronizer(gs *startup.ClockSynchronizer) Option {
+	return func(s *Service) error {
+		s.clockSetter = gs
+		s.clockWaiter = gs
 		return nil
 	}
 }

@@ -6,13 +6,13 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
+	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
 )
 
-var maxKeys = 1000000
+var maxKeys = 1_000_000
 var pubkeyCache = lruwrpr.New(maxKeys)
 
 // PublicKey used in the BLS signature scheme.
@@ -92,7 +92,6 @@ func (p *PublicKey) Equals(p2 common.PublicKey) bool {
 
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
-
 	agg := new(blstAggregatePublicKey)
 	// No group check here since it is checked at decompression time
 	agg.Add(p.p, false)

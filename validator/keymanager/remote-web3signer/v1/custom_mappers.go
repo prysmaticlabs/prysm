@@ -5,14 +5,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // MapForkInfo maps the eth2.ForkInfo proto to the Web3Signer spec.
-func MapForkInfo(slot types.Slot, genesisValidatorsRoot []byte) (*ForkInfo, error) {
+func MapForkInfo(slot primitives.Slot, genesisValidatorsRoot []byte) (*ForkInfo, error) {
 	fork, err := forks.Fork(slots.ToEpoch(slot))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get fork info")
@@ -348,7 +348,6 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 		block.Deposits[i] = deposit
 	}
 	for i, exit := range body.VoluntaryExits {
-
 		exit, err := MapSignedVoluntaryExit(exit)
 		if err != nil {
 			return nil, fmt.Errorf("could not map signed voluntary exit at index %v: %v", i, err)

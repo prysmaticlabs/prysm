@@ -9,13 +9,13 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
-	mathutil "github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
+	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 	"go.opencensus.io/trace"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
@@ -49,6 +49,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 
 	topic += s.Encoding().ProtocolSuffix()
 	iterator := s.dv5Listener.RandomNodes()
+	defer iterator.Close()
 	switch {
 	case strings.Contains(topic, GossipAttestationMessage):
 		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
@@ -61,12 +62,12 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	currNum := len(s.pubsub.ListPeers(topic))
 	wg := new(sync.WaitGroup)
 	for {
+		if currNum >= threshold {
+			break
+		}
 		if err := ctx.Err(); err != nil {
 			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
 				"only %d out of %d peers were able to be found", topic, currNum, threshold)
-		}
-		if currNum >= threshold {
-			break
 		}
 		nodes := enode.ReadNodes(iterator, int(params.BeaconNetworkConfig().MinimumPeersInSubnetSearch))
 		for _, node := range nodes {

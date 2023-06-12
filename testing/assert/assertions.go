@@ -1,7 +1,7 @@
 package assert
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/testing/assertions"
+	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -39,6 +39,16 @@ func DeepSSZEqual(tb assertions.AssertionTestingTB, expected, actual interface{}
 // DeepNotSSZEqual compares values using ssz.DeepEqual.
 func DeepNotSSZEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	assertions.DeepNotSSZEqual(tb.Errorf, expected, actual, msg...)
+}
+
+// StringContains asserts a string contains specified substring.
+func StringContains(tb assertions.AssertionTestingTB, expected, actual string, msg ...interface{}) {
+	assertions.StringContains(tb.Errorf, expected, actual, true, msg...)
+}
+
+// StringContains asserts a string does not contain specified substring.
+func StringNotContains(tb assertions.AssertionTestingTB, expected, actual string, msg ...interface{}) {
+	assertions.StringContains(tb.Errorf, expected, actual, false, msg...)
 }
 
 // NoError asserts that error is nil.

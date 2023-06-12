@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func Test_slashableAttestationCheck(t *testing.T) {
@@ -21,7 +21,7 @@ func Test_slashableAttestationCheck(t *testing.T) {
 	defer reset()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -69,7 +69,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	ctx := context.Background()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -110,11 +110,11 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), pubKey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	require.Equal(t, types.Epoch(4), e)
+	require.Equal(t, primitives.Epoch(4), e)
 	e, exists, err = validator.db.LowestSignedTargetEpoch(context.Background(), pubKey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	require.Equal(t, types.Epoch(10), e)
+	require.Equal(t, primitives.Epoch(10), e)
 }
 
 func Test_slashableAttestationCheck_OK(t *testing.T) {
@@ -191,9 +191,9 @@ func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 	e, exists, err := validator.db.LowestSignedSourceEpoch(context.Background(), fakePubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	require.Equal(t, types.Epoch(0), e)
+	require.Equal(t, primitives.Epoch(0), e)
 	e, exists, err = validator.db.LowestSignedTargetEpoch(context.Background(), fakePubkey)
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
-	require.Equal(t, types.Epoch(0), e)
+	require.Equal(t, primitives.Epoch(0), e)
 }

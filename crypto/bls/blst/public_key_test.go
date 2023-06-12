@@ -7,10 +7,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestPublicKeyFromBytes(t *testing.T) {
@@ -96,4 +96,28 @@ func TestPublicKeysEmpty(t *testing.T) {
 	var pubs [][]byte
 	_, err := blst.AggregatePublicKeys(pubs)
 	require.ErrorContains(t, "nil or empty public keys", err)
+}
+
+func BenchmarkPublicKeyFromBytes(b *testing.B) {
+	priv, err := blst.RandKey()
+	require.NoError(b, err)
+	pubkey := priv.PublicKey()
+	pubkeyBytes := pubkey.Marshal()
+
+	b.Run("cache on", func(b *testing.B) {
+		blst.EnableCaches()
+		for i := 0; i < b.N; i++ {
+			_, err := blst.PublicKeyFromBytes(pubkeyBytes)
+			require.NoError(b, err)
+		}
+	})
+
+	b.Run("cache off", func(b *testing.B) {
+		blst.DisableCaches()
+		for i := 0; i < b.N; i++ {
+			_, err := blst.PublicKeyFromBytes(pubkeyBytes)
+			require.NoError(b, err)
+		}
+	})
+
 }

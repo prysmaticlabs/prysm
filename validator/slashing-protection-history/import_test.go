@@ -9,15 +9,15 @@ import (
 	"reflect"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
-	dbtest "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
-	valtest "github.com/prysmaticlabs/prysm/v3/validator/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	dbtest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
+	valtest "github.com/prysmaticlabs/prysm/v4/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -151,7 +151,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 
 		receivedProposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
 		require.NoError(t, err)
-		rootsBySlot := make(map[types.Slot][]byte)
+		rootsBySlot := make(map[primitives.Slot][]byte)
 		for _, proposal := range receivedProposalHistory {
 			rootsBySlot[proposal.Slot] = proposal.SigningRoot
 		}

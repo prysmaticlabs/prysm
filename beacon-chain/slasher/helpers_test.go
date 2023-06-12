@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"testing"
 
-	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -143,7 +143,7 @@ func TestService_filterAttestations(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          []*slashertypes.IndexedAttestationWrapper
-		inputEpoch     types.Epoch
+		inputEpoch     primitives.Epoch
 		wantedValid    []*slashertypes.IndexedAttestationWrapper
 		wantedDeferred []*slashertypes.IndexedAttestationWrapper
 		wantedDropped  int

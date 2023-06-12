@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -41,7 +41,7 @@ func Setup(serviceName, processName, endpoint string, sampleFraction float64, en
 		},
 		BufferMaxCount: 10000,
 		OnError: func(err error) {
-			log.WithError(err).Error("Failed to process span")
+			log.WithError(err).Error("Could not process span")
 		},
 	})
 	if err != nil {

@@ -6,40 +6,19 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	chainMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/proto"
 )
-
-func TestDeleteAttsInPool(t *testing.T) {
-	r := &Service{
-		cfg: &config{attPool: attestations.NewPool()},
-	}
-
-	att1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}})
-	att2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}})
-	att3 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}})
-	att4 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}})
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att1))
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att2))
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att3))
-	require.NoError(t, r.cfg.attPool.SaveUnaggregatedAttestation(att4))
-
-	// Seen 1, 3 and 4 in block.
-	require.NoError(t, r.deleteAttsInPool([]*ethpb.Attestation{att1, att3, att4}))
-
-	// Only 2 should remain.
-	assert.DeepEqual(t, []*ethpb.Attestation{att2}, r.cfg.attPool.AggregatedAttestations(), "Did not get wanted attestations")
-}
 
 func TestService_beaconBlockSubscriber(t *testing.T) {
 	pooledAttestations := []*ethpb.Attestation{

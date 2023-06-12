@@ -276,7 +276,7 @@ func namesForExcludeCheck(pass *analysis.Pass, call *ast.CallExpr) []string {
 	}
 
 	// This will be missing for functions without a receiver (like fmt.Printf),
-	// so just fall back to the the function's fullName in that case.
+	// so just fall back to the function's fullName in that case.
 	selection, ok := pass.TypesInfo.Selections[sel]
 	if !ok {
 		return []string{name}
@@ -313,16 +313,16 @@ func namesForExcludeCheck(pass *analysis.Pass, call *ast.CallExpr) []string {
 //
 // For example, say we have:
 //
-//    type Inner interface {Method()}
-//    type Middle interface {Inner}
-//    type Outer interface {Middle}
-//    type T struct {Outer}
-//    type U struct {T}
-//    type V struct {U}
+//	type Inner interface {Method()}
+//	type Middle interface {Inner}
+//	type Outer interface {Middle}
+//	type T struct {Outer}
+//	type U struct {T}
+//	type V struct {U}
 //
 // And then the selector:
 //
-//    V.Method
+//	V.Method
 //
 // We'll return [Outer, Middle, Inner] by first walking through the embedded structs
 // until we reach the Outer interface, then descending through the embedded interfaces

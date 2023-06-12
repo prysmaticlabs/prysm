@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/slashings"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/slashings"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -20,12 +20,19 @@ import (
 // SlashingKind used for helpful information upon detection.
 type SlashingKind int
 
+// AttestationRecordSaveRequest includes the attestation record to save along
+// with the appropriate call context.
+type AttestationRecordSaveRequest struct {
+	ctx    context.Context
+	record *AttestationRecord
+}
+
 // AttestationRecord which can be represented by these simple values
 // for manipulation by database methods.
 type AttestationRecord struct {
 	PubKey      [fieldparams.BLSPubkeyLength]byte
-	Source      types.Epoch
-	Target      types.Epoch
+	Source      primitives.Epoch
+	Target      primitives.Epoch
 	SigningRoot [32]byte
 }
 
@@ -107,7 +114,7 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldpa
 		sourceEpochsBucket := pkBucket.Bucket(attestationSourceEpochsBucket)
 
 		return sourceEpochsBucket.ForEach(func(sourceBytes, targetEpochsList []byte) error {
-			targetEpochs := make([]types.Epoch, 0)
+			targetEpochs := make([]primitives.Epoch, 0)
 			for i := 0; i < len(targetEpochsList); i += 8 {
 				epoch := bytesutil.BytesToEpochBigEndian(targetEpochsList[i : i+8])
 				targetEpochs = append(targetEpochs, epoch)
@@ -204,7 +211,7 @@ func (_ *Store) checkSurroundedVote(
 		}
 
 		// There can be multiple source epochs attested per target epoch.
-		attestedSourceEpochs := make([]types.Epoch, 0, len(v)/8)
+		attestedSourceEpochs := make([]primitives.Epoch, 0, len(v)/8)
 		for i := 0; i < len(v); i += 8 {
 			sourceEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
 			attestedSourceEpochs = append(attestedSourceEpochs, sourceEpoch)
@@ -244,7 +251,7 @@ func (_ *Store) checkSurroundingVote(
 		}
 
 		// There can be multiple target epochs attested per source epoch.
-		attestedTargetEpochs := make([]types.Epoch, 0, len(v)/8)
+		attestedTargetEpochs := make([]primitives.Epoch, 0, len(v)/8)
 		for i := 0; i < len(v); i += 8 {
 			targetEpoch := bytesutil.BytesToEpochBigEndian(v[i : i+8])
 			attestedTargetEpochs = append(attestedTargetEpochs, targetEpoch)
@@ -304,17 +311,23 @@ func (s *Store) SaveAttestationForPubKey(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationForPubKey")
 	defer span.End()
-	s.batchedAttestationsChan <- &AttestationRecord{
-		PubKey:      pubKey,
-		Source:      att.Data.Source.Epoch,
-		Target:      att.Data.Target.Epoch,
-		SigningRoot: signingRoot,
+	s.batchedAttestationsChan <- &AttestationRecordSaveRequest{
+		ctx: ctx,
+		record: &AttestationRecord{
+			PubKey:      pubKey,
+			Source:      att.Data.Source.Epoch,
+			Target:      att.Data.Target.Epoch,
+			SigningRoot: signingRoot,
+		},
 	}
+
 	// Subscribe to be notified when the attestation record queued
 	// for saving to the DB is indeed saved. If an error occurred
 	// during the process of saving the attestation record, the sender
 	// will give us that error. We use a buffered channel
 	// to prevent blocking the sender from notifying us of the result.
+	_, innerSpan := trace.StartSpan(ctx, "Validator.SaveAttestationForPubKey.WaitForResponse")
+	defer innerSpan.End()
 	responseChan := make(chan saveAttestationsResponse, 1)
 	defer close(responseChan)
 	sub := s.batchAttestationsFlushedFeed.Subscribe(responseChan)
@@ -335,15 +348,24 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 	for {
 		select {
 		case v := <-s.batchedAttestationsChan:
-			s.batchedAttestations.Append(v)
+			_, span := trace.StartSpan(v.ctx, "batchAttestationWrites.handleBatchedAttestationSaveRequest")
+			s.batchedAttestations.Append(v.record)
+
+			span.AddAttributes(trace.Int64Attribute("num_records", int64(s.batchedAttestations.Len())))
+
 			if numRecords := s.batchedAttestations.Len(); numRecords >= attestationBatchCapacity {
 				log.WithField("numRecords", numRecords).Debug(
 					"Reached max capacity of batched attestation records, flushing to DB",
 				)
 				if s.batchedAttestationsFlushInProgress.IsNotSet() {
-					s.flushAttestationRecords(ctx, s.batchedAttestations.Flush())
+					// Create a new context with the span information from the chan. This is to
+					// prevent any context deadlines from the caller while maintaining the trace
+					// relationships.
+					ctx2 := trace.NewContext(ctx, span)
+					s.flushAttestationRecords(ctx2, s.batchedAttestations.Flush())
 				}
 			}
+			span.End()
 		case <-ticker.C:
 			if numRecords := s.batchedAttestations.Len(); numRecords > 0 {
 				log.WithField("numRecords", numRecords).Debug(
@@ -364,6 +386,9 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
 func (s *Store) flushAttestationRecords(ctx context.Context, records []*AttestationRecord) {
+	ctx, span := trace.StartSpan(ctx, "validatorDB.flushAttestationRecords")
+	defer span.End()
+
 	if s.batchedAttestationsFlushInProgress.IsSet() {
 		// This should never happen. This method should not be called when a flush is already in
 		// progress. If you are seeing this log, check the atomic bool before calling this method.
@@ -381,6 +406,7 @@ func (s *Store) flushAttestationRecords(ctx context.Context, records []*Attestat
 	} else {
 		// This should never happen.
 		log.WithError(err).Error("Failed to batch save attestation records, retrying in queue")
+		tracing.AnnotateError(span, err)
 		for _, ar := range records {
 			s.batchedAttestations.Append(ar)
 		}
@@ -423,7 +449,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				return errors.Wrap(err, "could not create signing roots bucket")
 			}
 			if err := signingRootsBucket.Put(targetEpochBytes, att.SigningRoot[:]); err != nil {
-				return errors.Wrapf(err, "could not save signing signing root for epoch %d", att.Target)
+				return errors.Wrapf(err, "could not save signing root for epoch %d", att.Target)
 			}
 			sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
 			if err != nil {
@@ -461,7 +487,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 
 			// If the incoming source epoch is lower than the lowest signed source epoch, override.
 			lowestSignedSourceBytes := lowestSourceBucket.Get(att.PubKey[:])
-			var lowestSignedSourceEpoch types.Epoch
+			var lowestSignedSourceEpoch primitives.Epoch
 			if len(lowestSignedSourceBytes) >= 8 {
 				lowestSignedSourceEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedSourceBytes)
 			}
@@ -475,7 +501,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 
 			// If the incoming target epoch is lower than the lowest signed target epoch, override.
 			lowestSignedTargetBytes := lowestTargetBucket.Get(att.PubKey[:])
-			var lowestSignedTargetEpoch types.Epoch
+			var lowestSignedTargetEpoch primitives.Epoch
 			if len(lowestSignedTargetBytes) >= 8 {
 				lowestSignedTargetEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedTargetBytes)
 			}
@@ -511,7 +537,7 @@ func (s *Store) AttestedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubke
 
 // SigningRootAtTargetEpoch checks for an existing signing root at a specified
 // target epoch for a given validator public key.
-func (s *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, target types.Epoch) ([32]byte, error) {
+func (s *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, target primitives.Epoch) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.SigningRootAtTargetEpoch")
 	defer span.End()
 	var signingRoot [32]byte
@@ -534,12 +560,12 @@ func (s *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [fieldparam
 
 // LowestSignedSourceEpoch returns the lowest signed source epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (types.Epoch, bool, error) {
+func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (primitives.Epoch, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
 	defer span.End()
 
 	var err error
-	var lowestSignedSourceEpoch types.Epoch
+	var lowestSignedSourceEpoch primitives.Epoch
 	var exists bool
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedSourceBucket)
@@ -557,12 +583,12 @@ func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [fieldpar
 
 // LowestSignedTargetEpoch returns the lowest signed target epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
-func (s *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (types.Epoch, bool, error) {
+func (s *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (primitives.Epoch, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedTargetEpoch")
 	defer span.End()
 
 	var err error
-	var lowestSignedTargetEpoch types.Epoch
+	var lowestSignedTargetEpoch primitives.Epoch
 	var exists bool
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(lowestSignedTargetBucket)

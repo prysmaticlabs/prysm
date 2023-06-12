@@ -5,15 +5,10 @@ import (
 
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 )
 
 type Option func(g *Gateway) error
-
-func (g *Gateway) SetRouter(r *mux.Router) *Gateway {
-	g.cfg.router = r
-	return g
-}
 
 func WithPbHandlers(handlers []*PbMux) Option {
 	return func(g *Gateway) error {

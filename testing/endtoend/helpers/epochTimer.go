@@ -3,7 +3,7 @@ package helpers
 import (
 	"time"
 
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 )
 
 // EpochTicker is a special ticker for timing epoch changes.
@@ -45,7 +45,6 @@ func (s *EpochTicker) start(
 	secondsPerEpoch uint64,
 	since, until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
-
 	d := time.Duration(secondsPerEpoch) * time.Second
 
 	go func() {

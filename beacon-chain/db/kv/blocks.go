@@ -9,17 +9,16 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -28,14 +27,14 @@ import (
 var errInvalidSlotRange = errors.New("invalid end slot and start slot provided")
 
 // Block retrieval by root.
-func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
+func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
 	defer span.End()
 	// Return block from cache if it exists.
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
-		return v.(interfaces.SignedBeaconBlock), nil
+		return v.(interfaces.ReadOnlySignedBeaconBlock), nil
 	}
-	var blk interfaces.SignedBeaconBlock
+	var blk interfaces.ReadOnlySignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
@@ -91,10 +90,10 @@ func (s *Store) BackfillBlockRoot(ctx context.Context) ([32]byte, error) {
 }
 
 // HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.
-func (s *Store) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
+func (s *Store) HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadBlock")
 	defer span.End()
-	var headBlock interfaces.SignedBeaconBlock
+	var headBlock interfaces.ReadOnlySignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		headRoot := bkt.Get(headBlockRootKey)
@@ -113,10 +112,10 @@ func (s *Store) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, er
 }
 
 // Blocks retrieves a list of beacon blocks and its respective roots by filter criteria.
-func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interfaces.SignedBeaconBlock, [][32]byte, error) {
+func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interfaces.ReadOnlySignedBeaconBlock, [][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Blocks")
 	defer span.End()
-	blocks := make([]interfaces.SignedBeaconBlock, 0)
+	blocks := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
 	blockRoots := make([][32]byte, 0)
 
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -186,11 +185,11 @@ func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // BlocksBySlot retrieves a list of beacon blocks and its respective roots by slot.
-func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+func (s *Store) BlocksBySlot(ctx context.Context, slot primitives.Slot) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
 	defer span.End()
 
-	blocks := make([]interfaces.SignedBeaconBlock, 0)
+	blocks := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		roots, err := blockRootsBySlot(ctx, tx, slot)
@@ -211,7 +210,7 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) ([]interfaces
 }
 
 // BlockRootsBySlot retrieves a list of beacon block roots by slot
-func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, [][32]byte, error) {
+func (s *Store) BlockRootsBySlot(ctx context.Context, slot primitives.Slot) (bool, [][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRootsBySlot")
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
@@ -259,7 +258,7 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 }
 
 // SaveBlock to the db.
-func (s *Store) SaveBlock(ctx context.Context, signed interfaces.SignedBeaconBlock) error {
+func (s *Store) SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
 	defer span.End()
 	blockRoot, err := signed.Block().HashTreeRoot()
@@ -269,11 +268,27 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
-	return s.SaveBlocks(ctx, []interfaces.SignedBeaconBlock{signed})
+	return s.SaveBlocks(ctx, []interfaces.ReadOnlySignedBeaconBlock{signed})
+}
+
+// This function determines if we should save beacon blocks in the DB in blinded format by checking
+// if a `saveBlindedBeaconBlocks` key exists in the database. Otherwise, we check if the last
+// blocked stored to check if it is blinded, and then write that `saveBlindedBeaconBlocks` key
+// to the DB for future checks.
+func (s *Store) shouldSaveBlinded(ctx context.Context) (bool, error) {
+	var saveBlinded bool
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		metadataBkt := tx.Bucket(chainMetadataBucket)
+		saveBlinded = len(metadataBkt.Get(saveBlindedBeaconBlocksKey)) > 0
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	return saveBlinded, nil
 }
 
 // SaveBlocks via bulk updates to the db.
-func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBlock) error {
+func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
@@ -287,7 +302,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 		if err != nil {
 			return err
 		}
-		enc, err := marshalBlock(ctx, blk)
+		enc, err := s.marshalBlock(ctx, blk)
 		if err != nil {
 			return err
 		}
@@ -295,6 +310,10 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 		encodedBlocks[i] = enc
 		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 		indicesForBlocks[i] = indicesByBucket
+	}
+	saveBlinded, err := s.shouldSaveBlinded(ctx)
+	if err != nil {
+		return err
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -305,7 +324,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			if features.Get().EnableOnlyBlindedBeaconBlocks {
+			if saveBlinded {
 				blindedBlock, err := blk.ToBlinded()
 				if err != nil {
 					if !errors.Is(err, blocks.ErrUnsupportedVersion) {
@@ -328,8 +347,8 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 func (s *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
+	hasStateSummary := s.HasStateSummary(ctx, blockRoot)
 	return s.db.Update(func(tx *bolt.Tx) error {
-		hasStateSummary := s.hasStateSummaryBytes(tx, blockRoot)
 		hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
 		if !(hasStateInDB || hasStateSummary) {
 			return errors.New("no state or state summary found with head block root")
@@ -341,10 +360,10 @@ func (s *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 }
 
 // GenesisBlock retrieves the genesis block of the beacon chain.
-func (s *Store) GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
+func (s *Store) GenesisBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisBlock")
 	defer span.End()
-	var blk interfaces.SignedBeaconBlock
+	var blk interfaces.ReadOnlySignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		root := bkt.Get(genesisBlockRootKey)
@@ -414,7 +433,7 @@ func (s *Store) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) e
 // calling code can make decisions based on the slot without resolving the blocks to discover their slot (for instance
 // checking which root is canonical in fork choice, which operates purely on roots,
 // then if no canonical block is found, continuing to search through lower slots).
-func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs types.Slot, roots [][32]byte, err error) {
+func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot primitives.Slot) (fs primitives.Slot, roots [][32]byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestRootsBelowSlot")
 	defer span.End()
 
@@ -470,7 +489,7 @@ func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs 
 
 // FeeRecipientByValidatorID returns the fee recipient for a validator id.
 // `ErrNotFoundFeeRecipient` is returned if the validator id is not found.
-func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id types.ValidatorIndex) (common.Address, error) {
+func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FeeRecipientByValidatorID")
 	defer span.End()
 	var addr []byte
@@ -499,7 +518,7 @@ func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id types.Validato
 
 // SaveFeeRecipientsByValidatorIDs saves the fee recipients for validator ids.
 // Error is returned if `ids` and `recipients` are not the same length.
-func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, feeRecipients []common.Address) error {
+func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, feeRecipients []common.Address) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFeeRecipientByValidatorID")
 	defer span.End()
 
@@ -520,7 +539,7 @@ func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types
 
 // RegistrationByValidatorID returns the validator registration object for a validator id.
 // `ErrNotFoundFeeRecipient` is returned if the validator id is not found.
-func (s *Store) RegistrationByValidatorID(ctx context.Context, id types.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
+func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.RegistrationByValidatorID")
 	defer span.End()
 	reg := &ethpb.ValidatorRegistrationV1{}
@@ -537,7 +556,7 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id types.Validato
 
 // SaveRegistrationsByValidatorIDs saves the validator registrations for validator ids.
 // Error is returned if `ids` and `registrations` are not the same length.
-func (s *Store) SaveRegistrationsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error {
+func (s *Store) SaveRegistrationsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveRegistrationsByValidatorIDs")
 	defer span.End()
 
@@ -633,20 +652,20 @@ func blockRootsBySlotRange(
 		return [][]byte{}, nil
 	}
 
-	var startSlot, endSlot types.Slot
+	var startSlot, endSlot primitives.Slot
 	var step uint64
 	var ok bool
-	if startSlot, ok = startSlotEncoded.(types.Slot); !ok {
+	if startSlot, ok = startSlotEncoded.(primitives.Slot); !ok {
 		startSlot = 0
 	}
-	if endSlot, ok = endSlotEncoded.(types.Slot); !ok {
+	if endSlot, ok = endSlotEncoded.(primitives.Slot); !ok {
 		endSlot = 0
 	}
 	if step, ok = slotStepEncoded.(uint64); !ok || step == 0 {
 		step = 1
 	}
-	startEpoch, startEpochOk := startEpochEncoded.(types.Epoch)
-	endEpoch, endEpochOk := endEpochEncoded.(types.Epoch)
+	startEpoch, startEpochOk := startEpochEncoded.(primitives.Epoch)
+	endEpoch, endEpochOk := endEpochEncoded.(primitives.Epoch)
 	var err error
 	if startEpochOk && endEpochOk {
 		startSlot, err = slots.EpochStart(startEpoch)
@@ -689,7 +708,7 @@ func blockRootsBySlotRange(
 }
 
 // blockRootsBySlot retrieves the block roots by slot
-func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][32]byte, error) {
+func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot primitives.Slot) ([][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
 	defer span.End()
 
@@ -710,7 +729,7 @@ func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][32]
 // createBlockIndicesFromBlock takes in a beacon block and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
-func createBlockIndicesFromBlock(ctx context.Context, block interfaces.BeaconBlock) map[string][]byte {
+func createBlockIndicesFromBlock(ctx context.Context, block interfaces.ReadOnlyBeaconBlock) map[string][]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromBlock")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
@@ -722,10 +741,10 @@ func createBlockIndicesFromBlock(ctx context.Context, block interfaces.BeaconBlo
 	indices := [][]byte{
 		bytesutil.SlotToBytesBigEndian(block.Slot()),
 	}
-	if block.ParentRoot() != nil && len(block.ParentRoot()) > 0 {
-		buckets = append(buckets, blockParentRootIndicesBucket)
-		indices = append(indices, block.ParentRoot())
-	}
+	buckets = append(buckets, blockParentRootIndicesBucket)
+	parentRoot := block.ParentRoot()
+	indices = append(indices, parentRoot[:])
+
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]
 	}
@@ -765,7 +784,7 @@ func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) 
 }
 
 // unmarshal block from marshaled proto beacon block bytes to versioned beacon block struct type.
-func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock, error) {
+func unmarshalBlock(_ context.Context, enc []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
@@ -789,6 +808,16 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal blinded Bellatrix block")
 		}
+	case hasCapellaKey(enc):
+		rawBlock = &ethpb.SignedBeaconBlockCapella{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(capellaKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal Capella block")
+		}
+	case hasCapellaBlindKey(enc):
+		rawBlock = &ethpb.SignedBlindedBeaconBlockCapella{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(capellaBlindKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blinded Capella block")
+		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
@@ -799,45 +828,71 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 	return blocks.NewSignedBeaconBlock(rawBlock)
 }
 
-// marshal versioned beacon block from struct type down to bytes.
-func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
+func (s *Store) marshalBlock(
+	ctx context.Context,
+	blk interfaces.ReadOnlySignedBeaconBlock,
+) ([]byte, error) {
+	shouldBlind, err := s.shouldSaveBlinded(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if shouldBlind {
+		return marshalBlockBlinded(ctx, blk)
+	}
+	return marshalBlockFull(ctx, blk)
+}
+
+// Encodes a full beacon block to the DB with its associated key.
+func marshalBlockFull(
+	_ context.Context,
+	blk interfaces.ReadOnlySignedBeaconBlock,
+) ([]byte, error) {
 	var encodedBlock []byte
 	var err error
-	blockToSave := blk
-	if features.Get().EnableOnlyBlindedBeaconBlocks {
-		blindedBlock, err := blk.ToBlinded()
-		switch {
-		case errors.Is(err, blocks.ErrUnsupportedVersion):
-			encodedBlock, err = blk.MarshalSSZ()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not marshal non-blinded block")
-			}
-		case err != nil:
-			return nil, errors.Wrap(err, "could not convert block to blinded format")
-		default:
-			encodedBlock, err = blindedBlock.MarshalSSZ()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not marshal blinded block")
-			}
-			blockToSave = blindedBlock
-		}
-	} else {
-		encodedBlock, err = blk.MarshalSSZ()
-		if err != nil {
-			return nil, err
-		}
+	encodedBlock, err = blk.MarshalSSZ()
+	if err != nil {
+		return nil, err
 	}
-	switch blockToSave.Version() {
+	switch blk.Version() {
+	case version.Capella:
+		return snappy.Encode(nil, append(capellaKey, encodedBlock...)), nil
 	case version.Bellatrix:
-		if blockToSave.IsBlinded() {
-			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
-		}
 		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
 	case version.Phase0:
 		return snappy.Encode(nil, encodedBlock), nil
 	default:
-		return nil, errors.New("Unknown block version")
+		return nil, errors.New("unknown block version")
+	}
+}
+
+// Encodes a blinded beacon block with its associated key.
+// If the block does not support blinding, we then encode it as a full
+// block with its associated key by calling marshalBlockFull.
+func marshalBlockBlinded(
+	ctx context.Context,
+	blk interfaces.ReadOnlySignedBeaconBlock,
+) ([]byte, error) {
+	blindedBlock, err := blk.ToBlinded()
+	if err != nil {
+		switch {
+		case errors.Is(err, blocks.ErrUnsupportedVersion):
+			return marshalBlockFull(ctx, blk)
+		default:
+			return nil, errors.Wrap(err, "could not convert block to blinded format")
+		}
+	}
+	encodedBlock, err := blindedBlock.MarshalSSZ()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal blinded block")
+	}
+	switch blk.Version() {
+	case version.Capella:
+		return snappy.Encode(nil, append(capellaBlindKey, encodedBlock...)), nil
+	case version.Bellatrix:
+		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
+	default:
+		return nil, fmt.Errorf("unsupported block version: %v", blk.Version())
 	}
 }

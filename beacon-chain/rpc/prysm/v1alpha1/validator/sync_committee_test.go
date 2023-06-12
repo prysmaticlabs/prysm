@@ -5,20 +5,20 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
-	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
+	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -82,23 +82,21 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 }
 
 func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	transition.SkipSlotCache.Disable()
 	defer transition.SkipSlotCache.Enable()
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{
-			SyncCommitteeIndices: []types.CommitteeIndex{0},
+			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 		},
 	}
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	// Request slot 0, should get the index 0 for validator 0.
 	res, err := server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
-		PublicKey: pubKey[:], Slot: types.Slot(0),
+		PublicKey: pubKey[:], Slot: primitives.Slot(0),
 	})
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{0}, res.Indices)
+	require.DeepEqual(t, []primitives.CommitteeIndex{0}, res.Indices)
 }
 
 func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
@@ -108,7 +106,7 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 		P2P:               &mockp2p.MockBroadcaster{},
 		HeadFetcher: &mock.ChainService{
 			State:                st,
-			SyncCommitteeIndices: []types.CommitteeIndex{10},
+			SyncCommitteeIndices: []primitives.CommitteeIndex{10},
 		},
 		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}

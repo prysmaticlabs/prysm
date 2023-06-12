@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -119,7 +118,7 @@ func TestProcessSlashings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := &Service{
-				TrackedValidators: map[types.ValidatorIndex]bool{
+				TrackedValidators: map[primitives.ValidatorIndex]bool{
 					1: true,
 					2: true,
 				},
@@ -170,7 +169,7 @@ func TestProcessProposedBlock(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := setupService(t)
 			beaconState, _ := util.DeterministicGenesisState(t, 256)
-			root := [32]byte{}
+			var root [32]byte
 			copy(root[:], "hello-world")
 			wb, err := blocks.NewBeaconBlock(tt.block)
 			require.NoError(t, err)
@@ -241,10 +240,44 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 
 func TestLogAggregatedPerformance(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	latestPerformance := map[primitives.ValidatorIndex]ValidatorLatestPerformance{
+		1: {
+			balance: 32000000000,
+		},
+		2: {
+			balance: 32000000000,
+		},
+		12: {
+			balance: 31900000000,
+		},
+		15: {
+			balance: 31900000000,
+		},
+	}
+	aggregatedPerformance := map[primitives.ValidatorIndex]ValidatorAggregatedPerformance{
+		1: {
+			startEpoch:                      0,
+			startBalance:                    31700000000,
+			totalAttestedCount:              12,
+			totalRequestedCount:             15,
+			totalDistance:                   14,
+			totalCorrectHead:                8,
+			totalCorrectSource:              11,
+			totalCorrectTarget:              12,
+			totalProposedCount:              1,
+			totalSyncCommitteeContributions: 0,
+			totalSyncCommitteeAggregations:  0,
+		},
+		2:  {},
+		12: {},
+		15: {},
+	}
+	s := &Service{
+		latestPerformance:     latestPerformance,
+		aggregatedPerformance: aggregatedPerformance,
+	}
 
 	s.logAggregatedPerformance()
-	time.Sleep(3000 * time.Millisecond)
 	wanted := "\"Aggregated performance since launch\" AttestationInclusion=\"80.00%\"" +
 		" AverageInclusionDistance=1.2 BalanceChangePct=\"0.95%\" CorrectlyVotedHeadPct=\"66.67%\" " +
 		"CorrectlyVotedSourcePct=\"91.67%\" CorrectlyVotedTargetPct=\"100.00%\" StartBalance=31700000000 " +

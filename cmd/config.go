@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -10,7 +10,6 @@ import (
 type Flags struct {
 	// Configuration related flags.
 	MinimalConfig  bool // MinimalConfig as defined in the spec.
-	E2EConfig      bool // E2EConfig made specifically for testing, do not use except in E2E.
 	MaxRPCPageSize int  // MaxRPCPageSize is used for a cap of page sizes in RPC requests.
 }
 

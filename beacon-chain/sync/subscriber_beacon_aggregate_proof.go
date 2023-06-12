@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -15,7 +15,7 @@ import (
 func (s *Service) beaconAggregateProofSubscriber(_ context.Context, msg proto.Message) error {
 	a, ok := msg.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
-		return fmt.Errorf("message was not type *eth.SignedAggregateAttestationAndProof, type=%T", msg)
+		return fmt.Errorf("message was not type *ethpb.SignedAggregateAttestationAndProof, type=%T", msg)
 	}
 
 	if a.Message.Aggregate == nil || a.Message.Aggregate.Data == nil {

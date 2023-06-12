@@ -5,18 +5,18 @@ import (
 	"strings"
 	"time"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	corenet "github.com/libp2p/go-libp2p-core/network"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	corenet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -32,9 +32,14 @@ var requestBlocksFlags = struct {
 }{}
 
 var requestBlocksCmd = &cli.Command{
-	Name:   "beacon-blocks-by-range",
-	Usage:  "Request a range of blocks from a beacon node via a p2p connection",
-	Action: cliActionRequestBlocks,
+	Name:  "beacon-blocks-by-range",
+	Usage: "Request a range of blocks from a beacon node via a p2p connection",
+	Action: func(cliCtx *cli.Context) error {
+		if err := cliActionRequestBlocks(cliCtx); err != nil {
+			log.WithError(err).Fatal("Could not request blocks by range")
+		}
+		return nil
+	},
 	Flags: []cli.Flag{
 		cmd.ChainConfigFileFlag,
 		&cli.StringFlag{
@@ -134,8 +139,8 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		return err
 	}
 
-	startSlot := types.Slot(requestBlocksFlags.StartSlot)
-	var headSlot *types.Slot
+	startSlot := primitives.Slot(requestBlocksFlags.StartSlot)
+	var headSlot *primitives.Slot
 	if startSlot == 0 {
 		headResp, err := c.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 		if err != nil {
@@ -185,7 +190,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		for _, blk := range blocks {
 			exec, err := blk.Block().Body().Execution()
 			switch {
-			case errors.Is(err, consensusblocks.ErrUnsupportedGetter):
+			case errors.Is(err, consensus_types.ErrUnsupportedField):
 				continue
 			case err != nil:
 				log.WithError(err).Error("Could not read execution data from block body")
@@ -194,7 +199,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 			}
 			_, err = exec.Transactions()
 			switch {
-			case errors.Is(err, consensusblocks.ErrUnsupportedGetter):
+			case errors.Is(err, consensus_types.ErrUnsupportedField):
 				continue
 			case err != nil:
 				log.WithError(err).Error("Could not read transactions block execution payload")
@@ -209,7 +214,6 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 			"timeFromSendingToProcessingResponse": end,
 			"totalBlocksWithExecutionPayloads":    totalExecutionBlocks,
 		}).Info("Received blocks from peer")
-
 	}
 	return nil
 }

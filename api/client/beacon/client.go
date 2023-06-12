@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -14,27 +12,30 @@ import (
 	"sort"
 	"strconv"
 	"text/template"
-	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	getSignedBlockPath      = "/eth/v2/beacon/blocks"
-	getBlockRootPath        = "/eth/v1/beacon/blocks/{{.Id}}/root"
-	getForkForStatePath     = "/eth/v1/beacon/states/{{.Id}}/fork"
-	getWeakSubjectivityPath = "/eth/v1/beacon/weak_subjectivity"
-	getForkSchedulePath     = "/eth/v1/config/fork_schedule"
-	getStatePath            = "/eth/v2/debug/beacon/states"
-	getNodeVersionPath      = "/eth/v1/node/version"
+	getSignedBlockPath       = "/eth/v2/beacon/blocks"
+	getBlockRootPath         = "/eth/v1/beacon/blocks/{{.Id}}/root"
+	getForkForStatePath      = "/eth/v1/beacon/states/{{.Id}}/fork"
+	getWeakSubjectivityPath  = "/eth/v1/beacon/weak_subjectivity"
+	getForkSchedulePath      = "/eth/v1/config/fork_schedule"
+	getConfigSpecPath        = "/eth/v1/config/spec"
+	getStatePath             = "/eth/v2/debug/beacon/states"
+	getNodeVersionPath       = "/eth/v1/node/version"
+	changeBLStoExecutionPath = "/eth/v1/beacon/pool/bls_to_execution_changes"
 )
 
 // StateOrBlockId represents the block_id / state_id parameters that several of the Eth Beacon API methods accept.
@@ -51,8 +52,6 @@ const (
 	IdFinalized StateOrBlockId = "finalized"
 )
 
-var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
-
 // IdFromRoot encodes a block root in the format expected by the API in places where a root can be used to identify
 // a BeaconState or SignedBeaconBlock.
 func IdFromRoot(r [32]byte) StateOrBlockId {
@@ -61,7 +60,7 @@ func IdFromRoot(r [32]byte) StateOrBlockId {
 
 // IdFromSlot encodes a Slot in the format expected by the API in places where a slot can be used to identify
 // a BeaconState or SignedBeaconBlock.
-func IdFromSlot(s types.Slot) StateOrBlockId {
+func IdFromSlot(s primitives.Slot) StateOrBlockId {
 	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
 }
 
@@ -82,99 +81,22 @@ func idTemplate(ts string) func(StateOrBlockId) string {
 	return f
 }
 
-// ClientOpt is a functional option for the Client type (http.Client wrapper)
-type ClientOpt func(*Client)
-
-// WithTimeout sets the .Timeout attribute of the wrapped http.Client.
-func WithTimeout(timeout time.Duration) ClientOpt {
-	return func(c *Client) {
-		c.hc.Timeout = timeout
-	}
+func renderGetBlockPath(id StateOrBlockId) string {
+	return path.Join(getSignedBlockPath, string(id))
 }
 
 // Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
-	hc      *http.Client
-	host    string
-	scheme  string
-	baseURL *url.URL
+	*client.Client
 }
 
-// NewClient constructs a new client with the provided options (ex WithTimeout).
-// `host` is the base host + port used to construct request urls. This value can be
-// a URL string, or NewClient will assume an http endpoint if just `host:port` is used.
-func NewClient(host string, opts ...ClientOpt) (*Client, error) {
-	u, err := urlForHost(host)
+// NewClient returns a new Client that includes functions for rest calls to Beacon API.
+func NewClient(host string, opts ...client.ClientOpt) (*Client, error) {
+	c, err := client.NewClient(host, opts...)
 	if err != nil {
 		return nil, err
 	}
-	c := &Client{
-		hc:      &http.Client{},
-		baseURL: u,
-	}
-	for _, o := range opts {
-		o(c)
-	}
-	return c, nil
-}
-
-func urlForHost(h string) (*url.URL, error) {
-	// try to parse as url (being permissive)
-	u, err := url.Parse(h)
-	if err == nil && u.Host != "" {
-		return u, nil
-	}
-	// try to parse as host:port
-	host, port, err := net.SplitHostPort(h)
-	if err != nil {
-		return nil, ErrMalformedHostname
-	}
-	return &url.URL{Host: fmt.Sprintf("%s:%s", host, port), Scheme: "http"}, nil
-}
-
-// NodeURL returns a human-readable string representation of the beacon node base url.
-func (c *Client) NodeURL() string {
-	return c.baseURL.String()
-}
-
-type reqOption func(*http.Request)
-
-func withSSZEncoding() reqOption {
-	return func(req *http.Request) {
-		req.Header.Set("Accept", "application/octet-stream")
-	}
-}
-
-// get is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
-func (c *Client) get(ctx context.Context, path string, opts ...reqOption) ([]byte, error) {
-	u := c.baseURL.ResolveReference(&url.URL{Path: path})
-	log.Printf("requesting %s", u.String())
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	for _, o := range opts {
-		o(req)
-	}
-	r, err := c.hc.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err = r.Body.Close()
-	}()
-	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
-	}
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "error reading http response body from GetBlock")
-	}
-	return b, nil
-}
-
-func renderGetBlockPath(id StateOrBlockId) string {
-	return path.Join(getSignedBlockPath, string(id))
+	return &Client{c}, nil
 }
 
 // GetBlock retrieves the SignedBeaconBlock for the given block id.
@@ -184,7 +106,7 @@ func renderGetBlockPath(id StateOrBlockId) string {
 // The return value contains the ssz-encoded bytes.
 func (c *Client) GetBlock(ctx context.Context, blockId StateOrBlockId) ([]byte, error) {
 	blockPath := renderGetBlockPath(blockId)
-	b, err := c.get(ctx, blockPath, withSSZEncoding())
+	b, err := c.Get(ctx, blockPath, client.WithSSZEncoding())
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting state by id = %s", blockId)
 	}
@@ -199,7 +121,7 @@ var getBlockRootTpl = idTemplate(getBlockRootPath)
 // for the named identifiers.
 func (c *Client) GetBlockRoot(ctx context.Context, blockId StateOrBlockId) ([32]byte, error) {
 	rootPath := getBlockRootTpl(blockId)
-	b, err := c.get(ctx, rootPath)
+	b, err := c.Get(ctx, rootPath)
 	if err != nil {
 		return [32]byte{}, errors.Wrapf(err, "error requesting block root by id = %s", blockId)
 	}
@@ -222,7 +144,7 @@ var getForkTpl = idTemplate(getForkForStatePath)
 // <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
 func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fork, error) {
-	body, err := c.get(ctx, getForkTpl(stateId))
+	body, err := c.Get(ctx, getForkTpl(stateId))
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting fork by state id = %s", stateId)
 	}
@@ -238,7 +160,7 @@ func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fo
 
 // GetForkSchedule retrieve all forks, past present and future, of which this node is aware.
 func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, error) {
-	body, err := c.get(ctx, getForkSchedulePath)
+	body, err := c.Get(ctx, getForkSchedulePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting fork schedule")
 	}
@@ -254,6 +176,20 @@ func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, er
 	return ofs, nil
 }
 
+// GetConfigSpec retrieve the current configs of the network used by the beacon node.
+func (c *Client) GetConfigSpec(ctx context.Context) (*v1.SpecResponse, error) {
+	body, err := c.Get(ctx, getConfigSpecPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "error requesting configSpecPath")
+	}
+	fsr := &v1.SpecResponse{}
+	err = json.Unmarshal(body, fsr)
+	if err != nil {
+		return nil, err
+	}
+	return fsr, nil
+}
+
 type NodeVersion struct {
 	implementation string
 	semver         string
@@ -265,7 +201,7 @@ var versionRE = regexp.MustCompile(`^(\w+)/(v\d+\.\d+\.\d+[-a-zA-Z0-9]*)\s*/?(.*
 func parseNodeVersion(v string) (*NodeVersion, error) {
 	groups := versionRE.FindStringSubmatch(v)
 	if len(groups) != 4 {
-		return nil, errors.Wrapf(ErrInvalidNodeVersion, "could not be parsed: %s", v)
+		return nil, errors.Wrapf(client.ErrInvalidNodeVersion, "could not be parsed: %s", v)
 	}
 	return &NodeVersion{
 		implementation: groups[1],
@@ -277,7 +213,7 @@ func parseNodeVersion(v string) (*NodeVersion, error) {
 // GetNodeVersion requests that the beacon node identify information about its implementation in a format
 // similar to a HTTP User-Agent field. ex: Lighthouse/v0.1.5 (Linux x86_64)
 func (c *Client) GetNodeVersion(ctx context.Context) (*NodeVersion, error) {
-	b, err := c.get(ctx, getNodeVersionPath)
+	b, err := c.Get(ctx, getNodeVersionPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting node version")
 	}
@@ -304,7 +240,7 @@ func renderGetStatePath(id StateOrBlockId) string {
 // The return value contains the ssz-encoded bytes.
 func (c *Client) GetState(ctx context.Context, stateId StateOrBlockId) ([]byte, error) {
 	statePath := path.Join(getStatePath, string(stateId))
-	b, err := c.get(ctx, statePath, withSSZEncoding())
+	b, err := c.Get(ctx, statePath, client.WithSSZEncoding())
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting state by id = %s", stateId)
 	}
@@ -317,7 +253,7 @@ func (c *Client) GetState(ctx context.Context, stateId StateOrBlockId) ([]byte, 
 // - finds the highest non-skipped block preceding the epoch
 // - returns the htr of the found block and returns this + the value of state_root from the block
 func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData, error) {
-	body, err := c.get(ctx, getWeakSubjectivityPath)
+	body, err := c.Get(ctx, getWeakSubjectivityPath)
 	if err != nil {
 		return nil, err
 	}
@@ -339,27 +275,64 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 		return nil, err
 	}
 	return &WeakSubjectivityData{
-		Epoch:     types.Epoch(epoch),
+		Epoch:     primitives.Epoch(epoch),
 		BlockRoot: bytesutil.ToBytes32(blockRoot),
 		StateRoot: bytesutil.ToBytes32(stateRoot),
 	}, nil
 }
 
-func non200Err(response *http.Response) error {
-	bodyBytes, err := io.ReadAll(response.Body)
-	var body string
+// SubmitChangeBLStoExecution calls a beacon API endpoint to set the withdrawal addresses based on the given signed messages.
+// If the API responds with something other than OK there will be failure messages associated to the corresponding request message.
+func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+	u := c.BaseURL().ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
+	body, err := json.Marshal(request)
 	if err != nil {
-		body = "(Unable to read response body.)"
-	} else {
-		body = "response body:\n" + string(bodyBytes)
+		return errors.Wrap(err, "failed to marshal JSON")
 	}
-	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
-	switch response.StatusCode {
-	case 404:
-		return errors.Wrap(ErrNotFound, msg)
-	default:
-		return errors.Wrap(ErrNotOK, msg)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewBuffer(body))
+	if err != nil {
+		return errors.Wrap(err, "invalid format, failed to create new POST request object")
 	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = resp.Body.Close()
+	}()
+	if resp.StatusCode != http.StatusOK {
+		decoder := json.NewDecoder(resp.Body)
+		decoder.DisallowUnknownFields()
+		errorJson := &apimiddleware.IndexedVerificationFailureErrorJson{}
+		if err := decoder.Decode(errorJson); err != nil {
+			return errors.Wrapf(err, "failed to decode error JSON for %s", resp.Request.URL)
+		}
+		for _, failure := range errorJson.Failures {
+			w := request[failure.Index].Message
+			log.WithFields(log.Fields{
+				"validator_index":    w.ValidatorIndex,
+				"withdrawal_address": w.ToExecutionAddress,
+			}).Error(failure.Message)
+		}
+		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
+	}
+	return nil
+}
+
+// GetBLStoExecutionChanges gets all the set withdrawal messages in the node's operation pool.
+// Returns a struct representation of json response.
+func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*apimiddleware.BLSToExecutionChangesPoolResponseJson, error) {
+	body, err := c.Get(ctx, changeBLStoExecutionPath)
+	if err != nil {
+		return nil, err
+	}
+	poolResponse := &apimiddleware.BLSToExecutionChangesPoolResponseJson{}
+	err = json.Unmarshal(body, poolResponse)
+	if err != nil {
+		return nil, err
+	}
+	return poolResponse, nil
 }
 
 type forkResponse struct {
@@ -390,7 +363,7 @@ func (f *forkResponse) Fork() (*ethpb.Fork, error) {
 	return &ethpb.Fork{
 		CurrentVersion:  cSlice,
 		PreviousVersion: pSlice,
-		Epoch:           types.Epoch(epoch),
+		Epoch:           primitives.Epoch(epoch),
 	}, nil
 }
 
@@ -415,7 +388,7 @@ func (fsr *forkScheduleResponse) OrderedForkSchedule() (forks.OrderedSchedule, e
 		version := bytesutil.ToBytes4(vSlice)
 		ofs = append(ofs, forks.ForkScheduleEntry{
 			Version: version,
-			Epoch:   types.Epoch(uint64(epoch)),
+			Epoch:   primitives.Epoch(uint64(epoch)),
 		})
 	}
 	sort.Sort(ofs)

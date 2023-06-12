@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit/mock"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestCreateTrieFromProto_Validation(t *testing.T) {
@@ -65,9 +65,10 @@ func TestCreateTrieFromProto_Validation(t *testing.T) {
 		{
 			trie: &ethpb.SparseMerkleTrie{
 				Layers: genValidLayers(66),
-				Depth:  65,
+				Depth:  63,
 			},
-			errString: "depth exceeds 64",
+			errString: "supported merkle trie depth exceeded (max uint64 depth is 63, " +
+				"theoretical max sparse merkle trie depth is 64)",
 		},
 	}
 	for _, tt := range tests {
@@ -151,6 +152,32 @@ func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
 	if _, err := trie.GenerateTrieFromItems(nil, params.BeaconConfig().DepositContractTreeDepth); err == nil {
 		t.Error("Expected error when providing nil items received nil")
 	}
+}
+
+func TestGenerateTrieFromItems_DepthSupport(t *testing.T) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("BB"),
+		[]byte("CCC"),
+		[]byte("DDDD"),
+		[]byte("EEEEE"),
+		[]byte("FFFFFF"),
+		[]byte("GGGGGGG"),
+	}
+	// max supported depth is 62 (uint64 will overflow above this)
+	// max theoretical depth is 64
+	var max_supported_trie_depth uint64 = 62
+	// Supported depth
+	m1, err := trie.GenerateTrieFromItems(items, max_supported_trie_depth)
+	require.NoError(t, err)
+	proof, err := m1.MerkleProof(2)
+	require.NoError(t, err)
+	require.Equal(t, len(proof), int(max_supported_trie_depth)+1)
+	// Unsupported depth
+	_, err = trie.GenerateTrieFromItems(items, max_supported_trie_depth+1)
+	errString := "supported merkle trie depth exceeded (max uint64 depth is 63, " +
+		"theoretical max sparse merkle trie depth is 64)"
+	require.ErrorContains(t, errString, err)
 }
 
 func TestMerkleTrie_VerifyMerkleProofWithDepth(t *testing.T) {

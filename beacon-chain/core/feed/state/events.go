@@ -6,8 +6,8 @@ package state
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 const (
@@ -15,27 +15,28 @@ const (
 	BlockProcessed = iota + 1
 	// ChainStarted is sent when enough validators are active to start proposing blocks.
 	ChainStarted
-	// Initialized is sent when the internal beacon node's state is ready to be accessed.
-	Initialized
-	// Synced is sent when the beacon node has completed syncing and is ready to participate in the network.
-	Synced
-	// Reorg is an event sent when the new head state's slot after a block
-	// transition is lower than its previous head state slot value.
+	// deprecated: Initialized is sent when the internal beacon node's state is ready to be accessed.
+	_
+	// deprecated: Synced is sent when the beacon node has completed syncing and is ready to participate in the network.
+	_
+	// Reorg is an event sent when the new head is not a descendant of the previous head.
 	Reorg
 	// FinalizedCheckpoint event.
 	FinalizedCheckpoint
 	// NewHead of the chain event.
 	NewHead
+	// MissedSlot is sent when we need to notify users that a slot was missed.
+	MissedSlot
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
 	// Slot is the slot of the processed block.
-	Slot types.Slot
+	Slot primitives.Slot
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// SignedBlock is the physical processed block.
-	SignedBlock interfaces.SignedBeaconBlock
+	SignedBlock interfaces.ReadOnlySignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
 }

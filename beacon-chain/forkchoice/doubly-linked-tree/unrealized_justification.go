@@ -1,21 +1,20 @@
 package doublylinkedtree
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch types.Epoch) error {
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
-
+func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch primitives.Epoch) error {
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
 		return errors.Wrap(ErrNilNode, "could not set unrealized justified epoch")
@@ -27,10 +26,7 @@ func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch types.Epoch) er
 	return nil
 }
 
-func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch types.Epoch) error {
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
-
+func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch primitives.Epoch) error {
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
 		return errors.Wrap(ErrNilNode, "could not set unrealized finalized epoch")
@@ -44,39 +40,28 @@ func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch types.Epoch) er
 
 // updateUnrealizedCheckpoints "realizes" the unrealized justified and finalized
 // epochs stored within nodes. It should be called at the beginning of each epoch.
-func (f *ForkChoice) updateUnrealizedCheckpoints() {
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
-	f.store.checkpointsLock.Lock()
-	defer f.store.checkpointsLock.Unlock()
+func (f *ForkChoice) updateUnrealizedCheckpoints(ctx context.Context) error {
 	for _, node := range f.store.nodeByRoot {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch
 		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
 			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
-			if node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
-				f.store.bestJustifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+			if err := f.updateJustifiedBalances(ctx, f.store.justifiedCheckpoint.Root); err != nil {
+				return errors.Wrap(err, "could not update justified balances")
 			}
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
-			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 			f.store.finalizedCheckpoint = f.store.unrealizedFinalizedCheckpoint
 		}
 	}
+	return nil
 }
 
 func (s *Store) pullTips(state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
-	s.nodesLock.Lock()
-	defer s.nodesLock.Unlock()
-
 	if node.parent == nil { // Nothing to do if the parent is nil.
 		return jc, fc
 	}
-
-	s.checkpointsLock.Lock()
-	defer s.checkpointsLock.Unlock()
-
 	currentEpoch := slots.ToEpoch(slots.CurrentSlot(s.genesisTime))
 	stateSlot := state.Slot()
 	stateEpoch := slots.ToEpoch(stateSlot)

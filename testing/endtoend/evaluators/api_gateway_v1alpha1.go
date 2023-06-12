@@ -9,10 +9,10 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
-	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
+	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"google.golang.org/grpc"
 )
 
@@ -33,7 +33,7 @@ const (
 
 type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
-func apiGatewayV1Alpha1Verify(conns ...*grpc.ClientConn) error {
+func apiGatewayV1Alpha1Verify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,

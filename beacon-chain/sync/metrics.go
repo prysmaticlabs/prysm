@@ -7,12 +7,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 var (
@@ -86,7 +86,51 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
 			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
-			Buckets: []float64{250, 500, 1000, 1500, 2000, 4000, 8000, 16000},
+			Buckets: []float64{100, 250, 500, 750, 1000, 1500, 2000, 4000, 8000, 12000, 16000, 20000, 24000},
+		},
+	)
+	arrivalBlockPropagationGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "block_arrival_latency_milliseconds_gauge",
+		Help: "Captures blocks propagation time. Blocks arrival in milliseconds",
+	})
+
+	// Attestation processing granular error tracking.
+	attBadBlockCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_block_total",
+		Help: "Increased when a gossip attestation references a bad block",
+	})
+	attBadLmdConsistencyCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_lmd_consistency_total",
+		Help: "Increased when a gossip attestation has bad LMD GHOST consistency",
+	})
+	attBadSelectionProofCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_selection_proof_total",
+		Help: "Increased when a gossip attestation has a bad selection proof",
+	})
+	attBadSignatureBatchCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_signature_batch_total",
+		Help: "Increased when a gossip attestation has a bad signature batch",
+	})
+
+	// Attestation and block gossip verification performance.
+	aggregateAttestationVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_aggregate_attestation_verification_milliseconds",
+			Help: "Time to verify gossiped attestations",
+		},
+	)
+	blockVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_block_verification_milliseconds",
+			Help: "Time to verify gossiped blocks",
+		},
+	)
+
+	// Sync committee verification performance.
+	syncMessagesForUnknownBlocks = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "sync_committee_messages_unknown_root",
+			Help: "The number of sync committee messages that are checked against DB to see if there vote is for an unknown root",
 		},
 	)
 )
@@ -94,7 +138,7 @@ var (
 func (s *Service) updateMetrics() {
 	// do not update metrics if genesis time
 	// has not been initialized
-	if s.cfg.chain.GenesisTime().IsZero() {
+	if s.cfg.clock.GenesisTime().IsZero() {
 		return
 	}
 	// We update the dynamic subnet topics.
@@ -102,8 +146,8 @@ func (s *Service) updateMetrics() {
 	if err != nil {
 		log.WithError(err).Debugf("Could not compute fork digest")
 	}
-	indices := s.aggregatorSubnetIndices(s.cfg.chain.CurrentSlot())
-	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	indices := s.aggregatorSubnetIndices(s.cfg.clock.CurrentSlot())
+	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	syncTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SyncCommitteeMessage{})]
 	attTopic += s.cfg.p2p.Encoding().ProtocolSuffix()

@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -39,6 +39,12 @@ var (
 		Name:  "beacon-rpc-gateway-provider",
 		Usage: "Beacon node RPC gateway provider endpoint",
 		Value: "127.0.0.1:3500",
+	}
+	// BeaconRESTApiProviderFlag defines a beacon node REST API endpoint.
+	BeaconRESTApiProviderFlag = &cli.StringFlag{
+		Name:  "beacon-rest-api-provider",
+		Usage: "Beacon node REST API provider endpoint",
+		Value: "http://127.0.0.1:3500",
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = &cli.StringFlag{
@@ -162,6 +168,11 @@ var (
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
 	}
+	// MnemonicLanguageFlag is used to specify the language of the mnemonic.
+	MnemonicLanguageFlag = &cli.StringFlag{
+		Name:  "mnemonic-language",
+		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish",
+	}
 	// ShowDepositDataFlag for accounts.
 	ShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",
@@ -214,6 +225,17 @@ var (
 		Name:  "exit-all",
 		Usage: "Exit all validators. This will still require the staker to confirm a userprompt for the action",
 	}
+	// ForceExitFlag to exit without displaying the confirmation prompt.
+	ForceExitFlag = &cli.BoolFlag{
+		Name:  "force-exit",
+		Usage: "Exit without displaying the confirmation prompt",
+	}
+	VoluntaryExitJSONOutputPath = &cli.StringFlag{
+		Name: "exit-json-output-dir",
+		Usage: "The output directory to write voluntary exits as individual unencrypted JSON " +
+			"files. If this flag is provided, voluntary exits will be written to the provided " +
+			"directory and will not be broadcasted.",
+	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
 		Name:  "backup-password-file",
@@ -236,18 +258,7 @@ var (
 		Name:  "keys-dir",
 		Usage: "Path to a directory where keystores to be imported are stored",
 	}
-	// GrpcRemoteAddressFlag defines the host:port address for a remote keymanager to connect to.
-	GrpcRemoteAddressFlag = &cli.StringFlag{
-		Name:  "grpc-remote-address",
-		Usage: "Host:port of a gRPC server for a remote keymanager",
-		Value: "",
-	}
-	// DisableRemoteSignerTlsFlag disables TLS when connecting to a remote signer.
-	DisableRemoteSignerTlsFlag = &cli.BoolFlag{
-		Name:  "disable-remote-signer-tls",
-		Usage: "Disables TLS when connecting to a remote signer. (WARNING! This will result in insecure requests!)",
-		Value: false,
-	}
+
 	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
 	// a secure signer via TLS and gRPC.
 	RemoteSignerCertPathFlag = &cli.StringFlag{

@@ -5,23 +5,23 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 	ctx := context.Background()
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
-	lowestSignedSlot := types.Slot(10)
-	pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
+	lowestSignedSlot := primitives.Slot(10)
+	var pubKeyBytes [fieldparams.BLSPubkeyLength]byte
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
 
 	// We save a proposal at the lowest signed slot in the DB.
@@ -102,7 +102,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 		Signature: params.BeaconConfig().EmptySignature[:],
 	})
 
-	pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKeyBytes [fieldparams.BLSPubkeyLength]byte
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
 
 	// We save a proposal at slot 1 as our lowest proposal.
@@ -113,7 +113,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	dummySigningRoot := [32]byte{1}
 	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, 10, dummySigningRoot[:])
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	sBlock, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
@@ -168,7 +168,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	defer reset()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	blk := util.NewBeaconBlock()

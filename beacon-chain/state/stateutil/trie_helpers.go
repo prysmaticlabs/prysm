@@ -5,19 +5,17 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash/htr"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v4/math"
 )
 
 // ReturnTrieLayer returns the representation of a merkle trie when
 // provided with the elements of a fixed sized trie and the corresponding depth of
 // it.
 func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
 	leaves := elements
 
 	if len(leaves) == 1 {
@@ -27,7 +25,7 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) 
 	layers := make([][][32]byte, ssz.Depth(length)+1)
 	layers[0] = hashLayer
 	var err error
-	layers, _, err = MerkleizeTrieLeaves(layers, hashLayer, hasher)
+	layers, _, err = MerkleizeTrieLeaves(layers, hashLayer)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +44,6 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) 
 // provided with the elements of a variable sized trie and the corresponding depth of
 // it.
 func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
-	hasher := hash.CustomSHA256Hasher()
 	depth := ssz.Depth(length)
 	layers := make([][]*[32]byte, depth+1)
 	// Return zerohash at depth
@@ -67,38 +64,18 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	for i := uint8(0); i < depth; i++ {
 		layerLen := len(layers[i])
 		oddNodeLength := layerLen%2 == 1
-		if features.Get().EnableVectorizedHTR {
-			if oddNodeLength {
-				zerohash := trie.ZeroHashes[i]
-				elements = append(elements, zerohash)
-				layerLen++
-			}
+		if oddNodeLength {
+			zerohash := trie.ZeroHashes[i]
+			elements = append(elements, zerohash)
+			layerLen++
+		}
 
-			layers[i+1] = make([]*[32]byte, layerLen/2)
-			newElems := make([][32]byte, layerLen/2)
-			htr.VectorizedSha256(elements, newElems)
-			elements = newElems
-			for j := range elements {
-				layers[i+1][j] = &elements[j]
-			}
-		} else {
-			if oddNodeLength {
-				zerohash := trie.ZeroHashes[i]
-				layers[i] = append(layers[i], &zerohash)
-			}
-			updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
-			for j := 0; j < len(layers[i]); j += 2 {
-				buffer.Write(layers[i][j][:])
-				buffer.Write(layers[i][j+1][:])
-				concat := hasher(buffer.Bytes())
-				updatedValues = append(updatedValues, &concat)
-				buffer.Reset()
-			}
-			// remove zerohash node from tree
-			if oddNodeLength {
-				layers[i] = layers[i][:len(layers[i])-1]
-			}
-			layers[i+1] = updatedValues
+		layers[i+1] = make([]*[32]byte, layerLen/2)
+		newElems := make([][32]byte, layerLen/2)
+		htr.VectorizedSha256(elements, newElems)
+		elements = newElems
+		for j := range elements {
+			layers[i+1][j] = &elements[j]
 		}
 	}
 	return layers
@@ -173,12 +150,12 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 	// only its branch up the tree.
 	currentIndex := idx
 	// Allocate only once.
-	combinedChunks := [64]byte{}
+	var combinedChunks [64]byte
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
 
-		neighbor := [32]byte{}
+		var neighbor [32]byte
 		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
 			neighbor = *layers[i][neighborIdx]
 		}
@@ -224,8 +201,8 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 	currentIndex := idx
 	root := item
 	// Allocate only once.
-	neighbor := [32]byte{}
-	combinedChunks := [64]byte{}
+	var neighbor [32]byte
+	var combinedChunks [64]byte
 
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
@@ -260,7 +237,7 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 	return root, layers, nil
 }
 
-// AddInMixin describes a method from which a lenth mixin is added to the
+// AddInMixin describes a method from which a length mixin is added to the
 // provided root.
 func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 	rootBuf := new(bytes.Buffer)
@@ -305,8 +282,7 @@ func Merkleize(leaves [][]byte) [][][]byte {
 }
 
 // MerkleizeTrieLeaves merkleize the trie leaves.
-func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
-	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte, error) {
+func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte) ([][][32]byte, [][32]byte, error) {
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.
@@ -319,21 +295,9 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 		if !math.IsPowerOf2(uint64(len(hashLayer))) {
 			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
 		}
-		if features.Get().EnableVectorizedHTR {
-			newLayer := make([][32]byte, len(hashLayer)/2)
-			htr.VectorizedSha256(hashLayer, newLayer)
-			hashLayer = newLayer
-		} else {
-			layer := make([][32]byte, len(hashLayer)/2)
-			for j := 0; j < len(hashLayer); j += 2 {
-				chunkBuffer.Write(hashLayer[j][:])
-				chunkBuffer.Write(hashLayer[j+1][:])
-				hashedChunk := hasher(chunkBuffer.Bytes())
-				layer[j/2] = hashedChunk
-				chunkBuffer.Reset()
-			}
-			hashLayer = layer
-		}
+		newLayer := make([][32]byte, len(hashLayer)/2)
+		htr.VectorizedSha256(hashLayer, newLayer)
+		hashLayer = newLayer
 		layers[i] = hashLayer
 		i++
 	}

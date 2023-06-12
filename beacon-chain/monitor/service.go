@@ -6,31 +6,26 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	// Error when event feed data is not statefeed.SyncedData.
-	errNotSyncedData = errors.New("event feed data is not of type *statefeed.SyncedData")
-
-	// Error when the context is closed while waiting for sync.
-	errContextClosedWhileWaiting = errors.New("context closed while waiting for beacon to sync to latest Head")
-)
+// Error when the context is closed while waiting for sync.
+var errContextClosedWhileWaiting = errors.New("context closed while waiting for beacon to sync to latest Head")
 
 // ValidatorLatestPerformance keeps track of the latest participation of the validator
 type ValidatorLatestPerformance struct {
-	attestedSlot  types.Slot
-	inclusionSlot types.Slot
+	attestedSlot  primitives.Slot
+	inclusionSlot primitives.Slot
 	timelySource  bool
 	timelyTarget  bool
 	timelyHead    bool
@@ -41,7 +36,7 @@ type ValidatorLatestPerformance struct {
 // ValidatorAggregatedPerformance keeps track of the accumulated performance of
 // the tracked validator since start of monitor service.
 type ValidatorAggregatedPerformance struct {
-	startEpoch                      types.Epoch
+	startEpoch                      primitives.Epoch
 	startBalance                    uint64
 	totalAttestedCount              uint64
 	totalRequestedCount             uint64
@@ -63,6 +58,7 @@ type ValidatorMonitorConfig struct {
 	AttestationNotifier operation.Notifier
 	HeadFetcher         blockchain.HeadFetcher
 	StateGen            stategen.StateManager
+	InitialSyncComplete chan struct{}
 }
 
 // Service is the main structure that tracks validators and reports logs and
@@ -77,24 +73,24 @@ type Service struct {
 	// trackedSyncedCommitteeIndices and lastSyncedEpoch
 	sync.RWMutex
 
-	TrackedValidators           map[types.ValidatorIndex]bool
-	latestPerformance           map[types.ValidatorIndex]ValidatorLatestPerformance
-	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
-	trackedSyncCommitteeIndices map[types.ValidatorIndex][]types.CommitteeIndex
-	lastSyncedEpoch             types.Epoch
+	TrackedValidators           map[primitives.ValidatorIndex]bool
+	latestPerformance           map[primitives.ValidatorIndex]ValidatorLatestPerformance
+	aggregatedPerformance       map[primitives.ValidatorIndex]ValidatorAggregatedPerformance
+	trackedSyncCommitteeIndices map[primitives.ValidatorIndex][]primitives.CommitteeIndex
+	lastSyncedEpoch             primitives.Epoch
 }
 
 // NewService sets up a new validator monitor service instance when given a list of validator indices to track.
-func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []types.ValidatorIndex) (*Service, error) {
+func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []primitives.ValidatorIndex) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		config:                      config,
 		ctx:                         ctx,
 		cancel:                      cancel,
-		TrackedValidators:           make(map[types.ValidatorIndex]bool, len(tracked)),
-		latestPerformance:           make(map[types.ValidatorIndex]ValidatorLatestPerformance),
-		aggregatedPerformance:       make(map[types.ValidatorIndex]ValidatorAggregatedPerformance),
-		trackedSyncCommitteeIndices: make(map[types.ValidatorIndex][]types.CommitteeIndex),
+		TrackedValidators:           make(map[primitives.ValidatorIndex]bool, len(tracked)),
+		latestPerformance:           make(map[primitives.ValidatorIndex]ValidatorLatestPerformance),
+		aggregatedPerformance:       make(map[primitives.ValidatorIndex]ValidatorAggregatedPerformance),
+		trackedSyncCommitteeIndices: make(map[primitives.ValidatorIndex][]primitives.CommitteeIndex),
 		isLogging:                   false,
 	}
 	for _, idx := range tracked {
@@ -108,7 +104,7 @@ func (s *Service) Start() {
 	s.Lock()
 	defer s.Unlock()
 
-	tracked := make([]types.ValidatorIndex, 0, len(s.TrackedValidators))
+	tracked := make([]primitives.ValidatorIndex, 0, len(s.TrackedValidators))
 	for idx := range s.TrackedValidators {
 		tracked = append(tracked, idx)
 	}
@@ -118,20 +114,12 @@ func (s *Service) Start() {
 		"ValidatorIndices": tracked,
 	}).Info("Starting service")
 
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-
-	go s.run(stateChannel, stateSub)
+	go s.run()
 }
 
 // run waits until the beacon is synced and starts the monitoring system.
-func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription) {
-	if stateChannel == nil {
-		log.Error("State state is nil")
-		return
-	}
-
-	if err := s.waitForSync(stateChannel, stateSub); err != nil {
+func (s *Service) run() {
+	if err := s.waitForSync(s.config.InitialSyncComplete); err != nil {
 		log.WithError(err)
 		return
 	}
@@ -158,12 +146,14 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 	s.isLogging = true
 	s.Unlock()
 
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 	s.monitorRoutine(stateChannel, stateSub)
 }
 
 // initializePerformanceStructures initializes the validatorLatestPerformance
 // and validatorAggregatedPerformance for each tracked validator.
-func (s *Service) initializePerformanceStructures(state state.BeaconState, epoch types.Epoch) {
+func (s *Service) initializePerformanceStructures(state state.BeaconState, epoch primitives.Epoch) {
 	for idx := range s.TrackedValidators {
 		balance, err := state.BalanceAtIndex(idx)
 		if err != nil {
@@ -197,24 +187,13 @@ func (s *Service) Stop() error {
 }
 
 // waitForSync waits until the beacon node is synced to the latest head.
-func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subscription) error {
-	for {
-		select {
-		case e := <-stateChannel:
-			if e.Type == statefeed.Synced {
-				_, ok := e.Data.(*statefeed.SyncedData)
-				if !ok {
-					return errNotSyncedData
-				}
-				return nil
-			}
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return errContextClosedWhileWaiting
-		case err := <-stateSub.Err():
-			log.WithError(err).Error("Could not subscribe to state notifier")
-			return err
-		}
+func (s *Service) waitForSync(syncChan chan struct{}) error {
+	select {
+	case <-syncChan:
+		return nil
+	case <-s.ctx.Done():
+		log.Debug("Context closed, exiting goroutine")
+		return errContextClosedWhileWaiting
 	}
 }
 
@@ -284,7 +263,7 @@ func (s *Service) monitorRoutine(stateChannel chan *feed.Event, stateSub event.S
 
 // TrackedIndex returns true if input  validator index exists in tracked validator list.
 // It assumes the caller holds the service Lock
-func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
+func (s *Service) trackedIndex(idx primitives.ValidatorIndex) bool {
 	_, ok := s.TrackedValidators[idx]
 	return ok
 }

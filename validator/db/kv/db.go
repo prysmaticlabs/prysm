@@ -10,12 +10,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/v3/async/abool"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v4/async/abool"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -64,7 +64,7 @@ type Store struct {
 	db                                 *bolt.DB
 	databasePath                       string
 	batchedAttestations                *QueuedAttestationRecords
-	batchedAttestationsChan            chan *AttestationRecord
+	batchedAttestationsChan            chan *AttestationRecordSaveRequest
 	batchAttestationsFlushedFeed       *event.Feed
 	batchedAttestationsFlushInProgress abool.AtomicBool
 }
@@ -134,7 +134,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		db:                           boltDB,
 		databasePath:                 dirPath,
 		batchedAttestations:          NewQueuedAttestationRecords(),
-		batchedAttestationsChan:      make(chan *AttestationRecord, attestationBatchCapacity),
+		batchedAttestationsChan:      make(chan *AttestationRecordSaveRequest, attestationBatchCapacity),
 		batchAttestationsFlushedFeed: new(event.Feed),
 	}
 
@@ -152,6 +152,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			pubKeysBucket,
 			migrationsBucket,
 			graffitiBucket,
+			proposerSettingsBucket,
 		)
 	}); err != nil {
 		return nil, err

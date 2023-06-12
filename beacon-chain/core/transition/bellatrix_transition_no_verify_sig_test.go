@@ -6,23 +6,23 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	p2pType "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
@@ -255,5 +255,45 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 		Signature: nil,
 	}
 	beaconState, _ := util.DeterministicGenesisStateBellatrix(t, 32)
+	return beaconState, blk
+}
+
+func createFullCapellaBlockWithOperations(t *testing.T) (state.BeaconState,
+	*ethpb.SignedBeaconBlockCapella) {
+	_, bellatrixBlk := createFullBellatrixBlockWithOperations(t)
+	blk := &ethpb.SignedBeaconBlockCapella{
+		Block: &ethpb.BeaconBlockCapella{
+			Slot:          bellatrixBlk.Block.Slot,
+			ProposerIndex: bellatrixBlk.Block.ProposerIndex,
+			ParentRoot:    bellatrixBlk.Block.ParentRoot,
+			StateRoot:     bellatrixBlk.Block.StateRoot,
+			Body: &ethpb.BeaconBlockBodyCapella{
+				RandaoReveal:      bellatrixBlk.Block.Body.RandaoReveal,
+				Eth1Data:          bellatrixBlk.Block.Body.Eth1Data,
+				Graffiti:          bellatrixBlk.Block.Body.Graffiti,
+				ProposerSlashings: bellatrixBlk.Block.Body.ProposerSlashings,
+				AttesterSlashings: bellatrixBlk.Block.Body.AttesterSlashings,
+				Attestations:      bellatrixBlk.Block.Body.Attestations,
+				Deposits:          bellatrixBlk.Block.Body.Deposits,
+				VoluntaryExits:    bellatrixBlk.Block.Body.VoluntaryExits,
+				SyncAggregate:     bellatrixBlk.Block.Body.SyncAggregate,
+				ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+					ParentHash:    make([]byte, fieldparams.RootLength),
+					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BaseFeePerGas: bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
+					BlockHash:     make([]byte, fieldparams.RootLength),
+					Transactions:  make([][]byte, 0),
+					Withdrawals:   make([]*enginev1.Withdrawal, 0),
+					ExtraData:     make([]byte, 0),
+				},
+			},
+		},
+		Signature: nil,
+	}
+	beaconState, _ := util.DeterministicGenesisStateCapella(t, 32)
 	return beaconState, blk
 }

@@ -3,9 +3,9 @@ package attestations
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 )
 
 // pruneAttsPool prunes attestations pool on every slot interval.
@@ -59,14 +59,14 @@ func (s *Service) pruneExpiredAtts() {
 			if err := s.cfg.Pool.DeleteBlockAttestation(att); err != nil {
 				log.WithError(err).Error("Could not delete expired block attestation")
 			}
+			expiredBlockAtts.Inc()
 		}
-		expiredBlockAtts.Inc()
 	}
 }
 
 // Return true if the input slot has been expired.
 // Expired is defined as one epoch behind than current time.
-func (s *Service) expired(slot types.Slot) bool {
+func (s *Service) expired(slot primitives.Slot) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
 	expirationTime := s.genesisTime + uint64(expirationSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	currentTime := uint64(prysmTime.Now().Unix())

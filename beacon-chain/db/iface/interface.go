@@ -8,29 +8,29 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/backup"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
+	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/backup"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
 type ReadOnlyDatabase interface {
 	// Block related methods.
-	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
-	Blocks(ctx context.Context, f *filters.QueryFilter) ([]interfaces.SignedBeaconBlock, [][32]byte, error)
+	Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
+	Blocks(ctx context.Context, f *filters.QueryFilter) ([]interfaces.ReadOnlySignedBeaconBlock, [][32]byte, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
-	BlocksBySlot(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error)
-	BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, [][32]byte, error)
+	BlocksBySlot(ctx context.Context, slot primitives.Slot) ([]interfaces.ReadOnlySignedBeaconBlock, error)
+	BlockRootsBySlot(ctx context.Context, slot primitives.Slot) (bool, [][32]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
-	GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	GenesisBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error)
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
-	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
-	HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (types.Slot, [][32]byte, error)
+	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
+	HighestRootsBelowSlot(ctx context.Context, slot primitives.Slot) (primitives.Slot, [][32]byte, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
@@ -38,22 +38,22 @@ type ReadOnlyDatabase interface {
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
-	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]state.ReadOnlyBeaconState, error)
+	HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot) ([]state.ReadOnlyBeaconState, error)
 	// Checkpoint operations.
 	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
-	ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
-	HasArchivedPoint(ctx context.Context, slot types.Slot) bool
+	ArchivedPointRoot(ctx context.Context, slot primitives.Slot) [32]byte
+	HasArchivedPoint(ctx context.Context, slot primitives.Slot) bool
 	LastArchivedRoot(ctx context.Context) [32]byte
-	LastArchivedSlot(ctx context.Context) (types.Slot, error)
+	LastArchivedSlot(ctx context.Context) (primitives.Slot, error)
 	LastValidatedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// ExecutionChainData operations.
 	ExecutionChainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
-	// Fee reicipients operations.
-	FeeRecipientByValidatorID(ctx context.Context, id types.ValidatorIndex) (common.Address, error)
-	RegistrationByValidatorID(ctx context.Context, id types.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
+	// Fee recipients operations.
+	FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error)
+	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	BackfillBlockRoot(ctx context.Context) ([32]byte, error)
@@ -65,8 +65,8 @@ type NoHeadAccessDatabase interface {
 
 	// Block related methods.
 	DeleteBlock(ctx context.Context, root [32]byte) error
-	SaveBlock(ctx context.Context, block interfaces.SignedBeaconBlock) error
-	SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error
+	SaveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) error
+	SaveBlocks(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
@@ -85,11 +85,11 @@ type NoHeadAccessDatabase interface {
 	SaveExecutionChainData(ctx context.Context, data *ethpb.ETH1ChainData) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
-	// Fee reicipients operations.
-	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, addrs []common.Address) error
-	SaveRegistrationsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error
+	// Fee recipients operations.
+	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, addrs []common.Address) error
+	SaveRegistrationsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error
 
-	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
+	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint primitives.Slot) error
 }
 
 // HeadAccessDatabase defines a struct with access to reading chain head data.
@@ -97,7 +97,7 @@ type HeadAccessDatabase interface {
 	NoHeadAccessDatabase
 
 	// Block related methods.
-	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error)
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 
 	// Genesis operations.
@@ -114,7 +114,7 @@ type HeadAccessDatabase interface {
 type SlasherDatabase interface {
 	io.Closer
 	SaveLastEpochsWrittenForValidators(
-		ctx context.Context, epochByValidator map[types.ValidatorIndex]types.Epoch,
+		ctx context.Context, epochByValidator map[primitives.ValidatorIndex]primitives.Epoch,
 	) error
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
@@ -127,13 +127,13 @@ type SlasherDatabase interface {
 		ctx context.Context, proposal []*slashertypes.SignedBlockHeaderWrapper,
 	) error
 	LastEpochWrittenForValidators(
-		ctx context.Context, validatorIndices []types.ValidatorIndex,
+		ctx context.Context, validatorIndices []primitives.ValidatorIndex,
 	) ([]*slashertypes.AttestedEpochForValidator, error)
 	AttestationRecordForValidator(
-		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
+		ctx context.Context, validatorIdx primitives.ValidatorIndex, targetEpoch primitives.Epoch,
 	) (*slashertypes.IndexedAttestationWrapper, error)
 	BlockProposalForValidator(
-		ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
+		ctx context.Context, validatorIdx primitives.ValidatorIndex, slot primitives.Slot,
 	) (*slashertypes.SignedBlockHeaderWrapper, error)
 	CheckAttesterDoubleVotes(
 		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
@@ -145,14 +145,14 @@ type SlasherDatabase interface {
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 	) ([]*ethpb.ProposerSlashing, error)
 	PruneAttestationsAtEpoch(
-		ctx context.Context, maxEpoch types.Epoch,
+		ctx context.Context, maxEpoch primitives.Epoch,
 	) (numPruned uint, err error)
 	PruneProposalsAtEpoch(
-		ctx context.Context, maxEpoch types.Epoch,
+		ctx context.Context, maxEpoch primitives.Epoch,
 	) (numPruned uint, err error)
 	HighestAttestations(
 		ctx context.Context,
-		indices []types.ValidatorIndex,
+		indices []primitives.ValidatorIndex,
 	) ([]*ethpb.HighestAttestation, error)
 	DatabasePath() string
 	ClearDB() error

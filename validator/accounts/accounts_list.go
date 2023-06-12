@@ -6,9 +6,10 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 )
 
 // List pretty-prints accounts in the wallet.
@@ -29,7 +30,7 @@ func (acm *AccountsCLIManager) List(ctx context.Context) error {
 		})
 }
 
-func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, client ethpb.BeaconNodeValidatorClient) error {
+func listValidatorIndices(ctx context.Context, km keymanager.IKeymanager, client iface.ValidatorClient) error {
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get validating public keys")

@@ -2,10 +2,10 @@ package stateutil
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/math"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // UnrealizedCheckpointBalances returns the total current active balance, the
@@ -13,7 +13,7 @@ import (
 // current epoch correctly attested for target balance. It takes the current and
 // previous epoch participation bits as parameters so implicitly only works for
 // beacon states post-Altair.
-func UnrealizedCheckpointBalances(cp, pp []byte, validators []*ethpb.Validator, currentEpoch types.Epoch) (uint64, uint64, uint64, error) {
+func UnrealizedCheckpointBalances(cp, pp []byte, validators []*ethpb.Validator, currentEpoch primitives.Epoch) (uint64, uint64, uint64, error) {
 	targetIdx := params.BeaconConfig().TimelyTargetFlagIndex
 	activeBalance := uint64(0)
 	currentTarget := uint64(0)

@@ -6,21 +6,17 @@ import (
 	"testing"
 	"time"
 
-	blockchainTesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -28,12 +24,12 @@ func TestService_ReceiveBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
-	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
+	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot primitives.Slot) *ethpb.SignedBeaconBlock {
 		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
 	}
-	params.SetupTestConfigCleanupWithLock(t)
+	//params.SetupTestConfigCleanupWithLock(t)
 	bc := params.BeaconConfig().Copy()
 	bc.ShardCommitteePeriod = 0 // Required for voluntary exits test in reasonable time.
 	params.OverrideBeaconConfig(bc)
@@ -96,7 +92,8 @@ func TestService_ReceiveBlock(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, s *Service) {
-				pending := s.cfg.ExitPool.PendingExits(genesis, 1, true /* no limit */)
+				pending, err := s.cfg.ExitPool.PendingExits()
+				require.NoError(t, err)
 				if len(pending) != 0 {
 					t.Errorf(
 						"Did not mark the correct number of exits. Got %d pending but wanted %d",
@@ -123,21 +120,15 @@ func TestService_ReceiveBlock(t *testing.T) {
 	for _, tt := range tests {
 		wg.Add(1)
 		t.Run(tt.name, func(t *testing.T) {
-			beaconDB := testDB.SetupDB(t)
+			s, tr := minimalTestService(t,
+				WithFinalizedStateAtStartUp(genesis),
+				WithExitPool(voluntaryexits.NewPool()),
+				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}))
+
+			beaconDB := tr.db
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
 			require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 
-			opts := []Option{
-				WithDatabase(beaconDB),
-				WithForkChoiceStore(protoarray.New()),
-				WithAttestationPool(attestations.NewPool()),
-				WithExitPool(voluntaryexits.NewPool()),
-				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-				WithStateGen(stategen.New(beaconDB)),
-				WithFinalizedStateAtStartUp(genesis),
-			}
-			s, err := NewService(ctx, opts...)
-			require.NoError(t, err)
 			// Initialize it here.
 			_ = s.cfg.StateNotifier.StateFeed()
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
@@ -159,24 +150,16 @@ func TestService_ReceiveBlock(t *testing.T) {
 }
 
 func TestService_ReceiveBlockUpdateHead(t *testing.T) {
-	ctx := context.Background()
+	s, tr := minimalTestService(t,
+		WithExitPool(voluntaryexits.NewPool()),
+		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}))
+	ctx, beaconDB := tr.ctx, tr.db
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
-	beaconDB := testDB.SetupDB(t)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(protoarray.New()),
-		WithAttestationPool(attestations.NewPool()),
-		WithExitPool(voluntaryexits.NewPool()),
-		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-		WithStateGen(stategen.New(beaconDB)),
-	}
 
-	s, err := NewService(ctx, opts...)
-	require.NoError(t, err)
 	// Initialize it here.
 	_ = s.cfg.StateNotifier.StateFeed()
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
@@ -202,7 +185,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
-	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
+	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot primitives.Slot) *ethpb.SignedBeaconBlock {
 		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
@@ -223,8 +206,8 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				block: genFullBlock(t, util.DefaultBlockGenConfig(), 2 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
-				assert.Equal(t, types.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
-				assert.Equal(t, types.Slot(2), s.head.block.Block().Slot(), "Incorrect head block slot")
+				assert.Equal(t, primitives.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
+				assert.Equal(t, primitives.Slot(2), s.head.block.Block().Slot(), "Incorrect head block slot")
 			},
 		},
 		{
@@ -242,22 +225,14 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			beaconDB := testDB.SetupDB(t)
-			opts := []Option{
-				WithDatabase(beaconDB),
-				WithForkChoiceStore(protoarray.New()),
-				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-				WithStateGen(stategen.New(beaconDB)),
-			}
-			s, err := NewService(ctx, opts...)
-			require.NoError(t, err)
-			err = s.saveGenesisData(ctx, genesis)
+			s, _ := minimalTestService(t, WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}))
+			err := s.saveGenesisData(ctx, genesis)
 			require.NoError(t, err)
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
 			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
-			blks := []interfaces.SignedBeaconBlock{wsb}
+			blks := []interfaces.ReadOnlySignedBeaconBlock{wsb}
 			roots := [][32]byte{root}
 			err = s.ReceiveBlockBatch(ctx, blks, roots)
 			if tt.wantedErr != "" {
@@ -271,10 +246,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasBlock(t *testing.T) {
-	opts := testServiceOptsWithDB(t)
-	opts = append(opts, WithStateNotifier(&blockchainTesting.MockStateNotifier{}))
-	s, err := NewService(context.Background(), opts...)
-	require.NoError(t, err)
+	s, _ := minimalTestService(t)
 	r := [32]byte{'a'}
 	if s.HasBlock(context.Background(), r) {
 		t.Error("Should not have block")
@@ -294,10 +266,8 @@ func TestService_HasBlock(t *testing.T) {
 }
 
 func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
-	opts := testServiceOptsWithDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), opts...)
-	require.NoError(t, err)
+	s, _ := minimalTestService(t)
 	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 
@@ -307,9 +277,9 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 
 func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	hook := logTest.NewGlobal()
-	opts := testServiceOptsWithDB(t)
-	s, err := NewService(context.Background(), opts...)
-	require.NoError(t, err)
+
+	s, _ := minimalTestService(t)
+
 	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
@@ -321,11 +291,57 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 
 func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 	hook := logTest.NewGlobal()
-	opts := testServiceOptsWithDB(t)
-	s, err := NewService(context.Background(), opts...)
-	require.NoError(t, err)
+	s, _ := minimalTestService(t)
 	s.genesisTime = time.Now()
 
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
 	assert.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
+}
+
+func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
+	service, tr := minimalTestService(t)
+	pool := tr.blsPool
+
+	t.Run("pre Capella block", func(t *testing.T) {
+		body := &ethpb.BeaconBlockBodyBellatrix{}
+		pbb := &ethpb.BeaconBlockBellatrix{
+			Body: body,
+		}
+		blk, err := blocks.NewBeaconBlock(pbb)
+		require.NoError(t, err)
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
+	})
+
+	t.Run("Post Capella no changes", func(t *testing.T) {
+		body := &ethpb.BeaconBlockBodyCapella{}
+		pbb := &ethpb.BeaconBlockCapella{
+			Body: body,
+		}
+		blk, err := blocks.NewBeaconBlock(pbb)
+		require.NoError(t, err)
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
+	})
+
+	t.Run("Post Capella some changes", func(t *testing.T) {
+		idx := primitives.ValidatorIndex(123)
+		change := &ethpb.BLSToExecutionChange{
+			ValidatorIndex: idx,
+		}
+		signedChange := &ethpb.SignedBLSToExecutionChange{
+			Message: change,
+		}
+		body := &ethpb.BeaconBlockBodyCapella{
+			BlsToExecutionChanges: []*ethpb.SignedBLSToExecutionChange{signedChange},
+		}
+		pbb := &ethpb.BeaconBlockCapella{
+			Body: body,
+		}
+		blk, err := blocks.NewBeaconBlock(pbb)
+		require.NoError(t, err)
+
+		pool.InsertBLSToExecChange(signedChange)
+		require.Equal(t, true, pool.ValidatorExists(idx))
+		require.NoError(t, service.markIncludedBlockBLSToExecChanges(blk))
+		require.Equal(t, false, pool.ValidatorExists(idx))
+	})
 }

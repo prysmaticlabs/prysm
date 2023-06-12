@@ -8,21 +8,21 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestStatus(t *testing.T) {
@@ -289,7 +289,7 @@ func TestPeerChainState(t *testing.T) {
 	oldChainStartLastUpdated, err := p.ChainStateLastUpdated(id)
 	require.NoError(t, err)
 
-	finalizedEpoch := types.Epoch(123)
+	finalizedEpoch := primitives.Epoch(123)
 	p.SetChainState(id, &pb.Status{FinalizedEpoch: finalizedEpoch})
 
 	resChainState, err := p.ChainState(id)
@@ -601,12 +601,12 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 		},
 	})
 
-	expectedTarget := types.Epoch(2)
+	expectedTarget := primitives.Epoch(2)
 	maxPeers := 3
-	mockroot2 := [32]byte{}
-	mockroot3 := [32]byte{}
-	mockroot4 := [32]byte{}
-	mockroot5 := [32]byte{}
+	var mockroot2 [32]byte
+	var mockroot3 [32]byte
+	var mockroot4 [32]byte
+	var mockroot5 [32]byte
 	copy(mockroot2[:], "two")
 	copy(mockroot3[:], "three")
 	copy(mockroot4[:], "four")
@@ -755,17 +755,89 @@ func TestPrunePeers(t *testing.T) {
 	}
 }
 
+func TestPrunePeers_TrustedPeers(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 1,
+			},
+		},
+	})
+
+	for i := 0; i < 15; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+	// Assert there are no prunable peers.
+	peersToPrune := p.PeersToPrune()
+	assert.Equal(t, 0, len(peersToPrune))
+
+	for i := 0; i < 18; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Assert there are the correct prunable peers.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 3, len(peersToPrune))
+
+	// Add in more peers.
+	for i := 0; i < 13; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	trustedPeers := []peer.ID{}
+	// Set up bad scores for inbound peers.
+	inboundPeers := p.InboundConnected()
+	for i, pid := range inboundPeers {
+		modulo := i % 5
+		// Increment bad scores for peers.
+		for j := 0; j < modulo; j++ {
+			p.Scorers().BadResponsesScorer().Increment(pid)
+		}
+		if modulo == 4 {
+			trustedPeers = append(trustedPeers, pid)
+		}
+	}
+	p.SetTrustedPeers(trustedPeers)
+	// Assert all peers more than max are prunable.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 16, len(peersToPrune))
+
+	// Check that trusted peers are not pruned.
+	for _, pid := range peersToPrune {
+		for _, tPid := range trustedPeers {
+			assert.NotEqual(t, pid.String(), tPid.String())
+		}
+	}
+	for _, pid := range peersToPrune {
+		dir, err := p.Direction(pid)
+		require.NoError(t, err)
+		assert.Equal(t, network.DirInbound, dir)
+	}
+
+	// Ensure it is in the descending order.
+	currScore := p.Scorers().Score(peersToPrune[0])
+	for _, pid := range peersToPrune {
+		score := p.Scorers().BadResponsesScorer().Score(pid)
+		assert.Equal(t, true, currScore >= score)
+		currScore = score
+	}
+}
+
 func TestStatus_BestPeer(t *testing.T) {
 	type peerConfig struct {
-		headSlot       types.Slot
-		finalizedEpoch types.Epoch
+		headSlot       primitives.Slot
+		finalizedEpoch primitives.Epoch
 	}
 	tests := []struct {
 		name              string
 		peers             []*peerConfig
 		limitPeers        int
-		ourFinalizedEpoch types.Epoch
-		targetEpoch       types.Epoch
+		ourFinalizedEpoch primitives.Epoch
+		targetEpoch       primitives.Epoch
 		// targetEpochSupport denotes how many peers support returned epoch.
 		targetEpochSupport int
 	}{
@@ -943,7 +1015,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		},
 	})
 
-	peerSlots := []types.Slot{32, 32, 32, 32, 235, 233, 258, 268, 270}
+	peerSlots := []primitives.Slot{32, 32, 32, 32, 235, 233, 258, 268, 270}
 	for i, headSlot := range peerSlots {
 		p.Add(new(enr.Record), peer.ID(rune(i)), nil, network.DirOutbound)
 		p.SetConnectionState(peer.ID(rune(i)), peers.PeerConnected)
@@ -952,7 +1024,7 @@ func TestStatus_BestNonFinalized(t *testing.T) {
 		})
 	}
 
-	expectedEpoch := types.Epoch(8)
+	expectedEpoch := primitives.Epoch(8)
 	retEpoch, pids := p.BestNonFinalized(3, 5)
 	assert.Equal(t, expectedEpoch, retEpoch, "Incorrect Finalized epoch retrieved")
 	assert.Equal(t, 3, len(pids), "Unexpected number of peers")
@@ -984,7 +1056,7 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 		HeadSlot: params.BeaconConfig().SlotsPerEpoch * 4,
 	})
 
-	assert.Equal(t, types.Epoch(5), p.HighestEpoch(), "Expected current epoch to be 5")
+	assert.Equal(t, primitives.Epoch(5), p.HighestEpoch(), "Expected current epoch to be 5")
 }
 
 func TestInbound(t *testing.T) {

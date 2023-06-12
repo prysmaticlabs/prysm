@@ -2,12 +2,13 @@ package execution
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/network/authorization"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/network"
+	"github.com/prysmaticlabs/prysm/v4/network/authorization"
 )
 
 type Option func(s *Service) error
@@ -15,7 +16,7 @@ type Option func(s *Service) error
 // WithHttpEndpoint parse http endpoint for the powchain service to use.
 func WithHttpEndpoint(endpointString string) Option {
 	return func(s *Service) error {
-		s.cfg.currHttpEndpoint = HttpEndpoint(endpointString)
+		s.cfg.currHttpEndpoint = network.HttpEndpoint(endpointString)
 		return nil
 	}
 }
@@ -27,11 +28,19 @@ func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 			return nil
 		}
 		// Overwrite authorization type for all endpoints to be of a bearer type.
-		hEndpoint := HttpEndpoint(endpointString)
+		hEndpoint := network.HttpEndpoint(endpointString)
 		hEndpoint.Auth.Method = authorization.Bearer
 		hEndpoint.Auth.Value = string(secret)
 
 		s.cfg.currHttpEndpoint = hEndpoint
+		return nil
+	}
+}
+
+// WithHeaders adds headers to the execution node JSON-RPC requests.
+func WithHeaders(headers []string) Option {
+	return func(s *Service) error {
+		s.cfg.headers = headers
 		return nil
 	}
 }

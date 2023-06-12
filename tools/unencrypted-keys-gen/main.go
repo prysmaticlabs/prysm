@@ -5,14 +5,14 @@ import (
 	"log"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v3/tools/unencrypted-keys-gen/keygen"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v4/tools/unencrypted-keys-gen/keygen"
 )
 
 var (
 	numKeys    = flag.Int("num-keys", 0, "Number of validator private/withdrawal keys to generate")
-	startIndex = flag.Uint64("start-index", 0, "Start index for the determinstic keygen algorithm")
+	startIndex = flag.Uint64("start-index", 0, "Start index for the deterministic keygen algorithm")
 	random     = flag.Bool("random", false, "Randomly generate keys")
 	outputJSON = flag.String("output-json", "", "JSON file to write output to")
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")

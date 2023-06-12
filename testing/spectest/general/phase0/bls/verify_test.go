@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestVerify(t *testing.T) {
@@ -20,7 +20,9 @@ func TestVerify(t *testing.T) {
 
 func testVerify(t *testing.T) {
 	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/verify/small")
-
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/verify/small")
+	}
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			file, err := util.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))

@@ -3,7 +3,7 @@ package kv
 import (
 	"context"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -19,7 +19,7 @@ func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][fieldpar
 		bucket := tx.Bucket(slashablePublicKeysBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			if key != nil {
-				pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
+				var pubKeyBytes [fieldparams.BLSPubkeyLength]byte
 				copy(pubKeyBytes[:], key)
 				publicKeys = append(publicKeys, pubKeyBytes)
 			}

@@ -7,10 +7,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/progress"
-	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/progress"
+	v1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/schollz/progressbar/v3"
 	bolt "go.etcd.io/bbolt"
 )
@@ -130,9 +130,15 @@ func performValidatorStateMigration(ctx context.Context, bar *progressbar.Progre
 				return err
 			}
 			item := enc
-			if hasAltairKey(item) {
+			switch {
+			case hasAltairKey(enc):
 				item = item[len(altairKey):]
+			case hasBellatrixKey(enc):
+				item = item[len(bellatrixKey):]
+			case hasCapellaKey(enc):
+				item = item[len(capellaKey):]
 			}
+
 			detector, err := detect.FromState(item)
 			if err != nil {
 				return err
@@ -165,9 +171,14 @@ func performValidatorStateMigration(ctx context.Context, bar *progressbar.Progre
 				return err
 			}
 			var stateBytes []byte
-			if hasAltairKey(enc) {
+			switch {
+			case hasAltairKey(enc):
 				stateBytes = snappy.Encode(nil, append(altairKey, rawObj...))
-			} else {
+			case hasBellatrixKey(enc):
+				stateBytes = snappy.Encode(nil, append(bellatrixKey, rawObj...))
+			case hasCapellaKey(enc):
+				stateBytes = snappy.Encode(nil, append(capellaKey, rawObj...))
+			default:
 				stateBytes = snappy.Encode(nil, rawObj)
 			}
 			if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {

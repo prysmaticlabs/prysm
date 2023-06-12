@@ -5,13 +5,13 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -101,7 +101,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
 	}
-	aggregatedSig, bits, err := vs.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubnetId, headRoot)
+	aggregatedSig, bits, err := vs.aggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubnetId, headRoot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
 	}
@@ -151,8 +151,19 @@ func (vs *Server) SubmitSignedContributionAndProof(
 // associated with a particular set of sync committee messages.
 func (vs *Server) AggregatedSigAndAggregationBits(
 	ctx context.Context,
+	req *ethpb.AggregatedSigAndAggregationBitsRequest,
+) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
+	aggregatedSig, bits, err := vs.aggregatedSigAndAggregationBits(ctx, req.Msgs, req.Slot, req.SubnetId, req.BlockRoot)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &ethpb.AggregatedSigAndAggregationBitsResponse{AggregatedSig: aggregatedSig, Bits: bits}, nil
+}
+
+func (vs *Server) aggregatedSigAndAggregationBits(
+	ctx context.Context,
 	msgs []*ethpb.SyncCommitteeMessage,
-	slot types.Slot,
+	slot primitives.Slot,
 	subnetId uint64,
 	blockRoot []byte,
 ) ([]byte, []byte, error) {

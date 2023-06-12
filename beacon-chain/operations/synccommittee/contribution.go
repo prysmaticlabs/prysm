@@ -4,9 +4,9 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/queue"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/queue"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // To give two slots tolerance for objects that arrive earlier.
@@ -68,7 +68,7 @@ func (s *Store) SaveSyncCommitteeContribution(cont *ethpb.SyncCommitteeContribut
 
 // SyncCommitteeContributions returns sync committee contributions by slot from the priority queue.
 // Upon retrieval, the contribution is removed from the queue.
-func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommitteeContribution, error) {
+func (s *Store) SyncCommitteeContributions(slot primitives.Slot) ([]*ethpb.SyncCommitteeContribution, error) {
 	s.contributionLock.RLock()
 	defer s.contributionLock.RUnlock()
 
@@ -85,6 +85,6 @@ func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommit
 	return contributions, nil
 }
 
-func syncCommitteeKey(slot types.Slot) string {
+func syncCommitteeKey(slot primitives.Slot) string {
 	return strconv.FormatUint(uint64(slot), 10)
 }

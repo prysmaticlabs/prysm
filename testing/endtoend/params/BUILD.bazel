@@ -3,12 +3,15 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     testonly = True,
-    srcs = ["params.go"],
-    importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params",
-    visibility = ["//testing/endtoend:__subpackages__"],
+    srcs = [
+        "const.go",
+        "params.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params",
+    visibility = ["//visibility:public"],
     deps = [
         "//io/file:go_default_library",
-        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

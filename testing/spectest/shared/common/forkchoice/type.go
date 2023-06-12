@@ -1,13 +1,14 @@
 package forkchoice
 
 type Step struct {
-	Tick             *int    `json:"tick"`
-	Block            *string `json:"block"`
-	Valid            *bool   `json:"valid"`
-	Attestation      *string `json:"attestation"`
-	AttesterSlashing *string `json:"attester_slashing"`
-	PowBlock         *string `json:"pow_block"`
-	Check            *Check  `json:"checks"`
+	Tick             *int            `json:"tick"`
+	Block            *string         `json:"block"`
+	Valid            *bool           `json:"valid"`
+	Attestation      *string         `json:"attestation"`
+	AttesterSlashing *string         `json:"attester_slashing"`
+	PayloadStatus    *MockEngineResp `json:"payload_status"`
+	PowBlock         *string         `json:"pow_block"`
+	Check            *Check          `json:"checks"`
 }
 
 type Check struct {
@@ -28,4 +29,10 @@ type SlotRoot struct {
 type EpochRoot struct {
 	Epoch int    `json:"epoch"`
 	Root  string `json:"root"`
+}
+
+type MockEngineResp struct {
+	Status          *string `json:"status"`
+	LatestValidHash *string `json:"latest_valid_hash"`
+	ValidationError *string `json:"validation_error"`
 }

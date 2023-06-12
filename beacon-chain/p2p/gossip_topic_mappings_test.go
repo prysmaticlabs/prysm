@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
 func TestMappingHasNoDuplicates(t *testing.T) {
@@ -25,13 +25,16 @@ func TestMappingHasNoDuplicates(t *testing.T) {
 func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bCfg := params.BeaconConfig().Copy()
-	altairForkEpoch := eth2types.Epoch(100)
-	BellatrixForkEpoch := eth2types.Epoch(200)
+	altairForkEpoch := primitives.Epoch(100)
+	BellatrixForkEpoch := primitives.Epoch(200)
+	CapellaForkEpoch := primitives.Epoch(300)
 
 	bCfg.AltairForkEpoch = altairForkEpoch
 	bCfg.BellatrixForkEpoch = BellatrixForkEpoch
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.BellatrixForkVersion)] = eth2types.Epoch(200)
+	bCfg.CapellaForkEpoch = CapellaForkEpoch
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = primitives.Epoch(100)
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.BellatrixForkVersion)] = primitives.Epoch(200)
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.CapellaForkVersion)] = primitives.Epoch(300)
 	params.OverrideBeaconConfig(bCfg)
 
 	// Phase 0
@@ -49,4 +52,8 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	_, ok = pMessage.(*ethpb.SignedBeaconBlockBellatrix)
 	assert.Equal(t, true, ok)
 
+	// Capella Fork
+	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, CapellaForkEpoch)
+	_, ok = pMessage.(*ethpb.SignedBeaconBlockCapella)
+	assert.Equal(t, true, ok)
 }

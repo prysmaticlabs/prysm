@@ -3,21 +3,21 @@ package mock
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // MockStateManager is a fake implementation of StateManager.
 type MockStateManager struct {
 	StatesByRoot map[[32]byte]state.BeaconState
-	StatesBySlot map[types.Slot]state.BeaconState
+	StatesBySlot map[primitives.Slot]state.BeaconState
 }
 
 // NewMockService --
 func NewMockService() *MockStateManager {
 	return &MockStateManager{
 		StatesByRoot: make(map[[32]byte]state.BeaconState),
-		StatesBySlot: make(map[types.Slot]state.BeaconState),
+		StatesBySlot: make(map[primitives.Slot]state.BeaconState),
 	}
 }
 
@@ -32,7 +32,7 @@ func (_ *MockStateManager) Resume(_ context.Context, _ state.BeaconState) (state
 }
 
 // SaveFinalizedState --
-func (_ *MockStateManager) SaveFinalizedState(_ types.Slot, _ [32]byte, _ state.BeaconState) {
+func (_ *MockStateManager) SaveFinalizedState(_ primitives.Slot, _ [32]byte, _ state.BeaconState) {
 	panic("implement me")
 }
 
@@ -51,13 +51,18 @@ func (m *MockStateManager) StateByRoot(_ context.Context, blockRoot [32]byte) (s
 	return m.StatesByRoot[blockRoot], nil
 }
 
+// BalancesByRoot --
+func (*MockStateManager) ActiveNonSlashedBalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+	return []uint64{}, nil
+}
+
 // StateByRootInitialSync --
 func (_ *MockStateManager) StateByRootInitialSync(_ context.Context, _ [32]byte) (state.BeaconState, error) {
 	panic("implement me")
 }
 
 // StateBySlot --
-func (m *MockStateManager) StateBySlot(_ context.Context, slot types.Slot) (state.BeaconState, error) {
+func (m *MockStateManager) StateBySlot(_ context.Context, slot primitives.Slot) (state.BeaconState, error) {
 	return m.StatesBySlot[slot], nil
 }
 
@@ -87,7 +92,7 @@ func (m *MockStateManager) AddStateForRoot(state state.BeaconState, blockRoot [3
 }
 
 // AddStateForSlot --
-func (m *MockStateManager) AddStateForSlot(state state.BeaconState, slot types.Slot) {
+func (m *MockStateManager) AddStateForSlot(state state.BeaconState, slot primitives.Slot) {
 	m.StatesBySlot[slot] = state
 }
 

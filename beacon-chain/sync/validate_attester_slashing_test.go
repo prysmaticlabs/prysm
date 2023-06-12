@@ -10,26 +10,28 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.BeaconState) {
 	s, privKeys := util.DeterministicGenesisState(t, 5)
 	vals := s.Validators()
 	for _, vv := range vals {
-		vv.WithdrawableEpoch = types.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
+		vv.WithdrawableEpoch = primitives.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
 	}
 	require.NoError(t, s.SetValidators(vals))
 
@@ -79,10 +81,12 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
+	chain := &mock.ChainService{State: s, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
@@ -111,15 +115,74 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	assert.NotNil(t, msg.ValidatorData, "Decoded message was not set on the message validator data")
 }
 
+func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidAttesterSlashing(t)
+	// Set only one of the  validators as withdrawn
+	vals := s.Validators()
+	vals[1].WithdrawableEpoch = primitives.Epoch(1)
+
+	require.NoError(t, s.SetValidators(vals))
+
+	chain := &mock.ChainService{State: s, Genesis: time.Now()}
+	r := &Service{
+		cfg: &config{
+			p2p:         p,
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			initialSync: &mockSync.Sync{IsSyncing: false},
+		},
+		seenAttesterSlashingCache: make(map[uint64]bool),
+		subHandler:                newSubTopicHandler(),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
+
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
+
+	assert.Equal(t, true, valid, "Rejected Validation")
+
+	// Set all validators as withdrawn.
+	vals = s.Validators()
+	for _, vv := range vals {
+		vv.WithdrawableEpoch = primitives.Epoch(1)
+	}
+
+	require.NoError(t, s.SetValidators(vals))
+	res, err = r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.ErrorContains(t, "none of the validators are slashable", err)
+	invalid := res == pubsub.ValidationReject
+
+	assert.Equal(t, true, invalid, "Passed Validation")
+}
+
 func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
+	chain := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
 			initialSync: &mockSync.Sync{IsSyncing: false},
-			chain:       &mock.ChainService{Genesis: time.Now()},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		subHandler:                newSubTopicHandler(),
@@ -184,10 +247,12 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
+	chain := &mock.ChainService{State: s}
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: s},
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
@@ -290,6 +355,7 @@ func TestSeenAttesterSlashingIndices(t *testing.T) {
 			seenAttesterSlashingCache: map[uint64]bool{},
 		}
 		r.setAttesterSlashingIndicesSeen(tc.saveIndices1, tc.saveIndices2)
-		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(tc.checkIndices1, tc.checkIndices2))
+		slashedVals := slice.IntersectionUint64(tc.checkIndices1, tc.checkIndices2)
+		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(slashedVals))
 	}
 }

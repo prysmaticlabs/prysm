@@ -3,19 +3,19 @@ package mock
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type MockSlashingChecker struct {
 	AttesterSlashingFound bool
 	ProposerSlashingFound bool
-	HighestAtts           map[types.ValidatorIndex]*ethpb.HighestAttestation
+	HighestAtts           map[primitives.ValidatorIndex]*ethpb.HighestAttestation
 }
 
 func (s *MockSlashingChecker) HighestAttestations(
-	_ context.Context, indices []types.ValidatorIndex,
+	_ context.Context, indices []primitives.ValidatorIndex,
 ) ([]*ethpb.HighestAttestation, error) {
 	atts := make([]*ethpb.HighestAttestation, 0, len(indices))
 	for _, valIdx := range indices {

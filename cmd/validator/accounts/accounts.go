@@ -3,10 +3,10 @@ package accounts
 import (
 	"os"
 
-	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	"github.com/prysmaticlabs/prysm/v3/runtime/tos"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -28,7 +28,6 @@ var Commands = &cli.Command{
 				flags.DeletePublicKeysFlag,
 				features.Mainnet,
 				features.PraterTestnet,
-				features.RopstenTestnet,
 				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
@@ -65,7 +64,6 @@ var Commands = &cli.Command{
 				flags.GrpcRetryDelayFlag,
 				features.Mainnet,
 				features.PraterTestnet,
-				features.RopstenTestnet,
 				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
@@ -99,7 +97,6 @@ var Commands = &cli.Command{
 				flags.BackupPasswordFile,
 				features.Mainnet,
 				features.PraterTestnet,
-				features.RopstenTestnet,
 				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
@@ -130,7 +127,6 @@ var Commands = &cli.Command{
 				flags.ImportPrivateKeyFileFlag,
 				features.Mainnet,
 				features.PraterTestnet,
-				features.RopstenTestnet,
 				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
@@ -159,15 +155,20 @@ var Commands = &cli.Command{
 				flags.AccountPasswordFileFlag,
 				flags.VoluntaryExitPublicKeysFlag,
 				flags.BeaconRPCProviderFlag,
+				flags.Web3SignerURLFlag,
+				flags.Web3SignerPublicValidatorKeysFlag,
+				flags.InteropNumValidators,
+				flags.InteropStartIndex,
 				cmd.GrpcMaxCallRecvMsgSizeFlag,
 				flags.CertFlag,
 				flags.GrpcHeadersFlag,
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
 				flags.ExitAllFlag,
+				flags.ForceExitFlag,
+				flags.VoluntaryExitJSONOutputPath,
 				features.Mainnet,
 				features.PraterTestnet,
-				features.RopstenTestnet,
 				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
@@ -181,7 +182,8 @@ var Commands = &cli.Command{
 				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if err := accountsExit(cliCtx, os.Stdin); err != nil {
+				log.Info("This command will be deprecated in the future in favor of `prysmctl validator exit`")
+				if err := AccountsExit(cliCtx, os.Stdin); err != nil {
 					log.WithError(err).Fatal("Could not perform voluntary exit")
 				}
 				return nil

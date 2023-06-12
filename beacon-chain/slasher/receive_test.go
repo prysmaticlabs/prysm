@@ -4,17 +4,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	params2 "github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	params2 "github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -24,6 +25,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			IndexedAttestationsFeed: new(event.Feed),
 			StateNotifier:           &mock.MockStateNotifier{},
+			ClockWaiter:             startup.NewClockSynchronizer(),
 		},
 		attsQueue: newAttestationsQueue(),
 	}
@@ -76,16 +78,16 @@ func TestService_pruneSlasherDataWithinSlidingWindow_AttestationsPruned(t *testi
 	require.NoError(t, err)
 
 	// Attempt to prune and discover that all data is still intact.
-	currentEpoch := types.Epoch(3)
+	currentEpoch := primitives.Epoch(3)
 	err = s.pruneSlasherDataWithinSlidingWindow(ctx, currentEpoch)
 	require.NoError(t, err)
 
-	epochs := []types.Epoch{0, 1, 2, 3}
+	epochs := []primitives.Epoch{0, 1, 2, 3}
 	for _, epoch := range epochs {
-		att, err := slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(0), epoch)
+		att, err := slasherDB.AttestationRecordForValidator(ctx, primitives.ValidatorIndex(0), epoch)
 		require.NoError(t, err)
 		require.NotNil(t, att)
-		att, err = slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(1), epoch)
+		att, err = slasherDB.AttestationRecordForValidator(ctx, primitives.ValidatorIndex(1), epoch)
 		require.NoError(t, err)
 		require.NotNil(t, att)
 	}
@@ -98,25 +100,25 @@ func TestService_pruneSlasherDataWithinSlidingWindow_AttestationsPruned(t *testi
 	require.NoError(t, err)
 
 	// Attempt to prune again by setting current epoch to 4.
-	currentEpoch = types.Epoch(4)
+	currentEpoch = primitives.Epoch(4)
 	err = s.pruneSlasherDataWithinSlidingWindow(ctx, currentEpoch)
 	require.NoError(t, err)
 
 	// We should now only have data for epochs 1, 2, 3, 4. We should
 	// have pruned data from epoch 0.
-	att, err := slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(0), 0)
+	att, err := slasherDB.AttestationRecordForValidator(ctx, primitives.ValidatorIndex(0), 0)
 	require.NoError(t, err)
 	require.Equal(t, true, att == nil)
-	att, err = slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(1), 0)
+	att, err = slasherDB.AttestationRecordForValidator(ctx, primitives.ValidatorIndex(1), 0)
 	require.NoError(t, err)
 	require.Equal(t, true, att == nil)
 
-	epochs = []types.Epoch{1, 2, 3, 4}
+	epochs = []primitives.Epoch{1, 2, 3, 4}
 	for _, epoch := range epochs {
-		att, err := slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(0), epoch)
+		att, err := slasherDB.AttestationRecordForValidator(ctx, primitives.ValidatorIndex(0), epoch)
 		require.NoError(t, err)
 		require.NotNil(t, att)
-		att, err = slasherDB.AttestationRecordForValidator(ctx, types.ValidatorIndex(1), epoch)
+		att, err = slasherDB.AttestationRecordForValidator(ctx, primitives.ValidatorIndex(1), epoch)
 		require.NoError(t, err)
 		require.NotNil(t, att)
 	}
@@ -155,16 +157,16 @@ func TestService_pruneSlasherDataWithinSlidingWindow_ProposalsPruned(t *testing.
 	require.NoError(t, err)
 
 	// Attempt to prune and discover that all data is still intact.
-	currentEpoch := types.Epoch(3)
+	currentEpoch := primitives.Epoch(3)
 	err = s.pruneSlasherDataWithinSlidingWindow(ctx, currentEpoch)
 	require.NoError(t, err)
 
-	slots := []types.Slot{0, 1, 2, 3}
+	slots := []primitives.Slot{0, 1, 2, 3}
 	for _, slot := range slots {
-		blk, err := slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(0), slot)
+		blk, err := slasherDB.BlockProposalForValidator(ctx, primitives.ValidatorIndex(0), slot)
 		require.NoError(t, err)
 		require.NotNil(t, blk)
-		blk, err = slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(1), slot)
+		blk, err = slasherDB.BlockProposalForValidator(ctx, primitives.ValidatorIndex(1), slot)
 		require.NoError(t, err)
 		require.NotNil(t, blk)
 	}
@@ -177,25 +179,25 @@ func TestService_pruneSlasherDataWithinSlidingWindow_ProposalsPruned(t *testing.
 	require.NoError(t, err)
 
 	// Attempt to prune again by setting current epoch to 4.
-	currentEpoch = types.Epoch(4)
+	currentEpoch = primitives.Epoch(4)
 	err = s.pruneSlasherDataWithinSlidingWindow(ctx, currentEpoch)
 	require.NoError(t, err)
 
 	// We should now only have data for epochs 1, 2, 3, 4. We should
 	// have pruned data from epoch 0.
-	blk, err := slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(0), 0)
+	blk, err := slasherDB.BlockProposalForValidator(ctx, primitives.ValidatorIndex(0), 0)
 	require.NoError(t, err)
 	require.Equal(t, true, blk == nil)
-	blk, err = slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(1), 0)
+	blk, err = slasherDB.BlockProposalForValidator(ctx, primitives.ValidatorIndex(1), 0)
 	require.NoError(t, err)
 	require.Equal(t, true, blk == nil)
 
-	slots = []types.Slot{1, 2, 3, 4}
+	slots = []primitives.Slot{1, 2, 3, 4}
 	for _, slot := range slots {
-		blk, err := slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(0), slot)
+		blk, err := slasherDB.BlockProposalForValidator(ctx, primitives.ValidatorIndex(0), slot)
 		require.NoError(t, err)
 		require.NotNil(t, blk)
-		blk, err = slasherDB.BlockProposalForValidator(ctx, types.ValidatorIndex(1), slot)
+		blk, err = slasherDB.BlockProposalForValidator(ctx, primitives.ValidatorIndex(1), slot)
 		require.NoError(t, err)
 		require.NotNil(t, blk)
 	}
@@ -207,6 +209,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			IndexedAttestationsFeed: new(event.Feed),
 			StateNotifier:           &mock.MockStateNotifier{},
+			ClockWaiter:             startup.NewClockSynchronizer(),
 		},
 		attsQueue: newAttestationsQueue(),
 	}
@@ -245,6 +248,7 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			BeaconBlockHeadersFeed: new(event.Feed),
 			StateNotifier:          &mock.MockStateNotifier{},
+			ClockWaiter:            startup.NewClockSynchronizer(),
 		},
 		blksQueue: newBlocksQueue(),
 	}
@@ -275,7 +279,7 @@ func TestService_processQueuedBlocks(t *testing.T) {
 
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	currentSlot := types.Slot(0)
+	currentSlot := primitives.Slot(0)
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 	mockChain := &mock.ChainService{
 		State: beaconState,
@@ -288,6 +292,7 @@ func TestService_processQueuedBlocks(t *testing.T) {
 			Database:         slasherDB,
 			StateNotifier:    &mock.MockStateNotifier{},
 			HeadStateFetcher: mockChain,
+			ClockWaiter:      startup.NewClockSynchronizer(),
 		},
 		blksQueue: newBlocksQueue(),
 	}
@@ -295,7 +300,7 @@ func TestService_processQueuedBlocks(t *testing.T) {
 		createProposalWrapper(t, 0, 1, nil),
 	})
 	ctx, cancel := context.WithCancel(context.Background())
-	tickerChan := make(chan types.Slot)
+	tickerChan := make(chan primitives.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedBlocks(ctx, tickerChan)

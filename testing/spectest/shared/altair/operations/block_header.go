@@ -9,12 +9,13 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -22,8 +23,13 @@ import (
 func RunBlockHeaderTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "operations/block_header/pyspec_tests")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "altair", "operations/block_header/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
+			helpers.ClearCache()
+
 			blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz_snappy")
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
@@ -37,7 +43,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			preBeaconStateBase := &ethpb.BeaconStateAltair{}
 			require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			preBeaconState, err := stateAltair.InitializeFromProto(preBeaconStateBase)
+			preBeaconState, err := state_native.InitializeFromProtoAltair(preBeaconStateBase)
 			require.NoError(t, err)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
@@ -63,10 +69,10 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 
 				postBeaconState := &ethpb.BeaconStateAltair{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := stateAltair.ProtobufBeaconState(beaconState.CloneInnerState())
+				pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.ToProto())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(beaconState.CloneInnerState(), postBeaconState)
+					diff, _ := messagediff.PrettyDiff(beaconState.ToProto(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}

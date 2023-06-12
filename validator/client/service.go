@@ -11,22 +11,27 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/v3/validator/db"
-	"github.com/prysmaticlabs/prysm/v3/validator/graffiti"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
+	slasherClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/slasher-client-factory"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
+	"github.com/prysmaticlabs/prysm/v4/validator/db"
+	"github.com/prysmaticlabs/prysm/v4/validator/graffiti"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -52,7 +57,7 @@ type ValidatorService struct {
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
 	interopKeysConfig     *local.InteropKeymanagerConfig
-	conn                  *grpc.ClientConn
+	conn                  validatorHelpers.NodeConnection
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
 	maxCallRecvMsgSize    int
@@ -69,7 +74,7 @@ type ValidatorService struct {
 	grpcHeaders           []string
 	graffiti              []byte
 	Web3SignerConfig      *remoteweb3signer.SetupConfig
-	ProposerSettings      *validatorserviceconfig.ProposerSettings
+	proposerSettings      *validatorserviceconfig.ProposerSettings
 }
 
 // Config for the validator service.
@@ -93,6 +98,8 @@ type Config struct {
 	Endpoint                   string
 	Web3SignerConfig           *remoteweb3signer.SetupConfig
 	ProposerSettings           *validatorserviceconfig.ProposerSettings
+	BeaconApiEndpoint          string
+	BeaconApiTimeout           time.Duration
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -120,7 +127,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
 		Web3SignerConfig:      cfg.Web3SignerConfig,
-		ProposerSettings:      cfg.ProposerSettings,
+		proposerSettings:      cfg.ProposerSettings,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -135,14 +142,18 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 
 	s.ctx = grpcutil.AppendHeaders(ctx, s.grpcHeaders)
 
-	conn, err := grpc.DialContext(ctx, s.endpoint, dialOpts...)
+	grpcConn, err := grpc.DialContext(ctx, s.endpoint, dialOpts...)
 	if err != nil {
 		return s, err
 	}
 	if s.withCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
-	s.conn = conn
+	s.conn = validatorHelpers.NewNodeConnection(
+		grpcConn,
+		cfg.BeaconApiEndpoint,
+		cfg.BeaconApiTimeout,
+	)
 
 	return s, nil
 }
@@ -177,23 +188,34 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
+	// checks db if proposer settings exist if none is provided.
+	if v.proposerSettings == nil {
+		settings, err := v.db.ProposerSettings(v.ctx)
+		if err == nil {
+			v.proposerSettings = settings
+		}
+	}
+
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
+	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
+
 	valStruct := &validator{
 		db:                             v.db,
-		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
-		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
-		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn),
-		node:                           ethpb.NewNodeClient(v.conn),
+		validatorClient:                validatorClient,
+		beaconClient:                   beaconClient,
+		slashingProtectionClient:       slasherClientFactory.NewSlasherClient(v.conn),
+		node:                           nodeClientFactory.NewNodeClient(v.conn),
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
 		startBalances:                  make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
-		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 		signedValidatorRegistrations:   make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
+		voteStats:                      voteStats{startEpoch: primitives.Epoch(^uint64(0))},
 		syncCommitteeStats:             syncCommitteeStats{},
 		useWeb:                         v.useWeb,
 		interopKeysConfig:              v.interopKeysConfig,
@@ -204,15 +226,16 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		Web3SignerConfig:               v.Web3SignerConfig,
-		ProposerSettings:               v.ProposerSettings,
+		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 	}
+
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize
 	// the inner type of the feed before hand. So that
 	// during future accesses, there will be no panics here
 	// from type incompatibility.
-	tempChan := make(chan interfaces.SignedBeaconBlock)
+	tempChan := make(chan interfaces.ReadOnlySignedBeaconBlock)
 	sub := valStruct.blockFeed.Subscribe(tempChan)
 	sub.Unsubscribe()
 	close(tempChan)
@@ -226,7 +249,7 @@ func (v *ValidatorService) Stop() error {
 	v.cancel()
 	log.Info("Stopping service")
 	if v.conn != nil {
-		return v.conn.Close()
+		return v.conn.GetGrpcClientConn().Close()
 	}
 	return nil
 }
@@ -244,8 +267,31 @@ func (v *ValidatorService) InteropKeysConfig() *local.InteropKeymanagerConfig {
 	return v.interopKeysConfig
 }
 
+// Keymanager returns the underlying keymanager in the validator
 func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 	return v.validator.Keymanager()
+}
+
+// ProposerSettings returns a deep copy of the underlying proposer settings in the validator
+func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+	settings := v.validator.ProposerSettings()
+	if settings != nil {
+		return settings.Clone()
+	}
+	return nil
+}
+
+// SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
+func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+	if v.db == nil {
+		return errors.New("db is not set")
+	}
+	if err := v.db.SaveProposerSettings(ctx, settings); err != nil {
+		return err
+	}
+	v.proposerSettings = settings
+	v.validator.SetProposerSettings(settings)
+	return nil
 }
 
 // ConstructDialOptions constructs a list of grpc dial options
@@ -304,7 +350,7 @@ func ConstructDialOptions(
 
 // Syncing returns whether or not the beacon node is currently synchronizing the chain.
 func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
-	nc := ethpb.NewNodeClient(v.conn)
+	nc := ethpb.NewNodeClient(v.conn.GetGrpcClientConn())
 	resp, err := nc.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return false, err
@@ -315,6 +361,6 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 // GenesisInfo queries the beacon node for the chain genesis info containing
 // the genesis time along with the validator deposit contract address.
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
-	nc := ethpb.NewNodeClient(v.conn)
+	nc := ethpb.NewNodeClient(v.conn.GetGrpcClientConn())
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
 }

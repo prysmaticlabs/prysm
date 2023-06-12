@@ -7,23 +7,22 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	blocktest "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks/testing"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestMockHistoryStates(t *testing.T) {
 	ctx := context.Background()
-	var begin, middle, end types.Slot = 100, 150, 155
+	var begin, middle, end primitives.Slot = 100, 150, 155
 	specs := []mockHistorySpec{
 		{slot: begin},
 		{slot: middle, savedState: true},
@@ -36,7 +35,7 @@ func TestMockHistoryStates(t *testing.T) {
 	st, err := hist.StateOrError(ctx, genesisRoot)
 	require.NoError(t, err)
 	require.DeepEqual(t, hist.states[genesisRoot], st)
-	require.Equal(t, types.Slot(0), st.Slot())
+	require.Equal(t, primitives.Slot(0), st.Slot())
 
 	shouldExist, err := hist.StateOrError(ctx, hist.slotMap[middle])
 	require.NoError(t, err)
@@ -54,7 +53,7 @@ func TestMockHistoryStates(t *testing.T) {
 
 func TestMockHistoryParentRoot(t *testing.T) {
 	ctx := context.Background()
-	var begin, middle, end types.Slot = 100, 150, 155
+	var begin, middle, end primitives.Slot = 100, 150, 155
 	specs := []mockHistorySpec{
 		{slot: begin},
 		{slot: middle, savedState: true},
@@ -65,27 +64,27 @@ func TestMockHistoryParentRoot(t *testing.T) {
 	endBlock, err := hist.Block(ctx, endRoot)
 	require.NoError(t, err)
 	// middle should be the parent of end, compare the middle root to endBlock's parent root
-	require.Equal(t, hist.slotMap[middle], bytesutil.ToBytes32(endBlock.Block().ParentRoot()))
+	require.Equal(t, hist.slotMap[middle], endBlock.Block().ParentRoot())
 }
 
 type mockHistorySpec struct {
-	slot           types.Slot
+	slot           primitives.Slot
 	savedState     bool
 	canonicalBlock bool
 }
 
 type mockHistory struct {
-	blocks                         map[[32]byte]interfaces.SignedBeaconBlock
-	slotMap                        map[types.Slot][32]byte
+	blocks                         map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+	slotMap                        map[primitives.Slot][32]byte
 	slotIndex                      slotList
 	canonical                      map[[32]byte]bool
 	states                         map[[32]byte]state.BeaconState
 	hiddenStates                   map[[32]byte]state.BeaconState
-	current                        types.Slot
-	overrideHighestSlotBlocksBelow func(context.Context, types.Slot) (types.Slot, [][32]byte, error)
+	current                        primitives.Slot
+	overrideHighestSlotBlocksBelow func(context.Context, primitives.Slot) (primitives.Slot, [][32]byte, error)
 }
 
-type slotList []types.Slot
+type slotList []primitives.Slot
 
 func (m slotList) Len() int {
 	return len(m)
@@ -101,7 +100,7 @@ func (m slotList) Swap(i, j int) {
 
 var errFallThroughOverride = errors.New("override yielding control back to real HighestRootsBelowSlot")
 
-func (m *mockHistory) HighestRootsBelowSlot(_ context.Context, slot types.Slot) (types.Slot, [][32]byte, error) {
+func (m *mockHistory) HighestRootsBelowSlot(_ context.Context, slot primitives.Slot) (primitives.Slot, [][32]byte, error) {
 	if m.overrideHighestSlotBlocksBelow != nil {
 		s, r, err := m.overrideHighestSlotBlocksBelow(context.Background(), slot)
 		if !errors.Is(err, errFallThroughOverride) {
@@ -132,7 +131,7 @@ func (m *mockHistory) GenesisBlockRoot(_ context.Context) ([32]byte, error) {
 	return genesisRoot, nil
 }
 
-func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
+func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if b, ok := m.blocks[blockRoot]; ok {
 		return b, nil
 	}
@@ -151,11 +150,11 @@ func (m *mockHistory) IsCanonical(_ context.Context, blockRoot [32]byte) (bool, 
 	return ok && canon, nil
 }
 
-func (m *mockHistory) CurrentSlot() types.Slot {
+func (m *mockHistory) CurrentSlot() primitives.Slot {
 	return m.current
 }
 
-func (h *mockHistory) addBlock(root [32]byte, b interfaces.SignedBeaconBlock, canon bool) {
+func (h *mockHistory) addBlock(root [32]byte, b interfaces.ReadOnlySignedBeaconBlock, canon bool) {
 	h.blocks[root] = b
 	h.slotMap[b.Block().Slot()] = root
 	h.canonical[root] = canon
@@ -170,7 +169,7 @@ func (h *mockHistory) hideState(root [32]byte, s state.BeaconState) {
 }
 
 func (h *mockHistory) validateRoots() error {
-	uniqParentRoots := make(map[[32]byte]types.Slot)
+	uniqParentRoots := make(map[[32]byte]primitives.Slot)
 	for s, root := range h.slotMap {
 		b := h.blocks[root]
 		htr, err := b.Block().HashTreeRoot()
@@ -188,14 +187,14 @@ func (h *mockHistory) validateRoots() error {
 	return nil
 }
 
-func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *mockHistory {
+func newMockHistory(t *testing.T, hist []mockHistorySpec, current primitives.Slot) *mockHistory {
 	ctx := context.Background()
 	mh := &mockHistory{
-		blocks:       map[[32]byte]interfaces.SignedBeaconBlock{},
+		blocks:       map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{},
 		canonical:    map[[32]byte]bool{},
 		states:       map[[32]byte]state.BeaconState{},
 		hiddenStates: map[[32]byte]state.BeaconState{},
-		slotMap:      map[types.Slot][32]byte{},
+		slotMap:      map[primitives.Slot][32]byte{},
 		slotIndex:    slotList{},
 		current:      current,
 	}

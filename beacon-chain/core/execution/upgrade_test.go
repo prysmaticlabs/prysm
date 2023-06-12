@@ -3,13 +3,13 @@ package execution_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/execution"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestUpgradeToBellatrix(t *testing.T) {
@@ -24,7 +24,11 @@ func TestUpgradeToBellatrix(t *testing.T) {
 	require.DeepSSZEqual(t, preForkState.LatestBlockHeader(), mSt.LatestBlockHeader())
 	require.DeepSSZEqual(t, preForkState.BlockRoots(), mSt.BlockRoots())
 	require.DeepSSZEqual(t, preForkState.StateRoots(), mSt.StateRoots())
-	require.DeepSSZEqual(t, preForkState.HistoricalRoots(), mSt.HistoricalRoots())
+	r1, err := preForkState.HistoricalRoots()
+	require.NoError(t, err)
+	r2, err := mSt.HistoricalRoots()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, r1, r2)
 	require.DeepSSZEqual(t, preForkState.Eth1Data(), mSt.Eth1Data())
 	require.DeepSSZEqual(t, preForkState.Eth1DataVotes(), mSt.Eth1DataVotes())
 	require.DeepSSZEqual(t, preForkState.Eth1DepositIndex(), mSt.Eth1DepositIndex())
@@ -61,6 +65,9 @@ func TestUpgradeToBellatrix(t *testing.T) {
 
 	header, err := mSt.LatestExecutionPayloadHeader()
 	require.NoError(t, err)
+	protoHeader, ok := header.Proto().(*enginev1.ExecutionPayloadHeader)
+	require.Equal(t, true, ok)
+
 	wanted := &enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, 32),
 		FeeRecipient:     make([]byte, 20),
@@ -76,5 +83,5 @@ func TestUpgradeToBellatrix(t *testing.T) {
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 	}
-	require.DeepEqual(t, wanted, header)
+	require.DeepEqual(t, wanted, protoHeader)
 }

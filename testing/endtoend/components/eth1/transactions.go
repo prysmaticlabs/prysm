@@ -16,9 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -78,7 +78,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			err := SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 200, false)
+			err := SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 100, false)
 			if err != nil {
 				return err
 			}
@@ -99,27 +99,41 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 	if err != nil {
 		return err
 	}
-	nonce, err := backend.NonceAt(context.Background(), sender, big.NewInt(-1))
+	nonce, err := backend.PendingNonceAt(context.Background(), sender)
 	if err != nil {
 		return err
 	}
-
+	expectedPrice, err := backend.SuggestGasPrice(context.Background())
+	if err != nil {
+		return err
+	}
+	if expectedPrice.Cmp(gasPrice) > 0 {
+		gasPrice = expectedPrice
+	}
 	g, _ := errgroup.WithContext(context.Background())
 	for i := uint64(0); i < N; i++ {
 		index := i
 		g.Go(func() error {
-			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, nil, al)
+			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, expectedPrice, nil, al)
 			if err != nil {
+				// In the event the transaction constructed is not valid, we continue with the routine
+				// rather than complete stop it.
+				//nolint:nilerr
 				return nil
 			}
 			signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
 			if err != nil {
+				// We continue on in the event there is a reason we can't sign this
+				// transaction(unlikely).
+				//nolint:nilerr
 				return nil
 			}
 			err = backend.SendTransaction(context.Background(), signedTx)
+			// We continue on if the constructed transaction is invalid
+			// and can't be submitted on chain.
+			//nolint:nilerr
 			return nil
 		})
-
 	}
 	return g.Wait()
 }

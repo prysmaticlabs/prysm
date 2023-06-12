@@ -3,12 +3,12 @@ package state_native_test
 import (
 	"testing"
 
-	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestReadOnlyValidator_ReturnsErrorOnNil(t *testing.T) {
@@ -25,28 +25,28 @@ func TestReadOnlyValidator_EffectiveBalance(t *testing.T) {
 }
 
 func TestReadOnlyValidator_ActivationEligibilityEpoch(t *testing.T) {
-	epoch := types.Epoch(234)
+	epoch := primitives.Epoch(234)
 	v, err := statenative.NewValidator(&ethpb.Validator{ActivationEligibilityEpoch: epoch})
 	require.NoError(t, err)
 	assert.Equal(t, epoch, v.ActivationEligibilityEpoch())
 }
 
 func TestReadOnlyValidator_ActivationEpoch(t *testing.T) {
-	epoch := types.Epoch(234)
+	epoch := primitives.Epoch(234)
 	v, err := statenative.NewValidator(&ethpb.Validator{ActivationEpoch: epoch})
 	require.NoError(t, err)
 	assert.Equal(t, epoch, v.ActivationEpoch())
 }
 
 func TestReadOnlyValidator_WithdrawableEpoch(t *testing.T) {
-	epoch := types.Epoch(234)
+	epoch := primitives.Epoch(234)
 	v, err := statenative.NewValidator(&ethpb.Validator{WithdrawableEpoch: epoch})
 	require.NoError(t, err)
 	assert.Equal(t, epoch, v.WithdrawableEpoch())
 }
 
 func TestReadOnlyValidator_ExitEpoch(t *testing.T) {
-	epoch := types.Epoch(234)
+	epoch := primitives.Epoch(234)
 	v, err := statenative.NewValidator(&ethpb.Validator{ExitEpoch: epoch})
 	require.NoError(t, err)
 	assert.Equal(t, epoch, v.ExitEpoch())

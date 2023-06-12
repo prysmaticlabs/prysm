@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	common "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/ssz_static"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	common "github.com/prysmaticlabs/prysm/v4/testing/spectest/shared/common/ssz_static"
 )
 
 // RunSSZStaticTests executes "ssz_static" tests.
@@ -22,7 +22,7 @@ func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR
 	switch object.(type) {
 	case *ethpb.BeaconStateBellatrix:
 		htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-			beaconState, err := v3.InitializeFromProto(s.(*ethpb.BeaconStateBellatrix))
+			beaconState, err := state_native.InitializeFromProtoBellatrix(s.(*ethpb.BeaconStateBellatrix))
 			require.NoError(t, err)
 			return beaconState.HashTreeRoot(context.Background())
 		})
@@ -75,6 +75,9 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.HistoricalBatch{}
 	case "IndexedAttestation":
 		obj = &ethpb.IndexedAttestation{}
+	case "LightClientHeader":
+		t.Skip("not a beacon node type, this is a light node type")
+		return nil, nil
 	case "PendingAttestation":
 		obj = &ethpb.PendingAttestation{}
 	case "ProposerSlashing":

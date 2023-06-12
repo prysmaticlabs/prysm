@@ -3,9 +3,10 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -92,7 +93,7 @@ var (
 	// StaticPeers specifies a set of peers to connect to explicitly.
 	StaticPeers = &cli.StringSliceFlag{
 		Name:  "peer",
-		Usage: "Connect with this peer. This flag may be used multiple times.",
+		Usage: "Connect with this peer, this flag may be used multiple times. This peer is recognized as a trusted peer.",
 	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
 	BootstrapNode = &cli.StringSliceFlag{
@@ -143,6 +144,11 @@ var (
 		Usage: "The file containing the private key to use in communications with other peers.",
 		Value: "",
 	}
+	P2PStaticID = &cli.BoolFlag{
+		Name:  "p2p-static-id",
+		Usage: "Enables the peer id of the node to be fixed by saving the generated network key to the default key path.",
+		Value: false,
+	}
 	// P2PMetadata defines a flag to specify the location of the peer metadata file.
 	P2PMetadata = &cli.StringFlag{
 		Name:  "p2p-metadata",
@@ -166,7 +172,7 @@ var (
 	// P2PDenyList defines a list of CIDR subnets to disallow connections from them.
 	P2PDenyList = &cli.StringSliceFlag{
 		Name: "p2p-denylist",
-		Usage: "The CIDR subnets for denying certainy peer connections. " +
+		Usage: "The CIDR subnets for denying certainty peer connections. " +
 			"Using \"private\" would deny all private subnets. Example: " +
 			"192.168.0.0/16 would deny connections from peers on your local network only. The " +
 			"default is to accept all connections.",
@@ -215,9 +221,13 @@ var (
 	}
 	// GrpcMaxCallRecvMsgSizeFlag defines the max call message size for GRPC
 	GrpcMaxCallRecvMsgSizeFlag = &cli.IntFlag{
-		Name:  "grpc-max-msg-size",
-		Usage: "Integer to define max recieve message call size (default: 4194304 (for 4MB))",
-		Value: 1 << 22,
+		Name: "grpc-max-msg-size",
+		Usage: "Integer to define max receive message call size. If serving a public gRPC server, " +
+			"set this to a more reasonable size to avoid resource exhaustion from large messages. " +
+			"Validators with as many as 10000 keys can be run with a max message size of less than " +
+			"50Mb. The default here is set to a very high value for local users. " +
+			"(default: 2147483647 (2Gi)).",
+		Value: math.MaxInt32,
 	}
 	// AcceptTosFlag specifies user acceptance of ToS for non-interactive environments.
 	AcceptTosFlag = &cli.BoolFlag{

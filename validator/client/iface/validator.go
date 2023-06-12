@@ -5,12 +5,13 @@ import (
 	"errors"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 )
 
 // ErrConnectionIssue represents a connection problem.
@@ -30,7 +31,7 @@ const (
 	RoleAggregator
 	// RoleSyncCommittee means that the validator should submit a sync committee message.
 	RoleSyncCommittee
-	// RoleSyncCommitteeAggregator means the valiator should aggregate sync committee messages and submit a sync committee contribution.
+	// RoleSyncCommitteeAggregator means the validator should aggregate sync committee messages and submit a sync committee contribution.
 	RoleSyncCommitteeAggregator
 )
 
@@ -40,28 +41,29 @@ type Validator interface {
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
 	WaitForActivation(ctx context.Context, accountsChangedChan chan [][fieldparams.BLSPubkeyLength]byte) error
-	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
-	NextSlot() <-chan types.Slot
-	SlotDeadline(slot types.Slot) time.Time
-	LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error
-	UpdateDuties(ctx context.Context, slot types.Slot) error
-	RolesAt(ctx context.Context, slot types.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]ValidatorRole, error) // validator pubKey -> roles
-	SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	ProposeBlock(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
-	SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	CanonicalHeadSlot(ctx context.Context) (primitives.Slot, error)
+	NextSlot() <-chan primitives.Slot
+	SlotDeadline(slot primitives.Slot) time.Time
+	LogValidatorGainsAndLosses(ctx context.Context, slot primitives.Slot) error
+	UpdateDuties(ctx context.Context, slot primitives.Slot) error
+	RolesAt(ctx context.Context, slot primitives.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]ValidatorRole, error) // validator pubKey -> roles
+	SubmitAttestation(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	ProposeBlock(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitAggregateAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitSyncCommitteeMessage(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitSignedContributionAndProof(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 	LogAttestationsSubmitted()
 	LogSyncCommitteeMessagesSubmitted()
-	UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
+	UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot)
 	WaitForKeymanagerInitialization(ctx context.Context) error
-	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	Keymanager() (keymanager.IKeymanager, error)
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
-	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
+	HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
-	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error
+	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
+	ProposerSettings() *validatorserviceconfig.ProposerSettings
+	SetProposerSettings(*validatorserviceconfig.ProposerSettings)
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

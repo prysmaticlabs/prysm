@@ -6,28 +6,29 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/async/abool"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v4/async/abool"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -42,8 +43,9 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{})
 
+	chain := &mock.ChainService{Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}}
 	r := &Service{
-		cfg:                  &config{p2p: p1, beaconDB: db, chain: &mock.ChainService{Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{}}},
+		cfg:                  &config{p2p: p1, beaconDB: db, chain: chain, clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot)},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		chainStarted:         abool.New(),
 	}
@@ -92,7 +94,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 	// Arbitrary aggregator index for testing purposes.
 	aggregatorIndex := committee[0]
-	sszUint := types.SSZUint64(att.Data.Slot)
+	sszUint := primitives.SSZUint64(att.Data.Slot)
 	sig, err := signing.ComputeDomainAndSign(beaconState, 0, &sszUint, params.BeaconConfig().DomainSelectionProof, privKeys[aggregatorIndex])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
@@ -105,19 +107,22 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
+	chain := &mock.ChainService{Genesis: time.Now(),
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
+			Epoch: 0,
+		},
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{Genesis: time.Now(),
-				State: beaconState,
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
-					Epoch: 0,
-				}},
-			attPool: attestations.NewPool(),
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			attPool:  attestations.NewPool(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
@@ -146,11 +151,15 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 
 	s, _ := util.DeterministicGenesisState(t, 256)
+	chain := &mock.ChainService{
+		State:   s,
+		Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	r := &Service{
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain:    &mock.ChainService{State: s, Genesis: prysmTime.Now(), FinalizedCheckPoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			attPool:  attestations.NewPool(),
 		},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
@@ -208,7 +217,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 	// Arbitrary aggregator index for testing purposes.
 	aggregatorIndex := committee[0]
-	sszSlot := types.SSZUint64(att.Data.Slot)
+	sszSlot := primitives.SSZUint64(att.Data.Slot)
 	sig, err := signing.ComputeDomainAndSign(s, 0, &sszSlot, params.BeaconConfig().DomainSelectionProof, privKeys[aggregatorIndex])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
@@ -221,18 +230,20 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 	require.NoError(t, s.SetGenesisTime(uint64(time.Now().Unix())))
 	ctx, cancel := context.WithCancel(context.Background())
+	chain2 := &mock.ChainService{Genesis: time.Now(),
+		State: s,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
+			Epoch: 0,
+		}}
 	r = &Service{
 		ctx: ctx,
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{Genesis: time.Now(),
-				State: s,
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
-					Epoch: 0,
-				}},
-			attPool: attestations.NewPool(),
+			chain:    chain2,
+			clock:    startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+			attPool:  attestations.NewPool(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
@@ -289,7 +300,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	// Arbitrary aggregator index for testing purposes.
 	aggregatorIndex := committee[0]
-	sszUint := types.SSZUint64(att.Data.Slot)
+	sszUint := primitives.SSZUint64(att.Data.Slot)
 	sig, err := signing.ComputeDomainAndSign(beaconState, 0, &sszUint, params.BeaconConfig().DomainSelectionProof, privKeys[aggregatorIndex])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
@@ -302,20 +313,22 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
+	chain := &mock.ChainService{Genesis: time.Now(),
+		DB:    db,
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
+			Epoch: 0,
+		}}
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{Genesis: time.Now(),
-				DB:    db,
-				State: beaconState,
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Root:  aggregateAndProof.Aggregate.Data.BeaconBlockRoot,
-					Epoch: 0,
-				}},
-			attPool: attestations.NewPool(),
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			attPool:  attestations.NewPool(),
 		},
 		blkRootToPendingAtts:           make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAggregatedAttestationCache: lruwrpr.New(10),
@@ -348,20 +361,20 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	r2 := [32]byte{'B'}
 	r3 := [32]byte{'C'}
 
-	for i := types.Slot(0); i < 100; i++ {
+	for i := primitives.Slot(0); i < 100; i++ {
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: types.ValidatorIndex(i),
+				AggregatorIndex: primitives.ValidatorIndex(i),
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r1[:]}}}})
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: types.ValidatorIndex(i*2 + i),
+				AggregatorIndex: primitives.ValidatorIndex(i*2 + i),
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r2[:]}}}})
 		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
 			Message: &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: types.ValidatorIndex(i*3 + i),
+				AggregatorIndex: primitives.ValidatorIndex(i*3 + i),
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{Slot: i, BeaconBlockRoot: r3[:]}}}})
 	}
@@ -411,4 +424,38 @@ func TestValidatePendingAtts_NoDuplicatingAggregatorIndex(t *testing.T) {
 
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
 	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r2]), "Did not save pending atts")
+}
+
+func TestSavePendingAtts_BeyondLimit(t *testing.T) {
+	s := &Service{
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+	}
+
+	for i := 0; i < pendingAttsLimit; i++ {
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: primitives.ValidatorIndex(i),
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: bytesutil.Bytes32(uint64(i))}}}})
+	}
+	r1 := [32]byte(bytesutil.Bytes32(0))
+	r2 := [32]byte(bytesutil.Bytes32(uint64(pendingAttsLimit) - 1))
+
+	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r1]), "Did not save pending atts")
+	assert.Equal(t, 1, len(s.blkRootToPendingAtts[r2]), "Did not save pending atts")
+
+	for i := pendingAttsLimit; i < pendingAttsLimit+20; i++ {
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: primitives.ValidatorIndex(i),
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: bytesutil.Bytes32(uint64(i))}}}})
+	}
+
+	r1 = [32]byte(bytesutil.Bytes32(uint64(pendingAttsLimit)))
+	r2 = [32]byte(bytesutil.Bytes32(uint64(pendingAttsLimit) + 10))
+
+	assert.Equal(t, 0, len(s.blkRootToPendingAtts[r1]), "Saved pending atts")
+	assert.Equal(t, 0, len(s.blkRootToPendingAtts[r2]), "Saved pending atts")
+
 }

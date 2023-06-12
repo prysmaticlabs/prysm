@@ -5,17 +5,17 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	ethtypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // FinalizationOccurs is an evaluator to make sure finalization is performing as it should.
 // Requires to be run after at least 4 epochs have passed.
-var FinalizationOccurs = func(epoch ethtypes.Epoch) types.Evaluator {
+var FinalizationOccurs = func(epoch primitives.Epoch) types.Evaluator {
 	return types.Evaluator{
 		Name:       "finalizes_at_epoch_%d",
 		Policy:     policies.AfterNthEpoch(epoch),
@@ -23,7 +23,7 @@ var FinalizationOccurs = func(epoch ethtypes.Epoch) types.Evaluator {
 	}
 }
 
-func finalizationOccurs(conns ...*grpc.ClientConn) error {
+func finalizationOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})

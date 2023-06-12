@@ -3,9 +3,7 @@ package kv
 import (
 	"context"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -34,20 +32,5 @@ func (s *Store) SaveLastValidatedCheckpoint(ctx context.Context, checkpoint *eth
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastValidatedCheckpoint")
 	defer span.End()
 
-	enc, err := encode(ctx, checkpoint)
-	if err != nil {
-		return err
-	}
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(checkpointBucket)
-		hasStateSummary := s.hasStateSummaryBytes(tx, bytesutil.ToBytes32(checkpoint.Root))
-		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-		if !(hasStateInDB || hasStateSummary) {
-			log.Warnf("Recovering state summary for last validated root: %#x", bytesutil.Trunc(checkpoint.Root))
-			if err := recoverStateSummary(ctx, tx, checkpoint.Root); err != nil {
-				return errors.Wrapf(errMissingStateForCheckpoint, "could not save finalized checkpoint, last validated root: %#x", bytesutil.Trunc(checkpoint.Root))
-			}
-		}
-		return bucket.Put(lastValidatedCheckpointKey, enc)
-	})
+	return s.saveCheckpoint(ctx, lastValidatedCheckpointKey, checkpoint)
 }

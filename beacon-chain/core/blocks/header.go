@@ -5,44 +5,44 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // ProcessBlockHeader validates a block by its header.
 //
 // Spec pseudocode definition:
 //
-//  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-//    # Verify that the slots match
-//    assert block.slot == state.slot
-//    # Verify that the block is newer than latest block header
-//    assert block.slot > state.latest_block_header.slot
-//    # Verify that proposer index is the correct index
-//    assert block.proposer_index == get_beacon_proposer_index(state)
-//    # Verify that the parent matches
-//    assert block.parent_root == hash_tree_root(state.latest_block_header)
-//    # Cache current block as the new latest block
-//    state.latest_block_header = BeaconBlockHeader(
-//        slot=block.slot,
-//        proposer_index=block.proposer_index,
-//        parent_root=block.parent_root,
-//        state_root=Bytes32(),  # Overwritten in the next process_slot call
-//        body_root=hash_tree_root(block.body),
-//    )
+//	def process_block_header(state: BeaconState, block: ReadOnlyBeaconBlock) -> None:
+//	  # Verify that the slots match
+//	  assert block.slot == state.slot
+//	  # Verify that the block is newer than latest block header
+//	  assert block.slot > state.latest_block_header.slot
+//	  # Verify that proposer index is the correct index
+//	  assert block.proposer_index == get_beacon_proposer_index(state)
+//	  # Verify that the parent matches
+//	  assert block.parent_root == hash_tree_root(state.latest_block_header)
+//	  # Cache current block as the new latest block
+//	  state.latest_block_header = BeaconBlockHeader(
+//	      slot=block.slot,
+//	      proposer_index=block.proposer_index,
+//	      parent_root=block.parent_root,
+//	      state_root=Bytes32(),  # Overwritten in the next process_slot call
+//	      body_root=hash_tree_root(block.body),
+//	  )
 //
-//    # Verify proposer is not slashed
-//    proposer = state.validators[block.proposer_index]
-//    assert not proposer.slashed
+//	  # Verify proposer is not slashed
+//	  proposer = state.validators[block.proposer_index]
+//	  assert not proposer.slashed
 func ProcessBlockHeader(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	block interfaces.SignedBeaconBlock,
+	block interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(block); err != nil {
 		return nil, err
@@ -51,13 +51,15 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
-	beaconState, err = ProcessBlockHeaderNoVerify(ctx, beaconState, block.Block().Slot(), block.Block().ProposerIndex(), block.Block().ParentRoot(), bodyRoot[:])
+	parentRoot := block.Block().ParentRoot()
+	beaconState, err = ProcessBlockHeaderNoVerify(ctx, beaconState, block.Block().Slot(), block.Block().ProposerIndex(), parentRoot[:], bodyRoot[:])
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify proposer signature.
-	if err := VerifyBlockSignature(beaconState, block.Block().ProposerIndex(), block.Signature(), block.Block().HashTreeRoot); err != nil {
+	sig := block.Signature()
+	if err := VerifyBlockSignature(beaconState, block.Block().ProposerIndex(), sig[:], block.Block().HashTreeRoot); err != nil {
 		return nil, err
 	}
 
@@ -71,31 +73,32 @@ func ProcessBlockHeader(
 // using a unsigned block.
 //
 // Spec pseudocode definition:
-//  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-//    # Verify that the slots match
-//    assert block.slot == state.slot
-//    # Verify that the block is newer than latest block header
-//    assert block.slot > state.latest_block_header.slot
-//    # Verify that proposer index is the correct index
-//    assert block.proposer_index == get_beacon_proposer_index(state)
-//    # Verify that the parent matches
-//    assert block.parent_root == hash_tree_root(state.latest_block_header)
-//    # Cache current block as the new latest block
-//    state.latest_block_header = BeaconBlockHeader(
-//        slot=block.slot,
-//        proposer_index=block.proposer_index,
-//        parent_root=block.parent_root,
-//        state_root=Bytes32(),  # Overwritten in the next process_slot call
-//        body_root=hash_tree_root(block.body),
-//    )
 //
-//    # Verify proposer is not slashed
-//    proposer = state.validators[block.proposer_index]
-//    assert not proposer.slashed
+//	def process_block_header(state: BeaconState, block: ReadOnlyBeaconBlock) -> None:
+//	  # Verify that the slots match
+//	  assert block.slot == state.slot
+//	  # Verify that the block is newer than latest block header
+//	  assert block.slot > state.latest_block_header.slot
+//	  # Verify that proposer index is the correct index
+//	  assert block.proposer_index == get_beacon_proposer_index(state)
+//	  # Verify that the parent matches
+//	  assert block.parent_root == hash_tree_root(state.latest_block_header)
+//	  # Cache current block as the new latest block
+//	  state.latest_block_header = BeaconBlockHeader(
+//	      slot=block.slot,
+//	      proposer_index=block.proposer_index,
+//	      parent_root=block.parent_root,
+//	      state_root=Bytes32(),  # Overwritten in the next process_slot call
+//	      body_root=hash_tree_root(block.body),
+//	  )
+//
+//	  # Verify proposer is not slashed
+//	  proposer = state.validators[block.proposer_index]
+//	  assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	slot types.Slot, proposerIndex types.ValidatorIndex,
+	slot primitives.Slot, proposerIndex primitives.ValidatorIndex,
 	parentRoot, bodyRoot []byte,
 ) (state.BeaconState, error) {
 	if beaconState.Slot() != slot {

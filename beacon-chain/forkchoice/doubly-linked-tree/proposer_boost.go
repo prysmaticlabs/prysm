@@ -1,43 +1,41 @@
 package doublylinkedtree
 
 import (
-	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 )
 
-// ResetBoostedProposerRoot sets the value of the proposer boosted root to zeros.
-func (f *ForkChoice) ResetBoostedProposerRoot(_ context.Context) error {
-	f.store.proposerBoostLock.Lock()
-	f.store.proposerBoostRoot = [32]byte{}
-	f.store.proposerBoostLock.Unlock()
+// applyProposerBoostScore applies the current proposer boost scores to the
+// relevant nodes.
+func (f *ForkChoice) applyProposerBoostScore() error {
+	s := f.store
+	proposerScore := uint64(0)
+	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
+		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
+		if !ok || previousNode == nil {
+			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
+		} else {
+			previousNode.balance -= s.previousProposerBoostScore
+		}
+	}
+
+	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
+		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
+		if !ok || currentNode == nil {
+			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.proposerBoostRoot))
+		} else {
+			proposerScore = (s.committeeWeight * params.BeaconConfig().ProposerScoreBoost) / 100
+			currentNode.balance += proposerScore
+		}
+	}
+	s.previousProposerBoostRoot = s.proposerBoostRoot
+	s.previousProposerBoostScore = proposerScore
 	return nil
 }
 
-// Given a list of validator balances, we compute the proposer boost score
-// that should be given to a proposer based on their committee weight, derived from
-// the total active balances, the size of a committee, and a boost score constant.
-// IMPORTANT: The caller MUST pass in a list of validator balances where balances > 0 refer to active
-// validators while balances == 0 are for inactive validators.
-func computeProposerBoostScore(validatorBalances []uint64) (score uint64, err error) {
-	totalActiveBalance := uint64(0)
-	numActive := uint64(0)
-	for _, balance := range validatorBalances {
-		// We only consider balances > 0. The input slice should be constructed
-		// as balance > 0 for all active validators and 0 for inactive ones.
-		if balance == 0 {
-			continue
-		}
-		totalActiveBalance += balance
-		numActive += 1
-	}
-	if numActive == 0 {
-		// Should never happen.
-		err = errors.New("no active validators")
-		return
-	}
-	committeeWeight := totalActiveBalance / uint64(params.BeaconConfig().SlotsPerEpoch)
-	score = (committeeWeight * params.BeaconConfig().ProposerScoreBoost) / 100
-	return
+// ProposerBoost of fork choice store.
+func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
+	return s.proposerBoostRoot
 }

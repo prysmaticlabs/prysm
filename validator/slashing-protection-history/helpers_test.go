@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 func Test_uint64FromString(t *testing.T) {
@@ -67,7 +67,7 @@ func Test_uint64FromString(t *testing.T) {
 				t.Errorf("EpochFromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != types.Epoch(tt.want) {
+			if got != primitives.Epoch(tt.want) {
 				t.Errorf("EpochFromString() got = %v, want %v", got, tt.want)
 			}
 		})
@@ -77,7 +77,7 @@ func Test_uint64FromString(t *testing.T) {
 				t.Errorf("SlotFromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != types.Slot(tt.want) {
+			if got != primitives.Slot(tt.want) {
 				t.Errorf("SlotFromString() got = %v, want %v", got, tt.want)
 			}
 		})

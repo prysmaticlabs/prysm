@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -112,7 +112,7 @@ func Test_initializeAuthToken(t *testing.T) {
 }
 
 // "createTokenString" now uses jwt.RegisteredClaims instead of jwt.StandardClaims (deprecated),
-// make sure emtpy jwt.RegisteredClaims and empty jwt.StandardClaims generates the same token.
+// make sure empty jwt.RegisteredClaims and empty jwt.StandardClaims generates the same token.
 func Test_UseRegisteredClaimInsteadOfStandClaims(t *testing.T) {
 	jwtsecret, err := hex.DecodeString("12345678900123456789abcdeffedcba")
 	require.NoError(t, err)

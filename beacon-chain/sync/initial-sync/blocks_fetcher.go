@@ -6,19 +6,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	p2pTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	prysmsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	p2ppb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	prysmsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	p2ppb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -54,6 +55,9 @@ var (
 	errNoPeersWithAltBlocks  = errors.New("no peers with alternative blocks found")
 )
 
+// Period to calculate expected limit for a single peer.
+var blockLimiterPeriod = 30 * time.Second
+
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
 	chain                    blockchainService
@@ -74,7 +78,7 @@ type blocksFetcher struct {
 	chain           blockchainService
 	p2p             p2p.P2P
 	db              db.ReadOnlyDatabase
-	blocksPerSecond uint64
+	blocksPerPeriod uint64
 	rateLimiter     *leakybucket.Collector
 	peerLocks       map[peer.ID]*peerLock
 	fetchRequests   chan *fetchRequestParams
@@ -93,7 +97,7 @@ type peerLock struct {
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
 type fetchRequestParams struct {
 	ctx   context.Context // if provided, it is used instead of global fetcher's context
-	start types.Slot      // starting slot
+	start primitives.Slot // starting slot
 	count uint64          // how many slots to receive (fetcher may return fewer slots)
 }
 
@@ -101,20 +105,20 @@ type fetchRequestParams struct {
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
 	pid    peer.ID
-	start  types.Slot
+	start  primitives.Slot
 	count  uint64
-	blocks []interfaces.SignedBeaconBlock
+	blocks []interfaces.ReadOnlySignedBeaconBlock
 	err    error
 }
 
 // newBlocksFetcher creates ready to use fetcher.
 func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetcher {
-	blocksPerSecond := flags.Get().BlockBatchLimit
+	blocksPerPeriod := flags.Get().BlockBatchLimit
 	allowedBlocksBurst := flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit
 	// Allow fetcher to go almost to the full burst capacity (less a single batch).
 	rateLimiter := leakybucket.NewCollector(
-		float64(blocksPerSecond), int64(allowedBlocksBurst-blocksPerSecond),
-		false /* deleteEmptyBuckets */)
+		float64(blocksPerPeriod), int64(allowedBlocksBurst-blocksPerPeriod),
+		blockLimiterPeriod, false /* deleteEmptyBuckets */)
 
 	capacityWeight := cfg.peerFilterCapacityWeight
 	if capacityWeight >= 1 {
@@ -129,7 +133,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		chain:           cfg.chain,
 		p2p:             cfg.p2p,
 		db:              cfg.db,
-		blocksPerSecond: uint64(blocksPerSecond),
+		blocksPerPeriod: uint64(blocksPerPeriod),
 		rateLimiter:     rateLimiter,
 		peerLocks:       make(map[peer.ID]*peerLock),
 		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
@@ -218,7 +222,7 @@ func (f *blocksFetcher) loop() {
 }
 
 // scheduleRequest adds request to incoming queue.
-func (f *blocksFetcher) scheduleRequest(ctx context.Context, start types.Slot, count uint64) error {
+func (f *blocksFetcher) scheduleRequest(ctx context.Context, start primitives.Slot, count uint64) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -237,14 +241,14 @@ func (f *blocksFetcher) scheduleRequest(ctx context.Context, start types.Slot, c
 }
 
 // handleRequest parses fetch request and forwards it to response builder.
-func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, count uint64) *fetchRequestResponse {
+func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot, count uint64) *fetchRequestResponse {
 	ctx, span := trace.StartSpan(ctx, "initialsync.handleRequest")
 	defer span.End()
 
 	response := &fetchRequestResponse{
 		start:  start,
 		count:  count,
-		blocks: []interfaces.SignedBeaconBlock{},
+		blocks: []interfaces.ReadOnlySignedBeaconBlock{},
 		err:    nil,
 	}
 
@@ -276,9 +280,9 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 // fetchBlocksFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
-	start types.Slot, count uint64,
+	start primitives.Slot, count uint64,
 	peers []peer.ID,
-) ([]interfaces.SignedBeaconBlock, peer.ID, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
@@ -292,7 +296,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		blocks, err := f.requestBlocks(ctx, req, peers[i])
 		if err == nil {
 			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
-			return blocks, peers[i], err
+			return blocks, peers[i], nil
 		} else {
 			log.WithError(err).Debug("Could not request blocks by range")
 		}
@@ -305,7 +309,7 @@ func (f *blocksFetcher) requestBlocks(
 	ctx context.Context,
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -320,7 +324,7 @@ func (f *blocksFetcher) requestBlocks(
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
-		if err := f.waitForBandwidth(pid); err != nil {
+		if err := f.waitForBandwidth(pid, req.Count); err != nil {
 			l.Unlock()
 			return nil, err
 		}
@@ -335,7 +339,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	ctx context.Context,
 	req *p2pTypes.BeaconBlockByRootsReq,
 	pid peer.ID,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -348,7 +352,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
-		if err := f.waitForBandwidth(pid); err != nil {
+		if err := f.waitForBandwidth(pid, uint64(len(*req))); err != nil {
 			l.Unlock()
 			return nil, err
 		}
@@ -360,9 +364,19 @@ func (f *blocksFetcher) requestBlocksByRoot(
 }
 
 // waitForBandwidth blocks up until peer's bandwidth is restored.
-func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
+func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 	log.WithField("peer", pid).Debug("Slowing down for rate limit")
-	timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
+	rem := f.rateLimiter.Remaining(pid.String())
+	if uint64(rem) >= count {
+		// Exit early if we have sufficient capacity
+		return nil
+	}
+	intCount, err := math.Int(count)
+	if err != nil {
+		return err
+	}
+	toWait := timeToWait(int64(intCount), rem, f.rateLimiter.Capacity(), f.rateLimiter.TillEmpty(pid.String()))
+	timer := time.NewTimer(toWait)
 	defer timer.Stop()
 	select {
 	case <-f.ctx.Done():
@@ -371,4 +385,25 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
 		// Peer has gathered enough capacity to be polled again.
 	}
 	return nil
+}
+
+// Determine how long it will take for us to have the required number of blocks allowed by our rate limiter.
+// We do this by calculating the duration till the rate limiter can request these blocks without exceeding
+// the provided bandwidth limits per peer.
+func timeToWait(wanted, rem, capacity int64, timeTillEmpty time.Duration) time.Duration {
+	// Defensive check if we have more than enough blocks
+	// to request from the peer.
+	if rem >= wanted {
+		return 0
+	}
+	// Handle edge case where capacity is equal to the remaining amount
+	// of blocks. This also handles the impossible case in where remaining blocks
+	// exceed the limiter's capacity.
+	if capacity <= rem {
+		return 0
+	}
+	blocksNeeded := wanted - rem
+	currentNumBlks := capacity - rem
+	expectedTime := int64(timeTillEmpty) * blocksNeeded / currentNumBlks
+	return time.Duration(expectedTime)
 }

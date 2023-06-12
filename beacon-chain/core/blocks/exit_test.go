@@ -4,18 +4,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
@@ -32,7 +32,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       10,
 	})
@@ -62,7 +62,7 @@ func TestProcessVoluntaryExits_ExitAlreadySubmitted(t *testing.T) {
 			ExitEpoch: 10,
 		},
 	}
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       0,
 	})
@@ -94,7 +94,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Fork: &ethpb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -126,8 +126,123 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	newState, err := blocks.ProcessVoluntaryExits(context.Background(), state, b.Block.Body.VoluntaryExits)
 	require.NoError(t, err, "Could not process exits")
 	newRegistry := newState.Validators()
-	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(types.Epoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch)) {
+	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(primitives.Epoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch)) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
-			helpers.ActivationExitEpoch(types.Epoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch)), newRegistry[0].ExitEpoch)
+			helpers.ActivationExitEpoch(primitives.Epoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch)), newRegistry[0].ExitEpoch)
+	}
+}
+
+func TestVerifyExitAndSignature(t *testing.T) {
+	type args struct {
+		currentSlot primitives.Slot
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		setup   func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error)
+		wantErr string
+	}{
+		{
+			name: "Empty Exit",
+			args: args{
+				currentSlot: 0,
+			},
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+				fork := &ethpb.Fork{
+					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+					Epoch:           0,
+				}
+				genesisRoot := [32]byte{'a'}
+				return &ethpb.Validator{}, &ethpb.SignedVoluntaryExit{}, fork, genesisRoot[:], nil
+			},
+			wantErr: "nil exit",
+		},
+		{
+			name: "Happy Path",
+			args: args{
+				currentSlot: (params.BeaconConfig().SlotsPerEpoch * 2) + 1,
+			},
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+				fork := &ethpb.Fork{
+					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+					Epoch:           0,
+				}
+				signedExit := &ethpb.SignedVoluntaryExit{
+					Exit: &ethpb.VoluntaryExit{
+						Epoch:          2,
+						ValidatorIndex: 0,
+					},
+				}
+				bs, keys := util.DeterministicGenesisState(t, 1)
+				validator := bs.Validators()[0]
+				validator.ActivationEpoch = 1
+				err := bs.UpdateValidatorAtIndex(0, validator)
+				require.NoError(t, err)
+				sb, err := signing.ComputeDomainAndSign(bs, signedExit.Exit.Epoch, signedExit.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				signedExit.Signature = sig.Marshal()
+				return validator, signedExit, fork, bs.GenesisValidatorsRoot(), nil
+			},
+		},
+		{
+			name: "bad signature",
+			args: args{
+				currentSlot: (params.BeaconConfig().SlotsPerEpoch * 2) + 1,
+			},
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+				fork := &ethpb.Fork{
+					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+					Epoch:           0,
+				}
+				signedExit := &ethpb.SignedVoluntaryExit{
+					Exit: &ethpb.VoluntaryExit{
+						Epoch:          2,
+						ValidatorIndex: 0,
+					},
+				}
+				bs, keys := util.DeterministicGenesisState(t, 1)
+				validator := bs.Validators()[0]
+				validator.ActivationEpoch = 1
+
+				sb, err := signing.ComputeDomainAndSign(bs, signedExit.Exit.Epoch, signedExit.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				signedExit.Signature = sig.Marshal()
+				genesisRoot := [32]byte{'a'}
+				// use wrong genesis root and don't update validator
+				return validator, signedExit, fork, genesisRoot[:], nil
+			},
+			wantErr: "signature did not verify",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := params.BeaconConfig().ShardCommitteePeriod
+			params.BeaconConfig().ShardCommitteePeriod = 0
+			validator, signedExit, fork, genesisRoot, err := tt.setup()
+			require.NoError(t, err)
+			rvalidator, err := state_native.NewValidator(validator)
+			require.NoError(t, err)
+			err = blocks.VerifyExitAndSignature(
+				rvalidator,
+				tt.args.currentSlot,
+				fork,
+				signedExit,
+				genesisRoot,
+			)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, tt.wantErr, err)
+			}
+			params.BeaconConfig().ShardCommitteePeriod = c // prevent contamination
+		})
 	}
 }

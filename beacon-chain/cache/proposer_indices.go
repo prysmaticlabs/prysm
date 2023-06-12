@@ -7,7 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -46,9 +46,16 @@ func proposerIndicesKeyFn(obj interface{}) (string, error) {
 
 // NewProposerIndicesCache creates a new proposer indices cache for storing/accessing proposer index assignments of an epoch.
 func NewProposerIndicesCache() *ProposerIndicesCache {
-	return &ProposerIndicesCache{
-		proposerIndicesCache: cache.NewFIFO(proposerIndicesKeyFn),
-	}
+	c := &ProposerIndicesCache{}
+	c.Clear()
+	return c
+}
+
+// Clear resets the ProposerIndicesCache to its initial state
+func (c *ProposerIndicesCache) Clear() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.proposerIndicesCache = cache.NewFIFO(proposerIndicesKeyFn)
 }
 
 // AddProposerIndices adds ProposerIndices object to the cache.
@@ -76,7 +83,7 @@ func (c *ProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
 }
 
 // ProposerIndices returns the proposer indices of a block root seed.
-func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.ValidatorIndex, error) {
+func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]primitives.ValidatorIndex, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.proposerIndicesCache.GetByKey(key(r))

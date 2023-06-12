@@ -2,20 +2,26 @@ package accounts
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	"google.golang.org/grpc"
 )
 
 // NewCLIManager allows for managing validator accounts via CLI commands.
 func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
-	acc := &AccountsCLIManager{}
+	acc := &AccountsCLIManager{
+		mnemonicLanguage: derived.DefaultMnemonicLanguage,
+	}
 	for _, opt := range opts {
 		if err := opt(acc); err != nil {
 			return nil, err
@@ -29,13 +35,14 @@ func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
 type AccountsCLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
-	keymanagerOpts       *remote.KeymanagerOpts
+	keymanagerKind       keymanager.Kind
 	showDepositData      bool
 	showPrivateKeys      bool
 	listValidatorIndices bool
 	deletePublicKeys     bool
 	importPrivateKeys    bool
 	readPasswordFile     bool
+	skipMnemonicConfirm  bool
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
 	beaconRPCProvider    string
@@ -43,29 +50,40 @@ type AccountsCLIManager struct {
 	privateKeyFile       string
 	passwordFilePath     string
 	keysDir              string
+	mnemonicLanguage     string
 	backupsDir           string
 	backupsPassword      string
 	filteredPubKeys      []bls.PublicKey
 	rawPubKeys           [][]byte
 	formattedPubKeys     []string
+	exitJSONOutputPath   string
 	walletDir            string
 	walletPassword       string
 	mnemonic             string
 	numAccounts          int
 	mnemonic25thWord     string
+	beaconApiEndpoint    string
+	beaconApiTimeout     time.Duration
 }
 
-func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {
+func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface.ValidatorClient, *iface.NodeClient, error) {
 	if acm.dialOpts == nil {
 		return nil, nil, errors.New("failed to construct dial options for beacon clients")
 	}
 
 	ctx = grpcutil.AppendHeaders(ctx, acm.grpcHeaders)
-	conn, err := grpc.DialContext(ctx, acm.beaconRPCProvider, acm.dialOpts...)
+	grpcConn, err := grpc.DialContext(ctx, acm.beaconRPCProvider, acm.dialOpts...)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", acm.beaconRPCProvider)
 	}
-	validatorClient := ethpb.NewBeaconNodeValidatorClient(conn)
-	nodeClient := ethpb.NewNodeClient(conn)
+
+	conn := validatorHelpers.NewNodeConnection(
+		grpcConn,
+		acm.beaconApiEndpoint,
+		acm.beaconApiTimeout,
+	)
+
+	validatorClient := validatorClientFactory.NewValidatorClient(conn)
+	nodeClient := nodeClientFactory.NewNodeClient(conn)
 	return &validatorClient, &nodeClient, nil
 }

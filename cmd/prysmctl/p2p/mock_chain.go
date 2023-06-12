@@ -3,10 +3,10 @@ package p2p
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 type mockChain struct {
@@ -31,6 +31,6 @@ func (m *mockChain) GenesisTime() time.Time {
 	return m.genesisTime
 }
 
-func (m *mockChain) CurrentSlot() types.Slot {
+func (m *mockChain) CurrentSlot() primitives.Slot {
 	return slots.SinceGenesis(m.genesisTime)
 }

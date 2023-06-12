@@ -12,23 +12,22 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
-	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	statev1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
+	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -37,6 +36,7 @@ import (
 )
 
 var errInvalidValIndex = errors.New("invalid validator index")
+var errParticipation = status.Error(codes.Internal, "Could not obtain epoch participation")
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
@@ -44,7 +44,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	ctx, span := trace.StartSpan(ctx, "validator.GetAttesterDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -60,13 +60,19 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	s, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	var startSlot primitives.Slot
+	if req.Epoch == currentEpoch+1 {
+		startSlot, err = slots.EpochStart(currentEpoch)
+	} else {
+		startSlot, err = slots.EpochStart(req.Epoch)
 	}
-	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
+	}
+
+	s, err := vs.Stater.StateBySlot(ctx, startSlot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
 	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
@@ -82,7 +88,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	duties := make([]*ethpbv1.AttesterDuty, 0, len(req.Index))
 	for _, index := range req.Index {
 		pubkey := s.PubkeyAtIndex(index)
-		zeroPubkey := [fieldparams.BLSPubkeyLength]byte{}
+		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
 		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
 		}
@@ -90,12 +96,12 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		if committee == nil {
 			continue
 		}
-		var valIndexInCommittee types.CommitteeIndex
+		var valIndexInCommittee primitives.CommitteeIndex
 		// valIndexInCommittee will be 0 in case we don't get a match. This is a potential false positive,
 		// however it's an impossible condition because every validator must be assigned to a committee.
 		for cIndex, vIndex := range committee.Committee {
 			if vIndex == index {
-				valIndexInCommittee = types.CommitteeIndex(uint64(cIndex))
+				valIndexInCommittee = primitives.CommitteeIndex(uint64(cIndex))
 				break
 			}
 		}
@@ -127,15 +133,9 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	ctx, span := trace.StartSpan(ctx, "validator.GetProposerDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
-	}
-
-	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch+1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
 
 	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -143,16 +143,33 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	s, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
+	cs := vs.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(cs)
+	nextEpoch := currentEpoch + 1
+	var nextEpochLookahead bool
+	if req.Epoch > nextEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
+	} else if req.Epoch == nextEpoch {
+		// If the request is for the next epoch, we use the current epoch's state to compute duties.
+		req.Epoch = currentEpoch
+		nextEpochLookahead = true
 	}
 
-	_, proposals, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
+	startSlot, err := slots.EpochStart(req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
+	}
+	s, err := vs.Stater.StateBySlot(ctx, startSlot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+	}
+
+	var proposals map[primitives.ValidatorIndex][]primitives.Slot
+	if nextEpochLookahead {
+		_, proposals, err = helpers.CommitteeAssignments(ctx, s, nextEpoch)
+	} else {
+		_, proposals, err = helpers.CommitteeAssignments(ctx, s, req.Epoch)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -166,6 +183,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		pubkey48 := val.PublicKey()
 		pubkey := pubkey48[:]
 		for _, s := range ss {
+			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(s, index, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
 			duties = append(duties, &ethpbv1.ProposerDuty{
 				Pubkey:         pubkey,
 				ValidatorIndex: index,
@@ -177,10 +195,12 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return duties[i].Slot < duties[j].Slot
 	})
 
-	root, err := vs.proposalDependentRoot(ctx, s, req.Epoch)
+	root, err := proposalDependentRoot(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
+
+	vs.ProposerSlotIndexCache.PrunePayloadIDs(startSlot)
 
 	return &ethpbv1.ProposerDutiesResponse{
 		DependentRoot:       root,
@@ -195,16 +215,16 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 // where `epoch` is described as `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`.
 //
 // Algorithm:
-//  - Get the last valid epoch. This is the last epoch of the next sync committee period.
-//  - Get the state for the requested epoch. If it's a future epoch from the current sync committee period
-//  or an epoch from the next sync committee period, then get the current state.
-//  - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
-//  - Get duties.
+//   - Get the last valid epoch. This is the last epoch of the next sync committee period.
+//   - Get the state for the requested epoch. If it's a future epoch from the current sync committee period
+//     or an epoch from the next sync committee period, then get the current state.
+//   - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
+//   - Get duties.
 func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -223,7 +243,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
 	}
-	st, err := vs.StateFetcher.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
+	st, err := vs.Stater.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee state: %v", err)
 	}
@@ -258,7 +278,14 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
 	}
 
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, st, vs.OptimisticModeFetcher)
+	isOptimistic, err := rpchelpers.IsOptimistic(
+		ctx,
+		[]byte(strconv.FormatUint(uint64(slot), 10)),
+		vs.OptimisticModeFetcher,
+		vs.Stater,
+		vs.ChainInfoFetcher,
+		vs.BeaconDB,
+	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -270,11 +297,17 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 }
 
 // ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
+// By definition `/eth/v2/validator/blocks/{slot}`, does not produce block using mev-boost and relayer network.
+// The following endpoint states that the returned object is a BeaconBlock, not a BlindedBeaconBlock. As such, the block must return a full ExecutionPayload:
+// https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceBlockV2
+//
+// To use mev-boost and relayer network. It's recommended to use the following endpoint:
+// https://github.com/ethereum/beacon-APIs/blob/master/apis/validator/blinded_block.yaml
 func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlockResponseV2, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -283,6 +316,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 		Slot:         req.Slot,
 		RandaoReveal: req.RandaoReveal,
 		Graffiti:     req.Graffiti,
+		SkipMevBoost: true, // Skip mev-boost and relayer network
 	}
 	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
@@ -315,6 +349,17 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if optimistic {
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is blinded")
+	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Bellatrix)
@@ -328,17 +373,40 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is blinded")
+	}
+	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlock.Capella)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_CAPELLA,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_CapellaBlock{CapellaBlock: block},
+			},
+		}, nil
+	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
 // ProduceBlockV2SSZ requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 //
 // The produced block is in SSZ form.
+// By definition `/eth/v2/validator/blocks/{slot}/ssz`, does not produce block using mev-boost and relayer network:
+// The following endpoint states that the returned object is a BeaconBlock, not a BlindedBeaconBlock. As such, the block must return a full ExecutionPayload:
+// https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceBlockV2
+//
+// To use mev-boost and relayer network. It's recommended to use the following endpoint:
+// https://github.com/ethereum/beacon-APIs/blob/master/apis/validator/blinded_block.yaml
 func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -347,6 +415,7 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 		Slot:         req.Slot,
 		RandaoReveal: req.RandaoReveal,
 		Graffiti:     req.Graffiti,
+		SkipMevBoost: true, // Skip mev-boost and relayer network
 	}
 	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
@@ -383,6 +452,17 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 			Data:    sszBlock,
 		}, nil
 	}
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if optimistic {
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is blinded")
+	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Bellatrix)
@@ -395,6 +475,25 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 		}
 		return &ethpbv2.SSZContainer{
 			Version: ethpbv2.Version_BELLATRIX,
+			Data:    sszBlock,
+		}, nil
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is blinded")
+	}
+	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlock.Capella)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_CAPELLA,
 			Data:    sszBlock,
 		}, nil
 	}
@@ -413,93 +512,10 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlock")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
+	if !vs.BlockBuilder.Configured() {
+		return nil, status.Error(codes.Internal, "Block builder not configured")
 	}
-	v1alpha1req := &ethpbalpha.BlockRequest{
-		Slot:         req.Slot,
-		RandaoReveal: req.RandaoReveal,
-		Graffiti:     req.Graffiti,
-	}
-
-	// Before Bellatrix, return normal block.
-	if req.Slot < types.Slot(params.BeaconConfig().BellatrixForkEpoch)*params.BeaconConfig().SlotsPerEpoch {
-		v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
-		if err != nil {
-			// We simply return err because it's already of a gRPC error type.
-			return nil, err
-		}
-		phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
-		if ok {
-			block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-			}
-			return &ethpbv2.ProduceBlindedBlockResponse{
-				Version: ethpbv2.Version_PHASE0,
-				Data: &ethpbv2.BlindedBeaconBlockContainer{
-					Block: &ethpbv2.BlindedBeaconBlockContainer_Phase0Block{Phase0Block: block},
-				},
-			}, nil
-		}
-		altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
-		if ok {
-			block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-			}
-			return &ethpbv2.ProduceBlindedBlockResponse{
-				Version: ethpbv2.Version_ALTAIR,
-				Data: &ethpbv2.BlindedBeaconBlockContainer{
-					Block: &ethpbv2.BlindedBeaconBlockContainer_AltairBlock{AltairBlock: block},
-				},
-			}, nil
-		}
-	}
-
-	// After Bellatrix, return blinded block.
-	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
-	}
-	if optimistic {
-		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
-	}
-	altairBlk, err := vs.V1Alpha1Server.BuildAltairBeaconBlock(ctx, v1alpha1req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-	}
-	ok, b, err := vs.V1Alpha1Server.GetAndBuildBlindBlock(ctx, altairBlk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare blind beacon block: %v", err)
-	}
-	if !ok {
-		return nil, status.Error(codes.Unavailable, "Builder is not available due to miss-config or circuit breaker")
-	}
-	blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.GetBlindedBellatrix())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-	}
-	return &ethpbv2.ProduceBlindedBlockResponse{
-		Version: ethpbv2.Version_BELLATRIX,
-		Data: &ethpbv2.BlindedBeaconBlockContainer{
-			Block: &ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blk},
-		},
-	}, nil
-}
-
-// ProduceBlindedBlockSSZ requests the beacon node to produce a valid unsigned blinded beacon block,
-// which can then be signed by a proposer and submitted.
-//
-// The produced block is in SSZ form.
-//
-// Pre-Bellatrix, this endpoint will return a regular block.
-func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.SSZContainer, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlockSSZ")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -514,6 +530,106 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 		// We simply return err because it's already of a gRPC error type.
 		return nil, err
 	}
+
+	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	if ok {
+		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_PHASE0,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_Phase0Block{Phase0Block: block},
+			},
+		}, nil
+	}
+	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_ALTAIR,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_AltairBlock{AltairBlock: block},
+			},
+		}, nil
+	}
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if optimistic {
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared beacon block is not blinded")
+	}
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	if ok {
+		blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(bellatrixBlock.BlindedBellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blk},
+			},
+		}, nil
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared beacon block is not blinded")
+	}
+	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	if ok {
+		blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(capellaBlock.BlindedCapella)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_CAPELLA,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: blk},
+			},
+		}, nil
+	}
+	return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("block was not a supported blinded block type, validator may not be registered if using a relay. received: %T", v1alpha1resp.Block))
+}
+
+// ProduceBlindedBlockSSZ requests the beacon node to produce a valid unsigned blinded beacon block,
+// which can then be signed by a proposer and submitted.
+//
+// The produced block is in SSZ form.
+//
+// Pre-Bellatrix, this endpoint will return a regular block.
+func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.SSZContainer, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlockSSZ")
+	defer span.End()
+
+	if !vs.BlockBuilder.Configured() {
+		return nil, status.Error(codes.Internal, "Block builder not configured")
+	}
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
+	v1alpha1req := &ethpbalpha.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+
 	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
 	if ok {
 		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
@@ -544,9 +660,20 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 			Data:    sszBlock,
 		}, nil
 	}
-	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if optimistic {
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
-		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2Blinded(bellatrixBlock.Bellatrix)
+		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is not blinded")
+	}
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(bellatrixBlock.BlindedBellatrix)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
@@ -556,6 +683,25 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 		}
 		return &ethpbv2.SSZContainer{
 			Version: ethpbv2.Version_BELLATRIX,
+			Data:    sszBlock,
+		}, nil
+	}
+	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	if ok {
+		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is not blinded")
+	}
+	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(capellaBlock.BlindedCapella)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_CAPELLA,
 			Data:    sszBlock,
 		}, nil
 	}
@@ -569,19 +715,19 @@ func (vs *Server) PrepareBeaconProposer(
 	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
 	defer span.End()
 	var feeRecipients []common.Address
-	var validatorIndices []types.ValidatorIndex
+	var validatorIndices []primitives.ValidatorIndex
 	newRecipients := make([]*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
-		f, err := vs.V1Alpha1Server.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
+		f, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
 		switch {
 		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
 			newRecipients = append(newRecipients, r)
 		case err != nil:
 			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
 		default:
-		}
-		if common.BytesToAddress(r.FeeRecipient) != f {
-			newRecipients = append(newRecipients, r)
+			if common.BytesToAddress(r.FeeRecipient) != f {
+				newRecipients = append(newRecipients, r)
+			}
 		}
 	}
 	if len(newRecipients) == 0 {
@@ -595,9 +741,10 @@ func (vs *Server) PrepareBeaconProposer(
 		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
 		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
 	}
-	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
 	}
+
 	log.WithFields(log.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")
@@ -609,7 +756,7 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistration")
 	defer span.End()
 
-	if vs.V1Alpha1Server.BlockBuilder == nil || !vs.V1Alpha1Server.BlockBuilder.Configured() {
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not register block builder: %v", builder.ErrNoBuilder)
 	}
 	var registrations []*ethpbalpha.SignedValidatorRegistrationV1
@@ -629,7 +776,7 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "Validator registration request is empty")
 	}
 
-	if err := vs.V1Alpha1Server.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
+	if err := vs.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
 	}
 
@@ -658,8 +805,12 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
+	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
 	defer span.End()
+
+	if err := vs.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations: %v", err)
+	}
 
 	allAtts := vs.AttestationsPool.AggregatedAttestations()
 	var bestMatchingAtt *ethpbalpha.Attestation
@@ -740,7 +891,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitBeaconCommitteeSubscription")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -749,7 +900,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
 	}
 
-	s, err := vs.HeadFetcher.HeadState(ctx)
+	s, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
@@ -758,13 +909,13 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	validators := make([]state.ReadOnlyValidator, len(req.Data))
 	for i, sub := range req.Data {
 		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
-		if outOfRangeErr, ok := err.(*statev1.ValidatorIndexOutOfRangeError); ok {
+		if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
 		}
 		validators[i] = val
 	}
 
-	fetchValsLen := func(slot types.Slot) (uint64, error) {
+	fetchValsLen := func(slot primitives.Slot) (uint64, error) {
 		wantedEpoch := slots.ToEpoch(slot)
 		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
@@ -802,7 +953,11 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator status: %v", err)
 		}
 		pubkey := val.PublicKey()
-		vs.V1Alpha1Server.AssignValidatorToSubnet(pubkey[:], v1ValidatorStatusToV1Alpha1(valStatus))
+		v1alpha1Req := &ethpbalpha.AssignValidatorToSubnetRequest{PublicKey: pubkey[:], Status: v1ValidatorStatusToV1Alpha1(valStatus)}
+		_, err = vs.V1Alpha1Server.AssignValidatorToSubnet(ctx, v1alpha1Req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not assign validator to subnet")
+		}
 	}
 
 	return &emptypb.Empty{}, nil
@@ -817,7 +972,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeSubscription")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -825,7 +980,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	if len(req.Data) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
 	}
-	s, err := vs.HeadFetcher.HeadState(ctx)
+	s, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
@@ -898,7 +1053,13 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	if msgs == nil {
 		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
 	}
-	aggregatedSig, bits, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubcommitteeIndex, req.BeaconBlockRoot)
+	v1alpha1Req := &ethpbalpha.AggregatedSigAndAggregationBitsRequest{
+		Msgs:      msgs,
+		Slot:      req.Slot,
+		SubnetId:  req.SubcommitteeIndex,
+		BlockRoot: req.BeaconBlockRoot,
+	}
+	v1alpha1Resp, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
 	}
@@ -906,8 +1067,8 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 		Slot:              req.Slot,
 		BeaconBlockRoot:   req.BeaconBlockRoot,
 		SubcommitteeIndex: req.SubcommitteeIndex,
-		AggregationBits:   bits,
-		Signature:         aggregatedSig,
+		AggregationBits:   v1alpha1Resp.Bits,
+		Signature:         v1alpha1Resp.AggregatedSig,
 	}
 
 	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
@@ -945,10 +1106,80 @@ func (vs *Server) SubmitContributionAndProofs(ctx context.Context, req *ethpbv2.
 	return &empty.Empty{}, nil
 }
 
+// GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
+// The beacon node might detect liveness by observing messages from the validator on the network,
+// in the beacon chain, from its API or from any other source.
+// A beacon node SHOULD support the current and previous epoch, however it MAY support earlier epoch.
+// It is important to note that the values returned by the beacon node are not canonical;
+// they are best-effort and based upon a subjective view of the network.
+// A beacon node that was recently started or suffered a network partition may indicate that a validator is not live when it actually is.
+func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessRequest) (*ethpbv2.GetLivenessResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.GetLiveness")
+	defer span.End()
+
+	var participation []byte
+
+	// First we check if the requested epoch is the current epoch.
+	// If it is, then we won't be able to fetch the state at the end of the epoch.
+	// In that case we get participation info from the head state.
+	// We can also use the head state to get participation info for the previous epoch.
+	headSt, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	currEpoch := slots.ToEpoch(headSt.Slot())
+	if req.Epoch > currEpoch {
+		return nil, status.Error(codes.InvalidArgument, "Requested epoch cannot be in the future")
+	}
+
+	var st state.BeaconState
+	if req.Epoch == currEpoch {
+		st = headSt
+		participation, err = st.CurrentEpochParticipation()
+		if err != nil {
+			return nil, errParticipation
+		}
+	} else if req.Epoch == currEpoch-1 {
+		st = headSt
+		participation, err = st.PreviousEpochParticipation()
+		if err != nil {
+			return nil, errParticipation
+		}
+	} else {
+		epochEnd, err := slots.EpochEnd(req.Epoch)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get requested epoch's end slot")
+		}
+		st, err = vs.Stater.StateBySlot(ctx, epochEnd)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get slot for requested epoch")
+		}
+		participation, err = st.CurrentEpochParticipation()
+		if err != nil {
+			return nil, errParticipation
+		}
+	}
+
+	resp := &ethpbv2.GetLivenessResponse{
+		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Index)),
+	}
+	for i, vi := range req.Index {
+		if vi >= primitives.ValidatorIndex(len(participation)) {
+			return nil, status.Errorf(codes.InvalidArgument, "Validator index %d is invalid", vi)
+		}
+		resp.Data[i] = &ethpbv2.GetLivenessResponse_Liveness{
+			Index:  vi,
+			IsLive: participation[vi] != 0,
+		}
+	}
+
+	return resp, nil
+}
+
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
 // or the genesis block root in the case of underflow.
-func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
-	var dependentRootSlot types.Slot
+func attestationDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+	var dependentRootSlot primitives.Slot
 	if epoch <= 1 {
 		dependentRootSlot = 0
 	} else {
@@ -967,8 +1198,8 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func (vs *Server) proposalDependentRoot(ctx context.Context, s state.BeaconState, epoch types.Epoch) ([]byte, error) {
-	var dependentRootSlot types.Slot
+func proposalDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+	var dependentRootSlot primitives.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
 	} else {
@@ -978,47 +1209,11 @@ func (vs *Server) proposalDependentRoot(ctx context.Context, s state.BeaconState
 		}
 		dependentRootSlot = epochStartSlot.Sub(1)
 	}
-	var root []byte
-	var err error
-	// Per spec, if the dependent root epoch is greater than current epoch, use the head root.
-	if dependentRootSlot >= s.Slot() {
-		root, err = vs.HeadFetcher.HeadRoot(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		root, err = helpers.BlockRootAtSlot(s, dependentRootSlot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get block root")
-		}
-	}
-
-	return root, nil
-}
-
-// advanceState advances state with empty transitions up to the requested epoch start slot.
-// In case 1 epoch ahead was requested, we take the start slot of the current epoch.
-// Taking the start slot of the next epoch would result in an error inside transition.ProcessSlots.
-func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, currentEpoch types.Epoch) (state.BeaconState, error) {
-	var epochStartSlot types.Slot
-	var err error
-	if requestedEpoch == currentEpoch+1 {
-		epochStartSlot, err = slots.EpochStart(requestedEpoch.Sub(1))
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
-		}
-	} else {
-		epochStartSlot, err = slots.EpochStart(requestedEpoch)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
-		}
-	}
-	s, err = transition.ProcessSlotsIfPossible(ctx, s, epochStartSlot)
+	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
+		return nil, errors.Wrap(err, "could not get block root")
 	}
-
-	return s, nil
+	return root, nil
 }
 
 // Logic based on https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
@@ -1035,20 +1230,7 @@ func v1ValidatorStatusToV1Alpha1(valStatus ethpbv1.ValidatorStatus) ethpbalpha.V
 	}
 }
 
-func (vs *Server) v1BeaconBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv1.BeaconBlock, error) {
-	v1alpha1req := &ethpbalpha.BlockRequest{
-		Slot:         req.Slot,
-		RandaoReveal: req.RandaoReveal,
-		Graffiti:     req.Graffiti,
-	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
-	if err != nil {
-		return nil, err
-	}
-	return migration.V1Alpha1ToV1Block(v1alpha1resp.GetPhase0())
-}
-
-func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
+func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives.Epoch {
 	currentSyncPeriodIndex := currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	// Return the last epoch of the next sync committee.
 	// To do this we go two periods ahead to find the first invalid epoch, and then subtract 1.
@@ -1056,7 +1238,7 @@ func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
 }
 
 func syncCommitteeDuties(
-	valIndices []types.ValidatorIndex,
+	valIndices []primitives.ValidatorIndex,
 	st state.BeaconState,
 	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]uint64,
 ) ([]*ethpbv2.SyncCommitteeDuty, error) {
@@ -1066,7 +1248,7 @@ func syncCommitteeDuties(
 			ValidatorIndex: index,
 		}
 		valPubkey48 := st.PubkeyAtIndex(index)
-		zeroPubkey := [fieldparams.BLSPubkeyLength]byte{}
+		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
 		if bytes.Equal(valPubkey48[:], zeroPubkey[:]) {
 			return nil, errInvalidValIndex
 		}

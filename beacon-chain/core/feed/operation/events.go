@@ -2,7 +2,7 @@
 package operation
 
 import (
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 const (
@@ -19,6 +19,9 @@ const (
 
 	// SyncCommitteeContributionReceived is sent after a sync committee contribution object has been received.
 	SyncCommitteeContributionReceived
+
+	// BLSToExecutionChangeReceived is sent after a BLS to execution change object has been received from gossip or rpc.
+	BLSToExecutionChangeReceived
 )
 
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
@@ -43,4 +46,9 @@ type ExitReceivedData struct {
 type SyncCommitteeContributionReceivedData struct {
 	// Contribution is the sync committee contribution object.
 	Contribution *ethpb.SignedContributionAndProof
+}
+
+// BLSToExecutionChangeReceivedData is the data sent with BLSToExecutionChangeReceived events.
+type BLSToExecutionChangeReceivedData struct {
+	Change *ethpb.SignedBLSToExecutionChange
 }

@@ -8,14 +8,14 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/slashings"
-	"github.com/prysmaticlabs/prysm/v3/validator/db"
-	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/v4/validator/db"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -174,18 +174,19 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 // We create a map of pubKey -> []*SignedBlock. Then, for each public key we observe,
 // we append to this map. This allows us to handle valid input JSON data such as:
 //
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
-//  },
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
-//  }
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
+//	 },
+//
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
+//	 }
 //
 // Which should be properly parsed as:
 //
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
-//  }
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
+//	 }
 func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock, error) {
 	signedBlocksByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock)
 	for _, validatorData := range data {
@@ -206,18 +207,19 @@ func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldpa
 // We create a map of pubKey -> []*SignedAttestation. Then, for each public key we observe,
 // we append to this map. This allows us to handle valid input JSON data such as:
 //
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}, {Source: 6, Target: 7}],
-//  },
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}],
-//  }
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}, {Source: 6, Target: 7}],
+//	 },
+//
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}],
+//	 }
 //
 // Which should be properly parsed as:
 //
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
-//  }
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
+//	 }
 func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation, error) {
 	signedAttestationsByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation)
 	for _, validatorData := range data {
@@ -244,7 +246,7 @@ func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fi
 	//     then we consider that proposer public key as slashable.
 	slashablePubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	for pubKey, proposals := range historyByPubKey {
-		seenSigningRootsBySlot := make(map[types.Slot][]byte)
+		seenSigningRootsBySlot := make(map[primitives.Slot][]byte)
 		for _, blk := range proposals.Proposals {
 			if signingRoot, ok := seenSigningRootsBySlot[blk.Slot]; ok {
 				if signingRoot == nil || !bytes.Equal(signingRoot, blk.SigningRoot) {
@@ -267,8 +269,8 @@ func filterSlashablePubKeysFromAttestations(
 	// First we need to find attestations that are slashable with respect to other
 	// attestations within the same JSON import.
 	for pubKey, signedAtts := range signedAttsByPubKey {
-		signingRootsByTarget := make(map[types.Epoch][32]byte)
-		targetEpochsBySource := make(map[types.Epoch][]types.Epoch)
+		signingRootsByTarget := make(map[primitives.Epoch][32]byte)
+		targetEpochsBySource := make(map[primitives.Epoch][]primitives.Epoch)
 	Loop:
 		for _, att := range signedAtts {
 			// Check for double votes.
@@ -365,7 +367,7 @@ func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts 
 	return historicalAtts, nil
 }
 
-func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
+func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{

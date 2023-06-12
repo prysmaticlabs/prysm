@@ -2,13 +2,13 @@ package validator
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -89,6 +89,17 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{BellatrixBlock: phBlk}
+	case version.Capella:
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockCapella)
+		if !ok {
+			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockCapella")
+			return nil
+		}
+		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: phBlk}
 	}
 
 	if err := stream.Send(b); err != nil {
@@ -113,13 +124,14 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		return nil
 	}
 	log := log.WithField("blockSlot", data.SignedBlock.Block().Slot())
-	headState, err := vs.HeadFetcher.HeadState(vs.Ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(vs.Ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not get head state")
 		return nil
 	}
 	signed := data.SignedBlock
-	if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), signed.Signature(), signed.Block().HashTreeRoot); err != nil {
+	sig := signed.Signature()
+	if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), sig[:], signed.Block().HashTreeRoot); err != nil {
 		log.WithError(err).Error("Could not verify block signature")
 		return nil
 	}
@@ -135,6 +147,8 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: p}
 	case *ethpb.SignedBeaconBlockBellatrix:
 		b.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{BellatrixBlock: p}
+	case *ethpb.SignedBeaconBlockCapella:
+		b.Block = &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: p}
 	default:
 		log.Errorf("Unknown block type %T", p)
 	}

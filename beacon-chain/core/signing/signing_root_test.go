@@ -7,18 +7,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	fuzz "github.com/google/gofuzz"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestSigningRoot_ComputeSigningRoot(t *testing.T) {
@@ -114,9 +114,9 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	st := &ethpb.BeaconState{}
-	pubkey := [fieldparams.BLSPubkeyLength]byte{}
-	sig := [96]byte{}
-	domain := [4]byte{}
+	var pubkey [fieldparams.BLSPubkeyLength]byte
+	var sig [96]byte
+	var domain [4]byte
 	var p []byte
 	var s []byte
 	var d []byte
@@ -136,6 +136,25 @@ func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	}
 }
 
+func TestDigestMap(t *testing.T) {
+	testVersion := []byte{'A', 'B', 'C', 'D'}
+	testValRoot := [32]byte{'t', 'e', 's', 't', 'r', 'o', 'o', 't'}
+	digest, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+
+	cachedDigest, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.Equal(t, digest, cachedDigest)
+	testVersion[3] = 'E'
+	cachedDigest, err = signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.NotEqual(t, digest, cachedDigest)
+	testValRoot[5] = 'z'
+	cachedDigest2, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.NotEqual(t, digest, cachedDigest2)
+	assert.NotEqual(t, cachedDigest, cachedDigest2)
+}
 func TestBlockSignatureBatch_NoSigVerification(t *testing.T) {
 	tests := []struct {
 		pubkey          []byte

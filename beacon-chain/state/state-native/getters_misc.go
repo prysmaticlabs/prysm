@@ -1,8 +1,9 @@
 package state_native
 
 import (
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // GenesisTime of the beacon state as a uint64.
@@ -29,7 +30,7 @@ func (b *BeaconState) Version() int {
 }
 
 // Slot of the current beacon chain state.
-func (b *BeaconState) Slot() types.Slot {
+func (b *BeaconState) Slot() primitives.Slot {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -67,15 +68,15 @@ func (b *BeaconState) forkVal() *ethpb.Fork {
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
-func (b *BeaconState) HistoricalRoots() [][]byte {
+func (b *BeaconState) HistoricalRoots() ([][]byte, error) {
 	if b.historicalRoots == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.historicalRoots.Slice()
+	return b.historicalRoots.Slice(), nil
 }
 
 // balancesLength returns the length of the balances slice.
@@ -86,4 +87,26 @@ func (b *BeaconState) balancesLength() int {
 	}
 
 	return len(b.balances)
+}
+
+// HistoricalSummaries of the beacon state.
+func (b *BeaconState) HistoricalSummaries() ([]*ethpb.HistoricalSummary, error) {
+	if b.version < version.Capella {
+		return nil, errNotSupported("HistoricalSummaries", b.version)
+	}
+
+	if b.historicalSummaries == nil {
+		return nil, nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.historicalSummariesVal(), nil
+}
+
+// historicalSummariesVal of the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) historicalSummariesVal() []*ethpb.HistoricalSummary {
+	return ethpb.CopyHistoricalSummaries(b.historicalSummaries)
 }

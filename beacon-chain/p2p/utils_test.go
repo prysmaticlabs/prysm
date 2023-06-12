@@ -6,9 +6,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -52,6 +52,10 @@ func TestSerializeENR(t *testing.T) {
 		s, err := SerializeENR(record)
 		require.NoError(t, err)
 		assert.NotEqual(t, "", s)
+		s = "enr:" + s
+		newRec, err := enode.Parse(enode.ValidSchemes, s)
+		require.NoError(t, err)
+		assert.Equal(t, s, newRec.String())
 	})
 
 	t.Run("Nil record", func(t *testing.T) {

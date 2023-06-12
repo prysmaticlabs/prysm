@@ -8,31 +8,36 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-//    /- b1 - b2
+//	/- b1 - b2
+//
 // b0
-//    \- b3
+//
+//	\- b3
+//
 // Test b1 was missing then received and we can process b0 -> b1 -> b2
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	db := dbtest.SetupDB(t)
@@ -47,7 +52,8 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 					Epoch: 0,
 				},
 			},
-			stateGen: stategen.New(db),
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -119,7 +125,8 @@ func TestRegularSyncBeaconBlockSubscriber_OptimisticStatus(t *testing.T) {
 					Epoch: 0,
 				},
 			},
-			stateGen: stategen.New(db),
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -181,6 +188,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 	db := dbtest.SetupDB(t)
 
 	p1 := p2ptest.NewTestP2P(t)
+	fcs := doublylinkedtree.New()
 	r := &Service{
 		cfg: &config{
 			p2p:      p1,
@@ -191,7 +199,8 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 				},
 				ReceiveBlockMockErr: execution.ErrHTTPTimeout,
 			},
-			stateGen: stategen.New(db),
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+			stateGen: stategen.New(db, fcs),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -318,7 +327,8 @@ func TestRegularSyncBeaconBlockSubscriber_DoNotReprocessBlock(t *testing.T) {
 					Epoch: 0,
 				},
 			},
-			stateGen: stategen.New(db),
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -347,9 +357,12 @@ func TestRegularSyncBeaconBlockSubscriber_DoNotReprocessBlock(t *testing.T) {
 	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
-//    /- b1 - b2 - b5
+//	/- b1 - b2 - b5
+//
 // b0
-//    \- b3 - b4
+//
+//	\- b3 - b4
+//
 // Test b2 and b3 were missed, after receiving them we can process 2 chains.
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testing.T) {
 	db := dbtest.SetupDB(t)
@@ -383,7 +396,8 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 					Root:  make([]byte, 32),
 				},
 			},
-			stateGen: stategen.New(db),
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -550,7 +564,7 @@ func TestService_sortedPendingSlots(t *testing.T) {
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
-	var lastSlot types.Slot = math.MaxUint64
+	var lastSlot primitives.Slot = math.MaxUint64
 	wsb, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot}}))
 	require.NoError(t, err)
 	require.NoError(t, r.insertBlockToPendingQueue(lastSlot, wsb, [32]byte{1}))
@@ -564,7 +578,7 @@ func TestService_sortedPendingSlots(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-2, wsb, [32]byte{4}))
 
-	want := []types.Slot{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
+	want := []primitives.Slot{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
 	assert.DeepEqual(t, want, r.sortedPendingSlots(), "Unexpected pending slots list")
 }
 
@@ -575,18 +589,20 @@ func TestService_BatchRootRequest(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 
+	chain := &mock.ChainService{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 1,
+			Root:  make([]byte, 32),
+		},
+		ValidatorsRoot: [32]byte{},
+		Genesis:        time.Now(),
+	}
 	r := &Service{
 		cfg: &config{
 			p2p:      p1,
 			beaconDB: db,
-			chain: &mock.ChainService{
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Epoch: 1,
-					Root:  make([]byte, 32),
-				},
-				ValidatorsRoot: [32]byte{},
-				Genesis:        time.Now(),
-			},
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -694,7 +710,9 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 	db := dbtest.SetupDB(t)
 
 	p1 := p2ptest.NewTestP2P(t)
-	mockChain := mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+	fcs := doublylinkedtree.New()
+	mockChain := mock.ChainService{
+		Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 		}}
@@ -703,7 +721,8 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 			p2p:      p1,
 			beaconDB: db,
 			chain:    &mockChain,
-			stateGen: stategen.New(db),
+			clock:    startup.NewClock(mockChain.Genesis, mockChain.ValidatorsRoot),
+			stateGen: stategen.New(db, fcs),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -781,7 +800,7 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 			p2p:      p1,
 			beaconDB: db,
 			chain:    &mockChain,
-			stateGen: stategen.New(db),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),

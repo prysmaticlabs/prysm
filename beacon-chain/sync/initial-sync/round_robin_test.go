@@ -6,27 +6,32 @@ import (
 	"time"
 
 	"github.com/paulbellamy/ratecounter"
-	"github.com/prysmaticlabs/prysm/v3/async/abool"
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	p2pt "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/async/abool"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestService_roundRobinSync(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	tests := []struct {
 		name                string
-		currentSlot         types.Slot
-		availableBlockSlots []types.Slot
-		expectedBlockSlots  []types.Slot
+		currentSlot         primitives.Slot
+		availableBlockSlots []primitives.Slot
+		expectedBlockSlots  []primitives.Slot
 		peers               []*peerData
 	}{
 		{
@@ -308,7 +313,7 @@ func TestService_roundRobinSync(t *testing.T) {
 				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), tt.currentSlot)
 			}
 			assert.Equal(t, true, len(tt.expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-			var receivedBlockSlots []types.Slot
+			var receivedBlockSlots []primitives.Slot
 			for _, blk := range mc.BlocksReceived {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 			}
@@ -360,7 +365,7 @@ func TestService_processBlock(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
@@ -370,7 +375,7 @@ func TestService_processBlock(t *testing.T) {
 		wsb, err = blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 			return nil
 		})
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
@@ -379,12 +384,12 @@ func TestService_processBlock(t *testing.T) {
 		wsb, err = blocks.NewSignedBeaconBlock(blk2)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, types.Slot(2), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, primitives.Slot(2), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
@@ -413,9 +418,9 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
-		var batch []interfaces.SignedBeaconBlock
+		var batch []interfaces.ReadOnlySignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
-		for i := types.Slot(1); i < 10; i++ {
+		for i := primitives.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
 			blk1 := util.NewBeaconBlock()
 			blk1.Block.Slot = i
@@ -429,8 +434,8 @@ func TestService_processBlockBatch(t *testing.T) {
 			currBlockRoot = blk1Root
 		}
 
-		var batch2 []interfaces.SignedBeaconBlock
-		for i := types.Slot(10); i < 20; i++ {
+		var batch2 []interfaces.ReadOnlySignedBeaconBlock
+		for i := primitives.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := util.NewBeaconBlock()
 			blk1.Block.Slot = i
@@ -446,7 +451,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Process block normally.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
@@ -454,12 +459,12 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Duplicate processing should trigger error.
 		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blocks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
-		assert.ErrorContains(t, "no good blocks in batch", err)
+		assert.ErrorContains(t, "block is already processed", err)
 
-		var badBatch2 []interfaces.SignedBeaconBlock
+		var badBatch2 []interfaces.ReadOnlySignedBeaconBlock
 		for i, b := range batch2 {
 			// create a non-linear batch
 			if i%3 == 0 && i != 0 {
@@ -470,7 +475,7 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Bad batch should fail because it is non linear
 		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
 		expectedSubErr := "expected linear block list"
@@ -478,16 +483,21 @@ func TestService_processBlockBatch(t *testing.T) {
 
 		// Continue normal processing, should proceed w/o errors.
 		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
-			ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
+			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, types.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, primitives.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
 func TestService_blockProviderScoring(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	cache.initializeRootCache(makeSequence(1, 640), t)
 
 	p := p2pt.NewTestP2P(t)
@@ -496,13 +506,13 @@ func TestService_blockProviderScoring(t *testing.T) {
 	peerData := []*peerData{
 		{
 			// The slowest peer, only a single block in couple of epochs.
-			blocks:         []types.Slot{1, 65, 129},
+			blocks:         []primitives.Slot{1, 65, 129},
 			finalizedEpoch: 5,
 			headSlot:       160,
 		},
 		{
 			// A relatively slow peer, still should perform better than the slowest peer.
-			blocks:         append([]types.Slot{1, 2, 3, 4, 65, 66, 67, 68, 129, 130}, makeSequence(131, 160)...),
+			blocks:         append([]primitives.Slot{1, 2, 3, 4, 65, 66, 67, 68, 129, 130}, makeSequence(131, 160)...),
 			finalizedEpoch: 5,
 			headSlot:       160,
 		},
@@ -546,7 +556,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 	}
 	scorer := s.cfg.P2P.Peers().Scorers().BlockProviderScorer()
 	expectedBlockSlots := makeSequence(1, 160)
-	currentSlot := types.Slot(160)
+	currentSlot := primitives.Slot(160)
 
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer1))
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer2))
@@ -557,7 +567,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), currentSlot)
 	}
 	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-	var receivedBlockSlots []types.Slot
+	var receivedBlockSlots []primitives.Slot
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 	}
@@ -610,7 +620,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 	}
 	expectedBlockSlots := makeSequence(1, 191)
-	currentSlot := types.Slot(191)
+	currentSlot := primitives.Slot(191)
 
 	// Sync to finalized epoch.
 	hook := logTest.NewGlobal()
@@ -625,7 +635,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), currentSlot)
 	}
 	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-	var receivedBlockSlots []types.Slot
+	var receivedBlockSlots []primitives.Slot
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 	}

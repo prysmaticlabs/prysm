@@ -4,12 +4,12 @@ import (
 	"errors"
 	"math"
 
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
-	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time"
 )
 
 var _ Scorer = (*PeerStatusScorer)(nil)
@@ -19,8 +19,8 @@ var _ Scorer = (*PeerStatusScorer)(nil)
 type PeerStatusScorer struct {
 	config              *PeerStatusScorerConfig
 	store               *peerdata.Store
-	ourHeadSlot         types.Slot
-	highestPeerHeadSlot types.Slot
+	ourHeadSlot         primitives.Slot
+	highestPeerHeadSlot primitives.Slot
 }
 
 // PeerStatusScorerConfig holds configuration parameters for peer status scoring service.
@@ -144,7 +144,7 @@ func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 }
 
 // SetHeadSlot updates known head slot.
-func (s *PeerStatusScorer) SetHeadSlot(slot types.Slot) {
+func (s *PeerStatusScorer) SetHeadSlot(slot primitives.Slot) {
 	s.store.Lock()
 	defer s.store.Unlock()
 	s.ourHeadSlot = slot

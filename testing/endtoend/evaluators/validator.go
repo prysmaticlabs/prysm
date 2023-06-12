@@ -5,20 +5,20 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	ethtypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
-	e2eparams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
+	e2eparams "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -37,7 +37,7 @@ var ValidatorsAreActive = types.Evaluator{
 }
 
 // ValidatorsParticipatingAtEpoch ensures the expected amount of validators are participating.
-var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator {
+var ValidatorsParticipatingAtEpoch = func(epoch primitives.Epoch) types.Evaluator {
 	return types.Evaluator{
 		Name:       "validators_participating_epoch_%d",
 		Policy:     policies.AfterNthEpoch(epoch),
@@ -49,11 +49,11 @@ var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator 
 // are active.
 var ValidatorSyncParticipation = types.Evaluator{
 	Name:       "validator_sync_participation_%d",
-	Policy:     policies.AfterNthEpoch(helpers.AltairE2EForkEpoch - 1),
+	Policy:     policies.OnwardsNthEpoch(helpers.AltairE2EForkEpoch),
 	Evaluation: validatorsSyncParticipation,
 }
 
-func validatorsAreActive(conns ...*grpc.ClientConn) error {
+func validatorsAreActive(ec *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
@@ -69,14 +69,14 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount
 	receivedCount := uint64(len(validators.ValidatorList))
 	if expectedCount != receivedCount {
-		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
+		return fmt.Errorf("expected validator count to be %d, received %d", expectedCount, receivedCount)
 	}
 
 	effBalanceLowCount := 0
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
 	for _, item := range validators.ValidatorList {
-		if valExited && item.Index == exitedIndex {
+		if ec.ExitedVals[bytesutil.ToBytes48(item.Validator.PublicKey)] {
 			continue
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
@@ -106,7 +106,7 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 }
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
-func validatorsParticipating(conns ...*grpc.ClientConn) error {
+func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	debugClient := ethpbservice.NewBeaconDebugClient(conn)
@@ -148,6 +148,11 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to get missing validators")
 			}
+		case *eth.BeaconStateContainer_CapellaState:
+			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.CapellaState.PreviousEpochParticipation)
+			if err != nil {
+				return errors.Wrap(err, "failed to get missing validators")
+			}
 		default:
 			return fmt.Errorf("unrecognized version: %v", st.Version)
 		}
@@ -167,7 +172,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 
 // validatorsSyncParticipation ensures the validators have an acceptable participation rate for
 // sync committee assignments.
-func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
+func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewNodeClient(conn)
 	altairClient := ethpb.NewBeaconChainClient(conn)
@@ -177,7 +182,10 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	}
 	currSlot := slots.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
 	currEpoch := slots.ToEpoch(currSlot)
-	lowestBound := currEpoch - 1
+	lowestBound := primitives.Epoch(0)
+	if currEpoch >= 1 {
+		lowestBound = currEpoch - 1
+	}
 
 	if lowestBound < helpers.AltairE2EForkEpoch {
 		lowestBound = helpers.AltairE2EForkEpoch
@@ -263,7 +271,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfaces.SignedBeaconBlock, error) {
+func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if container.GetPhase0Block() != nil {
 		return nil, errors.New("block doesn't support sync committees")
 	}
@@ -275,6 +283,12 @@ func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfac
 	}
 	if container.GetBlindedBellatrixBlock() != nil {
 		return blocks.NewSignedBeaconBlock(container.GetBlindedBellatrixBlock())
+	}
+	if container.GetCapellaBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetCapellaBlock())
+	}
+	if container.GetBlindedCapellaBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBlindedCapellaBlock())
 	}
 	return nil, errors.New("no supported block type in container")
 }

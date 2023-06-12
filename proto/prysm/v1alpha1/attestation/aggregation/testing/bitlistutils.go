@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time"
 )
 
 // BitlistWithAllBitsSet creates list of bitlists with all bits set.
@@ -97,7 +97,7 @@ func MakeSyncContributionsFromBitVector(bl []bitfield.Bitvector128) []*ethpb.Syn
 	c := make([]*ethpb.SyncCommitteeContribution, len(bl))
 	for i, b := range bl {
 		c[i] = &ethpb.SyncCommitteeContribution{
-			Slot:              types.Slot(1),
+			Slot:              primitives.Slot(1),
 			SubcommitteeIndex: 2,
 			AggregationBits:   b,
 			Signature:         bls.NewAggregateSignature().Marshal(),

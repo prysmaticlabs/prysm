@@ -6,18 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 func TestAttestation_IsAggregator(t *testing.T) {
@@ -45,44 +43,6 @@ func TestAttestation_IsAggregator(t *testing.T) {
 	})
 }
 
-func TestAttestation_AggregateSignature(t *testing.T) {
-	t.Run("verified", func(t *testing.T) {
-		pubkeys := make([]bls.PublicKey, 0, 100)
-		atts := make([]*ethpb.Attestation, 0, 100)
-		msg := bytesutil.ToBytes32([]byte("hello"))
-		for i := 0; i < 100; i++ {
-			priv, err := bls.RandKey()
-			require.NoError(t, err)
-			pub := priv.PublicKey()
-			sig := priv.Sign(msg[:])
-			pubkeys = append(pubkeys, pub)
-			att := &ethpb.Attestation{Signature: sig.Marshal()}
-			atts = append(atts, att)
-		}
-		aggSig, err := helpers.AggregateSignature(atts)
-		require.NoError(t, err)
-		assert.Equal(t, true, aggSig.FastAggregateVerify(pubkeys, msg), "Signature did not verify")
-	})
-
-	t.Run("not verified", func(t *testing.T) {
-		pubkeys := make([]bls.PublicKey, 0, 100)
-		atts := make([]*ethpb.Attestation, 0, 100)
-		msg := []byte("hello")
-		for i := 0; i < 100; i++ {
-			priv, err := bls.RandKey()
-			require.NoError(t, err)
-			pub := priv.PublicKey()
-			sig := priv.Sign(msg)
-			pubkeys = append(pubkeys, pub)
-			att := &ethpb.Attestation{Signature: sig.Marshal()}
-			atts = append(atts, att)
-		}
-		aggSig, err := helpers.AggregateSignature(atts[0 : len(atts)-2])
-		require.NoError(t, err)
-		assert.Equal(t, false, aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)), "Signature not suppose to verify")
-	})
-}
-
 func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 	// Create 10 committees
 	committeeCount := uint64(10)
@@ -99,7 +59,7 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 		}
 	}
 
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators:  validators,
 		Slot:        200,
 		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
@@ -130,7 +90,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	}
 
 	type args struct {
-		attSlot     types.Slot
+		attSlot     primitives.Slot
 		genesisTime time.Time
 	}
 	tests := []struct {

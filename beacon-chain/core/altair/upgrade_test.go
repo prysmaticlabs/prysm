@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestTranslateParticipation(t *testing.T) {
@@ -37,7 +37,7 @@ func TestTranslateParticipation(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		pendingAtts = append(pendingAtts, &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				CommitteeIndex:  types.CommitteeIndex(i),
+				CommitteeIndex:  primitives.CommitteeIndex(i),
 				BeaconBlockRoot: r,
 				Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
@@ -82,7 +82,11 @@ func TestUpgradeToAltair(t *testing.T) {
 	require.DeepSSZEqual(t, preForkState.LatestBlockHeader(), aState.LatestBlockHeader())
 	require.DeepSSZEqual(t, preForkState.BlockRoots(), aState.BlockRoots())
 	require.DeepSSZEqual(t, preForkState.StateRoots(), aState.StateRoots())
-	require.DeepSSZEqual(t, preForkState.HistoricalRoots(), aState.HistoricalRoots())
+	r1, err := preForkState.HistoricalRoots()
+	require.NoError(t, err)
+	r2, err := aState.HistoricalRoots()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, r1, r2)
 	require.DeepSSZEqual(t, preForkState.Eth1Data(), aState.Eth1Data())
 	require.DeepSSZEqual(t, preForkState.Eth1DataVotes(), aState.Eth1DataVotes())
 	require.DeepSSZEqual(t, preForkState.Eth1DepositIndex(), aState.Eth1DepositIndex())

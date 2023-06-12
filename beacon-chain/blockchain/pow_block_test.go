@@ -1,23 +1,20 @@
 package blockchain
 
 import (
-	"context"
 	"fmt"
 	"math/big"
 	"testing"
 
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/holiman/uint256"
-	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	mocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	mocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func Test_validTerminalPowBlock(t *testing.T) {
@@ -107,16 +104,8 @@ func Test_validateMergeBlock(t *testing.T) {
 	cfg.TerminalTotalDifficulty = "2"
 	params.OverrideBeaconConfig(cfg)
 
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
 	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
@@ -157,16 +146,8 @@ func Test_validateMergeBlock(t *testing.T) {
 }
 
 func Test_getBlkParentHashAndTD(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
 
 	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
@@ -213,20 +194,37 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 func Test_validateTerminalBlockHash(t *testing.T) {
 	wrapped, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{})
 	require.NoError(t, err)
-	require.NoError(t, validateTerminalBlockHash(1, wrapped))
+	ok, err := canUseValidatedTerminalBlockHash(1, wrapped)
+	require.NoError(t, err)
+	require.Equal(t, false, ok)
 
 	cfg := params.BeaconConfig()
 	cfg.TerminalBlockHash = [32]byte{0x01}
 	params.OverrideBeaconConfig(cfg)
-	require.ErrorContains(t, "terminal block hash activation epoch not reached", validateTerminalBlockHash(1, wrapped))
+	ok, err = canUseValidatedTerminalBlockHash(1, wrapped)
+	require.ErrorContains(t, "terminal block hash activation epoch not reached", err)
+	require.Equal(t, false, ok)
 
 	cfg.TerminalBlockHashActivationEpoch = 0
 	params.OverrideBeaconConfig(cfg)
-	require.ErrorContains(t, "parent hash does not match terminal block hash", validateTerminalBlockHash(1, wrapped))
+	ok, err = canUseValidatedTerminalBlockHash(1, wrapped)
+	require.ErrorContains(t, "parent hash does not match terminal block hash", err)
+	require.Equal(t, false, ok)
 
 	wrapped, err = blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash: cfg.TerminalBlockHash.Bytes(),
 	})
 	require.NoError(t, err)
-	require.NoError(t, validateTerminalBlockHash(1, wrapped))
+	ok, err = canUseValidatedTerminalBlockHash(1, wrapped)
+	require.NoError(t, err)
+	require.Equal(t, true, ok)
+
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+
+	blk, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
+	require.NoError(t, err)
+	blk.SetSlot(1)
+	require.NoError(t, blk.SetExecution(wrapped))
+	require.NoError(t, service.validateMergeBlock(ctx, blk))
 }

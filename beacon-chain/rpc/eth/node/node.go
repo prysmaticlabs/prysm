@@ -8,16 +8,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -228,7 +228,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	return &ethpb.PeersResponse{Data: filteredPeers}, nil
 }
 
-// PeerCount retrieves retrieves number of known peers.
+// PeerCount retrieves number of known peers.
 func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerCountResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "node.PeerCount")
 	defer span.End()
@@ -277,18 +277,20 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
 			IsSyncing:    ns.SyncChecker.Syncing(),
 			IsOptimistic: isOptimistic,
+			ElOffline:    !ns.ExecutionChainInfoFetcher.ExecutionClientConnected(),
 		},
 	}, nil
 }
 
 // GetHealth returns node health status in http status codes. Useful for load balancers.
 // Response Usage:
-//    "200":
-//      description: Node is ready
-//    "206":
-//      description: Node is syncing but can serve incomplete data
-//    "503":
-//      description: Node not initialized or having issues
+//
+//	"200":
+//	  description: Node is ready
+//	"206":
+//	  description: Node is syncing but can serve incomplete data
+//	"503":
+//	  description: Node not initialized or having issues
 func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "node.GetHealth")
 	defer span.End()
@@ -299,6 +301,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
 		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutil.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
 			// We return a positive result because failing to set a non-gRPC related header should not cause the gRPC call to fail.
+			//nolint:nilerr
 			return &emptypb.Empty{}, nil
 		}
 		return &emptypb.Empty{}, nil
@@ -334,6 +337,9 @@ func handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection boo
 func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
+		if errors.Is(err, peerdata.ErrPeerUnknown) {
+			return nil, nil
+		}
 		return nil, errors.Wrap(err, "could not obtain ENR")
 	}
 	var serializedEnr string
@@ -345,14 +351,23 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*ethpb.Peer, error) {
 	}
 	address, err := peerStatus.Address(id)
 	if err != nil {
+		if errors.Is(err, peerdata.ErrPeerUnknown) {
+			return nil, nil
+		}
 		return nil, errors.Wrap(err, "could not obtain address")
 	}
 	connectionState, err := peerStatus.ConnectionState(id)
 	if err != nil {
+		if errors.Is(err, peerdata.ErrPeerUnknown) {
+			return nil, nil
+		}
 		return nil, errors.Wrap(err, "could not obtain connection state")
 	}
 	direction, err := peerStatus.Direction(id)
 	if err != nil {
+		if errors.Is(err, peerdata.ErrPeerUnknown) {
+			return nil, nil
+		}
 		return nil, errors.Wrap(err, "could not obtain direction")
 	}
 	if eth.PeerDirection(direction) == eth.PeerDirection_UNKNOWN {

@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
-	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
+	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -52,7 +52,7 @@ var AllNodesHaveSameHead = e2etypes.Evaluator{
 	Evaluation: allNodesHaveSameHead,
 }
 
-func healthzCheck(conns ...*grpc.ClientConn) error {
+func healthzCheck(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	count := len(conns)
 	for i := 0; i < count; i++ {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.Ports.PrysmBeaconNodeMetricsPort+i))
@@ -94,7 +94,7 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func peersConnect(conns ...*grpc.ClientConn) error {
+func peersConnect(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	if len(conns) == 1 {
 		return nil
 	}
@@ -114,7 +114,7 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func finishedSyncing(conns ...*grpc.ClientConn) error {
+func finishedSyncing(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	syncNodeClient := eth.NewNodeClient(conn)
 	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &emptypb.Empty{})
@@ -127,8 +127,8 @@ func finishedSyncing(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
-	headEpochs := make([]types.Epoch, len(conns))
+func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+	headEpochs := make([]primitives.Epoch, len(conns))
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
 	finalizedRoots := make([][]byte, len(conns))

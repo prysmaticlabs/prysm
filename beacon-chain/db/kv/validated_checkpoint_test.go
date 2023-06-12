@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -49,6 +49,26 @@ func TestStore_LastValidatedCheckpoint_Recover(t *testing.T) {
 	retrieved, err := db.LastValidatedCheckpoint(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
+}
+
+func BenchmarkStore_SaveLastValidatedCheckpoint(b *testing.B) {
+	db := setupDB(b)
+	ctx := context.Background()
+	root := bytesutil.ToBytes32([]byte{'A'})
+	cp := &ethpb.Checkpoint{
+		Epoch: 10,
+		Root:  root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(b, err)
+	require.NoError(b, st.SetSlot(1))
+	require.NoError(b, db.SaveState(ctx, st, root))
+	db.stateSummaryCache.clear()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		require.NoError(b, db.SaveLastValidatedCheckpoint(ctx, cp))
+	}
 }
 
 func TestStore_LastValidatedCheckpoint_DefaultIsFinalized(t *testing.T) {

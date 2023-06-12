@@ -4,19 +4,21 @@ import (
 	"context"
 	"testing"
 
-	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
-	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	slashingsmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
+	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -60,8 +62,9 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 			Database:             slasherDB,
 			StateNotifier:        &mock.MockStateNotifier{},
 			HeadStateFetcher:     mockChain,
-			StateGen:             stategen.New(beaconDB),
+			StateGen:             stategen.New(beaconDB, doublylinkedtree.New()),
 			SlashingPoolInserter: &slashingsmock.PoolMock{},
+			ClockWaiter:          startup.NewClockSynchronizer(),
 		},
 		params:    DefaultParams(),
 		blksQueue: newBlocksQueue(),
@@ -71,7 +74,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	err = s.serviceCfg.StateGen.SaveState(ctx, parentRoot, beaconState)
 	require.NoError(t, err)
 
-	currentSlotChan := make(chan types.Slot)
+	currentSlotChan := make(chan primitives.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedBlocks(ctx, currentSlotChan)
@@ -102,7 +105,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 
 	s.blksQueue.extend(signedBlkHeaders)
 
-	currentSlot := types.Slot(4)
+	currentSlot := primitives.Slot(4)
 	currentSlotChan <- currentSlot
 	cancel()
 	<-exitChan
@@ -116,7 +119,7 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	currentSlot := types.Slot(4)
+	currentSlot := primitives.Slot(4)
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 	mockChain := &mock.ChainService{
 		State: beaconState,
@@ -128,11 +131,12 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 			Database:         slasherDB,
 			StateNotifier:    &mock.MockStateNotifier{},
 			HeadStateFetcher: mockChain,
+			ClockWaiter:      startup.NewClockSynchronizer(),
 		},
 		params:    DefaultParams(),
 		blksQueue: newBlocksQueue(),
 	}
-	currentSlotChan := make(chan types.Slot)
+	currentSlotChan := make(chan primitives.Slot)
 	exitChan := make(chan struct{})
 	go func() {
 		s.processQueuedBlocks(ctx, currentSlotChan)
@@ -148,7 +152,7 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Proposer slashing detected")
 }
 
-func createProposalWrapper(t *testing.T, slot types.Slot, proposerIndex types.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
+func createProposalWrapper(t *testing.T, slot primitives.Slot, proposerIndex primitives.ValidatorIndex, signingRoot []byte) *slashertypes.SignedBlockHeaderWrapper {
 	header := &ethpb.BeaconBlockHeader{
 		Slot:          slot,
 		ProposerIndex: proposerIndex,

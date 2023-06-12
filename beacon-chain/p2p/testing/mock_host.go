@@ -3,12 +3,12 @@ package testing
 import (
 	"context"
 
-	"github.com/libp2p/go-libp2p-core/connmgr"
-	"github.com/libp2p/go-libp2p-core/event"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/peerstore"
-	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p/core/connmgr"
+	"github.com/libp2p/go-libp2p/core/event"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -51,7 +51,8 @@ func (_ *MockHost) Connect(_ context.Context, _ peer.AddrInfo) error {
 func (_ *MockHost) SetStreamHandler(_ protocol.ID, _ network.StreamHandler) {}
 
 // SetStreamHandlerMatch --
-func (_ *MockHost) SetStreamHandlerMatch(protocol.ID, func(string) bool, network.StreamHandler) {}
+func (_ *MockHost) SetStreamHandlerMatch(protocol.ID, func(id protocol.ID) bool, network.StreamHandler) {
+}
 
 // RemoveStreamHandler --
 func (_ *MockHost) RemoveStreamHandler(_ protocol.ID) {}

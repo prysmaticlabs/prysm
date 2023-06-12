@@ -4,14 +4,16 @@ import (
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func Test_BeaconBlockIsNil(t *testing.T) {
@@ -23,7 +25,7 @@ func Test_BeaconBlockIsNil(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 	t.Run("nil signed block", func(t *testing.T) {
-		var i interfaces.SignedBeaconBlock
+		var i interfaces.ReadOnlySignedBeaconBlock
 		var sb *SignedBeaconBlock
 		i = sb
 		err := BeaconBlockIsNil(i)
@@ -40,8 +42,9 @@ func Test_BeaconBlockIsNil(t *testing.T) {
 }
 
 func Test_SignedBeaconBlock_Signature(t *testing.T) {
-	sb := &SignedBeaconBlock{signature: []byte("signature")}
-	assert.DeepEqual(t, []byte("signature"), sb.Signature())
+	sb := &SignedBeaconBlock{}
+	sb.SetSignature([]byte("signature"))
+	assert.DeepEqual(t, bytesutil.ToBytes96([]byte("signature")), sb.Signature())
 }
 
 func Test_SignedBeaconBlock_Block(t *testing.T) {
@@ -88,12 +91,12 @@ func Test_SignedBeaconBlock_Version(t *testing.T) {
 func Test_SignedBeaconBlock_Header(t *testing.T) {
 	bb := &BeaconBlockBody{
 		version:      version.Phase0,
-		randaoReveal: make([]byte, 96),
+		randaoReveal: [96]byte{},
 		eth1Data: &eth.Eth1Data{
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
 		},
-		graffiti: make([]byte, 32),
+		graffiti: [32]byte{},
 	}
 	sb := &SignedBeaconBlock{
 		version: version.Phase0,
@@ -101,19 +104,19 @@ func Test_SignedBeaconBlock_Header(t *testing.T) {
 			version:       version.Phase0,
 			slot:          128,
 			proposerIndex: 128,
-			parentRoot:    []byte("parentroot"),
-			stateRoot:     []byte("stateroot"),
+			parentRoot:    bytesutil.ToBytes32([]byte("parentroot")),
+			stateRoot:     bytesutil.ToBytes32([]byte("stateroot")),
 			body:          bb,
 		},
-		signature: []byte("signature"),
+		signature: bytesutil.ToBytes96([]byte("signature")),
 	}
 	h, err := sb.Header()
 	require.NoError(t, err)
-	assert.DeepEqual(t, sb.signature, h.Signature)
+	assert.DeepEqual(t, sb.signature[:], h.Signature)
 	assert.Equal(t, sb.block.slot, h.Header.Slot)
 	assert.Equal(t, sb.block.proposerIndex, h.Header.ProposerIndex)
-	assert.DeepEqual(t, sb.block.parentRoot, h.Header.ParentRoot)
-	assert.DeepEqual(t, sb.block.stateRoot, h.Header.StateRoot)
+	assert.DeepEqual(t, sb.block.parentRoot[:], h.Header.ParentRoot)
+	assert.DeepEqual(t, sb.block.stateRoot[:], h.Header.StateRoot)
 	expectedHTR, err := bb.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR[:], h.Header.BodyRoot)
@@ -137,29 +140,78 @@ func Test_SignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
 }
 
 func Test_BeaconBlock_Slot(t *testing.T) {
-	b := &BeaconBlock{slot: 128}
-	assert.Equal(t, types.Slot(128), b.Slot())
+	b := &SignedBeaconBlock{block: &BeaconBlock{}}
+	b.SetSlot(128)
+	assert.Equal(t, primitives.Slot(128), b.Block().Slot())
 }
 
 func Test_BeaconBlock_ProposerIndex(t *testing.T) {
-	b := &BeaconBlock{proposerIndex: 128}
-	assert.Equal(t, types.ValidatorIndex(128), b.ProposerIndex())
+	b := &SignedBeaconBlock{block: &BeaconBlock{}}
+	b.SetProposerIndex(128)
+	assert.Equal(t, primitives.ValidatorIndex(128), b.Block().ProposerIndex())
 }
 
 func Test_BeaconBlock_ParentRoot(t *testing.T) {
-	b := &BeaconBlock{parentRoot: []byte("parentroot")}
-	assert.DeepEqual(t, []byte("parentroot"), b.ParentRoot())
+	b := &SignedBeaconBlock{block: &BeaconBlock{}}
+	b.SetParentRoot([]byte("parentroot"))
+	assert.DeepEqual(t, bytesutil.ToBytes32([]byte("parentroot")), b.Block().ParentRoot())
 }
 
 func Test_BeaconBlock_StateRoot(t *testing.T) {
-	b := &BeaconBlock{stateRoot: []byte("stateroot")}
-	assert.DeepEqual(t, []byte("stateroot"), b.StateRoot())
+	b := &SignedBeaconBlock{block: &BeaconBlock{}}
+	b.SetStateRoot([]byte("stateroot"))
+	assert.DeepEqual(t, bytesutil.ToBytes32([]byte("stateroot")), b.Block().StateRoot())
 }
 
 func Test_BeaconBlock_Body(t *testing.T) {
 	bb := &BeaconBlockBody{}
 	b := &BeaconBlock{body: bb}
 	assert.Equal(t, bb, b.Body())
+}
+
+func Test_BeaconBlock_Copy(t *testing.T) {
+	bb := &BeaconBlockBody{randaoReveal: bytesutil.ToBytes96([]byte{246}), graffiti: bytesutil.ToBytes32([]byte("graffiti"))}
+	b := &BeaconBlock{body: bb, slot: 123, proposerIndex: 456, parentRoot: bytesutil.ToBytes32([]byte("parentroot")), stateRoot: bytesutil.ToBytes32([]byte("stateroot"))}
+	cp, err := b.Copy()
+	require.NoError(t, err)
+	assert.NotEqual(t, cp, b)
+	assert.NotEqual(t, cp.Body(), bb)
+
+	b.version = version.Altair
+	b.body.version = b.version
+	cp, err = b.Copy()
+	require.NoError(t, err)
+	assert.NotEqual(t, cp, b)
+	assert.NotEqual(t, cp.Body(), bb)
+
+	b.version = version.Bellatrix
+	b.body.version = b.version
+	cp, err = b.Copy()
+	require.NoError(t, err)
+	assert.NotEqual(t, cp, b)
+	assert.NotEqual(t, cp.Body(), bb)
+
+	b.version = version.Capella
+	b.body.version = b.version
+	cp, err = b.Copy()
+	require.NoError(t, err)
+	assert.NotEqual(t, cp, b)
+	assert.NotEqual(t, cp.Body(), bb)
+
+	b.version = version.Bellatrix
+	b.body.version = b.version
+	b.body.isBlinded = true
+	cp, err = b.Copy()
+	require.NoError(t, err)
+	assert.NotEqual(t, cp, b)
+	assert.NotEqual(t, cp.Body(), bb)
+
+	b.version = version.Capella
+	b.body.version = b.version
+	cp, err = b.Copy()
+	require.NoError(t, err)
+	assert.NotEqual(t, cp, b)
+	assert.NotEqual(t, cp.Body(), bb)
 }
 
 func Test_BeaconBlock_IsNil(t *testing.T) {
@@ -178,8 +230,10 @@ func Test_BeaconBlock_IsNil(t *testing.T) {
 }
 
 func Test_BeaconBlock_IsBlinded(t *testing.T) {
-	assert.Equal(t, false, (&BeaconBlock{body: &BeaconBlockBody{isBlinded: false}}).IsBlinded())
-	assert.Equal(t, true, (&BeaconBlock{body: &BeaconBlockBody{isBlinded: true}}).IsBlinded())
+	b := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	assert.Equal(t, false, b.IsBlinded())
+	b.SetBlinded(true)
+	assert.Equal(t, true, b.IsBlinded())
 }
 
 func Test_BeaconBlock_Version(t *testing.T) {
@@ -255,57 +309,104 @@ func Test_BeaconBlockBody_IsNil(t *testing.T) {
 }
 
 func Test_BeaconBlockBody_RandaoReveal(t *testing.T) {
-	bb := &BeaconBlockBody{randaoReveal: []byte("randaoreveal")}
-	assert.DeepEqual(t, []byte("randaoreveal"), bb.RandaoReveal())
+	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	bb.SetRandaoReveal([]byte("randaoreveal"))
+	assert.DeepEqual(t, bytesutil.ToBytes96([]byte("randaoreveal")), bb.Block().Body().RandaoReveal())
 }
 
 func Test_BeaconBlockBody_Eth1Data(t *testing.T) {
-	e := &eth.Eth1Data{}
-	bb := &BeaconBlockBody{eth1Data: e}
-	assert.Equal(t, e, bb.Eth1Data())
+	e := &eth.Eth1Data{DepositRoot: []byte("depositroot")}
+	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	bb.SetEth1Data(e)
+	assert.DeepEqual(t, e, bb.Block().Body().Eth1Data())
 }
 
 func Test_BeaconBlockBody_Graffiti(t *testing.T) {
-	bb := &BeaconBlockBody{graffiti: []byte("graffiti")}
-	assert.DeepEqual(t, []byte("graffiti"), bb.Graffiti())
+	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	bb.SetGraffiti([]byte("graffiti"))
+	assert.DeepEqual(t, bytesutil.ToBytes32([]byte("graffiti")), bb.Block().Body().Graffiti())
 }
 
 func Test_BeaconBlockBody_ProposerSlashings(t *testing.T) {
 	ps := make([]*eth.ProposerSlashing, 0)
-	bb := &BeaconBlockBody{proposerSlashings: ps}
-	assert.DeepSSZEqual(t, ps, bb.ProposerSlashings())
+	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	bb.SetProposerSlashings(ps)
+	assert.DeepSSZEqual(t, ps, bb.Block().Body().ProposerSlashings())
 }
 
 func Test_BeaconBlockBody_AttesterSlashings(t *testing.T) {
 	as := make([]*eth.AttesterSlashing, 0)
-	bb := &BeaconBlockBody{attesterSlashings: as}
-	assert.DeepSSZEqual(t, as, bb.AttesterSlashings())
+	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	bb.SetAttesterSlashings(as)
+	assert.DeepSSZEqual(t, as, bb.Block().Body().AttesterSlashings())
 }
 
 func Test_BeaconBlockBody_Attestations(t *testing.T) {
 	a := make([]*eth.Attestation, 0)
-	bb := &BeaconBlockBody{attestations: a}
-	assert.DeepSSZEqual(t, a, bb.Attestations())
+	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	bb.SetAttestations(a)
+	assert.DeepSSZEqual(t, a, bb.Block().Body().Attestations())
 }
 
 func Test_BeaconBlockBody_Deposits(t *testing.T) {
 	d := make([]*eth.Deposit, 0)
-	bb := &BeaconBlockBody{deposits: d}
-	assert.DeepSSZEqual(t, d, bb.Deposits())
+	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	bb.SetDeposits(d)
+	assert.DeepSSZEqual(t, d, bb.Block().Body().Deposits())
 }
 
 func Test_BeaconBlockBody_VoluntaryExits(t *testing.T) {
 	ve := make([]*eth.SignedVoluntaryExit, 0)
-	bb := &BeaconBlockBody{voluntaryExits: ve}
-	assert.DeepSSZEqual(t, ve, bb.VoluntaryExits())
+	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
+	bb.SetVoluntaryExits(ve)
+	assert.DeepSSZEqual(t, ve, bb.Block().Body().VoluntaryExits())
 }
 
 func Test_BeaconBlockBody_SyncAggregate(t *testing.T) {
 	sa := &eth.SyncAggregate{}
-	bb := &BeaconBlockBody{version: version.Altair, syncAggregate: sa}
-	result, err := bb.SyncAggregate()
+	bb := &SignedBeaconBlock{version: version.Altair, block: &BeaconBlock{version: version.Altair, body: &BeaconBlockBody{version: version.Altair}}}
+	require.NoError(t, bb.SetSyncAggregate(sa))
+	result, err := bb.Block().Body().SyncAggregate()
 	require.NoError(t, err)
-	assert.Equal(t, result, sa)
+	assert.DeepEqual(t, result, sa)
+}
+
+func Test_BeaconBlockBody_BLSToExecutionChanges(t *testing.T) {
+	changes := []*eth.SignedBLSToExecutionChange{{Message: &eth.BLSToExecutionChange{ToExecutionAddress: []byte("address")}}}
+	bb := &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Capella}}}
+	require.NoError(t, bb.SetBLSToExecutionChanges(changes))
+	result, err := bb.Block().Body().BLSToExecutionChanges()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, result, changes)
+}
+
+func Test_BeaconBlockBody_Execution(t *testing.T) {
+	execution := &pb.ExecutionPayload{BlockNumber: 1}
+	e, err := WrappedExecutionPayload(execution)
+	require.NoError(t, err)
+	bb := &SignedBeaconBlock{version: version.Bellatrix, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Bellatrix}}}
+	require.NoError(t, bb.SetExecution(e))
+	result, err := bb.Block().Body().Execution()
+	require.NoError(t, err)
+	assert.DeepEqual(t, result, e)
+
+	executionCapella := &pb.ExecutionPayloadCapella{BlockNumber: 1}
+	eCapella, err := WrappedExecutionPayloadCapella(executionCapella, 0)
+	require.NoError(t, err)
+	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Capella}}}
+	require.NoError(t, bb.SetExecution(eCapella))
+	result, err = bb.Block().Body().Execution()
+	require.NoError(t, err)
+	assert.DeepEqual(t, result, eCapella)
+
+	executionCapellaHeader := &pb.ExecutionPayloadHeaderCapella{BlockNumber: 1}
+	eCapellaHeader, err := WrappedExecutionPayloadHeaderCapella(executionCapellaHeader, 0)
+	require.NoError(t, err)
+	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{version: version.Capella, body: &BeaconBlockBody{version: version.Capella, isBlinded: true}}}
+	require.NoError(t, bb.SetExecution(eCapellaHeader))
+	result, err = bb.Block().Body().Execution()
+	require.NoError(t, err)
+	assert.DeepEqual(t, result, eCapellaHeader)
 }
 
 func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {

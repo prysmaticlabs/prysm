@@ -3,27 +3,25 @@ package detect
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // VersionedUnmarshaler represents the intersection of Configuration (eg mainnet, testnet) and Fork (eg phase0, altair).
-// Using a detected VersionedUnmarshaler, a BeaconState or SignedBeaconBlock can be correctly unmarshaled without the need to
+// Using a detected VersionedUnmarshaler, a BeaconState or ReadOnlySignedBeaconBlock can be correctly unmarshaled without the need to
 // hard code a concrete type in paths where only the marshaled bytes, or marshaled bytes and a version, are available.
 type VersionedUnmarshaler struct {
 	Config *params.BeaconChainConfig
@@ -68,6 +66,8 @@ func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler,
 		fork = version.Altair
 	case bytesutil.ToBytes4(cfg.BellatrixForkVersion):
 		fork = version.Bellatrix
+	case bytesutil.ToBytes4(cfg.CapellaForkVersion):
+		fork = version.Capella
 	default:
 		return nil, errors.Wrapf(ErrForkNotFound, "version=%#x", cv)
 	}
@@ -89,7 +89,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
 		}
-		s, err = v1.InitializeFromProtoUnsafe(st)
+		s, err = state_native.InitializeFromProtoUnsafePhase0(st)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
@@ -99,7 +99,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
 		}
-		s, err = v2.InitializeFromProtoUnsafe(st)
+		s, err = state_native.InitializeFromProtoUnsafeAltair(st)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
@@ -109,7 +109,17 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
 		}
-		s, err = v3.InitializeFromProtoUnsafe(st)
+		s, err = state_native.InitializeFromProtoUnsafeBellatrix(st)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
+		}
+	case version.Capella:
+		st := &ethpb.BeaconStateCapella{}
+		err = st.UnmarshalSSZ(marshaled)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+		}
+		s, err = state_native.InitializeFromProtoUnsafeCapella(st)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
@@ -121,26 +131,26 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 }
 
 var beaconBlockSlot = fieldSpec{
-	// ssz variable length offset (not to be confused with the fieldSpec offest) is a uint32
+	// ssz variable length offset (not to be confused with the fieldSpec offset) is a uint32
 	// variable length. Offsets come before fixed length data, so that's 4 bytes at the beginning
 	// then signature is 96 bytes, 4+96 = 100
 	offset: 100,
 	t:      typeUint64,
 }
 
-func slotFromBlock(marshaled []byte) (types.Slot, error) {
+func slotFromBlock(marshaled []byte) (primitives.Slot, error) {
 	slot, err := beaconBlockSlot.uint64(marshaled)
 	if err != nil {
 		return 0, err
 	}
-	return types.Slot(slot), nil
+	return primitives.Slot(slot), nil
 }
 
 var errBlockForkMismatch = errors.New("fork or config detected in unmarshaler is different than block")
 
-// UnmarshalBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete SignedBeaconBlock type,
-// then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
-func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
+// UnmarshalBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete ReadOnlySignedBeaconBlock type,
+// then Unmarshal()s the type and returns an instance of block.ReadOnlySignedBeaconBlock if successful.
+func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	slot, err := slotFromBlock(marshaled)
 	if err != nil {
 		return nil, err
@@ -157,21 +167,23 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 		blk = &ethpb.SignedBeaconBlockAltair{}
 	case version.Bellatrix:
 		blk = &ethpb.SignedBeaconBlockBellatrix{}
+	case version.Capella:
+		blk = &ethpb.SignedBeaconBlockCapella{}
 	default:
 		forkName := version.String(cf.Fork)
-		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", forkName, slot)
+		return nil, fmt.Errorf("unable to initialize ReadOnlyBeaconBlock for fork version=%s at slot=%d", forkName, slot)
 	}
 	err = blk.UnmarshalSSZ(marshaled)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in UnmarshalSSZ")
+		return nil, errors.Wrap(err, "failed to unmarshal ReadOnlySignedBeaconBlock in UnmarshalSSZ")
 	}
 	return blocks.NewSignedBeaconBlock(blk)
 }
 
-// UnmarshalBlindedBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete blinded SignedBeaconBlock type,
-// then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
+// UnmarshalBlindedBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete blinded ReadOnlySignedBeaconBlock type,
+// then Unmarshal()s the type and returns an instance of block.ReadOnlySignedBeaconBlock if successful.
 // For Phase0 and Altair it works exactly line UnmarshalBeaconBlock.
-func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
+func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	slot, err := slotFromBlock(marshaled)
 	if err != nil {
 		return nil, err
@@ -188,13 +200,15 @@ func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (i
 		blk = &ethpb.SignedBeaconBlockAltair{}
 	case version.Bellatrix:
 		blk = &ethpb.SignedBlindedBeaconBlockBellatrix{}
+	case version.Capella:
+		blk = &ethpb.SignedBlindedBeaconBlockCapella{}
 	default:
 		forkName := version.String(cf.Fork)
-		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", forkName, slot)
+		return nil, fmt.Errorf("unable to initialize ReadOnlyBeaconBlock for fork version=%s at slot=%d", forkName, slot)
 	}
 	err = blk.UnmarshalSSZ(marshaled)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in UnmarshalSSZ")
+		return nil, errors.Wrap(err, "failed to unmarshal ReadOnlySignedBeaconBlock in UnmarshalSSZ")
 	}
 	return blocks.NewSignedBeaconBlock(blk)
 }
@@ -202,7 +216,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (i
 // Heuristic to make sure block is from the same version as the VersionedUnmarshaler.
 // Look up the version for the epoch that the block is from, then ensure that it matches the Version in the
 // VersionedUnmarshaler.
-func (cf *VersionedUnmarshaler) validateVersion(slot types.Slot) error {
+func (cf *VersionedUnmarshaler) validateVersion(slot primitives.Slot) error {
 	epoch := slots.ToEpoch(slot)
 	fs := forks.NewOrderedSchedule(cf.Config)
 	ver, err := fs.VersionForEpoch(epoch)

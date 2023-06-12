@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	depositcontract "github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
-	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	depositcontract "github.com/prysmaticlabs/prysm/v4/contracts/deposit/mock"
+	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestDepositTrieRoot_OK(t *testing.T) {
@@ -36,7 +36,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		data := depositDataItems[i]
-		dataRoot := [32]byte{}
+		var dataRoot [32]byte
 		copy(dataRoot[:], depositDataRoots[i])
 
 		_, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)
@@ -77,7 +77,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		data := depositDataItems[i]
-		dataRoot := [32]byte{}
+		var dataRoot [32]byte
 		copy(dataRoot[:], depositDataRoots[i])
 
 		_, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)

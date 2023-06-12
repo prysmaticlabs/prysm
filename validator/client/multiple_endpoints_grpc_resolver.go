@@ -38,7 +38,7 @@ func (r *multipleEndpointsGrpcResolver) start() {
 	endpoints := strings.Split(r.target.Endpoint, ",")
 	var addrs []resolver.Address
 	for _, endpoint := range endpoints {
-		addrs = append(addrs, resolver.Address{Addr: endpoint})
+		addrs = append(addrs, resolver.Address{Addr: endpoint, ServerName: endpoint})
 	}
 	if err := r.cc.UpdateState(resolver.State{Addresses: addrs}); err != nil {
 		log.WithError(err).Error("Failed to update grpc connection state")

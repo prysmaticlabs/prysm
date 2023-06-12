@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -28,7 +28,7 @@ func migrateArchivedIndex(ctx context.Context, db *bolt.DB) error {
 			return err
 		}
 
-		var highest types.Slot
+		var highest primitives.Slot
 		c := bkt.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			// Look up actual slot from block

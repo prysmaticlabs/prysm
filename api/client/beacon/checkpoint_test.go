@@ -7,24 +7,24 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	blocktest "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks/testing"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 type testRT struct {
@@ -66,11 +66,7 @@ func TestMarshalToEnvelope(t *testing.T) {
 }
 
 func TestFallbackVersionCheck(t *testing.T) {
-	c := &Client{
-		hc:      &http.Client{},
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
-	c.hc.Transport = &testRT{rt: func(req *http.Request) (*http.Response, error) {
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
 		res := &http.Response{Request: req}
 		switch req.URL.Path {
 		case getNodeVersionPath:
@@ -88,12 +84,13 @@ func TestFallbackVersionCheck(t *testing.T) {
 		case getWeakSubjectivityPath:
 			res.StatusCode = http.StatusNotFound
 		}
-
 		return res, nil
 	}}
 
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 	ctx := context.Background()
-	_, err := ComputeWeakSubjectivityCheckpoint(ctx, c)
+	_, err = ComputeWeakSubjectivityCheckpoint(ctx, c)
 	require.ErrorIs(t, err, errUnsupportedPrysmCheckpointVersion)
 }
 
@@ -102,7 +99,7 @@ func TestFname(t *testing.T) {
 		Config: params.MainnetConfig(),
 		Fork:   version.Phase0,
 	}
-	slot := types.Slot(23)
+	slot := primitives.Slot(23)
 	prefix := "block"
 	var root [32]byte
 	copy(root[:], []byte{0x23, 0x23, 0x23})
@@ -170,44 +167,41 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 		Epoch:     epoch,
 	}
 
-	hc := &http.Client{
-		Transport: &testRT{rt: func(req *http.Request) (*http.Response, error) {
-			res := &http.Response{Request: req}
-			switch req.URL.Path {
-			case getWeakSubjectivityPath:
-				res.StatusCode = http.StatusOK
-				cp := struct {
-					Epoch string `json:"epoch"`
-					Root  string `json:"root"`
-				}{
-					Epoch: fmt.Sprintf("%d", slots.ToEpoch(b.Block().Slot())),
-					Root:  fmt.Sprintf("%#x", bRoot),
-				}
-				wsr := struct {
-					Checkpoint interface{} `json:"ws_checkpoint"`
-					StateRoot  string      `json:"state_root"`
-				}{
-					Checkpoint: cp,
-					StateRoot:  fmt.Sprintf("%#x", wRoot),
-				}
-				rb, err := marshalToEnvelope(wsr)
-				require.NoError(t, err)
-				res.Body = io.NopCloser(bytes.NewBuffer(rb))
-			case renderGetStatePath(IdFromSlot(wSlot)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(wsSerialized))
-			case renderGetBlockPath(IdFromRoot(bRoot)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(serBlock))
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
+		res := &http.Response{Request: req}
+		switch req.URL.Path {
+		case getWeakSubjectivityPath:
+			res.StatusCode = http.StatusOK
+			cp := struct {
+				Epoch string `json:"epoch"`
+				Root  string `json:"root"`
+			}{
+				Epoch: fmt.Sprintf("%d", slots.ToEpoch(b.Block().Slot())),
+				Root:  fmt.Sprintf("%#x", bRoot),
 			}
+			wsr := struct {
+				Checkpoint interface{} `json:"ws_checkpoint"`
+				StateRoot  string      `json:"state_root"`
+			}{
+				Checkpoint: cp,
+				StateRoot:  fmt.Sprintf("%#x", wRoot),
+			}
+			rb, err := marshalToEnvelope(wsr)
+			require.NoError(t, err)
+			res.Body = io.NopCloser(bytes.NewBuffer(rb))
+		case renderGetStatePath(IdFromSlot(wSlot)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(wsSerialized))
+		case renderGetBlockPath(IdFromRoot(bRoot)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(serBlock))
+		}
 
-			return res, nil
-		}},
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
+		return res, nil
+	}}
+
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 
 	wsd, err := ComputeWeakSubjectivityCheckpoint(ctx, c)
 	require.NoError(t, err)
@@ -266,42 +260,39 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 	wsSerialized, err := wst.MarshalSSZ()
 	require.NoError(t, err)
 
-	hc := &http.Client{
-		Transport: &testRT{rt: func(req *http.Request) (*http.Response, error) {
-			res := &http.Response{Request: req}
-			switch req.URL.Path {
-			case getNodeVersionPath:
-				res.StatusCode = http.StatusOK
-				b := bytes.NewBuffer(nil)
-				d := struct {
-					Version string `json:"version"`
-				}{
-					Version: "Lighthouse/v0.1.5 (Linux x86_64)",
-				}
-				encoded, err := marshalToEnvelope(d)
-				require.NoError(t, err)
-				b.Write(encoded)
-				res.Body = io.NopCloser(b)
-			case getWeakSubjectivityPath:
-				res.StatusCode = http.StatusNotFound
-			case renderGetStatePath(IdHead):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(serialized))
-			case renderGetStatePath(IdFromSlot(wSlot)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(wsSerialized))
-			case renderGetBlockPath(IdFromRoot(bRoot)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(serBlock))
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
+		res := &http.Response{Request: req}
+		switch req.URL.Path {
+		case getNodeVersionPath:
+			res.StatusCode = http.StatusOK
+			b := bytes.NewBuffer(nil)
+			d := struct {
+				Version string `json:"version"`
+			}{
+				Version: "Lighthouse/v0.1.5 (Linux x86_64)",
 			}
+			encoded, err := marshalToEnvelope(d)
+			require.NoError(t, err)
+			b.Write(encoded)
+			res.Body = io.NopCloser(b)
+		case getWeakSubjectivityPath:
+			res.StatusCode = http.StatusNotFound
+		case renderGetStatePath(IdHead):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(serialized))
+		case renderGetStatePath(IdFromSlot(wSlot)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(wsSerialized))
+		case renderGetBlockPath(IdFromRoot(bRoot)):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(serBlock))
+		}
 
-			return res, nil
-		}},
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
+		return res, nil
+	}}
+
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 
 	wsPub, err := ComputeWeakSubjectivityCheckpoint(ctx, c)
 	require.NoError(t, err)
@@ -315,27 +306,22 @@ func TestGetWeakSubjectivityEpochFromHead(t *testing.T) {
 	st, expectedEpoch := defaultTestHeadState(t, params.MainnetConfig())
 	serialized, err := st.MarshalSSZ()
 	require.NoError(t, err)
-	hc := &http.Client{
-		Transport: &testRT{rt: func(req *http.Request) (*http.Response, error) {
-			res := &http.Response{Request: req}
-			switch req.URL.Path {
-			case renderGetStatePath(IdHead):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(serialized))
-			}
-			return res, nil
-		}},
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
+		res := &http.Response{Request: req}
+		if req.URL.Path == renderGetStatePath(IdHead) {
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(serialized))
+		}
+		return res, nil
+	}}
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 	actualEpoch, err := getWeakSubjectivityEpochFromHead(context.Background(), c)
 	require.NoError(t, err)
 	require.Equal(t, expectedEpoch, actualEpoch)
 }
 
-func forkForEpoch(cfg *params.BeaconChainConfig, epoch types.Epoch) (*ethpb.Fork, error) {
+func forkForEpoch(cfg *params.BeaconChainConfig, epoch primitives.Epoch) (*ethpb.Fork, error) {
 	os := forks.NewOrderedSchedule(cfg)
 	currentVersion, err := os.VersionForEpoch(epoch)
 	if err != nil {
@@ -357,7 +343,7 @@ func forkForEpoch(cfg *params.BeaconChainConfig, epoch types.Epoch) (*ethpb.Fork
 	}, nil
 }
 
-func defaultTestHeadState(t *testing.T, cfg *params.BeaconChainConfig) (state.BeaconState, types.Epoch) {
+func defaultTestHeadState(t *testing.T, cfg *params.BeaconChainConfig) (state.BeaconState, primitives.Epoch) {
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
 
@@ -398,11 +384,7 @@ func populateValidators(cfg *params.BeaconChainConfig, st state.BeaconState, val
 	if err := st.SetValidators(validators); err != nil {
 		return err
 	}
-	if err := st.SetBalances(balances); err != nil {
-		return err
-	}
-
-	return nil
+	return st.SetBalances(balances)
 }
 
 func TestDownloadFinalizedData(t *testing.T) {
@@ -418,6 +400,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 	require.NoError(t, err)
 	fork, err := forkForEpoch(cfg, epoch)
 	require.NoError(t, st.SetFork(fork))
+	require.NoError(t, st.SetSlot(slot))
 
 	// set up checkpoint block
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
@@ -451,29 +434,24 @@ func TestDownloadFinalizedData(t *testing.T) {
 	ms, err := st.MarshalSSZ()
 	require.NoError(t, err)
 
-	hc := &http.Client{
-		Transport: &testRT{rt: func(req *http.Request) (*http.Response, error) {
-			res := &http.Response{Request: req}
-			switch req.URL.Path {
-			case renderGetStatePath(IdFinalized):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(ms))
-			case renderGetBlockPath(IdFromRoot(br)):
-				res.StatusCode = http.StatusOK
-				res.Body = io.NopCloser(bytes.NewBuffer(mb))
-			default:
-				res.StatusCode = http.StatusInternalServerError
-				res.Body = io.NopCloser(bytes.NewBufferString(""))
-			}
+	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
+		res := &http.Response{Request: req}
+		switch req.URL.Path {
+		case renderGetStatePath(IdFinalized):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(ms))
+		case renderGetBlockPath(IdFromSlot(b.Block().Slot())):
+			res.StatusCode = http.StatusOK
+			res.Body = io.NopCloser(bytes.NewBuffer(mb))
+		default:
+			res.StatusCode = http.StatusInternalServerError
+			res.Body = io.NopCloser(bytes.NewBufferString(""))
+		}
 
-			return res, nil
-		}},
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
-
+		return res, nil
+	}}
+	c, err := NewClient("http://localhost:3500", client.WithRoundTripper(trans))
+	require.NoError(t, err)
 	// sanity check before we go through checkpoint
 	// make sure we can download the state and unmarshal it with the VersionedUnmarshaler
 	sb, err := c.GetState(ctx, IdFinalized)

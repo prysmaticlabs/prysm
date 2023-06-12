@@ -8,9 +8,8 @@ go_library(
         "getters_block.go",
         "getters_checkpoint.go",
         "getters_validator.go",
-        "setters_participation.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/testing",
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/testing",
     visibility = ["//beacon-chain/state:__subpackages__"],
     deps = [
         "//beacon-chain/state:go_default_library",

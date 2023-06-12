@@ -7,10 +7,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/math"
-	protodb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	protodb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // SparseMerkleTrie implements a sparse, general purpose Merkle trie to be used
@@ -57,8 +57,9 @@ func (m *SparseMerkleTrie) validate() error {
 	if m.depth >= uint(len(m.branches)) {
 		return errors.New("depth is greater than or equal to number of branches")
 	}
-	if m.depth >= 64 {
-		return errors.New("depth exceeds 64") // PowerOf2 would overflow.
+	if m.depth >= 63 {
+		return errors.New("supported merkle trie depth exceeded (max uint64 depth is 63, " +
+			"theoretical max sparse merkle trie depth is 64)") // PowerOf2 would overflow.
 	}
 
 	return nil
@@ -69,6 +70,11 @@ func GenerateTrieFromItems(items [][]byte, depth uint64) (*SparseMerkleTrie, err
 	if len(items) == 0 {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
+	if depth >= 63 {
+		return nil, errors.New("supported merkle trie depth exceeded (max uint64 depth is 63, " +
+			"theoretical max sparse merkle trie depth is 64)") // PowerOf2 would overflow
+	}
+
 	leaves := items
 	layers := make([][][]byte, depth+1)
 	transformedLeaves := make([][]byte, len(leaves))
@@ -101,10 +107,11 @@ func (m *SparseMerkleTrie) Items() [][]byte {
 }
 
 // HashTreeRoot of the Merkle trie as defined in the deposit contract.
-//  Spec Definition:
-//   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
+//
+//	Spec Definition:
+//	 sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
 func (m *SparseMerkleTrie) HashTreeRoot() ([32]byte, error) {
-	enc := [32]byte{}
+	var enc [32]byte
 	depositCount := uint64(len(m.originalItems))
 	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], ZeroHashes[0][:]) {
 		// Accounting for empty tries
@@ -180,7 +187,7 @@ func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
 			proof[i] = ZeroHashes[i][:]
 		}
 	}
-	enc := [32]byte{}
+	var enc [32]byte
 	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
 	proof[len(proof)-1] = enc[:]
 	return proof, nil

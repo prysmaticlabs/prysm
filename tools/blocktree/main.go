@@ -1,11 +1,11 @@
-/**
- * Block tree graph viz
- *
- * Given a DB, start slot and end slot. This tool computes the graphviz data
- * needed to construct the block tree in graphviz data format. Then one can paste
- * the data in a Graph rendering engine (ie. http://www.webgraphviz.com/) to see the visual format.
-
- */
+/*
+*
+  - Block tree graph viz
+    *
+  - Given a DB, start slot and end slot. This tool computes the graphviz data
+  - needed to construct the block tree in graphviz data format. Then one can paste
+  - the data in a Graph rendering engine (ie. http://www.webgraphviz.com/) to see the visual format.
+*/
 package main
 
 import (
@@ -16,10 +16,9 @@ import (
 	"strconv"
 
 	"github.com/emicklei/dot"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 var (
@@ -47,8 +46,8 @@ func main() {
 	graph.Attr("rankdir", "RL")
 	graph.Attr("labeljust", "l")
 
-	startSlot := types.Slot(*startSlot)
-	endSlot := types.Slot(*endSlot)
+	startSlot := primitives.Slot(*startSlot)
+	endSlot := primitives.Slot(*endSlot)
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blks, roots, err := database.Blocks(context.Background(), filter)
 	if err != nil {
@@ -86,7 +85,7 @@ func main() {
 
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{
-			parentRoot: bytesutil.ToBytes32(b.Block().ParentRoot()),
+			parentRoot: b.Block().ParentRoot(),
 			dothNode:   &dotN,
 		}
 		m[r] = n

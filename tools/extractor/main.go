@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 var (
@@ -28,7 +28,7 @@ func main() {
 		panic(err)
 	}
 	ctx := context.Background()
-	slot := types.Slot(*state)
+	slot := primitives.Slot(*state)
 	_, roots, err := d.BlockRootsBySlot(ctx, slot)
 	if err != nil {
 		panic(err)

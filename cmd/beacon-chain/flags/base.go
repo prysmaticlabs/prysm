@@ -3,9 +3,8 @@
 package flags
 
 import (
-	"strings"
-
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -26,18 +25,22 @@ var (
 		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
 		Value: 8,
 	}
+	LocalBlockValueBoost = &cli.Float64Flag{
+		Name: "local-block-value-boost",
+		Usage: "A percentage boost for local block construction. This is used to prioritize local block construction over relay/builder block construction" +
+			"Boost is an additional percentage to multiple local block value. Use builder block if: builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)",
+	}
 	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
 	ExecutionEngineEndpoint = &cli.StringFlag{
 		Name:  "execution-endpoint",
 		Usage: "An execution client http endpoint. Can contain auth header as well in the format",
 		Value: "http://localhost:8551",
 	}
-	// Deprecated: HTTPWeb3ProviderFlag is a deprecated flag and is an alias for the ExecutionEngineEndpoint flag.
-	HTTPWeb3ProviderFlag = &cli.StringFlag{
-		Name:   "http-web3provider",
-		Usage:  "DEPRECATED: A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
-		Value:  "http://localhost:8551",
-		Hidden: true,
+	// ExecutionEngineHeaders defines a list of HTTP headers to send with all execution client requests.
+	ExecutionEngineHeaders = &cli.StringFlag{
+		Name: "execution-headers",
+		Usage: "A comma separated list of key value pairs to pass as HTTP headers for all execution " +
+			"client calls. Example: --execution-headers=key1=value1,key2=value2",
 	}
 	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
 	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests
@@ -89,7 +92,7 @@ var (
 	HTTPModules = &cli.StringFlag{
 		Name:  "http-modules",
 		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
-		Value: strings.Join([]string{PrysmAPIModule, EthAPIModule}, ","),
+		Value: PrysmAPIModule + `,` + EthAPIModule,
 	}
 	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
 	DisableGRPCGateway = &cli.BoolFlag{
@@ -159,7 +162,7 @@ var (
 	BlockBatchLimitBurstFactor = &cli.IntFlag{
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
-		Value: 10,
+		Value: 2,
 	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
@@ -186,11 +189,23 @@ var (
 		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
 	}
+	// EngineEndpointTimeoutSeconds defines the seconds to wait before timing out engine endpoints with execution payload execution semantics (newPayload, forkchoiceUpdated).
+	// If this flag is not used then default will be used as defined here:
+	// https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
+	EngineEndpointTimeoutSeconds = &cli.Uint64Flag{
+		Name:  "engine-endpoint-timeout-seconds",
+		Usage: "Sets the execution engine timeout (seconds) for execution payload semantics (forkchoiceUpdated, newPayload)",
+	}
 	// Eth1HeaderReqLimit defines a flag to set the maximum number of headers that a deposit log query can fetch. If none is set, 1000 will be the limit.
 	Eth1HeaderReqLimit = &cli.Uint64Flag{
 		Name:  "eth1-header-req-limit",
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
+	}
+	// EnableRegistrationCache a temporary flag for enabling the validator registration cache instead of db.
+	EnableRegistrationCache = &cli.BoolFlag{
+		Name:  "enable-registration-cache",
+		Usage: "A temporary flag for enabling the validator registration cache instead of persisting in db. The cache will clear on restart.",
 	}
 	// WeakSubjectivityCheckpoint defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
 	WeakSubjectivityCheckpoint = &cli.StringFlag{
@@ -232,5 +247,11 @@ var (
 		Usage: "Sets the block hash epoch to manual overrides the default TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH value. " +
 			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch. " +
 			"Incorrect usage will result in your node experience consensus failure.",
+	}
+	// SlasherDirFlag defines a path on disk where the slasher database is stored.
+	SlasherDirFlag = &cli.StringFlag{
+		Name:  "slasher-datadir",
+		Usage: "Directory for the slasher database",
+		Value: cmd.DefaultDataDir(),
 	}
 )

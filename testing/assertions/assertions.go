@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/d4l3k/messagediff"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -75,6 +75,23 @@ func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, m
 		errMsg := parseMsg("Values are equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
+	}
+}
+
+// StringContains checks whether a string contains specified substring. If flag is false, inverse is checked.
+func StringContains(loggerFn assertionLoggerFn, expected, actual string, flag bool, msg ...interface{}) {
+	if flag {
+		if !strings.Contains(actual, expected) {
+			errMsg := parseMsg("Expected substring is not found", msg...)
+			_, file, line, _ := runtime.Caller(2)
+			loggerFn("%s:%d %s, got: %v, want: %s", filepath.Base(file), line, errMsg, actual, expected)
+		}
+	} else {
+		if strings.Contains(actual, expected) {
+			errMsg := parseMsg("Unexpected substring is found", msg...)
+			_, file, line, _ := runtime.Caller(2)
+			loggerFn("%s:%d %s, got: %v, not want: %s", filepath.Base(file), line, errMsg, actual, expected)
+		}
 	}
 }
 

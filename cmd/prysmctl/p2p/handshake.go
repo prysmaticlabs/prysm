@@ -3,12 +3,12 @@ package p2p
 import (
 	"context"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/network/forks"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -27,7 +27,7 @@ func (c *client) pingHandler(_ context.Context, _ interface{}, stream libp2pcore
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	sq := types.SSZUint64(c.MetadataSeq())
+	sq := primitives.SSZUint64(c.MetadataSeq())
 	if _, err := c.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		return err
 	}

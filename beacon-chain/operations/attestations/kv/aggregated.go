@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	attaggregation "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -29,7 +29,7 @@ func (c *AttCaches) AggregateUnaggregatedAttestations(ctx context.Context) error
 // AggregateUnaggregatedAttestationsBySlotIndex aggregates the unaggregated attestations and saves
 // newly aggregated attestations in the pool. Unaggregated attestations are filtered by slot and
 // committee index.
-func (c *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) error {
+func (c *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) error {
 	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregateUnaggregatedAttestationsBySlotIndex")
 	defer span.End()
 	unaggregatedAtts := c.UnaggregatedAttestationsBySlotIndex(ctx, slot, committeeIndex)
@@ -53,27 +53,25 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 	// Track the unaggregated attestations that aren't able to aggregate.
 	leftOverUnaggregatedAtt := make(map[[32]byte]bool)
 	for _, atts := range attsByDataRoot {
-		aggregatedAtts := make([]*ethpb.Attestation, 0, len(atts))
-		processedAtts, err := attaggregation.Aggregate(atts)
+		aggregated, err := attaggregation.AggregateDisjointOneBitAtts(atts)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not aggregate unaggregated attestations")
 		}
-		for _, att := range processedAtts {
-			if helpers.IsAggregated(att) {
-				aggregatedAtts = append(aggregatedAtts, att)
-			} else {
-				h, err := hashFn(att)
-				if err != nil {
-					return err
-				}
-				leftOverUnaggregatedAtt[h] = true
+		if aggregated == nil {
+			return errors.New("could not aggregate unaggregated attestations")
+		}
+		if helpers.IsAggregated(aggregated) {
+			if err := c.SaveAggregatedAttestations([]*ethpb.Attestation{aggregated}); err != nil {
+				return err
 			}
-		}
-		if err := c.SaveAggregatedAttestations(aggregatedAtts); err != nil {
-			return err
+		} else {
+			h, err := hashFn(aggregated)
+			if err != nil {
+				return err
+			}
+			leftOverUnaggregatedAtt[h] = true
 		}
 	}
-
 	// Remove the unaggregated attestations from the pool that were successfully aggregated.
 	for _, att := range unaggregatedAtts {
 		h, err := hashFn(att)
@@ -87,7 +85,6 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -167,7 +164,7 @@ func (c *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
-func (c *AttCaches) AggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation {
+func (c *AttCaches) AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation {
 	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregatedAttestationsBySlotIndex")
 	defer span.End()
 

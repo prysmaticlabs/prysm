@@ -3,10 +3,11 @@ package math_test
 import (
 	"fmt"
 	stdmath "math"
+	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/math"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/math"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestIntegerSquareRoot(t *testing.T) {
@@ -82,6 +83,7 @@ func TestIntegerSquareRoot(t *testing.T) {
 
 	for _, testVals := range tt {
 		require.Equal(t, testVals.root, math.IntegerSquareRoot(testVals.number))
+		require.Equal(t, testVals.root, math.CachedSquareRoot(testVals.number))
 	}
 }
 
@@ -164,6 +166,35 @@ func BenchmarkIntegerSquareRootAbove52Bits(b *testing.B) {
 	val := uint64(1 << 62)
 	for i := 0; i < b.N; i++ {
 		require.Equal(b, uint64(1<<31), math.IntegerSquareRoot(val))
+	}
+}
+
+func BenchmarkSquareRootEffectiveBalance(b *testing.B) {
+	val := uint64(1 << 62)
+	for i := 0; i < b.N; i++ {
+		require.Equal(b, uint64(1<<31), math.CachedSquareRoot(val))
+	}
+}
+
+func BenchmarkSquareRootBabylonian(b *testing.B) {
+	//Start with 700K validators' effective balance
+	val := uint64(22400000000000000)
+	for i := 0; i < b.N; i++ {
+		sqr := math.CachedSquareRoot(val)
+		require.Equal(b, true, sqr^2 <= val)
+		require.Equal(b, true, (sqr+1)*(sqr+1) > val)
+		val += 10_000_000_000
+	}
+}
+
+func BenchmarkSquareRootOldWay(b *testing.B) {
+	//Start with 700K validators' effective balance
+	val := uint64(22400000000000000)
+	for i := 0; i < b.N; i++ {
+		sqr := math.IntegerSquareRoot(val)
+		require.Equal(b, true, sqr^2 <= val)
+		require.Equal(b, true, (sqr+1)*(sqr+1) > val)
+		val += 10_000_000_000
 	}
 }
 
@@ -518,4 +549,29 @@ func TestAddInt(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWeiToGwei(t *testing.T) {
+	tests := []struct {
+		v    *big.Int
+		want uint64
+	}{
+		{big.NewInt(1e9 - 1), 0},
+		{big.NewInt(1e9), 1},
+		{big.NewInt(1e10), 10},
+		{big.NewInt(239489233849348394), 239489233},
+	}
+	for _, tt := range tests {
+		if got := math.WeiToGwei(tt.v); got != tt.want {
+			t.Errorf("WeiToGwei() = %v, want %v", got, tt.want)
+		}
+	}
+}
+
+func TestWeiToGwei_CopyOk(t *testing.T) {
+	v := big.NewInt(1e9)
+	got := math.WeiToGwei(v)
+
+	require.Equal(t, uint64(1), got)
+	require.Equal(t, big.NewInt(1e9).Uint64(), v.Uint64())
 }

@@ -12,11 +12,11 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/container/slice"
-	mathutil "github.com/prysmaticlabs/prysm/v3/math"
+	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 )
 
 const (
@@ -56,15 +56,22 @@ func committeeKeyFn(obj interface{}) (string, error) {
 
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
-	return &CommitteeCache{
-		CommitteeCache: lruwrpr.New(maxCommitteesCacheSize),
-		inProgress:     make(map[string]bool),
-	}
+	cc := &CommitteeCache{}
+	cc.Clear()
+	return cc
+}
+
+// Clear resets the CommitteeCache to its initial state
+func (c *CommitteeCache) Clear() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.CommitteeCache = lruwrpr.New(maxCommitteesCacheSize)
+	c.inProgress = make(map[string]bool)
 }
 
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *CommitteeCache) Committee(ctx context.Context, slot types.Slot, seed [32]byte, index types.CommitteeIndex) ([]types.ValidatorIndex, error) {
+func (c *CommitteeCache) Committee(ctx context.Context, slot primitives.Slot, seed [32]byte, index primitives.CommitteeIndex) ([]primitives.ValidatorIndex, error) {
 	if err := c.checkInProgress(ctx, seed); err != nil {
 		return nil, err
 	}
@@ -117,7 +124,7 @@ func (c *CommitteeCache) AddCommitteeShuffledList(ctx context.Context, committee
 }
 
 // ActiveIndices returns the active indices of a given seed stored in cache.
-func (c *CommitteeCache) ActiveIndices(ctx context.Context, seed [32]byte) ([]types.ValidatorIndex, error) {
+func (c *CommitteeCache) ActiveIndices(ctx context.Context, seed [32]byte) ([]primitives.ValidatorIndex, error) {
 	if err := c.checkInProgress(ctx, seed); err != nil {
 		return nil, err
 	}

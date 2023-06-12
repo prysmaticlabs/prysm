@@ -11,29 +11,25 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/async"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	prysmnetwork "github.com/prysmaticlabs/prysm/v3/network"
-	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/v3/runtime"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v4/async"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
+	prysmnetwork "github.com/prysmaticlabs/prysm/v4/network"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v4/runtime"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -79,7 +75,6 @@ type Service struct {
 	initializationLock    sync.Mutex
 	dv5Listener           Listener
 	startupErr            error
-	stateNotifier         statefeed.Notifier
 	ctx                   context.Context
 	host                  host.Host
 	genesisTime           time.Time
@@ -95,13 +90,12 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 
 	s := &Service{
-		ctx:           ctx,
-		stateNotifier: cfg.StateNotifier,
-		cancel:        cancel,
-		cfg:           cfg,
-		isPreGenesis:  true,
-		joinedTopics:  make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
-		subnetsLock:   make(map[uint64]*sync.RWMutex),
+		ctx:          ctx,
+		cancel:       cancel,
+		cfg:          cfg,
+		isPreGenesis: true,
+		joinedTopics: make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
+		subnetsLock:  make(map[uint64]*sync.RWMutex),
 	}
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -124,7 +118,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		log.WithError(err).Error("Failed to create address filter")
 		return nil, err
 	}
-	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
+	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
 	opts := s.buildOptions(ipAddr, s.privKey)
 	h, err := libp2p.New(opts...)
@@ -134,24 +128,11 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	}
 
 	s.host = h
-	s.host.RemoveStreamHandler(identify.IDDelta)
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
 	// object.
-	psOpts := []pubsub.Option{
-		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
-		pubsub.WithNoAuthor(),
-		pubsub.WithMessageIdFn(func(pmsg *pubsubpb.Message) string {
-			return MsgID(s.genesisValidatorsRoot, pmsg)
-		}),
-		pubsub.WithSubscriptionFilter(s),
-		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
-		pubsub.WithValidateQueueSize(pubsubQueueSize),
-		pubsub.WithPeerScore(peerScoringParams()),
-		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
-		pubsub.WithGossipSubParams(pubsubGossipParam()),
-	}
+	psOpts := s.pubsubOptions()
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
 	// Reinitialize them in the event we are running a custom config.
@@ -229,6 +210,10 @@ func (s *Service) Start() {
 		if err != nil {
 			log.WithError(err).Error("Could not connect to static peer")
 		}
+		// Set trusted peers for those that are provided as static addresses.
+		pids := peerIdsFromMultiAddrs(addrs)
+		s.peers.SetTrustedPeers(pids)
+		peersToWatch = append(peersToWatch, s.cfg.StaticPeers...)
 		s.connectWithAllPeers(addrs)
 	}
 	// Initialize metadata according to the
@@ -245,9 +230,7 @@ func (s *Service) Start() {
 	})
 	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
 	async.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
-	async.RunEvery(s.ctx, refreshRate, func() {
-		s.RefreshENR()
-	})
+	async.RunEvery(s.ctx, refreshRate, s.RefreshENR)
 	async.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
 			"inbound":     len(s.peers.InboundConnected()),
@@ -400,38 +383,19 @@ func (s *Service) pingPeers() {
 func (s *Service) awaitStateInitialized() {
 	s.initializationLock.Lock()
 	defer s.initializationLock.Unlock()
-
 	if s.isInitialized() {
 		return
 	}
-
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-	cleanup := stateSub.Unsubscribe
-	defer cleanup()
-	for {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.Initialized {
-				data, ok := event.Data.(*statefeed.InitializedData)
-				if !ok {
-					// log.Fatalf will prevent defer from being called
-					cleanup()
-					log.Fatalf("Received wrong data over state initialized feed: %v", data)
-				}
-				s.genesisTime = data.StartTime
-				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
-				_, err := s.currentForkDigest() // initialize fork digest cache
-				if err != nil {
-					log.WithError(err).Error("Could not initialize fork digest")
-				}
-
-				return
-			}
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return
-		}
+	clock, err := s.cfg.ClockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Fatal("failed to receive initial genesis data")
+	}
+	s.genesisTime = clock.GenesisTime()
+	gvr := clock.GenesisValidatorsRoot()
+	s.genesisValidatorsRoot = gvr[:]
+	_, err = s.currentForkDigest() // initialize fork digest cache
+	if err != nil {
+		log.WithError(err).Error("Could not initialize fork digest")
 	}
 }
 

@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestUint64Root(t *testing.T) {
@@ -34,14 +34,13 @@ func TestForkRoot(t *testing.T) {
 }
 
 func TestCheckPointRoot(t *testing.T) {
-	testHasher := hash.CustomSHA256Hasher()
 	testCheckpoint := ethpb.Checkpoint{
 		Epoch: 1234567890,
 		Root:  []byte{222},
 	}
 	expected := [32]byte{228, 65, 39, 109, 183, 249, 167, 232, 125, 239, 25, 155, 207, 4, 84, 174, 176, 229, 175, 224, 62, 33, 215, 254, 170, 220, 132, 65, 246, 128, 68, 194}
 
-	result, err := ssz.CheckpointRoot(testHasher, &testCheckpoint)
+	result, err := ssz.CheckpointRoot(&testCheckpoint)
 	require.NoError(t, err)
 	assert.Equal(t, expected, result)
 }
@@ -153,6 +152,76 @@ func TestPackByChunk_SingleList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ssz.PackByChunk([][]byte{tt.input})
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestWithdrawalRoot(t *testing.T) {
+	tests := []struct {
+		name  string
+		input *enginev1.Withdrawal
+		want  [32]byte
+	}{
+		{
+			name:  "nil",
+			input: &enginev1.Withdrawal{},
+			want:  [32]byte{0xdb, 0x56, 0x11, 0x4e, 0x0, 0xfd, 0xd4, 0xc1, 0xf8, 0x5c, 0x89, 0x2b, 0xf3, 0x5a, 0xc9, 0xa8, 0x92, 0x89, 0xaa, 0xec, 0xb1, 0xeb, 0xd0, 0xa9, 0x6c, 0xde, 0x60, 0x6a, 0x74, 0x8b, 0x5d, 0x71},
+		},
+		{
+			name: "empty",
+			input: &enginev1.Withdrawal{
+				Address: make([]byte, 20),
+			},
+			want: [32]byte{0xdb, 0x56, 0x11, 0x4e, 0x0, 0xfd, 0xd4, 0xc1, 0xf8, 0x5c, 0x89, 0x2b, 0xf3, 0x5a, 0xc9, 0xa8, 0x92, 0x89, 0xaa, 0xec, 0xb1, 0xeb, 0xd0, 0xa9, 0x6c, 0xde, 0x60, 0x6a, 0x74, 0x8b, 0x5d, 0x71},
+		},
+		{
+			name: "non-empty",
+			input: &enginev1.Withdrawal{
+				Index:          123,
+				ValidatorIndex: 123123,
+				Address:        []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+				Amount:         50,
+			},
+			want: [32]byte{0x4f, 0xca, 0x3a, 0x43, 0x6e, 0xcc, 0x34, 0xad, 0x33, 0xde, 0x3c, 0x22, 0xa3, 0x32, 0x27, 0xa, 0x8c, 0x4e, 0x75, 0xd8, 0x39, 0xc1, 0xd7, 0x55, 0x78, 0x77, 0xd7, 0x14, 0x6b, 0x34, 0x6a, 0xb6},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ssz.WithdrawalRoot(tt.input)
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestWithrawalSliceRoot(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []*enginev1.Withdrawal
+		want  [32]byte
+	}{
+		{
+			name:  "empty",
+			input: make([]*enginev1.Withdrawal, 0),
+			want:  [32]byte{0x79, 0x29, 0x30, 0xbb, 0xd5, 0xba, 0xac, 0x43, 0xbc, 0xc7, 0x98, 0xee, 0x49, 0xaa, 0x81, 0x85, 0xef, 0x76, 0xbb, 0x3b, 0x44, 0xba, 0x62, 0xb9, 0x1d, 0x86, 0xae, 0x56, 0x9e, 0x4b, 0xb5, 0x35},
+		},
+		{
+			name: "non-empty",
+			input: []*enginev1.Withdrawal{{
+				Index:          123,
+				ValidatorIndex: 123123,
+				Address:        []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0},
+				Amount:         50,
+			},
+			},
+			want: [32]byte{0x10, 0x34, 0x29, 0xd1, 0x34, 0x30, 0xa0, 0x1c, 0x4, 0xdd, 0x3, 0xed, 0xe6, 0xa6, 0x33, 0xb2, 0xc9, 0x24, 0x23, 0x5c, 0x43, 0xca, 0xb2, 0x32, 0xaa, 0xed, 0xfe, 0xd5, 0x9, 0x78, 0xd1, 0x6f},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ssz.WithdrawalSliceRoot(tt.input, 16)
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, tt.want, got)
 		})

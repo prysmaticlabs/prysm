@@ -7,18 +7,18 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -72,7 +72,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
 	if err := altair.ValidateSyncMessageTime(
 		m.Slot,
-		s.cfg.chain.GenesisTime(),
+		s.cfg.clock.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
 	); err != nil {
 		tracing.AnnotateError(span, err)
@@ -90,7 +90,7 @@ func (s *Service) validateSyncCommitteeMessage(
 		ctx,
 		ignoreEmptyCommittee(committeeIndices),
 		s.rejectIncorrectSyncCommittee(committeeIndices, *msg.Topic),
-		s.ignoreHasSeenSyncMsg(m, committeeIndices),
+		s.ignoreHasSeenSyncMsg(ctx, m, committeeIndices),
 		s.rejectInvalidSyncCommitteeSignature(m),
 	); result != pubsub.ValidationAccept {
 		return result, err
@@ -119,28 +119,49 @@ func (s *Service) readSyncCommitteeMessage(msg *pubsub.Message) (*ethpb.SyncComm
 }
 
 // Mark all a slot and validator index as seen for every index in a committee and subnet.
-func (s *Service) markSyncCommitteeMessagesSeen(committeeIndices []types.CommitteeIndex, m *ethpb.SyncCommitteeMessage) {
+func (s *Service) markSyncCommitteeMessagesSeen(committeeIndices []primitives.CommitteeIndex, m *ethpb.SyncCommitteeMessage) {
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	for _, idx := range committeeIndices {
 		subnet := uint64(idx) / subCommitteeSize
-		s.setSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, subnet)
+		s.setSeenSyncMessageIndexSlot(m, subnet)
 	}
 }
 
 // Returns true if the node has received sync committee for the validator with index and slot.
-func (s *Service) hasSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) bool {
+func (s *Service) hasSeenSyncMessageIndexSlot(ctx context.Context, m *ethpb.SyncCommitteeMessage, subCommitteeIndex uint64) bool {
 	s.seenSyncMessageLock.RLock()
 	defer s.seenSyncMessageLock.RUnlock()
-	_, seen := s.seenSyncMessageCache.Get(seenSyncCommitteeKey(slot, valIndex, subCommitteeIndex))
-	return seen
+	rt, seen := s.seenSyncMessageCache.Get(seenSyncCommitteeKey(m.Slot, m.ValidatorIndex, subCommitteeIndex))
+	if !seen {
+		// return early if this is the first message
+		return false
+	}
+	root, ok := rt.([32]byte)
+	if !ok {
+		return true // Impossible. Return true to be safe
+	}
+	if !s.cfg.chain.InForkchoice(root) && !s.cfg.beaconDB.HasBlock(ctx, root) {
+		syncMessagesForUnknownBlocks.Inc()
+		return true
+	}
+	msgRoot := [32]byte(m.BlockRoot)
+	if !s.cfg.chain.InForkchoice(msgRoot) && !s.cfg.beaconDB.HasBlock(ctx, msgRoot) {
+		syncMessagesForUnknownBlocks.Inc()
+		return false
+	}
+	headRoot := s.cfg.chain.CachedHeadRoot()
+	if root == headRoot {
+		return true
+	}
+	return msgRoot != headRoot
 }
 
 // Set sync committee message validator index and slot as seen.
-func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) {
+func (s *Service) setSeenSyncMessageIndexSlot(m *ethpb.SyncCommitteeMessage, subCommitteeIndex uint64) {
 	s.seenSyncMessageLock.Lock()
 	defer s.seenSyncMessageLock.Unlock()
-	key := seenSyncCommitteeKey(slot, valIndex, subCommitteeIndex)
-	s.seenSyncMessageCache.Add(key, true)
+	key := seenSyncCommitteeKey(m.Slot, m.ValidatorIndex, subCommitteeIndex)
+	s.seenSyncMessageCache.Add(key, [32]byte(m.BlockRoot))
 }
 
 // The `subnet_id` is valid for the given validator. This implies the validator is part of the broader
@@ -152,7 +173,7 @@ func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.Va
 // message and broadcasts it into subnet 2, we need to make sure that whatever committee index and
 // resultant subnet that the validator has is valid for this particular topic.
 func (s *Service) rejectIncorrectSyncCommittee(
-	committeeIndices []types.CommitteeIndex, topic string,
+	committeeIndices []primitives.CommitteeIndex, topic string,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		ctx, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
@@ -184,15 +205,15 @@ func (s *Service) rejectIncorrectSyncCommittee(
 // There has been no other valid sync committee signature for the declared `slot`, `validator_index`,
 // and `subcommittee_index`. In the event of `validator_index` belongs to multiple subnets, as long
 // as one subnet has not been seen, we should let it in.
-func (s *Service) ignoreHasSeenSyncMsg(
-	m *ethpb.SyncCommitteeMessage, committeeIndices []types.CommitteeIndex,
+func (s *Service) ignoreHasSeenSyncMsg(ctx context.Context,
+	m *ethpb.SyncCommitteeMessage, committeeIndices []primitives.CommitteeIndex,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		var isValid bool
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		for _, idx := range committeeIndices {
 			subnet := uint64(idx) / subCommitteeSize
-			if !s.hasSeenSyncMessageIndexSlot(m.Slot, m.ValidatorIndex, subnet) {
+			if !s.hasSeenSyncMessageIndexSlot(ctx, m, subnet) {
 				isValid = true
 				break
 			}
@@ -243,15 +264,16 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 		// the signature to a G2 point if batch verification is
 		// enabled.
 		set := &bls.SignatureBatch{
-			Messages:   [][32]byte{sigRoot},
-			PublicKeys: []bls.PublicKey{pKey},
-			Signatures: [][]byte{m.Signature},
+			Messages:     [][32]byte{sigRoot},
+			PublicKeys:   []bls.PublicKey{pKey},
+			Signatures:   [][]byte{m.Signature},
+			Descriptions: []string{signing.SyncCommitteeSignature},
 		}
 		return s.validateWithBatchVerifier(ctx, "sync committee message", set)
 	}
 }
 
-func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
+func ignoreEmptyCommittee(indices []primitives.CommitteeIndex) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		if len(indices) == 0 {
 			return pubsub.ValidationIgnore, nil
@@ -260,7 +282,7 @@ func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
 	}
 }
 
-func seenSyncCommitteeKey(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) string {
+func seenSyncCommitteeKey(slot primitives.Slot, valIndex primitives.ValidatorIndex, subCommitteeIndex uint64) string {
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
 	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
 	return string(b)
