@@ -185,23 +185,6 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
 
-func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), testutil.AllValidatorsAreExitedCtxKey, true))
-	hook := logTest.NewGlobal()
-
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- slot
-
-		cancel()
-	}()
-	run(ctx, v)
-	assert.LogsContain(t, hook, "All validators are exited")
-}
-
 func TestKeyReload_ActiveKey(t *testing.T) {
 	ctx := context.Background()
 	km := &mockKeymanager{}
