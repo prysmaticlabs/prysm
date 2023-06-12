@@ -245,6 +245,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 		result := &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
+		log.Info("GetPayload: calling engine_getPayloadV3", "payloadId", payloadId, "slot", slot)
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
 		if err != nil {
 			return nil, nil, handleRPCError(err)

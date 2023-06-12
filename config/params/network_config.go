@@ -25,7 +25,6 @@ type NetworkConfig struct {
 	MessageDomainValidSnappy         [4]byte          `yaml:"MESSAGE_DOMAIN_VALID_SNAPPY"`           // MessageDomainValidSnappy is the 4-byte domain for gossip message-id isolation of valid snappy messages.
 	MinEpochsForBlobsSidecarsRequest primitives.Epoch `yaml:"MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUEST"` // MinEpochsForBlobsSidecarsRequest is the minimum number of epochs the node will keep the blobs for.
 	MaxRequestBlobSidecars           uint64           `yaml:"MAX_REQUEST_BLOB_SIDECARS"`             // MaxRequestBlobSidecars is the maximum number of blobs to request in a single request.
-	MaxRequestBlocksDeneb            uint64           `yaml:"MAX_REQUEST_BLOCKS_DENEB"`              // MaxRequestBlocksDeneb is the maximum number of blocks in a single request after the deneb epoch.
 
 	// DiscoveryV5 Config
 	ETH2Key                    string // ETH2Key is the ENR key of the Ethereum consensus object in an enr.
