@@ -345,6 +345,8 @@ func (s *Service) Start() {
 		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
 	}
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/validators/performance", beaconChainServerV1.GetValidatorPerformance)
+
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
