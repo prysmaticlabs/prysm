@@ -14,14 +14,17 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
+// SignedValidatorRegistration a struct for signed validator registrations.
 type SignedValidatorRegistration struct {
 	*eth.SignedValidatorRegistrationV1
 }
 
+// ValidatorRegistration a struct for validator registrations.
 type ValidatorRegistration struct {
 	*eth.ValidatorRegistrationV1
 }
 
+// MarshalJSON returns a json representation copy of signed validator registration.
 func (r *SignedValidatorRegistration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *ValidatorRegistration `json:"message"`
@@ -32,6 +35,7 @@ func (r *SignedValidatorRegistration) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// UnmarshalJSON returns a byte representation of signed validator registration from json.
 func (r *SignedValidatorRegistration) UnmarshalJSON(b []byte) error {
 	if r.SignedValidatorRegistrationV1 == nil {
 		r.SignedValidatorRegistrationV1 = &eth.SignedValidatorRegistrationV1{}
@@ -48,6 +52,7 @@ func (r *SignedValidatorRegistration) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MarshalJSON returns a json representation copy of validator registration.
 func (r *ValidatorRegistration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		FeeRecipient hexutil.Bytes `json:"fee_recipient"`
@@ -62,6 +67,7 @@ func (r *ValidatorRegistration) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// UnmarshalJSON returns a byte representation of validator registration from json.
 func (r *ValidatorRegistration) UnmarshalJSON(b []byte) error {
 	if r.ValidatorRegistrationV1 == nil {
 		r.ValidatorRegistrationV1 = &eth.ValidatorRegistrationV1{}
@@ -92,6 +98,7 @@ func (r *ValidatorRegistration) UnmarshalJSON(b []byte) error {
 var errInvalidUint256 = errors.New("invalid Uint256")
 var errDecodeUint256 = errors.New("unable to decode into Uint256")
 
+// Uint256 a wrapper representation of big.Int
 type Uint256 struct {
 	*big.Int
 }
@@ -118,7 +125,7 @@ func sszBytesToUint256(b []byte) (Uint256, error) {
 	return Uint256{Int: bi}, nil
 }
 
-// SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256
+// SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256.
 func (s Uint256) SSZBytes() []byte {
 	if !isValidUint256(s.Int) {
 		return []byte{}
@@ -126,6 +133,7 @@ func (s Uint256) SSZBytes() []byte {
 	return bytesutil.PadTo(bytesutil.ReverseByteOrder(s.Int.Bytes()), 32)
 }
 
+// UnmarshalJSON takes in a byte array and unmarshals the value in Uint256
 func (s *Uint256) UnmarshalJSON(t []byte) error {
 	start := 0
 	end := len(t)
@@ -138,6 +146,7 @@ func (s *Uint256) UnmarshalJSON(t []byte) error {
 	return s.UnmarshalText(t[start:end])
 }
 
+// UnmarshalText takes in a byte array and unmarshals the text in Uint256
 func (s *Uint256) UnmarshalText(t []byte) error {
 	if s.Int == nil {
 		s.Int = big.NewInt(0)
@@ -153,6 +162,7 @@ func (s *Uint256) UnmarshalText(t []byte) error {
 	return nil
 }
 
+// MarshalJSON returns a json byte representation of Uint256.
 func (s Uint256) MarshalJSON() ([]byte, error) {
 	t, err := s.MarshalText()
 	if err != nil {
@@ -163,6 +173,7 @@ func (s Uint256) MarshalJSON() ([]byte, error) {
 	return t, nil
 }
 
+// MarshalText returns a text byte representation of Uint256.
 func (s Uint256) MarshalText() ([]byte, error) {
 	if !isValidUint256(s.Int) {
 		return nil, errors.Wrapf(errInvalidUint256, "value=%s", s.Int)
@@ -170,22 +181,27 @@ func (s Uint256) MarshalText() ([]byte, error) {
 	return []byte(s.String()), nil
 }
 
+// Uint64String is a custom type that allows marshalling from text to uint64 and vice versa.
 type Uint64String uint64
 
+// UnmarshalText takes a byte array and unmarshals the text in Uint64String.
 func (s *Uint64String) UnmarshalText(t []byte) error {
 	u, err := strconv.ParseUint(string(t), 10, 64)
 	*s = Uint64String(u)
 	return err
 }
 
+// MarshalText returns a byte representation of the text from Uint64String.
 func (s Uint64String) MarshalText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%d", s)), nil
 }
 
+// VersionResponse is a JSON representation of a field in the builder API header response.
 type VersionResponse struct {
 	Version string `json:"version"`
 }
 
+// ExecHeaderResponse is a JSON representation of  the builder API header response for Bellatrix.
 type ExecHeaderResponse struct {
 	Version string `json:"version"`
 	Data    struct {
@@ -194,6 +210,7 @@ type ExecHeaderResponse struct {
 	} `json:"data"`
 }
 
+// ToProto returns a SignedBuilderBid from ExecHeaderResponse for Bellatrix.
 func (ehr *ExecHeaderResponse) ToProto() (*eth.SignedBuilderBid, error) {
 	bb, err := ehr.Data.Message.ToProto()
 	if err != nil {
@@ -205,6 +222,7 @@ func (ehr *ExecHeaderResponse) ToProto() (*eth.SignedBuilderBid, error) {
 	}, nil
 }
 
+// ToProto returns a BuilderBid Proto for Bellatrix.
 func (bb *BuilderBid) ToProto() (*eth.BuilderBid, error) {
 	header, err := bb.Header.ToProto()
 	if err != nil {
@@ -217,31 +235,34 @@ func (bb *BuilderBid) ToProto() (*eth.BuilderBid, error) {
 	}, nil
 }
 
+// ToProto returns a ExecutionPayloadHeader for Bellatrix.
 func (h *ExecutionPayloadHeader) ToProto() (*v1.ExecutionPayloadHeader, error) {
 	return &v1.ExecutionPayloadHeader{
-		ParentHash:       h.ParentHash,
-		FeeRecipient:     h.FeeRecipient,
-		StateRoot:        h.StateRoot,
-		ReceiptsRoot:     h.ReceiptsRoot,
-		LogsBloom:        h.LogsBloom,
-		PrevRandao:       h.PrevRandao,
+		ParentHash:       bytesutil.SafeCopyBytes(h.ParentHash),
+		FeeRecipient:     bytesutil.SafeCopyBytes(h.FeeRecipient),
+		StateRoot:        bytesutil.SafeCopyBytes(h.StateRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(h.ReceiptsRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(h.LogsBloom),
+		PrevRandao:       bytesutil.SafeCopyBytes(h.PrevRandao),
 		BlockNumber:      uint64(h.BlockNumber),
 		GasLimit:         uint64(h.GasLimit),
 		GasUsed:          uint64(h.GasUsed),
 		Timestamp:        uint64(h.Timestamp),
-		ExtraData:        h.ExtraData,
-		BaseFeePerGas:    h.BaseFeePerGas.SSZBytes(),
-		BlockHash:        h.BlockHash,
-		TransactionsRoot: h.TransactionsRoot,
+		ExtraData:        bytesutil.SafeCopyBytes(h.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(h.BaseFeePerGas.SSZBytes()),
+		BlockHash:        bytesutil.SafeCopyBytes(h.BlockHash),
+		TransactionsRoot: bytesutil.SafeCopyBytes(h.TransactionsRoot),
 	}, nil
 }
 
+// BuilderBid is part of ExecHeaderResponse for Bellatrix.
 type BuilderBid struct {
 	Header *ExecutionPayloadHeader `json:"header"`
 	Value  Uint256                 `json:"value"`
 	Pubkey hexutil.Bytes           `json:"pubkey"`
 }
 
+// ExecutionPayloadHeader is a field in BuilderBid.
 type ExecutionPayloadHeader struct {
 	ParentHash       hexutil.Bytes `json:"parent_hash"`
 	FeeRecipient     hexutil.Bytes `json:"fee_recipient"`
@@ -260,6 +281,7 @@ type ExecutionPayloadHeader struct {
 	*v1.ExecutionPayloadHeader
 }
 
+// MarshalJSON returns the JSON bytes representation of ExecutionPayloadHeader.
 func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
 	type MarshalCaller ExecutionPayloadHeader
 	baseFeePerGas, err := sszBytesToUint256(h.ExecutionPayloadHeader.BaseFeePerGas)
@@ -284,6 +306,7 @@ func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// UnmarshalJSON takes in a JSON byte array and sets ExecutionPayloadHeader.
 func (h *ExecutionPayloadHeader) UnmarshalJSON(b []byte) error {
 	type UnmarshalCaller ExecutionPayloadHeader
 	uc := &UnmarshalCaller{}
@@ -297,11 +320,13 @@ func (h *ExecutionPayloadHeader) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// ExecPayloadResponse is the builder API /eth/v1/builder/blinded_blocks for Bellatrix.
 type ExecPayloadResponse struct {
 	Version string           `json:"version"`
 	Data    ExecutionPayload `json:"data"`
 }
 
+// ExecutionPayload is a field of ExecPayloadResponse
 type ExecutionPayload struct {
 	ParentHash    hexutil.Bytes   `json:"parent_hash"`
 	FeeRecipient  hexutil.Bytes   `json:"fee_recipient"`
@@ -319,29 +344,31 @@ type ExecutionPayload struct {
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
 
+// ToProto returns a ExecutionPayload Proto from ExecPayloadResponse
 func (r *ExecPayloadResponse) ToProto() (*v1.ExecutionPayload, error) {
 	return r.Data.ToProto()
 }
 
+// ToProto returns a ExecutionPayload Proto
 func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
 	txs := make([][]byte, len(p.Transactions))
 	for i := range p.Transactions {
-		txs[i] = p.Transactions[i]
+		txs[i] = bytesutil.SafeCopyBytes(p.Transactions[i])
 	}
 	return &v1.ExecutionPayload{
-		ParentHash:    p.ParentHash,
-		FeeRecipient:  p.FeeRecipient,
-		StateRoot:     p.StateRoot,
-		ReceiptsRoot:  p.ReceiptsRoot,
-		LogsBloom:     p.LogsBloom,
-		PrevRandao:    p.PrevRandao,
+		ParentHash:    bytesutil.SafeCopyBytes(p.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(p.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(p.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(p.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(p.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(p.PrevRandao),
 		BlockNumber:   uint64(p.BlockNumber),
 		GasLimit:      uint64(p.GasLimit),
 		GasUsed:       uint64(p.GasUsed),
 		Timestamp:     uint64(p.Timestamp),
-		ExtraData:     p.ExtraData,
-		BaseFeePerGas: p.BaseFeePerGas.SSZBytes(),
-		BlockHash:     p.BlockHash,
+		ExtraData:     bytesutil.SafeCopyBytes(p.ExtraData),
+		BaseFeePerGas: bytesutil.SafeCopyBytes(p.BaseFeePerGas.SSZBytes()),
+		BlockHash:     bytesutil.SafeCopyBytes(p.BlockHash),
 		Transactions:  txs,
 	}, nil
 }
@@ -355,22 +382,22 @@ func FromProto(payload *v1.ExecutionPayload) (ExecutionPayload, error) {
 	}
 	txs := make([]hexutil.Bytes, len(payload.Transactions))
 	for i := range payload.Transactions {
-		txs[i] = payload.Transactions[i]
+		txs[i] = bytesutil.SafeCopyBytes(payload.Transactions[i])
 	}
 	return ExecutionPayload{
-		ParentHash:    payload.ParentHash,
-		FeeRecipient:  payload.FeeRecipient,
-		StateRoot:     payload.StateRoot,
-		ReceiptsRoot:  payload.ReceiptsRoot,
-		LogsBloom:     payload.LogsBloom,
-		PrevRandao:    payload.PrevRandao,
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
 		BlockNumber:   Uint64String(payload.BlockNumber),
 		GasLimit:      Uint64String(payload.GasLimit),
 		GasUsed:       Uint64String(payload.GasUsed),
 		Timestamp:     Uint64String(payload.Timestamp),
-		ExtraData:     payload.ExtraData,
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
 		BaseFeePerGas: bFee,
-		BlockHash:     payload.BlockHash,
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  txs,
 	}, nil
 }
@@ -384,36 +411,37 @@ func FromProtoCapella(payload *v1.ExecutionPayloadCapella) (ExecutionPayloadCape
 	}
 	txs := make([]hexutil.Bytes, len(payload.Transactions))
 	for i := range payload.Transactions {
-		txs[i] = payload.Transactions[i]
+		txs[i] = bytesutil.SafeCopyBytes(payload.Transactions[i])
 	}
 	withdrawals := make([]Withdrawal, len(payload.Withdrawals))
 	for i, w := range payload.Withdrawals {
 		withdrawals[i] = Withdrawal{
 			Index:          Uint256{Int: big.NewInt(0).SetUint64(w.Index)},
 			ValidatorIndex: Uint256{Int: big.NewInt(0).SetUint64(uint64(w.ValidatorIndex))},
-			Address:        w.Address,
+			Address:        bytesutil.SafeCopyBytes(w.Address),
 			Amount:         Uint256{Int: big.NewInt(0).SetUint64(w.Amount)},
 		}
 	}
 	return ExecutionPayloadCapella{
-		ParentHash:    payload.ParentHash,
-		FeeRecipient:  payload.FeeRecipient,
-		StateRoot:     payload.StateRoot,
-		ReceiptsRoot:  payload.ReceiptsRoot,
-		LogsBloom:     payload.LogsBloom,
-		PrevRandao:    payload.PrevRandao,
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
 		BlockNumber:   Uint64String(payload.BlockNumber),
 		GasLimit:      Uint64String(payload.GasLimit),
 		GasUsed:       Uint64String(payload.GasUsed),
 		Timestamp:     Uint64String(payload.Timestamp),
-		ExtraData:     payload.ExtraData,
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
 		BaseFeePerGas: bFee,
-		BlockHash:     payload.BlockHash,
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  txs,
 		Withdrawals:   withdrawals,
 	}, nil
 }
 
+// ExecHeaderResponseCapella is the response of builder API /eth/v1/builder/header/{slot}/{parent_hash}/{pubkey} for Capella.
 type ExecHeaderResponseCapella struct {
 	Data struct {
 		Signature hexutil.Bytes      `json:"signature"`
@@ -421,6 +449,7 @@ type ExecHeaderResponseCapella struct {
 	} `json:"data"`
 }
 
+// ToProto returns a SignedBuilderBidCapella Proto from ExecHeaderResponseCapella.
 func (ehr *ExecHeaderResponseCapella) ToProto() (*eth.SignedBuilderBidCapella, error) {
 	bb, err := ehr.Data.Message.ToProto()
 	if err != nil {
@@ -428,10 +457,11 @@ func (ehr *ExecHeaderResponseCapella) ToProto() (*eth.SignedBuilderBidCapella, e
 	}
 	return &eth.SignedBuilderBidCapella{
 		Message:   bb,
-		Signature: ehr.Data.Signature,
+		Signature: bytesutil.SafeCopyBytes(ehr.Data.Signature),
 	}, nil
 }
 
+// ToProto returns a BuilderBidCapella Proto.
 func (bb *BuilderBidCapella) ToProto() (*eth.BuilderBidCapella, error) {
 	header, err := bb.Header.ToProto()
 	if err != nil {
@@ -439,37 +469,40 @@ func (bb *BuilderBidCapella) ToProto() (*eth.BuilderBidCapella, error) {
 	}
 	return &eth.BuilderBidCapella{
 		Header: header,
-		Value:  bb.Value.SSZBytes(),
-		Pubkey: bb.Pubkey,
+		Value:  bytesutil.SafeCopyBytes(bb.Value.SSZBytes()),
+		Pubkey: bytesutil.SafeCopyBytes(bb.Pubkey),
 	}, nil
 }
 
+// ToProto returns a ExecutionPayloadHeaderCapella Proto
 func (h *ExecutionPayloadHeaderCapella) ToProto() (*v1.ExecutionPayloadHeaderCapella, error) {
 	return &v1.ExecutionPayloadHeaderCapella{
-		ParentHash:       h.ParentHash,
-		FeeRecipient:     h.FeeRecipient,
-		StateRoot:        h.StateRoot,
-		ReceiptsRoot:     h.ReceiptsRoot,
-		LogsBloom:        h.LogsBloom,
-		PrevRandao:       h.PrevRandao,
+		ParentHash:       bytesutil.SafeCopyBytes(h.ParentHash),
+		FeeRecipient:     bytesutil.SafeCopyBytes(h.FeeRecipient),
+		StateRoot:        bytesutil.SafeCopyBytes(h.StateRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(h.ReceiptsRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(h.LogsBloom),
+		PrevRandao:       bytesutil.SafeCopyBytes(h.PrevRandao),
 		BlockNumber:      uint64(h.BlockNumber),
 		GasLimit:         uint64(h.GasLimit),
 		GasUsed:          uint64(h.GasUsed),
 		Timestamp:        uint64(h.Timestamp),
-		ExtraData:        h.ExtraData,
-		BaseFeePerGas:    h.BaseFeePerGas.SSZBytes(),
-		BlockHash:        h.BlockHash,
-		TransactionsRoot: h.TransactionsRoot,
-		WithdrawalsRoot:  h.WithdrawalsRoot,
+		ExtraData:        bytesutil.SafeCopyBytes(h.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(h.BaseFeePerGas.SSZBytes()),
+		BlockHash:        bytesutil.SafeCopyBytes(h.BlockHash),
+		TransactionsRoot: bytesutil.SafeCopyBytes(h.TransactionsRoot),
+		WithdrawalsRoot:  bytesutil.SafeCopyBytes(h.WithdrawalsRoot),
 	}, nil
 }
 
+// BuilderBidCapella is field of ExecHeaderResponseCapella.
 type BuilderBidCapella struct {
 	Header *ExecutionPayloadHeaderCapella `json:"header"`
 	Value  Uint256                        `json:"value"`
 	Pubkey hexutil.Bytes                  `json:"pubkey"`
 }
 
+// ExecutionPayloadHeaderCapella is a field in BuilderBidCapella.
 type ExecutionPayloadHeaderCapella struct {
 	ParentHash       hexutil.Bytes `json:"parent_hash"`
 	FeeRecipient     hexutil.Bytes `json:"fee_recipient"`
@@ -489,6 +522,7 @@ type ExecutionPayloadHeaderCapella struct {
 	*v1.ExecutionPayloadHeaderCapella
 }
 
+// MarshalJSON returns a JSON byte representation of ExecutionPayloadHeaderCapella.
 func (h *ExecutionPayloadHeaderCapella) MarshalJSON() ([]byte, error) {
 	type MarshalCaller ExecutionPayloadHeaderCapella
 	baseFeePerGas, err := sszBytesToUint256(h.ExecutionPayloadHeaderCapella.BaseFeePerGas)
@@ -514,6 +548,7 @@ func (h *ExecutionPayloadHeaderCapella) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// UnmarshalJSON takes a JSON byte array and sets ExecutionPayloadHeaderCapella.
 func (h *ExecutionPayloadHeaderCapella) UnmarshalJSON(b []byte) error {
 	type UnmarshalCaller ExecutionPayloadHeaderCapella
 	uc := &UnmarshalCaller{}
@@ -527,11 +562,13 @@ func (h *ExecutionPayloadHeaderCapella) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// ExecPayloadResponseCapella is the builder API /eth/v1/builder/blinded_blocks for Capella.
 type ExecPayloadResponseCapella struct {
 	Version string                  `json:"version"`
 	Data    ExecutionPayloadCapella `json:"data"`
 }
 
+// ExecutionPayloadCapella is a field of ExecPayloadResponseCapella.
 type ExecutionPayloadCapella struct {
 	ParentHash    hexutil.Bytes   `json:"parent_hash"`
 	FeeRecipient  hexutil.Bytes   `json:"fee_recipient"`
@@ -550,43 +587,46 @@ type ExecutionPayloadCapella struct {
 	Withdrawals   []Withdrawal    `json:"withdrawals"`
 }
 
+// ToProto returns a ExecutionPayloadCapella Proto.
 func (r *ExecPayloadResponseCapella) ToProto() (*v1.ExecutionPayloadCapella, error) {
 	return r.Data.ToProto()
 }
 
+// ToProto returns a ExecutionPayloadCapella Proto.
 func (p *ExecutionPayloadCapella) ToProto() (*v1.ExecutionPayloadCapella, error) {
 	txs := make([][]byte, len(p.Transactions))
 	for i := range p.Transactions {
-		txs[i] = p.Transactions[i]
+		txs[i] = bytesutil.SafeCopyBytes(p.Transactions[i])
 	}
 	withdrawals := make([]*v1.Withdrawal, len(p.Withdrawals))
 	for i, w := range p.Withdrawals {
 		withdrawals[i] = &v1.Withdrawal{
 			Index:          w.Index.Uint64(),
 			ValidatorIndex: types.ValidatorIndex(w.ValidatorIndex.Uint64()),
-			Address:        w.Address,
+			Address:        bytesutil.SafeCopyBytes(w.Address),
 			Amount:         w.Amount.Uint64(),
 		}
 	}
 	return &v1.ExecutionPayloadCapella{
-		ParentHash:    p.ParentHash,
-		FeeRecipient:  p.FeeRecipient,
-		StateRoot:     p.StateRoot,
-		ReceiptsRoot:  p.ReceiptsRoot,
-		LogsBloom:     p.LogsBloom,
-		PrevRandao:    p.PrevRandao,
+		ParentHash:    bytesutil.SafeCopyBytes(p.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(p.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(p.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(p.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(p.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(p.PrevRandao),
 		BlockNumber:   uint64(p.BlockNumber),
 		GasLimit:      uint64(p.GasLimit),
 		GasUsed:       uint64(p.GasUsed),
 		Timestamp:     uint64(p.Timestamp),
-		ExtraData:     p.ExtraData,
-		BaseFeePerGas: p.BaseFeePerGas.SSZBytes(),
-		BlockHash:     p.BlockHash,
+		ExtraData:     bytesutil.SafeCopyBytes(p.ExtraData),
+		BaseFeePerGas: bytesutil.SafeCopyBytes(p.BaseFeePerGas.SSZBytes()),
+		BlockHash:     bytesutil.SafeCopyBytes(p.BlockHash),
 		Transactions:  txs,
 		Withdrawals:   withdrawals,
 	}, nil
 }
 
+// Withdrawal is a field of ExecutionPayloadCapella.
 type Withdrawal struct {
 	Index          Uint256       `json:"index"`
 	ValidatorIndex Uint256       `json:"validator_index"`
@@ -594,18 +634,22 @@ type Withdrawal struct {
 	Amount         Uint256       `json:"amount"`
 }
 
+// SignedBlindedBeaconBlockBellatrix is the request object for builder API /eth/v1/builder/blinded_blocks.
 type SignedBlindedBeaconBlockBellatrix struct {
 	*eth.SignedBlindedBeaconBlockBellatrix
 }
 
+// BlindedBeaconBlockBellatrix is a field in SignedBlindedBeaconBlockBellatrix.
 type BlindedBeaconBlockBellatrix struct {
 	*eth.BlindedBeaconBlockBellatrix
 }
 
+// BlindedBeaconBlockBodyBellatrix is a field in BlindedBeaconBlockBellatrix.
 type BlindedBeaconBlockBodyBellatrix struct {
 	*eth.BlindedBeaconBlockBodyBellatrix
 }
 
+// MarshalJSON returns a JSON byte array representation of SignedBlindedBeaconBlockBellatrix.
 func (r *SignedBlindedBeaconBlockBellatrix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *BlindedBeaconBlockBellatrix `json:"message"`
@@ -616,6 +660,7 @@ func (r *SignedBlindedBeaconBlockBellatrix) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// MarshalJSON returns a JSON byte array representation of BlindedBeaconBlockBellatrix.
 func (b *BlindedBeaconBlockBellatrix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Slot          string                           `json:"slot"`
@@ -632,10 +677,12 @@ func (b *BlindedBeaconBlockBellatrix) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// ProposerSlashing is a field in BlindedBeaconBlockBodyCapella.
 type ProposerSlashing struct {
 	*eth.ProposerSlashing
 }
 
+// MarshalJSON returns a JSON byte array representation of ProposerSlashing.
 func (s *ProposerSlashing) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		SignedHeader1 *SignedBeaconBlockHeader `json:"signed_header_1"`
@@ -646,10 +693,12 @@ func (s *ProposerSlashing) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// SignedBeaconBlockHeader is a field of ProposerSlashing.
 type SignedBeaconBlockHeader struct {
 	*eth.SignedBeaconBlockHeader
 }
 
+// MarshalJSON returns a JSON byte array representation of SignedBeaconBlockHeader.
 func (h *SignedBeaconBlockHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Header    *BeaconBlockHeader `json:"message"`
@@ -660,10 +709,12 @@ func (h *SignedBeaconBlockHeader) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// BeaconBlockHeader is a field of SignedBeaconBlockHeader.
 type BeaconBlockHeader struct {
 	*eth.BeaconBlockHeader
 }
 
+// MarshalJSON returns a JSON byte array representation of BeaconBlockHeader.
 func (h *BeaconBlockHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Slot          string        `json:"slot"`
@@ -680,10 +731,12 @@ func (h *BeaconBlockHeader) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// IndexedAttestation is a field of AttesterSlashing.
 type IndexedAttestation struct {
 	*eth.IndexedAttestation
 }
 
+// MarshalJSON returns a JSON byte array representation of IndexedAttestation.
 func (a *IndexedAttestation) MarshalJSON() ([]byte, error) {
 	indices := make([]string, len(a.IndexedAttestation.AttestingIndices))
 	for i := range a.IndexedAttestation.AttestingIndices {
@@ -700,10 +753,12 @@ func (a *IndexedAttestation) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// AttesterSlashing is a field of a Beacon Block Body.
 type AttesterSlashing struct {
 	*eth.AttesterSlashing
 }
 
+// MarshalJSON returns a JSON byte array representation of AttesterSlashing.
 func (s *AttesterSlashing) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Attestation1 *IndexedAttestation `json:"attestation_1"`
@@ -714,10 +769,12 @@ func (s *AttesterSlashing) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// Checkpoint is a field of AttestationData.
 type Checkpoint struct {
 	*eth.Checkpoint
 }
 
+// MarshalJSON returns a JSON byte array representation of Checkpoint.
 func (c *Checkpoint) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Epoch string        `json:"epoch"`
@@ -728,10 +785,12 @@ func (c *Checkpoint) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// AttestationData is a field of IndexedAttestation.
 type AttestationData struct {
 	*eth.AttestationData
 }
 
+// MarshalJSON returns a JSON byte array representation of AttestationData.
 func (a *AttestationData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Slot            string        `json:"slot"`
@@ -748,10 +807,12 @@ func (a *AttestationData) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// Attestation is a field of Beacon Block Body.
 type Attestation struct {
 	*eth.Attestation
 }
 
+// MarshalJSON returns a JSON byte array representation of Attestation.
 func (a *Attestation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		AggregationBits hexutil.Bytes    `json:"aggregation_bits"`
@@ -764,10 +825,12 @@ func (a *Attestation) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// DepositData is a field of Deposit.
 type DepositData struct {
 	*eth.Deposit_Data
 }
 
+// MarshalJSON returns a JSON byte array representation of DepositData.
 func (d *DepositData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		PublicKey             hexutil.Bytes `json:"pubkey"`
@@ -782,10 +845,12 @@ func (d *DepositData) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// Deposit is a field of Beacon Block Body.
 type Deposit struct {
 	*eth.Deposit
 }
 
+// MarshalJSON returns a JSON byte array representation of Deposit.
 func (d *Deposit) MarshalJSON() ([]byte, error) {
 	proof := make([]hexutil.Bytes, len(d.Proof))
 	for i := range d.Proof {
@@ -800,10 +865,12 @@ func (d *Deposit) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// SignedVoluntaryExit is a field of Beacon Block Body.
 type SignedVoluntaryExit struct {
 	*eth.SignedVoluntaryExit
 }
 
+// MarshalJSON returns a JSON byte array representation of SignedVoluntaryExit.
 func (sve *SignedVoluntaryExit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *VoluntaryExit `json:"message"`
@@ -814,10 +881,12 @@ func (sve *SignedVoluntaryExit) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// VoluntaryExit is a field in SignedVoluntaryExit
 type VoluntaryExit struct {
 	*eth.VoluntaryExit
 }
 
+// MarshalJSON returns a JSON byte array representation of VoluntaryExit
 func (ve *VoluntaryExit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Epoch          string `json:"epoch"`
@@ -828,10 +897,12 @@ func (ve *VoluntaryExit) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// SyncAggregate is a field of Beacon Block Body.
 type SyncAggregate struct {
 	*eth.SyncAggregate
 }
 
+// MarshalJSON returns a JSON byte array representation of SyncAggregate.
 func (s *SyncAggregate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		SyncCommitteeBits      hexutil.Bytes `json:"sync_committee_bits"`
@@ -842,10 +913,12 @@ func (s *SyncAggregate) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// Eth1Data is a field of Beacon Block Body.
 type Eth1Data struct {
 	*eth.Eth1Data
 }
 
+// MarshalJSON returns a JSON byte array representation of Eth1Data.
 func (e *Eth1Data) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		DepositRoot  hexutil.Bytes `json:"deposit_root"`
@@ -858,6 +931,7 @@ func (e *Eth1Data) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// MarshalJSON returns a JSON byte array representation of BlindedBeaconBlockBodyBellatrix.
 func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 	sve := make([]*SignedVoluntaryExit, len(b.BlindedBeaconBlockBodyBellatrix.VoluntaryExits))
 	for i := range b.BlindedBeaconBlockBodyBellatrix.VoluntaryExits {
@@ -904,10 +978,12 @@ func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// SignedBLSToExecutionChange is a field in Beacon Block Body for capella and above.
 type SignedBLSToExecutionChange struct {
 	*eth.SignedBLSToExecutionChange
 }
 
+// MarshalJSON returns a JSON byte array representation of SignedBLSToExecutionChange.
 func (ch *SignedBLSToExecutionChange) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *BLSToExecutionChange `json:"message"`
@@ -918,10 +994,12 @@ func (ch *SignedBLSToExecutionChange) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// BLSToExecutionChange is a field in SignedBLSToExecutionChange.
 type BLSToExecutionChange struct {
 	*eth.BLSToExecutionChange
 }
 
+// MarshalJSON returns a JSON byte array representation of BLSToExecutionChange.
 func (ch *BLSToExecutionChange) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		ValidatorIndex     string        `json:"validator_index"`
@@ -934,18 +1012,22 @@ func (ch *BLSToExecutionChange) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// SignedBlindedBeaconBlockCapella is part of the request object sent to builder API /eth/v1/builder/blinded_blocks for Capella.
 type SignedBlindedBeaconBlockCapella struct {
 	*eth.SignedBlindedBeaconBlockCapella
 }
 
+// BlindedBeaconBlockCapella is a field in SignedBlindedBeaconBlockCapella.
 type BlindedBeaconBlockCapella struct {
 	*eth.BlindedBeaconBlockCapella
 }
 
+// BlindedBeaconBlockBodyCapella is a field in BlindedBeaconBlockCapella.
 type BlindedBeaconBlockBodyCapella struct {
 	*eth.BlindedBeaconBlockBodyCapella
 }
 
+// MarshalJSON returns a JSON byte array representation of SignedBlindedBeaconBlockCapella.
 func (b *SignedBlindedBeaconBlockCapella) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *BlindedBeaconBlockCapella `json:"message"`
@@ -956,6 +1038,7 @@ func (b *SignedBlindedBeaconBlockCapella) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// MarshalJSON returns a JSON byte array representation of BlindedBeaconBlockCapella
 func (b *BlindedBeaconBlockCapella) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Slot          string                         `json:"slot"`
@@ -972,6 +1055,7 @@ func (b *BlindedBeaconBlockCapella) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// MarshalJSON returns a JSON byte array representation of BlindedBeaconBlockBodyCapella
 func (b *BlindedBeaconBlockBodyCapella) MarshalJSON() ([]byte, error) {
 	sve := make([]*SignedVoluntaryExit, len(b.VoluntaryExits))
 	for i := range b.VoluntaryExits {
@@ -1024,6 +1108,7 @@ func (b *BlindedBeaconBlockBodyCapella) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// ErrorMessage is a JSON representation of the builder API's returned error message.
 type ErrorMessage struct {
 	Code        int      `json:"code"`
 	Message     string   `json:"message"`
