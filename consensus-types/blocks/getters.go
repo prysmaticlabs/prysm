@@ -123,7 +123,9 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 			}, nil
 		}
 		return &eth.GenericSignedBeaconBlock{
-			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: pb.(*eth.SignedBeaconBlockAndBlobsDeneb)},
+			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{
+				Block: pb.(*eth.SignedBeaconBlockDeneb),
+			}},
 		}, nil
 	default:
 		return nil, errIncorrectBlockVersion
