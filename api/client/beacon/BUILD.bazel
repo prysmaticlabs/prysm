@@ -6,11 +6,11 @@ go_library(
         "checkpoint.go",
         "client.go",
         "doc.go",
-        "errors.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/api/client/beacon",
     visibility = ["//visibility:public"],
     deps = [
+        "//api/client:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//beacon-chain/state:go_default_library",
@@ -39,6 +39,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//api/client:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",

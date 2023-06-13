@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -140,8 +139,17 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		// Set sync aggregate. New in Altair.
 		vs.setSyncAggregate(ctx, sBlk)
 
-		// Set execution data. New in Bellatrix.
-		if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
+		// Get local and builder (if enabled) payloads. Set execution data. New in Bellatrix.
+		localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+		}
+		builderPayload, err := vs.getBuilderPayload(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+		if err != nil {
+			builderGetPayloadMissCount.Inc()
+			log.WithError(err).Error("Could not get builder payload")
+		}
+		if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 		}
 
@@ -224,7 +232,18 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
+	localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+	}
+
+	builderPayload, err := vs.getBuilderPayload(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+	if err != nil {
+		builderGetPayloadMissCount.Inc()
+		log.WithError(err).Error("Could not get builder payload")
+	}
+
+	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
@@ -327,10 +346,16 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
-	root, err := blk.Block().HashTreeRoot()
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash block: %v", err)
-	}
+
+	// Do not block proposal critical path with debug logging or block feed updates.
+	defer func() {
+		log.WithField("slot", blk.Block().Slot()).Debugf(
+			"Block proposal received via RPC")
+		vs.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
+		})
+	}()
 
 	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
 	if err != nil {
@@ -341,16 +366,6 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
 
-	// Do not block proposal critical path with debug logging or block feed updates.
-	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-			"Block proposal received via RPC")
-		vs.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
-		})
-	}()
-
 	// Broadcast the new block to the network.
 	blkPb, err := blk.Proto()
 	if err != nil {
@@ -359,6 +374,11 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash block: %v", err)
+	}
+
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")

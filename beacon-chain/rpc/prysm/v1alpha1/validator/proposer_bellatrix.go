@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -42,93 +41,84 @@ var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, headState state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
+func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData) error {
+	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
 	defer span.End()
 
-	idx := blk.Block().ProposerIndex()
 	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
 
-	canUseBuilder, err := vs.canUseBuilder(ctx, slot, idx)
-	span.AddAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
-	if err != nil {
-		log.WithError(err).Warn("Proposer: failed to check if builder can be used")
-	} else if canUseBuilder {
-		builderPayload, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
+	if localPayload == nil {
+		return errors.New("local payload is nil")
+	}
+
+	// Use local payload if builder payload is nil.
+	if builderPayload == nil {
+		return blk.SetExecution(localPayload)
+	}
+
+	switch {
+	case blk.Version() >= version.Capella:
+		// Compare payload values between local and builder. Default to the local value if it is higher.
+		localValueGwei, err := localPayload.ValueInGwei()
 		if err != nil {
-			builderGetPayloadMissCount.Inc()
-			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
-		} else {
-			switch {
-			case blk.Version() >= version.Capella:
-				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
-				if err != nil {
-					return errors.Wrap(err, "failed to get execution payload")
-				}
-				// Compare payload values between local and builder. Default to the local value if it is higher.
-				localValueGwei, err := localPayload.ValueInGwei()
-				if err != nil {
-					return errors.Wrap(err, "failed to get local payload value")
-				}
-				builderValueGwei, err := builderPayload.ValueInGwei()
-				if err != nil {
-					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-				}
+			return errors.Wrap(err, "failed to get local payload value")
+		}
+		builderValueGwei, err := builderPayload.ValueInGwei()
+		if err != nil {
+			log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+			return blk.SetExecution(localPayload)
+		}
 
-				withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
-				if err != nil {
-					tracing.AnnotateError(span, err)
-					return errors.Wrap(err, "failed to match withdrawals root")
-				}
+		withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			log.WithError(err).Warn("Proposer: failed to match withdrawals root")
+			return blk.SetExecution(localPayload)
+		}
 
-				// Use builder payload if the following in true:
-				// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
-				boost := params.BeaconConfig().LocalBlockValueBoost
-				higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
+		// Use builder payload if the following in true:
+		// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
+		boost := params.BeaconConfig().LocalBlockValueBoost
+		higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
 
-				// If we can't get the builder value, just use local block.
-				if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
-					blk.SetBlinded(true)
-					if err := blk.SetExecution(builderPayload); err != nil {
-						log.WithError(err).Warn("Proposer: failed to set builder payload")
-						blk.SetBlinded(false)
-					} else {
-						return nil
-					}
-				}
-				if !higherValueBuilder {
-					log.WithFields(logrus.Fields{
-						"localGweiValue":       localValueGwei,
-						"localBoostPercentage": boost,
-						"builderGweiValue":     builderValueGwei,
-					}).Warn("Proposer: using local execution payload because higher value")
-				}
-				span.AddAttributes(
-					trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
-					trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
-					trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
-					trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
-				)
+		// If we can't get the builder value, just use local block.
+		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
+			blk.SetBlinded(true)
+			if err := blk.SetExecution(builderPayload); err != nil {
+				log.WithError(err).Warn("Proposer: failed to set builder payload")
+				blk.SetBlinded(false)
 				return blk.SetExecution(localPayload)
-			default: // Bellatrix case.
-				blk.SetBlinded(true)
-				if err := blk.SetExecution(builderPayload); err != nil {
-					log.WithError(err).Warn("Proposer: failed to set builder payload")
-					blk.SetBlinded(false)
-				} else {
-					return nil
-				}
+			} else {
+				return nil
 			}
 		}
+		if !higherValueBuilder {
+			log.WithFields(logrus.Fields{
+				"localGweiValue":       localValueGwei,
+				"localBoostPercentage": boost,
+				"builderGweiValue":     builderValueGwei,
+			}).Warn("Proposer: using local execution payload because higher value")
+		}
+		span.AddAttributes(
+			trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
+			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
+		)
+		return blk.SetExecution(localPayload)
+	default: // Bellatrix case.
+		blk.SetBlinded(true)
+		if err := blk.SetExecution(builderPayload); err != nil {
+			log.WithError(err).Warn("Proposer: failed to set builder payload")
+			blk.SetBlinded(false)
+			return blk.SetExecution(localPayload)
+		} else {
+			return nil
+		}
 	}
-	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
-	if err != nil {
-		return errors.Wrap(err, "failed to get execution payload")
-	}
-	return blk.SetExecution(executionData)
 }
 
 // This function retrieves the payload header given the slot number and the validator index.
