@@ -2,6 +2,7 @@ package builder
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -16,6 +17,7 @@ import (
 	"strconv"
 )
 
+// ExpectedWithdrawals Get the withdrawals computed from the specified state, that will be included in the block that gets built on the specified state.
 func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Retrieve beacon state
 	stateId := mux.Vars(r)["state_id"]
@@ -28,7 +30,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	}
 	st, err := s.Stater.State(r.Context(), []byte(stateId))
 	if err != nil {
-		network.WriteError(w, handleWrapError(err, "could not retrieve state_id", http.StatusNotFound))
+		network.WriteError(w, handleWrapError(err, "could not retrieve state", http.StatusNotFound))
 		return
 	}
 	queryParam := r.URL.Query().Get("proposal_slot")
@@ -64,10 +66,9 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	lookAheadLimit := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().MaxSeedLookahead)))
-	// SafeSub not needed as we have checked that proposal slot cannot be lesser than Capella start epoch
-	if proposalSlot.Sub(lookAheadLimit) >= st.Slot() {
+	if st.Slot().Add(lookAheadLimit) <= proposalSlot {
 		network.WriteError(w, &network.DefaultErrorJson{
-			Message: fmt.Sprintf("proposal slot cannot be more than %d slots ahead of state slot", lookAheadLimit),
+			Message: fmt.Sprintf("proposal slot cannot be >= %d slots ahead of state slot", lookAheadLimit),
 			Code:    http.StatusBadRequest,
 		})
 		return
@@ -83,8 +84,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, handleWrapError(err, "could not get block root", http.StatusInternalServerError))
 		return
 	}
-	var blockRoot [32]byte
-	copy(blockRoot[:], root)
+	var blockRoot = [32]byte(root)
 	isFinalized := s.FinalizationFetcher.IsFinalized(r.Context(), blockRoot)
 	// Advance state forward to proposal slot
 	st, err = transition.ProcessSlots(r.Context(), st, proposalSlot)

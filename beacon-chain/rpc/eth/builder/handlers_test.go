@@ -77,7 +77,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 				strconv.FormatUint(uint64(currentSlot+128), 10),
 			urlParams:    map[string]string{"state_id": "head"},
 			state:        st,
-			errorMessage: "proposal slot cannot be more than 128 slots ahead of state slot",
+			errorMessage: "proposal slot cannot be >= 128 slots ahead of state slot",
 		},
 	}
 
@@ -114,10 +114,12 @@ func TestExpectedWithdrawals(t *testing.T) {
 	mockChainService := &mock.ChainService{Optimistic: true}
 
 	t.Run("get correct expected withdrawals", func(t *testing.T) {
-		saved := params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep
-		params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = 16
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.MaxValidatorsPerWithdrawalsSweep = 16
+		params.OverrideBeaconConfig(cfg)
 
-		// Overwrite current state copy with updated validator fields
+		// Update state with updated validator fields
 		valCount := 17
 		validators := make([]*eth.Validator, 0, valCount)
 		balances := make([]uint64, 0, valCount)
@@ -203,8 +205,5 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.DeepEqual(t, expectedWithdrawal1, resp.Data[0])
 		require.DeepEqual(t, expectedWithdrawal2, resp.Data[1])
 		require.DeepEqual(t, expectedWithdrawal3, resp.Data[2])
-
-		// Restore original config settings
-		params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = saved
 	})
 }
