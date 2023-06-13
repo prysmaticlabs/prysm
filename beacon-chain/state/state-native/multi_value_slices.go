@@ -1,8 +1,13 @@
 package state_native
 
 import (
+	"runtime"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
+	"github.com/sirupsen/logrus"
 )
 
 type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte, *BeaconState]
@@ -44,6 +49,13 @@ func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 	}
 }
 
+var (
+	balancesCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "balances_count",
+		Help: "Count the number of active balance objects.",
+	})
+)
+
 type MultiValueBalances = multi_value_slice.Slice[uint64, *BeaconState]
 
 func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
@@ -51,8 +63,19 @@ func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
 	for i, v := range balances {
 		items[i] = &multi_value_slice.ShareableMultiValue[uint64]{Shared: v, Individual: nil}
 	}
-	return &MultiValueBalances{
+	b := &MultiValueBalances{
 		OriginalItems: items,
 		AppendedItems: []*multi_value_slice.MultiValue[uint64]{},
 	}
+
+	balancesCount.Inc()
+	logrus.Warn("Creating balances")
+	runtime.SetFinalizer(b, balancesFinalizer)
+
+	return b
+}
+
+func balancesFinalizer(b *MultiValueBalances) {
+	balancesCount.Dec()
+	logrus.Warn("Removing balances")
 }
