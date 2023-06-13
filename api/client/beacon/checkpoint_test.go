@@ -440,7 +440,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 		case renderGetStatePath(IdFinalized):
 			res.StatusCode = http.StatusOK
 			res.Body = io.NopCloser(bytes.NewBuffer(ms))
-		case renderGetBlockPath(IdFromRoot(br)):
+		case renderGetBlockPath(IdFromSlot(b.Block().Slot())):
 			res.StatusCode = http.StatusOK
 			res.Body = io.NopCloser(bytes.NewBuffer(mb))
 		default:
