@@ -16,7 +16,7 @@ import (
 	"strconv"
 )
 
-func (s *Server) GetExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Retrieve beacon state
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {

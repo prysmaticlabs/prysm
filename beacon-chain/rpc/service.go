@@ -220,7 +220,7 @@ func (s *Service) Start() {
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		Stater:                stater,
 	}
-	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.GetExpectedWithdrawals)
+	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,

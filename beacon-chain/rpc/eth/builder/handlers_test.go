@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TestGetExpectedWithdrawals_BadRequest(t *testing.T) {
+func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 	st, err := util.NewBeaconStateCapella()
 	slotsAhead := 5000
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestGetExpectedWithdrawals_BadRequest(t *testing.T) {
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
-			s.GetExpectedWithdrawals(writer, request)
+			s.ExpectedWithdrawals(writer, request)
 			assert.Equal(t, http.StatusBadRequest, writer.Code)
 			e := &network.DefaultErrorJson{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
@@ -103,7 +103,7 @@ func TestGetExpectedWithdrawals_BadRequest(t *testing.T) {
 	}
 }
 
-func TestGetExpectedWithdrawals(t *testing.T) {
+func TestExpectedWithdrawals(t *testing.T) {
 	st, err := util.NewBeaconStateCapella()
 	slotsAhead := 5000
 	require.NoError(t, err)
@@ -172,7 +172,7 @@ func TestGetExpectedWithdrawals(t *testing.T) {
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
-		s.GetExpectedWithdrawals(writer, request)
+		s.ExpectedWithdrawals(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		resp := &ExpectedWithdrawalsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
