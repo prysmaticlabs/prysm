@@ -19,11 +19,18 @@ func setKzgCommitments(blk interfaces.SignedBeaconBlock, bundle *enginev1.BlobsB
 	if slots.ToEpoch(slot) < params.BeaconConfig().DenebForkEpoch {
 		return nil
 	}
+	if bundle == nil {
+		return nil
+	}
 	return blk.SetBlobKzgCommitments(bundle.KzgCommitments)
 }
 
 // coverts a blobs bundle to a sidecar format.
 func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.BlobSidecar, error) {
+	if bundle == nil {
+		return nil, nil
+	}
+
 	r, err := blk.HashTreeRoot()
 	if err != nil {
 		return nil, err

@@ -81,8 +81,8 @@ github.com/Joker/jade v1.0.1-0.20190614124447-d475f43051e7/go.mod h1:6E6s8o2AE4K
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20221202121132-bd37e8fb1d0d h1:DyFNUJjW7jX3w+QPsDw4cdwZ2j6BapkuQpiUg5IefzE=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20221202121132-bd37e8fb1d0d/go.mod h1:BSKhCg8phwi9taTm849mjagbJqs5fpFFXCc6uH4qaT4=
-github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20230612191436-8a26268cae09 h1:OorwV3GTzVQEGUC0omSY8W/mNyXzjS01qdIg3+cDRcw=
-github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20230612191436-8a26268cae09/go.mod h1:GXnDoy6ShaCzPXPfMcof5rPnVDwuckBAlW8jgH1jdl4=
+github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20230613102258-55b3a6ab569c h1:WiRREOiTUHh/ka2Bm18hKweOPRGhPOKJLMBz/Mt6SnE=
+github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20230613102258-55b3a6ab569c/go.mod h1:+w28TSqwMtERyOD7XwpSt+KuWeZvzi5i8CWBxCcNoPo=
 github.com/MariusVanDerWijden/tx-fuzz v1.0.2 h1:H/C75+C305sWTF2ZoC4wZlJrMOpQ1YIdUBPL48ILIWI=
 github.com/MariusVanDerWijden/tx-fuzz v1.0.2/go.mod h1:jrK+Lr2mr1+6Pm3LlQ6rGHgK3WRQ9VMTiX+2mPMe6ys=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
@@ -249,8 +249,8 @@ github.com/cpuguy83/go-md2man/v2 v2.0.0/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsr
 github.com/cpuguy83/go-md2man/v2 v2.0.2 h1:p1EgwI/C7NhT0JmVkwCD2ZBK8j4aeHQX2pMHHBfMQ6w=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/crate-crypto/go-ipa v0.0.0-20220523130400-f11357ae11c7/go.mod h1:gFnFS95y8HstDP6P9pPwzrxOOC5TRDkwbM+ao15ChAI=
-github.com/crate-crypto/go-kzg-4844 v0.2.0 h1:UVuHOE+5tIWrim4zf/Xaa43+MIsDCPyW76QhUpiMGj4=
-github.com/crate-crypto/go-kzg-4844 v0.2.0/go.mod h1:SBP7ikXEgDnUPONgm33HtuDZEDtWa3L4QtN1ocJSEQ4=
+github.com/crate-crypto/go-kzg-4844 v0.3.0 h1:UBlWE0CgyFqqzTI+IFyCzA7A3Zw4iip6uzRv5NIXG0A=
+github.com/crate-crypto/go-kzg-4844 v0.3.0/go.mod h1:SBP7ikXEgDnUPONgm33HtuDZEDtWa3L4QtN1ocJSEQ4=
 github.com/creack/pty v1.1.7/go.mod h1:lj5s0c3V2DBrqTV7llrYr5NG6My20zk30Fl46Y7DoTY=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/cyberdelia/templates v0.0.0-20141128023046-ca7fffd4298c/go.mod h1:GyV+0YP4qX0UQ7r2MoYZ+AvYDp12OF5yg4q8rGnyNh4=
