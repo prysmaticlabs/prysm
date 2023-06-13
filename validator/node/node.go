@@ -593,10 +593,8 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 					config.GasLimit = option.Builder.GasLimit
 				}
 				option.Builder = config
-			} else {
-				if option.Builder != nil {
-					option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
-				}
+			} else if option.Builder != nil {
+				option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
 			}
 			o := &validatorServiceConfig.ProposerOption{
 				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
