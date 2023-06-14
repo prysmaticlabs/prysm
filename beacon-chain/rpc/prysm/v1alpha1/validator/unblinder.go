@@ -59,8 +59,9 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	if err = sb.SetExecution(h); err != nil {
 		return nil, errors.Wrap(err, "could not set execution")
 	}
-
-	payload, err := u.builder.SubmitBlindedBlock(ctx, sb)
+	// TODO: replace nil with proper variable for signed blinded blob sidecars
+	// replace _ with blob bundle and use it in the response.
+	payload, _, err := u.builder.SubmitBlindedBlock(ctx, sb, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not submit blinded block")
 	}

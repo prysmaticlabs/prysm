@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -1024,6 +1025,296 @@ func (b *BlindedBeaconBlockBodyCapella) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// ExecHeaderResponseDeneb is the header response for builder API /eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}.
+type ExecHeaderResponseDeneb struct {
+	Data struct {
+		Signature hexutil.Bytes    `json:"signature"`
+		Message   *BuilderBidDeneb `json:"message"`
+	} `json:"data"`
+}
+
+// ToProto creates a SignedBuilderBidDeneb Proto from ExecHeaderResponseDeneb.
+func (ehr *ExecHeaderResponseDeneb) ToProto() (*eth.SignedBuilderBidDeneb, error) {
+	bb, err := ehr.Data.Message.ToProto()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.SignedBuilderBidDeneb{
+		Message:   bb,
+		Signature: bytesutil.SafeCopyBytes(ehr.Data.Signature),
+	}, nil
+}
+
+// ToProto creates a BuilderBidDeneb Proto from BuilderBidDeneb.
+func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
+	header, err := bb.Header.ToProto()
+	if err != nil {
+		return nil, err
+	}
+	bundle, err := bb.BlindedBlobsBundle.ToProto()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.BuilderBidDeneb{
+		Header:             header,
+		BlindedBlobsBundle: bundle,
+		Value:              bytesutil.SafeCopyBytes(bb.Value.SSZBytes()),
+		Pubkey:             bytesutil.SafeCopyBytes(bb.Pubkey),
+	}, nil
+}
+
+// BuilderBidDeneb is a field of ExecHeaderResponseDeneb.
+type BuilderBidDeneb struct {
+	Header             *ExecutionPayloadHeaderDeneb `json:"header"`
+	BlindedBlobsBundle *BlindedBlobsBundle          `json:"blinded_blobs_bundle"`
+	Value              Uint256                      `json:"value"`
+	Pubkey             hexutil.Bytes                `json:"pubkey"`
+}
+
+// BlindedBlobsBundle is a field of BuilderBidDeneb and represents the blinded blobs of the associated header.
+type BlindedBlobsBundle struct {
+	KzgCommitments []hexutil.Bytes `json:"commitments"`
+	Proofs         []hexutil.Bytes `json:"proofs"`
+	BlobRoots      []hexutil.Bytes `json:"blob_roots"`
+}
+
+// ToProto creates a BlindedBlobsBundle Proto from BlindedBlobsBundle.
+func (r *BlindedBlobsBundle) ToProto() (*v1.BlindedBlobsBundle, error) {
+	kzg := make([][]byte, len(r.KzgCommitments))
+	for i := range kzg {
+		kzg[i] = bytesutil.SafeCopyBytes(r.KzgCommitments[i])
+	}
+
+	proofs := make([][]byte, len(r.Proofs))
+	for i := range proofs {
+		proofs[i] = bytesutil.SafeCopyBytes(r.Proofs[i])
+	}
+
+	blobRoots := make([][]byte, len(r.BlobRoots))
+	for i := range blobRoots {
+		blobRoots[i] = bytesutil.SafeCopyBytes(r.BlobRoots[i])
+	}
+
+	return &v1.BlindedBlobsBundle{
+		KzgCommitments: kzg,
+		Proofs:         proofs,
+		BlobRoots:      blobRoots,
+	}, nil
+}
+
+// ExecutionPayloadHeaderDeneb a field part of the BuilderBidDeneb.
+type ExecutionPayloadHeaderDeneb struct {
+	ParentHash       hexutil.Bytes `json:"parent_hash"`
+	FeeRecipient     hexutil.Bytes `json:"fee_recipient"`
+	StateRoot        hexutil.Bytes `json:"state_root"`
+	ReceiptsRoot     hexutil.Bytes `json:"receipts_root"`
+	LogsBloom        hexutil.Bytes `json:"logs_bloom"`
+	PrevRandao       hexutil.Bytes `json:"prev_randao"`
+	BlockNumber      Uint64String  `json:"block_number"`
+	GasLimit         Uint64String  `json:"gas_limit"`
+	GasUsed          Uint64String  `json:"gas_used"`
+	Timestamp        Uint64String  `json:"timestamp"`
+	ExtraData        hexutil.Bytes `json:"extra_data"`
+	BaseFeePerGas    Uint256       `json:"base_fee_per_gas"`
+	BlockHash        hexutil.Bytes `json:"block_hash"`
+	TransactionsRoot hexutil.Bytes `json:"transactions_root"`
+	WithdrawalsRoot  hexutil.Bytes `json:"withdrawals_root"`
+	DataGasUsed      Uint64String  `json:"data_gas_used"`   // new in deneb
+	ExcessDataGas    Uint64String  `json:"excess_data_gas"` // new in deneb
+	*v1.ExecutionPayloadHeaderDeneb
+}
+
+// MarshalJSON returns a JSON byte array representing the ExecutionPayloadHeaderDeneb struct.
+func (h *ExecutionPayloadHeaderDeneb) MarshalJSON() ([]byte, error) {
+	type MarshalCaller ExecutionPayloadHeaderDeneb
+	baseFeePerGas, err := sszBytesToUint256(h.ExecutionPayloadHeaderDeneb.BaseFeePerGas)
+	if err != nil {
+		return []byte{}, errors.Wrapf(err, "invalid BaseFeePerGas")
+	}
+	return json.Marshal(&MarshalCaller{
+		ParentHash:       h.ExecutionPayloadHeaderDeneb.ParentHash,
+		FeeRecipient:     h.ExecutionPayloadHeaderDeneb.FeeRecipient,
+		StateRoot:        h.ExecutionPayloadHeaderDeneb.StateRoot,
+		ReceiptsRoot:     h.ExecutionPayloadHeaderDeneb.ReceiptsRoot,
+		LogsBloom:        h.ExecutionPayloadHeaderDeneb.LogsBloom,
+		PrevRandao:       h.ExecutionPayloadHeaderDeneb.PrevRandao,
+		BlockNumber:      Uint64String(h.ExecutionPayloadHeaderDeneb.BlockNumber),
+		GasLimit:         Uint64String(h.ExecutionPayloadHeaderDeneb.GasLimit),
+		GasUsed:          Uint64String(h.ExecutionPayloadHeaderDeneb.GasUsed),
+		Timestamp:        Uint64String(h.ExecutionPayloadHeaderDeneb.Timestamp),
+		ExtraData:        h.ExecutionPayloadHeaderDeneb.ExtraData,
+		BaseFeePerGas:    baseFeePerGas,
+		BlockHash:        h.ExecutionPayloadHeaderDeneb.BlockHash,
+		TransactionsRoot: h.ExecutionPayloadHeaderDeneb.TransactionsRoot,
+		WithdrawalsRoot:  h.ExecutionPayloadHeaderDeneb.WithdrawalsRoot,
+		DataGasUsed:      Uint64String(h.ExecutionPayloadHeaderDeneb.DataGasUsed),
+		ExcessDataGas:    Uint64String(h.ExecutionPayloadHeaderDeneb.ExcessDataGas),
+	})
+}
+
+// UnmarshalJSON takes in a byte array and unmarshals the value into ExecutionPayloadHeaderDeneb.
+func (h *ExecutionPayloadHeaderDeneb) UnmarshalJSON(b []byte) error {
+	type UnmarshalCaller ExecutionPayloadHeaderDeneb
+	uc := &UnmarshalCaller{}
+	if err := json.Unmarshal(b, uc); err != nil {
+		return err
+	}
+	ep := ExecutionPayloadHeaderDeneb(*uc)
+	*h = ep
+	var err error
+	h.ExecutionPayloadHeaderDeneb, err = h.ToProto()
+	return err
+}
+
+// ToProto returns a ExecutionPayloadHeaderDeneb Proto object.
+func (h *ExecutionPayloadHeaderDeneb) ToProto() (*v1.ExecutionPayloadHeaderDeneb, error) {
+	return &v1.ExecutionPayloadHeaderDeneb{
+		ParentHash:       bytesutil.SafeCopyBytes(h.ParentHash),
+		FeeRecipient:     bytesutil.SafeCopyBytes(h.FeeRecipient),
+		StateRoot:        bytesutil.SafeCopyBytes(h.StateRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(h.ReceiptsRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(h.LogsBloom),
+		PrevRandao:       bytesutil.SafeCopyBytes(h.PrevRandao),
+		BlockNumber:      uint64(h.BlockNumber),
+		GasLimit:         uint64(h.GasLimit),
+		GasUsed:          uint64(h.GasUsed),
+		Timestamp:        uint64(h.Timestamp),
+		ExtraData:        bytesutil.SafeCopyBytes(h.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(h.BaseFeePerGas.SSZBytes()),
+		BlockHash:        bytesutil.SafeCopyBytes(h.BlockHash),
+		TransactionsRoot: bytesutil.SafeCopyBytes(h.TransactionsRoot),
+		WithdrawalsRoot:  bytesutil.SafeCopyBytes(h.WithdrawalsRoot),
+		DataGasUsed:      uint64(h.DataGasUsed),
+		ExcessDataGas:    uint64(h.ExcessDataGas),
+	}, nil
+}
+
+// ExecPayloadResponseDeneb the response to the build API /eth/v1/builder/blinded_blocks that includes the version, execution payload object , and blobs bundle object.
+type ExecPayloadResponseDeneb struct {
+	Version string                               `json:"version"`
+	Data    *ExecutionPayloadDenebAndBlobsBundle `json:"data"`
+}
+
+// ExecutionPayloadDenebAndBlobsBundle the main field used in ExecPayloadResponseDeneb.
+type ExecutionPayloadDenebAndBlobsBundle struct {
+	ExecutionPayload *ExecutionPayloadDeneb `json:"execution_payload"`
+	BlobsBundle      *BlobsBundle           `json:"blobs_bundle"`
+}
+
+// ExecutionPayloadDeneb is a field used in ExecutionPayloadDenebAndBlobsBundle.
+type ExecutionPayloadDeneb struct {
+	ParentHash    hexutil.Bytes   `json:"parent_hash"`
+	FeeRecipient  hexutil.Bytes   `json:"fee_recipient"`
+	StateRoot     hexutil.Bytes   `json:"state_root"`
+	ReceiptsRoot  hexutil.Bytes   `json:"receipts_root"`
+	LogsBloom     hexutil.Bytes   `json:"logs_bloom"`
+	PrevRandao    hexutil.Bytes   `json:"prev_randao"`
+	BlockNumber   Uint64String    `json:"block_number"`
+	GasLimit      Uint64String    `json:"gas_limit"`
+	GasUsed       Uint64String    `json:"gas_used"`
+	Timestamp     Uint64String    `json:"timestamp"`
+	ExtraData     hexutil.Bytes   `json:"extra_data"`
+	BaseFeePerGas Uint256         `json:"base_fee_per_gas"`
+	BlockHash     hexutil.Bytes   `json:"block_hash"`
+	Transactions  []hexutil.Bytes `json:"transactions"`
+	Withdrawals   []Withdrawal    `json:"withdrawals"`
+	DataGasUsed   Uint64String    `json:"data_gas_used"`   // new in deneb
+	ExcessDataGas Uint64String    `json:"excess_data_gas"` // new in deneb
+}
+
+// BlobsBundle is a field in ExecutionPayloadDenebAndBlobsBundle.
+type BlobsBundle struct {
+	Commitments []hexutil.Bytes `json:"commitments"`
+	Proofs      []hexutil.Bytes `json:"proofs"`
+	Blobs       []hexutil.Bytes `json:"blobs"`
+}
+
+// ToProto returns a BlobsBundle Proto.
+func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
+	commitments := make([][]byte, len(b.Commitments))
+	for i := range b.Commitments {
+		if len(b.Commitments[i]) != fieldparams.BLSPubkeyLength {
+			return nil, fmt.Errorf("commitment length %d is not %d", len(b.Commitments[i]), fieldparams.BLSPubkeyLength)
+		}
+		commitments[i] = bytesutil.SafeCopyBytes(b.Commitments[i])
+	}
+	proofs := make([][]byte, len(b.Proofs))
+	for i := range b.Proofs {
+		if len(b.Proofs[i]) != fieldparams.BLSPubkeyLength {
+			return nil, fmt.Errorf("proof length %d is not %d", len(b.Proofs[i]), fieldparams.BLSPubkeyLength)
+		}
+		proofs[i] = bytesutil.SafeCopyBytes(b.Proofs[i])
+	}
+	if len(b.Blobs) > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobsPerBlock)
+	}
+	blobs := make([][]byte, len(b.Blobs))
+	for i := range b.Blobs {
+		if len(b.Blobs[i]) != fieldparams.BlobLength {
+			return nil, fmt.Errorf("blob length %d is not %d", len(b.Blobs[i]), fieldparams.BlobLength)
+		}
+		blobs[i] = bytesutil.SafeCopyBytes(b.Blobs[i])
+	}
+	return &v1.BlobsBundle{
+		KzgCommitments: commitments,
+		Proofs:         proofs,
+		Blobs:          blobs,
+	}, nil
+}
+
+// ToProto returns ExecutionPayloadDeneb Proto and BlobsBundle Proto separately.
+func (r *ExecPayloadResponseDeneb) ToProto() (*v1.ExecutionPayloadDeneb, *v1.BlobsBundle, error) {
+	if r.Data == nil {
+		return nil, nil, errors.New("data field in response is empty")
+	}
+	payload, err := r.Data.ExecutionPayload.ToProto()
+	if err != nil {
+		return nil, nil, err
+	}
+	bundle, err := r.Data.BlobsBundle.ToProto()
+	if err != nil {
+		return nil, nil, err
+	}
+	return payload, bundle, nil
+}
+
+// ToProto returns the ExecutionPayloadDeneb Proto.
+func (p *ExecutionPayloadDeneb) ToProto() (*v1.ExecutionPayloadDeneb, error) {
+	txs := make([][]byte, len(p.Transactions))
+	for i := range p.Transactions {
+		txs[i] = bytesutil.SafeCopyBytes(p.Transactions[i])
+	}
+	withdrawals := make([]*v1.Withdrawal, len(p.Withdrawals))
+	for i, w := range p.Withdrawals {
+		withdrawals[i] = &v1.Withdrawal{
+			Index:          w.Index.Uint64(),
+			ValidatorIndex: types.ValidatorIndex(w.ValidatorIndex.Uint64()),
+			Address:        bytesutil.SafeCopyBytes(w.Address),
+			Amount:         w.Amount.Uint64(),
+		}
+	}
+	return &v1.ExecutionPayloadDeneb{
+		ParentHash:    bytesutil.SafeCopyBytes(p.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(p.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(p.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(p.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(p.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(p.PrevRandao),
+		BlockNumber:   uint64(p.BlockNumber),
+		GasLimit:      uint64(p.GasLimit),
+		GasUsed:       uint64(p.GasUsed),
+		Timestamp:     uint64(p.Timestamp),
+		ExtraData:     bytesutil.SafeCopyBytes(p.ExtraData),
+		BaseFeePerGas: bytesutil.SafeCopyBytes(p.BaseFeePerGas.SSZBytes()),
+		BlockHash:     bytesutil.SafeCopyBytes(p.BlockHash),
+		Transactions:  txs,
+		Withdrawals:   withdrawals,
+		DataGasUsed:   uint64(p.DataGasUsed),
+		ExcessDataGas: uint64(p.ExcessDataGas),
+	}, nil
+}
+
+// ErrorMessage is a JSON representation of the builder API's returned error message.
 type ErrorMessage struct {
 	Code        int      `json:"code"`
 	Message     string   `json:"message"`

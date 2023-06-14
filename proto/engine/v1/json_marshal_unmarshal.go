@@ -690,6 +690,14 @@ type BlobBundleJSON struct {
 	Blobs       [][]byte   `json:"blobs"`
 }
 
+func (b BlobBundleJSON) ToProto() *BlobsBundle {
+	return &BlobsBundle{
+		KzgCommitments: bytesutil.SafeCopy2dBytes(bytesutil.FromBytes48Array(b.Commitments)),
+		Proofs:         bytesutil.SafeCopy2dBytes(bytesutil.FromBytes48Array(b.Proofs)),
+		Blobs:          bytesutil.SafeCopy2dBytes(b.Blobs),
+	}
+}
+
 // MarshalJSON --
 func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	transactions := make([]hexutil.Bytes, len(e.Transactions))
@@ -728,11 +736,11 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 		Timestamp:     &timeStamp,
 		ExtraData:     e.ExtraData,
 		BaseFeePerGas: baseFeeHex,
-		ExcessDataGas: &excessDataGas,
-		DataGasUsed:   &dataGasUsed,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
 		Withdrawals:   e.Withdrawals,
+		DataGasUsed:   &dataGasUsed,
+		ExcessDataGas: &excessDataGas,
 	})
 }
 
