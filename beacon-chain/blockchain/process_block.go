@@ -659,11 +659,16 @@ func (s *Service) runLateBlockTasks() {
 	}
 	attThreshold := params.BeaconConfig().SecondsPerSlot / 3
 	ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
+
+	if err := s.waitForSync(); err != nil {
+		log.WithError(err).Error("failed to wait for initial sync")
+		return
+	}
+
 	for {
 		select {
 		case <-ticker.C():
 			s.lateBlockTasks(s.ctx)
-
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
@@ -718,5 +723,15 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	})
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
+	}
+}
+
+// waitForSync blocks until the node is synced to the head.
+func (s *Service) waitForSync() error {
+	select {
+	case <-s.syncComplete:
+		return nil
+	case <-s.ctx.Done():
+		return errors.New("context closed, exiting goroutine")
 	}
 }
