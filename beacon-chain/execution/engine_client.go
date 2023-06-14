@@ -23,7 +23,6 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -256,8 +255,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
-		v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value))
-		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, math.WeiToGwei(v))
+		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToGwei(result.Value))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -270,8 +268,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
-		v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(result.Value))
-		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, math.WeiToGwei(v))
+		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToGwei(result.Value))
 		if err != nil {
 			return nil, nil, err
 		}
