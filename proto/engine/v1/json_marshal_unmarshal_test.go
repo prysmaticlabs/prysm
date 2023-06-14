@@ -243,14 +243,14 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 				BaseFeePerGas: "0x123",
 				BlockHash:     &hash,
 				Transactions:  []hexutil.Bytes{{}},
-				DataGasUsed:   &dgu,
-				ExcessDataGas: &edg,
 				Withdrawals: []*enginev1.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
 					Address:        bytesutil.PadTo([]byte("address"), 20),
 					Amount:         1,
 				}},
+				DataGasUsed:   &dgu,
+				ExcessDataGas: &edg,
 			},
 		}
 		enc, err := json.Marshal(resp)
@@ -267,11 +267,11 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, uint64(2), pb.Payload.GasLimit)
 		require.DeepEqual(t, uint64(3), pb.Payload.GasUsed)
 		require.DeepEqual(t, uint64(4), pb.Payload.Timestamp)
+		require.DeepEqual(t, uint64(5), pb.Payload.DataGasUsed)
+		require.DeepEqual(t, uint64(6), pb.Payload.ExcessDataGas)
 		require.DeepEqual(t, extra.Bytes(), pb.Payload.ExtraData)
 		feePerGas := new(big.Int).SetBytes(pb.Payload.BaseFeePerGas)
 		require.Equal(t, "15832716547479101977395928904157292820330083199902421483727713169783165812736", feePerGas.String())
-		require.DeepEqual(t, uint64(5), pb.Payload.DataGasUsed)
-		require.DeepEqual(t, uint64(6), pb.Payload.ExcessDataGas)
 		require.DeepEqual(t, hash.Bytes(), pb.Payload.BlockHash)
 		require.DeepEqual(t, [][]byte{{}}, pb.Payload.Transactions)
 		require.Equal(t, 1, len(pb.Payload.Withdrawals))
