@@ -14,6 +14,7 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
@@ -61,14 +62,14 @@ func (e *EngineClient) ForkchoiceUpdated(
 // GetPayload --
 func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error) {
 	if slots.ToEpoch(s) >= params.BeaconConfig().DenebForkEpoch {
-		ed, err := blocks.WrappedExecutionPayloadDeneb(e.ExecutionPayloadDeneb, e.BlockValue)
+		ed, err := blocks.WrappedExecutionPayloadDeneb(e.ExecutionPayloadDeneb, math.Gwei(e.BlockValue))
 		if err != nil {
 			return nil, nil, err
 		}
 		return ed, e.BlobsBundle, nil
 	}
 	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
-		ed, err := blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
+		ed, err := blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, math.Gwei(e.BlockValue))
 		if err != nil {
 			return nil, nil, err
 		}
