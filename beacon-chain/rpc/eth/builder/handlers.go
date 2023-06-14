@@ -17,7 +17,7 @@ import (
 	"strconv"
 )
 
-// ExpectedWithdrawals Get the withdrawals computed from the specified state, that will be included in the block that gets built on the specified state.
+// ExpectedWithdrawals get the withdrawals computed from the specified state, that will be included in the block that gets built on the specified state.
 func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Retrieve beacon state
 	stateId := mux.Vars(r)["state_id"]
