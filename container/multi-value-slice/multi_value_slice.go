@@ -22,19 +22,15 @@ type MultiValue[V any] struct {
 	Individual []*Value[V]
 }
 
-type ShareableMultiValue[V any] struct {
-	Shared     V
-	Individual []*Value[V]
-}
-
 type Slice[V comparable, O Identifiable] struct {
-	OriginalItems []*ShareableMultiValue[V]
-	AppendedItems []*MultiValue[V]
-	lock          sync.RWMutex
+	SharedItems     []V
+	IndividualItems map[uint64]*MultiValue[V]
+	AppendedItems   []*MultiValue[V]
+	lock            sync.RWMutex
 }
 
 func (s *Slice[V, O]) Len(obj O) int {
-	l := len(s.OriginalItems)
+	l := len(s.SharedItems)
 	for i := 0; i < len(s.AppendedItems); i++ {
 		found := false
 		for _, mv := range s.AppendedItems[i].Individual {
@@ -56,19 +52,18 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	for _, item := range s.OriginalItems {
-		if item.Individual != nil {
-		outerLoop1:
-			for _, mv := range item.Individual {
-				for _, o := range mv.objs {
-					if o == src.Id() {
-						mv.objs = append(mv.objs, dst.Id())
-						break outerLoop1
-					}
+	for _, item := range s.IndividualItems {
+	outerLoop:
+		for _, mv := range item.Individual {
+			for _, o := range mv.objs {
+				if o == src.Id() {
+					mv.objs = append(mv.objs, dst.Id())
+					break outerLoop
 				}
 			}
 		}
 	}
+
 	for _, item := range s.AppendedItems {
 		found := false
 	outerLoop2:
@@ -91,27 +86,29 @@ func (s *Slice[V, O]) Value(obj O) []V {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	v := make([]V, len(s.OriginalItems))
-	for i, item := range s.OriginalItems {
-		if item.Individual == nil {
-			v[i] = s.OriginalItems[i].Shared
+	v := make([]V, len(s.SharedItems))
+	for i, item := range s.SharedItems {
+		ind, ok := s.IndividualItems[uint64(i)]
+		if !ok {
+			v[i] = item
 		} else {
 			found := false
-		outerLoop1:
-			for _, mv := range item.Individual {
+		outerLoop:
+			for _, mv := range ind.Individual {
 				for _, o := range mv.objs {
 					if o == obj.Id() {
 						v[i] = mv.val
 						found = true
-						break outerLoop1
+						break outerLoop
 					}
 				}
 			}
 			if !found {
-				v[i] = s.OriginalItems[i].Shared
+				v[i] = item
 			}
 		}
 	}
+
 	for _, item := range s.AppendedItems {
 		found := false
 	outerLoop2:
@@ -136,27 +133,27 @@ func (s *Slice[V, O]) At(obj O, i uint64) (V, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	if i >= uint64(len(s.OriginalItems)+len(s.AppendedItems)) {
+	if i >= uint64(len(s.SharedItems)+len(s.AppendedItems)) {
 		var def V
 		return def, fmt.Errorf("index %d is out of bounds", i)
 	}
 
-	isOriginal := i < uint64(len(s.OriginalItems))
+	isOriginal := i < uint64(len(s.SharedItems))
 	if isOriginal {
-		item := s.OriginalItems[i]
-		if item.Individual == nil {
-			return item.Shared, nil
+		ind, ok := s.IndividualItems[i]
+		if !ok {
+			return s.SharedItems[i], nil
 		}
-		for _, mv := range item.Individual {
+		for _, mv := range ind.Individual {
 			for _, o := range mv.objs {
 				if o == obj.Id() {
 					return mv.val, nil
 				}
 			}
 		}
-		return item.Shared, nil
+		return s.SharedItems[i], nil
 	} else {
-		item := s.AppendedItems[i-uint64(len(s.OriginalItems))]
+		item := s.AppendedItems[i-uint64(len(s.SharedItems))]
 		for _, mv := range item.Individual {
 			for _, o := range mv.objs {
 				if o == obj.Id() {
@@ -173,44 +170,55 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if i >= uint64(len(s.OriginalItems)+len(s.AppendedItems)) {
+	if i >= uint64(len(s.SharedItems)+len(s.AppendedItems)) {
 		return fmt.Errorf("index %d is out of bounds", i)
 	}
 
-	isOriginal := i < uint64(len(s.OriginalItems))
+	isOriginal := i < uint64(len(s.SharedItems))
 	if isOriginal {
-		item := s.OriginalItems[i]
-	outerLoop1:
-		for mvi, mv := range item.Individual {
-			for oi, o := range mv.objs {
-				if o == obj.Id() {
-					if len(mv.objs) == 1 {
-						item.Individual = append(item.Individual[:mvi], item.Individual[mvi+1:]...)
-					} else {
-						mv.objs = append(mv.objs[:oi], mv.objs[oi+1:]...)
+		ind, ok := s.IndividualItems[i]
+		if ok {
+		outerLoop:
+			for mvi, mv := range ind.Individual {
+				for oi, o := range mv.objs {
+					if o == obj.Id() {
+						if len(mv.objs) == 1 {
+							if len(ind.Individual) == 1 {
+								delete(s.IndividualItems, i)
+							} else {
+								ind.Individual = append(ind.Individual[:mvi], ind.Individual[mvi+1:]...)
+							}
+						} else {
+							mv.objs = append(mv.objs[:oi], mv.objs[oi+1:]...)
+						}
+						break outerLoop
 					}
-					break outerLoop1
 				}
 			}
 		}
 
-		if val == item.Shared {
+		if val == s.SharedItems[i] {
 			return nil
 		}
 
-		newValue := true
-		for _, mv := range item.Individual {
-			if mv.val == val {
-				mv.objs = append(mv.objs, obj.Id())
-				newValue = false
-				break
+		if !ok {
+			s.IndividualItems[i] = &MultiValue[V]{Individual: []*Value[V]{{val: val, objs: []uint64{obj.Id()}}}}
+		} else {
+			newValue := true
+			for _, mv := range ind.Individual {
+				if mv.val == val {
+					mv.objs = append(mv.objs, obj.Id())
+					newValue = false
+					break
+				}
+			}
+			if newValue {
+				ind.Individual = append(ind.Individual, &Value[V]{val: val, objs: []uint64{obj.Id()}})
 			}
 		}
-		if newValue {
-			item.Individual = append(item.Individual, &Value[V]{val: val, objs: []uint64{obj.Id()}})
-		}
+
 	} else {
-		item := s.AppendedItems[i-uint64(len(s.OriginalItems))]
+		item := s.AppendedItems[i-uint64(len(s.SharedItems))]
 		found := false
 	outerLoop2:
 		for mvi, mv := range item.Individual {
@@ -289,13 +297,17 @@ func (s *Slice[V, O]) Detach(obj O) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	for _, item := range s.OriginalItems {
+	for i, ind := range s.IndividualItems {
 	outerLoop1:
-		for mvi, mv := range item.Individual {
+		for mvi, mv := range ind.Individual {
 			for oi, o := range mv.objs {
 				if o == obj.Id() {
 					if len(mv.objs) == 1 {
-						item.Individual = append(item.Individual[:mvi], item.Individual[mvi+1:]...)
+						if len(ind.Individual) == 1 {
+							delete(s.IndividualItems, i)
+						} else {
+							ind.Individual = append(ind.Individual[:mvi], ind.Individual[mvi+1:]...)
+						}
 					} else {
 						mv.objs = append(mv.objs[:oi], mv.objs[oi+1:]...)
 					}
