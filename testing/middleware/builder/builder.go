@@ -276,7 +276,7 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	ax := types.Slot(slot)
 	currEpoch := types.Epoch(ax / params.BeaconConfig().SlotsPerEpoch)
 	if currEpoch >= params.BeaconConfig().CapellaForkEpoch {
-		p.handleHeadeRequestCapella(w)
+		p.handleHeaderRequestCapella(w)
 		return
 	}
 
@@ -354,7 +354,7 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (p *Builder) handleHeadeRequestCapella(w http.ResponseWriter) {
+func (p *Builder) handleHeaderRequestCapella(w http.ResponseWriter) {
 	b, err := p.retrievePendingBlockCapella()
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not retrieve pending block")
@@ -369,9 +369,11 @@ func (p *Builder) handleHeadeRequestCapella(w http.ResponseWriter) {
 		return
 	}
 	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
 	v = v.Mul(v, big.NewInt(2))
 	// Is used as the helper modifies the big.Int
 	weiVal := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
 	weiVal = weiVal.Mul(weiVal, big.NewInt(2))
 	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload, math.WeiToGwei(weiVal))
 	if err != nil {
