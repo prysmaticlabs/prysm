@@ -2,6 +2,7 @@ package builder
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -10,10 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -24,7 +27,7 @@ var ErrNoBuilder = errors.New("builder endpoint not configured")
 
 // BlockBuilder defines the interface for interacting with the block builder
 type BlockBuilder interface {
-	SubmitBlindedBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error)
+	SubmitBlindedBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blobs []*ethpb.SignedBlindedBlobSidecar) (interfaces.ExecutionData, *v1.BlobsBundle, error)
 	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error)
 	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
 	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
@@ -87,7 +90,7 @@ func (s *Service) Stop() error {
 }
 
 // SubmitBlindedBlock submits a blinded block to the builder relay network.
-func (s *Service) SubmitBlindedBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error) {
+func (s *Service) SubmitBlindedBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blobs []*ethpb.SignedBlindedBlobSidecar) (interfaces.ExecutionData, *v1.BlobsBundle, error) {
 	ctx, span := trace.StartSpan(ctx, "builder.SubmitBlindedBlock")
 	defer span.End()
 	start := time.Now()
@@ -95,10 +98,13 @@ func (s *Service) SubmitBlindedBlock(ctx context.Context, b interfaces.ReadOnlyS
 		submitBlindedBlockLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 	if s.c == nil {
-		return nil, ErrNoBuilder
+		return nil, nil, ErrNoBuilder
+	}
+	if uint64(len(blobs)) > fieldparams.MaxBlobsPerBlock {
+		return nil, nil, fmt.Errorf("blob count %d beyond max limit of %d", len(blobs), fieldparams.MaxBlobsPerBlock)
 	}
 
-	return s.c.SubmitBlindedBlock(ctx, b)
+	return s.c.SubmitBlindedBlock(ctx, b, blobs)
 }
 
 // GetHeader retrieves the header for a given slot and parent hash from the builder relay network.
