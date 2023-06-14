@@ -2,6 +2,8 @@ package builder
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
@@ -13,8 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/network"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"net/http"
-	"strconv"
 )
 
 // ExpectedWithdrawals get the withdrawals computed from the specified state, that will be included in the block that gets built on the specified state.
