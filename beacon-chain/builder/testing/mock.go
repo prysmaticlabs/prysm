@@ -26,9 +26,12 @@ type MockBuilderService struct {
 	HasConfigured         bool
 	Payload               *v1.ExecutionPayload
 	PayloadCapella        *v1.ExecutionPayloadCapella
+	PayloadDeneb          *v1.ExecutionPayloadDeneb
+	BlobBundle            *v1.BlobsBundle
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
 	BidCapella            *ethpb.SignedBuilderBidCapella
+	BidDeneb              *ethpb.SignedBuilderBidDeneb
 	RegistrationCache     *cache.RegistrationCache
 	ErrGetHeader          error
 	ErrRegisterValidator  error
@@ -41,23 +44,34 @@ func (s *MockBuilderService) Configured() bool {
 }
 
 // SubmitBlindedBlock for mocking.
-func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error) {
+func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.ReadOnlySignedBeaconBlock, _ []*ethpb.SignedBlindedBlobSidecar) (interfaces.ExecutionData, *v1.BlobsBundle, error) {
 	if s.Payload != nil {
 		w, err := blocks.WrappedExecutionPayload(s.Payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not wrap payload")
+			return nil, nil, errors.Wrap(err, "could not wrap payload")
 		}
-		return w, s.ErrSubmitBlindedBlock
+		return w, nil, s.ErrSubmitBlindedBlock
 	}
-	w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella, 0)
+	if s.PayloadCapella != nil {
+		w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella, 0)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not wrap capella payload")
+		}
+		return w, nil, s.ErrSubmitBlindedBlock
+	}
+
+	w, err := blocks.WrappedExecutionPayloadDeneb(s.PayloadDeneb, 0)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not wrap capella payload")
+		return nil, nil, errors.Wrap(err, "could not wrap deneb payload")
 	}
-	return w, s.ErrSubmitBlindedBlock
+	return w, s.BlobBundle, s.ErrSubmitBlindedBlock
 }
 
 // GetHeader for mocking.
 func (s *MockBuilderService) GetHeader(_ context.Context, slot primitives.Slot, _ [32]byte, _ [48]byte) (builder.SignedBid, error) {
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch || s.BidDeneb != nil {
+		return builder.WrappedSignedBuilderBidDeneb(s.BidDeneb)
+	}
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch || s.BidCapella != nil {
 		return builder.WrappedSignedBuilderBidCapella(s.BidCapella)
 	}
