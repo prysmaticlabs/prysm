@@ -13,6 +13,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// AttDelta contains rewards and penalties for a single attestation.
+type AttDelta struct {
+	HeadReward    uint64
+	SourceReward  uint64
+	SourcePenalty uint64
+	TargetReward  uint64
+	TargetPenalty uint64
+}
+
 // InitializePrecomputeValidators precomputes individual validator for its attested balances and the total sum of validators attested balances of the epoch.
 func InitializePrecomputeValidators(ctx context.Context, beaconState state.BeaconState) ([]*precompute.Validator, *precompute.Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.InitializePrecomputeValidators")
@@ -226,7 +235,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return beaconState, errors.New("validator registries not the same length as state's validator registries")
 	}
 
-	attsRewards, attsPenalties, err := AttestationsDelta(beaconState, bal, vals)
+	attDeltas, err := AttestationsDelta(beaconState, bal, vals)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
@@ -237,11 +246,12 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 		// Compute the post balance of the validator after accounting for the
 		// attester and proposer rewards and penalties.
-		balances[i], err = helpers.IncreaseBalanceWithVal(balances[i], attsRewards[i])
+		delta := attDeltas[i]
+		balances[i], err = helpers.IncreaseBalanceWithVal(balances[i], delta.HeadReward+delta.SourceReward+delta.TargetReward)
 		if err != nil {
 			return nil, err
 		}
-		balances[i] = helpers.DecreaseBalanceWithVal(balances[i], attsPenalties[i])
+		balances[i] = helpers.DecreaseBalanceWithVal(balances[i], delta.SourcePenalty+delta.TargetPenalty)
 
 		vals[i].AfterEpochTransitionBalance = balances[i]
 	}
@@ -255,10 +265,8 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
-	numOfVals := beaconState.NumValidators()
-	rewards = make([]uint64, numOfVals)
-	penalties = make([]uint64, numOfVals)
+func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, vals []*precompute.Validator) ([]*AttDelta, error) {
+	attDeltas := make([]*AttDelta, len(vals))
 
 	cfg := params.BeaconConfig()
 	prevEpoch := time.PrevEpoch(beaconState)
@@ -272,29 +280,29 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 	bias := cfg.InactivityScoreBias
 	inactivityPenaltyQuotient, err := beaconState.InactivityPenaltyQuotient()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	inactivityDenominator := bias * inactivityPenaltyQuotient
 
 	for i, v := range vals {
-		rewards[i], penalties[i], err = attestationDelta(bal, v, baseRewardMultiplier, inactivityDenominator, leak)
+		attDeltas[i], err = attestationDelta(bal, v, baseRewardMultiplier, inactivityDenominator, leak)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	return rewards, penalties, nil
+	return attDeltas, nil
 }
 
 func attestationDelta(
 	bal *precompute.Balance,
 	val *precompute.Validator,
 	baseRewardMultiplier, inactivityDenominator uint64,
-	inactivityLeak bool) (reward, penalty uint64, err error) {
+	inactivityLeak bool) (*AttDelta, error) {
 	eligible := val.IsActivePrevEpoch || (val.IsSlashed && !val.IsWithdrawableCurrentEpoch)
 	// Per spec `ActiveCurrentEpoch` can't be 0 to process attestation delta.
 	if !eligible || bal.ActiveCurrentEpoch == 0 {
-		return 0, 0, nil
+		return &AttDelta{}, nil
 	}
 
 	cfg := params.BeaconConfig()
@@ -307,32 +315,32 @@ func attestationDelta(
 	srcWeight := cfg.TimelySourceWeight
 	tgtWeight := cfg.TimelyTargetWeight
 	headWeight := cfg.TimelyHeadWeight
-	reward, penalty = uint64(0), uint64(0)
+	attDelta := &AttDelta{}
 	// Process source reward / penalty
 	if val.IsPrevEpochSourceAttester && !val.IsSlashed {
 		if !inactivityLeak {
 			n := baseReward * srcWeight * (bal.PrevEpochAttested / increment)
-			reward += n / (activeIncrement * weightDenominator)
+			attDelta.SourceReward += n / (activeIncrement * weightDenominator)
 		}
 	} else {
-		penalty += baseReward * srcWeight / weightDenominator
+		attDelta.SourcePenalty += baseReward * srcWeight / weightDenominator
 	}
 
 	// Process target reward / penalty
 	if val.IsPrevEpochTargetAttester && !val.IsSlashed {
 		if !inactivityLeak {
 			n := baseReward * tgtWeight * (bal.PrevEpochTargetAttested / increment)
-			reward += n / (activeIncrement * weightDenominator)
+			attDelta.TargetReward += n / (activeIncrement * weightDenominator)
 		}
 	} else {
-		penalty += baseReward * tgtWeight / weightDenominator
+		attDelta.TargetPenalty += baseReward * tgtWeight / weightDenominator
 	}
 
 	// Process head reward / penalty
 	if val.IsPrevEpochHeadAttester && !val.IsSlashed {
 		if !inactivityLeak {
 			n := baseReward * headWeight * (bal.PrevEpochHeadAttested / increment)
-			reward += n / (activeIncrement * weightDenominator)
+			attDelta.HeadReward += n / (activeIncrement * weightDenominator)
 		}
 	}
 
@@ -341,10 +349,10 @@ func attestationDelta(
 	if !val.IsPrevEpochTargetAttester || val.IsSlashed {
 		n, err := math.Mul64(effectiveBalance, val.InactivityScore)
 		if err != nil {
-			return 0, 0, err
+			return &AttDelta{}, err
 		}
-		penalty += n / inactivityDenominator
+		attDelta.TargetPenalty += n / inactivityDenominator
 	}
 
-	return reward, penalty, nil
+	return attDelta, nil
 }

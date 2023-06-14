@@ -11,17 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	coreblocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/math"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -308,7 +304,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	idealRewards := make([]AttReward, 32)
+	idealRewards := make([]IdealAttestationReward, 32)
 	idealVals := make([]*precompute.Validator, 32)
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	for i := 1; i < 33; i++ {
@@ -321,9 +317,9 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			IsPrevEpochTargetAttester:    true,
 			IsPrevEpochHeadAttester:      true,
 		}
-		idealRewards[i-1] = &IdealAttestationReward{EffectiveBalance: strconv.FormatUint(effectiveBalance, 10)}
+		idealRewards[i-1] = IdealAttestationReward{EffectiveBalance: strconv.FormatUint(effectiveBalance, 10)}
 	}
-	err = attestationsDelta(idealRewards, st, bal, idealVals)
+	deltas, err := altair.AttestationsDelta(st, bal, idealVals)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: "Could not get attestations delta: " + err.Error(),
@@ -332,12 +328,25 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
+	for i, d := range deltas {
+		idealRewards[i].Head = strconv.FormatUint(d.HeadReward, 10)
+		if d.SourcePenalty > 0 {
+			idealRewards[i].Source = fmt.Sprintf("-%s", strconv.FormatUint(d.SourcePenalty, 10))
+		} else {
+			idealRewards[i].Source = strconv.FormatUint(d.SourceReward, 10)
+		}
+		if d.TargetPenalty > 0 {
+			idealRewards[i].Target = fmt.Sprintf("-%s", strconv.FormatUint(d.TargetPenalty, 10))
+		} else {
+			idealRewards[i].Target = strconv.FormatUint(d.TargetReward, 10)
+		}
+	}
 
-	totalRewards := make([]AttReward, len(valIndices))
+	totalRewards := make([]TotalAttestationReward, len(valIndices))
 	for i, v := range valIndices {
-		totalRewards[i] = &TotalAttestationReward{ValidatorIndex: strconv.FormatUint(uint64(v), 10)}
+		totalRewards[i] = TotalAttestationReward{ValidatorIndex: strconv.FormatUint(uint64(v), 10)}
 	}
-	err = attestationsDelta(totalRewards, st, bal, filteredVals)
+	deltas, err = altair.AttestationsDelta(st, bal, filteredVals)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: "Could not get attestations delta: " + err.Error(),
@@ -346,132 +355,28 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
+	for i, d := range deltas {
+		totalRewards[i].Head = strconv.FormatUint(d.HeadReward, 10)
+		if d.SourcePenalty > 0 {
+			totalRewards[i].Source = fmt.Sprintf("-%s", strconv.FormatUint(d.SourcePenalty, 10))
+		} else {
+			totalRewards[i].Source = strconv.FormatUint(d.SourceReward, 10)
+		}
+		if d.TargetPenalty > 0 {
+			totalRewards[i].Target = fmt.Sprintf("-%s", strconv.FormatUint(d.TargetPenalty, 10))
+		} else {
+			totalRewards[i].Target = strconv.FormatUint(d.TargetReward, 10)
+		}
+	}
 
-	ir := make([]IdealAttestationReward, len(idealRewards))
-	for i, r := range idealRewards {
-		ir[i] = *r.(*IdealAttestationReward)
-	}
-	tr := make([]TotalAttestationReward, len(totalRewards))
-	for i, r := range totalRewards {
-		tr[i] = *r.(*TotalAttestationReward)
-	}
 	resp := &AttestationRewardsResponse{
 		Data: AttestationRewards{
-			IdealRewards: ir,
-			TotalRewards: tr,
+			IdealRewards: idealRewards,
+			TotalRewards: totalRewards,
 		},
 	}
 
 	network.WriteJson(w, resp)
-}
-
-func attestationsDelta(
-	rewards []AttReward,
-	beaconState state.BeaconState,
-	bal *precompute.Balance,
-	vals []*precompute.Validator,
-) error {
-	cfg := params.BeaconConfig()
-	prevEpoch := time.PrevEpoch(beaconState)
-	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
-	increment := cfg.EffectiveBalanceIncrement
-	factor := cfg.BaseRewardFactor
-	baseRewardMultiplier := increment * factor / math.CachedSquareRoot(bal.ActiveCurrentEpoch)
-	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
-
-	// Modified in Altair and Bellatrix.
-	bias := cfg.InactivityScoreBias
-	inactivityPenaltyQuotient, err := beaconState.InactivityPenaltyQuotient()
-	if err != nil {
-		return err
-	}
-	inactivityDenominator := bias * inactivityPenaltyQuotient
-
-	for i, r := range rewards {
-		err = singleAttDelta(r, bal, vals[i], baseRewardMultiplier, inactivityDenominator, leak)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func singleAttDelta(
-	reward AttReward,
-	bal *precompute.Balance,
-	val *precompute.Validator,
-	baseRewardMultiplier, inactivityDenominator uint64,
-	inactivityLeak bool) error {
-	// TODO: Move this outside
-	eligible := val.IsActivePrevEpoch || (val.IsSlashed && !val.IsWithdrawableCurrentEpoch)
-	// Per spec `ActiveCurrentEpoch` can't be 0 to process attestation delta.
-	if !eligible || bal.ActiveCurrentEpoch == 0 {
-		return nil
-	}
-
-	cfg := params.BeaconConfig()
-	increment := cfg.EffectiveBalanceIncrement
-	effectiveBalance := val.CurrentEpochEffectiveBalance
-	baseReward := (effectiveBalance / increment) * baseRewardMultiplier
-	activeIncrement := bal.ActiveCurrentEpoch / increment
-
-	weightDenominator := cfg.WeightDenominator
-	srcWeight := cfg.TimelySourceWeight
-	tgtWeight := cfg.TimelyTargetWeight
-	headWeight := cfg.TimelyHeadWeight
-	// Process source reward / penalty
-	if val.IsPrevEpochSourceAttester && !val.IsSlashed {
-		if inactivityLeak {
-			reward.SetSource("0")
-		} else {
-			n := baseReward * srcWeight * (bal.PrevEpochAttested / increment)
-			reward.SetSource(strconv.FormatUint(n/(activeIncrement*weightDenominator), 10))
-		}
-	} else {
-		reward.SetSource(strconv.FormatUint(-(baseReward * srcWeight / weightDenominator), 10))
-	}
-
-	// Process target reward / penalty
-	if val.IsPrevEpochTargetAttester && !val.IsSlashed {
-		if inactivityLeak {
-			reward.SetTarget("0")
-		} else {
-			n := baseReward * tgtWeight * (bal.PrevEpochTargetAttested / increment)
-			reward.SetTarget(strconv.FormatUint(n/(activeIncrement*weightDenominator), 10))
-		}
-	} else {
-		reward.SetTarget(strconv.FormatUint(-(baseReward * tgtWeight / weightDenominator), 10))
-	}
-
-	// Process head reward / penalty
-	if val.IsPrevEpochHeadAttester && !val.IsSlashed {
-		if inactivityLeak {
-			reward.SetHead("0")
-		} else {
-			n := baseReward * headWeight * (bal.PrevEpochHeadAttested / increment)
-			reward.SetHead(strconv.FormatUint(n/(activeIncrement*weightDenominator), 10))
-		}
-	} else {
-		reward.SetHead("0")
-	}
-
-	// Process finality delay penalty
-	// Apply an additional penalty to validators that did not vote on the correct target or slashed
-	if !val.IsPrevEpochTargetAttester || val.IsSlashed {
-		n, err := math.Mul64(effectiveBalance, val.InactivityScore)
-		if err != nil {
-			return err
-		}
-		r, err := strconv.ParseUint(reward.GetTarget(), 10, 64)
-		// This should never happen because we set the target reward earlier in this function.
-		if err != nil {
-			return err
-		}
-		reward.SetTarget(strconv.FormatUint(r-n/inactivityDenominator, 10))
-	}
-
-	return nil
 }
 
 func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) *network.DefaultErrorJson {

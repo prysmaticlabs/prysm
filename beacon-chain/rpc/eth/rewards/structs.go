@@ -26,34 +26,11 @@ type AttestationRewards struct {
 	TotalRewards []TotalAttestationReward
 }
 
-type AttReward interface {
-	SetHead(value string)
-	GetTarget() string
-	SetTarget(value string)
-	SetSource(value string)
-}
-
 type IdealAttestationReward struct {
 	EffectiveBalance string `json:"effective_balance"`
 	Head             string `json:"head"`
 	Target           string `json:"target"`
 	Source           string `json:"source"`
-}
-
-func (r *IdealAttestationReward) SetHead(value string) {
-	r.Head = value
-}
-
-func (r *IdealAttestationReward) GetTarget() string {
-	return r.Target
-}
-
-func (r *IdealAttestationReward) SetTarget(value string) {
-	r.Target = value
-}
-
-func (r *IdealAttestationReward) SetSource(value string) {
-	r.Source = value
 }
 
 type TotalAttestationReward struct {
@@ -62,20 +39,4 @@ type TotalAttestationReward struct {
 	Target         string `json:"target"`
 	Source         string `json:"source"`
 	InclusionDelay string `json:"inclusion_delay"`
-}
-
-func (r *TotalAttestationReward) SetHead(value string) {
-	r.Head = value
-}
-
-func (r *TotalAttestationReward) GetTarget() string {
-	return r.Target
-}
-
-func (r *TotalAttestationReward) SetTarget(value string) {
-	r.Target = value
-}
-
-func (r *TotalAttestationReward) SetSource(value string) {
-	r.Source = value
 }
