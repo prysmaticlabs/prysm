@@ -3,6 +3,7 @@ package blocks
 import (
 	"bytes"
 	"errors"
+	"math/big"
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -393,8 +395,8 @@ type executionPayloadCapella struct {
 }
 
 // WrappedExecutionPayloadCapella is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value uint64) (interfaces.ExecutionData, error) {
-	w := executionPayloadCapella{p: p, value: value}
+func WrappedExecutionPayloadCapella(p *enginev1.ExecutionPayloadCapella, value math.Gwei) (interfaces.ExecutionData, error) {
+	w := executionPayloadCapella{p: p, value: uint64(value)}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -565,8 +567,8 @@ type executionPayloadHeaderCapella struct {
 }
 
 // WrappedExecutionPayloadHeaderCapella is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value uint64) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderCapella{p: p, value: value}
+func WrappedExecutionPayloadHeaderCapella(p *enginev1.ExecutionPayloadHeaderCapella, value math.Gwei) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderCapella{p: p, value: uint64(value)}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -880,8 +882,8 @@ type executionPayloadHeaderDeneb struct {
 }
 
 // WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value uint64) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderDeneb{p: p, value: value}
+func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb, value math.Gwei) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderDeneb{p: p, value: uint64(value)}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1049,8 +1051,8 @@ type executionPayloadDeneb struct {
 }
 
 // WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value uint64) (interfaces.ExecutionData, error) {
-	w := executionPayloadDeneb{p: p, value: value}
+func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb, value math.Gwei) (interfaces.ExecutionData, error) {
+	w := executionPayloadDeneb{p: p, value: uint64(value)}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -1207,4 +1209,11 @@ func (e executionPayloadDeneb) ValueInGwei() (uint64, error) {
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadDeneb) IsBlinded() bool {
 	return false
+}
+
+// PayloadValueToGwei returns a Gwei value given the payload's value
+func PayloadValueToGwei(value []byte) math.Gwei {
+	// We have to convert big endian to little endian because the value is coming from the execution layer.
+	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(value))
+	return math.WeiToGwei(v)
 }
