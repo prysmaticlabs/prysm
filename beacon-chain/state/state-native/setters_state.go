@@ -11,7 +11,9 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.stateRoots.Detach(b)
+	if b.stateRoots != nil {
+		b.stateRoots.Detach(b)
+	}
 	b.stateRoots = NewMultiValueStateRoots(val)
 	b.markFieldAsDirty(types.StateRoots)
 	b.rebuildTrie[types.StateRoots] = true

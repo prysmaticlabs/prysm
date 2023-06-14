@@ -18,7 +18,6 @@ type Value[V any] struct {
 	objs []uint64
 }
 
-// TODO: Can this be removed and []*Value[V] used directly in methods?
 type MultiValue[V any] struct {
 	Individual []*Value[V]
 }

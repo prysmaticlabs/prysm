@@ -7,7 +7,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
-	"github.com/sirupsen/logrus"
 )
 
 type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte, *BeaconState]
@@ -15,7 +14,7 @@ type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte, *BeaconState]
 func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
 	items := make([]*multi_value_slice.ShareableMultiValue[[32]byte], fieldparams.RandaoMixesLength)
 	for i, v := range mixes {
-		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
+		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: [32]byte(v), Individual: nil}
 	}
 	return &MultiValueRandaoMixes{
 		OriginalItems: items,
@@ -28,7 +27,7 @@ type MultiValueBlockRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
 func NewMultiValueBlockRoots(roots [][]byte) *MultiValueBlockRoots {
 	items := make([]*multi_value_slice.ShareableMultiValue[[32]byte], fieldparams.BlockRootsLength)
 	for i, v := range roots {
-		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
+		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: [32]byte(v), Individual: nil}
 	}
 	return &MultiValueBlockRoots{
 		OriginalItems: items,
@@ -41,7 +40,7 @@ type MultiValueStateRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
 func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 	items := make([]*multi_value_slice.ShareableMultiValue[[32]byte], fieldparams.StateRootsLength)
 	for i, v := range roots {
-		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: *(*[32]byte)(v), Individual: nil}
+		items[i] = &multi_value_slice.ShareableMultiValue[[32]byte]{Shared: [32]byte(v), Individual: nil}
 	}
 	return &MultiValueStateRoots{
 		OriginalItems: items,
@@ -52,7 +51,6 @@ func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 var (
 	balancesCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "balances_count",
-		Help: "Count the number of active balance objects.",
 	})
 )
 
@@ -69,7 +67,6 @@ func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
 	}
 
 	balancesCount.Inc()
-	logrus.Warn("Creating balances")
 	runtime.SetFinalizer(b, balancesFinalizer)
 
 	return b
@@ -77,5 +74,4 @@ func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
 
 func balancesFinalizer(b *MultiValueBalances) {
 	balancesCount.Dec()
-	logrus.Warn("Removing balances")
 }

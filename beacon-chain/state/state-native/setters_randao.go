@@ -11,7 +11,9 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.randaoMixes.Detach(b)
+	if b.randaoMixes != nil {
+		b.randaoMixes.Detach(b)
+	}
 	b.randaoMixes = NewMultiValueRandaoMixes(val)
 	b.markFieldAsDirty(types.RandaoMixes)
 	b.rebuildTrie[types.RandaoMixes] = true

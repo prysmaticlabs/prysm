@@ -88,8 +88,10 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	if b.balances != nil {
+		b.balances.Detach(b)
+	}
 	b.balances = NewMultiValueBalances(val)
-
 	b.markFieldAsDirty(types.Balances)
 	b.rebuildTrie[types.Balances] = true
 	return nil
