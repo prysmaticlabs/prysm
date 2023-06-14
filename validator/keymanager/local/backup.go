@@ -44,11 +44,11 @@ func (_ *Keymanager) ExtractKeystores(
 			return nil, err
 		}
 		keystores[i] = &keymanager.Keystore{
-			Crypto:  cryptoFields,
-			ID:      id.String(),
-			Pubkey:  fmt.Sprintf("%x", pubKeyBytes),
-			Version: encryptor.Version(),
-			Name:    encryptor.Name(),
+			Crypto:      cryptoFields,
+			ID:          id.String(),
+			Pubkey:      fmt.Sprintf("%x", pubKeyBytes),
+			Version:     encryptor.Version(),
+			Description: encryptor.Name(),
 		}
 	}
 	return keystores, nil

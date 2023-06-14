@@ -89,6 +89,9 @@ func (s *Server) ImportKeystores(
 	for i := 0; i < len(req.Keystores); i++ {
 		k := &keymanager.Keystore{}
 		err = json.Unmarshal([]byte(req.Keystores[i]), k)
+		if k.Description == "" && k.Name != "" {
+			k.Description = k.Name
+		}
 		if err != nil {
 			// we want to ignore unmarshal errors for now, proper status in importKeystore
 			k.Pubkey = "invalid format"
