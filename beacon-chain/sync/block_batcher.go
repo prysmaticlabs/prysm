@@ -141,6 +141,9 @@ func newBlockBatch(start, reqEnd primitives.Slot, size uint64) (blockBatch, bool
 	if start > reqEnd {
 		return blockBatch{}, false
 	}
+	if size == 0 {
+		return blockBatch{}, false
+	}
 	nb := blockBatch{start: start, end: start.Add(size - 1)}
 	if nb.end > reqEnd {
 		nb.end = reqEnd
