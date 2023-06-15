@@ -139,13 +139,13 @@ func (c *Cache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *
 
 // FinalizedDeposits returns the finalized deposits trie.
 func (c *Cache) FinalizedDeposits(ctx context.Context) cache.FinalizedDeposits {
-	ctx, span := trace.StartSpan(ctx, "Cache.finalizedDepositsContainer")
+	ctx, span := trace.StartSpan(ctx, "Cache.FinalizedDeposits")
 	defer span.End()
 	c.depositsLock.RLock()
 	defer c.depositsLock.RUnlock()
 
 	return &finalizedDepositsContainer{
-		depositTree:     c.finalizedDeposits.depositTree,
+		depositTree:     c.finalizedDeposits.depositTree.Copy(),
 		merkleTrieIndex: c.finalizedDeposits.merkleTrieIndex,
 	}
 }

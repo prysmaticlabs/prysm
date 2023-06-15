@@ -83,7 +83,6 @@ func Test_fromSnapshotParts(t *testing.T) {
 			for i := 0; i < len(tt.finalized); i++ {
 				transformed[i] = bytesutil.SafeCopyBytes(tt.finalized[i][:])
 			}
-			fmt.Println(transformed)
 			generatedTrie, err := trie.GenerateTrieFromItems(transformed, 32)
 			require.NoError(t, err)
 

@@ -18,8 +18,8 @@ var (
 	ErrEmptyExecutionBlock = errors.New("empty execution block")
 	// ErrInvalidSnapshotRoot occurs when the snapshot root does not match the calculated root.
 	ErrInvalidSnapshotRoot = errors.New("snapshot root is invalid")
-	// ErrInvalidMixInLength occurs when the value for mix in length is 0.
-	ErrInvalidMixInLength = errors.New("depositCount should be greater than 0")
+	// ErrInvalidDepositCount occurs when the value for mix in length is 0.
+	ErrInvalidDepositCount = errors.New("depositCount should be greater than 0")
 	// ErrInvalidIndex occurs when the index is less than the number of finalized deposits.
 	ErrInvalidIndex = errors.New("index should be greater than finalizedDeposits - 1")
 	// ErrTooManyDeposits occurs when the number of deposits exceeds the capacity of the tree.
@@ -100,7 +100,7 @@ func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint
 // getProof returns the deposit tree proof.
 func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 	if d.depositCount <= 0 {
-		return [32]byte{}, nil, ErrInvalidMixInLength
+		return [32]byte{}, nil, ErrInvalidDepositCount
 	}
 	finalizedDeposits, _ := d.tree.GetFinalized([][32]byte{})
 	if finalizedDeposits != 0 {
@@ -173,4 +173,13 @@ func (d *DepositTree) MerkleProof(index int) ([][]byte, error) {
 		byteSlices[i] = p[:]
 	}
 	return byteSlices, nil
+}
+
+// Copy performs a deep copy of the tree.
+func (d *DepositTree) Copy() *DepositTree {
+	return &DepositTree{
+		tree:                    d.tree,
+		depositCount:            d.depositCount,
+		finalizedExecutionBlock: d.finalizedExecutionBlock,
+	}
 }
