@@ -8,6 +8,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -230,16 +231,29 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	fvs[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
+	fvs[bytesutil.ToBytes4(b.DenebForkVersion)] = b.DenebForkEpoch
 	return fvs
 }
 
 func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]string {
+	cfv := ConfigForkVersions(b)
 	fvn := map[[fieldparams.VersionLength]byte]string{}
-	fvn[bytesutil.ToBytes4(b.GenesisForkVersion)] = "phase0"
-	fvn[bytesutil.ToBytes4(b.AltairForkVersion)] = "altair"
-	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
-	fvn[bytesutil.ToBytes4(b.CapellaForkVersion)] = "capella"
+	for k, v := range cfv {
+		fvn[k] = version.String(v)
+	}
 	return fvn
+}
+
+// ConfigForkVersions returns a mapping between a fork version param and the version identifier
+// from the runtime/version package.
+func ConfigForkVersions(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]int {
+	return map[[fieldparams.VersionLength]byte]int{
+		bytesutil.ToBytes4(b.GenesisForkVersion):   version.Phase0,
+		bytesutil.ToBytes4(b.AltairForkVersion):    version.Altair,
+		bytesutil.ToBytes4(b.BellatrixForkVersion): version.Bellatrix,
+		bytesutil.ToBytes4(b.CapellaForkVersion):   version.Capella,
+		bytesutil.ToBytes4(b.DenebForkVersion):     version.Deneb,
+	}
 }
 
 // Eth1DataVotesLength returns the maximum length of the votes on the Eth1 data,
