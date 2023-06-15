@@ -36,4 +36,8 @@ func TestUnmarshalEpochParticipation(t *testing.T) {
 		require.NoError(t, ep.UnmarshalJSON([]byte("null")))
 		assert.DeepEqual(t, EpochParticipation([]string{}), ep)
 	})
+	t.Run("invalid value", func(t *testing.T) {
+		ep := EpochParticipation{}
+		require.ErrorContains(t, "could not decode epoch participation base64 value", ep.UnmarshalJSON([]byte("XdHJ1ZQ==X")))
+	})
 }

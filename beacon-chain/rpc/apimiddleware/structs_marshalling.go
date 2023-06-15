@@ -3,6 +3,7 @@ package apimiddleware
 import (
 	"encoding/base64"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -19,7 +20,9 @@ func (p *EpochParticipation) UnmarshalJSON(b []byte) error {
 	}
 
 	// Remove leading and trailing quotation marks.
-	decoded, err := base64.StdEncoding.DecodeString(string(b[1 : len(b)-1]))
+	jsonString := string(b)
+	jsonString = strings.Trim(jsonString, "\"")
+	decoded, err := base64.StdEncoding.DecodeString(jsonString)
 	if err != nil {
 		return errors.Wrapf(err, "could not decode epoch participation base64 value")
 	}
