@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -474,4 +475,116 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(blocks))
 	})
+}
+
+func TestBlobValidatorFromRootReq(t *testing.T) {
+	validRoot := bytesutil.PadTo([]byte("valid"), 32)
+	invalidRoot := bytesutil.PadTo([]byte("invalid"), 32)
+	cases := []struct {
+		name     string
+		ids      []*ethpb.BlobIdentifier
+		response []*ethpb.BlobSidecar
+		err      error
+	}{
+		{
+			name:     "valid",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
+			response: []*ethpb.BlobSidecar{{BlockRoot: validRoot}},
+		},
+		{
+			name:     "invalid",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
+			response: []*ethpb.BlobSidecar{{BlockRoot: invalidRoot}},
+			err:      ErrUnrequestedRoot,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := p2pTypes.BlobSidecarsByRootReq(c.ids)
+			vf := blobValidatorFromRootReq(&r)
+			for _, sc := range c.response {
+				err := vf(sc)
+				if c.err != nil {
+					require.ErrorIs(t, err, c.err)
+					return
+				}
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBlobValidatorFromRangeReq(t *testing.T) {
+	cases := []struct {
+		name     string
+		req      *ethpb.BlobSidecarsByRangeRequest
+		response []*ethpb.BlobSidecar
+		err      error
+	}{
+		{
+			name: "valid - count multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 14}},
+		},
+		{
+			name: "valid - count 1",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 10}},
+		},
+		{
+			name: "invalid - before",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 9}},
+			err:      ErrBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, count 1",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     1,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 11}},
+			err:      ErrBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 23}},
+			err:      ErrBlobResponseOutOfBounds,
+		},
+		{
+			name: "invalid - after, at boundary, multi",
+			req: &ethpb.BlobSidecarsByRangeRequest{
+				StartSlot: 10,
+				Count:     10,
+			},
+			response: []*ethpb.BlobSidecar{{Slot: 20}},
+			err:      ErrBlobResponseOutOfBounds,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			vf := blobValidatorFromRangeReq(c.req)
+			for _, sc := range c.response {
+				err := vf(sc)
+				if c.err != nil {
+					require.ErrorIs(t, err, c.err)
+					return
+				}
+				require.NoError(t, err)
+			}
+		})
+	}
 }
