@@ -1066,3 +1066,27 @@ func makeDepositProof() [][]byte {
 	}
 	return proof
 }
+
+func BenchmarkDepositTree_InsertNewImplementation(b *testing.B) {
+	totalDeposits := 10000
+	input := bytesutil.ToBytes32([]byte("foo"))
+	for i := 0; i < b.N; i++ {
+		dt := NewDepositTree()
+		for j := 0; j < totalDeposits; j++ {
+			err := dt.Insert(input[:], 0)
+			require.NoError(b, err)
+		}
+	}
+}
+func BenchmarkDepositTree_InsertOldImplementation(b *testing.B) {
+	totalDeposits := 10000
+	input := bytesutil.ToBytes32([]byte("foo"))
+	for i := 0; i < b.N; i++ {
+		dt, err := trie.NewTrie(33)
+		require.NoError(b, err)
+		for j := 0; j < totalDeposits; j++ {
+			err := dt.Insert(input[:], 0)
+			require.NoError(b, err)
+		}
+	}
+}
