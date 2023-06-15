@@ -162,7 +162,7 @@ func (s *Slice[V, O]) At(obj O, i uint64) (V, error) {
 			}
 		}
 		var def V
-		return def, fmt.Errorf("index %d out of bounds", i)
+		return def, fmt.Errorf("index %d is out of bounds", i)
 	}
 }
 
@@ -183,11 +183,12 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 				for oi, o := range mv.objs {
 					if o == obj.Id() {
 						if len(mv.objs) == 1 {
-							if len(ind.Individual) == 1 {
-								delete(s.IndividualItems, i)
-							} else {
-								ind.Individual = append(ind.Individual[:mvi], ind.Individual[mvi+1:]...)
-							}
+							// TODO: Can we delete this safely?
+							//if len(ind.Individual) == 1 {
+							//delete(s.IndividualItems, i)
+							//} else {
+							ind.Individual = append(ind.Individual[:mvi], ind.Individual[mvi+1:]...)
+							//}
 						} else {
 							mv.objs = append(mv.objs[:oi], mv.objs[oi+1:]...)
 						}
@@ -216,7 +217,6 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 				ind.Individual = append(ind.Individual, &Value[V]{val: val, objs: []uint64{obj.Id()}})
 			}
 		}
-
 	} else {
 		item := s.AppendedItems[i-uint64(len(s.SharedItems))]
 		found := false
@@ -298,7 +298,7 @@ func (s *Slice[V, O]) Detach(obj O) {
 	defer s.lock.Unlock()
 
 	for i, ind := range s.IndividualItems {
-	outerLoop1:
+	outerLoop:
 		for mvi, mv := range ind.Individual {
 			for oi, o := range mv.objs {
 				if o == obj.Id() {
@@ -311,7 +311,7 @@ func (s *Slice[V, O]) Detach(obj O) {
 					} else {
 						mv.objs = append(mv.objs[:oi], mv.objs[oi+1:]...)
 					}
-					break outerLoop1
+					break outerLoop
 				}
 			}
 		}
