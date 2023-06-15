@@ -175,6 +175,9 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 }
 
 // TODO: Explain the flow
+// TODO: Execution optimistic + finalized
+// TODO: Godoc
+// TODO: Inclusion delay
 func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 	segments := strings.Split(r.URL.Path, "/")
 	requestedEpoch, err := strconv.ParseUint(segments[len(segments)-1], 10, 64)
