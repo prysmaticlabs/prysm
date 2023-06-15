@@ -18,14 +18,13 @@ import (
 
 func TestNewRateLimiter(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
-	assert.Equal(t, len(rlimiter.limiterMap), 10, "correct number of topics not registered")
+	assert.Equal(t, len(rlimiter.limiterMap), 12, "correct number of topics not registered")
 }
 
 func TestNewRateLimiter_FreeCorrectly(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
 	rlimiter.free()
 	assert.Equal(t, len(rlimiter.limiterMap), 0, "rate limiter not freed correctly")
-
 }
 
 func TestRateLimiter_ExceedCapacity(t *testing.T) {
