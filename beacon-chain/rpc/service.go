@@ -293,6 +293,9 @@ func (s *Service) Start() {
 		HeadFetcher:               s.cfg.HeadFetcher,
 		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	}
+	s.cfg.Router.HandleFunc("/eth/v1/node/trusted_peers", nodeServerV1.ListTrustedPeer).Methods("GET")
+	s.cfg.Router.HandleFunc("/eth/v1/node/trusted_peers", nodeServerV1.AddTrustedPeer).Methods("POST")
+	s.cfg.Router.HandleFunc("/eth/v1/node/trusted_peers/{peer_id}", nodeServerV1.RemoveTrustedPeer).Methods("Delete")
 
 	beaconChainServer := &beaconv1alpha1.Server{
 		Ctx:                         s.ctx,

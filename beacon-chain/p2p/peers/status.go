@@ -912,6 +912,27 @@ func (p *Status) SetTrustedPeers(peers []peer.ID) {
 	p.store.SetTrustedPeers(peers)
 }
 
+// GetTrustedPeers returns a list of all trusted peers' ids
+func (p *Status) GetTrustedPeers() []peer.ID {
+	p.store.Lock()
+	defer p.store.Unlock()
+	return p.store.GetTrustedPeers()
+}
+
+// DeleteTrustedPeers remove peers from trusted peer set
+func (p *Status) DeleteTrustedPeers(peers []peer.ID) {
+	p.store.Lock()
+	defer p.store.Unlock()
+	p.store.DeleteTrustedPeers(peers)
+}
+
+// IsTrustedPeers returns if given peer is a Trusted peer
+func (p *Status) IsTrustedPeers(pid peer.ID) bool {
+	p.store.Lock()
+	defer p.store.Unlock()
+	return p.store.IsTrustedPeer(pid)
+}
+
 // this method assumes the store lock is acquired before
 // executing the method.
 func (p *Status) isfromBadIP(pid peer.ID) bool {
