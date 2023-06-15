@@ -15,7 +15,7 @@ import (
 // ExtractKeystores retrieves the secret keys for specified public keys
 // in the function input, encrypts them using the specified password,
 // and returns their respective EIP-2335 keystores.
-func (_ *Keymanager) ExtractKeystores(
+func (*Keymanager) ExtractKeystores(
 	_ context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*keymanager.Keystore, error) {
 	lock.Lock()
@@ -44,11 +44,11 @@ func (_ *Keymanager) ExtractKeystores(
 			return nil, err
 		}
 		keystores[i] = &keymanager.Keystore{
-			Crypto:  cryptoFields,
-			ID:      id.String(),
-			Pubkey:  fmt.Sprintf("%x", pubKeyBytes),
-			Version: encryptor.Version(),
-			Name:    encryptor.Name(),
+			Crypto:      cryptoFields,
+			ID:          id.String(),
+			Pubkey:      fmt.Sprintf("%x", pubKeyBytes),
+			Version:     encryptor.Version(),
+			Description: encryptor.Name(),
 		}
 	}
 	return keystores, nil
