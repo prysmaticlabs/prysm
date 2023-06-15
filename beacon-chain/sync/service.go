@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
@@ -282,6 +283,10 @@ func (s *Service) registerHandlers() {
 
 func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {
 	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.p2p)
+}
+
+func (s *Service) setRateCollector(topic string, c *leakybucket.Collector) {
+	s.rateLimiter.limiterMap[topic] = c
 }
 
 // marks the chain as having started.
