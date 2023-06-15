@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -173,4 +174,31 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pubKeys))
 	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))
+}
+
+func Test_NameToDescriptionChangeIsOK(t *testing.T) {
+	jsonString := `{"version":1, "name":"hmmm"}`
+	type Obj struct {
+		Version     uint   `json:"version"`
+		Description string `json:"description"`
+	}
+	a := &Obj{}
+	require.NoError(t, json.Unmarshal([]byte(jsonString), a))
+	require.Equal(t, a.Description, "")
+}
+
+func Test_MarshalOmitsName(t *testing.T) {
+	type Obj struct {
+		Version     uint   `json:"version"`
+		Description string `json:"description"`
+		Name        string `json:"name,omitempty"`
+	}
+	a := &Obj{
+		Version:     1,
+		Description: "hmm",
+	}
+
+	bytes, err := json.Marshal(a)
+	require.NoError(t, err)
+	require.Equal(t, string(bytes), `{"version":1,"description":"hmm"}`)
 }

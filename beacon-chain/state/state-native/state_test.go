@@ -2,11 +2,13 @@ package state_native
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -271,6 +273,94 @@ func TestBeaconState_NoDeadlock_Capella(t *testing.T) {
 }
 
 func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
+
+	newState := generateState(t)
+	st, ok := newState.(*BeaconState)
+	require.Equal(t, true, ok)
+	_, err := st.HashTreeRoot(context.Background())
+	assert.NoError(t, err)
+
+	for i := 0; i < 100; i++ {
+		if i%2 == 0 {
+			assert.NoError(t, st.UpdateBalancesAtIndex(primitives.ValidatorIndex(i), 1000))
+		}
+		if i%3 == 0 {
+			assert.NoError(t, st.AppendBalance(1000))
+		}
+	}
+	_, err = st.HashTreeRoot(context.Background())
+	assert.NoError(t, err)
+	newRt := bytesutil.ToBytes32(st.merkleLayers[0][types.Balances])
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.Balances())
+	assert.NoError(t, err)
+	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
+}
+
+func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyPreviousParticipationBits is not supported", st.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
+}
+
+func TestBeaconState_ModifyCurrentParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyCurrentParticipationBits is not supported", st.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
+}
+
+func TestCopyAllTries(t *testing.T) {
+	newState := generateState(t)
+	_, err := newState.HashTreeRoot(context.Background())
+	assert.NoError(t, err)
+
+	assert.NoError(t, newState.UpdateBalancesAtIndex(0, 10000))
+	assert.NoError(t, newState.UpdateBlockRootAtIndex(0, [32]byte{'a'}))
+
+	_, err = newState.HashTreeRoot(context.Background())
+	assert.NoError(t, err)
+
+	st, ok := newState.(*BeaconState)
+	require.Equal(t, true, ok)
+
+	obj := st.stateFieldLeaves[types.Balances]
+
+	fieldAddr := fmt.Sprintf("%p", obj)
+
+	nState, ok := st.Copy().(*BeaconState)
+	require.Equal(t, true, ok)
+
+	obj = nState.stateFieldLeaves[types.Balances]
+
+	newFieldAddr := fmt.Sprintf("%p", obj)
+	assert.Equal(t, fieldAddr, newFieldAddr)
+	assert.Equal(t, 2, int(obj.FieldReference().Refs()))
+
+	nState.CopyAllTries()
+
+	obj = nState.stateFieldLeaves[types.Balances]
+	updatedFieldAddr := fmt.Sprintf("%p", obj)
+
+	assert.NotEqual(t, fieldAddr, updatedFieldAddr)
+	assert.Equal(t, 1, int(obj.FieldReference().Refs()))
+
+	assert.NoError(t, nState.UpdateBalancesAtIndex(20, 10000))
+
+	_, err = nState.HashTreeRoot(context.Background())
+	assert.NoError(t, err)
+
+	rt, err := st.stateFieldLeaves[types.Balances].TrieRoot()
+	assert.NoError(t, err)
+
+	newRt, err := nState.stateFieldLeaves[types.Balances].TrieRoot()
+	assert.NoError(t, err)
+	assert.NotEqual(t, rt, newRt)
+}
+
+func generateState(t *testing.T) state.BeaconState {
 	count := uint64(100)
 	vals := make([]*ethpb.Validator, 0, count)
 	bals := make([]uint64, 0, count)
@@ -334,39 +424,5 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 	})
 	assert.NoError(t, err)
-	st, ok := newState.(*BeaconState)
-	require.Equal(t, true, ok)
-	_, err = st.HashTreeRoot(context.Background())
-	assert.NoError(t, err)
-
-	for i := 0; i < 100; i++ {
-		if i%2 == 0 {
-			assert.NoError(t, st.UpdateBalancesAtIndex(primitives.ValidatorIndex(i), 1000))
-		}
-		if i%3 == 0 {
-			assert.NoError(t, st.AppendBalance(1000))
-		}
-	}
-	_, err = st.HashTreeRoot(context.Background())
-	assert.NoError(t, err)
-	newRt := bytesutil.ToBytes32(st.merkleLayers[0][types.Balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.Balances())
-	assert.NoError(t, err)
-	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
-}
-
-func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
-	st, err := InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
-	assert.NoError(t, err)
-	assert.ErrorContains(t, "ModifyPreviousParticipationBits is not supported", st.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
-		return nil, nil
-	}))
-}
-
-func TestBeaconState_ModifyCurrentParticipationBits(t *testing.T) {
-	st, err := InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
-	assert.NoError(t, err)
-	assert.ErrorContains(t, "ModifyCurrentParticipationBits is not supported", st.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
-		return nil, nil
-	}))
+	return newState
 }

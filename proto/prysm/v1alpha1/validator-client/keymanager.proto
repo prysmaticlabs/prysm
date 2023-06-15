@@ -107,3 +107,22 @@ message SignResponse {
     // same conventions.
     Status status = 2;
 }
+
+// ProposerOptionPayload is a property of ProposerSettingsPayload
+message ProposerOptionPayload {
+  string fee_recipient = 1;
+  BuilderConfig builder = 2;
+}
+
+// BuilderConfig is a property of ProposerOptionPayload
+message BuilderConfig {
+  bool enabled = 1;
+  uint64 gas_limit = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/validator.Uint64"];
+  repeated string relays = 3;
+}
+
+// ProposerSettingsPayload is used to unmarshal files sent from the validator flag as well as safe to bolt db bucket
+message ProposerSettingsPayload {
+  map<string, ProposerOptionPayload> proposer_config = 1;
+  ProposerOptionPayload default_config = 2;
+}

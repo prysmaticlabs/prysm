@@ -39,6 +39,7 @@ type Flags struct {
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
+	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
@@ -60,6 +61,7 @@ type Flags struct {
 	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
 
+	DisableResourceManager     bool // Disables running the node with libp2p's resource manager.
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
@@ -75,7 +77,7 @@ type Flags struct {
 	KeystoreImportDebounceInterval time.Duration
 
 	// AggregateIntervals specifies the time durations at which we aggregate attestations preparing for forkchoice.
-	AggregateIntervals []time.Duration
+	AggregateIntervals [3]time.Duration
 }
 
 var featureConfig *Flags
@@ -178,6 +180,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableReorgLateBlocks)
 		cfg.DisableReorgLateBlocks = true
 	}
+	cfg.EnablePeerScorer = true
+	if ctx.Bool(disablePeerScorer.Name) {
+		logDisabled(disablePeerScorer)
+		cfg.EnablePeerScorer = false
+	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
 		cfg.DisableBroadcastSlashings = true
@@ -227,7 +234,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableEIP4881)
 		cfg.EnableEIP4881 = true
 	}
-	cfg.AggregateIntervals = []time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
+	if ctx.IsSet(disableResourceManager.Name) {
+		logEnabled(disableResourceManager)
+		cfg.DisableResourceManager = true
+	}
+	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
 }

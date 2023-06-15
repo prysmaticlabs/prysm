@@ -31,11 +31,11 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
 	require.NoError(t, err)
 	return &keymanager.Keystore{
-		Crypto:  cryptoFields,
-		Pubkey:  fmt.Sprintf("%x", pubKey),
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
+		Crypto:      cryptoFields,
+		Pubkey:      fmt.Sprintf("%x", pubKey),
+		ID:          id.String(),
+		Version:     encryptor.Version(),
+		Description: encryptor.Name(),
 	}
 }
 

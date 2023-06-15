@@ -45,6 +45,10 @@ var (
 		Name:  "disable-reorg-late-blocks",
 		Usage: "Disables reorgs of late blocks",
 	}
+	disablePeerScorer = &cli.BoolFlag{
+		Name:  "disable-peer-scorer",
+		Usage: "(Danger): Disables P2P peer scorer. Do NOT use this in production!",
+	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
@@ -53,19 +57,19 @@ var (
 	aggregateFirstInterval = &cli.DurationFlag{
 		Name:   "aggregate-first-interval",
 		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
-		Value:  7 * time.Second,
+		Value:  6500 * time.Millisecond,
 		Hidden: true,
 	}
 	aggregateSecondInterval = &cli.DurationFlag{
 		Name:   "aggregate-second-interval",
 		Usage:  "(Advanced): Specifies the second interval in which attestations are aggregated in the slot",
-		Value:  9 * time.Second,
+		Value:  9500 * time.Millisecond,
 		Hidden: true,
 	}
 	aggregateThirdInterval = &cli.DurationFlag{
 		Name:   "aggregate-third-interval",
 		Usage:  "(Advanced): Specifies the third interval in which attestations are aggregated in the slot",
-		Value:  11 * time.Second,
+		Value:  11800 * time.Millisecond,
 		Hidden: true,
 	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
@@ -143,6 +147,10 @@ var (
 	enableEIP4881 = &cli.BoolFlag{
 		Name:  "enable-eip-4881",
 		Usage: "Enables the deposit tree specified in EIP4881",
+  }
+	disableResourceManager = &cli.BoolFlag{
+		Name:  "disable-resource-manager",
+		Usage: "Disables running the libp2p resource manager",
 	}
 )
 
@@ -179,6 +187,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
+	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
@@ -195,6 +204,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateSecondInterval,
 	aggregateThirdInterval,
 	enableEIP4881,
+	disableResourceManager,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

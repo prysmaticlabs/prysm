@@ -21,6 +21,7 @@ import (
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
 var processPendingAttsPeriod = slots.DivideSlotBy(2 /* twice per slot */)
+var pendingAttsLimit = 10000
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
@@ -164,6 +165,16 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 
 	s.pendingAttsLock.Lock()
 	defer s.pendingAttsLock.Unlock()
+
+	numOfPendingAtts := 0
+	for _, v := range s.blkRootToPendingAtts {
+		numOfPendingAtts += len(v)
+	}
+	// Exit early if we exceed the pending attestations limit.
+	if numOfPendingAtts >= pendingAttsLimit {
+		return
+	}
+
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
 		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}

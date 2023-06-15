@@ -265,6 +265,7 @@ func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool
 // validators' latest votes.
 func (f *ForkChoice) updateBalances() error {
 	newBalances := f.justifiedBalances
+	zHash := params.BeaconConfig().ZeroHash
 
 	for index, vote := range f.votes {
 		// Skip if validator has been slashed
@@ -273,7 +274,7 @@ func (f *ForkChoice) updateBalances() error {
 		}
 		// Skip if validator has never voted for current root and next root (i.e. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
-		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
+		if vote.currentRoot == zHash && vote.nextRoot == zHash {
 			continue
 		}
 
@@ -293,7 +294,7 @@ func (f *ForkChoice) updateBalances() error {
 			// Ignore the vote if the root is not in fork choice
 			// store, that means we have not seen the block before.
 			nextNode, ok := f.store.nodeByRoot[vote.nextRoot]
-			if ok && vote.nextRoot != params.BeaconConfig().ZeroHash {
+			if ok && vote.nextRoot != zHash {
 				// Protection against nil node
 				if nextNode == nil {
 					return errors.Wrap(ErrNilNode, "could not update balances")
@@ -302,7 +303,7 @@ func (f *ForkChoice) updateBalances() error {
 			}
 
 			currentNode, ok := f.store.nodeByRoot[vote.currentRoot]
-			if ok && vote.currentRoot != params.BeaconConfig().ZeroHash {
+			if ok && vote.currentRoot != zHash {
 				// Protection against nil node
 				if currentNode == nil {
 					return errors.Wrap(ErrNilNode, "could not update balances")
