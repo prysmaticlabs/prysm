@@ -176,10 +176,10 @@ func (d *DepositTree) MerkleProof(index int) ([][]byte, error) {
 }
 
 // Copy performs a deep copy of the tree.
-func (d *DepositTree) Copy() *DepositTree {
-	return &DepositTree{
-		tree:                    d.tree,
-		depositCount:            d.depositCount,
-		finalizedExecutionBlock: d.finalizedExecutionBlock,
+func (d *DepositTree) Copy() (*DepositTree, error) {
+	snapshot, err := d.GetSnapshot()
+	if err != nil {
+		return nil, err
 	}
+	return fromSnapshot(snapshot)
 }
