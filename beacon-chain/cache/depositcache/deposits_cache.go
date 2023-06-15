@@ -257,7 +257,7 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 }
 
 // FinalizedDeposits returns the finalized deposits trie.
-func (dc *DepositCache) FinalizedDeposits(ctx context.Context) cache.FinalizedDeposits {
+func (dc *DepositCache) FinalizedDeposits(ctx context.Context) (cache.FinalizedDeposits, error) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
@@ -266,7 +266,7 @@ func (dc *DepositCache) FinalizedDeposits(ctx context.Context) cache.FinalizedDe
 	return &FinalizedDeposits{
 		deposits:        dc.finalizedDeposits.deposits.Copy(),
 		merkleTrieIndex: dc.finalizedDeposits.merkleTrieIndex,
-	}
+	}, nil
 }
 
 // NonFinalizedDeposits returns the list of non-finalized deposits until the given block number (inclusive).

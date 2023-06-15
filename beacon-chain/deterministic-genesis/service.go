@@ -178,8 +178,8 @@ func (_ *Service) DepositsNumberAndRootAtHeight(_ context.Context, _ *big.Int) (
 }
 
 // FinalizedDeposits mocks out the deposit cache functionality for interop.
-func (_ *Service) FinalizedDeposits(_ context.Context) cache.FinalizedDeposits {
-	return nil
+func (_ *Service) FinalizedDeposits(ctx context.Context) (cache.FinalizedDeposits, error) {
+	return nil, nil
 }
 
 // NonFinalizedDeposits mocks out the deposit cache functionality for interop.

@@ -355,7 +355,8 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	err = dc.InsertFinalizedDeposits(context.Background(), 2)
 	require.NoError(t, err)
 
-	cachedDeposits := dc.FinalizedDeposits(context.Background())
+	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
 	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex())
 
@@ -425,7 +426,8 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 
 	dc.deposits = append(dc.deposits, []*ethpb.DepositContainer{newFinalizedDeposit}...)
 
-	cachedDeposits := dc.FinalizedDeposits(context.Background())
+	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
 	require.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex())
 	require.Equal(t, cachedDeposits.Deposits().NumOfItems(), 2)
@@ -453,7 +455,8 @@ func TestFinalizedDeposits_HandleZeroDeposits(t *testing.T) {
 	err = dc.InsertFinalizedDeposits(context.Background(), 2)
 	require.NoError(t, err)
 
-	cachedDeposits := dc.FinalizedDeposits(context.Background())
+	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
 	assert.Equal(t, int64(-1), cachedDeposits.MerkleTrieIndex())
 }
@@ -499,7 +502,8 @@ func TestFinalizedDeposits_HandleSmallerThanExpectedDeposits(t *testing.T) {
 	err = dc.InsertFinalizedDeposits(context.Background(), 5)
 	require.NoError(t, err)
 
-	cachedDeposits := dc.FinalizedDeposits(context.Background())
+	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
 	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex())
 }
@@ -579,7 +583,8 @@ func TestFinalizedDeposits_HandleLowerEth1DepositIndex(t *testing.T) {
 	err = dc.InsertFinalizedDeposits(context.Background(), 2)
 	require.NoError(t, err)
 
-	cachedDeposits := dc.FinalizedDeposits(context.Background())
+	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
 	assert.Equal(t, int64(5), cachedDeposits.MerkleTrieIndex())
 }
@@ -762,7 +767,8 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	require.NoError(t, err)
 
 	// Mimick finalized deposit trie fetch.
-	fd := dc.FinalizedDeposits(context.Background())
+	fd, err := dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
 	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(14))
 	insertIndex := fd.MerkleTrieIndex() + 1
 
@@ -781,7 +787,8 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	err = dc.InsertFinalizedDeposits(context.Background(), 14)
 	require.NoError(t, err)
 
-	fd = dc.FinalizedDeposits(context.Background())
+	fd, err = dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
 	deps = dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(30))
 	insertIndex = fd.MerkleTrieIndex() + 1
 
@@ -831,7 +838,8 @@ func TestMin(t *testing.T) {
 	}
 	dc.deposits = finalizedDeposits
 
-	fd := dc.FinalizedDeposits(context.Background())
+	fd, err := dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
 	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(16))
 	insertIndex := fd.MerkleTrieIndex() + 1
 	for _, dep := range deps {

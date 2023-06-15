@@ -136,7 +136,10 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 
 	var depositTrie cache.MerkleTree
 
-	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
+	finalizedDeposits, err := vs.DepositFetcher.FinalizedDeposits(ctx)
+	if err != nil {
+		return nil, err
+	}
 	depositTrie = finalizedDeposits.Deposits()
 	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, finalizedDeposits.MerkleTrieIndex(), canonicalEth1DataHeight)
 	insertIndex := finalizedDeposits.MerkleTrieIndex() + 1

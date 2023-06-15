@@ -37,7 +37,7 @@ type DepositInserter interface {
 // FinalizedFetcher is a smaller interface defined to be the bare minimum to satisfy “Service”.
 // It extends the "DepositFetcher" interface with additional methods for fetching finalized deposits.
 type FinalizedFetcher interface {
-	FinalizedDeposits(ctx context.Context) FinalizedDeposits
+	FinalizedDeposits(ctx context.Context) (FinalizedDeposits, error)
 	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
 }
 
