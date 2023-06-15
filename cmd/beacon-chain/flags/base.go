@@ -165,6 +165,18 @@ var (
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 2,
 	}
+	// BlockBatchLimit specifies the requested block batch size.
+	BlobBatchLimit = &cli.IntFlag{
+		Name:  "blob-batch-limit",
+		Usage: "The amount of blobs the local peer is bounded to request and respond to in a batch.",
+		Value: 8,
+	}
+	// BlobBatchLimitBurstFactor specifies the factor by which blob batch size may increase.
+	BlobBatchLimitBurstFactor = &cli.IntFlag{
+		Name:  "blob-batch-limit-burst-factor",
+		Usage: "The factor by which blob batch limit may increase on burst.",
+		Value: 2,
+	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
 		Name:  "enable-debug-rpc-endpoints",
