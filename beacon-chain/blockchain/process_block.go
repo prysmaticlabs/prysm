@@ -285,7 +285,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}()
 	}
 	defer reportAttestationInclusion(b)
-	if err := s.handleEpochBoundary(ctx, postState); err != nil {
+	if err := s.handleEpochBoundary(ctx, postState, blockRoot[:]); err != nil {
 		return err
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
@@ -483,14 +483,14 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 }
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
-func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState) error {
+func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState, blockRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
 	defer span.End()
 
 	var err error
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		copied := postState.Copy()
-		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
+		copied, err := transition.ProcessSlotsUsingNextSlotCache(ctx, copied, blockRoot, copied.Slot()+1)
 		if err != nil {
 			return err
 		}

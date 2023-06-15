@@ -243,6 +243,9 @@ func (*Server) ValidateKeystores(
 		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
 		}
+		if keystore.Description == "" && keystore.Name != "" {
+			keystore.Description = keystore.Name
+		}
 		if _, err := decryptor.Decrypt(keystore.Crypto, req.KeystoresPassword); err != nil {
 			doesNotDecrypt := strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
 			if doesNotDecrypt {
