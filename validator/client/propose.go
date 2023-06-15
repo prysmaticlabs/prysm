@@ -210,11 +210,8 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "failed to get genesis")
 	}
-	epoch, err := CurrentEpoch(genesisResponse.GenesisTime)
-	if err != nil {
-		return errors.Wrap(err, "gRPC call to get genesis time failed")
-	}
-	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, nodeClient, signer, pubKey, epoch)
+	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
+	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, signer, pubKey, currentSlot, slots.ToEpoch(currentSlot))
 	if err != nil {
 		return errors.Wrap(err, "failed to create signed voluntary exit")
 	}
@@ -239,9 +236,9 @@ func CurrentEpoch(genesisTime *timestamp.Timestamp) (primitives.Epoch, error) {
 func CreateSignedVoluntaryExit(
 	ctx context.Context,
 	validatorClient iface.ValidatorClient,
-	nodeClient iface.NodeClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
+	currentSlot primitives.Slot,
 	epoch primitives.Epoch,
 ) (*ethpb.SignedVoluntaryExit, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CreateSignedVoluntaryExit")
@@ -251,11 +248,6 @@ func CreateSignedVoluntaryExit(
 	if err != nil {
 		return nil, errors.Wrap(err, "gRPC call to get validator index failed")
 	}
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
-	if err != nil {
-		return nil, errors.Wrap(err, "gRPC call to get genesis time failed")
-	}
-	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
 	exit := &ethpb.VoluntaryExit{Epoch: epoch, ValidatorIndex: indexResponse.Index}
 	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, currentSlot)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
@@ -694,23 +695,24 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	if err != nil {
 		return nil, err
 	}
+	genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
+	}
 	if req.Epoch == 0 {
-		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
-		}
 		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "gRPC call to get genesis time failed: %v", err)
 		}
 		req.Epoch = epoch
 	}
+	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
 	sve, err := client.CreateSignedVoluntaryExit(
 		ctx,
 		s.beaconNodeValidatorClient,
-		s.beaconNodeClient,
 		km.Sign,
 		req.Pubkey,
+		currentSlot,
 		req.Epoch,
 	)
 	if err != nil {
