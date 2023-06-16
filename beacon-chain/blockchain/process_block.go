@@ -503,7 +503,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e+1); err != nil {
-			log.Warn(ctx, "Failed to cache next epoch proposers", "err", err)
+			log.WithError(err).Warn("Failed to cache next epoch proposers")
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
