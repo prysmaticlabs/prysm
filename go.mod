@@ -45,7 +45,7 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
-	github.com/minio/highwayhash v1.0.1
+	github.com/minio/highwayhash v1.0.2
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.9.0
@@ -77,7 +77,7 @@ require (
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.6.3
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
-	go.etcd.io/bbolt v1.3.5
+	go.etcd.io/bbolt v1.3.6
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.3.0
 	golang.org/x/crypto v0.9.0
