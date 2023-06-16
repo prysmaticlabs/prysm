@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"runtime/debug"
@@ -13,6 +14,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
@@ -283,7 +286,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}
 		if b == pubsub.ValidationIgnore {
-			if err != nil {
+			if err != nil && !errorIsIgnored(err) {
 				log.WithError(err).WithFields(logrus.Fields{
 					"topic":        topic,
 					"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
@@ -780,4 +783,14 @@ func multiAddr(pid peer.ID, stat *peers.Status) string {
 		return ""
 	}
 	return addrs.String()
+}
+
+func errorIsIgnored(err error) bool {
+	if errors.Is(err, helpers.ErrTooLate) {
+		return true
+	}
+	if errors.Is(err, altair.ErrTooLate) {
+		return true
+	}
+	return false
 }

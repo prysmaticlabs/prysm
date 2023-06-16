@@ -1156,6 +1156,14 @@ func TestUint256Unmarshal(t *testing.T) {
 	require.Equal(t, expected, string(m))
 }
 
+func TestUint256Unmarshal_BadData(t *testing.T) {
+	var bigNum Uint256
+
+	assert.ErrorContains(t, "provided Uint256 json string is too short", bigNum.UnmarshalJSON([]byte{'"'}))
+	assert.ErrorContains(t, "provided Uint256 json string is malformed", bigNum.UnmarshalJSON([]byte{'"', '1', '2'}))
+
+}
+
 func TestUint256UnmarshalNegative(t *testing.T) {
 	m := "-1"
 	var value Uint256

@@ -347,16 +347,6 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 
-	// Do not block proposal critical path with debug logging or block feed updates.
-	defer func() {
-		log.WithField("slot", blk.Block().Slot()).Debugf(
-			"Block proposal received via RPC")
-		vs.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
-		})
-	}()
-
 	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create unblinder")
@@ -386,6 +376,13 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
+
+	log.WithField("slot", blk.Block().Slot()).Debugf(
+		"Block proposal received via RPC")
+	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
+		Type: blockfeed.ReceivedBlock,
+		Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
+	})
 
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
