@@ -18,6 +18,9 @@ func (p *EpochParticipation) UnmarshalJSON(b []byte) error {
 	if len(b) < 2 {
 		return errors.New("epoch participation length must be at least 2")
 	}
+	if b[0] != '"' || b[len(b)-1] != '"' {
+		return errors.Errorf("provided epoch participation json string is malformed: %s", string(b))
+	}
 
 	// Remove leading and trailing quotation marks.
 	jsonString := string(b)
