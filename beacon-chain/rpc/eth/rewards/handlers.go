@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -174,11 +175,58 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	network.WriteJson(w, response)
 }
 
-// TODO: Explain the flow
-// TODO: Execution optimistic + finalized
-// TODO: Godoc
+// AttestationRewards retrieves attestation reward info for validators specified by array of public keys or validator index.
+// If no array is provided, return reward info for every validator.
 // TODO: Inclusion delay
 func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
+	st, ok := s.attRewardsState(w, r)
+	if !ok {
+		return
+	}
+	bal, vals, valIndices, ok := attRewardsBalancesAndVals(w, r, st)
+	if !ok {
+		return
+	}
+	idealRewards, ok := idealAttRewards(w, st, bal)
+	if !ok {
+		return
+	}
+	totalRewards, ok := totalAttRewards(w, st, bal, vals, valIndices)
+	if !ok {
+		return
+	}
+
+	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get optimistic mode info: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	blkRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get block root: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	resp := &AttestationRewardsResponse{
+		Data: AttestationRewards{
+			IdealRewards: idealRewards,
+			TotalRewards: totalRewards,
+		},
+		ExecutionOptimistic: optimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(r.Context(), blkRoot),
+	}
+	network.WriteJson(w, resp)
+}
+
+func (s *Server) attRewardsState(w http.ResponseWriter, r *http.Request) (state.BeaconState, bool) {
 	segments := strings.Split(r.URL.Path, "/")
 	requestedEpoch, err := strconv.ParseUint(segments[len(segments)-1], 10, 64)
 	if err != nil {
@@ -187,26 +235,25 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			Code:    http.StatusBadRequest,
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, false
 	}
 	if primitives.Epoch(requestedEpoch) < params.BeaconConfig().AltairForkEpoch {
 		errJson := &network.DefaultErrorJson{
 			Message: "Attestation rewards are not supported for Phase 0",
-			Code:    http.StatusBadRequest,
+			Code:    http.StatusNotFound,
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, false
 	}
 	currentEpoch := uint64(slots.ToEpoch(s.TimeFetcher.CurrentSlot()))
 	if requestedEpoch+1 >= currentEpoch {
 		errJson := &network.DefaultErrorJson{
-			Code:    http.StatusBadRequest,
+			Code:    http.StatusNotFound,
 			Message: "Attestation rewards are available after two epoch transitions to ensure all attestations have a chance of inclusion",
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, false
 	}
-
 	nextEpochEnd, err := slots.EpochEnd(primitives.Epoch(requestedEpoch + 1))
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
@@ -214,7 +261,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			Code:    http.StatusInternalServerError,
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, false
 	}
 	st, err := s.Stater.StateBySlot(r.Context(), nextEpochEnd)
 	if err != nil {
@@ -223,9 +270,16 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			Code:    http.StatusInternalServerError,
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, false
 	}
+	return st, true
+}
 
+func attRewardsBalancesAndVals(
+	w http.ResponseWriter,
+	r *http.Request,
+	st state.BeaconState,
+) (*precompute.Balance, []*precompute.Validator, []primitives.ValidatorIndex, bool) {
 	allVals, bal, err := altair.InitializePrecomputeValidators(r.Context(), st)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
@@ -233,7 +287,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			Code:    http.StatusBadRequest,
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, nil, nil, false
 	}
 	allVals, bal, err = altair.ProcessEpochParticipation(r.Context(), st, bal, allVals)
 	if err != nil {
@@ -242,9 +296,8 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			Code:    http.StatusBadRequest,
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, nil, nil, false
 	}
-
 	var rawValIds []string
 	if r.Body != http.NoBody {
 		if err = json.NewDecoder(r.Body).Decode(&rawValIds); err != nil {
@@ -253,7 +306,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 				Code:    http.StatusBadRequest,
 			}
 			network.WriteError(w, errJson)
-			return
+			return nil, nil, nil, false
 		}
 	}
 	valIndices := make([]primitives.ValidatorIndex, len(rawValIds))
@@ -267,7 +320,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 					Code:    http.StatusBadRequest,
 				}
 				network.WriteError(w, errJson)
-				return
+				return nil, nil, nil, false
 			}
 			var ok bool
 			valIndices[i], ok = st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
@@ -277,16 +330,16 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 					Code:    http.StatusBadRequest,
 				}
 				network.WriteError(w, errJson)
-				return
+				return nil, nil, nil, false
 			}
 		} else {
-			if i >= st.NumValidators() {
+			if index >= uint64(st.NumValidators()) {
 				errJson := &network.DefaultErrorJson{
-					Message: fmt.Sprintf("Validator index %d is too large. Maximum allowed index is %d", i, st.NumValidators()-1),
+					Message: fmt.Sprintf("Validator index %d is too large. Maximum allowed index is %d", index, st.NumValidators()-1),
 					Code:    http.StatusBadRequest,
 				}
 				network.WriteError(w, errJson)
-				return
+				return nil, nil, nil, false
 			}
 			valIndices[i] = primitives.ValidatorIndex(index)
 		}
@@ -297,16 +350,18 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			valIndices[i] = primitives.ValidatorIndex(i)
 		}
 	}
-	var filteredVals []*precompute.Validator
 	if len(valIndices) == len(allVals) {
-		filteredVals = allVals
+		return bal, allVals, valIndices, true
 	} else {
-		filteredVals = make([]*precompute.Validator, len(valIndices))
+		filteredVals := make([]*precompute.Validator, len(valIndices))
 		for i, valIx := range valIndices {
 			filteredVals[i] = allVals[valIx]
 		}
+		return bal, filteredVals, valIndices, true
 	}
+}
 
+func idealAttRewards(w http.ResponseWriter, st state.BeaconState, bal *precompute.Balance) ([]IdealAttestationReward, bool) {
 	idealRewards := make([]IdealAttestationReward, 32)
 	idealVals := make([]*precompute.Validator, 32)
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
@@ -329,7 +384,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			Code:    http.StatusInternalServerError,
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, false
 	}
 	for i, d := range deltas {
 		idealRewards[i].Head = strconv.FormatUint(d.HeadReward, 10)
@@ -344,19 +399,28 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			idealRewards[i].Target = strconv.FormatUint(d.TargetReward, 10)
 		}
 	}
+	return idealRewards, true
+}
 
+func totalAttRewards(
+	w http.ResponseWriter,
+	st state.BeaconState,
+	bal *precompute.Balance,
+	vals []*precompute.Validator,
+	valIndices []primitives.ValidatorIndex,
+) ([]TotalAttestationReward, bool) {
 	totalRewards := make([]TotalAttestationReward, len(valIndices))
 	for i, v := range valIndices {
 		totalRewards[i] = TotalAttestationReward{ValidatorIndex: strconv.FormatUint(uint64(v), 10)}
 	}
-	deltas, err = altair.AttestationsDelta(st, bal, filteredVals)
+	deltas, err := altair.AttestationsDelta(st, bal, vals)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: "Could not get attestations delta: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 		network.WriteError(w, errJson)
-		return
+		return nil, false
 	}
 	for i, d := range deltas {
 		totalRewards[i].Head = strconv.FormatUint(d.HeadReward, 10)
@@ -371,15 +435,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			totalRewards[i].Target = strconv.FormatUint(d.TargetReward, 10)
 		}
 	}
-
-	resp := &AttestationRewardsResponse{
-		Data: AttestationRewards{
-			IdealRewards: idealRewards,
-			TotalRewards: totalRewards,
-		},
-	}
-
-	network.WriteJson(w, resp)
+	return totalRewards, true
 }
 
 func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) *network.DefaultErrorJson {
