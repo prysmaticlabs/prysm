@@ -20,9 +20,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ValidateSync checks whether the node is currently syncing and returns an error if it is.
+// ValidateSyncGRPC checks whether the node is currently syncing and returns an error if it is.
 // It also appends syncing info to gRPC headers.
-func ValidateSync(
+func ValidateSyncGRPC(
 	ctx context.Context,
 	syncChecker sync.Checker,
 	headFetcher blockchain.HeadFetcher,
@@ -38,8 +38,8 @@ func ValidateSync(
 		return status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	syncDetailsContainer := &syncDetailsContainer{
-		SyncDetails: &SyncDetailsJson{
+	syncDetailsContainer := &SyncDetailsContainer{
+		Data: &SyncDetailsJson{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
@@ -56,6 +56,35 @@ func ValidateSync(
 		)
 	}
 	return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+}
+
+// ValidateSyncHTTP checks whether the node is currently syncing and returns sync information.
+// It returns information whether the node is currently syncing along with sync details.
+func ValidateSyncHTTP(
+	ctx context.Context,
+	syncChecker sync.Checker,
+	headFetcher blockchain.HeadFetcher,
+	timeFetcher blockchain.TimeFetcher,
+	optimisticModeFetcher blockchain.OptimisticModeFetcher,
+) (bool, *SyncDetailsContainer, error) {
+	if !syncChecker.Syncing() {
+		return false, nil, nil
+	}
+
+	headSlot := headFetcher.HeadSlot()
+	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return true, nil, errors.Wrap(err, "could not check optimistic status")
+	}
+	syncDetails := &SyncDetailsContainer{
+		Data: &SyncDetailsJson{
+			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
+			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
+			IsSyncing:    true,
+			IsOptimistic: isOptimistic,
+		},
+	}
+	return true, syncDetails, nil
 }
 
 // IsOptimistic checks whether the beacon state's block is optimistic.
@@ -197,7 +226,7 @@ type SyncDetailsJson struct {
 	ElOffline    bool   `json:"el_offline"`
 }
 
-// SyncDetailsContainer is a wrapper for SyncDetails.
-type syncDetailsContainer struct {
-	SyncDetails *SyncDetailsJson `json:"sync_details"`
+// SyncDetailsContainer is a wrapper for Data.
+type SyncDetailsContainer struct {
+	Data *SyncDetailsJson `json:"data"`
 }

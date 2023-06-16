@@ -44,7 +44,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	ctx, span := trace.StartSpan(ctx, "validator.GetAttesterDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	ctx, span := trace.StartSpan(ctx, "validator.GetProposerDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -307,7 +307,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -406,7 +406,7 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -515,7 +515,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	if !vs.BlockBuilder.Configured() {
 		return nil, status.Error(codes.Internal, "Block builder not configured")
 	}
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -614,7 +614,7 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 	if !vs.BlockBuilder.Configured() {
 		return nil, status.Error(codes.Internal, "Block builder not configured")
 	}
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -891,7 +891,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitBeaconCommitteeSubscription")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -972,7 +972,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeSubscription")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
