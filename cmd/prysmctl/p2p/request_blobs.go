@@ -157,12 +157,19 @@ func cliActionRequestBlobs(cliCtx *cli.Context) error {
 		if headSlot != nil {
 			fields["headSlot"] = *headSlot
 		}
+
+		ctxByte, err := sync.ContextByteVersionsForValRoot(chain.genesisValsRoot)
+		if err != nil {
+			return err
+		}
+
 		log.WithFields(fields).Info("Blobs by range p2p request to peer")
 		blobs, err := sync.SendBlobsByRangeRequest(
 			ctx,
 			chain,
 			c,
 			pr,
+			ctxByte,
 			req,
 		)
 		if err != nil {
