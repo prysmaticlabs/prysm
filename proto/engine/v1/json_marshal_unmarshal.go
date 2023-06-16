@@ -394,6 +394,9 @@ func (e *ExecutionPayloadCapellaWithValue) UnmarshalJSON(enc []byte) error {
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
 	}
+	if dec.ExecutionPayload == nil {
+		return errors.New("missing required field 'executionPayload' for ExecutionPayloadWithValue")
+	}
 
 	if dec.ExecutionPayload.ParentHash == nil {
 		return errors.New("missing required field 'parentHash' for ExecutionPayload")
