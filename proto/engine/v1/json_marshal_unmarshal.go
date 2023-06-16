@@ -793,10 +793,10 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
 	if dec.ExecutionPayload.ExcessDataGas == nil {
-		dec.ExecutionPayload.ExcessDataGas = new(hexutil.Uint64)
+		return errors.New("missing required field 'excessDataGas' for ExecutionPayload")
 	}
 	if dec.ExecutionPayload.DataGasUsed == nil {
-		dec.ExecutionPayload.DataGasUsed = new(hexutil.Uint64)
+		return errors.New("missing required field 'dataGasUsed' for ExecutionPayload")
 	}
 
 	*e = ExecutionPayloadDenebWithValueAndBlobsBundle{Payload: &ExecutionPayloadDeneb{}}
