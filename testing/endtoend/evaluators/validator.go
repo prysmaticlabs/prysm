@@ -290,6 +290,12 @@ func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfac
 	if container.GetBlindedCapellaBlock() != nil {
 		return blocks.NewSignedBeaconBlock(container.GetBlindedCapellaBlock())
 	}
+	if container.GetDeneb() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetDeneb())
+	}
+	if container.GetBlindedDeneb() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBlindedDeneb())
+	}
 	return nil, errors.New("no supported block type in container")
 }
 
