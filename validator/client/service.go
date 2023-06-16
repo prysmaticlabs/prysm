@@ -233,15 +233,6 @@ func (v *ValidatorService) Start() {
 	close(tempChan)
 
 	v.validator = valStruct
-
-	if v.proposerSettings == nil {
-		// attempt to migrate data
-		settings, err := v.validator.MigrateFromBeaconNodeProposerSettings(v.ctx)
-		if err == nil && settings != nil {
-			v.proposerSettings = settings
-		}
-	}
-
 	go run(v.ctx, v.validator)
 }
 

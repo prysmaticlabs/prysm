@@ -67,8 +67,16 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		}
 	} else {
-		log.Warnln("Validator client started without proposer settings such as fee recipient" +
-			" and will continue to use settings provided in the beacon node.")
+		// attempt to migrate data
+		settings, err := v.MigrateFromBeaconNodeProposerSettings(ctx)
+		if err != nil || settings == nil {
+			log.Warnln("Validator client started without proposer settings such as fee recipient" +
+				" and will continue to use settings provided in the beacon node.")
+		} else {
+			log.Infof("Validator client started with migrated proposer settings that sets options such as fee recipient"+
+				" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
+		}
+
 	}
 
 	for {
