@@ -70,13 +70,12 @@ func run(ctx context.Context, v iface.Validator) {
 		// attempt to migrate data
 		settings, err := v.MigrateFromBeaconNodeProposerSettings(ctx)
 		if err != nil || settings == nil {
-			log.Warnln("Validator client started without proposer settings such as fee recipient" +
+			log.WithError(err).Warnln("Validator client started without proposer settings such as fee recipient" +
 				" and will continue to use settings provided in the beacon node.")
 		} else {
-			log.Infof("Validator client started with migrated proposer settings that sets options such as fee recipient"+
-				" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
+			log.Infof("Validator client started with fee recipient information from the beacon node"+
+				" and will periodically update the beacon node with any new changes. If you are using a custom builder please restart the validator client with the --%s", flags.EnableBuilderFlag.Name)
 		}
-
 	}
 
 	for {

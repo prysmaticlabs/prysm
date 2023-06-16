@@ -977,14 +977,10 @@ func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (
 	}
 	ctx, span := trace.StartSpan(ctx, "MigrateFromBeaconNodeProposerSettings")
 	defer span.End()
-	fmt.Println("is this working?")
 	km, err := v.Keymanager()
 	if err != nil {
-
-		fmt.Println(err)
 		return nil, err
 	}
-	fmt.Println("we have the keys1")
 	keys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, err
@@ -992,14 +988,11 @@ func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (
 	if len(keys) == 0 {
 		return nil, errors.New("no keys found to migrate settings for")
 	}
-	fmt.Println("we have the keys2")
-	log.Info("retrieving fee recipient information from beacon node to generate proposer settings on validator client")
 	proposerConfig := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 	for i := range keys {
 
 		resp, err := v.validatorClient.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[i][:]})
 		if err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		fr := common.BytesToAddress(resp.FeeRecipient)
@@ -1009,7 +1002,6 @@ func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (
 			},
 		}
 		log.Infof("preparing validator key %s with fee recipient %s on proposer settings", hexutil.Encode(keys[i][:]), fr.Hex())
-		fmt.Sprintf("preparing validator key %s with fee recipient %s on proposer settings", hexutil.Encode(keys[i][:]), fr.Hex())
 	}
 	settings := &validatorserviceconfig.ProposerSettings{
 		ProposeConfig: proposerConfig,
