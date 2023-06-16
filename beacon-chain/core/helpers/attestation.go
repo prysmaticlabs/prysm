@@ -14,6 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
+var (
+	ErrTooLate = errors.New("attestation is too late")
+)
+
 // ValidateNilAttestation checks if any composite field of input attestation is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
@@ -164,7 +168,7 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 	)
 	if attTime.Before(lowerBounds) {
 		attReceivedTooLateCount.Inc()
-		return attError
+		return errors.Join(ErrTooLate, attError)
 	}
 	if attTime.After(upperBounds) {
 		attReceivedTooEarlyCount.Inc()
