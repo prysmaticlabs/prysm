@@ -10,7 +10,7 @@ var Commands = []*cli.Command{
 			{
 				Name:        "send",
 				Usage:       "commands for sending p2p rpc requests to beacon nodes",
-				Subcommands: []*cli.Command{requestBlocksCmd},
+				Subcommands: []*cli.Command{requestBlocksCmd, requestBlobsCmd},
 			},
 		},
 	},
