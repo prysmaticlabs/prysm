@@ -17,6 +17,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var CommitteeCacheInProgressHit = promauto.NewCounter(prometheus.CounterOpts{
@@ -395,4 +396,23 @@ func IsEligibleForActivationUsingTrie(state state.ReadOnlyCheckpoint, validator 
 func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch primitives.Epoch) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
+}
+
+// LastActivatedValidatorIndex provides the last activated validator given a state
+func LastActivatedValidatorIndex(ctx context.Context, st state.ReadOnlyBeaconState) (primitives.ValidatorIndex, error) {
+	_, span := trace.StartSpan(ctx, "helpers.LastActivatedValidatorIndex")
+	defer span.End()
+	var lastActivatedvalidatorIndex primitives.ValidatorIndex
+	// linear search because status are not sorted
+	for j := st.NumValidators() - 1; j >= 0; j-- {
+		val, err := st.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(j))
+		if err != nil {
+			return 0, err
+		}
+		if IsActiveValidatorUsingTrie(val, time.CurrentEpoch(st)) {
+			lastActivatedvalidatorIndex = primitives.ValidatorIndex(j)
+			break
+		}
+	}
+	return lastActivatedvalidatorIndex, nil
 }
