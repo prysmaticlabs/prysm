@@ -327,7 +327,7 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 		// Impossible condition as it would mean topic does not exist.
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
-	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+	for i := uint64(0); i < subnetCount; i++ {
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, digest, i), validator, handle)
 	}
 	genesis := s.cfg.clock.GenesisTime()
