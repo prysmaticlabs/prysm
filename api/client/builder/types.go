@@ -135,7 +135,6 @@ func (s Uint256) SSZBytes() []byte {
 
 // UnmarshalJSON takes in a byte array and unmarshals the value in Uint256
 func (s *Uint256) UnmarshalJSON(t []byte) error {
-	start := 0
 	end := len(t)
 	if len(t) < 2 {
 		return errors.Errorf("provided Uint256 json string is too short: %s", string(t))
@@ -143,9 +142,7 @@ func (s *Uint256) UnmarshalJSON(t []byte) error {
 	if t[0] != '"' || t[end-1] != '"' {
 		return errors.Errorf("provided Uint256 json string is malformed: %s", string(t))
 	}
-	start += 1
-	end -= 1
-	return s.UnmarshalText(t[start:end])
+	return s.UnmarshalText(t[1 : end-1])
 }
 
 // UnmarshalText takes in a byte array and unmarshals the text in Uint256
