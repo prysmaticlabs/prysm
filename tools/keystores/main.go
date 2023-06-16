@@ -197,11 +197,11 @@ func encrypt(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not encrypt into new keystore")
 	}
 	item := &keymanager.Keystore{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Pubkey:  pubKey,
-		Name:    encryptor.Name(),
+		Crypto:      cryptoFields,
+		ID:          id.String(),
+		Version:     encryptor.Version(),
+		Pubkey:      pubKey,
+		Description: encryptor.Name(),
 	}
 	encodedFile, err := json.MarshalIndent(item, "", "\t")
 	if err != nil {
@@ -229,7 +229,6 @@ func readAndDecryptKeystore(fullPath, password string) error {
 	}
 	decryptor := keystorev4.New()
 	keystoreFile := &keymanager.Keystore{}
-
 	if err := json.Unmarshal(f, keystoreFile); err != nil {
 		return errors.Wrap(err, "could not JSON unmarshal keystore file")
 	}
