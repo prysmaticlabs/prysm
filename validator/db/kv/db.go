@@ -165,6 +165,19 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		}
 	}
 
+	if features.Get().EnableMinimalSlashingProtectionDatabase {
+		// Check if the current slashing protection database is compatible with the minimal
+		// slashing protection database type.
+		err, isMinimal := kv.IsMinimal()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if slashing protection database is minimal")
+		}
+
+		if !isMinimal {
+			return nil, errors.New("slashing protection database is not compatible with minimal slashing protection database type")
+		}
+	}
+
 	if features.Get().EnableSlashingProtectionPruning {
 		// Prune attesting records older than the current weak subjectivity period.
 		if err := kv.PruneAttestations(ctx); err != nil {
