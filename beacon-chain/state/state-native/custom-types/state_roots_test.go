@@ -9,7 +9,7 @@ import (
 )
 
 func TestStateRoots_Casting(t *testing.T) {
-	var b [fieldparams.StateRootsLength][32]byte
+	var b [][32]byte
 	d := StateRoots(b)
 	if !reflect.DeepEqual([fieldparams.StateRootsLength][32]byte(d), b) {
 		t.Errorf("Unequal: %v = %v", d, b)

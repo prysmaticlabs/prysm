@@ -31,7 +31,7 @@ func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex int) [][]byte {
 
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	length := f.length
-	if f.dataType == types.CompressedArray {
+	if f.fieldInfo.ArrayType == types.CompressedArray {
 		comLength, err := f.field.ElemsInChunk()
 		if err != nil {
 			return err
@@ -46,15 +46,15 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	return nil
 }
 
-func validateElements(state *BeaconState, field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) error {
-	if dataType == types.CompressedArray {
+func validateElements(state *BeaconState, field types.FieldIndex, fieldInfo types.FieldInfo, elements interface{}, length uint64) error {
+	if fieldInfo.ArrayType == types.CompressedArray {
 		comLength, err := field.ElemsInChunk()
 		if err != nil {
 			return err
 		}
 		length *= comLength
 	}
-	if field == types.RandaoMixes || field == types.BlockRoots || field == types.StateRoots || field == types.Balances {
+	if fieldInfo.ValueType == types.MultiValue {
 		l := uint64(elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state))
 		if l > length {
 			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), l, length)

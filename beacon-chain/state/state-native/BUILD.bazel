@@ -67,8 +67,6 @@ go_library(
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_fastssz//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
@@ -79,6 +77,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "field_trie_test.go",
         "getters_attestation_test.go",
         "getters_block_test.go",
         "getters_checkpoint_test.go",
@@ -87,6 +86,7 @@ go_test(
         "getters_validator_test.go",
         "getters_withdrawal_test.go",
         "hasher_test.go",
+        "helpers_test.go",
         "multi_value_slices_test.go",
         "proofs_test.go",
         "readonly_validator_test.go",
@@ -102,6 +102,7 @@ go_test(
     deps = [
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/state-native/custom-types:go_default_library",
         "//beacon-chain/state/state-native/types:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/testing:go_default_library",

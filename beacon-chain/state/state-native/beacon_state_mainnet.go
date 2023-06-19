@@ -42,7 +42,7 @@ type BeaconState struct {
 	previousJustifiedCheckpoint         *ethpb.Checkpoint
 	currentJustifiedCheckpoint          *ethpb.Checkpoint
 	finalizedCheckpoint                 *ethpb.Checkpoint
-	inactivityScores                    []uint64
+	inactivityScores                    *MultiValueInactivityScores
 	currentSyncCommittee                *ethpb.SyncCommittee
 	nextSyncCommittee                   *ethpb.SyncCommittee
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader

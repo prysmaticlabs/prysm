@@ -9,7 +9,7 @@ import (
 )
 
 func TestBlockRoots_Casting(t *testing.T) {
-	var b [fieldparams.BlockRootsLength][32]byte
+	var b [][32]byte
 	d := BlockRoots(b)
 	if !reflect.DeepEqual([fieldparams.BlockRootsLength][32]byte(d), b) {
 		t.Errorf("Unequal: %v = %v", d, b)

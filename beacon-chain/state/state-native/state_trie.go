@@ -84,9 +84,9 @@ var capellaFields = append(
 
 const (
 	phase0SharedFieldRefCount    = 6
-	altairSharedFieldRefCount    = 7
-	bellatrixSharedFieldRefCount = 8
-	capellaSharedFieldRefCount   = 10
+	altairSharedFieldRefCount    = 6
+	bellatrixSharedFieldRefCount = 7
+	capellaSharedFieldRefCount   = 9
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -160,7 +160,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(b, f, types.BasicArray, nil, 0)
+		trie, err := NewFieldTrie(b, f, types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +217,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		previousJustifiedCheckpoint: st.PreviousJustifiedCheckpoint,
 		currentJustifiedCheckpoint:  st.CurrentJustifiedCheckpoint,
 		finalizedCheckpoint:         st.FinalizedCheckpoint,
-		inactivityScores:            st.InactivityScores,
+		inactivityScores:            NewMultiValueInactivityScores(st.InactivityScores),
 		currentSyncCommittee:        st.CurrentSyncCommittee,
 		nextSyncCommittee:           st.NextSyncCommittee,
 
@@ -235,7 +235,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(b, f, types.BasicArray, nil, 0)
+		trie, err := NewFieldTrie(b, f, types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -249,7 +249,6 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
-	b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)               // New in Altair.
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -293,7 +292,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		previousJustifiedCheckpoint:  st.PreviousJustifiedCheckpoint,
 		currentJustifiedCheckpoint:   st.CurrentJustifiedCheckpoint,
 		finalizedCheckpoint:          st.FinalizedCheckpoint,
-		inactivityScores:             st.InactivityScores,
+		inactivityScores:             NewMultiValueInactivityScores(st.InactivityScores),
 		currentSyncCommittee:         st.CurrentSyncCommittee,
 		nextSyncCommittee:            st.NextSyncCommittee,
 		latestExecutionPayloadHeader: st.LatestExecutionPayloadHeader,
@@ -312,7 +311,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(b, f, types.BasicArray, nil, 0)
+		trie, err := NewFieldTrie(b, f, types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -326,7 +325,6 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.LatestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
 
 	state.StateCount.Inc()
@@ -371,7 +369,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		previousJustifiedCheckpoint:         st.PreviousJustifiedCheckpoint,
 		currentJustifiedCheckpoint:          st.CurrentJustifiedCheckpoint,
 		finalizedCheckpoint:                 st.FinalizedCheckpoint,
-		inactivityScores:                    st.InactivityScores,
+		inactivityScores:                    NewMultiValueInactivityScores(st.InactivityScores),
 		currentSyncCommittee:                st.CurrentSyncCommittee,
 		nextSyncCommittee:                   st.NextSyncCommittee,
 		latestExecutionPayloadHeaderCapella: st.LatestExecutionPayloadHeader,
@@ -393,7 +391,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(b, f, types.BasicArray, nil, 0)
+		trie, err := NewFieldTrie(b, f, types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -407,7 +405,6 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.LatestExecutionPayloadHeaderCapella] = stateutil.NewRef(1) // New in Capella.
 	b.sharedFieldReferences[types.HistoricalSummaries] = stateutil.NewRef(1)                 // New in Capella.
 
@@ -491,6 +488,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	b.stateRoots.Copy(b, dst)
 	b.randaoMixes.Copy(b, dst)
 	b.balances.Copy(b, dst)
+	b.inactivityScores.Copy(b, dst)
 
 	switch b.version {
 	case version.Phase0:
@@ -771,7 +769,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case types.FinalizedCheckpoint:
 		return ssz.CheckpointRoot(b.finalizedCheckpoint)
 	case types.InactivityScores:
-		return stateutil.Uint64ListRootWithRegistryLimit(b.inactivityScores)
+		return stateutil.Uint64ListRootWithRegistryLimit(b.inactivityScores.Value(b))
 	case types.CurrentSyncCommittee:
 		return stateutil.SyncCommitteeRoot(b.currentSyncCommittee)
 	case types.NextSyncCommittee:
@@ -877,6 +875,9 @@ func finalizerCleanup(b *BeaconState) {
 	}
 	if b.balances != nil {
 		b.balances.Detach(b)
+	}
+	if b.inactivityScores != nil {
+		b.inactivityScores.Detach(b)
 	}
 
 	state.StateCount.Sub(1)

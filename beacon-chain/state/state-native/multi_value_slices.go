@@ -1,10 +1,6 @@
 package state_native
 
 import (
-	"runtime"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 )
@@ -51,29 +47,26 @@ func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 	}
 }
 
-var (
-	balancesCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "balances_count",
-	})
-)
-
 type MultiValueBalances = multi_value_slice.Slice[uint64, *BeaconState]
 
 func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
 	items := make([]uint64, len(balances))
 	copy(items, balances)
-	b := &MultiValueBalances{
+	return &MultiValueBalances{
 		SharedItems:     items,
 		IndividualItems: map[uint64]*multi_value_slice.MultiValue[uint64]{},
 		AppendedItems:   []*multi_value_slice.MultiValue[uint64]{},
 	}
-
-	balancesCount.Inc()
-	runtime.SetFinalizer(b, balancesFinalizer)
-
-	return b
 }
 
-func balancesFinalizer(b *MultiValueBalances) {
-	balancesCount.Dec()
+type MultiValueInactivityScores = multi_value_slice.Slice[uint64, *BeaconState]
+
+func NewMultiValueInactivityScores(balances []uint64) *MultiValueInactivityScores {
+	items := make([]uint64, len(balances))
+	copy(items, balances)
+	return &MultiValueInactivityScores{
+		SharedItems:     items,
+		IndividualItems: map[uint64]*multi_value_slice.MultiValue[uint64]{},
+		AppendedItems:   []*multi_value_slice.MultiValue[uint64]{},
+	}
 }

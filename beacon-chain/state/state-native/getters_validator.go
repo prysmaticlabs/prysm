@@ -249,17 +249,5 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.inactivityScoresVal(), nil
-}
-
-// inactivityScoresVal of validators participating in consensus on the beacon chain.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) inactivityScoresVal() []uint64 {
-	if b.inactivityScores == nil {
-		return nil
-	}
-
-	res := make([]uint64, len(b.inactivityScores))
-	copy(res, b.inactivityScores)
-	return res
+	return b.inactivityScores.Value(b), nil
 }

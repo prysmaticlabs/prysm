@@ -6,14 +6,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DataType signifies the data type of the field.
-type DataType int
+// FieldInfo contains various information about a state's field.
+type FieldInfo struct {
+	ArrayType
+	ValueType
+}
+
+// ArrayType signifies the array type of the field.
+type ArrayType int
 
 // List of current data types the state supports.
 const (
-	// TODO: This can be replaced with MultiValueArray/MultiValueSlice
 	// BasicArray represents a simple array type for a field.
-	BasicArray DataType = iota
+	BasicArray ArrayType = iota
 	// CompositeArray represents a variable length array with
 	// a non primitive type.
 	CompositeArray
@@ -21,6 +26,16 @@ const (
 	// can pack multiple elements into a leaf of the underlying
 	// trie.
 	CompressedArray
+)
+
+// ValueType signifies whether the field supports multiple values.
+type ValueType int
+
+const (
+	// SingleValue means no support for multiple values.
+	SingleValue ValueType = iota
+	// MultiValue means support for multiple values.
+	MultiValue
 )
 
 // FieldIndex represents the relevant field position in the

@@ -9,7 +9,7 @@ import (
 )
 
 func TestRandaoMixes_Casting(t *testing.T) {
-	var b [fieldparams.RandaoMixesLength][32]byte
+	var b [][32]byte
 	d := RandaoMixes(b)
 	if !reflect.DeepEqual([fieldparams.RandaoMixesLength][32]byte(d), b) {
 		t.Errorf("Unequal: %v = %v", d, b)

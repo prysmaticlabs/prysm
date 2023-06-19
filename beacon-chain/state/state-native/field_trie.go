@@ -23,7 +23,7 @@ type FieldTrie struct {
 	reference     *stateutil.Reference
 	fieldLayers   [][]*[32]byte
 	field         types.FieldIndex
-	dataType      types.DataType
+	fieldInfo     types.FieldInfo
 	length        uint64
 	numOfElems    int
 	isTransferred bool
@@ -32,11 +32,11 @@ type FieldTrie struct {
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(state *BeaconState, field types.FieldIndex, fieldInfo types.FieldInfo, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
 			field:      field,
-			dataType:   dataType,
+			fieldInfo:  fieldInfo,
 			reference:  stateutil.NewRef(1),
 			RWMutex:    new(sync.RWMutex),
 			length:     length,
@@ -49,17 +49,17 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 		return nil, err
 	}
 
-	if err := validateElements(state, field, dataType, elements, length); err != nil {
+	if err := validateElements(state, field, fieldInfo, elements, length); err != nil {
 		return nil, err
 	}
-	switch dataType {
+	switch fieldInfo.ArrayType {
 	case types.BasicArray:
 		fl, err := stateutil.ReturnTrieLayer(fieldRoots, length)
 		if err != nil {
 			return nil, err
 		}
 		var l int
-		if field == types.RandaoMixes || field == types.BlockRoots || field == types.StateRoots {
+		if fieldInfo.ValueType == types.MultiValue {
 			l = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
 		} else {
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
@@ -67,7 +67,7 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 		return &FieldTrie{
 			fieldLayers: fl,
 			field:       field,
-			dataType:    dataType,
+			fieldInfo:   fieldInfo,
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
@@ -75,7 +75,7 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		var l int
-		if field == types.Balances {
+		if fieldInfo.ValueType == types.MultiValue {
 			l = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
 		} else {
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
@@ -83,14 +83,14 @@ func NewFieldTrie(state *BeaconState, field types.FieldIndex, dataType types.Dat
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
-			dataType:    dataType,
+			fieldInfo:   fieldInfo,
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
 			numOfElems:  l,
 		}, nil
 	default:
-		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
+		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(fieldInfo).Name())
 	}
 }
 
@@ -113,14 +113,14 @@ func (f *FieldTrie) RecomputeTrie(state *BeaconState, indices []uint64, elements
 	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
-	switch f.dataType {
+	switch f.fieldInfo.ArrayType {
 	case types.BasicArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayer(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		var l int
-		if f.field == types.RandaoMixes || f.field == types.BlockRoots || f.field == types.StateRoots {
+		if f.fieldInfo.ValueType == types.MultiValue {
 			l = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
 		} else {
 			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
@@ -161,14 +161,14 @@ func (f *FieldTrie) RecomputeTrie(state *BeaconState, indices []uint64, elements
 		if err != nil {
 			return [32]byte{}, err
 		}
-		if f.field == types.Balances {
+		if f.fieldInfo.ValueType == types.MultiValue {
 			f.numOfElems = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
 		} else {
 			f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
 		return stateutil.AddInMixin(fieldRoot, uint64(f.numOfElems))
 	default:
-		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())
+		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.fieldInfo).Name())
 	}
 }
 
@@ -178,7 +178,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:      f.field,
-			dataType:   f.dataType,
+			fieldInfo:  f.fieldInfo,
 			reference:  stateutil.NewRef(1),
 			RWMutex:    new(sync.RWMutex),
 			length:     f.length,
@@ -193,7 +193,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	return &FieldTrie{
 		fieldLayers: dstFieldTrie,
 		field:       f.field,
-		dataType:    f.dataType,
+		fieldInfo:   f.fieldInfo,
 		reference:   stateutil.NewRef(1),
 		RWMutex:     new(sync.RWMutex),
 		length:      f.length,
@@ -216,7 +216,7 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:      f.field,
-			dataType:   f.dataType,
+			fieldInfo:  f.fieldInfo,
 			reference:  stateutil.NewRef(1),
 			RWMutex:    new(sync.RWMutex),
 			length:     f.length,
@@ -227,7 +227,7 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 	nTrie := &FieldTrie{
 		fieldLayers: f.fieldLayers,
 		field:       f.field,
-		dataType:    f.dataType,
+		fieldInfo:   f.fieldInfo,
 		reference:   stateutil.NewRef(1),
 		RWMutex:     new(sync.RWMutex),
 		length:      f.length,
@@ -246,7 +246,7 @@ func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 	if len(f.fieldLayers[len(f.fieldLayers)-1]) == 0 {
 		return [32]byte{}, ErrInvalidFieldTrie
 	}
-	switch f.dataType {
+	switch f.fieldInfo.ArrayType {
 	case types.BasicArray:
 		return *f.fieldLayers[len(f.fieldLayers)-1][0], nil
 	case types.CompositeArray:
@@ -256,7 +256,7 @@ func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 		trieRoot := *f.fieldLayers[len(f.fieldLayers)-1][0]
 		return stateutil.AddInMixin(trieRoot, uint64(f.numOfElems))
 	default:
-		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())
+		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.fieldInfo).Name())
 	}
 }
 

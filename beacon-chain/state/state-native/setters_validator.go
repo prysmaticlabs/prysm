@@ -196,14 +196,8 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 		return errNotSupported("AppendInactivityScore", b.version)
 	}
 
-	scores := b.inactivityScores
-	if b.sharedFieldReferences[types.InactivityScores].Refs() > 1 {
-		scores = b.inactivityScoresVal()
-		b.sharedFieldReferences[types.InactivityScores].MinusRef()
-		b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
-	}
+	b.inactivityScores.Append(b, s)
 
-	b.inactivityScores = append(scores, s)
 	b.markFieldAsDirty(types.InactivityScores)
 	return nil
 }
@@ -218,10 +212,10 @@ func (b *BeaconState) SetInactivityScores(val []uint64) error {
 		return errNotSupported("SetInactivityScores", b.version)
 	}
 
-	b.sharedFieldReferences[types.InactivityScores].MinusRef()
-	b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
-
-	b.inactivityScores = val
+	if b.inactivityScores != nil {
+		b.inactivityScores.Detach(b)
+	}
+	b.inactivityScores = NewMultiValueInactivityScores(val)
 	b.markFieldAsDirty(types.InactivityScores)
 	return nil
 }

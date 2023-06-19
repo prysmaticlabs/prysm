@@ -1,4 +1,4 @@
-package fieldtrie
+package state_native
 
 import (
 	"encoding/binary"
@@ -77,7 +77,7 @@ func TestValidateIndices_CompressedField(t *testing.T) {
 		reference:   stateutil.NewRef(0),
 		fieldLayers: nil,
 		field:       types.Balances,
-		dataType:    types.CompressedArray,
+		fieldInfo:   types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.SingleValue},
 		length:      params.BeaconConfig().ValidatorRegistryLimit / 4,
 		numOfElems:  0,
 	}
@@ -351,9 +351,13 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			roots, err := fieldConverters(tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
-			if err != nil && tt.errMsg != "" {
-				require.ErrorContains(t, tt.errMsg, err)
+			roots, err := fieldConverters(nil, tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
+			if err != nil {
+				if tt.errMsg != "" {
+					require.ErrorContains(t, tt.errMsg, err)
+				} else {
+					t.Error("Unexpected error: " + err.Error())
+				}
 			} else {
 				for i, root := range roots {
 					hex := hexutil.Encode(root[:])
