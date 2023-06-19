@@ -174,9 +174,12 @@ func (b *BeaconState) ToProto() interface{} {
 	balancesCopy := make([]uint64, len(balances))
 	copy(balancesCopy, balances)
 
-	inactivityScores := b.inactivityScores.Value(b)
-	inactivityScoresCopy := make([]uint64, len(inactivityScores))
-	copy(inactivityScoresCopy, inactivityScores)
+	var inactivityScoresCopy []uint64
+	if b.version > version.Phase0 {
+		inactivityScores := b.inactivityScores.Value(b)
+		inactivityScoresCopy = make([]uint64, len(inactivityScores))
+		copy(inactivityScoresCopy, inactivityScores)
+	}
 
 	switch b.version {
 	case version.Phase0:
