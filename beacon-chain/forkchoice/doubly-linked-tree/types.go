@@ -74,25 +74,38 @@ type Vote struct {
 }
 
 type fcLock struct {
-	lk sync.RWMutex
-	t  time.Time
+	lk       sync.RWMutex
+	t        time.Time
+	currChan chan int
 }
 
 func (f *fcLock) Lock() {
 	f.lk.Lock()
 	f.t = time.Now()
+	f.currChan = make(chan int)
+	go func(t time.Time, c chan int) {
+		tim := time.NewTimer(3 * time.Second)
+		select {
+		case <-c:
+			tim.Stop()
+		case <-tim.C:
+			tim.Stop()
+			pfile := pprof.Lookup("goroutine")
+			bf := bytes.NewBuffer([]byte{})
+			err := pfile.WriteTo(bf, 1)
+			_ = err
+			log.Warnf("FC lock is taking longer than 3 seconds with the complete stack of %s", bf.String())
+		}
+	}(time.Now(), f.currChan)
 }
 
 func (f *fcLock) Unlock() {
 	t := time.Since(f.t)
 	f.t = time.Time{}
+	close(f.currChan)
 	f.lk.Unlock()
 	if t > time.Second {
-		pfile := pprof.Lookup("goroutine")
-		bf := bytes.NewBuffer([]byte{})
-		err := pfile.WriteTo(bf, 1)
-		_ = err
-		log.Warnf("FC lock is taking longer than 1 second: %s with the complete stack of %s", t.String(), bf.String())
+		log.Warnf("FC lock is taking longer than 1 second: %s with the complete stack of %s", t.String(), string(debug.Stack()))
 	}
 }
 
