@@ -39,7 +39,7 @@ func New() *ForkChoice {
 
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
-	return &ForkChoice{store: s, balances: b, votes: v}
+	return &ForkChoice{store: s, balances: b, votes: v, fcLock: new(fcLock)}
 }
 
 // NodeCount returns the current number of nodes in the Store.
