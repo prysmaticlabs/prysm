@@ -1,7 +1,9 @@
 package doublylinkedtree
 
 import (
+	"bytes"
 	"runtime/debug"
+	"runtime/pprof"
 	"sync"
 	"time"
 
@@ -86,7 +88,11 @@ func (f *fcLock) Unlock() {
 	f.t = time.Time{}
 	f.lk.Unlock()
 	if t > time.Second {
-		log.Warnf("FC lock is taking longer than 1 second: %s with stack %s", t.String(), string(debug.Stack()))
+		pfile := pprof.Lookup("goroutine")
+		bf := bytes.NewBuffer([]byte{})
+		err := pfile.WriteTo(bf, 1)
+		_ = err
+		log.Warnf("FC lock is taking longer than 1 second: %s with the complete stack of %s", t.String(), bf.String())
 	}
 }
 
