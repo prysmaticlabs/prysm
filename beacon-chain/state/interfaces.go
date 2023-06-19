@@ -20,6 +20,7 @@ type BeaconState interface {
 	ReadOnlyBeaconState
 	WriteOnlyBeaconState
 	Copy() BeaconState
+	CopyAllTries()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	StateProver
 }

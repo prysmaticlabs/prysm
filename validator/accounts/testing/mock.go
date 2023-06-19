@@ -166,10 +166,6 @@ func (_ MockValidator) WaitForKeymanagerInitialization(_ context.Context) error 
 	panic("implement me")
 }
 
-func (_ MockValidator) AllValidatorsAreExited(_ context.Context) (bool, error) {
-	panic("implement me")
-}
-
 func (m MockValidator) Keymanager() (keymanager.IKeymanager, error) {
 	return m.Km, nil
 }
