@@ -488,7 +488,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 	b.stateRoots.Copy(b, dst)
 	b.randaoMixes.Copy(b, dst)
 	b.balances.Copy(b, dst)
-	b.inactivityScores.Copy(b, dst)
+	if b.version > version.Phase0 {
+		b.inactivityScores.Copy(b, dst)
+	}
 
 	switch b.version {
 	case version.Phase0:

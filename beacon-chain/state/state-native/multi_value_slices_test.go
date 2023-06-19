@@ -33,6 +33,7 @@ func TestCorrectness_FixedSize(t *testing.T) {
 		mixesSlice[i] = mixesArray[i][:]
 	}
 	st1, err := InitializeFromProtoUnsafePhase0(&eth.BeaconState{BlockRoots: bRootsSlice, StateRoots: sRootsSlice, RandaoMixes: mixesSlice, Balances: []uint64{}})
+	require.NoError(t, err)
 	m, err := st1.RandaoMixAtIndex(0)
 	require.NoError(t, err)
 	assert.DeepEqual(t, m1_0[:], m)
@@ -114,6 +115,7 @@ func TestCorrectness_VariableSize(t *testing.T) {
 	}
 	balances := []uint64{100, 101, 102}
 	st1, err := InitializeFromProtoUnsafePhase0(&eth.BeaconState{BlockRoots: bRootsSlice, StateRoots: sRootsSlice, RandaoMixes: mixesSlice, Balances: balances})
+	require.NoError(t, err)
 	b, err := st1.BalanceAtIndex(0)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(100), b)
@@ -216,6 +218,7 @@ func TestCorrectness_VariableSize(t *testing.T) {
 	_, err = st2.BalanceAtIndex(5)
 	assert.ErrorContains(t, "out of bounds", err)
 	b, err = st3.BalanceAtIndex(5)
+	require.NoError(t, err)
 	assert.Equal(t, uint64(305), b)
 	assert.DeepEqual(t, []uint64{100, 101, 102, 1103, 1104}, st1.Balances())
 	assert.DeepEqual(t, []uint64{200, 101, 102, 203}, st2.Balances())
