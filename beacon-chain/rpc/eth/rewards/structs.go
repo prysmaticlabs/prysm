@@ -22,8 +22,8 @@ type AttestationRewardsResponse struct {
 }
 
 type AttestationRewards struct {
-	IdealRewards []IdealAttestationReward
-	TotalRewards []TotalAttestationReward
+	IdealRewards []IdealAttestationReward `json:"ideal_rewards"`
+	TotalRewards []TotalAttestationReward `json:"total_rewards"`
 }
 
 type IdealAttestationReward struct {
