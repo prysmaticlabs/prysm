@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -98,260 +98,327 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	}
 	tests := []struct {
 		name           string
-		args           *args
+		args           func() *args
 		wantHex        []string
 		errMsg         string
 		expectedLength int
 	}{
 		{
-			name: "BlockRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(5),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
+			name: "BlockRoots",
+			args: func() *args {
+				var roots [fieldparams.BlockRootsLength][32]byte
+				roots[0] = bytesutil.ToBytes32([]byte("dfsadfsadf"))
+				elems := make([][]byte, len(roots))
+				for i, r := range roots {
+					tmp := make([]byte, 32)
+					copy(tmp, r[:])
+					elems[i] = tmp
+				}
+				return &args{
+					field:      types.FieldIndex(5),
+					indices:    []uint64{},
+					elements:   NewMultiValueBlockRoots(elems),
+					convertAll: true,
+				}
 			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			wantHex:        []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			expectedLength: fieldparams.BlockRootsLength,
 		},
 		{
-			name: "BlockRoots customtypes.BlockRoots",
-			args: &args{
-				field:      types.FieldIndex(5),
-				indices:    []uint64{},
-				elements:   &customtypes.BlockRoots{},
-				convertAll: true,
+			name: "BlockRoots convertAll false",
+			args: func() *args {
+				var roots [fieldparams.BlockRootsLength][32]byte
+				roots[0] = bytesutil.ToBytes32([]byte("dfsadfsadf"))
+				roots[1] = bytesutil.ToBytes32([]byte("fskjgs"))
+				elems := make([][]byte, len(roots))
+				for i, r := range roots {
+					tmp := make([]byte, 32)
+					copy(tmp, r[:])
+					elems[i] = tmp
+				}
+				return &args{
+					field:      types.FieldIndex(5),
+					indices:    []uint64{0},
+					elements:   NewMultiValueBlockRoots(elems),
+					convertAll: false,
+				}
 			},
-			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
-			expectedLength: 8192,
+			wantHex:        []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			expectedLength: 1,
 		},
 		{
 			name: "BlockRoots type not found",
-			args: &args{
-				field:      types.FieldIndex(5),
-				indices:    []uint64{},
-				elements:   123,
-				convertAll: true,
+			args: func() *args {
+				return &args{
+					field:      types.FieldIndex(5),
+					indices:    []uint64{},
+					elements:   123,
+					convertAll: true,
+				}
 			},
 			wantHex: nil,
 			errMsg:  "Incorrect type used for block roots",
 		},
 		{
-			name: "BlockRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(5),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
+			name: "StateRoots",
+			args: func() *args {
+				var roots [fieldparams.StateRootsLength][32]byte
+				roots[0] = bytesutil.ToBytes32([]byte("dfsadfsadf"))
+				elems := make([][]byte, len(roots))
+				for i, r := range roots {
+					tmp := make([]byte, 32)
+					copy(tmp, r[:])
+					elems[i] = tmp
+				}
+				return &args{
+					field:      types.FieldIndex(6),
+					indices:    []uint64{},
+					elements:   NewMultiValueStateRoots(elems),
+					convertAll: true,
+				}
 			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			wantHex:        []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			expectedLength: fieldparams.StateRootsLength,
 		},
 		{
-			name: "StateRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
+			name: "StateRoots convertAll false",
+			args: func() *args {
+				var roots [fieldparams.StateRootsLength][32]byte
+				roots[0] = bytesutil.ToBytes32([]byte("dfsadfsadf"))
+				roots[1] = bytesutil.ToBytes32([]byte("fskjgs"))
+				elems := make([][]byte, len(roots))
+				for i, r := range roots {
+					tmp := make([]byte, 32)
+					copy(tmp, r[:])
+					elems[i] = tmp
+				}
+				return &args{
+					field:      types.FieldIndex(6),
+					indices:    []uint64{0},
+					elements:   NewMultiValueStateRoots(elems),
+					convertAll: false,
+				}
 			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
-		},
-		{
-			name: "StateRoots customtypes.StateRoots",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   &customtypes.StateRoots{},
-				convertAll: true,
-			},
-			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
-			expectedLength: 8192,
+			wantHex:        []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			expectedLength: 1,
 		},
 		{
 			name: "StateRoots type not found",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   123,
-				convertAll: true,
+			args: func() *args {
+				return &args{
+					field:      types.FieldIndex(6),
+					indices:    []uint64{},
+					elements:   123,
+					convertAll: true,
+				}
 			},
 			wantHex: nil,
 			errMsg:  "Incorrect type used for state roots",
 		},
 		{
-			name: "StateRoots [][]bytes convert all false",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: false,
+			name: "RandaoMixes",
+			args: func() *args {
+				var mixes [fieldparams.RandaoMixesLength][32]byte
+				mixes[0] = bytesutil.ToBytes32([]byte("dfsadfsadf"))
+				elems := make([][]byte, len(mixes))
+				for i, m := range mixes {
+					tmp := make([]byte, 32)
+					copy(tmp, m[:])
+					elems[i] = tmp
+				}
+				return &args{
+					field:      types.FieldIndex(13),
+					indices:    []uint64{},
+					elements:   NewMultiValueRandaoMixes(elems),
+					convertAll: true,
+				}
 			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			wantHex:        []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			expectedLength: fieldparams.RandaoMixesLength,
 		},
 		{
-			name: "StateRoots customtypes.StateRoots convert all false",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   &customtypes.StateRoots{},
-				convertAll: false,
+			name: "RandaoMixes convertAll false",
+			args: func() *args {
+				var mixes [fieldparams.RandaoMixesLength][32]byte
+				mixes[0] = bytesutil.ToBytes32([]byte("dfsadfsadf"))
+				mixes[1] = bytesutil.ToBytes32([]byte("fskjgs"))
+				elems := make([][]byte, len(mixes))
+				for i, m := range mixes {
+					tmp := make([]byte, 32)
+					copy(tmp, m[:])
+					elems[i] = tmp
+				}
+				return &args{
+					field:      types.FieldIndex(13),
+					indices:    []uint64{0},
+					elements:   NewMultiValueRandaoMixes(elems),
+					convertAll: false,
+				}
 			},
-			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
-			expectedLength: 8192,
-		},
-		{
-			name: "RandaoMixes [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(13),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
-		},
-		{
-			name: "RandaoMixes customtypes.RandaoMixes",
-			args: &args{
-				field:      types.FieldIndex(13),
-				indices:    []uint64{},
-				elements:   &customtypes.RandaoMixes{},
-				convertAll: true,
-			},
-			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
-			expectedLength: 65536,
+			wantHex:        []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			expectedLength: 1,
 		},
 		{
 			name: "RandaoMixes type not found",
-			args: &args{
-				field:      types.FieldIndex(13),
-				indices:    []uint64{},
-				elements:   123,
-				convertAll: true,
+			args: func() *args {
+				return &args{
+					field:      types.FieldIndex(13),
+					indices:    []uint64{},
+					elements:   123,
+					convertAll: true,
+				}
 			},
 			wantHex: nil,
 			errMsg:  "Incorrect type used for randao mixes",
 		},
 		{
 			name: "Eth1DataVotes type not found",
-			args: &args{
-				field:   types.FieldIndex(9),
-				indices: []uint64{},
-				elements: []*ethpb.Eth1Data{
-					{
-						DepositRoot:  make([]byte, fieldparams.RootLength),
-						DepositCount: 1,
+			args: func() *args {
+				return &args{
+					field:   types.FieldIndex(9),
+					indices: []uint64{},
+					elements: []*ethpb.Eth1Data{
+						{
+							DepositRoot:  make([]byte, fieldparams.RootLength),
+							DepositCount: 1,
+						},
 					},
-				},
-				convertAll: true,
+					convertAll: true,
+				}
 			},
 			wantHex: []string{"0x4833912e1264aef8a18392d795f3f2eed17cf5c0e8471cb0c0db2ec5aca10231"},
 		},
 		{
 			name: "Eth1DataVotes convertAll false",
-			args: &args{
-				field:   types.FieldIndex(9),
-				indices: []uint64{1},
-				elements: []*ethpb.Eth1Data{
-					{
-						DepositRoot:  make([]byte, fieldparams.RootLength),
-						DepositCount: 1,
+			args: func() *args {
+				return &args{
+					field:   types.FieldIndex(9),
+					indices: []uint64{1},
+					elements: []*ethpb.Eth1Data{
+						{
+							DepositRoot:  make([]byte, fieldparams.RootLength),
+							DepositCount: 2,
+						},
+						{
+							DepositRoot:  make([]byte, fieldparams.RootLength),
+							DepositCount: 1,
+						},
 					},
-				},
-				convertAll: false,
+					convertAll: false,
+				}
 			},
 			wantHex: []string{"0x4833912e1264aef8a18392d795f3f2eed17cf5c0e8471cb0c0db2ec5aca10231"},
 		},
 		{
 			name: "Eth1DataVotes type not found",
-			args: &args{
-				field:      types.FieldIndex(9),
-				indices:    []uint64{},
-				elements:   123,
-				convertAll: true,
+			args: func() *args {
+				return &args{
+					field:      types.FieldIndex(9),
+					indices:    []uint64{},
+					elements:   123,
+					convertAll: true,
+				}
 			},
 			wantHex: nil,
 			errMsg:  fmt.Sprintf("Wanted type of %T", []*ethpb.Eth1Data{}),
 		},
 		{
 			name: "Balance",
-			args: &args{
-				field:      types.FieldIndex(12),
-				indices:    []uint64{},
-				elements:   []uint64{12321312321, 12131241234123123},
-				convertAll: true,
+			args: func() *args {
+				return &args{
+					field:      types.FieldIndex(12),
+					indices:    []uint64{},
+					elements:   NewMultiValueBalances([]uint64{12321312321, 12131241234123123}),
+					convertAll: true,
+				}
 			},
 			wantHex: []string{"0x414e68de0200000073c971b44c192b0000000000000000000000000000000000"},
 		},
 		{
 			name: "Validators",
-			args: &args{
-				field:   types.FieldIndex(11),
-				indices: []uint64{},
-				elements: []*ethpb.Validator{
-					{
-						ActivationEpoch: 1,
+			args: func() *args {
+				return &args{
+					field:   types.FieldIndex(11),
+					indices: []uint64{},
+					elements: []*ethpb.Validator{
+						{
+							ActivationEpoch: 1,
+						},
 					},
-				},
-				convertAll: true,
+					convertAll: true,
+				}
 			},
 			wantHex: []string{"0x79817c24fc7ba90cdac48fd462fafc1cb501884e847b18733f7ca6df214a301e"},
 		},
 		{
 			name: "Validators not found",
-			args: &args{
-				field:      types.FieldIndex(11),
-				indices:    []uint64{},
-				elements:   123,
-				convertAll: true,
+			args: func() *args {
+				return &args{
+					field:      types.FieldIndex(11),
+					indices:    []uint64{},
+					elements:   123,
+					convertAll: true,
+				}
 			},
 			wantHex: nil,
 			errMsg:  fmt.Sprintf("Wanted type of %T", []*ethpb.Validator{}),
 		},
 		{
 			name: "Attestations",
-			args: &args{
-				field:   types.FieldIndex(15),
-				indices: []uint64{},
-				elements: []*ethpb.PendingAttestation{
-					{
-						ProposerIndex: 1,
+			args: func() *args {
+				return &args{
+					field:   types.FieldIndex(15),
+					indices: []uint64{},
+					elements: []*ethpb.PendingAttestation{
+						{
+							ProposerIndex: 1,
+						},
 					},
-				},
-				convertAll: true,
+					convertAll: true,
+				}
 			},
 			wantHex: []string{"0x7d7696e7f12593934afcd87a0d38e1a981bee63cb4cf0568ba36a6e0596eeccb"},
 		},
 		{
-			name: "Attestations",
-			args: &args{
-				field:   types.FieldIndex(15),
-				indices: []uint64{1},
-				elements: []*ethpb.PendingAttestation{
-					{
-						ProposerIndex: 1,
+			name: "Attestations convertAll false",
+			args: func() *args {
+				return &args{
+					field:   types.FieldIndex(15),
+					indices: []uint64{1},
+					elements: []*ethpb.PendingAttestation{
+						{
+							ProposerIndex: 0,
+						},
+						{
+							ProposerIndex: 1,
+						},
 					},
-				},
-				convertAll: false,
+					convertAll: false,
+				}
 			},
 			wantHex: []string{"0x7d7696e7f12593934afcd87a0d38e1a981bee63cb4cf0568ba36a6e0596eeccb"},
 		},
 		{
 			name: "Type not found",
-			args: &args{
-				field:   types.FieldIndex(999),
-				indices: []uint64{},
-				elements: []*ethpb.PendingAttestation{
-					{
-						ProposerIndex: 1,
+			args: func() *args {
+				return &args{
+					field:   types.FieldIndex(999),
+					indices: []uint64{},
+					elements: []*ethpb.PendingAttestation{
+						{
+							ProposerIndex: 1,
+						},
 					},
-				},
-				convertAll: true,
+					convertAll: true,
+				}
 			},
 			errMsg: "got unsupported type of",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			roots, err := fieldConverters(nil, tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
+			arg := tt.args()
+			roots, err := fieldConverters(nil, arg.field, arg.indices, arg.elements, arg.convertAll)
 			if err != nil {
 				if tt.errMsg != "" {
 					require.ErrorContains(t, tt.errMsg, err)
