@@ -699,7 +699,6 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 
 	m.nodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
-		Times(2).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
 	m.validatorClient.EXPECT().
@@ -734,7 +733,6 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 
 	m.nodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
-		Times(2).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
 	m.validatorClient.EXPECT().
@@ -768,7 +766,6 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 
 	m.nodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
-		Times(2).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
 	m.validatorClient.EXPECT().
@@ -806,7 +803,6 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 
 	m.nodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
-		Times(2).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
 	m.validatorClient.EXPECT().
