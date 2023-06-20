@@ -343,6 +343,7 @@ func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
 	headSlot := s.head.slot
 	headOptimistic := s.head.optimistic
 	s.headLock.RUnlock()
+	// we trust the head package for recent head slots, otherwise fallback to forkchoice
 	if headSlot+2 >= s.CurrentSlot() {
 		return headOptimistic, nil
 	}
