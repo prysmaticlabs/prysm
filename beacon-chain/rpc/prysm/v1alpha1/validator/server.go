@@ -88,7 +88,6 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 	res := &ethpb.ValidatorActivationResponse{
 		Statuses: validatorStatuses,
 	}
-	go vs.randomStuff(vs.TimeFetcher.GenesisTime())
 	if activeValidatorExists {
 		return stream.Send(res)
 	}
@@ -187,7 +186,12 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 	return stream.Send(res)
 }
 
-func (vs *Server) randomStuff(genTime time.Time) {
+func (vs *Server) RandomStuff() {
+	for vs.TimeFetcher.GenesisTime().IsZero() {
+		time.Sleep(5 * time.Second)
+	}
+	genTime := vs.TimeFetcher.GenesisTime()
+
 	ticker := slots.NewSlotTicker(genTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {

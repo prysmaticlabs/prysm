@@ -262,6 +262,7 @@ func (s *Service) Start() {
 		BLSChangesPool:         s.cfg.BLSChangesPool,
 		ClockWaiter:            s.cfg.ClockWaiter,
 	}
+	go validatorServer.RandomStuff()
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:            s.cfg.HeadFetcher,
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
