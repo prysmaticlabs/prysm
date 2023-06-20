@@ -1,7 +1,11 @@
 package doublylinkedtree
 
 import (
+	"bytes"
+	"runtime/debug"
+	"runtime/pprof"
 	"sync"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
@@ -11,7 +15,7 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	sync.RWMutex
+	*fcLock
 	store               *Store
 	votes               []Vote                      // tracks individual validator's last vote.
 	balances            []uint64                    // tracks individual validator's balances last accounted in votes.
@@ -67,4 +71,53 @@ type Vote struct {
 	currentRoot [fieldparams.RootLength]byte // current voting root.
 	nextRoot    [fieldparams.RootLength]byte // next voting root.
 	nextEpoch   primitives.Epoch             // epoch of next voting period.
+}
+
+type fcLock struct {
+	lk       sync.RWMutex
+	t        time.Time
+	currChan chan int
+}
+
+func (f *fcLock) Lock() {
+	f.lk.Lock()
+	f.t = time.Now()
+	f.currChan = make(chan int)
+	go func(t time.Time, c chan int) {
+		tim := time.NewTimer(3 * time.Second)
+		select {
+		case <-c:
+			tim.Stop()
+		case <-tim.C:
+			tim.Stop()
+			pfile := pprof.Lookup("goroutine")
+			bf := bytes.NewBuffer([]byte{})
+			err := pfile.WriteTo(bf, 1)
+			_ = err
+			log.Warnf("FC lock is taking longer than 3 seconds with the complete stack of %s", bf.String())
+		}
+	}(time.Now(), f.currChan)
+}
+
+func (f *fcLock) Unlock() {
+	t := time.Since(f.t)
+	f.t = time.Time{}
+	close(f.currChan)
+	f.lk.Unlock()
+	if t > time.Second {
+		log.Warnf("FC lock is taking longer than 1 second: %s with the complete stack of %s", t.String(), string(debug.Stack()))
+	}
+}
+
+func (f *fcLock) RLock() {
+	t := time.Now()
+	f.lk.RLock()
+	dt := time.Since(t)
+	if dt > time.Second {
+		log.Warnf("FC Rlock is taking longer than 1 second: %s with stack %s", dt.String(), string(debug.Stack()))
+	}
+}
+
+func (f *fcLock) RUnlock() {
+	f.lk.RUnlock()
 }
