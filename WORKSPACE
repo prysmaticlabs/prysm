@@ -44,6 +44,10 @@ register_toolchains(
     #    "@zig_sdk//toolchain:windows_amd64",
 )
 
+load("@prysm//tools/cross-toolchain:darwin_cc_hack.bzl", "configure_nonhermetic_darwin")
+
+configure_nonhermetic_darwin()
+
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
 configure_prysm_toolchains()
