@@ -210,8 +210,11 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "failed to get genesis")
 	}
-	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
-	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, signer, pubKey, currentSlot, slots.ToEpoch(currentSlot))
+	epoch, err := CurrentEpoch(genesisResponse.GenesisTime)
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve current epoch")
+	}
+	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, signer, pubKey, epoch)
 	if err != nil {
 		return errors.Wrap(err, "failed to create signed voluntary exit")
 	}
@@ -238,7 +241,6 @@ func CreateSignedVoluntaryExit(
 	validatorClient iface.ValidatorClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
-	currentSlot primitives.Slot,
 	epoch primitives.Epoch,
 ) (*ethpb.SignedVoluntaryExit, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CreateSignedVoluntaryExit")
@@ -249,7 +251,11 @@ func CreateSignedVoluntaryExit(
 		return nil, errors.Wrap(err, "gRPC call to get validator index failed")
 	}
 	exit := &ethpb.VoluntaryExit{Epoch: epoch, ValidatorIndex: indexResponse.Index}
-	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, currentSlot)
+	slot, err := slots.EpochStart(epoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve slot")
+	}
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign voluntary exit")
 	}

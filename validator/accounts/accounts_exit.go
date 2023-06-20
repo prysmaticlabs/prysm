@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	beacon_api "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
@@ -93,8 +92,11 @@ func PerformVoluntaryExit(
 			if err != nil {
 				log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.FormattedPubKeys[i])
 			}
-			currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
-			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.Keymanager.Sign, key, currentSlot, slots.ToEpoch(currentSlot))
+			epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
+			if err != nil {
+				log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.FormattedPubKeys[i])
+			}
+			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.Keymanager.Sign, key, epoch)
 			if err != nil {
 				rawNotExitedKeys = append(rawNotExitedKeys, key)
 				msg := err.Error()
