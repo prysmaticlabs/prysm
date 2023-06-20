@@ -56,6 +56,7 @@ import (
 var (
 	keyRefetchPeriod                = 30 * time.Second
 	ErrBuilderValidatorRegistration = errors.New("Builder API validator registration unsuccessful")
+	ErrValidatorsAllExited          = errors.New("All validators are exited, no more work to perform...")
 )
 
 var (
@@ -603,6 +604,16 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		return err
 	}
 
+	allExitedCounter := 0
+	for i := range resp.CurrentEpochDuties {
+		if resp.CurrentEpochDuties[i].Status == ethpb.ValidatorStatus_EXITED {
+			allExitedCounter++
+		}
+	}
+	if allExitedCounter != 0 && allExitedCounter == len(resp.CurrentEpochDuties) {
+		return ErrValidatorsAllExited
+	}
+
 	v.duties = resp
 	v.logDuties(slot, v.duties.CurrentEpochDuties)
 
@@ -844,38 +855,6 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot primitives.
 	}
 }
 
-// AllValidatorsAreExited informs whether all validators have already exited.
-func (v *validator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
-	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "could not fetch validating keys")
-	}
-	if len(validatingKeys) == 0 {
-		return false, nil
-	}
-	var publicKeys [][]byte
-	for _, key := range validatingKeys {
-		copyKey := key
-		publicKeys = append(publicKeys, copyKey[:])
-	}
-	request := &ethpb.MultipleValidatorStatusRequest{
-		PublicKeys: publicKeys,
-	}
-	response, err := v.validatorClient.MultipleValidatorStatus(ctx, request)
-	if err != nil {
-		return false, err
-	}
-	if len(response.Statuses) != len(request.PublicKeys) {
-		return false, errors.New("number of status responses did not match number of requested keys")
-	}
-	for _, status := range response.Statuses {
-		if status.Status != ethpb.ValidatorStatus_EXITED {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
 func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, domain []byte) (*ethpb.DomainResponse, error) {
 	v.domainDataLock.Lock()
 	defer v.domainDataLock.Unlock()
@@ -895,7 +874,6 @@ func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, doma
 	if err != nil {
 		return nil, err
 	}
-
 	v.domainDataCache.Set(key, proto.Clone(res), 1)
 
 	return res, nil

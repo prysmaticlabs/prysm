@@ -93,7 +93,7 @@ var (
 	// StaticPeers specifies a set of peers to connect to explicitly.
 	StaticPeers = &cli.StringSliceFlag{
 		Name:  "peer",
-		Usage: "Connect with this peer. This flag may be used multiple times.",
+		Usage: "Connect with this peer, this flag may be used multiple times. This peer is recognized as a trusted peer.",
 	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
 	BootstrapNode = &cli.StringSliceFlag{
