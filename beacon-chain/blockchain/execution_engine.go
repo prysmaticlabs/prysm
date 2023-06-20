@@ -71,9 +71,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
 	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot, arg.headRoot[:])
-	w, err := attr.Withdrawals()
-	_ = err
-	log.Infof("Calling attribute of: T %d , R %#x, F %#x, W %d in notify FCU for slot %d, with root %#x and proposer %d", attr.Timestamps(), attr.PrevRandao(), attr.SuggestedFeeRecipient(), len(w), nextSlot, arg.headRoot[:], proposerId)
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if payloadID != nil {
 		log.Infof("Payload id of %#x in notify FCU", (*payloadID)[:])
