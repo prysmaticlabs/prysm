@@ -59,6 +59,7 @@ type Service struct {
 	wsVerifier            *WeakSubjectivityVerifier
 	clockSetter           startup.ClockSetter
 	clockWaiter           startup.ClockWaiter
+	syncComplete          chan struct{}
 }
 
 // config options for the service.
