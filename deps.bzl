@@ -870,8 +870,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_dop251_goja",
         importpath = "github.com/dop251/goja",
-        sum = "h1:kgvzE5wLsLa7XKfV85VZl40QXaMCaeFtHpPwJ8fhotY=",
-        version = "v0.0.0-20230122112309-96b1610dd4f7",
+        sum = "h1:+3HCtB74++ClLy8GgjUQYeC8R4ILzVcIe8+5edAJJnE=",
+        version = "v0.0.0-20230605162241-28ee0ee714f3",
     )
     go_repository(
         name = "com_github_dop251_goja_nodejs",
@@ -999,8 +999,8 @@ def prysm_deps():
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
         replace = "github.com/MariusVanDerWijden/go-ethereum",
-        sum = "h1:RFpY4VB4xfLZlXYO5ZF43cV7vjXvwQ/PFxfTlkhNJsg=",
-        version = "v1.8.22-0.20230614185505-0ee653a0a80c",
+        sum = "h1:FRu+Canfmgu/7QUJ8u4PElDdzXn2fTfYKoSOv/rmdfo=",
+        version = "v1.8.22-0.20230619190840-9522dfd80334",
     )
 
     go_repository(
