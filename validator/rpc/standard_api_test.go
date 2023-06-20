@@ -1597,7 +1597,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 
 	mockNodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
-		Times(6).
+		Times(3).
 		Return(&eth.Genesis{GenesisTime: genesisTime}, nil)
 
 	s := &Server{
