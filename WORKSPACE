@@ -36,9 +36,12 @@ zig_toolchains()
 register_toolchains(
     "@zig_sdk//toolchain:linux_amd64_gnu.2.31",
     "@zig_sdk//toolchain:linux_arm64_gnu.2.31",
-    "@zig_sdk//toolchain:darwin_amd64",
-    "@zig_sdk//toolchain:darwin_arm64",
-    "@zig_sdk//toolchain:windows_amd64",
+    # Hermetic cc toolchain is not yet supported on darwin. Sysroot needs to be provided.
+    # See https://github.com/uber/hermetic_cc_toolchain#osx-sysroot
+    #    "@zig_sdk//toolchain:darwin_amd64",
+    #    "@zig_sdk//toolchain:darwin_arm64",
+    # Windows builds are not supported yet.
+    #    "@zig_sdk//toolchain:windows_amd64",
 )
 
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
