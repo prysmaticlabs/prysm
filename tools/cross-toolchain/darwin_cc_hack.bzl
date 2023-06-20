@@ -47,6 +47,15 @@ def cc_autoconf_impl(repository_ctx, overriden_tools = dict()):
         print("Configuring local C++ toolchain for Darwin. This is non-hermetic and builds may " + 
         "not be reproducible. Consider building on linux for a hermetic build.")
         configure_unix_toolchain(repository_ctx, cpu_value, overriden_tools)
+    else: 
+        paths = resolve_labels(repository_ctx, [
+            "@bazel_tools//tools/cpp:BUILD.empty.tpl",
+            "@bazel_tools//tools/cpp:empty_cc_toolchain_config.bzl",
+        ])
+        repository_ctx.symlink(paths["@bazel_tools//tools/cpp:empty_cc_toolchain_config.bzl"], "cc_toolchain_config.bzl")
+        repository_ctx.template("BUILD", paths["@bazel_tools//tools/cpp:BUILD.empty.tpl"], {
+            "%{cpu}": get_cpu_value(repository_ctx),
+        })
 
 cc_autoconf_toolchains = repository_rule(
     environ = [
