@@ -230,8 +230,8 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	log.Debugln("Registering Determinstic Genesis Service")
-	if err := beacon.registerDeterminsticGenesisService(); err != nil {
+	log.Debugln("Registering Deterministic Genesis Service")
+	if err := beacon.registerDeterministicGenesisService(); err != nil {
 		return nil, err
 	}
 
@@ -924,7 +924,7 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 	return b.services.RegisterService(g)
 }
 
-func (b *BeaconNode) registerDeterminsticGenesisService() error {
+func (b *BeaconNode) registerDeterministicGenesisService() error {
 	genesisTime := b.cliCtx.Uint64(flags.InteropGenesisTimeFlag.Name)
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
 
