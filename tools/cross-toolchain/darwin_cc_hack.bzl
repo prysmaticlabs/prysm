@@ -44,7 +44,7 @@ def cc_autoconf_impl(repository_ctx, overriden_tools = dict()):
     cpu_value = get_cpu_value(repository_ctx)
 
     if cpu_value.startswith("darwin"):
-        print("Configuring lcoal C++ toolchain for Darwin. This is non-hermetic and builds may " + 
+        print("Configuring local C++ toolchain for Darwin. This is non-hermetic and builds may " + 
         "not be reproducible. Consider building on linux for a hermetic build.")
         configure_unix_toolchain(repository_ctx, cpu_value, overriden_tools)
 
@@ -95,10 +95,10 @@ cc_autoconf = repository_rule(
 
 def configure_nonhermetic_darwin():
     """A C++ configuration rules that generate the crosstool file."""
-    cc_autoconf_toolchains(name = "local_config_cc_toolchains_darwin_hack")
-    cc_autoconf(name = "local_config_cc_darwin_hack")
-    native.bind(name = "cc_toolchain_darwin_hack", actual = "@local_config_cc//:toolchain")
+    cc_autoconf_toolchains(name = "local_config_cc_toolchains")
+    cc_autoconf(name = "local_config_cc")
+    native.bind(name = "cc_toolchain", actual = "@local_config_cc//:toolchain")
     native.register_toolchains(
         # Use register_toolchain's target pattern expansion to register all toolchains in the package.
-        "@local_config_cc_toolchains_darwin_hack//:all",
+        "@local_config_cc_toolchains//:all",
     )
