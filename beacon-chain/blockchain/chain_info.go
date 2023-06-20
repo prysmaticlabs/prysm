@@ -340,7 +340,12 @@ func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
 	}
 	s.headLock.RLock()
 	headRoot := s.head.root
+	headSlot := s.head.slot
+	headOptimistic := s.head.optimistic
 	s.headLock.RUnlock()
+	if headSlot+2 >= s.CurrentSlot() {
+		return headOptimistic, nil
+	}
 
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
