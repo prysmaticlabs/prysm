@@ -110,7 +110,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	log.Infof("proposer_mocker: setting proposer index took %s", time.Since(curr).String())
 
 	if features.Get().BuildBlockParallel {
-		if err := vs.BuildBlockParallel(ctx, sBlk, head); err != nil {
+		if err := vs.BuildBlockParallel(ctx, sBlk, head, curr); err != nil {
 			return nil, errors.Wrap(err, "could not build block in parallel")
 		}
 	} else {
@@ -121,7 +121,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			log.WithError(err).Error("Could not get eth1data")
 		}
 		sBlk.SetEth1Data(eth1Data)
-		log.Infof("proposer_mocker: setting eth1data took %s", time.Since(curr).String())
 
 		// Set deposit and attestation.
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
@@ -133,22 +132,17 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			sBlk.SetDeposits(deposits)
 			sBlk.SetAttestations(atts)
 		}
-		log.Infof("proposer_mocker: setting deposits and atts took %s", time.Since(curr).String())
 
 		// Set slashings.
 		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 		sBlk.SetProposerSlashings(validProposerSlashings)
 		sBlk.SetAttesterSlashings(validAttSlashings)
 
-		log.Infof("proposer_mocker: setting slashings took %s", time.Since(curr).String())
-
 		// Set exits.
 		sBlk.SetVoluntaryExits(vs.getExits(head, req.Slot))
-		log.Infof("proposer_mocker: setting exits took %s", time.Since(curr).String())
 
 		// Set sync aggregate. New in Altair.
 		vs.setSyncAggregate(ctx, sBlk)
-		log.Infof("proposer_mocker: setting sync aggs took %s", time.Since(curr).String())
 
 		// Get local and builder (if enabled) payloads. Set execution data. New in Bellatrix.
 		localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
@@ -163,11 +157,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 		}
-		log.Infof("proposer_mocker: setting execution data took %s", time.Since(curr).String())
 
 		// Set bls to execution change. New in Capella.
 		vs.setBlsToExecData(sBlk, head)
-		log.Infof("proposer_mocker: setting bls data took %s", time.Since(curr).String())
 	}
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
@@ -175,7 +167,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	sBlk.SetStateRoot(sr)
-	log.Infof("proposer_mocker: setting state root took %s", time.Since(curr).String())
 
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
@@ -205,7 +196,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) error {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, curr time.Time) error {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -219,6 +210,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 			log.WithError(err).Error("Could not get eth1data")
 		}
 		sBlk.SetEth1Data(eth1Data)
+		log.Infof("proposer_mocker: setting eth1data took %s", time.Since(curr).String())
 
 		// Set deposit and attestation.
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
@@ -230,20 +222,26 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 			sBlk.SetDeposits(deposits)
 			sBlk.SetAttestations(atts)
 		}
+		log.Infof("proposer_mocker: setting deposits and atts took %s", time.Since(curr).String())
 
 		// Set slashings.
 		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 		sBlk.SetProposerSlashings(validProposerSlashings)
 		sBlk.SetAttesterSlashings(validAttSlashings)
+		log.Infof("proposer_mocker: setting slashings took %s", time.Since(curr).String())
 
 		// Set exits.
 		sBlk.SetVoluntaryExits(vs.getExits(head, sBlk.Block().Slot()))
+		log.Infof("proposer_mocker: setting exits took %s", time.Since(curr).String())
 
 		// Set sync aggregate. New in Altair.
 		vs.setSyncAggregate(ctx, sBlk)
+		log.Infof("proposer_mocker: setting sync aggs took %s", time.Since(curr).String())
 
 		// Set bls to execution change. New in Capella.
 		vs.setBlsToExecData(sBlk, head)
+		log.Infof("proposer_mocker: setting bls data took %s", time.Since(curr).String())
+
 	}()
 
 	localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
@@ -260,6 +258,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
+	log.Infof("proposer_mocker: setting execution data took %s", time.Since(curr).String())
 
 	wg.Wait() // Wait until block is built via consensus and execution fields.
 
