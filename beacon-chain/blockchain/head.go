@@ -47,9 +47,11 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 
 // This defines the current chain service's view of head.
 type head struct {
-	root  [32]byte                             // current head root.
-	block interfaces.ReadOnlySignedBeaconBlock // current head block.
-	state state.BeaconState                    // current head state.
+	root       [32]byte                             // current head root.
+	block      interfaces.ReadOnlySignedBeaconBlock // current head block.
+	state      state.BeaconState                    // current head state.
+	slot       primitives.Slot                      // the head block slot number
+	optimistic bool                                 // optimistic status when saved head
 }
 
 // This saves head info to the local service cache, it also saves the
@@ -94,6 +96,10 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		return errors.Wrap(err, "could not get old head root")
 	}
 	oldHeadRoot := bytesutil.ToBytes32(r)
+	isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("could not check if node is optimistically synced")
+	}
 	if headBlock.Block().ParentRoot() != oldHeadRoot {
 		// A chain re-org occurred, so we fire an event notifying the rest of the services.
 		commonRoot, forkSlot, err := s.cfg.ForkChoiceStore.CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
@@ -125,10 +131,6 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		reorgDistance.Observe(float64(dis))
 		reorgDepth.Observe(float64(dep))
 
-		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(newHeadRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not check if node is optimistically synced")
-		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
@@ -150,7 +152,14 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	}
 
 	// Cache the new head info.
-	if err := s.setHead(newHeadRoot, headBlock, headState); err != nil {
+	newHead := &head{
+		root:       newHeadRoot,
+		block:      headBlock,
+		state:      headState,
+		optimistic: isOptimistic,
+		slot:       headBlock.Block().Slot(),
+	}
+	if err := s.setHead(newHead); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
 
@@ -195,20 +204,22 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.ReadOnlySignedB
 	return nil
 }
 
-// This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(root [32]byte, block interfaces.ReadOnlySignedBeaconBlock, state state.BeaconState) error {
+// This sets head view object which is used to track the head slot, root, block, state and optimistic status
+func (s *Service) setHead(newHead *head) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
 	// This does a full copy of the block and state.
-	bCp, err := block.Copy()
+	bCp, err := newHead.block.Copy()
 	if err != nil {
 		return err
 	}
 	s.head = &head{
-		root:  root,
-		block: bCp,
-		state: state.Copy(),
+		root:       newHead.root,
+		block:      bCp,
+		state:      newHead.state.Copy(),
+		optimistic: newHead.optimistic,
+		slot:       newHead.slot,
 	}
 	return nil
 }
