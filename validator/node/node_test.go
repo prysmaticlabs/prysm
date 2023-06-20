@@ -877,6 +877,29 @@ func TestProposerSettings(t *testing.T) {
 			}
 			w := tt.want()
 			require.DeepEqual(t, w, got)
+
 		})
 	}
+}
+
+func Test_ProposerSettingsWithOnlyBuilder_DoesNotSaveInDB(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.EnableBuilderFlag.Name, true, "")
+	cliCtx := cli.NewContext(&app, set, nil)
+	validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	got, err := proposerSettings(cliCtx, validatorDB)
+	require.NoError(t, err)
+	_, err = validatorDB.ProposerSettings(cliCtx.Context)
+	require.ErrorContains(t, "no proposer settings found in bucket", err)
+	want := &validatorserviceconfig.ProposerSettings{
+		DefaultConfig: &validatorserviceconfig.ProposerOption{
+			BuilderConfig: &validatorserviceconfig.BuilderConfig{
+				Enabled:  true,
+				GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+				Relays:   nil,
+			},
+		},
+	}
+	require.DeepEqual(t, want, got)
 }
