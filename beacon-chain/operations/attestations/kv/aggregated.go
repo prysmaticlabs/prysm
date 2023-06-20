@@ -26,7 +26,7 @@ func (c *AttCaches) AggregateUnaggregatedAttestations(ctx context.Context) error
 	if err != nil {
 		return err
 	}
-	return c.aggregateUnaggregatedAttestations(ctx, unaggregatedAtts)
+	return c.aggregateUnaggregatedAtts(ctx, unaggregatedAtts)
 }
 
 // AggregateUnaggregatedAttestationsBySlotIndex aggregates the unaggregated attestations and saves
@@ -36,11 +36,11 @@ func (c *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(ctx context.Con
 	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregateUnaggregatedAttestationsBySlotIndex")
 	defer span.End()
 	unaggregatedAtts := c.UnaggregatedAttestationsBySlotIndex(ctx, slot, committeeIndex)
-	return c.aggregateUnaggregatedAttestations(ctx, unaggregatedAtts)
+	return c.aggregateUnaggregatedAtts(ctx, unaggregatedAtts)
 }
 
-func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unaggregatedAtts []*ethpb.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.aggregateUnaggregatedAttestations")
+func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedAtts []*ethpb.Attestation) error {
+	_, span := trace.StartSpan(ctx, "operations.attestations.kv.aggregateUnaggregatedAtts")
 	defer span.End()
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
@@ -226,7 +226,7 @@ func (c *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
 func (c *AttCaches) AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation {
-	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregatedAttestationsBySlotIndex")
+	_, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregatedAttestationsBySlotIndex")
 	defer span.End()
 
 	atts := make([]*ethpb.Attestation, 0)
