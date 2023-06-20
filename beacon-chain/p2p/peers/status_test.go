@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
@@ -548,6 +549,10 @@ func TestPrune(t *testing.T) {
 }
 
 func TestPeerIPTracker(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
@@ -582,7 +587,7 @@ func TestPeerIPTracker(t *testing.T) {
 	p.Prune()
 
 	for _, pr := range badPeers {
-		assert.Equal(t, true, p.IsBad(pr), "peer with good ip is regarded as bad")
+		assert.Equal(t, false, p.IsBad(pr), "peer with good ip is regarded as bad")
 	}
 }
 
@@ -686,6 +691,10 @@ func TestAtInboundPeerLimit(t *testing.T) {
 }
 
 func TestPrunePeers(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &scorers.Config{
@@ -729,6 +738,80 @@ func TestPrunePeers(t *testing.T) {
 	// Assert all peers more than max are prunable.
 	peersToPrune = p.PeersToPrune()
 	assert.Equal(t, 16, len(peersToPrune))
+	for _, pid := range peersToPrune {
+		dir, err := p.Direction(pid)
+		require.NoError(t, err)
+		assert.Equal(t, network.DirInbound, dir)
+	}
+
+	// Ensure it is in the descending order.
+	currCount, err := p.Scorers().BadResponsesScorer().Count(peersToPrune[0])
+	require.NoError(t, err)
+	for _, pid := range peersToPrune {
+		count, err := p.Scorers().BadResponsesScorer().Count(pid)
+		require.NoError(t, err)
+		assert.Equal(t, true, currCount >= count)
+		currCount = count
+	}
+}
+
+func TestPrunePeers_TrustedPeers(t *testing.T) {
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{
+				Threshold: 1,
+			},
+		},
+	})
+
+	for i := 0; i < 15; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirOutbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+	// Assert there are no prunable peers.
+	peersToPrune := p.PeersToPrune()
+	assert.Equal(t, 0, len(peersToPrune))
+
+	for i := 0; i < 18; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Assert there are the correct prunable peers.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 3, len(peersToPrune))
+
+	// Add in more peers.
+	for i := 0; i < 13; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	trustedPeers := []peer.ID{}
+	// Set up bad scores for inbound peers.
+	inboundPeers := p.InboundConnected()
+	for i, pid := range inboundPeers {
+		modulo := i % 5
+		// Increment bad scores for peers.
+		for j := 0; j < modulo; j++ {
+			p.Scorers().BadResponsesScorer().Increment(pid)
+		}
+		if modulo == 4 {
+			trustedPeers = append(trustedPeers, pid)
+		}
+	}
+	p.SetTrustedPeers(trustedPeers)
+	// Assert all peers more than max are prunable.
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 16, len(peersToPrune))
+
+	// Check that trusted peers are not pruned.
+	for _, pid := range peersToPrune {
+		for _, tPid := range trustedPeers {
+			assert.NotEqual(t, pid.String(), tPid.String())
+		}
+	}
 	for _, pid := range peersToPrune {
 		dir, err := p.Direction(pid)
 		require.NoError(t, err)

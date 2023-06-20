@@ -60,6 +60,7 @@ type Service struct {
 	wsVerifier            *WeakSubjectivityVerifier
 	clockSetter           startup.ClockSetter
 	clockWaiter           startup.ClockWaiter
+	syncComplete          chan struct{}
 }
 
 // config options for the service.
@@ -130,7 +131,7 @@ func (s *Service) Start() {
 		}
 	}
 	s.spawnProcessAttestationsRoutine()
-	s.spawnLateBlockTasksLoop()
+	go s.runLateBlockTasks()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.

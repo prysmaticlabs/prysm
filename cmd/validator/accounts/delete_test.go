@@ -52,11 +52,11 @@ func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
 	keystoreFile := &keymanager.Keystore{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
+		Crypto:      cryptoFields,
+		ID:          id.String(),
+		Pubkey:      fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
+		Version:     encryptor.Version(),
+		Description: encryptor.Name(),
 	}
 	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
 	require.NoError(t, err)
