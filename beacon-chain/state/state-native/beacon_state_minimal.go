@@ -30,7 +30,7 @@ type BeaconState struct {
 	eth1Data                            *ethpb.Eth1Data
 	eth1DataVotes                       []*ethpb.Eth1Data
 	eth1DepositIndex                    uint64
-	validators                          []*ethpb.Validator
+	validators                          *MultiValueValidators
 	balances                            *MultiValueBalances
 	randaoMixes                         *MultiValueRandaoMixes
 	slashings                           []uint64

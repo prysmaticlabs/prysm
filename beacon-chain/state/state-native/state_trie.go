@@ -83,10 +83,10 @@ var capellaFields = append(
 )
 
 const (
-	phase0SharedFieldRefCount    = 6
-	altairSharedFieldRefCount    = 6
-	bellatrixSharedFieldRefCount = 7
-	capellaSharedFieldRefCount   = 9
+	phase0SharedFieldRefCount    = 5
+	altairSharedFieldRefCount    = 5
+	bellatrixSharedFieldRefCount = 6
+	capellaSharedFieldRefCount   = 8
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -136,7 +136,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		eth1Data:                    st.Eth1Data,
 		eth1DataVotes:               st.Eth1DataVotes,
 		eth1DepositIndex:            st.Eth1DepositIndex,
-		validators:                  st.Validators,
+		validators:                  NewMultiValueValidators(st.Validators),
 		balances:                    NewMultiValueBalances(st.Balances),
 		slashings:                   st.Slashings,
 		previousEpochAttestations:   st.PreviousEpochAttestations,
@@ -170,7 +170,6 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 	// Initialize field reference tracking for shared data.
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochAttestations] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochAttestations] = stateutil.NewRef(1)
@@ -208,7 +207,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		eth1Data:                    st.Eth1Data,
 		eth1DataVotes:               st.Eth1DataVotes,
 		eth1DepositIndex:            st.Eth1DepositIndex,
-		validators:                  st.Validators,
+		validators:                  NewMultiValueValidators(st.Validators),
 		balances:                    NewMultiValueBalances(st.Balances),
 		slashings:                   st.Slashings,
 		previousEpochParticipation:  st.PreviousEpochParticipation,
@@ -245,7 +244,6 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	// Initialize field reference tracking for shared data.
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
@@ -283,7 +281,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		eth1Data:                     st.Eth1Data,
 		eth1DataVotes:                st.Eth1DataVotes,
 		eth1DepositIndex:             st.Eth1DepositIndex,
-		validators:                   st.Validators,
+		validators:                   NewMultiValueValidators(st.Validators),
 		balances:                     NewMultiValueBalances(st.Balances),
 		slashings:                    st.Slashings,
 		previousEpochParticipation:   st.PreviousEpochParticipation,
@@ -321,7 +319,6 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	// Initialize field reference tracking for shared data.
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
@@ -360,7 +357,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		eth1Data:                            st.Eth1Data,
 		eth1DataVotes:                       st.Eth1DataVotes,
 		eth1DepositIndex:                    st.Eth1DepositIndex,
-		validators:                          st.Validators,
+		validators:                          NewMultiValueValidators(st.Validators),
 		balances:                            NewMultiValueBalances(st.Balances),
 		slashings:                           st.Slashings,
 		previousEpochParticipation:          st.PreviousEpochParticipation,
@@ -401,7 +398,6 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	// Initialize field reference tracking for shared data.
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
@@ -491,6 +487,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	if b.version > version.Phase0 {
 		b.inactivityScores.Copy(b, dst)
 	}
+	b.validators.Copy(b, dst)
 
 	switch b.version {
 	case version.Phase0:
@@ -900,6 +897,9 @@ func finalizerCleanup(b *BeaconState) {
 	}
 	if b.inactivityScores != nil {
 		b.inactivityScores.Detach(b)
+	}
+	if b.validators != nil {
+		b.validators.Detach(b)
 	}
 
 	state.StateCount.Sub(1)

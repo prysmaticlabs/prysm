@@ -5,8 +5,10 @@ import (
 	"sync"
 )
 
+type Id = uint64
+
 type Identifiable interface {
-	Id() uint64
+	Id() Id
 }
 
 type MultiValueSlice[O Identifiable] interface {
@@ -24,7 +26,7 @@ type MultiValue[V any] struct {
 
 type Slice[V comparable, O Identifiable] struct {
 	SharedItems     []V
-	IndividualItems map[uint64]*MultiValue[V]
+	IndividualItems map[Id]*MultiValue[V]
 	AppendedItems   []*MultiValue[V]
 	lock            sync.RWMutex
 }

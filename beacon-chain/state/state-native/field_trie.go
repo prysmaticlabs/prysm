@@ -132,7 +132,13 @@ func (f *FieldTrie) RecomputeTrie(state *BeaconState, indices []uint64, elements
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		var l int
+		if f.fieldInfo.ValueType == types.MultiValue {
+			l = elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state)
+		} else {
+			l = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
+		f.numOfElems = l
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	case types.CompressedArray:
 		numOfElems, err := f.field.ElemsInChunk()

@@ -3,6 +3,7 @@ package state_native
 import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte, *BeaconState]
@@ -14,7 +15,7 @@ func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
 	}
 	return &MultiValueRandaoMixes{
 		SharedItems:     items,
-		IndividualItems: map[uint64]*multi_value_slice.MultiValue[[32]byte]{},
+		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[[32]byte]{},
 		AppendedItems:   []*multi_value_slice.MultiValue[[32]byte]{},
 	}
 }
@@ -28,7 +29,7 @@ func NewMultiValueBlockRoots(roots [][]byte) *MultiValueBlockRoots {
 	}
 	return &MultiValueBlockRoots{
 		SharedItems:     items,
-		IndividualItems: map[uint64]*multi_value_slice.MultiValue[[32]byte]{},
+		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[[32]byte]{},
 		AppendedItems:   []*multi_value_slice.MultiValue[[32]byte]{},
 	}
 }
@@ -42,7 +43,7 @@ func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 	}
 	return &MultiValueStateRoots{
 		SharedItems:     items,
-		IndividualItems: map[uint64]*multi_value_slice.MultiValue[[32]byte]{},
+		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[[32]byte]{},
 		AppendedItems:   []*multi_value_slice.MultiValue[[32]byte]{},
 	}
 }
@@ -54,7 +55,7 @@ func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
 	copy(items, balances)
 	return &MultiValueBalances{
 		SharedItems:     items,
-		IndividualItems: map[uint64]*multi_value_slice.MultiValue[uint64]{},
+		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[uint64]{},
 		AppendedItems:   []*multi_value_slice.MultiValue[uint64]{},
 	}
 }
@@ -66,7 +67,17 @@ func NewMultiValueInactivityScores(balances []uint64) *MultiValueInactivityScore
 	copy(items, balances)
 	return &MultiValueInactivityScores{
 		SharedItems:     items,
-		IndividualItems: map[uint64]*multi_value_slice.MultiValue[uint64]{},
+		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[uint64]{},
 		AppendedItems:   []*multi_value_slice.MultiValue[uint64]{},
+	}
+}
+
+type MultiValueValidators = multi_value_slice.Slice[*ethpb.Validator, *BeaconState]
+
+func NewMultiValueValidators(vals []*ethpb.Validator) *MultiValueValidators {
+	return &MultiValueValidators{
+		SharedItems:     vals,
+		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[*ethpb.Validator]{},
+		AppendedItems:   []*multi_value_slice.MultiValue[*ethpb.Validator]{},
 	}
 }

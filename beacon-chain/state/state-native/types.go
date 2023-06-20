@@ -20,7 +20,7 @@ func init() {
 
 	// Initialize the composite arrays.
 	fieldMap[types.Eth1DataVotes] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
-	fieldMap[types.Validators] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
+	fieldMap[types.Validators] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.MultiValue}
 	fieldMap[types.PreviousEpochAttestations] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
 	fieldMap[types.CurrentEpochAttestations] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
 	fieldMap[types.Balances] = types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.MultiValue}

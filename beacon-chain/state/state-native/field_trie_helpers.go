@@ -80,7 +80,7 @@ func fieldConverters(state *BeaconState, field types.FieldIndex, indices []uint6
 	case types.Eth1DataVotes:
 		return convertEth1DataVotes(indices, elements, convertAll)
 	case types.Validators:
-		return convertValidators(indices, elements, convertAll)
+		return convertValidators(state, indices, elements, convertAll)
 	case types.PreviousEpochAttestations, types.CurrentEpochAttestations:
 		return convertAttestations(indices, elements, convertAll)
 	case types.Balances:
@@ -131,12 +131,12 @@ func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll boo
 	return handleEth1DataSlice(val, indices, convertAll)
 }
 
-func convertValidators(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	val, ok := elements.([]*ethpb.Validator)
+func convertValidators(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+	val, ok := elements.(*MultiValueValidators)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Validator{}, elements)
+		return nil, errors.Errorf("Wanted type of %T but got %T", &MultiValueValidators{}, elements)
 	}
-	return handleValidatorSlice(val, indices, convertAll)
+	return handleValidatorSlice(val.Value(state), indices, convertAll)
 }
 
 func convertAttestations(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {

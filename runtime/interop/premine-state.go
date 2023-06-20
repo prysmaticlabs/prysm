@@ -110,6 +110,7 @@ func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 			StateRoots:  sRoots,
 			RandaoMixes: mixes,
 			Balances:    []uint64{},
+			Validators:  []*ethpb.Validator{},
 		})
 		if err != nil {
 			return nil, err
@@ -121,6 +122,7 @@ func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 			RandaoMixes:      mixes,
 			Balances:         []uint64{},
 			InactivityScores: []uint64{},
+			Validators:       []*ethpb.Validator{},
 		})
 		if err != nil {
 			return nil, err
@@ -132,6 +134,7 @@ func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 			RandaoMixes:      mixes,
 			Balances:         []uint64{},
 			InactivityScores: []uint64{},
+			Validators:       []*ethpb.Validator{},
 		})
 		if err != nil {
 			return nil, err
@@ -143,6 +146,7 @@ func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 			RandaoMixes:      mixes,
 			Balances:         []uint64{},
 			InactivityScores: []uint64{},
+			Validators:       []*ethpb.Validator{},
 		})
 		if err != nil {
 			return nil, err
@@ -151,12 +155,6 @@ func (s *PremineGenesisConfig) empty() (state.BeaconState, error) {
 		return nil, errUnsupportedVersion
 	}
 	if err = e.SetSlot(0); err != nil {
-		return nil, err
-	}
-	if err = e.SetValidators([]*ethpb.Validator{}); err != nil {
-		return nil, err
-	}
-	if err = e.SetBalances([]uint64{}); err != nil {
 		return nil, err
 	}
 	if err = e.SetJustificationBits([]byte{0}); err != nil {

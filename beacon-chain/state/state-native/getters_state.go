@@ -33,7 +33,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1Data:                    b.eth1Data,
 			Eth1DataVotes:               b.eth1DataVotes,
 			Eth1DepositIndex:            b.eth1DepositIndex,
-			Validators:                  b.validators,
+			Validators:                  b.validators.Value(b),
 			Balances:                    b.balances.Value(b),
 			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashings,
@@ -57,7 +57,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1Data:                    b.eth1Data,
 			Eth1DataVotes:               b.eth1DataVotes,
 			Eth1DepositIndex:            b.eth1DepositIndex,
-			Validators:                  b.validators,
+			Validators:                  b.validators.Value(b),
 			Balances:                    b.balances.Value(b),
 			RandaoMixes:                 rm.Slice(),
 			Slashings:                   b.slashings,
@@ -84,7 +84,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1Data:                     b.eth1Data,
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
-			Validators:                   b.validators,
+			Validators:                   b.validators.Value(b),
 			Balances:                     b.balances.Value(b),
 			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashings,
@@ -112,7 +112,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Eth1Data:                     b.eth1Data,
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
-			Validators:                   b.validators,
+			Validators:                   b.validators.Value(b),
 			Balances:                     b.balances.Value(b),
 			RandaoMixes:                  rm.Slice(),
 			Slashings:                    b.slashings,
@@ -178,6 +178,16 @@ func (b *BeaconState) ToProto() interface{} {
 		copy(inactivityScoresCopy, inactivityScores)
 	}
 
+	vals := b.validators.Value(b)
+	valsCopy := make([]*ethpb.Validator, len(vals))
+	for i := 0; i < len(vals); i++ {
+		val := vals[i]
+		if val == nil {
+			continue
+		}
+		valsCopy[i] = ethpb.CopyValidator(val)
+	}
+
 	switch b.version {
 	case version.Phase0:
 		return &ethpb.BeaconState{
@@ -192,7 +202,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1Data:                    b.eth1DataVal(),
 			Eth1DataVotes:               b.eth1DataVotesVal(),
 			Eth1DepositIndex:            b.eth1DepositIndex,
-			Validators:                  b.validatorsVal(),
+			Validators:                  valsCopy,
 			Balances:                    balancesCopy,
 			RandaoMixes:                 rmCopy,
 			Slashings:                   b.slashingsVal(),
@@ -216,7 +226,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1Data:                    b.eth1DataVal(),
 			Eth1DataVotes:               b.eth1DataVotesVal(),
 			Eth1DepositIndex:            b.eth1DepositIndex,
-			Validators:                  b.validatorsVal(),
+			Validators:                  valsCopy,
 			Balances:                    balancesCopy,
 			RandaoMixes:                 rmCopy,
 			Slashings:                   b.slashingsVal(),
@@ -243,7 +253,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
-			Validators:                   b.validatorsVal(),
+			Validators:                   valsCopy,
 			Balances:                     balancesCopy,
 			RandaoMixes:                  rmCopy,
 			Slashings:                    b.slashingsVal(),
@@ -271,7 +281,7 @@ func (b *BeaconState) ToProto() interface{} {
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
-			Validators:                   b.validatorsVal(),
+			Validators:                   valsCopy,
 			Balances:                     balancesCopy,
 			RandaoMixes:                  rmCopy,
 			Slashings:                    b.slashingsVal(),

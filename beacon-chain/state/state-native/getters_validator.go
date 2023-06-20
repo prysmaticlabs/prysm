@@ -3,7 +3,6 @@ package state_native
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -39,19 +38,10 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.validatorsVal()
-}
-
-// validatorsVal participating in consensus on the beacon chain.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) validatorsVal() []*ethpb.Validator {
-	if b.validators == nil {
-		return nil
-	}
-
-	res := make([]*ethpb.Validator, len(b.validators))
+	v := b.validators.Value(b)
+	res := make([]*ethpb.Validator, len(v))
 	for i := 0; i < len(res); i++ {
-		val := b.validators[i]
+		val := v[i]
 		if val == nil {
 			continue
 		}
@@ -60,41 +50,20 @@ func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 	return res
 }
 
-// references of validators participating in consensus on the beacon chain.
-// This assumes that a lock is already held on BeaconState. This does not
-// copy fully and instead just copies the reference.
-func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
-	if b.validators == nil {
-		return nil
-	}
-
-	res := make([]*ethpb.Validator, len(b.validators))
-	for i := 0; i < len(res); i++ {
-		validator := b.validators[i]
-		if validator == nil {
-			continue
-		}
-		// copy validator reference instead.
-		res[i] = validator
-	}
-	return res
-}
-
 // ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Validator, error) {
 	if b.validators == nil {
-		return &ethpb.Validator{}, nil
-	}
-	if uint64(len(b.validators)) <= uint64(idx) {
-		e := NewValidatorIndexOutOfRangeError(idx)
-		return nil, &e
+		return nil, state.ErrNilValidatorsInState
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	val := b.validators[idx]
-	return ethpb.CopyValidator(val), nil
+	v, err := b.validators.At(b, uint64(idx))
+	if err != nil {
+		return nil, err
+	}
+	return ethpb.CopyValidator(v), nil
 }
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
@@ -103,15 +72,15 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (s
 	if b.validators == nil {
 		return nil, state.ErrNilValidatorsInState
 	}
-	if uint64(len(b.validators)) <= uint64(idx) {
-		e := NewValidatorIndexOutOfRangeError(idx)
-		return nil, &e
-	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return NewValidator(b.validators[idx])
+	v, err := b.validators.At(b, uint64(idx))
+	if err != nil {
+		return nil, err
+	}
+	return NewValidator(v)
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -121,7 +90,7 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	numOfVals := len(b.validators)
+	numOfVals := b.validators.Len(b)
 
 	idx, ok := b.valMapHandler.Get(key)
 	if ok && primitives.ValidatorIndex(numOfVals) <= idx {
@@ -133,16 +102,17 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
 func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte {
-	if uint64(idx) >= uint64(len(b.validators)) {
+	if uint64(idx) >= uint64(b.validators.Len(b)) {
 		return [fieldparams.BLSPubkeyLength]byte{}
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.validators[idx] == nil {
+	v, err := b.validators.At(b, uint64(idx))
+	if err != nil || v == nil {
 		return [fieldparams.BLSPubkeyLength]byte{}
 	}
-	return bytesutil.ToBytes48(b.validators[idx].PublicKey)
+	return bytesutil.ToBytes48(v.PublicKey)
 }
 
 // NumValidators returns the size of the validator registry.
@@ -150,7 +120,7 @@ func (b *BeaconState) NumValidators() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return len(b.validators)
+	return b.validators.Len(b)
 }
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
@@ -158,10 +128,10 @@ func (b *BeaconState) NumValidators() int {
 // WARNING: This method is potentially unsafe, as it exposes the actual validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyValidator) error) error {
 	if b.validators == nil {
-		return errors.New("nil validators in state")
+		return state.ErrNilValidatorsInState
 	}
 	b.lock.RLock()
-	validators := b.validators
+	validators := b.validators.Value(b)
 	b.lock.RUnlock()
 
 	for i, v := range validators {
@@ -169,7 +139,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 		if err != nil {
 			return err
 		}
-		if err := f(i, v); err != nil {
+		if err = f(i, v); err != nil {
 			return err
 		}
 	}
@@ -185,7 +155,10 @@ func (b *BeaconState) Balances() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.balances.Value(b)
+	v := b.balances.Value(b)
+	res := make([]uint64, len(v))
+	copy(res, v)
+	return res
 }
 
 // BalanceAtIndex of validator with the provided index.
@@ -249,5 +222,8 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.inactivityScores.Value(b), nil
+	v := b.inactivityScores.Value(b)
+	res := make([]uint64, len(v))
+	copy(res, v)
+	return res, nil
 }

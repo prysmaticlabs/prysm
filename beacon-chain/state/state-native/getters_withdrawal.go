@@ -55,9 +55,13 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	withdrawalIndex := b.nextWithdrawalIndex
 	epoch := slots.ToEpoch(b.slot)
 
-	bound := mathutil.Min(uint64(len(b.validators)), params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+	validatorsLen := b.validators.Len(b)
+	bound := mathutil.Min(uint64(validatorsLen), params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
 	for i := uint64(0); i < bound; i++ {
-		val := b.validators[validatorIndex]
+		val, err := b.validators.At(b, uint64(validatorIndex))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not retrieve validator at index %d", validatorIndex)
+		}
 		balance, err := b.balances.At(b, uint64(validatorIndex))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not retrieve balance at index %d", validatorIndex)
@@ -83,7 +87,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 			break
 		}
 		validatorIndex += 1
-		if uint64(validatorIndex) == uint64(len(b.validators)) {
+		if uint64(validatorIndex) == uint64(validatorsLen) {
 			validatorIndex = 0
 		}
 	}
