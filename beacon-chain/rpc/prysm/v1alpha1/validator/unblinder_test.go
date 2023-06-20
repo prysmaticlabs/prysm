@@ -250,9 +250,9 @@ func Test_unblindBuilderBlock(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			unblinder, err := newUnblinder(tc.blk, tc.mock)
+			unblinder, err := newUnblinder(tc.blk, nil, tc.mock)
 			require.NoError(t, err)
-			gotBlk, err := unblinder.unblindBuilderBlock(context.Background())
+			gotBlk, _, err := unblinder.unblindBuilderBlock(context.Background())
 			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {

@@ -14,10 +14,10 @@ import (
 func Test_setKzgCommitments(t *testing.T) {
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	require.NoError(t, setKzgCommitments(b, nil))
+	require.NoError(t, setKzgCommitments(b, nil, nil))
 	b, err = blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
 	require.NoError(t, err)
-	require.NoError(t, setKzgCommitments(b, nil))
+	require.NoError(t, setKzgCommitments(b, nil, nil))
 
 	cfg := params.BeaconConfig().Copy()
 	cfg.DenebForkEpoch = 0
@@ -25,7 +25,7 @@ func Test_setKzgCommitments(t *testing.T) {
 
 	kcs := [][]byte{[]byte("kzg"), []byte("kzg1"), []byte("kzg2")}
 	bundle := &enginev1.BlobsBundle{KzgCommitments: kcs}
-	require.NoError(t, setKzgCommitments(b, bundle))
+	require.NoError(t, setKzgCommitments(b, bundle, nil))
 	got, err := b.Block().Body().BlobKzgCommitments()
 	require.NoError(t, err)
 	require.DeepEqual(t, got, kcs)

@@ -81,7 +81,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		builderPayload, _, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
@@ -140,7 +140,7 @@ func TestServer_setExecutionData(t *testing.T) {
 
 		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		builderPayload, _, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
@@ -202,7 +202,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		builderPayload, _, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
@@ -216,7 +216,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		builderPayload, _, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
@@ -236,7 +236,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		builderPayload, _, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
@@ -257,7 +257,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
-		builderPayload, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
+		builderPayload, _, err := vs.getBuilderPayload(ctx, b.Slot(), b.ProposerIndex())
 		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
 		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload))
 		e, err := blk.Block().Body().Execution()
@@ -502,7 +502,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			}}
 			hb, err := vs.HeadFetcher.HeadBlock(context.Background())
 			require.NoError(t, err)
-			h, err := vs.getPayloadHeaderFromBuilder(context.Background(), hb.Block().Slot(), 0)
+			h, _, err := vs.getPayloadHeaderFromBuilder(context.Background(), hb.Block().Slot(), 0)
 			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {

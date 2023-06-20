@@ -238,20 +238,20 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 
 func (vs *Server) getBuilderPayload(ctx context.Context,
 	slot primitives.Slot,
-	vIdx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
+	vIdx primitives.ValidatorIndex) (interfaces.ExecutionData, *enginev1.BlindedBlobsBundle, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getBuilderPayload")
 	defer span.End()
 
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return nil, nil
+		return nil, nil, nil
 	}
 	canUseBuilder, err := vs.canUseBuilder(ctx, slot, vIdx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to check if we can use the builder")
+		return nil, nil, errors.Wrap(err, "failed to check if we can use the builder")
 	}
 	span.AddAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
 	if !canUseBuilder {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	return vs.getPayloadHeaderFromBuilder(ctx, slot, vIdx)

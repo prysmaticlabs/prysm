@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -123,26 +124,26 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, *enginev1.BlindedBlobsBundle, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPayloadHeaderFromBuilder")
 	defer span.End()
 
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return nil, errors.New("can't get payload header from builder before bellatrix epoch")
+		return nil, nil, errors.New("can't get payload header from builder before bellatrix epoch")
 	}
 
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	h, err := b.Block().Body().Execution()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get execution header")
+		return nil, nil, errors.Wrap(err, "failed to get execution header")
 	}
 	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
@@ -150,62 +151,71 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 
 	signedBid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if signedBid.IsNil() {
-		return nil, errors.New("builder returned nil bid")
+		return nil, nil, errors.New("builder returned nil bid")
 	}
 	fork, err := forks.Fork(slots.ToEpoch(slot))
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get fork information")
+		return nil, nil, errors.Wrap(err, "unable to get fork information")
 	}
 	forkName, ok := params.BeaconConfig().ForkVersionNames[bytesutil.ToBytes4(fork.CurrentVersion)]
 	if !ok {
-		return nil, errors.New("unable to find current fork in schedule")
+		return nil, nil, errors.New("unable to find current fork in schedule")
 	}
 	if !strings.EqualFold(version.String(signedBid.Version()), forkName) {
-		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
+		return nil, nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
 	}
 
 	bid, err := signedBid.Message()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get bid")
+		return nil, nil, errors.Wrap(err, "could not get bid")
 	}
 	if bid.IsNil() {
-		return nil, errors.New("builder returned nil bid")
+		return nil, nil, errors.New("builder returned nil bid")
 	}
 
 	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
 	if v.String() == "0" {
-		return nil, errors.New("builder returned header with 0 bid amount")
+		return nil, nil, errors.New("builder returned header with 0 bid amount")
 	}
 
 	header, err := bid.Header()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get bid header")
+		return nil, nil, errors.Wrap(err, "could not get bid header")
 	}
 	txRoot, err := header.TransactionsRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get transaction root")
+		return nil, nil, errors.Wrap(err, "could not get transaction root")
 	}
 	if bytesutil.ToBytes32(txRoot) == emptyTransactionsRoot {
-		return nil, errors.New("builder returned header with an empty tx root")
+		return nil, nil, errors.New("builder returned header with an empty tx root")
 	}
 
 	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
-		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
+		return nil, nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if header.Timestamp() != uint64(t.Unix()) {
-		return nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
+		return nil, nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
 	}
 
 	if err := validateBuilderSignature(signedBid); err != nil {
-		return nil, errors.Wrap(err, "could not validate builder signature")
+		return nil, nil, errors.Wrap(err, "could not validate builder signature")
+	}
+
+	var bundle *enginev1.BlindedBlobsBundle
+	if bid.Version() >= version.Deneb {
+		bundle, err = bid.BlindedBlobsBundle()
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not get blinded blobs bundle")
+		}
+		log.WithField("blindBlobCount", len(bundle.BlobRoots))
 	}
 
 	log.WithFields(logrus.Fields{
@@ -223,7 +233,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),
 	)
 
-	return header, nil
+	return header, bundle, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
