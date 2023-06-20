@@ -52,7 +52,12 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	defer b.lock.RUnlock()
 
 	roots := customtypes.BlockRoots(b.blockRoots.Value(b))
-	return roots.Slice()
+	rootsSlice := roots.Slice()
+	rootsCopy := make([][]byte, len(rootsSlice))
+	for i, v := range rootsSlice {
+		copy(rootsCopy[i], v)
+	}
+	return rootsCopy
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an

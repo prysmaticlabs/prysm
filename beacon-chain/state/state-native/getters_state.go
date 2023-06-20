@@ -148,7 +148,6 @@ func (b *BeaconState) ToProto() interface{} {
 
 	br := customtypes.BlockRoots(b.blockRoots.Value(b))
 	brSlice := br.Slice()
-	// TODO: Should this be done in Slice()?
 	brCopy := make([][]byte, len(br))
 	for i, v := range brSlice {
 		copy(brCopy[i], v)
@@ -156,7 +155,6 @@ func (b *BeaconState) ToProto() interface{} {
 
 	sr := customtypes.StateRoots(b.stateRoots.Value(b))
 	srSlice := sr.Slice()
-	// TODO: Should this be done in Slice()?
 	srCopy := make([][]byte, len(sr))
 	for i, v := range srSlice {
 		copy(srCopy[i], v)
@@ -164,7 +162,6 @@ func (b *BeaconState) ToProto() interface{} {
 
 	rm := customtypes.RandaoMixes(b.randaoMixes.Value(b))
 	rmSlice := rm.Slice()
-	// TODO: Should this be done in Slice()?
 	rmCopy := make([][]byte, len(rm))
 	for i, v := range rmSlice {
 		copy(rmCopy[i], v)
@@ -307,7 +304,12 @@ func (b *BeaconState) StateRoots() [][]byte {
 	defer b.lock.RUnlock()
 
 	roots := customtypes.StateRoots(b.stateRoots.Value(b))
-	return roots.Slice()
+	rootsSlice := roots.Slice()
+	rootsCopy := make([][]byte, len(rootsSlice))
+	for i, v := range rootsSlice {
+		copy(rootsCopy[i], v)
+	}
+	return rootsCopy
 }
 
 // StateRootAtIndex retrieves a specific state root based on an

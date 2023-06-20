@@ -14,7 +14,12 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	defer b.lock.RUnlock()
 
 	rm := customtypes.RandaoMixes(b.randaoMixes.Value(b))
-	return rm.Slice()
+	rmSlice := rm.Slice()
+	rmCopy := make([][]byte, len(rmSlice))
+	for i, v := range rmSlice {
+		copy(rmCopy[i], v)
+	}
+	return rmCopy
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
