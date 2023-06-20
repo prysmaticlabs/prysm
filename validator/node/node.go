@@ -629,11 +629,13 @@ func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
 	if err == nil {
 		// process any overrides to builder settings
 		overrideBuilderSettings(settings, builderConfigFromFlag)
+		// if settings are empty
 		return settings, nil
 	}
 
 	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
 		// if there are no proposer settings provided, create a default where fee recipient is not populated, this will be skipped for validator registration on validators that don't have a fee recipient set.
+		// skip saving to DB if only builder settings are provided until a trigger like keymanager API updates with fee recipient values
 		return &validatorServiceConfig.ProposerSettings{
 			DefaultConfig: &validatorServiceConfig.ProposerOption{
 				BuilderConfig: builderConfigFromFlag,

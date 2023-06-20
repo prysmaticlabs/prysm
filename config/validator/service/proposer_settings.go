@@ -84,6 +84,11 @@ type ProposerSettings struct {
 	DefaultConfig *ProposerOption
 }
 
+// ShouldBeSaved goes through checks to see if the value should be saveable.
+func (settings *ProposerSettings) ShouldBeSaved() bool {
+	return settings != nil && (settings.ProposeConfig != nil || settings.DefaultConfig != nil && settings.DefaultConfig.FeeRecipientConfig != nil)
+}
+
 // ToPayload converts struct to ProposerSettingsPayload
 func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 	if ps == nil {

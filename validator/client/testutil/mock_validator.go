@@ -285,8 +285,3 @@ func (f *FakeValidator) SetProposerSettings(_ context.Context, settings *validat
 	f.proposerSettings = settings
 	return nil
 }
-
-// MigrateFromBeaconNodeProposerSettings for mocking
-func (*FakeValidator) MigrateFromBeaconNodeProposerSettings(_ context.Context) (*validatorserviceconfig.ProposerSettings, error) {
-	return nil, nil
-}

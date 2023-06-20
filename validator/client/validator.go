@@ -970,50 +970,6 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *validator
 	return nil
 }
 
-// MigrateFromBeaconNodeProposerSettings tries to collect fee recipient information from the beacon node to construct the proposer settings on the validator client.
-func (v *validator) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (*validatorserviceconfig.ProposerSettings, error) {
-	if v.proposerSettings != nil {
-		return nil, errors.New("proposer settings exist, can not migrate")
-	}
-	ctx, span := trace.StartSpan(ctx, "MigrateFromBeaconNodeProposerSettings")
-	defer span.End()
-	km, err := v.Keymanager()
-	if err != nil {
-		return nil, err
-	}
-	keys, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if len(keys) == 0 {
-		return nil, errors.New("no keys found to migrate settings for")
-	}
-	proposerConfig := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
-	for i := range keys {
-
-		resp, err := v.validatorClient.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{PublicKey: keys[i][:]})
-		if err != nil {
-			return nil, err
-		}
-		fr := common.BytesToAddress(resp.FeeRecipient)
-		proposerConfig[keys[i]] = &validatorserviceconfig.ProposerOption{
-			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
-				FeeRecipient: fr,
-			},
-		}
-		log.Infof("preparing validator key %s with fee recipient %s on proposer settings", hexutil.Encode(keys[i][:]), fr.Hex())
-	}
-	settings := &validatorserviceconfig.ProposerSettings{
-		ProposeConfig: proposerConfig,
-	}
-	if err := v.SetProposerSettings(ctx, settings); err != nil {
-		return nil, err
-	}
-	log.Info("successfully migrated proposer settings from beacon node")
-	// does not migrate any default, will fall back to Beacon Node
-	return settings, nil
-}
-
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
 func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error {
 	if km == nil {

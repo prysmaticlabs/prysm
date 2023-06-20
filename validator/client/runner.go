@@ -67,15 +67,8 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		}
 	} else {
-		// attempt to migrate data
-		settings, err := v.MigrateFromBeaconNodeProposerSettings(ctx)
-		if err != nil || settings == nil {
-			log.WithError(err).Warnln("Validator client started without proposer settings such as fee recipient" +
-				" and will continue to use settings provided in the beacon node.")
-		} else {
-			log.Infof("Validator client started with fee recipient information from the beacon node"+
-				" and will periodically update the beacon node with any new changes. If you are using a custom builder please restart the validator client with the --%s", flags.EnableBuilderFlag.Name)
-		}
+		log.WithError(err).Warnln("Validator client started without proposer settings such as fee recipient" +
+			" and will continue to use settings provided in the beacon node.")
 	}
 
 	for {
@@ -115,9 +108,10 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
+			// create call on a separate thread to push proposer settings from the middle of an epoch.
+			if slots.SinceEpochStarts(slot) == params.BeaconConfig().SlotsPerEpoch/2 && v.ProposerSettings() != nil {
 				go func() {
-					// deadline set for end of epoch
+					// deadline set for 1 epoch from call to not overlap.
 					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
 					if err := v.PushProposerSettings(ctx, km, slot, epochDeadline); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")

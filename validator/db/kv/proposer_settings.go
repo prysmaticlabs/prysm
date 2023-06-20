@@ -122,7 +122,7 @@ func (s *Store) SaveProposerSettings(ctx context.Context, settings *validatorSer
 	_, span := trace.StartSpan(ctx, "validator.db.SaveProposerSettings")
 	defer span.End()
 	// nothing to save
-	if settings == nil {
+	if !settings.ShouldBeSaved() {
 		log.Warnf("proposer settings are empty, nothing has been saved")
 		return nil
 	}
