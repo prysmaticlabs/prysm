@@ -253,6 +253,10 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				elements: []*ethpb.Eth1Data{
 					{
 						DepositRoot:  make([]byte, fieldparams.RootLength),
+						DepositCount: 2,
+					},
+					{
+						DepositRoot:  make([]byte, fieldparams.RootLength),
 						DepositCount: 1,
 					},
 				},
@@ -321,11 +325,14 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 			wantHex: []string{"0x7d7696e7f12593934afcd87a0d38e1a981bee63cb4cf0568ba36a6e0596eeccb"},
 		},
 		{
-			name: "Attestations",
+			name: "Attestations convertAll false",
 			args: &args{
 				field:   types.FieldIndex(15),
 				indices: []uint64{1},
 				elements: []*ethpb.PendingAttestation{
+					{
+						ProposerIndex: 0,
+					},
 					{
 						ProposerIndex: 1,
 					},
@@ -352,8 +359,12 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			roots, err := fieldConverters(tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
-			if err != nil && tt.errMsg != "" {
-				require.ErrorContains(t, tt.errMsg, err)
+			if err != nil {
+				if tt.errMsg != "" {
+					require.ErrorContains(t, tt.errMsg, err)
+				} else {
+					t.Error("Unexpected error: " + err.Error())
+				}
 			} else {
 				for i, root := range roots {
 					hex := hexutil.Encode(root[:])
