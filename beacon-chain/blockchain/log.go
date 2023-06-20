@@ -53,7 +53,7 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())))
 		txs, err := p.Transactions()
 		switch {
-		case errors.Is(err, consensus_types.ErrUnsupportedGetter):
+		case errors.Is(err, consensus_types.ErrUnsupportedField):
 		case err != nil:
 			return err
 		default:
@@ -120,7 +120,7 @@ func logPayload(block interfaces.ReadOnlyBeaconBlock) error {
 	fields := logrus.Fields{
 		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
 		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash())),
-		"blockNumber": payload.BlockNumber,
+		"blockNumber": payload.BlockNumber(),
 		"gasUtilized": fmt.Sprintf("%.2f", gasUtilized),
 	}
 	if block.Version() >= version.Capella {

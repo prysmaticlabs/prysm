@@ -190,7 +190,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		for _, blk := range blocks {
 			exec, err := blk.Block().Body().Execution()
 			switch {
-			case errors.Is(err, consensus_types.ErrUnsupportedGetter):
+			case errors.Is(err, consensus_types.ErrUnsupportedField):
 				continue
 			case err != nil:
 				log.WithError(err).Error("Could not read execution data from block body")
@@ -199,7 +199,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 			}
 			_, err = exec.Transactions()
 			switch {
-			case errors.Is(err, consensus_types.ErrUnsupportedGetter):
+			case errors.Is(err, consensus_types.ErrUnsupportedField):
 				continue
 			case err != nil:
 				log.WithError(err).Error("Could not read transactions block execution payload")

@@ -840,10 +840,12 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	return [32]byte{}, errors.New("invalid field index provided")
 }
 
-// CopyAllTries copies our field tries from the state
+// CopyAllTries copies our field tries from the state. This is used to
+// remove shared field tries which have references to other states and
+// only have this copied set referencing to the current state.
 func (b *BeaconState) CopyAllTries() {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	for fldIdx, fieldTrie := range b.stateFieldLeaves {
 		if fieldTrie.FieldReference() != nil {

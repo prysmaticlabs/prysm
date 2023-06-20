@@ -136,7 +136,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	if err != nil {
 		return errors.Wrap(err, "could not validate new payload")
 	}
-	if isValidPayload {
+	if signed.Version() < version.Capella && isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
 			return err
 		}
@@ -285,7 +285,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}()
 	}
 	defer reportAttestationInclusion(b)
-	if err := s.handleEpochBoundary(ctx, postState); err != nil {
+	if err := s.handleEpochBoundary(ctx, postState, blockRoot[:]); err != nil {
 		return err
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
@@ -483,14 +483,14 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 }
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
-func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState) error {
+func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState, blockRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
 	defer span.End()
 
 	var err error
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		copied := postState.Copy()
-		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
+		copied, err := transition.ProcessSlotsUsingNextSlotCache(ctx, copied, blockRoot, copied.Slot()+1)
 		if err != nil {
 			return err
 		}
@@ -672,26 +672,23 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 // This routine checks if there is a cached proposer payload ID available for the next slot proposer.
 // If there is not, it will call forkchoice updated with the correct payload attribute then cache the payload ID.
-func (s *Service) spawnLateBlockTasksLoop() {
-	go func() {
-		_, err := s.clockWaiter.WaitForClock(s.ctx)
-		if err != nil {
-			log.WithError(err).Error("spawnLateBlockTasksLoop encountered an error waiting for initialization")
+func (s *Service) runLateBlockTasks() {
+	if err := s.waitForSync(); err != nil {
+		log.WithError(err).Error("failed to wait for initial sync")
+		return
+	}
+
+	attThreshold := params.BeaconConfig().SecondsPerSlot / 3
+	ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
+	for {
+		select {
+		case <-ticker.C():
+			s.lateBlockTasks(s.ctx)
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting routine")
 			return
 		}
-		attThreshold := params.BeaconConfig().SecondsPerSlot / 3
-		ticker := slots.NewSlotTickerWithOffset(s.genesisTime, time.Duration(attThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
-		for {
-			select {
-			case <-ticker.C():
-				s.lateBlockTasks(s.ctx)
-
-			case <-s.ctx.Done():
-				log.Debug("Context closed, exiting routine")
-				return
-			}
-		}
-	}()
+	}
 }
 
 // lateBlockTasks  is called 4 seconds into the slot and performs tasks
@@ -706,12 +703,26 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		Type: statefeed.MissedSlot,
 	})
 
+	headRoot := s.headRoot()
+	headState := s.headState(ctx)
+	lastRoot, lastState := transition.LastCachedState()
+	if lastState == nil {
+		lastRoot, lastState = headRoot[:], headState
+	}
+	// Copy all the field tries in our cached state in the event of late
+	// blocks.
+	lastState.CopyAllTries()
+	if err := transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
+		log.WithError(err).Debug("could not update next slot state cache")
+	}
+
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
 	if (!has && !features.Get().PrepareAllPayloads) || id != [8]byte{} {
 		return
 	}
+
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
@@ -719,8 +730,6 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		log.WithError(err).Debug("could not perform late block tasks: failed to retrieve head block")
 		return
 	}
-	headRoot := s.headRoot()
-	headState := s.headState(ctx)
 	s.headLock.RUnlock()
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
@@ -730,12 +739,14 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 	}
-	lastRoot, lastState := transition.LastCachedState()
-	if lastState == nil {
-		lastRoot, lastState = headRoot[:], headState
-	}
-	lastState.CopyAllTries()
-	if err = transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
-		log.WithError(err).Debug("could not update next slot state cache")
+}
+
+// waitForSync blocks until the node is synced to the head.
+func (s *Service) waitForSync() error {
+	select {
+	case <-s.syncComplete:
+		return nil
+	case <-s.ctx.Done():
+		return errors.New("context closed, exiting goroutine")
 	}
 }
