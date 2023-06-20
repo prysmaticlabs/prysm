@@ -8,8 +8,9 @@ load(
 """
 This file is a copy of https://github.com/bazelbuild/bazel/blob/master/tools/cpp/cc_configure.bzl
 with some minor changes. The original file is licensed under Apache 2.0 license. The gist of this
-is that we want darwin to register the local toolchain and disregard the envroniment variable of
-BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN.
+is that we want darwin to register the local toolchain and disregard the environment variable of
+BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN. We must support a local toolchain for darwin until
+hermetic_cc_toolchain supports darwin's sysroot in a hermetic way.
 """
 
 def cc_autoconf_toolchains_impl(repository_ctx):
