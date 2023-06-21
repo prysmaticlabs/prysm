@@ -721,7 +721,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 		},
 		{
 			name: "deneb block has too many blobs",
-			err:  "Too many blobs in block: 7",
+			err:  "too many blobs in block: 7",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBeaconBlockDeneb()
 				blockToPropose.Block.Slot = 5
@@ -2816,4 +2816,20 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9728D8").Hex(), common.BytesToAddress(resp.FeeRecipient).Hex())
+}
+
+func Test_extractBlobs(t *testing.T) {
+	blobs := []*ethpb.SignedBlobSidecar{
+		{Message: &ethpb.BlobSidecar{Index: 0}}, {Message: &ethpb.BlobSidecar{Index: 1}},
+		{Message: &ethpb.BlobSidecar{Index: 2}}, {Message: &ethpb.BlobSidecar{Index: 3}},
+		{Message: &ethpb.BlobSidecar{Index: 4}}, {Message: &ethpb.BlobSidecar{Index: 5}}}
+	req := &ethpb.GenericSignedBeaconBlock{Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+		Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+			Blobs: blobs,
+		},
+	},
+	}
+	bs, err := extractBlobs(req)
+	require.NoError(t, err)
+	require.DeepEqual(t, blobs, bs)
 }

@@ -21,6 +21,10 @@ func Test_unblindBuilderBlock(t *testing.T) {
 	p.GasLimit = 123
 	pCapella := emptyPayloadCapella()
 	pCapella.GasLimit = 123
+	pDeneb := emptyPayloadDeneb()
+	pDeneb.GasLimit = 123
+	pDeneb.ExcessDataGas = 456
+	pDeneb.DataGasUsed = 789
 
 	tests := []struct {
 		name        string
@@ -242,6 +246,85 @@ func Test_unblindBuilderBlock(t *testing.T) {
 					},
 				}
 				b.Block.Body.ExecutionPayload = pCapella
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+		},
+		{
+			name: "can get payload Deneb",
+			blk: func() interfaces.SignedBeaconBlock {
+				b := util.NewBlindedBeaconBlockDeneb()
+				b.Block.Slot = 1
+				b.Block.ProposerIndex = 2
+				b.Block.Body.BlsToExecutionChanges = []*eth.SignedBLSToExecutionChange{
+					{
+						Message: &eth.BLSToExecutionChange{
+							ValidatorIndex:     123,
+							FromBlsPubkey:      []byte{'a'},
+							ToExecutionAddress: []byte{'a'},
+						},
+						Signature: []byte("sig123"),
+					},
+					{
+						Message: &eth.BLSToExecutionChange{
+							ValidatorIndex:     456,
+							FromBlsPubkey:      []byte{'b'},
+							ToExecutionAddress: []byte{'b'},
+						},
+						Signature: []byte("sig456"),
+					},
+				}
+				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				require.NoError(t, err)
+				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*v1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+				require.NoError(t, err)
+				b.Block.Body.ExecutionPayloadHeader = &v1.ExecutionPayloadHeaderDeneb{
+					ParentHash:       make([]byte, fieldparams.RootLength),
+					FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:        make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+					LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:       make([]byte, fieldparams.RootLength),
+					BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+					BlockHash:        make([]byte, fieldparams.RootLength),
+					TransactionsRoot: txRoot[:],
+					WithdrawalsRoot:  withdrawalsRoot[:],
+					GasLimit:         123,
+					ExcessDataGas:    456,
+					DataGasUsed:      789,
+				}
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			mock: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				PayloadDeneb:  pDeneb,
+			},
+			returnedBlk: func() interfaces.SignedBeaconBlock {
+				b := util.NewBeaconBlockDeneb()
+				b.Block.Slot = 1
+				b.Block.ProposerIndex = 2
+				b.Block.Body.BlsToExecutionChanges = []*eth.SignedBLSToExecutionChange{
+					{
+						Message: &eth.BLSToExecutionChange{
+							ValidatorIndex:     123,
+							FromBlsPubkey:      []byte{'a'},
+							ToExecutionAddress: []byte{'a'},
+						},
+						Signature: []byte("sig123"),
+					},
+					{
+						Message: &eth.BLSToExecutionChange{
+							ValidatorIndex:     456,
+							FromBlsPubkey:      []byte{'b'},
+							ToExecutionAddress: []byte{'b'},
+						},
+						Signature: []byte("sig456"),
+					},
+				}
+				b.Block.Body.ExecutionPayload = pDeneb
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
