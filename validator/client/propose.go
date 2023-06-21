@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const domainDataErr = "could not get domain data"
@@ -199,21 +198,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 func ProposeExit(
 	ctx context.Context,
 	validatorClient iface.ValidatorClient,
-	nodeClient iface.NodeClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
+	epoch primitives.Epoch,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
 
-	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "failed to get genesis")
-	}
-	epoch, err := CurrentEpoch(genesisResponse.GenesisTime)
-	if err != nil {
-		return errors.Wrap(err, "failed to retrieve current epoch")
-	}
 	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, signer, pubKey, epoch)
 	if err != nil {
 		return errors.Wrap(err, "failed to create signed voluntary exit")
