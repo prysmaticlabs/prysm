@@ -17,6 +17,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	rmSlice := rm.Slice()
 	rmCopy := make([][]byte, len(rmSlice))
 	for i, v := range rmSlice {
+		rmCopy[i] = make([]byte, len(v))
 		copy(rmCopy[i], v)
 	}
 	return rmCopy
