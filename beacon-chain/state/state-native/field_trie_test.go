@@ -164,7 +164,7 @@ func FuzzFieldTrie(f *testing.F) {
 		for i := 32; i < len(data); i += 32 {
 			roots = append(roots, data[i-32:i])
 		}
-		trie, err := state_native.NewFieldTrie(st, types.FieldIndex(idx), types.FieldInfo{ArrayType: types.ArrayType(typ), ValueType: types.MultiValue}, roots, slotsPerHistRoot)
+		trie, err := state_native.NewFieldTrie(st, types.FieldIndex(idx), types.FieldInfo{ArrayType: types.ArrayType(typ), ValueType: types.MultiValue}, state_native.NewMultiValueStateRoots(roots), slotsPerHistRoot)
 		if err != nil {
 			return // invalid inputs
 		}
