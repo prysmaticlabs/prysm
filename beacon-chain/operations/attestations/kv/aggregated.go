@@ -99,7 +99,7 @@ func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedA
 
 // aggregateParallel aggregates attestations in parallel for `atts` and saves them in the pool,
 // returns the unaggregated attestations that weren't able to aggregate.
-// Given CPU cores, it creates a channel of size `n` and spawns `n` goroutines to aggregate attestations
+// Given `n` CPU cores, it creates a channel of size `n` and spawns `n` goroutines to aggregate attestations
 func (c *AttCaches) aggregateParallel(atts map[[32]byte][]*ethpb.Attestation, leftOver map[[32]byte]bool) map[[32]byte]bool {
 	var leftoverLock sync.Mutex
 	wg := sync.WaitGroup{}
