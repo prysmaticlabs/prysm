@@ -84,16 +84,16 @@ func PerformVoluntaryExit(
 	ctx context.Context, cfg PerformExitCfg,
 ) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
 	var rawNotExitedKeys [][]byte
+	genesisResponse, err := cfg.NodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.WithError(err).Errorf("voluntary exit failed: %v", err)
+	}
 	for i, key := range cfg.RawPubKeys {
 		// When output directory is present, only create the signed exit, but do not propose it.
 		// Otherwise, propose the exit immediately.
-		genesisResponse, err := cfg.NodeClient.GetGenesis(ctx, &emptypb.Empty{})
-		if err != nil {
-			log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.FormattedPubKeys[i])
-		}
 		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
 		if err != nil {
-			log.WithError(err).Errorf("voluntary exit failed for account %s", cfg.FormattedPubKeys[i])
+			log.WithError(err).Errorf("voluntary exit failed: %v", err)
 		}
 		if len(cfg.OutputDirectory) > 0 {
 			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.Keymanager.Sign, key, epoch)
