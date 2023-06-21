@@ -1,9 +1,8 @@
 package types
 
 import (
-	"sync"
-
 	"github.com/pkg/errors"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 )
 
 // FieldInfo contains various information about a state's field.
@@ -228,20 +227,5 @@ const (
 	HistoricalSummaries
 )
 
-// StateEnumerator is a thread-safe counter of all states created since the node's start.
-type StateEnumerator struct {
-	counter uint64
-	lock    sync.RWMutex
-}
-
-// Inc increments the number of states and returns the new state count.
-func (c *StateEnumerator) Inc() uint64 {
-	c.lock.Lock()
-	c.counter++
-	v := c.counter
-	c.lock.Unlock()
-	return v
-}
-
 // Enumerator keeps track of the number of states created since the node's start.
-var Enumerator = StateEnumerator{}
+var Enumerator consensus_types.Enumerator = &consensus_types.ThreadSafeEnumerator{}
