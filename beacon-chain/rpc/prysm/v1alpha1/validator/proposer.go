@@ -262,14 +262,10 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		if wasBlinded {
 			scs = blobSidecar
 		} else {
-			b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
-			if !ok {
-				return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
+			scs, err = extractBlobs(req)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not extract blobs")
 			}
-			if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
-				return nil, status.Errorf(codes.InvalidArgument, "Too many blobs in block: %d", len(b.Deneb.Blobs))
-			}
-			scs = b.Deneb.Blobs
 		}
 		sidecar := make([]*ethpb.BlobSidecar, len(scs))
 		for i, sc := range scs {
@@ -307,6 +303,18 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
+}
+
+func extractBlobs(req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.SignedBlobSidecar, error) {
+	b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
+	if !ok {
+		return nil, errors.New("Could not cast block to Deneb")
+	}
+	if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("too many blobs in block: %d", len(b.Deneb.Blobs))
+
+	}
+	return b.Deneb.Blobs, nil
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
