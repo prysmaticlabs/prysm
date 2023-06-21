@@ -150,6 +150,7 @@ func (b *BeaconState) ToProto() interface{} {
 	brSlice := br.Slice()
 	brCopy := make([][]byte, len(br))
 	for i, v := range brSlice {
+		brCopy[i] = make([]byte, len(v))
 		copy(brCopy[i], v)
 	}
 
@@ -157,6 +158,7 @@ func (b *BeaconState) ToProto() interface{} {
 	srSlice := sr.Slice()
 	srCopy := make([][]byte, len(sr))
 	for i, v := range srSlice {
+		srCopy[i] = make([]byte, len(v))
 		copy(srCopy[i], v)
 	}
 
@@ -164,6 +166,7 @@ func (b *BeaconState) ToProto() interface{} {
 	rmSlice := rm.Slice()
 	rmCopy := make([][]byte, len(rm))
 	for i, v := range rmSlice {
+		rmCopy[i] = make([]byte, len(v))
 		copy(rmCopy[i], v)
 	}
 
