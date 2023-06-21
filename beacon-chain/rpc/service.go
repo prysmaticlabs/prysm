@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
@@ -217,6 +218,13 @@ func (s *Service) Start() {
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards)
+
+	builderServer := &rpcBuilder.Server{
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		Stater:                stater,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
