@@ -84,11 +84,19 @@ func PerformVoluntaryExit(
 	ctx context.Context, cfg PerformExitCfg,
 ) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
 	var rawNotExitedKeys [][]byte
+	genesisResponse, err := cfg.NodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.WithError(err).Errorf("voluntary exit failed: %v", err)
+	}
 	for i, key := range cfg.RawPubKeys {
 		// When output directory is present, only create the signed exit, but do not propose it.
 		// Otherwise, propose the exit immediately.
+		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
+		if err != nil {
+			log.WithError(err).Errorf("voluntary exit failed: %v", err)
+		}
 		if len(cfg.OutputDirectory) > 0 {
-			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, key)
+			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.Keymanager.Sign, key, epoch)
 			if err != nil {
 				rawNotExitedKeys = append(rawNotExitedKeys, key)
 				msg := err.Error()
@@ -101,7 +109,7 @@ func PerformVoluntaryExit(
 			} else if err := writeSignedVoluntaryExitJSON(ctx, sve, cfg.OutputDirectory); err != nil {
 				log.WithError(err).Error("failed to write voluntary exit")
 			}
-		} else if err := client.ProposeExit(ctx, cfg.ValidatorClient, cfg.NodeClient, cfg.Keymanager.Sign, key); err != nil {
+		} else if err := client.ProposeExit(ctx, cfg.ValidatorClient, cfg.Keymanager.Sign, key, epoch); err != nil {
 			rawNotExitedKeys = append(rawNotExitedKeys, key)
 
 			msg := err.Error()

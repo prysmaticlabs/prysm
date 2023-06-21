@@ -102,6 +102,7 @@ go_test(
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//config/validator/service:go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//consensus-types/validator:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",
@@ -138,6 +139,7 @@ go_test(
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
         "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",
     ],
 )
