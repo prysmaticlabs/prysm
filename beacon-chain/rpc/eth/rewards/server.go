@@ -11,4 +11,8 @@ type Server struct {
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
 	ReplayerBuilder       stategen.ReplayerBuilder
+	// TODO: Init
+	TimeFetcher blockchain.TimeFetcher
+	Stater      lookup.Stater
+	HeadFetcher blockchain.HeadFetcher
 }

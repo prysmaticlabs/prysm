@@ -213,8 +213,15 @@ func TestAttestationsDelta(t *testing.T) {
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
-	rewards, penalties, err := AttestationsDelta(s, balance, validators)
+	deltas, err := AttestationsDelta(s, balance, validators)
 	require.NoError(t, err)
+
+	rewards := make([]uint64, len(deltas))
+	penalties := make([]uint64, len(deltas))
+	for i, d := range deltas {
+		rewards[i] = d.HeadReward + d.SourceReward + d.TargetReward
+		penalties[i] = d.SourcePenalty + d.TargetPenalty
+	}
 
 	// Reward amount should increase as validator index increases due to setup.
 	for i := 1; i < len(rewards); i++ {
@@ -244,8 +251,15 @@ func TestAttestationsDeltaBellatrix(t *testing.T) {
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
-	rewards, penalties, err := AttestationsDelta(s, balance, validators)
+	deltas, err := AttestationsDelta(s, balance, validators)
 	require.NoError(t, err)
+
+	rewards := make([]uint64, len(deltas))
+	penalties := make([]uint64, len(deltas))
+	for i, d := range deltas {
+		rewards[i] = d.HeadReward + d.SourceReward + d.TargetReward
+		penalties[i] = d.SourcePenalty + d.TargetPenalty
+	}
 
 	// Reward amount should increase as validator index increases due to setup.
 	for i := 1; i < len(rewards); i++ {
@@ -285,8 +299,15 @@ func TestProcessRewardsAndPenaltiesPrecompute_Ok(t *testing.T) {
 	}
 
 	wanted := make([]uint64, s.NumValidators())
-	rewards, penalties, err := AttestationsDelta(s, balance, validators)
+	deltas, err := AttestationsDelta(s, balance, validators)
 	require.NoError(t, err)
+
+	rewards := make([]uint64, len(deltas))
+	penalties := make([]uint64, len(deltas))
+	for i, d := range deltas {
+		rewards[i] = d.HeadReward + d.SourceReward + d.TargetReward
+		penalties[i] = d.SourcePenalty + d.TargetPenalty
+	}
 	for i := range rewards {
 		wanted[i] += rewards[i]
 	}
