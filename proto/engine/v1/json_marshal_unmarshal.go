@@ -17,6 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var errExecutionUnmarshal = errors.New("unable to unmarshal execution engine data")
+
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
 // client with proper JSON Marshal and Unmarshal methods to hex.
 type PayloadIDBytes [8]byte
@@ -109,13 +111,32 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		edg, has := decoded["excessDataGas"]
 		if has && edg != nil {
 			e.Version = version.Deneb
-			e.ExcessDataGas = edg.(*hexutil.Uint64)
+			u := new(hexutil.Uint64)
+			sedg, ok := edg.(string)
+			if !ok {
+				return errors.Wrap(errExecutionUnmarshal, "excessDataGas is not a string, can not decode")
+			}
+			err = u.UnmarshalText([]byte(sedg))
+			if err != nil {
+				return errors.Wrap(err, "unable to unmarshal excessDataGas as hexutil.Uint64")
+			}
+			e.ExcessDataGas = u
 		}
+
 		dgu, has := decoded["dataGasUsed"]
 		log.Error(has, dgu != nil)
 		if has && dgu != nil {
 			e.Version = version.Deneb
-			e.DataGasUsed = dgu.(*hexutil.Uint64)
+			u := new(hexutil.Uint64)
+			sdgu, ok := dgu.(string)
+			if !ok {
+				return errors.Wrap(errExecutionUnmarshal, "dataGasUsed is not a string, can not decode")
+			}
+			err = u.UnmarshalText([]byte(sdgu))
+			if err != nil {
+				return errors.Wrap(err, "unable to unmarshal dataGasUsed as hexutil.Uint64")
+			}
+			e.DataGasUsed = u
 		}
 	}
 
