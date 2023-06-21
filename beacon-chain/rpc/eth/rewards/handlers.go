@@ -187,11 +187,11 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	idealRewards, ok := idealAttRewards(w, st, bal)
+	totalRewards, ok := totalAttRewards(w, st, bal, vals, valIndices)
 	if !ok {
 		return
 	}
-	totalRewards, ok := totalAttRewards(w, st, bal, vals, valIndices)
+	idealRewards, ok := idealAttRewards(w, st, bal, vals)
 	if !ok {
 		return
 	}
@@ -361,21 +361,35 @@ func attRewardsBalancesAndVals(
 	}
 }
 
-func idealAttRewards(w http.ResponseWriter, st state.BeaconState, bal *precompute.Balance) ([]IdealAttestationReward, bool) {
-	idealRewards := make([]IdealAttestationReward, 32)
-	idealVals := make([]*precompute.Validator, 32)
+// idealAttRewards returns rewards for hypothetical, perfectly voting validators
+// whose effective balances are over EJECTION_BALANCE and match balances in passed in validators.
+func idealAttRewards(
+	w http.ResponseWriter,
+	st state.BeaconState,
+	bal *precompute.Balance,
+	vals []*precompute.Validator,
+) ([]IdealAttestationReward, bool) {
+	idealRewards := make([]IdealAttestationReward, 0, 16)
+	idealVals := make([]*precompute.Validator, 0, 16)
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	for i := 1; i < 33; i++ {
-		effectiveBalance := uint64(i) * increment
-		idealVals[i-1] = &precompute.Validator{
-			IsActivePrevEpoch:            true,
-			IsSlashed:                    false,
-			CurrentEpochEffectiveBalance: effectiveBalance,
-			IsPrevEpochSourceAttester:    true,
-			IsPrevEpochTargetAttester:    true,
-			IsPrevEpochHeadAttester:      true,
+	minIdealBalance := params.BeaconConfig().EjectionBalance/1e9 + 1
+	maxIdealBalance := params.BeaconConfig().MaxEffectiveBalance / 1e9
+	for i := minIdealBalance; i <= maxIdealBalance; i++ {
+		for _, v := range vals {
+			if v.CurrentEpochEffectiveBalance/1e9 == i {
+				effectiveBalance := i * increment
+				idealVals = append(idealVals, &precompute.Validator{
+					IsActivePrevEpoch:            true,
+					IsSlashed:                    false,
+					CurrentEpochEffectiveBalance: effectiveBalance,
+					IsPrevEpochSourceAttester:    true,
+					IsPrevEpochTargetAttester:    true,
+					IsPrevEpochHeadAttester:      true,
+				})
+				idealRewards = append(idealRewards, IdealAttestationReward{EffectiveBalance: strconv.FormatUint(effectiveBalance, 10)})
+				break
+			}
 		}
-		idealRewards[i-1] = IdealAttestationReward{EffectiveBalance: strconv.FormatUint(effectiveBalance, 10)}
 	}
 	deltas, err := altair.AttestationsDelta(st, bal, idealVals)
 	if err != nil {

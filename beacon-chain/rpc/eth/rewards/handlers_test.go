@@ -223,9 +223,9 @@ func TestAttestationRewards(t *testing.T) {
 			PublicKey:         blsKey.PublicKey().Marshal(),
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance / 64 * uint64(i),
+			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance / 64 * uint64(i+1),
 		})
-		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance/64*uint64(i))
+		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance/64*uint64(i+1))
 	}
 	require.NoError(t, st.SetValidators(validators))
 	require.NoError(t, st.SetBalances(balances))
@@ -258,7 +258,7 @@ func TestAttestationRewards(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		resp := &AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.Equal(t, 32, len(resp.Data.IdealRewards))
+		require.Equal(t, 16, len(resp.Data.IdealRewards))
 		sum := uint64(0)
 		for _, r := range resp.Data.IdealRewards {
 			hr, err := strconv.ParseUint(r.Head, 10, 64)
@@ -269,13 +269,13 @@ func TestAttestationRewards(t *testing.T) {
 			require.NoError(t, err)
 			sum += hr + sr + tr
 		}
-		assert.Equal(t, uint64(28398351), sum)
+		assert.Equal(t, uint64(20756849), sum)
 	})
 	t.Run("ok - filtered vals", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
 		var body bytes.Buffer
 		pubkey := fmt.Sprintf("%#x", secretKeys[10].PublicKey().Marshal())
-		valIds, err := json.Marshal([]string{"10", pubkey})
+		valIds, err := json.Marshal([]string{"20", pubkey})
 		require.NoError(t, err)
 		_, err = body.Write(valIds)
 		require.NoError(t, err)
@@ -298,7 +298,7 @@ func TestAttestationRewards(t *testing.T) {
 			require.NoError(t, err)
 			sum += hr + sr + tr
 		}
-		assert.Equal(t, uint64(537848), sum)
+		assert.Equal(t, uint64(794265), sum)
 	})
 	t.Run("ok - all vals", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
@@ -321,7 +321,7 @@ func TestAttestationRewards(t *testing.T) {
 			require.NoError(t, err)
 			sum += hr + sr + tr
 		}
-		assert.Equal(t, uint64(53354472), sum)
+		assert.Equal(t, uint64(54221955), sum)
 	})
 	t.Run("ok - penalty", func(t *testing.T) {
 		st, err := util.NewBeaconStateCapella()
