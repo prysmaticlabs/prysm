@@ -323,10 +323,13 @@ http_archive(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "4dd15db6eb3955745f379d28fb4a2fcfb6753de3",
+    commit = "436bd7880e458532901c58f4d9d1ea23fa7edd52",
     remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1686752890 -0700",
+    shallow_since = "1617835118 -0700",
 )
+
+# Group the sources of the library so that CMake rule have access to it
+all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
 
 # External dependencies
 

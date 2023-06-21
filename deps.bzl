@@ -4874,5 +4874,5 @@ def prysm_deps():
         name = "vaticle_bazel_distribution",
         commit = "96424c85195a97dad81f69fdbbef2e1574bf8801",
         remote = "https://github.com/vaticle/bazel-distribution",
-        shallow_since = "1646647146 +0000",
+        shallow_since = "1569509514 +0300",
     )
