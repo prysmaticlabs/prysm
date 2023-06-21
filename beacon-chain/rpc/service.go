@@ -211,8 +211,12 @@ func (s *Service) Start() {
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		ReplayerBuilder:       ch,
+		TimeFetcher:           s.cfg.GenesisTimeFetcher,
+		Stater:                stater,
+		HeadFetcher:           s.cfg.HeadFetcher,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
