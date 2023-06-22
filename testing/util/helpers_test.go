@@ -19,9 +19,6 @@ import (
 
 func TestBlockSignature(t *testing.T) {
 	beaconState, privKeys := DeterministicGenesisState(t, 100)
-	htr, err := beaconState.HashTreeRoot(context.Background())
-	require.NoError(t, err)
-	assert.NotNil(t, htr)
 	block, err := GenerateFullBlock(beaconState, privKeys, nil, 0)
 	require.NoError(t, err)
 
