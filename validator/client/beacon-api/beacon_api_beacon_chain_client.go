@@ -1,7 +1,9 @@
 package beacon_api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -11,6 +13,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -316,13 +319,29 @@ func (c beaconApiBeaconChainClient) GetValidatorQueue(ctx context.Context, in *e
 	panic("beaconApiBeaconChainClient.GetValidatorQueue is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
 }
 
-func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context, in *ethpb.ValidatorPerformanceRequest) (*ethpb.ValidatorPerformanceResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetValidatorPerformance(ctx, in)
+func (c beaconApiBeaconChainClient) GetValidatorPerformance(
+	ctx context.Context, in *ethpb.ValidatorPerformanceRequest,
+) (*ethpb.ValidatorPerformanceResponse, error) {
+	request, err := json.Marshal(beacon.ValidatorPerformanceRequest{
+		PublicKeys: in.PublicKeys,
+		Indices:    in.Indices,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal request")
 	}
-
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetValidatorPerformance is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	resp := &beacon.ValidatorPerformanceResponse{}
+	if _, err := c.jsonRestHandler.PostRestJson(
+		ctx,
+		"/eth/v1/beacon/validators/performance",
+		nil,
+		bytes.NewBuffer(request),
+		&resp,
+	); err != nil {
+		return nil, errors.Wrap(err, "failed to get head block header")
+	}
+	return &ethpb.ValidatorPerformanceResponse{
+		// Fill in the fields...
+	}, nil
 }
 
 func (c beaconApiBeaconChainClient) GetValidatorParticipation(ctx context.Context, in *ethpb.GetValidatorParticipationRequest) (*ethpb.ValidatorParticipationResponse, error) {
