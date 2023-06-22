@@ -3,6 +3,7 @@ package state_native
 import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -11,7 +12,7 @@ type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte, *BeaconState]
 func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
 	items := make([][32]byte, fieldparams.RandaoMixesLength)
 	for i, v := range mixes {
-		items[i] = [32]byte(v)
+		items[i] = [32]byte(bytesutil.PadTo(v, 32))
 	}
 	return &MultiValueRandaoMixes{
 		SharedItems:     items,
@@ -25,7 +26,7 @@ type MultiValueBlockRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
 func NewMultiValueBlockRoots(roots [][]byte) *MultiValueBlockRoots {
 	items := make([][32]byte, fieldparams.BlockRootsLength)
 	for i, v := range roots {
-		items[i] = [32]byte(v)
+		items[i] = [32]byte(bytesutil.PadTo(v, 32))
 	}
 	return &MultiValueBlockRoots{
 		SharedItems:     items,
@@ -39,7 +40,7 @@ type MultiValueStateRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
 func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 	items := make([][32]byte, fieldparams.StateRootsLength)
 	for i, v := range roots {
-		items[i] = [32]byte(v)
+		items[i] = [32]byte(bytesutil.PadTo(v, 32))
 	}
 	return &MultiValueStateRoots{
 		SharedItems:     items,

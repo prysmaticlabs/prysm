@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -59,9 +61,12 @@ func TestBalanceCache_AddGetBalance(t *testing.T) {
 }
 
 func TestBalanceCache_BalanceKey(t *testing.T) {
-	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	blockRoots := make([][]byte, fieldparams.BlockRootsLength)
+	for i := range blockRoots {
+		blockRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
 	for i := 0; i < len(blockRoots); i++ {
-		b := make([]byte, 8)
+		b := make([]byte, 32)
 		binary.LittleEndian.PutUint64(b, uint64(i))
 		blockRoots[i] = b
 	}
