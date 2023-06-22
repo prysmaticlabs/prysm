@@ -58,6 +58,9 @@ func TestBlockRewards(t *testing.T) {
 	require.NoError(t, st.SetCurrentSyncCommittee(syncCommittee))
 	slot0bRoot := bytesutil.PadTo([]byte("slot0root"), 32)
 	bRoots := make([][]byte, fieldparams.BlockRootsLength)
+	for i := range bRoots {
+		bRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
 	bRoots[0] = slot0bRoot
 	require.NoError(t, st.SetBlockRoots(bRoots))
 

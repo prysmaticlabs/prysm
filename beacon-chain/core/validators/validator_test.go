@@ -7,8 +7,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -122,11 +124,15 @@ func TestSlashValidator_OK(t *testing.T) {
 		})
 		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
 	}
+	mixes := make([][]byte, fieldparams.RandaoMixesLength)
+	for i := range mixes {
+		mixes[i] = bytesutil.PadTo([]byte{}, 32)
+	}
 
 	base := &ethpb.BeaconState{
 		Validators:  registry,
 		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: mixes,
 		Balances:    balances,
 	}
 	state, err := state_native.InitializeFromProtoPhase0(base)

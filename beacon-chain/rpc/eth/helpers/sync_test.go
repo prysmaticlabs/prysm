@@ -16,7 +16,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	syncmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -313,11 +312,19 @@ func prepareForkchoiceState(
 	executionHeader := &enginev1.ExecutionPayloadHeader{
 		BlockHash: payloadHash[:],
 	}
+	bRoots := make([][]byte, fieldparams.BlockRootsLength)
+	for i := range bRoots {
+		bRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+	mixes := make([][]byte, fieldparams.RandaoMixesLength)
+	for i := range mixes {
+		mixes[i] = bytesutil.PadTo([]byte{}, 32)
+	}
 
 	base := &eth.BeaconStateBellatrix{
 		Slot:                         slot,
-		RandaoMixes:                  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		BlockRoots:                   make([][]byte, 1),
+		RandaoMixes:                  mixes,
+		BlockRoots:                   bRoots,
 		CurrentJustifiedCheckpoint:   justified,
 		FinalizedCheckpoint:          finalized,
 		LatestExecutionPayloadHeader: executionHeader,

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
@@ -35,13 +36,25 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}
 	}
+	bRoots := make([][]byte, fieldparams.BlockRootsLength)
+	for i := range bRoots {
+		bRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+	sRoots := make([][]byte, fieldparams.StateRootsLength)
+	for i := range sRoots {
+		sRoots[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+	mixes := make([][]byte, fieldparams.RandaoMixesLength)
+	for i := range mixes {
+		mixes[i] = bytesutil.PadTo([]byte{}, 32)
+	}
 
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators:  validators,
 		Slot:        200,
-		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		StateRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:  bRoots,
+		StateRoots:  sRoots,
+		RandaoMixes: mixes,
 	})
 	require.NoError(t, err)
 

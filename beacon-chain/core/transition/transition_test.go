@@ -149,7 +149,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	var blockRoots [][]byte
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, bytesutil.PadTo([]byte{byte(i)}, 32))
 	}
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	blockAtt := util.HydrateAttestation(&ethpb.Attestation{
@@ -295,7 +295,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 
 	var blockRoots [][]byte
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, bytesutil.PadTo([]byte{byte(i)}, 32))
 	}
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 
