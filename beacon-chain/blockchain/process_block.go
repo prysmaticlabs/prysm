@@ -185,7 +185,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			}
 		}()
 	}
-
 	justified := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	start := time.Now()
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
@@ -256,10 +255,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
 			return err
 		}
-		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(finalized.Root)
-		if err != nil {
-			return errors.Wrap(err, "could not check if node is optimistically synced")
-		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
 			stateRoot := signed.Block().StateRoot()
@@ -269,7 +264,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 					Epoch:               postState.FinalizedCheckpoint().Epoch,
 					Block:               postState.FinalizedCheckpoint().Root,
 					State:               stateRoot[:],
-					ExecutionOptimistic: isOptimistic,
+					ExecutionOptimistic: isValidPayload,
 				},
 			})
 
