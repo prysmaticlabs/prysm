@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"fmt"
+
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
@@ -16,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
+
+var ctxByteTableLogged bool
 
 // chunkBlockWriter writes the given message as a chunked response to the given network
 // stream.
@@ -62,6 +66,12 @@ func WriteBlockChunk(stream libp2pcore.Stream, tor blockchain.TemporalOracle, en
 	default:
 		return errors.Wrapf(ErrUnrecognizedVersion, "block version %d is not recognized", blk.Version())
 	}
+	log.
+		WithField("version", version.String(blk.Version())).
+		WithField("valroot", fmt.Sprintf("%#x", valRoot)).
+		WithField("fork_digest", fmt.Sprintf("%#x", obtainedCtx)).
+		WithField("slot", blk.Block().Slot()).
+		Debug("ctx fork digest")
 
 	if err := writeContextToStream(obtainedCtx, stream); err != nil {
 		return err
@@ -147,6 +157,37 @@ func extractBlockDataType(digest []byte, tor blockchain.TemporalOracle) (interfa
 		if rDigest == bytesutil.ToBytes4(digest) {
 			return blkFunc()
 		}
+	}
+	if !ctxByteTableLogged {
+		gen, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		altair, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		bella, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		capella, err := signing.ComputeForkDigest(params.BeaconConfig().CapellaForkVersion, vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		deneb, err := signing.ComputeForkDigest(params.BeaconConfig().DenebForkVersion, vRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		log.
+			WithField("valroot", vRoot).
+			WithField("genesis", fmt.Sprintf("%#x", gen)).
+			WithField("altair", fmt.Sprintf("%#x", altair)).
+			WithField("bellatrix", fmt.Sprintf("%#x", bella)).
+			WithField("capella", fmt.Sprintf("%#x", capella)).
+			WithField("deneb", fmt.Sprintf("%#x", deneb)).
+			Debug("context type mapping")
+		ctxByteTableLogged = true
 	}
 	return nil, errors.Wrapf(ErrNoValidDigest, "could not extract block data type, saw digest=%#x, genesis=%v, vr=%#x", digest, tor.GenesisTime(), tor.GenesisValidatorsRoot())
 }
