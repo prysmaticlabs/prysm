@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -411,9 +410,4 @@ func (m *MockValidatorClient) WaitForChainStart(arg0 context.Context, arg1 *empt
 func (mr *MockValidatorClientMockRecorder) WaitForChainStart(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForChainStart", reflect.TypeOf((*MockValidatorClient)(nil).WaitForChainStart), arg0, arg1)
-}
-
-// MigrateFromBeaconNodeProposerSettings migrates proposer settings data from beacon node to validator client
-func (mr *MockValidatorClient) MigrateFromBeaconNodeProposerSettings(ctx context.Context) (*validatorserviceconfig.ProposerSettings, error){
-	return nil,nil
 }
