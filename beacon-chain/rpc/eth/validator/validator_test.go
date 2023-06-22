@@ -226,12 +226,9 @@ func TestGetProposerDuties(t *testing.T) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	roots := make([][]byte, fieldparams.BlockRootsLength)
-	for i := range roots {
-		roots[i] = bytesutil.PadTo([]byte{}, 32)
-	}
 	roots[0] = genesisRoot[:]
 	// We DON'T WANT this root to be returned when testing the next epoch
-	roots[31] = bytesutil.PadTo([]byte("next_epoch_dependent_root"), 32)
+	roots[31] = []byte("next_epoch_dependent_root")
 	db := dbutil.SetupDB(t)
 
 	pubKeys := make([][]byte, len(deposits))
@@ -273,10 +270,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(12289), vid)
+		require.Equal(t, primitives.ValidatorIndex(9982), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, primitives.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
 	})
 
 	t.Run("Next epoch", func(t *testing.T) {
@@ -312,10 +309,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(1360), vid)
+		require.Equal(t, primitives.ValidatorIndex(4863), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
-		assert.Equal(t, primitives.ValidatorIndex(1360), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[1360], expectedDuty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(4863), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[4863], expectedDuty.Pubkey)
 	})
 
 	t.Run("Prune payload ID cache ok", func(t *testing.T) {
@@ -339,6 +336,9 @@ func TestGetProposerDuties(t *testing.T) {
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: 1,
 		}
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
 
 		_, err = vs.GetProposerDuties(ctx, req)
 		require.NoError(t, err)
@@ -351,7 +351,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.Equal(t, primitives.ValidatorIndex(0), vid)
 		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(10565), vid)
+		require.Equal(t, primitives.ValidatorIndex(4309), vid)
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {

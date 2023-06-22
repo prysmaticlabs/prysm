@@ -59,7 +59,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 	a := params.BeaconConfig().MaxEffectiveBalance
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
 	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = bytesutil.PadTo([]byte{byte(i)}, 32)
+		blockRoots[i] = []byte{byte(i)}
 	}
 	base := &ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,

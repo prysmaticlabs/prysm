@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -280,8 +279,8 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				valIndex = primitives.ValidatorIndex(index)
 			}
 			validator, err := state.ValidatorAtIndex(valIndex)
-			if err != nil && strings.Contains(err.Error(), "out of bounds") {
-				// Ignore indexes out of bounds.
+			if _, ok := err.(*statenative.ValidatorIndexOutOfRangeError); ok {
+				// Ignore well-formed yet unknown indexes.
 				continue
 			}
 			if err != nil {

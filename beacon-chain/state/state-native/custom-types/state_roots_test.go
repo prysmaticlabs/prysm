@@ -8,6 +8,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
+func TestStateRoots_Casting(t *testing.T) {
+	var b [][32]byte
+	d := StateRoots(b)
+	if !reflect.DeepEqual([fieldparams.StateRootsLength][32]byte(d), b) {
+		t.Errorf("Unequal: %v = %v", d, b)
+	}
+}
+
 func TestStateRoots_UnmarshalSSZ(t *testing.T) {
 	t.Run("Ok", func(t *testing.T) {
 		d := StateRoots{}
@@ -62,7 +70,7 @@ func TestStateRoots_MarshalSSZTo(t *testing.T) {
 }
 
 func TestStateRoots_MarshalSSZ(t *testing.T) {
-	d := StateRoots(make([][32]byte, fieldparams.StateRootsLength))
+	d := StateRoots{}
 	d[0] = [32]byte{'f', 'o', 'o'}
 	d[1] = [32]byte{'b', 'a', 'r'}
 	b, err := d.MarshalSSZ()
@@ -86,7 +94,7 @@ func TestStateRoots_SizeSSZ(t *testing.T) {
 
 func TestStateRoots_Slice(t *testing.T) {
 	a, b, c := [32]byte{'a'}, [32]byte{'b'}, [32]byte{'c'}
-	roots := StateRoots(make([][32]byte, fieldparams.StateRootsLength))
+	roots := StateRoots{}
 	roots[1] = a
 	roots[10] = b
 	roots[100] = c

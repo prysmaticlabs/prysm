@@ -323,7 +323,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 			errMsg:  fmt.Sprintf("Wanted type of %T", []*ethpb.Eth1Data{}),
 		},
 		{
-			name: "Balances",
+			name: "Balance",
 			args: func() *args {
 				return &args{
 					field:      types.FieldIndex(12),
@@ -340,11 +340,11 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				return &args{
 					field:   types.FieldIndex(11),
 					indices: []uint64{},
-					elements: NewMultiValueValidators([]*ethpb.Validator{
+					elements: []*ethpb.Validator{
 						{
 							ActivationEpoch: 1,
 						},
-					}),
+					},
 					convertAll: true,
 				}
 			},
@@ -361,7 +361,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				}
 			},
 			wantHex: nil,
-			errMsg:  fmt.Sprintf("Wanted type of %T", &MultiValueValidators{}),
+			errMsg:  fmt.Sprintf("Wanted type of %T", []*ethpb.Validator{}),
 		},
 		{
 			name: "Attestations",
