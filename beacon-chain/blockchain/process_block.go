@@ -145,8 +145,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
 		return err
 	}
-
-	if err := s.insertBlockToForkchoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
+	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, postState, blockRoot); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
 	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
@@ -526,23 +525,6 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	}
 
 	return nil
-}
-
-// This feeds in the block to fork choice store. It's allows fork choice store
-// to gain information on the most current chain.
-func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, root [32]byte, st state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockToForkchoiceStore")
-	defer span.End()
-
-	if !s.cfg.ForkChoiceStore.HasNode(blk.ParentRoot()) {
-		fCheckpoint := st.FinalizedCheckpoint()
-		jCheckpoint := st.CurrentJustifiedCheckpoint()
-		if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
-			return err
-		}
-	}
-
-	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, root)
 }
 
 // This feeds in the attestations included in the block to fork choice store. It's allows fork choice store
