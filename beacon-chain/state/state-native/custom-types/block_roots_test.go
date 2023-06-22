@@ -8,6 +8,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
+func TestBlockRoots_Casting(t *testing.T) {
+	var b [][32]byte
+	d := BlockRoots(b)
+	if !reflect.DeepEqual([fieldparams.BlockRootsLength][32]byte(d), b) {
+		t.Errorf("Unequal: %v = %v", d, b)
+	}
+}
+
 func TestBlockRoots_UnmarshalSSZ(t *testing.T) {
 	t.Run("Ok", func(t *testing.T) {
 		d := BlockRoots{}

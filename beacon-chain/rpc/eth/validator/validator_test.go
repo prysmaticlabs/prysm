@@ -54,9 +54,6 @@ func TestGetAttesterDuties(t *testing.T) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	roots := make([][]byte, fieldparams.BlockRootsLength)
-	for i := range roots {
-		roots[i] = bytesutil.PadTo([]byte{}, 32)
-	}
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 	db := dbutil.SetupDB(t)

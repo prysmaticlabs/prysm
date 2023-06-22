@@ -17,7 +17,7 @@ import (
 func TestBalanceCache_AddGetBalance(t *testing.T) {
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
-		b := make([]byte, 32)
+		b := make([]byte, 8)
 		binary.LittleEndian.PutUint64(b, uint64(i))
 		blockRoots[i] = b
 	}

@@ -11,7 +11,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -20,9 +19,9 @@ import (
 func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
-	blockRoots := make([][]byte, fieldparams.BlockRootsLength)
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
 	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = bytesutil.PadTo([]byte{byte(i)}, 32)
+		blockRoots[i] = []byte{byte(i)}
 	}
 	base := &ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,

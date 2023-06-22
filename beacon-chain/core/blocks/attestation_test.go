@@ -191,15 +191,11 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	mixes := make([][]byte, fieldparams.RandaoMixesLength)
-	for i := range mixes {
-		mixes[i] = bytesutil.PadTo([]byte{}, 32)
-	}
 
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:        5,
 		Validators:  validators,
-		RandaoMixes: mixes,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
 	tests := []struct {
@@ -253,10 +249,6 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			WithdrawalCredentials: make([]byte, 32),
 		}
 	}
-	mixes := make([][]byte, fieldparams.RandaoMixesLength)
-	for i := range mixes {
-		mixes[i] = bytesutil.PadTo([]byte{}, 32)
-	}
 
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:       5,
@@ -266,7 +258,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes: mixes,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
 	tests := []struct {

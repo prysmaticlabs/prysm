@@ -47,14 +47,9 @@ func prepareForkchoiceState(
 		BlockHash: payloadHash[:],
 	}
 
-	mixes := make([][]byte, fieldparams.RandaoMixesLength)
-	for i := range mixes {
-		mixes[i] = bytesutil.PadTo([]byte{}, 32)
-	}
-
 	base := &ethpb.BeaconStateBellatrix{
 		Slot:                         slot,
-		RandaoMixes:                  mixes,
+		RandaoMixes:                  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		BlockRoots:                   make([][]byte, 1),
 		CurrentJustifiedCheckpoint:   justified,
 		FinalizedCheckpoint:          finalized,

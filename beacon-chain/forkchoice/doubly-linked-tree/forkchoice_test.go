@@ -10,12 +10,10 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -50,14 +48,9 @@ func prepareForkchoiceState(
 		Epoch: finalizedEpoch,
 	}
 
-	mixes := make([][]byte, fieldparams.RandaoMixesLength)
-	for i := range mixes {
-		mixes[i] = bytesutil.PadTo([]byte{}, 32)
-	}
-
 	base := &ethpb.BeaconStateBellatrix{
 		Slot:                         slot,
-		RandaoMixes:                  mixes,
+		RandaoMixes:                  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentJustifiedCheckpoint:   justifiedCheckpoint,
 		FinalizedCheckpoint:          finalizedCheckpoint,
 		LatestExecutionPayloadHeader: executionHeader,

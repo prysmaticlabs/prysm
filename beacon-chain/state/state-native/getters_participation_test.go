@@ -3,9 +3,7 @@ package state_native
 import (
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -20,13 +18,9 @@ func TestState_UnrealizedCheckpointBalances(t *testing.T) {
 		}
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
-	mixes := make([][]byte, fieldparams.RandaoMixesLength)
-	for i := range mixes {
-		mixes[i] = bytesutil.PadTo([]byte{}, 32)
-	}
 	base := &ethpb.BeaconStateAltair{
 		Slot:        2,
-		RandaoMixes: mixes,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 
 		Validators:                 validators,
 		CurrentEpochParticipation:  make([]byte, params.BeaconConfig().MinGenesisActiveValidatorCount),

@@ -40,7 +40,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	st, ok := newState.(*state_native.BeaconState)
 	require.Equal(t, true, ok)
 	// 10 represents the enum value of validators
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(11), types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.MultiValue}, state_native.NewMultiValueValidators(newState.Validators()), params.BeaconConfig().ValidatorRegistryLimit)
+	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(11), types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
 	oldroot, err := trie.TrieRoot()
@@ -64,7 +64,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
-	root, err := trie.RecomputeTrie(st, changedIdx, state_native.NewMultiValueValidators(newState.Validators()))
+	root, err := trie.RecomputeTrie(st, changedIdx, newState.Validators())
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoot, root)
 }

@@ -21,11 +21,9 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -46,18 +44,6 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 	for i := 0; i < len(validatorBalances); i++ {
 		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
-	bRoots := make([][]byte, fieldparams.BlockRootsLength)
-	for i := range bRoots {
-		bRoots[i] = bytesutil.PadTo([]byte{}, 32)
-	}
-	sRoots := make([][]byte, fieldparams.StateRootsLength)
-	for i := range sRoots {
-		sRoots[i] = bytesutil.PadTo([]byte{}, 32)
-	}
-	mixes := make([][]byte, fieldparams.RandaoMixesLength)
-	for i := range mixes {
-		mixes[i] = bytesutil.PadTo([]byte{}, 32)
-	}
 
 	currentSlot := primitives.Slot(0)
 	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
@@ -70,10 +56,10 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			Epoch:           0,
 		},
 		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: mixes,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 
-		StateRoots:        sRoots,
-		BlockRoots:        bRoots,
+		StateRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
 	})
 	require.NoError(t, err)

@@ -47,12 +47,8 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	ctx := context.Background()
 
-	mixes := make([][]byte, fieldparams.RandaoMixesLength)
-	for i := range mixes {
-		mixes[i] = bytesutil.PadTo([]byte{}, 32)
-	}
 	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-		RandaoMixes: mixes,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
 
