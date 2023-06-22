@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -8,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/metadata"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -32,6 +35,13 @@ var (
 // reset maps and reinitialize them.
 func InitializeDataMaps() {
 	// Reset our block map.
+	log.
+		WithField("genesis_fv", fmt.Sprintf("%#x", params.BeaconConfig().GenesisForkVersion)).
+		WithField("altair_fv", fmt.Sprintf("%#x", params.BeaconConfig().AltairForkVersion)).
+		WithField("bellatrix_fv", fmt.Sprintf("%#x", params.BeaconConfig().BellatrixForkVersion)).
+		WithField("capella_fv", fmt.Sprintf("%#x", params.BeaconConfig().CapellaForkVersion)).
+		WithField("deneb_fv", fmt.Sprintf("%#x", params.BeaconConfig().DenebForkVersion)).
+		Debug("InitializeDataMaps")
 	BlockMap = map[[4]byte]func() (interfaces.ReadOnlySignedBeaconBlock, error){
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (interfaces.ReadOnlySignedBeaconBlock, error) {
 			return blocks.NewSignedBeaconBlock(
