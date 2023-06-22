@@ -219,13 +219,7 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 		return nil
 	}
 	if convertAll {
-		for i := range val {
-			err := rootCreator(val[i])
-			if err != nil {
-				return nil, err
-			}
-		}
-		return roots, nil
+		return stateutil.OptimizedValidatorRoots(val)
 	}
 	if len(val) > 0 {
 		for _, idx := range indices {

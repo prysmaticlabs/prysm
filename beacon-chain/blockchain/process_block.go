@@ -1,8 +1,10 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"runtime/pprof"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -218,6 +221,35 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			defer cancel()
 			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
 				log.WithError(err).Debug("could not update next slot state cache")
+			}
+			currSlot := b.Slot() - 2
+			ancRoot, err := s.Ancestor(context.Background(), blockRoot[:], currSlot)
+			if err != nil {
+				log.WithError(err).Debug("could not get ancestor")
+				return
+			}
+			tNow := time.Now()
+			bf := bytes.NewBuffer([]byte{})
+			err = pprof.StartCPUProfile(bf)
+			if err != nil {
+				log.WithError(err).Debug("could not get profile")
+				return
+			}
+			nSt, err := s.cfg.StateGen.StateByRoot(context.Background(), [32]byte(ancRoot))
+			if err != nil {
+				log.WithError(err).Debug("could not get state")
+				return
+			}
+			_, err = transition.ProcessSlots(context.Background(), nSt, b.Slot())
+			if err != nil {
+				log.WithError(err).Debug("could not get state")
+				return
+			}
+			t := time.Since(tNow)
+			pprof.StopCPUProfile()
+			log.Infof("Old state transition from %#x and slot %d to %d took %s ", ancRoot, currSlot, b.Slot(), t.String())
+			if err = file.WriteFile(fmt.Sprintf("/home/nishant/%d_profile", b.Slot()), bf.Bytes()); err != nil {
+				log.Error(err)
 			}
 		}()
 	}

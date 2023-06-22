@@ -26,6 +26,7 @@ type FieldTrie struct {
 	length        uint64
 	numOfElems    int
 	isTransferred bool
+	isCompressed  bool
 }
 
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
@@ -210,9 +211,35 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 		length:      f.length,
 		numOfElems:  f.numOfElems,
 	}
-	// Zero out field layers here.
-	f.fieldLayers = nil
+	// For validator fields we special case the transferance process
+	if f.field == types.Validators {
+		newLyr := make([]*[32]byte, len(f.fieldLayers[0]))
+		copy(newLyr, f.fieldLayers[0])
+		f.fieldLayers = [][]*[32]byte{newLyr}
+		f.isCompressed = true
+	} else {
+		// Zero out field layers here.
+		f.fieldLayers = nil
+	}
 	return nTrie
+}
+
+func (f *FieldTrie) ExpandTrie() error {
+	if !f.isCompressed {
+		return errors.Errorf("Unsuitable trie provided to expand, it has length of %d instead of 1", len(f.fieldLayers))
+	}
+	fieldRoots := make([][32]byte, len(f.fieldLayers[0]))
+	for i, v := range f.fieldLayers[0] {
+		copiedRt := *v
+		fieldRoots[i] = copiedRt
+	}
+	if f.dataType == types.CompositeArray {
+		f.fieldLayers = stateutil.ReturnTrieLayerVariable(fieldRoots, f.length)
+	} else {
+		return errors.Errorf("Wrong data type for trie: %v", f.dataType)
+	}
+	f.isCompressed = false
+	return nil
 }
 
 // TrieRoot returns the corresponding root of the trie.
@@ -249,9 +276,19 @@ func (f *FieldTrie) Empty() bool {
 	return f == nil || len(f.fieldLayers) == 0 || f.isTransferred
 }
 
+func (f *FieldTrie) IsCompressed() bool {
+	return f.isCompressed
+}
+
 // InsertFieldLayer manually inserts a field layer. This method
 // bypasses the normal method of field computation, it is only
 // meant to be used in tests.
 func (f *FieldTrie) InsertFieldLayer(layer [][]*[32]byte) {
 	f.fieldLayers = layer
+}
+
+func copyLayer(lyr []*[32]byte) []*[32]byte {
+	newLyr := make([]*[32]byte, len(lyr))
+	copy(newLyr, lyr)
+	return newLyr
 }

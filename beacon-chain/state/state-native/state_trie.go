@@ -867,7 +867,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 	// and therefore we would call Unlock() on a different object.
 	fTrieMutex.Lock()
 
-	if fTrie.Empty() {
+	if fTrie.Empty() && !fTrie.IsCompressed() {
 		err := b.resetFieldTrie(index, elements, fTrie.Length())
 		if err != nil {
 			fTrieMutex.Unlock()
@@ -879,7 +879,13 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 		return b.stateFieldLeaves[index].TrieRoot()
 	}
 
-	if fTrie.FieldReference().Refs() > 1 {
+	if fTrie.IsCompressed() {
+		if err := fTrie.ExpandTrie(); err != nil {
+			return [32]byte{}, err
+		}
+	}
+
+	if fTrie.FieldReference().Refs() > 1 && !fTrie.IsCompressed() {
 		fTrie.FieldReference().MinusRef()
 		newTrie := fTrie.TransferTrie()
 		b.stateFieldLeaves[index] = newTrie
