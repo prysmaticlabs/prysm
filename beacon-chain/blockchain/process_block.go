@@ -108,13 +108,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 
 	// Verify that the parent block is in forkchoice
 	parentRoot := b.ParentRoot()
-	if !s.cfg.ForkChoiceStore.HasNode(parentRoot) {
+	if !s.InForkchoice(parentRoot) {
 		return ErrNotDescendantOfFinalized
 	}
 
 	// Save current justified and finalized epochs for future use.
-	currStoreJustifiedEpoch := s.cfg.ForkChoiceStore.JustifiedCheckpoint().Epoch
-	currStoreFinalizedEpoch := s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch
+	currStoreJustifiedEpoch := s.CurrentJustifiedCheckpt().Epoch
+	currStoreFinalizedEpoch := s.FinalizedCheckpt().Epoch
 	preStateFinalizedEpoch := preState.FinalizedCheckpoint().Epoch
 	preStateJustifiedEpoch := preState.CurrentJustifiedCheckpoint().Epoch
 
@@ -149,19 +149,38 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
 		return err
 	}
+
+	// Forkchoice critical section, write lock is held
+	s.cfg.ForkChoiceStore.Lock()
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, postState, blockRoot); err != nil {
+		s.cfg.ForkChoiceStore.Unlock()
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
-	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
-		return errors.Wrap(err, "could not handle block's attestations")
-	}
-
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
+			s.cfg.ForkChoiceStore.Unlock()
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
+	start := time.Now()
+	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
+	if err != nil {
+		log.WithError(err).Warn("Could not update head")
+	}
+	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
+	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
+		return errors.Wrap(err, "could not handle block's attestations")
+	}
+	// verify conditions for FCU, notifies FCU, and saves the new head.
+	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
+	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
+		s.cfg.ForkChoiceStore.Unlock()
+		return err
+	}
+	s.cfg.ForkChoiceStore.Unlock()
+	// End of forkchoice locked block
 
 	// If slasher is configured, forward the attestations in the block via
 	// an event feed for processing.
@@ -189,13 +208,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			}
 		}()
 	}
-	justified := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
-	start := time.Now()
-	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
-	if err != nil {
-		log.WithError(err).Warn("Could not update head")
-	}
 	if blockRoot != headRoot {
+		s.cfg.ForkChoiceStore.RLock()
 		receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
@@ -204,6 +218,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", headRoot)).Warn("could not determine node weight")
 		}
+		s.cfg.ForkChoiceStore.RUnlock()
 		log.WithFields(logrus.Fields{
 			"receivedRoot":   fmt.Sprintf("%#x", blockRoot),
 			"receivedWeight": receivedWeight,
@@ -223,13 +238,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			}
 		}()
 	}
-	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-
-	// verify conditions for FCU, notifies FCU, and saves the new head.
-	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
-	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
-		return err
-	}
 
 	// Send notification of the processed block to the state feed.
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
@@ -244,9 +252,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 
 	// Save justified check point to db.
 	postStateJustifiedEpoch := postState.CurrentJustifiedCheckpoint().Epoch
+	justified := s.CurrentJustifiedCheckpt()
 	if justified.Epoch > currStoreJustifiedEpoch || (justified.Epoch == postStateJustifiedEpoch && justified.Epoch > preStateJustifiedEpoch) {
 		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{
-			Epoch: justified.Epoch, Root: justified.Root[:],
+			Epoch: justified.Epoch, Root: justified.Root,
 		}); err != nil {
 			return err
 		}
@@ -254,9 +263,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 
 	// Save finalized check point to db and more.
 	postStateFinalizedEpoch := postState.FinalizedCheckpoint().Epoch
-	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
+	finalized := s.FinalizedCheckpt()
 	if finalized.Epoch > currStoreFinalizedEpoch || (finalized.Epoch == postStateFinalizedEpoch && finalized.Epoch > preStateFinalizedEpoch) {
-		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
+		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root}); err != nil {
 			return err
 		}
 		go func() {
@@ -277,7 +286,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 			// with a custom deadline, therefore using the background context instead.
 			depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
 			defer cancel()
-			if err := s.insertFinalizedDeposits(depCtx, finalized.Root); err != nil {
+			if err := s.insertFinalizedDeposits(depCtx, [32]byte(finalized.Root)); err != nil {
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()

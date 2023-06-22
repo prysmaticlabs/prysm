@@ -5,13 +5,11 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -124,9 +122,8 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		return err
 	}
 
-	fRoot := bytesutil.ToBytes32(cp.Root)
-	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
-	if err != nil && !errors.Is(err, doublylinkedtree.ErrNilNode) {
+	optimistic, err := s.IsOptimistic(ctx)
+	if err != nil {
 		return err
 	}
 	if !optimistic {
@@ -139,7 +136,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 		// We do not pass in the parent context from the method as this method call
 		// is meant to be asynchronous and run in the background rather than being
 		// tied to the execution of a block.
-		if err := s.cfg.StateGen.MigrateToCold(s.ctx, fRoot); err != nil {
+		if err := s.cfg.StateGen.MigrateToCold(s.ctx, [32]byte(cp.Root)); err != nil {
 			log.WithError(err).Error("could not migrate to cold")
 		}
 	}()
