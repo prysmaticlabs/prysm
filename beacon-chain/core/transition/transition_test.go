@@ -375,9 +375,7 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	base := &ethpb.BeaconState{
 		Slot:                       params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)) + 1,
-		BlockRoots:                 make([][]byte, 128),
 		Slashings:                  slashing,
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		JustificationBits:          bitfield.Bitvector4{0x00},

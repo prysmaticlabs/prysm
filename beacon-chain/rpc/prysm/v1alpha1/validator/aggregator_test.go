@@ -74,8 +74,12 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	ctx := context.Background()
 
+	mixes := make([][]byte, fieldparams.RandaoMixesLength)
+	for i := range mixes {
+		mixes[i] = bytesutil.PadTo([]byte{}, 32)
+	}
 	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: mixes,
 		Validators: []*ethpb.Validator{
 			{PublicKey: pubKey(0)},
 			{PublicKey: pubKey(1)},

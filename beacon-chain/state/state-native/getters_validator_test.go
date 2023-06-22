@@ -4,45 +4,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	testtmpl "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/testing"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
-
-func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Phase0(t *testing.T) {
-	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
-		return statenative.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
-			Validators: nil,
-		})
-	})
-}
-
-func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Altair(t *testing.T) {
-	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
-		return statenative.InitializeFromProtoUnsafeAltair(&ethpb.BeaconStateAltair{
-			Validators: nil,
-		})
-	})
-}
-
-func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Bellatrix(t *testing.T) {
-	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
-		return statenative.InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{
-			Validators: nil,
-		})
-	})
-}
-
-func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Capella(t *testing.T) {
-	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
-		return statenative.InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{
-			Validators: nil,
-		})
-	})
-}
 
 func TestValidatorIndexOutOfRangeError(t *testing.T) {
 	err := statenative.NewValidatorIndexOutOfRangeError(1)

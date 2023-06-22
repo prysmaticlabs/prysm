@@ -62,7 +62,7 @@ func TestBlockRoots_MarshalSSZTo(t *testing.T) {
 }
 
 func TestBlockRoots_MarshalSSZ(t *testing.T) {
-	d := BlockRoots{}
+	d := BlockRoots(make([][32]byte, fieldparams.BlockRootsLength))
 	d[0] = [32]byte{'f', 'o', 'o'}
 	d[1] = [32]byte{'b', 'a', 'r'}
 	b, err := d.MarshalSSZ()
@@ -86,7 +86,7 @@ func TestBlockRoots_SizeSSZ(t *testing.T) {
 
 func TestBlockRoots_Slice(t *testing.T) {
 	a, b, c := [32]byte{'a'}, [32]byte{'b'}, [32]byte{'c'}
-	roots := BlockRoots{}
+	roots := BlockRoots(make([][32]byte, fieldparams.BlockRootsLength))
 	roots[1] = a
 	roots[10] = b
 	roots[100] = c
