@@ -220,9 +220,10 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		}).Info("Called new payload with optimistic block")
 		return false, nil
 	case execution.ErrInvalidPayloadStatus:
+		lvh := bytesutil.ToBytes32(lastValidHash)
 		return false, invalidBlock{
 			error:         ErrInvalidPayload,
-			lastValidHash: [32]byte(lastValidHash),
+			lastValidHash: lvh,
 		}
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
