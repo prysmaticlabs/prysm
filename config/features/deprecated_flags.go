@@ -32,6 +32,12 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedRegistrationCache = &cli.BoolFlag{
+		Name:   "enable-registration-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -41,6 +47,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableReorgLateBlocks,
 	deprecatedDisableGossipBatchAggregation,
 	deprecatedBuildBlockParallel,
+	deprecatedRegistrationCache,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
