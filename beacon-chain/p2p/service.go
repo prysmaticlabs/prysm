@@ -6,6 +6,7 @@ package p2p
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"sync"
 	"time"
 
@@ -392,6 +393,7 @@ func (s *Service) awaitStateInitialized() {
 	}
 	s.genesisTime = clock.GenesisTime()
 	gvr := clock.GenesisValidatorsRoot()
+	log.WithField("gvr", fmt.Sprintf("%#x", gvr)).Debug("saw genesis_validators_root in awaitStateInitialized")
 	s.genesisValidatorsRoot = gvr[:]
 	_, err = s.currentForkDigest() // initialize fork digest cache
 	if err != nil {
