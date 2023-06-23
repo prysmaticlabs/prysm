@@ -242,9 +242,9 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create unblinder")
 	}
-	blind := unblinder.b.IsBlinded() //
+	blinded := unblinder.b.IsBlinded() //
 
-	blk, sidecars, err := unblinder.unblindBuilderBlock(ctx)
+	blk, unblindedSidecars, err := unblinder.unblindBuilderBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
@@ -260,23 +260,23 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 	var scs []*ethpb.SignedBlobSidecar
 	if blk.Version() >= version.Deneb {
-		if blind {
-			scs = sidecars // Use sidecars from unblinder if the block was blinded.
+		if blinded {
+			scs = unblindedSidecars // Use sidecars from unblinder if the block was blinded.
 		} else {
 			scs, err = extraSidecars(req) // Use sidecars from the request if the block was not blinded.
 			if err != nil {
 				return nil, errors.Wrap(err, "could not extract blobs")
 			}
 		}
-		sidecar := make([]*ethpb.BlobSidecar, len(scs))
+		sidecars := make([]*ethpb.BlobSidecar, len(scs))
 		for i, sc := range scs {
 			if err := vs.P2P.BroadcastBlob(ctx, sc.Message.Index, sc); err != nil {
 				log.WithError(err).Errorf("Could not broadcast blob sidecar index %d / %d", i, len(scs))
 			}
-			sidecar[i] = sc.Message
+			sidecars[i] = sc.Message
 		}
 		if len(scs) > 0 {
-			if err := vs.BeaconDB.SaveBlobSidecar(ctx, sidecar); err != nil {
+			if err := vs.BeaconDB.SaveBlobSidecar(ctx, sidecars); err != nil {
 				return nil, err
 			}
 		}
