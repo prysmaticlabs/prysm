@@ -5,8 +5,6 @@ import "github.com/pkg/errors"
 var (
 	// ErrInvalidPayload is returned when the payload is invalid
 	ErrInvalidPayload = invalidBlock{error: errors.New("received an INVALID payload from execution engine")}
-	// ErrInvalidBlockHashPayloadStatus is returned when the payload has invalid block hash.
-	ErrInvalidBlockHashPayloadStatus = invalidBlock{error: errors.New("received an INVALID_BLOCK_HASH payload from execution engine")}
 	// ErrUndefinedExecutionEngineError is returned when the execution engine returns an error that is not defined
 	ErrUndefinedExecutionEngineError = errors.New("received an undefined execution engine error")
 	// errNilFinalizedInStore is returned when a nil finalized checkpt is returned from store.
