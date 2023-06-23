@@ -171,7 +171,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
-		return errors.Wrap(err, "could not handle block's attestations")
+		log.WithError(err).Warn("could not handle block's attestations")
 	}
 	// verify conditions for FCU, notifies FCU, and saves the new head.
 	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
