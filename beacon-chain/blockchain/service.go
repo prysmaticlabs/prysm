@@ -309,7 +309,13 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
-	if err := s.setHead(finalizedRoot, finalizedBlock, finalizedState); err != nil {
+	if err := s.setHead(&head{
+		finalizedRoot,
+		finalizedBlock,
+		finalizedState,
+		finalizedBlock.Block().Slot(),
+		false,
+	}); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
 
@@ -441,7 +447,13 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
-	if err := s.setHead(genesisBlkRoot, genesisBlk, genesisState); err != nil {
+	if err := s.setHead(&head{
+		genesisBlkRoot,
+		genesisBlk,
+		genesisState,
+		genesisBlk.Block().Slot(),
+		false,
+	}); err != nil {
 		log.WithError(err).Fatal("Could not set head")
 	}
 	return nil
