@@ -11,6 +11,7 @@ import (
 
 // setKzgCommitments sets the KZG commitment on the block.
 // Return early if the block version is older than deneb or block slot has not passed deneb epoch.
+// Depends on the blk is blind or not, set the KZG commitment from the corresponding bundle.
 func setKzgCommitments(blk interfaces.SignedBeaconBlock, bundle *enginev1.BlobsBundle, blindBundle *enginev1.BlindedBlobsBundle) error {
 	if blk.Version() < version.Deneb {
 		return nil

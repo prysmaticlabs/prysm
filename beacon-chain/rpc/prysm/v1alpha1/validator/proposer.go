@@ -233,17 +233,18 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
 	}
 
-	var signedBlindBlobs []*ethpb.SignedBlindedBlobSidecar
+	var blindSidecars []*ethpb.SignedBlindedBlobSidecar
 	if blk.Version() >= version.Deneb && blk.IsBlinded() {
-		signedBlindBlobs = req.GetBlindedDeneb().Blobs
+		blindSidecars = req.GetBlindedDeneb().Blobs
 	}
 
-	unblinder, err := newUnblinder(blk, signedBlindBlobs, vs.BlockBuilder)
+	unblinder, err := newUnblinder(blk, blindSidecars, vs.BlockBuilder)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create unblinder")
 	}
-	wasBlinded := unblinder.b.IsBlinded()
-	blk, blobSidecar, err := unblinder.unblindBuilderBlock(ctx)
+	blind := unblinder.b.IsBlinded() //
+
+	blk, sidecars, err := unblinder.unblindBuilderBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
@@ -259,10 +260,10 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 	var scs []*ethpb.SignedBlobSidecar
 	if blk.Version() >= version.Deneb {
-		if wasBlinded {
-			scs = blobSidecar
+		if blind {
+			scs = sidecars // Use sidecars from unblinder if the block was blinded.
 		} else {
-			scs, err = extractBlobs(req)
+			scs, err = extraSidecars(req) // Use sidecars from the request if the block was not blinded.
 			if err != nil {
 				return nil, errors.Wrap(err, "could not extract blobs")
 			}
@@ -270,7 +271,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		sidecar := make([]*ethpb.BlobSidecar, len(scs))
 		for i, sc := range scs {
 			if err := vs.P2P.BroadcastBlob(ctx, sc.Message.Index, sc); err != nil {
-				log.WithError(err).Errorf("Could not broadcast blob index %d / %d", i, len(scs))
+				log.WithError(err).Errorf("Could not broadcast blob sidecar index %d / %d", i, len(scs))
 			}
 			sidecar[i] = sc.Message
 		}
@@ -305,14 +306,15 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	}, nil
 }
 
-func extractBlobs(req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.SignedBlobSidecar, error) {
+// extraSidecars extracts the sidecars from the request.
+// return error if there are too many sidecars.
+func extraSidecars(req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.SignedBlobSidecar, error) {
 	b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
 	if !ok {
 		return nil, errors.New("Could not cast block to Deneb")
 	}
 	if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
 		return nil, fmt.Errorf("too many blobs in block: %d", len(b.Deneb.Blobs))
-
 	}
 	return b.Deneb.Blobs, nil
 }

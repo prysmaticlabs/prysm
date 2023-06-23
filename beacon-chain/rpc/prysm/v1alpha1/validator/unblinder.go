@@ -112,15 +112,24 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 		"txs":          len(txs),
 	}).Info("Retrieved full payload from builder")
 
-	return wb, unblindBlobsSidecars(u.blobs, blobsBundle), nil
+	bundle, err := unblindBlobsSidecars(u.blobs, blobsBundle)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not unblind blobs sidecars")
+	}
+
+	return wb, bundle, nil
 }
 
-func unblindBlobsSidecars(blindSidecars []*ethpb.SignedBlindedBlobSidecar, bundle *enginev1.BlobsBundle) []*ethpb.SignedBlobSidecar {
+func unblindBlobsSidecars(blindSidecars []*ethpb.SignedBlindedBlobSidecar, bundle *enginev1.BlobsBundle) ([]*ethpb.SignedBlobSidecar, error) {
+	if bundle == nil {
+		return nil, nil
+	}
+
 	sidecars := make([]*ethpb.SignedBlobSidecar, len(blindSidecars))
 	for i, b := range blindSidecars {
 		sidecars[i] = &ethpb.SignedBlobSidecar{
 			Message: &ethpb.BlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(b.Message.BlobRoot),
+				BlockRoot:       bytesutil.SafeCopyBytes(b.Message.BlockRoot),
 				Index:           b.Message.Index,
 				Slot:            b.Message.Slot,
 				BlockParentRoot: bytesutil.SafeCopyBytes(b.Message.BlockParentRoot),
@@ -132,7 +141,7 @@ func unblindBlobsSidecars(blindSidecars []*ethpb.SignedBlindedBlobSidecar, bundl
 			Signature: bytesutil.SafeCopyBytes(b.Signature),
 		}
 	}
-	return sidecars
+	return sidecars, nil
 }
 
 func copyBlockData(src interfaces.SignedBeaconBlock, dst interfaces.SignedBeaconBlock) error {

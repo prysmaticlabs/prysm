@@ -741,6 +741,38 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
+		{
+			name: "blind capella",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBlindedBeaconBlockDeneb()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				require.NoError(t, err)
+				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+				require.NoError(t, err)
+				blockToPropose.Block.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
+				blockToPropose.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
+				blk := &ethpb.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{
+					Block: blockToPropose,
+					Blobs: []*ethpb.SignedBlindedBlobSidecar{
+						{
+							Message: &ethpb.BlindedBlobSidecar{
+								BlockRoot:       []byte{0x01},
+								Slot:            2,
+								BlockParentRoot: []byte{0x03},
+								ProposerIndex:   3,
+								BlobRoot:        []byte{0x04},
+								KzgCommitment:   []byte{0x05},
+								KzgProof:        []byte{0x06},
+							},
+							Signature: []byte{0x07},
+						},
+					},
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -758,7 +790,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				BlockReceiver: c,
 				BlockNotifier: c.BlockNotifier(),
 				P2P:           mockp2p.NewTestP2P(t),
-				BlockBuilder:  &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella()},
+				BlockBuilder:  &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella(), PayloadDeneb: emptyPayloadDeneb(), BlobBundle: &enginev1.BlobsBundle{KzgCommitments: [][]byte{{0x01}}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}},
 				BeaconDB:      db,
 			}
 			blockToPropose := tt.block(bsRoot)
@@ -2829,7 +2861,7 @@ func Test_extractBlobs(t *testing.T) {
 		},
 	},
 	}
-	bs, err := extractBlobs(req)
+	bs, err := extraSidecars(req)
 	require.NoError(t, err)
 	require.DeepEqual(t, blobs, bs)
 }
