@@ -252,7 +252,6 @@ func Test_unblindBuilderBlock(t *testing.T) {
 				require.NoError(t, err)
 				return wb
 			}(),
-			returnedBlobSidecars: []*eth.SignedBlobSidecar{},
 		},
 		{
 			name: "can get payload and blobs Deneb",
