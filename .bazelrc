@@ -3,6 +3,7 @@ import %workspace%/build/bazelrc/convenience.bazelrc
 import %workspace%/build/bazelrc/correctness.bazelrc
 import %workspace%/build/bazelrc/cross.bazelrc
 import %workspace%/build/bazelrc/debug.bazelrc
+import %workspace%/build/bazelrc/hermetic-cc.bazelrc
 import %workspace%/build/bazelrc/performance.bazelrc
 
 # E2E run with debug gotag
@@ -27,30 +28,7 @@ build:minimal --@io_bazel_rules_go//go/config:tags=minimal
 build:release --compilation_mode=opt
 build:release --stamp
 
-# LLVM compiler for building C/C++ dependencies.
-build:llvm --define compiler=llvm
-build:llvm --copt -fno-sanitize=vptr,function
-build:llvm --linkopt -fno-sanitize=vptr,function
-# --incompatible_enable_cc_toolchain_resolution not needed after this issue is closed https://github.com/bazelbuild/bazel/issues/7260
-build:llvm --incompatible_enable_cc_toolchain_resolution
-
-build:asan --copt -fsanitize=address,undefined
-build:asan --copt -fno-omit-frame-pointer
-build:asan --linkopt -fsanitize=address,undefined
-build:asan --copt -fno-sanitize=vptr,function
-build:asan --linkopt -fno-sanitize=vptr,function
-build:asan --copt -DADDRESS_SANITIZER=1
-build:asan --copt -D__SANITIZE_ADDRESS__
-build:asan --linkopt -ldl
-
-build:llvm-asan --config=llvm
-build:llvm-asan --config=asan
-build:llvm-asan --linkopt -fuse-ld=ld.lld
-
-build:fuzz --@io_bazel_rules_go//go/config:tags=fuzz
-
 # Build binary with cgo symbolizer for debugging / profiling.
-build:cgo_symbolizer --config=llvm
 build:cgo_symbolizer --copt=-g
 build:cgo_symbolizer --define=USE_CGO_SYMBOLIZER=true
 build:cgo_symbolizer -c dbg
@@ -59,7 +37,7 @@ build:cgo_symbolizer --define=gotags=cgosymbolizer_enabled
 # toolchain build debug configs
 #------------------------------
 build:debug --sandbox_debug
-build:debug --toolchain_resolution_debug
+build:debug --toolchain_resolution_debug=".*"
 build:debug --verbose_failures
 build:debug -s
 
