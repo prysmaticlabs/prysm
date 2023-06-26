@@ -9,6 +9,8 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/sirupsen/logrus"
@@ -17,10 +19,11 @@ import (
 
 type unblinder struct {
 	b       interfaces.SignedBeaconBlock
+	blobs   []*ethpb.SignedBlindedBlobSidecar
 	builder builder.BlockBuilder
 }
 
-func newUnblinder(b interfaces.SignedBeaconBlock, builder builder.BlockBuilder) (*unblinder, error) {
+func newUnblinder(b interfaces.SignedBeaconBlock, blobs []*ethpb.SignedBlindedBlobSidecar, builder builder.BlockBuilder) (*unblinder, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
@@ -29,74 +32,78 @@ func newUnblinder(b interfaces.SignedBeaconBlock, builder builder.BlockBuilder) 
 	}
 	return &unblinder{
 		b:       b,
+		blobs:   blobs,
 		builder: builder,
 	}, nil
 }
 
-func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
+func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedBeaconBlock, []*ethpb.SignedBlobSidecar, error) {
 	if !u.b.IsBlinded() || u.b.Version() < version.Bellatrix {
-		return u.b, nil
+		return u.b, nil, nil
 	}
 	if u.b.IsBlinded() && !u.builder.Configured() {
-		return nil, errors.New("builder not configured")
+		return nil, nil, errors.New("builder not configured")
 	}
 
 	psb, err := u.blindedProtoBlock()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get blinded proto block")
+		return nil, nil, errors.Wrap(err, "could not get blinded proto block")
 	}
 	sb, err := consensusblocks.NewSignedBeaconBlock(psb)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create signed block")
+		return nil, nil, errors.Wrap(err, "could not create signed block")
 	}
 	if err = copyBlockData(u.b, sb); err != nil {
-		return nil, errors.Wrap(err, "could not copy block data")
+		return nil, nil, errors.Wrap(err, "could not copy block data")
 	}
 	h, err := u.b.Block().Body().Execution()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution")
+		return nil, nil, errors.Wrap(err, "could not get execution")
 	}
 	if err = sb.SetExecution(h); err != nil {
-		return nil, errors.Wrap(err, "could not set execution")
+		return nil, nil, errors.Wrap(err, "could not set execution")
 	}
-	// TODO: replace nil with proper variable for signed blinded blob sidecars
-	// replace _ with blob bundle and use it in the response.
-	payload, _, err := u.builder.SubmitBlindedBlock(ctx, sb, nil)
+	payload, blobsBundle, err := u.builder.SubmitBlindedBlock(ctx, sb, u.blobs)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not submit blinded block")
+		return nil, nil, errors.Wrap(err, "could not submit blinded block")
 	}
 	headerRoot, err := h.HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get header root")
+		return nil, nil, errors.Wrap(err, "could not get header root")
 	}
 	payloadRoot, err := payload.HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get payload root")
+		return nil, nil, errors.Wrap(err, "could not get payload root")
 	}
 	if headerRoot != payloadRoot {
-		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
+		return nil, nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
 			"%#x != %#x", headerRoot, payloadRoot)
 	}
 
 	bb, err := u.protoBlock()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get proto block")
+		return nil, nil, errors.Wrap(err, "could not get proto block")
 	}
 	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create signed block")
+		return nil, nil, errors.Wrap(err, "could not create signed block")
 	}
 	if err = copyBlockData(sb, wb); err != nil {
-		return nil, errors.Wrap(err, "could not copy block data")
+		return nil, nil, errors.Wrap(err, "could not copy block data")
 	}
 	if err = wb.SetExecution(payload); err != nil {
-		return nil, errors.Wrap(err, "could not set execution")
+		return nil, nil, errors.Wrap(err, "could not set execution")
 	}
 
 	txs, err := payload.Transactions()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get transactions from payload")
+		return nil, nil, errors.Wrap(err, "could not get transactions from payload")
 	}
+
+	if wb.Version() >= version.Bellatrix && blobsBundle != nil {
+		log.WithField("blobCount", len(blobsBundle.Blobs))
+	}
+
 	log.WithFields(logrus.Fields{
 		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
 		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
@@ -105,7 +112,36 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 		"txs":          len(txs),
 	}).Info("Retrieved full payload from builder")
 
-	return wb, nil
+	bundle, err := unblindBlobsSidecars(u.blobs, blobsBundle)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not unblind blobs sidecars")
+	}
+
+	return wb, bundle, nil
+}
+
+func unblindBlobsSidecars(blindSidecars []*ethpb.SignedBlindedBlobSidecar, bundle *enginev1.BlobsBundle) ([]*ethpb.SignedBlobSidecar, error) {
+	if bundle == nil {
+		return nil, nil
+	}
+
+	sidecars := make([]*ethpb.SignedBlobSidecar, len(blindSidecars))
+	for i, b := range blindSidecars {
+		sidecars[i] = &ethpb.SignedBlobSidecar{
+			Message: &ethpb.BlobSidecar{
+				BlockRoot:       bytesutil.SafeCopyBytes(b.Message.BlockRoot),
+				Index:           b.Message.Index,
+				Slot:            b.Message.Slot,
+				BlockParentRoot: bytesutil.SafeCopyBytes(b.Message.BlockParentRoot),
+				ProposerIndex:   b.Message.ProposerIndex,
+				Blob:            bytesutil.SafeCopyBytes(bundle.Blobs[i]),
+				KzgCommitment:   bytesutil.SafeCopyBytes(b.Message.KzgCommitment),
+				KzgProof:        bytesutil.SafeCopyBytes(b.Message.KzgProof),
+			},
+			Signature: bytesutil.SafeCopyBytes(b.Signature),
+		}
+	}
+	return sidecars, nil
 }
 
 func copyBlockData(src interfaces.SignedBeaconBlock, dst interfaces.SignedBeaconBlock) error {
@@ -160,6 +196,12 @@ func (u *unblinder) blindedProtoBlock() (proto.Message, error) {
 				Body: &ethpb.BlindedBeaconBlockBodyCapella{},
 			},
 		}, nil
+	case version.Deneb:
+		return &ethpb.SignedBlindedBeaconBlockDeneb{
+			Block: &ethpb.BlindedBeaconBlockDeneb{
+				Body: &ethpb.BlindedBeaconBlockBodyDeneb{},
+			},
+		}, nil
 	default:
 		return nil, fmt.Errorf("invalid version %s", version.String(u.b.Version()))
 	}
@@ -177,6 +219,12 @@ func (u *unblinder) protoBlock() (proto.Message, error) {
 		return &ethpb.SignedBeaconBlockCapella{
 			Block: &ethpb.BeaconBlockCapella{
 				Body: &ethpb.BeaconBlockBodyCapella{},
+			},
+		}, nil
+	case version.Deneb:
+		return &ethpb.SignedBeaconBlockDeneb{
+			Block: &ethpb.BeaconBlockDeneb{
+				Body: &ethpb.BeaconBlockBodyDeneb{},
 			},
 		}, nil
 	default:
