@@ -39,6 +39,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "handlers_test.go",
         "node_test.go",
         "server_test.go",
     ],
