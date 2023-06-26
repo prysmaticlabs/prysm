@@ -630,6 +630,9 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
 
+	denebState, _ := util.DeterministicGenesisStateDeneb(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, denebState.SetSlot(1))
+
 	tests := []struct {
 		name                 string
 		inputState           state.BeaconState
@@ -675,6 +678,32 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 			inputDelay: primitives.Slot(math.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
 			participationIndices: map[uint8]bool{
 				sourceFlagIndex: true,
+				targetFlagIndex: true,
+			},
+		},
+		{
+			name: "participated source and target with delay",
+			inputState: func() state.BeaconState {
+				return beaconState
+			}(),
+			inputData: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+				Target: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+			},
+			inputDelay:           params.BeaconConfig().SlotsPerEpoch + 1,
+			participationIndices: map[uint8]bool{},
+		},
+		{
+			name: "participated source and target with delay in deneb",
+			inputState: func() state.BeaconState {
+				return denebState
+			}(),
+			inputData: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+				Target: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
+			},
+			inputDelay: params.BeaconConfig().SlotsPerEpoch + 1,
+			participationIndices: map[uint8]bool{
 				targetFlagIndex: true,
 			},
 		},
