@@ -236,22 +236,22 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 	return vs.ExecutionEngineCaller.GetTerminalBlockHash(ctx, transitionTime)
 }
 
-func (vs *Server) getBuilderPayload(ctx context.Context,
+func (vs *Server) getBuilderPayloadAndBlobs(ctx context.Context,
 	slot primitives.Slot,
-	vIdx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.getBuilderPayload")
+	vIdx primitives.ValidatorIndex) (interfaces.ExecutionData, *enginev1.BlindedBlobsBundle, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getBuilderPayloadAndBlobs")
 	defer span.End()
 
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return nil, nil
+		return nil, nil, nil
 	}
 	canUseBuilder, err := vs.canUseBuilder(ctx, slot, vIdx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to check if we can use the builder")
+		return nil, nil, errors.Wrap(err, "failed to check if we can use the builder")
 	}
 	span.AddAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
 	if !canUseBuilder {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	return vs.getPayloadHeaderFromBuilder(ctx, slot, vIdx)
@@ -288,6 +288,21 @@ func emptyPayload() *enginev1.ExecutionPayload {
 
 func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
 	return &enginev1.ExecutionPayloadCapella{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
+	}
+}
+
+func emptyPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
+	return &enginev1.ExecutionPayloadDeneb{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),

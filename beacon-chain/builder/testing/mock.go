@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
@@ -44,27 +45,29 @@ func (s *MockBuilderService) Configured() bool {
 }
 
 // SubmitBlindedBlock for mocking.
-func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.ReadOnlySignedBeaconBlock, _ []*ethpb.SignedBlindedBlobSidecar) (interfaces.ExecutionData, *v1.BlobsBundle, error) {
-	if s.Payload != nil {
+func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, b interfaces.ReadOnlySignedBeaconBlock, _ []*ethpb.SignedBlindedBlobSidecar) (interfaces.ExecutionData, *v1.BlobsBundle, error) {
+	switch b.Version() {
+	case version.Bellatrix:
 		w, err := blocks.WrappedExecutionPayload(s.Payload)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not wrap payload")
 		}
 		return w, nil, s.ErrSubmitBlindedBlock
-	}
-	if s.PayloadCapella != nil {
+	case version.Capella:
 		w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella, 0)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not wrap capella payload")
 		}
 		return w, nil, s.ErrSubmitBlindedBlock
+	case version.Deneb:
+		w, err := blocks.WrappedExecutionPayloadDeneb(s.PayloadDeneb, 0)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not wrap deneb payload")
+		}
+		return w, s.BlobBundle, s.ErrSubmitBlindedBlock
+	default:
+		return nil, nil, errors.New("unknown block version for mocking")
 	}
-
-	w, err := blocks.WrappedExecutionPayloadDeneb(s.PayloadDeneb, 0)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not wrap deneb payload")
-	}
-	return w, s.BlobBundle, s.ErrSubmitBlindedBlock
 }
 
 // GetHeader for mocking.
