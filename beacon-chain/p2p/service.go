@@ -210,6 +210,10 @@ func (s *Service) Start() {
 		if err != nil {
 			log.WithError(err).Error("Could not connect to static peer")
 		}
+		// Set trusted peers for those that are provided as static addresses.
+		pids := peerIdsFromMultiAddrs(addrs)
+		s.peers.SetTrustedPeers(pids)
+		peersToWatch = append(peersToWatch, s.cfg.StaticPeers...)
 		s.connectWithAllPeers(addrs)
 	}
 	// Initialize metadata according to the

@@ -23,7 +23,7 @@ func TestUnmarshalEpochParticipation(t *testing.T) {
 		ep := EpochParticipation{}
 		err := ep.UnmarshalJSON([]byte(":illegal:"))
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "could not decode epoch participation base64 value", err)
+		assert.ErrorContains(t, "provided epoch participation json string is malformed", err)
 	})
 	t.Run("length too small", func(t *testing.T) {
 		ep := EpochParticipation{}
@@ -35,5 +35,9 @@ func TestUnmarshalEpochParticipation(t *testing.T) {
 		ep := EpochParticipation{}
 		require.NoError(t, ep.UnmarshalJSON([]byte("null")))
 		assert.DeepEqual(t, EpochParticipation([]string{}), ep)
+	})
+	t.Run("invalid value", func(t *testing.T) {
+		ep := EpochParticipation{}
+		require.ErrorContains(t, "provided epoch participation json string is malformed", ep.UnmarshalJSON([]byte("XdHJ1ZQ==X")))
 	})
 }

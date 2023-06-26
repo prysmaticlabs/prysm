@@ -16,11 +16,11 @@ load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 rules_pkg_dependencies()
 
-HERMETIC_CC_TOOLCHAIN_VERSION = "v2.0.0-rc2"
+HERMETIC_CC_TOOLCHAIN_VERSION = "v2.0.0"
 
 http_archive(
     name = "hermetic_cc_toolchain",
-    sha256 = "40dff82816735e631e8bd51ede3af1c4ed1ad4646928ffb6a0e53e228e55738c",
+    sha256 = "57f03a6c29793e8add7bd64186fc8066d23b5ffd06fe9cc6b0b8c499914d3a65",
     urls = [
         "https://mirror.bazel.build/github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
         "https://github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
@@ -31,21 +31,26 @@ load("@hermetic_cc_toolchain//toolchain:defs.bzl", zig_toolchains = "toolchains"
 
 zig_toolchains()
 
-# Register zig sdk toolchains with support for Ubuntu 20.04.
+# Register zig sdk toolchains with support for Ubuntu 20.04 (Focal Fossa) which has an EOL date of April, 2025.
 # For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc
 register_toolchains(
     "@zig_sdk//toolchain:linux_amd64_gnu.2.31",
     "@zig_sdk//toolchain:linux_arm64_gnu.2.31",
-    "@zig_sdk//toolchain:darwin_amd64",
-    "@zig_sdk//toolchain:darwin_arm64",
-    "@zig_sdk//toolchain:windows_amd64",
+    # Hermetic cc toolchain is not yet supported on darwin. Sysroot needs to be provided.
+    # See https://github.com/uber/hermetic_cc_toolchain#osx-sysroot
+    #    "@zig_sdk//toolchain:darwin_amd64",
+    #    "@zig_sdk//toolchain:darwin_arm64",
+    # Windows builds are not supported yet.
+    #    "@zig_sdk//toolchain:windows_amd64",
 )
+
+load("@prysm//tools/cross-toolchain:darwin_cc_hack.bzl", "configure_nonhermetic_darwin")
+
+configure_nonhermetic_darwin()
 
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
 configure_prysm_toolchains()
-
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
@@ -286,7 +291,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.3.0"
+consensus_spec_version = "v1.4.0-alpha.1"
 
 bls_test_version = "v0.1.1"
 
@@ -302,7 +307,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "1c806e04ac5e3779032c06a6009350b3836b6809bb23812993d6ececd7047cf5",
+    sha256 = "1118a663be4a00ba00f0635eb20287157f2b2f993aed64335bfbcd04af424c2b",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -318,7 +323,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2b42796dc5ccd9f1246032d0c17663e20f70334ff7e00325f0fc3af28cb24186",
+    sha256 = "acde6e10940d14f22277eda5b55b65a24623ac88e4c7a2e34134a6069f5eea82",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -334,7 +339,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "231e3371e81ce9acde65d2910ec4580587e74dbbcfcbd9c675e473e022deec8a",
+    sha256 = "49c022f3a3478cea849ba8f877a9f7e4c1ded549edddc09993550bbc5bb192e1",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -349,7 +354,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "219b74d95664ea7e8dfbf31162dfa206b9c0cf45919ea86db5fa0f8902977e3c",
+    sha256 = "c3e246ff01f6b7b9e9e41939954a6ff89dfca7297415f88781809165fa83267c",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -398,9 +403,6 @@ git_repository(
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1617835118 -0700",
 )
-
-# Group the sources of the library so that CMake rule have access to it
-all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
 
 # External dependencies
 

@@ -2,6 +2,7 @@ package altair
 
 import (
 	"context"
+	goErrors "errors"
 	"fmt"
 	"time"
 
@@ -21,6 +22,10 @@ import (
 )
 
 const maxRandomByte = uint64(1<<8 - 1)
+
+var (
+	ErrTooLate = errors.New("sync message is too late")
+)
 
 // ValidateNilSyncContribution validates the following fields are not nil:
 // -the contribution and proof itself
@@ -217,7 +222,7 @@ func ValidateSyncMessageTime(slot primitives.Slot, genesisTime time.Time, clockD
 	upperBound := time.Now().Add(clockDisparity)
 	// Verify sync message slot is within the time range.
 	if messageTime.Before(lowerBound) || messageTime.After(upperBound) {
-		return fmt.Errorf(
+		syncErr := fmt.Errorf(
 			"sync message time %v (slot %d) not within allowable range of %v (slot %d) to %v (slot %d)",
 			messageTime,
 			slot,
@@ -226,6 +231,11 @@ func ValidateSyncMessageTime(slot primitives.Slot, genesisTime time.Time, clockD
 			upperBound,
 			uint64(upperBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
 		)
+		// Wrap error message if sync message is too late.
+		if messageTime.Before(lowerBound) {
+			syncErr = goErrors.Join(ErrTooLate, syncErr)
+		}
+		return syncErr
 	}
 	return nil
 }

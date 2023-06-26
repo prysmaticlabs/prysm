@@ -11,10 +11,11 @@ import (
 var (
 	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
 	ErrNilObjectWrapped = errors.New("attempted to wrap nil object")
-	// ErrUnsupportedGetter is returned when a getter access is not supported for a specific beacon block version.
-	ErrUnsupportedGetter = errors.New("unsupported getter")
+	// ErrUnsupportedField is returned when a getter/setter access is not supported.
+	ErrUnsupportedField = errors.New("unsupported getter")
 )
 
+// ErrNotSupported constructs a message informing about an unsupported field access.
 func ErrNotSupported(funcName string, ver int) error {
-	return errors2.Wrap(ErrUnsupportedGetter, fmt.Sprintf("%s is not supported for %s", funcName, version.String(ver)))
+	return errors2.Wrap(ErrUnsupportedField, fmt.Sprintf("%s is not supported for %s", funcName, version.String(ver)))
 }

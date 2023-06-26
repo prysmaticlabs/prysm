@@ -3,6 +3,7 @@ import %workspace%/build/bazelrc/convenience.bazelrc
 import %workspace%/build/bazelrc/correctness.bazelrc
 import %workspace%/build/bazelrc/cross.bazelrc
 import %workspace%/build/bazelrc/debug.bazelrc
+import %workspace%/build/bazelrc/hermetic-cc.bazelrc
 import %workspace%/build/bazelrc/performance.bazelrc
 import %workspace%/build/bazelrc/zig-cc.bazelrc
 

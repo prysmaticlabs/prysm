@@ -39,7 +39,7 @@ def prysm_image_upload(
     oci_image_index(
         name = "oci_image_index",
         images = [
-            ":multiarch",
+            ":oci_multiarch",
         ],
     )
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
@@ -28,7 +27,6 @@ import (
 	testing2 "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type mocks struct {
@@ -648,37 +646,13 @@ func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 	err := ProposeExit(
 		context.Background(),
 		m.validatorClient,
-		m.nodeClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
+		params.BeaconConfig().GenesisEpoch,
 	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
 	assert.ErrorContains(t, "gRPC call to get validator index failed", err)
-}
-
-func TestProposeExit_GetGenesisFailed(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
-	defer finish()
-
-	m.validatorClient.EXPECT().
-		ValidatorIndex(gomock.Any(), gomock.Any()).
-		Return(nil, nil)
-
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), gomock.Any()).
-		Return(nil, errors.New("uh oh"))
-
-	err := ProposeExit(
-		context.Background(),
-		m.validatorClient,
-		m.nodeClient,
-		m.signfunc,
-		validatorKey.PublicKey().Marshal(),
-	)
-	assert.NotNil(t, err)
-	assert.ErrorContains(t, "uh oh", err)
-	assert.ErrorContains(t, "gRPC call to get genesis time failed", err)
 }
 
 func TestProposeExit_DomainDataFailed(t *testing.T) {
@@ -689,15 +663,6 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	// Any time in the past will suffice
-	genesisTime := &timestamppb.Timestamp{
-		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-	}
-
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), gomock.Any()).
-		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
-
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("uh oh"))
@@ -705,9 +670,9 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 	err := ProposeExit(
 		context.Background(),
 		m.validatorClient,
-		m.nodeClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
+		params.BeaconConfig().GenesisEpoch,
 	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, domainDataErr, err)
@@ -723,15 +688,6 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	// Any time in the past will suffice
-	genesisTime := &timestamppb.Timestamp{
-		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-	}
-
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), gomock.Any()).
-		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
-
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(nil, nil)
@@ -739,9 +695,9 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 	err := ProposeExit(
 		context.Background(),
 		m.validatorClient,
-		m.nodeClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
+		params.BeaconConfig().GenesisEpoch,
 	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, domainDataErr, err)
@@ -756,15 +712,6 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	// Any time in the past will suffice
-	genesisTime := &timestamppb.Timestamp{
-		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-	}
-
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), gomock.Any()).
-		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
-
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
@@ -776,9 +723,9 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 	err := ProposeExit(
 		context.Background(),
 		m.validatorClient,
-		m.nodeClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
+		params.BeaconConfig().GenesisEpoch,
 	)
 	assert.NotNil(t, err)
 	assert.ErrorContains(t, "uh oh", err)
@@ -793,15 +740,6 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
-	// Any time in the past will suffice
-	genesisTime := &timestamppb.Timestamp{
-		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
-	}
-
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), gomock.Any()).
-		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
-
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
@@ -813,9 +751,9 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 	assert.NoError(t, ProposeExit(
 		context.Background(),
 		m.validatorClient,
-		m.nodeClient,
 		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
+		params.BeaconConfig().GenesisEpoch,
 	))
 }
 

@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
@@ -211,8 +212,19 @@ func (s *Service) Start() {
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		ReplayerBuilder:       ch,
+		TimeFetcher:           s.cfg.GenesisTimeFetcher,
+		Stater:                stater,
+		HeadFetcher:           s.cfg.HeadFetcher,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards)
+
+	builderServer := &rpcBuilder.Server{
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		Stater:                stater,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
@@ -340,7 +352,10 @@ func (s *Service) Start() {
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
 		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
+		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
 	}
+	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2)
+	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2)
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
