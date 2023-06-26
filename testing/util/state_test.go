@@ -2,10 +2,10 @@ package util
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
@@ -16,9 +16,7 @@ func TestNewBeaconState(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconState{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
-		t.Fatal("State did not match after round trip marshal")
-	}
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got, "State did not match after round trip marshal")
 }
 
 func TestNewBeaconStateAltair(t *testing.T) {
@@ -28,9 +26,7 @@ func TestNewBeaconStateAltair(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateAltair{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
-		t.Fatal("State did not match after round trip marshal")
-	}
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got, "State did not match after round trip marshal")
 }
 
 func TestNewBeaconStateBellatrix(t *testing.T) {
@@ -40,9 +36,7 @@ func TestNewBeaconStateBellatrix(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateBellatrix{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
-		t.Fatal("State did not match after round trip marshal")
-	}
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got, "State did not match after round trip marshal")
 }
 
 func TestNewBeaconStateCapella(t *testing.T) {
@@ -52,9 +46,7 @@ func TestNewBeaconStateCapella(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateCapella{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
-		t.Fatal("State did not match after round trip marshal")
-	}
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got, "State did not match after round trip marshal")
 }
 
 func TestNewBeaconState_HashTreeRoot(t *testing.T) {

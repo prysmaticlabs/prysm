@@ -41,6 +41,10 @@ const (
 	indicesLimit = 8000
 )
 
+func (b *BeaconState) SetId(id uint64) {
+	b.index = id
+}
+
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.lock.Lock()

@@ -16,6 +16,7 @@ import (
 	blocktest "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
@@ -219,6 +220,9 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current primitives.Slo
 	for _, spec := range hist {
 		// call process_slots and process_block separately, because process_slots updates values used in randao mix
 		// which influences proposer_index.
+		htr, err := ps.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, htr)
 		s, err := ReplayProcessSlots(ctx, ps, spec.slot)
 		require.NoError(t, err)
 
@@ -260,6 +264,12 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current primitives.Slo
 		}
 		mh.addBlock(pr, b, spec.canonicalBlock)
 		ps = s.Copy()
+	}
+
+	for _, v := range mh.hiddenStates {
+		htr, err := v.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		assert.NotNil(t, htr)
 	}
 
 	require.NoError(t, mh.validateRoots())

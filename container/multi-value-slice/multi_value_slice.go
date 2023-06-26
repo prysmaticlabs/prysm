@@ -9,6 +9,7 @@ type Id = uint64
 
 type Identifiable interface {
 	Id() Id
+	SetId(id uint64)
 }
 
 type MultiValueSlice[O Identifiable] interface {
@@ -32,6 +33,9 @@ type Slice[V comparable, O Identifiable] struct {
 }
 
 func (s *Slice[V, O]) Len(obj O) int {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	l := len(s.SharedItems)
 	for i := 0; i < len(s.AppendedItems); i++ {
 		found := false

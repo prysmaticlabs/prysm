@@ -30,7 +30,9 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	require.NoError(t, service.MigrateToCold(ctx, br))
 
 	wanted := &finalizedInfo{state: beaconState, root: br, slot: 1}
-	assert.DeepEqual(t, wanted, service.finalizedInfo, "Incorrect finalized info")
+	assert.DeepEqual(t, wanted.root, service.finalizedInfo.root)
+	assert.Equal(t, wanted.slot, service.finalizedInfo.slot)
+	assert.DeepEqual(t, wanted.state, service.finalizedInfo.state)
 }
 
 func TestMigrateToCold_HappyPath(t *testing.T) {
