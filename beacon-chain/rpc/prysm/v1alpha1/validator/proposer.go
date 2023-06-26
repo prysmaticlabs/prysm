@@ -148,7 +148,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 	}
 
-	builderPayload, err := vs.getBuilderPayload(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+	builderPayload, blindBlobsBundle, err := vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 	if err != nil {
 		builderGetPayloadMissCount.Inc()
 		log.WithError(err).Error("Could not get builder payload")
@@ -158,7 +158,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
-	if err := setKzgCommitments(sBlk, blobsBundle); err != nil {
+	if err := setKzgCommitments(sBlk, blobsBundle, blindBlobsBundle); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set kzg commitment: %v", err)
 	}
 
@@ -181,7 +181,18 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().DenebForkEpoch {
-		// TODO: Handle blind case
+		if sBlk.IsBlinded() {
+			scs, err := blindBlobsBundleToSidecars(blindBlobsBundle, sBlk.Block())
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not convert blind blobs bundle to sidecar: %v", err)
+			}
+			blockAndBlobs := &ethpb.BlindedBeaconBlockAndBlobsDeneb{
+				Block: pb.(*ethpb.BlindedBeaconBlockDeneb),
+				Blobs: scs,
+			}
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blockAndBlobs}}, nil
+		}
+
 		scs, err := blobsBundleToSidecars(blobsBundle, sBlk.Block())
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
@@ -222,11 +233,18 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
 	}
 
-	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
+	var blindSidecars []*ethpb.SignedBlindedBlobSidecar
+	if blk.Version() >= version.Deneb && blk.IsBlinded() {
+		blindSidecars = req.GetBlindedDeneb().Blobs
+	}
+
+	unblinder, err := newUnblinder(blk, blindSidecars, vs.BlockBuilder)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create unblinder")
 	}
-	blk, err = unblinder.unblindBuilderBlock(ctx)
+	blinded := unblinder.b.IsBlinded() //
+
+	blk, unblindedSidecars, err := unblinder.unblindBuilderBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
@@ -240,23 +258,25 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
 
+	var scs []*ethpb.SignedBlobSidecar
 	if blk.Version() >= version.Deneb {
-		b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
-		if !ok {
-			return nil, status.Error(codes.Internal, "Could not cast block to Deneb")
-		}
-		if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
-			return nil, status.Errorf(codes.InvalidArgument, "Too many blobs in block: %d", len(b.Deneb.Blobs))
-		}
-		scs := make([]*ethpb.BlobSidecar, len(b.Deneb.Blobs))
-		for i, blob := range b.Deneb.Blobs {
-			if err := vs.P2P.BroadcastBlob(ctx, blob.Message.Index, blob); err != nil {
-				log.WithError(err).Errorf("Could not broadcast blob index %d / %d", i, len(b.Deneb.Blobs))
+		if blinded {
+			scs = unblindedSidecars // Use sidecars from unblinder if the block was blinded.
+		} else {
+			scs, err = extraSidecars(req) // Use sidecars from the request if the block was not blinded.
+			if err != nil {
+				return nil, errors.Wrap(err, "could not extract blobs")
 			}
-			scs[i] = blob.Message
+		}
+		sidecars := make([]*ethpb.BlobSidecar, len(scs))
+		for i, sc := range scs {
+			if err := vs.P2P.BroadcastBlob(ctx, sc.Message.Index, sc); err != nil {
+				log.WithError(err).Errorf("Could not broadcast blob sidecar index %d / %d", i, len(scs))
+			}
+			sidecars[i] = sc.Message
 		}
 		if len(scs) > 0 {
-			if err := vs.BeaconDB.SaveBlobSidecar(ctx, scs); err != nil {
+			if err := vs.BeaconDB.SaveBlobSidecar(ctx, sidecars); err != nil {
 				return nil, err
 			}
 		}
@@ -284,6 +304,19 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
+}
+
+// extraSidecars extracts the sidecars from the request.
+// return error if there are too many sidecars.
+func extraSidecars(req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.SignedBlobSidecar, error) {
+	b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
+	if !ok {
+		return nil, errors.New("Could not cast block to Deneb")
+	}
+	if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("too many blobs in block: %d", len(b.Deneb.Blobs))
+	}
+	return b.Deneb.Blobs, nil
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
