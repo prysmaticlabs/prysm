@@ -115,7 +115,7 @@ genrule(
 
 genrule(
     name = "libtinfo6_tar",
-        srcs = select({
+    srcs = select({
         "@platforms//cpu:x86_64": ["@libtinfo6_amd64//file:file"],
         "@platforms//cpu:arm64": ["@libtinfo6_arm64//file:file"],
     }),
