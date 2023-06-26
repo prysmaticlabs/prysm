@@ -85,6 +85,11 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 }
 
 func Test_ValidateAttestationTime(t *testing.T) {
+	cfg := params.BeaconConfig().Copy()
+	cfg.DenebForkEpoch = 5
+	params.OverrideBeaconConfig(cfg)
+	params.SetupTestConfigCleanup(t)
+
 	if params.BeaconNetworkConfig().MaximumGossipClockDisparity < 200*time.Millisecond {
 		t.Fatal("This test expects the maximum clock disparity to be at least 200ms")
 	}
@@ -154,6 +159,39 @@ func Test_ValidateAttestationTime(t *testing.T) {
 					-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(200 * time.Millisecond),
 			},
+		},
+		{
+			name: "attestation.slot < current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE in deneb",
+			args: args{
+				attSlot:     300 - params.BeaconNetworkConfig().AttestationPropagationSlotRange - 1,
+				genesisTime: prysmTime.Now().Add(-300 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+		},
+		{
+			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE in deneb",
+			args: args{
+				attSlot:     300 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+				genesisTime: prysmTime.Now().Add(-300 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+		},
+		{
+			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE, received 200ms late in deneb",
+			args: args{
+				attSlot: 300 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+				genesisTime: prysmTime.Now().Add(
+					-300 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(200 * time.Millisecond),
+			},
+		},
+		{
+			name: "attestation.slot != current epoch or previous epoch in deneb",
+			args: args{
+				attSlot: 300 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+				genesisTime: prysmTime.Now().Add(
+					-500 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(200 * time.Millisecond),
+			},
+			wantedErr: "attestation slot 268 not within current epoch 15 or previous epoch 14",
 		},
 		{
 			name: "attestation.slot is well beyond current slot",

@@ -127,6 +127,44 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestProcessAttestationsNoVerify_OlderThanSlotsPerEpoch(t *testing.T) {
+	aggBits := bitfield.NewBitlist(3)
+	aggBits.SetBitAt(1, true)
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+		},
+		AggregationBits: aggBits,
+	}
+	ctx := context.Background()
+
+	t.Run("attestation older than slots per epoch", func(t *testing.T) {
+		beaconState, _ := util.DeterministicGenesisState(t, 100)
+
+		err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().SlotsPerEpoch + 1)
+		require.NoError(t, err)
+		ckp := beaconState.CurrentJustifiedCheckpoint()
+		copy(ckp.Root, "hello-world")
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
+		require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
+
+		require.ErrorContains(t, "state slot 33 > attestation slot 0 + SLOTS_PER_EPOCH 32", blocks.VerifyAttestationNoVerifySignature(ctx, beaconState, att))
+	})
+
+	t.Run("attestation older than slots per epoch in deneb", func(t *testing.T) {
+		beaconState, _ := util.DeterministicGenesisStateDeneb(t, 100)
+
+		err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().SlotsPerEpoch + 1)
+		require.NoError(t, err)
+		ckp := beaconState.CurrentJustifiedCheckpoint()
+		copy(ckp.Root, "hello-world")
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(ckp))
+
+		require.NoError(t, blocks.VerifyAttestationNoVerifySignature(ctx, beaconState, att))
+	})
+}
+
 func TestVerifyAttestationNoVerifySignature_OK(t *testing.T) {
 	// Attestation with an empty signature
 
