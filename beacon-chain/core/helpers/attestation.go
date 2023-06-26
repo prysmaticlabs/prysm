@@ -177,7 +177,10 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 			attReceivedTooLateCount.Inc()
 			return errors.Join(ErrTooLate, attError)
 		}
+		return nil
 	}
+
+	// The following checks are only for Deneb fork and beyond.
 
 	currentEpoch := slots.ToEpoch(currentSlot)
 	prevEpoch := currentEpoch.Sub(1)
