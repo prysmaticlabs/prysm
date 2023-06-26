@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -295,8 +296,14 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconState, data *et
 		participatedFlags[sourceFlagIndex] = true
 	}
 	matchedSrcTgt := matchedSrc && matchedTgt
-	if matchedSrcTgt && delay <= slotsPerEpoch {
-		participatedFlags[targetFlagIndex] = true
+	if beaconState.Version() >= version.Deneb {
+		if matchedSrcTgt {
+			participatedFlags[targetFlagIndex] = true
+		}
+	} else {
+		if matchedSrcTgt && delay <= slotsPerEpoch {
+			participatedFlags[targetFlagIndex] = true
+		}
 	}
 	matchedSrcTgtHead := matchedHead && matchedSrcTgt
 	if matchedSrcTgtHead && delay == cfg.MinAttestationInclusionDelay {

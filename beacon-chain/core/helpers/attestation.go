@@ -166,14 +166,26 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 		lowerBoundsSlot,
 		currentSlot,
 	)
-	if attTime.Before(lowerBounds) {
-		attReceivedTooLateCount.Inc()
-		return errors.Join(ErrTooLate, attError)
-	}
 	if attTime.After(upperBounds) {
 		attReceivedTooEarlyCount.Inc()
 		return attError
 	}
+
+	attEpoch := slots.ToEpoch(attSlot)
+	if attEpoch < params.BeaconConfig().DenebForkEpoch {
+		if attTime.Before(lowerBounds) {
+			attReceivedTooLateCount.Inc()
+			return errors.Join(ErrTooLate, attError)
+		}
+	}
+
+	currentEpoch := slots.ToEpoch(currentSlot)
+	prevEpoch := currentEpoch.Sub(1)
+	attSlotEpoch := slots.ToEpoch(attSlot)
+	if attSlotEpoch != currentEpoch || attSlotEpoch != prevEpoch {
+		return fmt.Errorf("attestation slot %d not within current epoch %d or previous epoch %d", attSlot, currentEpoch, prevEpoch)
+	}
+
 	return nil
 }
 
