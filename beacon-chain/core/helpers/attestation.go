@@ -191,6 +191,7 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 	}
 	attSlotEpoch := slots.ToEpoch(attSlot)
 	if attSlotEpoch != currentEpoch && attSlotEpoch != prevEpoch {
+		return fmt.Errorf("attestation slot %d not within current epoch %d or previous epoch %d", attSlot, currentEpoch, prevEpoch)
 	}
 
 	return nil
