@@ -1,8 +1,13 @@
 package state_native
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 )
 
 // SetRandaoMixes for the beacon state. Updates the entire
@@ -11,10 +16,22 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if b.randaoMixes != nil {
-		b.randaoMixes.Detach(b)
+	if features.Get().EnableExperimentalState {
+		if b.randaoMixesMultiValue != nil {
+			b.randaoMixesMultiValue.Detach(b)
+		}
+		b.randaoMixesMultiValue = NewMultiValueRandaoMixes(val)
+	} else {
+		b.sharedFieldReferences[types.RandaoMixes].MinusRef()
+		b.sharedFieldReferences[types.RandaoMixes] = stateutil.NewRef(1)
+
+		rootsArr := make([][32]byte, fieldparams.RandaoMixesLength)
+		for i := 0; i < len(rootsArr); i++ {
+			copy(rootsArr[i][:], val[i])
+		}
+		b.randaoMixes = rootsArr
 	}
-	b.randaoMixes = NewMultiValueRandaoMixes(val)
+
 	b.markFieldAsDirty(types.RandaoMixes)
 	b.rebuildTrie[types.RandaoMixes] = true
 	return nil
@@ -26,9 +43,26 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if err := b.randaoMixes.UpdateAt(b, idx, val); err != nil {
-		return errors.Wrap(err, "could not update randao mixes")
+	if features.Get().EnableExperimentalState {
+		if err := b.randaoMixesMultiValue.UpdateAt(b, idx, val); err != nil {
+			return errors.Wrap(err, "could not update randao mixes")
+		}
+	} else {
+		if uint64(len(b.randaoMixes)) <= idx {
+			return fmt.Errorf("index %d out of bounds", idx)
+		}
+		m := b.randaoMixes
+		if ref := b.sharedFieldReferences[types.RandaoMixes]; ref.Refs() > 1 {
+			// Copy elements in underlying array by reference.
+			m = make([][32]byte, len(b.randaoMixes))
+			copy(m, b.randaoMixes)
+			ref.MinusRef()
+			b.sharedFieldReferences[types.RandaoMixes] = stateutil.NewRef(1)
+		}
+		m[idx] = val
+		b.randaoMixes = m
 	}
+
 	b.markFieldAsDirty(types.RandaoMixes)
 	b.addDirtyIndices(types.RandaoMixes, []uint64{idx})
 	return nil

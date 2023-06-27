@@ -72,12 +72,8 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.BlockRoots.RealPosition()] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	sRoots := make([][]byte, state.stateRoots.Len(state))
-	sr := state.stateRoots.Value(state)
-	for i := range sRoots {
-		sRoots[i] = sr[i][:]
-	}
-	stateRootsRoot, err := stateutil.ArraysRoot(sRoots, fieldparams.StateRootsLength)
+	sRoots := customtypes.StateRoots(state.stateRootsVal())
+	stateRootsRoot, err := stateutil.ArraysRoot(sRoots.Slice(), fieldparams.StateRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
@@ -115,26 +111,22 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.Eth1DepositIndex.RealPosition()] = eth1DepositBuf[:]
 
 	// Validators slice root.
-	validatorsRoot, err := stateutil.ValidatorRegistryRoot(state.validators.Value(state))
+	validatorsRoot, err := stateutil.ValidatorRegistryRoot(state.validatorsVal())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
 	fieldRoots[types.Validators.RealPosition()] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balances.Value(state))
+	balancesRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.balancesVal())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator balances merkleization")
 	}
 	fieldRoots[types.Balances.RealPosition()] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	mixes := make([][]byte, state.randaoMixes.Len(state))
-	m := state.randaoMixes.Value(state)
-	for i := range mixes {
-		mixes[i] = m[i][:]
-	}
-	randaoRootsRoot, err := stateutil.ArraysRoot(mixes, fieldparams.RandaoMixesLength)
+	mixes := customtypes.RandaoMixes(state.randaoMixesVal())
+	randaoRootsRoot, err := stateutil.ArraysRoot(mixes.Slice(), fieldparams.RandaoMixesLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
@@ -206,7 +198,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 
 	if state.version >= version.Altair {
 		// Inactivity scores root.
-		inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.inactivityScores.Value(state))
+		inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.inactivityScoresVal())
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute inactivityScoreRoot")
 		}

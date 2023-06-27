@@ -195,18 +195,25 @@ func (s *State) finalizedState() state.BeaconState {
 func initFieldMap() {
 	state_native.FieldMap = make(map[types.FieldIndex]types.FieldInfo)
 	// Initialize the fixed sized arrays.
-	state_native.FieldMap[types.StateRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.MultiValue}
-	state_native.FieldMap[types.RandaoMixes] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.MultiValue}
 	if features.Get().EnableExperimentalState {
 		state_native.FieldMap[types.BlockRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.MultiValue}
+		state_native.FieldMap[types.StateRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.MultiValue}
+		state_native.FieldMap[types.RandaoMixes] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.MultiValue}
 	} else {
 		state_native.FieldMap[types.BlockRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}
+		state_native.FieldMap[types.StateRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}
+		state_native.FieldMap[types.RandaoMixes] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}
 	}
 
 	// Initialize the composite arrays.
 	state_native.FieldMap[types.Eth1DataVotes] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
 	state_native.FieldMap[types.PreviousEpochAttestations] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
 	state_native.FieldMap[types.CurrentEpochAttestations] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
-	state_native.FieldMap[types.Validators] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.MultiValue}
-	state_native.FieldMap[types.Balances] = types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.MultiValue}
+	if features.Get().EnableExperimentalState {
+		state_native.FieldMap[types.Validators] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.MultiValue}
+		state_native.FieldMap[types.Balances] = types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.MultiValue}
+	} else {
+		state_native.FieldMap[types.Validators] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
+		state_native.FieldMap[types.Balances] = types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.SingleValue}
+	}
 }
