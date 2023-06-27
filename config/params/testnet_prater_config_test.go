@@ -13,12 +13,12 @@ func TestPraterConfigMatchesUpstreamYaml(t *testing.T) {
 	require.NoError(t, err)
 	cfg := mn.Copy()
 	for _, fp := range presetFPs {
-		cfg, err = params.UnmarshalConfigFile(fp, cfg)
+		_, err = params.UnmarshalConfigFile(fp, cfg)
 		require.NoError(t, err)
 	}
 	configFP := testnetConfigFilePath(t, "prater")
 	pcfg, err := params.UnmarshalConfigFile(configFP, nil)
 	require.NoError(t, err)
 	fields := fieldsFromYamls(t, append(presetFPs, configFP))
-	assertYamlFieldsMatch(t, "prater", fields, pcfg, params.PraterConfig())
+	assertYamlFieldsMatch(t, "prater", fields, pcfg.BeaconChainConfig, params.PraterConfig())
 }

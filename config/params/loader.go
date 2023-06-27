@@ -13,6 +13,27 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type CombinedConfig struct {
+	BeaconChainConfig *BeaconChainConfig
+	NetworkConfig     *NetworkConfig
+}
+
+var errNilConfig = errors.New("config must not be nil when unmarshalling from yaml")
+
+func (c *CombinedConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// each config struct should be set at this point, to avoid zero values
+	if c.BeaconChainConfig == nil {
+		return errors.Wrap(errNilConfig, "chain config")
+	}
+	if err := unmarshal(c.BeaconChainConfig); err != nil {
+		return err
+	}
+	if c.NetworkConfig == nil {
+		return errors.Wrap(errNilConfig, "network config")
+	}
+	return unmarshal(c.NetworkConfig)
+}
+
 func isMinimal(lines []string) bool {
 	for _, l := range lines {
 		if strings.HasPrefix(l, "PRESET_BASE: 'minimal'") ||
@@ -25,7 +46,7 @@ func isMinimal(lines []string) bool {
 	return false
 }
 
-func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
+func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*CombinedConfig, error) {
 	// To track if config name is defined inside config file.
 	hasConfigName := false
 	// Convert 0x hex inputs to fixed bytes arrays
@@ -52,23 +73,27 @@ func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConf
 		}
 	}
 	yamlFile = []byte(strings.Join(lines, "\n"))
-	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
+	cconf := &CombinedConfig{
+		BeaconChainConfig: conf,
+		NetworkConfig:     BeaconNetworkConfig(),
+	}
+	if err := yaml.Unmarshal(yamlFile, cconf); err != nil {
 		if _, ok := err.(*yaml.TypeError); !ok {
-			return nil, errors.Wrap(err, "Failed to parse chain config yaml file.")
+			return nil, errors.Wrap(err, "Failed to parse config yaml file.")
 		} else {
 			log.WithError(err).Error("There were some issues parsing the config from a yaml file")
 		}
 	}
 	if !hasConfigName {
-		conf.ConfigName = DevnetName
+		cconf.BeaconChainConfig.ConfigName = DevnetName
 	}
 	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
-	conf.SqrRootSlotsPerEpoch = primitives.Slot(math.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
-	log.Debugf("Config file values: %+v", conf)
-	return conf, nil
+	cconf.BeaconChainConfig.SqrRootSlotsPerEpoch = primitives.Slot(math.IntegerSquareRoot(uint64(cconf.BeaconChainConfig.SlotsPerEpoch)))
+	log.Debugf("Config file values: %+v", cconf)
+	return cconf, nil
 }
 
-func UnmarshalConfigFile(path string, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
+func UnmarshalConfigFile(path string, conf *BeaconChainConfig) (*CombinedConfig, error) {
 	yamlFile, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to read chain config file.")
@@ -83,7 +108,8 @@ func LoadChainConfigFile(path string, conf *BeaconChainConfig) error {
 	if err != nil {
 		return err
 	}
-	return SetActive(c)
+	OverrideBeaconNetworkConfig(c.NetworkConfig)
+	return SetActive(c.BeaconChainConfig)
 }
 
 // ReplaceHexStringWithYAMLFormat will replace hex strings that the yaml parser will understand.

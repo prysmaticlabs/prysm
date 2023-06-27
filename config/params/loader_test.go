@@ -133,44 +133,48 @@ func TestModifiedE2E(t *testing.T) {
 	y := params.ConfigToYaml(c)
 	cfg, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)
-	assertEqualConfigs(t, "modified-e2e", []string{}, c, cfg)
+	assertEqualConfigs(t, "modified-e2e", []string{}, c, cfg.BeaconChainConfig)
 }
 
 func TestLoadConfigFile(t *testing.T) {
 	t.Run("mainnet", func(t *testing.T) {
-		mn := params.MainnetConfig().Copy()
+		mn := &params.CombinedConfig{
+			BeaconChainConfig: params.MainnetConfig().Copy(),
+		}
 		mainnetPresetsFiles := presetsFilePath(t, "mainnet")
 		var err error
 		for _, fp := range mainnetPresetsFiles {
-			mn, err = params.UnmarshalConfigFile(fp, mn)
+			mn, err = params.UnmarshalConfigFile(fp, mn.BeaconChainConfig)
 			require.NoError(t, err)
 		}
 		// configs loaded from file get the name 'devnet' unless they specify a specific name in the yaml itself.
 		// since these are partial patches for presets, they do not have the config name
-		mn.ConfigName = params.MainnetName
+		mn.BeaconChainConfig.ConfigName = params.MainnetName
 		mainnetConfigFile := configFilePath(t, "mainnet")
 		mnf, err := params.UnmarshalConfigFile(mainnetConfigFile, nil)
 		require.NoError(t, err)
 		fields := fieldsFromYamls(t, append(mainnetPresetsFiles, mainnetConfigFile))
-		assertEqualConfigs(t, "mainnet", fields, mn, mnf)
+		assertEqualConfigs(t, "mainnet", fields, mn.BeaconChainConfig, mnf.BeaconChainConfig)
 	})
 
 	t.Run("minimal", func(t *testing.T) {
-		min := params.MinimalSpecConfig().Copy()
+		min := &params.CombinedConfig{
+			BeaconChainConfig: params.MinimalSpecConfig().Copy(),
+		}
 		minimalPresetsFiles := presetsFilePath(t, "minimal")
 		var err error
 		for _, fp := range minimalPresetsFiles {
-			min, err = params.UnmarshalConfigFile(fp, min)
+			min, err = params.UnmarshalConfigFile(fp, min.BeaconChainConfig)
 			require.NoError(t, err)
 		}
 		// configs loaded from file get the name 'devnet' unless they specify a specific name in the yaml itself.
 		// since these are partial patches for presets, they do not have the config name
-		min.ConfigName = params.MinimalName
+		min.BeaconChainConfig.ConfigName = params.MinimalName
 		minimalConfigFile := configFilePath(t, "minimal")
 		minf, err := params.UnmarshalConfigFile(minimalConfigFile, nil)
 		require.NoError(t, err)
 		fields := fieldsFromYamls(t, append(minimalPresetsFiles, minimalConfigFile))
-		assertEqualConfigs(t, "minimal", fields, min, minf)
+		assertEqualConfigs(t, "minimal", fields, min.BeaconChainConfig, minf.BeaconChainConfig)
 	})
 
 	t.Run("e2e", func(t *testing.T) {
@@ -180,7 +184,7 @@ func TestLoadConfigFile(t *testing.T) {
 		e2ef, err := params.UnmarshalConfigFile(configFile, nil)
 		require.NoError(t, err)
 		fields := fieldsFromYamls(t, []string{configFile})
-		assertEqualConfigs(t, "e2e", fields, e2e, e2ef)
+		assertEqualConfigs(t, "e2e", fields, e2e, e2ef.BeaconChainConfig)
 	})
 }
 
