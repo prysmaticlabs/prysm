@@ -254,7 +254,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		root := b.Root()
 		isValidPayload, err = s.notifyNewPayload(ctx,
 			postVersionAndHeaders[i].version,
-			postVersionAndHeaders[i].header, b)
+			postVersionAndHeaders[i].header, b, blockRoots[i])
 		if err != nil {
 			return s.handleInvalidExecutionError(ctx, err, root, b.Block().ParentRoot())
 		}

@@ -186,7 +186,7 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 // notifyNewPayload signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
 func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
-	preStateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock) (bool, error) {
+	preStateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 
@@ -221,9 +221,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 		if err != nil {
 			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
 		}
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes)
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, blkRoot)
 	} else {
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{} /*empty version hashes before Deneb*/)
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{}, [32]byte{} /*empty version hashes and root before Deneb*/)
 	}
 	switch err {
 	case nil:
@@ -324,7 +324,24 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Capella, version.Deneb:
+	case version.Deneb:
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
+			return false, emptyAttri, 0
+		}
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            prevRando,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			Withdrawals:           withdrawals,
+			ParentBeaconBlockRoot: headRoot,
+		})
+		if err != nil {
+			log.WithError(err).Error("Could not get payload attribute")
+			return false, emptyAttri, 0
+		}
+	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")

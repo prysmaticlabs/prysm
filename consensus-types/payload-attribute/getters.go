@@ -74,3 +74,20 @@ func (a *data) PbV2() (*enginev1.PayloadAttributesV2, error) {
 		Withdrawals:           a.withdrawals,
 	}, nil
 }
+
+// PbV3 returns the payload attribute in version 3.
+func (a *data) PbV3() (*enginev1.PayloadAttributesV3, error) {
+	if a == nil {
+		return nil, errNilPayloadAttribute
+	}
+	if a.version != version.Deneb {
+		return nil, consensus_types.ErrNotSupported("PayloadAttributePbV3", a.version)
+	}
+	return &enginev1.PayloadAttributesV3{
+		Timestamp:             a.timeStamp,
+		PrevRandao:            a.prevRandao,
+		SuggestedFeeRecipient: a.suggestedFeeRecipient,
+		Withdrawals:           a.withdrawals,
+		ParentBeaconBlockRoot: a.parentBeaconBlockRoot,
+	}, nil
+}

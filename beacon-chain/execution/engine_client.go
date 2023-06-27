@@ -55,6 +55,8 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// ForkchoiceUpdatedMethodV2 v2 request string for JSON-RPC.
 	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
+	// ForkchoiceUpdatedMethodV3 v3 request string for JSON-RPC.
+	ForkchoiceUpdatedMethodV3 = "engine_forkchoiceUpdatedV3"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
 	// GetPayloadMethodV2 v2 request string for JSON-RPC.
@@ -98,7 +100,7 @@ type ExecutionPayloadReconstructor interface {
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
-	NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes [][32]byte) ([]byte, error)
+	NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes [][32]byte, parentBlockRoot [32]byte) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
@@ -113,7 +115,7 @@ type EngineCaller interface {
 var EmptyBlockHash = errors.New("Block hash is empty 0x0000...")
 
 // NewPayload calls the engine_newPayloadVX method via JSON-RPC.
-func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes [][32]byte) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes [][32]byte, parentBlockRoot [32]byte) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -150,7 +152,7 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if !ok {
 			return nil, errors.New("execution data must be a Deneb execution payload")
 		}
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, payloadPb, versionedHashes)
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, payloadPb, versionedHashes, parentBlockRoot)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
@@ -201,12 +203,21 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
-	case version.Capella, version.Deneb:
+	case version.Capella:
 		a, err := attrs.PbV2()
 		if err != nil {
 			return nil, nil, err
 		}
 		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV2, state, a)
+		if err != nil {
+			return nil, nil, handleRPCError(err)
+		}
+	case version.Deneb:
+		a, err := attrs.PbV3()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV3, state, a)
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}

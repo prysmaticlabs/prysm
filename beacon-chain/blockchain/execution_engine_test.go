@@ -689,7 +689,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
 			require.NoError(t, err)
-			isValidPayload, err := service.notifyNewPayload(ctx, postVersion, postHeader, tt.blk)
+			isValidPayload, err := service.notifyNewPayload(ctx, postVersion, postHeader, tt.blk, [32]byte{})
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 				if tt.invalidBlock {
@@ -740,7 +740,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	service.cfg.ExecutionEngineCaller = e
 	postVersion, postHeader, err := getStateVersionAndPayload(bellatrixState)
 	require.NoError(t, err)
-	validated, err := service.notifyNewPayload(ctx, postVersion, postHeader, bellatrixBlk)
+	validated, err := service.notifyNewPayload(ctx, postVersion, postHeader, bellatrixBlk, [32]byte{})
 	require.NoError(t, err)
 	require.Equal(t, true, validated)
 }
@@ -894,6 +894,12 @@ func Test_GetPayloadAttributeDeneb(t *testing.T) {
 	a, err = attr.Withdrawals()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(a))
+
+	attrV3, err := attr.PbV3()
+	require.NoError(t, err)
+	hr := service.headRoot()
+	require.Equal(t, hr, [32]byte(attrV3.ParentBeaconBlockRoot))
+
 }
 
 func Test_UpdateLastValidatedCheckpoint(t *testing.T) {

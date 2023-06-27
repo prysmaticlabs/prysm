@@ -150,7 +150,22 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Capella, version.Deneb:
+	case version.Deneb:
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			return nil, nil, err
+		}
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			Withdrawals:           withdrawals,
+			ParentBeaconBlockRoot: headRoot[:],
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			return nil, nil, false, err
