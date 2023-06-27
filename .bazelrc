@@ -43,3 +43,7 @@ build:debug -s
 
 # Set bazel gotag
 build --define gotags=bazel
+
+# Abseil requires c++14
+build --cxxopt=-std=c++14
+build --host_cxxopt=-std=c++14
