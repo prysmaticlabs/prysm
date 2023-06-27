@@ -323,10 +323,10 @@ http_archive(
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "4b98c800b352e7582bc92ed398999030ce4ebb49c7858dcb070850ec476b72f2",
-    strip_prefix = "protobuf-22.5",
+    sha256 = "4e176116949be52b0408dfd24f8925d1eb674a781ae242a75296b17a1c721395",
+    strip_prefix = "protobuf-23.3",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v22.5.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v23.3.tar.gz",
     ],
 )
 
