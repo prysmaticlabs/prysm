@@ -10,6 +10,7 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
@@ -83,10 +84,14 @@ var capellaFields = append(
 )
 
 const (
-	phase0SharedFieldRefCount    = 5
-	altairSharedFieldRefCount    = 5
-	bellatrixSharedFieldRefCount = 6
-	capellaSharedFieldRefCount   = 8
+	phase0SharedFieldRefCount     = 5
+	altairSharedFieldRefCount     = 5
+	bellatrixSharedFieldRefCount  = 6
+	capellaSharedFieldRefCount    = 8
+	phase0MultiValueFieldCount    = 5
+	altairMultiValueFieldCount    = 6
+	bellatrixMultiValueFieldCount = 6
+	capellaMultiValueFieldCount   = 6
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -129,7 +134,6 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		slot:                        st.Slot,
 		fork:                        st.Fork,
 		latestBlockHeader:           st.LatestBlockHeader,
-		blockRoots:                  NewMultiValueBlockRoots(st.BlockRoots),
 		stateRoots:                  NewMultiValueStateRoots(st.StateRoots),
 		randaoMixes:                 NewMultiValueRandaoMixes(st.RandaoMixes),
 		historicalRoots:             hRoots,
@@ -148,12 +152,23 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 
 		index: types.Enumerator.Inc(),
 
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
+	}
+
+	if features.Get().EnableExperimentalState {
+		b.blockRootsMultiValue = NewMultiValueBlockRoots(st.BlockRoots)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
+	} else {
+		roots := make([][32]byte, len(st.BlockRoots))
+		for i, r := range st.BlockRoots {
+			roots[i] = bytesutil.ToBytes32(r)
+		}
+		b.blockRoots = roots
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount+phase0MultiValueFieldCount)
 	}
 
 	for _, f := range phase0Fields {
@@ -173,6 +188,9 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochAttestations] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochAttestations] = stateutil.NewRef(1)
+	if !features.Get().EnableExperimentalState {
+		b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+	}
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -200,7 +218,6 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		slot:                        st.Slot,
 		fork:                        st.Fork,
 		latestBlockHeader:           st.LatestBlockHeader,
-		blockRoots:                  NewMultiValueBlockRoots(st.BlockRoots),
 		stateRoots:                  NewMultiValueStateRoots(st.StateRoots),
 		randaoMixes:                 NewMultiValueRandaoMixes(st.RandaoMixes),
 		historicalRoots:             hRoots,
@@ -222,12 +239,23 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 
 		index: types.Enumerator.Inc(),
 
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
+	}
+
+	if features.Get().EnableExperimentalState {
+		b.blockRootsMultiValue = NewMultiValueBlockRoots(st.BlockRoots)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
+	} else {
+		roots := make([][32]byte, len(st.BlockRoots))
+		for i, r := range st.BlockRoots {
+			roots[i] = bytesutil.ToBytes32(r)
+		}
+		b.blockRoots = roots
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount+altairMultiValueFieldCount)
 	}
 
 	for _, f := range altairFields {
@@ -247,6 +275,9 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
+	if !features.Get().EnableExperimentalState {
+		b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+	}
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -274,7 +305,6 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		slot:                         st.Slot,
 		fork:                         st.Fork,
 		latestBlockHeader:            st.LatestBlockHeader,
-		blockRoots:                   NewMultiValueBlockRoots(st.BlockRoots),
 		stateRoots:                   NewMultiValueStateRoots(st.StateRoots),
 		randaoMixes:                  NewMultiValueRandaoMixes(st.RandaoMixes),
 		historicalRoots:              hRoots,
@@ -297,12 +327,23 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 
 		index: types.Enumerator.Inc(),
 
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
+	}
+
+	if features.Get().EnableExperimentalState {
+		b.blockRootsMultiValue = NewMultiValueBlockRoots(st.BlockRoots)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
+	} else {
+		roots := make([][32]byte, len(st.BlockRoots))
+		for i, r := range st.BlockRoots {
+			roots[i] = bytesutil.ToBytes32(r)
+		}
+		b.blockRoots = roots
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount+bellatrixMultiValueFieldCount)
 	}
 
 	for _, f := range bellatrixFields {
@@ -323,6 +364,9 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.LatestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
+	if !features.Get().EnableExperimentalState {
+		b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+	}
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -350,7 +394,6 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		slot:                                st.Slot,
 		fork:                                st.Fork,
 		latestBlockHeader:                   st.LatestBlockHeader,
-		blockRoots:                          NewMultiValueBlockRoots(st.BlockRoots),
 		stateRoots:                          NewMultiValueStateRoots(st.StateRoots),
 		randaoMixes:                         NewMultiValueRandaoMixes(st.RandaoMixes),
 		historicalRoots:                     hRoots,
@@ -376,12 +419,23 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 
 		index: types.Enumerator.Inc(),
 
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
+	}
+
+	if features.Get().EnableExperimentalState {
+		b.blockRootsMultiValue = NewMultiValueBlockRoots(st.BlockRoots)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
+	} else {
+		roots := make([][32]byte, len(st.BlockRoots))
+		for i, r := range st.BlockRoots {
+			roots[i] = bytesutil.ToBytes32(r)
+		}
+		b.blockRoots = roots
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount+capellaMultiValueFieldCount)
 	}
 
 	for _, f := range capellaFields {
@@ -403,6 +457,9 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.LatestExecutionPayloadHeaderCapella] = stateutil.NewRef(1) // New in Capella.
 	b.sharedFieldReferences[types.HistoricalSummaries] = stateutil.NewRef(1)                 // New in Capella.
+	if !features.Get().EnableExperimentalState {
+		b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+	}
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -439,6 +496,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 		// Large arrays, infrequently changed, constant size.
 		blockRoots:                b.blockRoots,
+		blockRootsMultiValue:      b.blockRootsMultiValue,
 		stateRoots:                b.stateRoots,
 		randaoMixes:               b.randaoMixes,
 		previousEpochAttestations: b.previousEpochAttestations,
@@ -480,7 +538,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 		valMapHandler: b.valMapHandler,
 	}
 
-	b.blockRoots.Copy(b, dst)
+	if features.Get().EnableExperimentalState {
+		b.blockRootsMultiValue.Copy(b, dst)
+	}
 	b.stateRoots.Copy(b, dst)
 	b.randaoMixes.Copy(b, dst)
 	b.balances.Copy(b, dst)
@@ -655,14 +715,25 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return stateutil.BlockHeaderRoot(b.latestBlockHeader)
 	case types.BlockRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.blockRoots, fieldparams.BlockRootsLength)
-			if err != nil {
-				return [32]byte{}, err
+			if features.Get().EnableExperimentalState {
+				err := b.resetFieldTrie(field, b.blockRootsMultiValue, fieldparams.BlockRootsLength)
+				if err != nil {
+					return [32]byte{}, err
+				}
+			} else {
+				err := b.resetFieldTrie(field, b.blockRoots, fieldparams.BlockRootsLength)
+				if err != nil {
+					return [32]byte{}, err
+				}
 			}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(field, b.blockRoots)
+		if features.Get().EnableExperimentalState {
+			return b.recomputeFieldTrie(field, b.blockRootsMultiValue)
+		} else {
+			return b.recomputeFieldTrie(field, b.blockRoots)
+		}
 	case types.StateRoots:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.stateRoots, fieldparams.StateRootsLength)
@@ -849,7 +920,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 }
 
 func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
-	fTrie, err := NewFieldTrie(b, index, fieldMap[index], elements, length)
+	fTrie, err := NewFieldTrie(b, index, FieldMap[index], elements, length)
 	if err != nil {
 		return err
 	}
@@ -883,8 +954,10 @@ func finalizerCleanup(b *BeaconState) {
 		delete(b.stateFieldLeaves, i)
 	}
 
-	if b.blockRoots != nil {
-		b.blockRoots.Detach(b)
+	if features.Get().EnableExperimentalState {
+		if b.blockRootsMultiValue != nil {
+			b.blockRootsMultiValue.Detach(b)
+		}
 	}
 	if b.stateRoots != nil {
 		b.stateRoots.Detach(b)

@@ -15,7 +15,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 	}
 
 	gvrCopy := b.genesisValidatorsRoot
-	br := customtypes.BlockRoots(b.blockRoots.Value(b))
+	br := customtypes.BlockRoots(b.blockRootsVal())
 	sr := customtypes.StateRoots(b.stateRoots.Value(b))
 	rm := customtypes.RandaoMixes(b.randaoMixes.Value(b))
 
@@ -146,7 +146,7 @@ func (b *BeaconState) ToProto() interface{} {
 
 	gvrCopy := b.genesisValidatorsRoot
 
-	br := customtypes.BlockRoots(b.blockRoots.Value(b))
+	br := customtypes.BlockRoots(b.blockRootsVal())
 	brSlice := br.Slice()
 	brCopy := make([][]byte, len(br))
 	for i, v := range brSlice {

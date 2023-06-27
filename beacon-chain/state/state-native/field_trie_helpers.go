@@ -6,8 +6,10 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
@@ -91,14 +93,19 @@ func fieldConverters(state *BeaconState, field types.FieldIndex, indices []uint6
 }
 
 func convertBlockRoots(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	switch val := elements.(type) {
-	case [][]byte:
-		return handleByteArrays(val, indices, convertAll)
-	case *MultiValueBlockRoots:
+	if features.Get().EnableExperimentalState {
+		val, ok := elements.(*MultiValueBlockRoots)
+		if !ok {
+			return nil, errors.Errorf("Wanted type of %T but got %T", &MultiValueBlockRoots{}, elements)
+		}
 		return handle32ByteArrays(val.Value(state), indices, convertAll)
-	default:
-		return nil, errors.Errorf("Incorrect type used for block roots")
 	}
+	val, ok := elements.(customtypes.BlockRoots)
+	if !ok {
+		return nil, errors.Errorf("Wanted type of %T but got %T", [][]byte{}, elements)
+	}
+	return handleByteArrays(val.Slice(), indices, convertAll)
+
 }
 
 func convertStateRoots(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {

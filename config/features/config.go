@@ -37,6 +37,7 @@ const disabledFeatureFlag = "Disabled feature flag"
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Feature related flags.
+	EnableExperimentalState             bool // EnableExperimentalState turns on the latest and greatest (but potentially unstable) changes to the beacon state.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
@@ -163,6 +164,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	}
 	if err := configureTestnet(ctx); err != nil {
 		return err
+	}
+
+	if ctx.Bool(enableExperimentalState.Name) {
+		logEnabled(enableExperimentalState)
+		cfg.EnableExperimentalState = true
 	}
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {

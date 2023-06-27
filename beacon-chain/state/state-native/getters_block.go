@@ -1,7 +1,9 @@
 package state_native
 
 import (
-	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+	"fmt"
+
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -44,36 +46,53 @@ func (b *BeaconState) latestBlockHeaderVal() *ethpb.BeaconBlockHeader {
 
 // BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() [][]byte {
-	if b.blockRoots == nil {
-		return nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := customtypes.BlockRoots(b.blockRoots.Value(b))
-	rootsSlice := roots.Slice()
-	rootsCopy := make([][]byte, len(rootsSlice))
-	for i, v := range rootsSlice {
-		rootsCopy[i] = make([]byte, len(v))
-		copy(rootsCopy[i], v)
+	roots := b.blockRootsVal()
+	rootsCopy := make([][]byte, len(roots))
+	for i, r := range roots {
+		rootsCopy[i] = make([]byte, 32)
+		copy(rootsCopy[i], r[:])
 	}
 	return rootsCopy
+}
+
+func (b *BeaconState) blockRootsVal() [][32]byte {
+	if features.Get().EnableExperimentalState {
+		if b.blockRootsMultiValue == nil {
+			return nil
+		}
+		return b.blockRootsMultiValue.Value(b)
+	}
+	if b.blockRoots == nil {
+		return nil
+	}
+	return b.blockRoots
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
 // input index value.
 func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
-	if b.blockRoots == nil {
-		return []byte{}, nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	r, err := b.blockRoots.At(b, idx)
-	if err != nil {
-		return nil, err
+	if features.Get().EnableExperimentalState {
+		if b.blockRootsMultiValue == nil {
+			return []byte{}, nil
+		}
+		r, err := b.blockRootsMultiValue.At(b, idx)
+		if err != nil {
+			return nil, err
+		}
+		return r[:], nil
 	}
-	return r[:], nil
+
+	if b.blockRoots == nil {
+		return []byte{}, nil
+	}
+	if uint64(len(b.blockRoots)) <= idx {
+		return []byte{}, fmt.Errorf("index %d out of bounds", idx)
+	}
+	return b.blockRoots[idx][:], nil
 }

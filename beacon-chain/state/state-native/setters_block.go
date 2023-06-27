@@ -1,8 +1,13 @@
 package state_native
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -22,10 +27,22 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if b.blockRoots != nil {
-		b.blockRoots.Detach(b)
+	if features.Get().EnableExperimentalState {
+		if b.blockRootsMultiValue != nil {
+			b.blockRootsMultiValue.Detach(b)
+		}
+		b.blockRootsMultiValue = NewMultiValueBlockRoots(val)
+	} else {
+		b.sharedFieldReferences[types.BlockRoots].MinusRef()
+		b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+
+		rootsArr := make([][32]byte, fieldparams.BlockRootsLength)
+		for i := 0; i < len(rootsArr); i++ {
+			copy(rootsArr[i][:], val[i])
+		}
+		b.blockRoots = rootsArr
 	}
-	b.blockRoots = NewMultiValueBlockRoots(val)
+
 	b.markFieldAsDirty(types.BlockRoots)
 	b.rebuildTrie[types.BlockRoots] = true
 	return nil
@@ -37,9 +54,26 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if err := b.blockRoots.UpdateAt(b, idx, blockRoot); err != nil {
-		return errors.Wrap(err, "could not update block roots")
+	if features.Get().EnableExperimentalState {
+		if err := b.blockRootsMultiValue.UpdateAt(b, idx, blockRoot); err != nil {
+			return errors.Wrap(err, "could not update block roots")
+		}
+	} else {
+		if uint64(len(b.blockRoots)) <= idx {
+			return fmt.Errorf("index %d out of bounds", idx)
+		}
+		r := b.blockRoots
+		if ref := b.sharedFieldReferences[types.BlockRoots]; ref.Refs() > 1 {
+			// Copy elements in underlying array by reference.
+			r = make([][32]byte, len(b.blockRoots))
+			copy(r, b.blockRoots)
+			ref.MinusRef()
+			b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+		}
+		r[idx] = blockRoot
+		b.blockRoots = r
 	}
+
 	b.markFieldAsDirty(types.BlockRoots)
 	b.addDirtyIndices(types.BlockRoots, []uint64{idx})
 	return nil
