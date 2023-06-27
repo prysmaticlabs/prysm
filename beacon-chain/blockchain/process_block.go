@@ -497,7 +497,12 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		go func() {
-			if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e+1); err != nil {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := helpers.UpdateProposerIndicesInCache(slotCtx, copied, e+1); err != nil {
 				log.WithError(err).Warn("Failed to cache next epoch proposers")
 			}
 		}()
