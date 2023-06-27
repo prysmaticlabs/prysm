@@ -805,43 +805,9 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case types.LatestBlockHeader:
 		return stateutil.BlockHeaderRoot(b.latestBlockHeader)
 	case types.BlockRoots:
-		if b.rebuildTrie[field] {
-			if features.Get().EnableExperimentalState {
-				err := b.resetFieldTrie(field, b.blockRootsMultiValue, fieldparams.BlockRootsLength)
-				if err != nil {
-					return [32]byte{}, err
-				}
-			} else {
-				err := b.resetFieldTrie(field, b.blockRoots, fieldparams.BlockRootsLength)
-				if err != nil {
-					return [32]byte{}, err
-				}
-			}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
-		}
-		if features.Get().EnableExperimentalState {
-			return b.recomputeFieldTrie(field, b.blockRootsMultiValue)
-		} else {
-			return b.recomputeFieldTrie(field, b.blockRoots)
-		}
+		return b.blockRootsRootSelector(field)
 	case types.StateRoots:
-		if b.rebuildTrie[field] {
-			if features.Get().EnableExperimentalState {
-				err := b.resetFieldTrie(field, b.stateRootsMultiValue, fieldparams.StateRootsLength)
-				if err != nil {
-					return [32]byte{}, err
-				}
-			} else {
-				err := b.resetFieldTrie(field, b.stateRoots, fieldparams.StateRootsLength)
-				if err != nil {
-					return [32]byte{}, err
-				}
-			}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
-		}
-		return b.recomputeFieldTrie(field, b.stateRoots)
+		return b.stateRootsRootSelector(field)
 	case types.HistoricalRoots:
 		hRoots := make([][]byte, len(b.historicalRoots))
 		for i := range hRoots {
@@ -865,56 +831,11 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(field, b.eth1DataVotes)
 	case types.Validators:
-		if b.rebuildTrie[field] {
-			if features.Get().EnableExperimentalState {
-				err := b.resetFieldTrie(field, b.validatorsMultiValue, fieldparams.ValidatorRegistryLimit)
-				if err != nil {
-					return [32]byte{}, err
-				}
-			} else {
-				err := b.resetFieldTrie(field, b.validators, fieldparams.ValidatorRegistryLimit)
-				if err != nil {
-					return [32]byte{}, err
-				}
-			}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
-		}
-		return b.recomputeFieldTrie(11, b.validators)
+		return b.validatorsRootSelector(field)
 	case types.Balances:
-		if b.rebuildTrie[field] {
-			if features.Get().EnableExperimentalState {
-				err := b.resetFieldTrie(field, b.balancesMultiValue, stateutil.ValidatorLimitForBalancesChunks())
-				if err != nil {
-					return [32]byte{}, err
-				}
-			} else {
-				err := b.resetFieldTrie(field, b.balances, stateutil.ValidatorLimitForBalancesChunks())
-				if err != nil {
-					return [32]byte{}, err
-				}
-			}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
-		}
-		return b.recomputeFieldTrie(12, b.balances)
+		return b.balancesRootSelector(field)
 	case types.RandaoMixes:
-		if b.rebuildTrie[field] {
-			if features.Get().EnableExperimentalState {
-				err := b.resetFieldTrie(field, b.randaoMixesMultiValue, fieldparams.RandaoMixesLength)
-				if err != nil {
-					return [32]byte{}, err
-				}
-			} else {
-				err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
-				if err != nil {
-					return [32]byte{}, err
-				}
-			}
-			delete(b.rebuildTrie, field)
-			return b.stateFieldLeaves[field].TrieRoot()
-		}
-		return b.recomputeFieldTrie(13, b.randaoMixes)
+		return b.randaoMixesRootSelector(field)
 	case types.Slashings:
 		return ssz.SlashingsRoot(b.slashings)
 	case types.PreviousEpochAttestations:
@@ -1099,4 +1020,119 @@ func finalizerCleanup(b *BeaconState) {
 	}
 
 	state.StateCount.Sub(1)
+}
+
+func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
+	if b.rebuildTrie[field] {
+		if features.Get().EnableExperimentalState {
+			err := b.resetFieldTrie(field, b.blockRootsMultiValue, fieldparams.BlockRootsLength)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		} else {
+			err := b.resetFieldTrie(field, b.blockRoots, fieldparams.BlockRootsLength)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		}
+		delete(b.rebuildTrie, field)
+		return b.stateFieldLeaves[field].TrieRoot()
+	}
+	if features.Get().EnableExperimentalState {
+		return b.recomputeFieldTrie(field, b.blockRootsMultiValue)
+	} else {
+		return b.recomputeFieldTrie(field, b.blockRoots)
+	}
+}
+
+func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
+	if b.rebuildTrie[field] {
+		if features.Get().EnableExperimentalState {
+			err := b.resetFieldTrie(field, b.stateRootsMultiValue, fieldparams.StateRootsLength)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		} else {
+			err := b.resetFieldTrie(field, b.stateRoots, fieldparams.StateRootsLength)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		}
+		delete(b.rebuildTrie, field)
+		return b.stateFieldLeaves[field].TrieRoot()
+	}
+	if features.Get().EnableExperimentalState {
+		return b.recomputeFieldTrie(field, b.stateRootsMultiValue)
+	} else {
+		return b.recomputeFieldTrie(field, b.stateRoots)
+	}
+}
+
+func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, error) {
+	if b.rebuildTrie[field] {
+		if features.Get().EnableExperimentalState {
+			err := b.resetFieldTrie(field, b.validatorsMultiValue, fieldparams.ValidatorRegistryLimit)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		} else {
+			err := b.resetFieldTrie(field, b.validators, fieldparams.ValidatorRegistryLimit)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		}
+		delete(b.rebuildTrie, field)
+		return b.stateFieldLeaves[field].TrieRoot()
+	}
+	if features.Get().EnableExperimentalState {
+		return b.recomputeFieldTrie(11, b.validatorsMultiValue)
+	} else {
+		return b.recomputeFieldTrie(11, b.validators)
+	}
+}
+
+func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, error) {
+	if b.rebuildTrie[field] {
+		if features.Get().EnableExperimentalState {
+			err := b.resetFieldTrie(field, b.balancesMultiValue, stateutil.ValidatorLimitForBalancesChunks())
+			if err != nil {
+				return [32]byte{}, err
+			}
+		} else {
+			err := b.resetFieldTrie(field, b.balances, stateutil.ValidatorLimitForBalancesChunks())
+			if err != nil {
+				return [32]byte{}, err
+			}
+		}
+		delete(b.rebuildTrie, field)
+		return b.stateFieldLeaves[field].TrieRoot()
+	}
+	if features.Get().EnableExperimentalState {
+		return b.recomputeFieldTrie(12, b.balancesMultiValue)
+	} else {
+		return b.recomputeFieldTrie(12, b.balances)
+	}
+}
+
+func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte, error) {
+	if b.rebuildTrie[field] {
+		if features.Get().EnableExperimentalState {
+			err := b.resetFieldTrie(field, b.randaoMixesMultiValue, fieldparams.RandaoMixesLength)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		} else {
+			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
+			if err != nil {
+				return [32]byte{}, err
+			}
+		}
+		delete(b.rebuildTrie, field)
+		return b.stateFieldLeaves[field].TrieRoot()
+	}
+	if features.Get().EnableExperimentalState {
+		return b.recomputeFieldTrie(13, b.randaoMixesMultiValue)
+	} else {
+		return b.recomputeFieldTrie(13, b.randaoMixes)
+	}
 }
