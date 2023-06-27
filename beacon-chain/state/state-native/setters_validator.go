@@ -90,10 +90,10 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 // UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx primitives.ValidatorIndex, val *ethpb.Validator) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
 	if features.Get().EnableExperimentalState {
+		b.lock.Lock()
+		defer b.lock.Unlock()
+
 		if err := b.validatorsMultiValue.UpdateAt(b, uint64(idx), val); err != nil {
 			return errors.Wrap(err, "could not update validator")
 		}
@@ -147,10 +147,10 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx primitives.ValidatorIndex, val uint64) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
 	if features.Get().EnableExperimentalState {
+		b.lock.Lock()
+		defer b.lock.Unlock()
+
 		if err := b.balancesMultiValue.UpdateAt(b, uint64(idx), val); err != nil {
 			return errors.Wrap(err, "could not update balances")
 		}

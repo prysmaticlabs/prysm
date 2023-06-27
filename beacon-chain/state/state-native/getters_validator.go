@@ -275,9 +275,6 @@ func (b *BeaconState) BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, err
 }
 
 func (b *BeaconState) balanceAtIndex(idx primitives.ValidatorIndex) (uint64, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
 	if features.Get().EnableExperimentalState {
 		if b.balancesMultiValue == nil {
 			return 0, nil
