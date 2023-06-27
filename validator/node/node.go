@@ -525,10 +525,13 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		}
 	}
 
-	// nothing is set, so just return nil
+	// this condition triggers if SuggestedFeeRecipientFlag,ProposerSettingsFlag or ProposerSettingsURLFlag did not create any settings
 	if fileConfig == nil {
+		// Checks the db or enable builder settings before starting the node without proposer settings
+		// starting the node without proposer settings, will skip API calls for push proposer settings and register validator
 		return handleNoProposerSettingsFlagsProvided(cliCtx, db, builderConfigFromFlag)
 	}
+
 	// convert file config to proposer config for internal use
 	vpSettings := &validatorServiceConfig.ProposerSettings{}
 
@@ -646,7 +649,7 @@ func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
 }
 
 func overrideBuilderSettings(settings *validatorServiceConfig.ProposerSettings, builderConfigFromFlag *validatorServiceConfig.BuilderConfig) {
-	// override the db settings with the results on whether or not the --enable-builder flag is provided.
+	// override the db settings with the results on whether the --enable-builder flag is provided.
 	// if the user does not which for settings saved in the db to be reset
 	if builderConfigFromFlag == nil {
 		log.Infof("proposer settings loaded from db. validator registration to builder is not enabled, please use the --%s flag if you wish to use a builder.", flags.EnableBuilderFlag.Name)
