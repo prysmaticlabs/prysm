@@ -227,6 +227,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		if dataDir == "" && c.wallet != nil {
 			dataDir = c.wallet.AccountsDir()
 			if dataDir == "" {
+				// skipcq: RVV-A0003
 				log.Fatal(
 					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
 						"to use for your validator data",
@@ -310,6 +311,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
 			if dataDir == "" {
+				// skipcq: RVV-A0003
 				log.Fatal(
 					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
 						"to use for your validator data",
