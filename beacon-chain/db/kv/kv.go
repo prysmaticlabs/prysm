@@ -111,6 +111,7 @@ var Buckets = [][]byte{
 	powchainBucket,
 	stateSummaryBucket,
 	stateValidatorsBucket,
+	blockRootsBucket,
 	// Indices buckets.
 	attestationHeadBlockRootBucket,
 	attestationSourceRootIndicesBucket,
