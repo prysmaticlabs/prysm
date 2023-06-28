@@ -41,18 +41,25 @@ var (
 type invalidBlock struct {
 	invalidAncestorRoots [][32]byte
 	error
-	root [32]byte
+	root          [32]byte
+	lastValidHash [32]byte
 }
 
 type invalidBlockError interface {
 	Error() string
 	InvalidAncestorRoots() [][32]byte
 	BlockRoot() [32]byte
+	LastValidHash() [32]byte
 }
 
 // BlockRoot returns the invalid block root.
 func (e invalidBlock) BlockRoot() [32]byte {
 	return e.root
+}
+
+// LastValidHash returns the last valid hash root.
+func (e invalidBlock) LastValidHash() [32]byte {
+	return e.lastValidHash
 }
 
 // InvalidAncestorRoots returns an optional list of invalid roots of the invalid block which leads up last valid root.
@@ -70,6 +77,19 @@ func IsInvalidBlock(e error) bool {
 		return IsInvalidBlock(errors.Unwrap(e))
 	}
 	return true
+}
+
+// InvalidBlockLVH returns the invalid block last valid hash root. If the error
+// doesn't have a last valid hash, [32]byte{} is returned.
+func InvalidBlockLVH(e error) [32]byte {
+	if e == nil {
+		return [32]byte{}
+	}
+	d, ok := e.(invalidBlockError)
+	if !ok {
+		return [32]byte{}
+	}
+	return d.LastValidHash()
 }
 
 // InvalidBlockRoot returns the invalid block root. If the error
