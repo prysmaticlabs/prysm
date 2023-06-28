@@ -275,7 +275,12 @@ func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSe
 
 // SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
 func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+	// validator service proposer settings is only used for pass through from node -> validator service -> validator.
+	// in memory use of proposer settings happens on validator.
 	v.proposerSettings = settings
+
+	// passes settings down to be updated in database and saved in memory.
+	// updates to validator porposer settings will be in the validator object and not validator service.
 	return v.validator.SetProposerSettings(ctx, settings)
 }
 
