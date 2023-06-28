@@ -992,14 +992,14 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_ethereum_c_kzg_4844",
-        importpath = "github.com/ethereum/c-kzg-4844",
-        sum = "h1:3Y3hD6l5i0dEYsBL50C+Om644kve3pNqoAcvE26o9zI=",
-        version = "v0.3.0",
         build_directives = [
             "gazelle:resolve go github.com/supranational/blst/bindings/go @com_github_supranational_blst//:go_default_library",
         ],
+        importpath = "github.com/ethereum/c-kzg-4844",
         patch_args = ["-p1"],
         patches = ["//third_party:com_github_ethereum_c_kzg_4844.patch"],
+        sum = "h1:3Y3hD6l5i0dEYsBL50C+Om644kve3pNqoAcvE26o9zI=",
+        version = "v0.3.0",
     )
 
     go_repository(
@@ -1175,8 +1175,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_gdamore_tcell_v2",
         importpath = "github.com/gdamore/tcell/v2",
-        sum = "h1:b9XQrT6QGbgI7JvZOJXFNczOQeIYbo8BfeSMzt2sAV0=",
-        version = "v2.5.3",
+        sum = "h1:OKbluoP9VYmJwZwq/iLb4BxwKcwGthaa1YNBJIyCySg=",
+        version = "v2.6.0",
     )
 
     go_repository(
@@ -1888,15 +1888,15 @@ def prysm_deps():
     go_repository(
         name = "com_github_holiman_goevmlab",
         importpath = "github.com/holiman/goevmlab",
-        sum = "h1:WZmIv3jvH/3MJDtOaHyE3SCzYHchDXVP6Hlcyh/+dQw=",
-        version = "v0.0.0-20221207202144-89074274e1b7",
+        sum = "h1:BPP25cIOO16g50P6PgZ1dYkyOD2WBLCcl+2GJ+yQgNw=",
+        version = "v0.0.0-20230602194133-da4e4913b799",
     )
 
     go_repository(
         name = "com_github_holiman_uint256",
         importpath = "github.com/holiman/uint256",
-        sum = "h1:DZfsyhDK1hnSS5lH8l+JggqzEleHteTYfutAiVlSUM8=",
-        version = "v1.2.2-0.20230321075855-87b91420868c",
+        sum = "h1:TXKcSGc2WaxPD2+bmzAsVthL4+pEN0YwXcL5qED83vk=",
+        version = "v1.2.2",
     )
     go_repository(
         name = "com_github_hpcloud_tail",
@@ -3468,8 +3468,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_rivo_tview",
         importpath = "github.com/rivo/tview",
-        sum = "h1:0nVxhPi+jdqG11c3n4zTcZQbjGy0yi60ym/6B+NITPU=",
-        version = "v0.0.0-20221117065207-09f052e6ca98",
+        sum = "h1:vpjWdGBgikHYD4ruBvDINMxwdh5UWVck9yOyrwFktMo=",
+        version = "v0.0.0-20230330183452-5796b0cd5c1f",
     )
     go_repository(
         name = "com_github_rivo_uniseg",
@@ -3478,8 +3478,8 @@ def prysm_deps():
             "gazelle:exclude gen_properties.go",
         ],
         importpath = "github.com/rivo/uniseg",
-        sum = "h1:utMvzDsuh3suAEnhH0RdHmoPbU648o6CvXxTx4SBMOw=",
-        version = "v0.4.3",
+        sum = "h1:8TfxU8dW6PdqD27gjM8MVNuicgxIjxpm4K7x4jp8sis=",
+        version = "v0.4.4",
     )
     go_repository(
         name = "com_github_rjeczalik_notify",
@@ -4013,8 +4013,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_urfave_cli_v2",
         importpath = "github.com/urfave/cli/v2",
-        sum = "h1:YHDQ46s3VghFHFf1DdF+Sh7H4RqhcM+t0TmZRJx4oJY=",
-        version = "v2.23.7",
+        sum = "h1:zw8dSP7ghX0Gmm8vugrs6q9Ku0wzweqPyshy+syu9Gw=",
+        version = "v2.25.1",
     )
     go_repository(
         name = "com_github_urfave_negroni",
