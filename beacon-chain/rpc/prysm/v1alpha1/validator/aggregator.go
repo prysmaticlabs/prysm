@@ -66,11 +66,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	if err := vs.AttPool.AggregateUnaggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations")
-	}
 	aggregatedAtts := vs.AttPool.AggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex)
-
 	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
 	if len(aggregatedAtts) == 0 {
 		aggregatedAtts = vs.AttPool.UnaggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex)
