@@ -136,6 +136,20 @@ func convertToBlockContainer(blk interfaces.ReadOnlySignedBeaconBlock, root [32]
 			}
 			ctr.Block = &ethpb.BeaconBlockContainer_CapellaBlock{CapellaBlock: rBlk}
 		}
+	case version.Deneb:
+		if blk.IsBlinded() {
+			rBlk, err := blk.PbBlindedDenebBlock()
+			if err != nil {
+				return nil, err
+			}
+			ctr.Block = &ethpb.BeaconBlockContainer_BlindedDenebBlock{BlindedDenebBlock: rBlk}
+		} else {
+			rBlk, err := blk.PbDenebBlock()
+			if err != nil {
+				return nil, err
+			}
+			ctr.Block = &ethpb.BeaconBlockContainer_DenebBlock{DenebBlock: rBlk}
+		}
 	default:
 		return nil, errors.Errorf("block type is not recognized: %d", blk.Version())
 	}

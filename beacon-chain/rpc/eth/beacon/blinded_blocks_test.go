@@ -107,6 +107,27 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		assert.DeepEqual(t, expected, capellaBlock.CapellaBlock)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		b := util.NewBlindedBeaconBlockDeneb()
+		blk, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{}
+		bs := &Server{
+			FinalizationFetcher:   mockChainService,
+			Blocker:               &testutil.MockBlocker{BlockToReturn: blk},
+			OptimisticModeFetcher: mockChainService,
+		}
+
+		expected, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(b.Block)
+		require.NoError(t, err)
+		resp, err := bs.GetBlindedBlock(ctx, &ethpbv1.BlockRequest{})
+		require.NoError(t, err)
+		capellaBlock, ok := resp.Data.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_DenebBlock)
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, expected, capellaBlock.DenebBlock)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
+	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
 		blk, err := blocks.NewSignedBeaconBlock(b)
@@ -245,6 +266,26 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.DeepEqual(t, expected, resp.Data)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		b := util.NewBlindedBeaconBlockDeneb()
+		blk, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{}
+		bs := &Server{
+			FinalizationFetcher:   mockChainService,
+			Blocker:               &testutil.MockBlocker{BlockToReturn: blk},
+			OptimisticModeFetcher: mockChainService,
+		}
+
+		expected, err := blk.MarshalSSZ()
+		require.NoError(t, err)
+		resp, err := bs.GetBlindedBlockSSZ(ctx, &ethpbv1.BlockRequest{})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, expected, resp.Data)
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBlindedBeaconBlockBellatrix()
@@ -453,9 +494,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block{Phase0Block: &ethpbv1.BeaconBlock{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_Phase0Block{Phase0Block: &ethpbv1.SignedBeaconBlock{}},
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -468,9 +508,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock{AltairBlock: &ethpbv2.BeaconBlockAltair{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_AltairBlock{AltairBlock: &ethpbv2.SignedBeaconBlockAltair{}},
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -483,9 +522,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.BlindedBeaconBlockBellatrix{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.SignedBlindedBeaconBlockBellatrix{}},
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -498,9 +536,27 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: &ethpbv2.BlindedBeaconBlockCapella{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_CapellaBlock{CapellaBlock: &ethpbv2.SignedBlindedBeaconBlockCapella{}},
+		}
+		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
+		assert.NoError(t, err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBlindedBeaconBlockContentsContainer_DenebContents{
+				DenebContents: &ethpbv2.SignedBlindedBeaconBlockContentsDeneb{
+					SignedBlindedBlock:        &ethpbv2.SignedBlindedBeaconBlockDeneb{},
+					SignedBlindedBlobSidecars: []*ethpbv2.SignedBlindedBlobSidecar{},
+				},
+			},
 		}
 		_, err := server.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
