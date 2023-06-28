@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "archived_point.go",
         "backup.go",
+        "block_roots.go",
         "blocks.go",
         "checkpoint.go",
         "deposit_contract.go",
