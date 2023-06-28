@@ -367,40 +367,48 @@ func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	return hasState
 }
 
+// checkJustifiedAndFinalized check if blockRoot is finalized, genesis or head
+func checkJustifiedAndFinalized(ctx context.Context, tx *bolt.Tx, blockRoot [32]byte) error {
+	bkt := tx.Bucket(blocksBucket)
+	genesisBlockRoot := bkt.Get(genesisBlockRootKey)
+
+	bkt = tx.Bucket(checkpointBucket)
+	enc := bkt.Get(finalizedCheckpointKey)
+	finalized := &ethpb.Checkpoint{}
+	if enc == nil {
+		finalized = &ethpb.Checkpoint{Root: genesisBlockRoot}
+	} else if err := decode(ctx, enc, finalized); err != nil {
+		return err
+	}
+
+	enc = bkt.Get(justifiedCheckpointKey)
+	justified := &ethpb.Checkpoint{}
+	if enc == nil {
+		justified = &ethpb.Checkpoint{Root: genesisBlockRoot}
+	} else if err := decode(ctx, enc, justified); err != nil {
+		return err
+	}
+
+	bkt = tx.Bucket(stateBucket)
+	// Safeguard against deleting genesis, finalized, head state.
+	if bytes.Equal(blockRoot[:], finalized.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], justified.Root) {
+		return ErrDeleteJustifiedAndFinalized
+	}
+	return nil
+}
+
 // DeleteState by block root.
 func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
 	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
-
-		bkt = tx.Bucket(checkpointBucket)
-		enc := bkt.Get(finalizedCheckpointKey)
-		finalized := &ethpb.Checkpoint{}
-		if enc == nil {
-			finalized = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(ctx, enc, finalized); err != nil {
+		if err := checkJustifiedAndFinalized(ctx, tx, blockRoot); err != nil {
 			return err
 		}
-
-		enc = bkt.Get(justifiedCheckpointKey)
-		justified := &ethpb.Checkpoint{}
-		if enc == nil {
-			justified = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(ctx, enc, justified); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(stateBucket)
-		// Safeguard against deleting genesis, finalized, head state.
-		if bytes.Equal(blockRoot[:], finalized.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], justified.Root) {
-			return ErrDeleteJustifiedAndFinalized
-		}
-
+		bkt := tx.Bucket(stateBucket)
 		// Nothing to delete if state doesn't exist.
-		enc = bkt.Get(blockRoot[:])
+		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
