@@ -919,7 +919,7 @@ func (p *Status) GetTrustedPeers() []peer.ID {
 	return p.store.GetTrustedPeers()
 }
 
-// DeleteTrustedPeers remove peers from trusted peer set
+// DeleteTrustedPeers removes peers from trusted peer set
 func (p *Status) DeleteTrustedPeers(peers []peer.ID) {
 	p.store.Lock()
 	defer p.store.Unlock()
