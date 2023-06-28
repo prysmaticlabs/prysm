@@ -287,7 +287,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	if err != nil {
 		return errors.Wrap(err, "could not get postStateRoot")
 	}
-	if err := s.cfg.BeaconDB.SaveBlockRoot(ctx, postStateRoot, [32]byte(blockRoot[:])); err != nil {
+	if err := s.cfg.BeaconDB.SaveBlockRoot(ctx, postStateRoot, blockRoot); err != nil {
 		return errors.Wrap(err, "could not save blockRoot")
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
