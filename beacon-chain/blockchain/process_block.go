@@ -107,7 +107,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 
 	// Verify that the parent block is in forkchoice
-	if !s.cfg.ForkChoiceStore.HasNode(b.ParentRoot()) {
+	parentRoot := b.ParentRoot()
+	if !s.cfg.ForkChoiceStore.HasNode(parentRoot) {
 		return ErrNotDescendantOfFinalized
 	}
 
@@ -134,6 +135,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
+		if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
+			return s.reportInvalidBlock(ctx, blockRoot, parentRoot, InvalidBlockLVH(err))
+		}
 		return errors.Wrap(err, "could not validate new payload")
 	}
 	if signed.Version() < version.Capella && isValidPayload {
