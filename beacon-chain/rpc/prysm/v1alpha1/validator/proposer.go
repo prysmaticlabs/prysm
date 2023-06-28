@@ -1,9 +1,12 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
+	"path"
+	"runtime/pprof"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -52,6 +56,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), req.Slot)
 	if err != nil {
 		log.WithError(err).Error("Could not convert slot to time")
+	}
+	bf := bytes.NewBuffer([]byte{})
+	if err := pprof.StartCPUProfile(bf); err != nil {
+		log.WithError(err)
 	}
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
@@ -173,6 +181,20 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
+	pprof.StopCPUProfile()
+	if time.Since(t) > 1*time.Second {
+		dbPath := vs.BeaconDB.DatabasePath()
+		dbPath = path.Join(dbPath, "profiles")
+		err = file.MkdirAll(dbPath)
+		if err != nil {
+			log.WithError(err)
+		} else {
+			dbPath = path.Join(dbPath, fmt.Sprintf("%d.profile", req.Slot))
+			if err = file.WriteFile(dbPath, bf.Bytes()); err != nil {
+				log.WithError(err)
+			}
+		}
+	}
 
 	pb, err := sBlk.Block().Proto()
 	if err != nil {

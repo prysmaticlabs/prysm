@@ -70,7 +70,7 @@ type Server struct {
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
-	BeaconDB               db.HeadAccessDatabase
+	BeaconDB               db.Database
 	ExecutionEngineCaller  execution.EngineCaller
 	BlockBuilder           builder.BlockBuilder
 	BLSChangesPool         blstoexec.PoolManager
