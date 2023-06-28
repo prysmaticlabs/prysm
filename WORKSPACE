@@ -321,11 +321,13 @@ http_archive(
     url = "https://github.com/bazelbuild/buildtools/archive/f2aed9ee205d62d45c55cfabbfd26342f8526862.zip",
 )
 
-git_repository(
+http_archive(
     name = "com_google_protobuf",
-    commit = "436bd7880e458532901c58f4d9d1ea23fa7edd52",
-    remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1617835118 -0700",
+    sha256 = "4e176116949be52b0408dfd24f8925d1eb674a781ae242a75296b17a1c721395",
+    strip_prefix = "protobuf-23.3",
+    urls = [
+        "https://github.com/protocolbuffers/protobuf/archive/v23.3.tar.gz",
+    ],
 )
 
 # Group the sources of the library so that CMake rule have access to it
