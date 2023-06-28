@@ -803,7 +803,7 @@ func TestPrunePeers_TrustedPeers(t *testing.T) {
 	}
 	p.SetTrustedPeers(trustedPeers)
 
-	// Assert have correct trusted peers
+	// Assert we have correct trusted peers
 	trustedPeers = p.GetTrustedPeers()
 	assert.Equal(t, 6, len(trustedPeers))
 
