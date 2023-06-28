@@ -78,7 +78,7 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// also add a new peerdata to peers
+	// also add new peerdata to peers
 	direction, err := s.PeersFetcher.Peers().Direction(info.ID)
 	if err != nil {
 		s.PeersFetcher.Peers().Add(nil, info.ID, info.Addrs[0], corenet.DirUnknown)
