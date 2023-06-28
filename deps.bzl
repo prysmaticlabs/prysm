@@ -996,10 +996,10 @@ def prysm_deps():
         sum = "h1:3Y3hD6l5i0dEYsBL50C+Om644kve3pNqoAcvE26o9zI=",
         version = "v0.3.0",
         build_directives = [
-            "gazelle:resolve go github.com/supranational/blst/bindings/go @com_github_supranational_blst//:go_default_library"
+            "gazelle:resolve go github.com/supranational/blst/bindings/go @com_github_supranational_blst//:go_default_library",
         ],
         patch_args = ["-p1"],
-        patches = ["//third_party:com_github_ethereum_c_kzg_4844.patch"]
+        patches = ["//third_party:com_github_ethereum_c_kzg_4844.patch"],
     )
 
     go_repository(
