@@ -496,16 +496,6 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e); err != nil {
 			return err
 		}
-		if s.nextEpochBoundarySlot != 0 {
-			ep := slots.ToEpoch(s.nextEpochBoundarySlot)
-			_, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, copied, ep)
-			if err != nil {
-				return err
-			}
-			for k, v := range nextProposerIndexToSlots {
-				s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(v[0], k, [8]byte{}, [32]byte{})
-			}
-		}
 		go func() {
 			// Use a custom deadline here, since this method runs asynchronously.
 			// We ignore the parent method's context and instead create a new one
