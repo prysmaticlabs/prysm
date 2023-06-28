@@ -363,9 +363,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: &ethpbv1.BeaconBlock{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_Phase0Block{Phase0Block: &ethpbv1.SignedBeaconBlock{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -378,9 +377,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: &ethpbv2.BeaconBlockAltair{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_AltairBlock{AltairBlock: &ethpbv2.SignedBeaconBlockAltair{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -393,9 +391,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.BeaconBlockBellatrix{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.SignedBeaconBlockBellatrix{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -408,9 +405,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_CapellaBlock{CapellaBlock: &ethpbv2.BeaconBlockCapella{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_CapellaBlock{CapellaBlock: &ethpbv2.SignedBeaconBlockCapella{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
