@@ -649,8 +649,7 @@ func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
 }
 
 func overrideBuilderSettings(settings *validatorServiceConfig.ProposerSettings, builderConfigFromFlag *validatorServiceConfig.BuilderConfig) {
-	// override the db settings with the results on whether the --enable-builder flag is provided.
-	// if the user does not which for settings saved in the db to be reset
+	// override the db settings with the results based on whether the --enable-builder flag is provided.
 	if builderConfigFromFlag == nil {
 		log.Infof("proposer settings loaded from db. validator registration to builder is not enabled, please use the --%s flag if you wish to use a builder.", flags.EnableBuilderFlag.Name)
 	}

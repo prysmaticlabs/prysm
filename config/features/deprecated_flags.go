@@ -33,7 +33,7 @@ var (
 		Hidden: true,
 	}
 
-	deprecatedRegistrationCache = &cli.BoolFlag{
+	deprecatedEnableRegistrationCache = &cli.BoolFlag{
 		Name:   "enable-registration-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
@@ -47,7 +47,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableReorgLateBlocks,
 	deprecatedDisableGossipBatchAggregation,
 	deprecatedBuildBlockParallel,
-	deprecatedRegistrationCache,
+	deprecatedEnableRegistrationCache,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
