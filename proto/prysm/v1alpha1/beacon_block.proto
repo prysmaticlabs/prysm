@@ -652,12 +652,12 @@ message BlindedBeaconBlockBodyCapella {
 
 message SignedBlindedBeaconBlockAndBlobsDeneb {
     SignedBlindedBeaconBlockDeneb block = 1;
-    repeated SignedBlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+    repeated SignedBlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BlindedBeaconBlockAndBlobsDeneb {
     BlindedBeaconBlockDeneb block = 1;
-    repeated BlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+    repeated BlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message SignedBlindedBeaconBlockDeneb {

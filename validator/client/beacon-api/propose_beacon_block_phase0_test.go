@@ -26,7 +26,7 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = phase0Block
 
-	jsonPhase0Block := &apimiddleware.SignedBeaconBlockContainerJson{
+	jsonPhase0Block := &apimiddleware.SignedBeaconBlockJson{
 		Signature: hexutil.Encode(phase0Block.Phase0.Signature),
 		Message: &apimiddleware.BeaconBlockJson{
 			ParentRoot:    hexutil.Encode(phase0Block.Phase0.Block.ParentRoot),

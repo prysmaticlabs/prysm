@@ -60,6 +60,11 @@ message BeaconBlockContainerV2 {
   }
 }
 
+message BeaconBlockAndBlobsDeneb {
+    BeaconBlockDeneb block = 1;
+    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
+}
+
 message SignedBeaconBlockContainer {
   oneof message {
     v1.BeaconBlock phase0_block = 1;
@@ -71,6 +76,16 @@ message SignedBeaconBlockContainer {
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 6 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message SignedBeaconBlockContentsContainer {
+  oneof message {
+    v1.SignedBeaconBlock phase0_block = 1;
+    SignedBeaconBlockAltair altair_block = 2;
+    SignedBeaconBlockBellatrix bellatrix_block = 3;
+    SignedBeaconBlockCapella capella_block = 4;
+    SignedBeaconBlockContentsDeneb deneb_contents = 5;
+  }
 }
 
 message SignedBeaconBlockContentsContainer {
@@ -101,7 +116,7 @@ message SignedBlindedBeaconBlockContainer {
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
     BlindedBeaconBlockCapella capella_block = 4;
-    BlindedBeaconBlockDeneb deneb_block = 5; // is block
+    BlindedBeaconBlockDeneb deneb_block = 5;
   }
 
   // 96 byte BLS signature from the validator that produced this block.
@@ -519,7 +534,7 @@ message BeaconBlockBodyDeneb {
   bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 
   // Block operations
-  // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#max-operations-per-block
+  // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
 
   // At most MAX_PROPOSER_SLASHINGS.
   repeated  v1.ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
