@@ -376,6 +376,9 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Deneb))
 		}
 		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockDeneb to the builder api")
+		}
 		ep := &ExecPayloadResponseDeneb{}
 		if err := json.Unmarshal(rb, ep); err != nil {
 			return nil, nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockDeneb response")
