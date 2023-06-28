@@ -125,7 +125,7 @@ func (s *Store) GetTrustedPeers() []peer.ID {
 	return peers
 }
 
-// DeleteTrustedPeers remove peers from trusted peer set.
+// DeleteTrustedPeers removes peers from trusted peer set.
 // Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) DeleteTrustedPeers(peers []peer.ID) {
 	for _, p := range peers {
