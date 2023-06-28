@@ -31,7 +31,7 @@ func (s *Server) ListTrustedPeer(w http.ResponseWriter, r *http.Request) {
 			network.WriteError(w, errJson)
 			return
 		}
-		// peers been added into trusted set but never been connected should also be listed
+		// peers added into trusted set but never connected should also be listed
 		if p == nil {
 			p = &Peer{
 				PeerID:             id.String(),
