@@ -627,13 +627,17 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
 	db iface.ValidatorDB,
 	builderConfigFromFlag *validatorServiceConfig.BuilderConfig) (*validatorServiceConfig.ProposerSettings, error) {
+	log.Info("no proposer settings files have been provided, attempting to load from db.")
 	// checks db if proposer settings exist if none is provided.
 	settings, err := db.ProposerSettings(cliCtx.Context)
 	if err == nil {
 		// process any overrides to builder settings
 		overrideBuilderSettings(settings, builderConfigFromFlag)
 		// if settings are empty
+		log.Info("successfully loaded proposer settings from db.")
 		return settings, nil
+	} else {
+		log.Infof("no proposer settings will be loaded from the db for the following reason: %v", err)
 	}
 
 	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
