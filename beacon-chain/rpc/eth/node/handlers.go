@@ -92,7 +92,7 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// RemoveTrustedPeer just removes peer from our trusted peers set but not close connection.
+// RemoveTrustedPeer removes peer from our trusted peer set but does not close connection.
 func (s *Server) RemoveTrustedPeer(w http.ResponseWriter, r *http.Request) {
 	segments := strings.Split(r.URL.Path, "/")
 	id := segments[len(segments)-1]
