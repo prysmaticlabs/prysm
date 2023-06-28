@@ -10,7 +10,7 @@ import (
 
 // BlockRoot returns the block root from the DB using the state root
 func (s *Store) BlockRoot(ctx context.Context, stateRoot [32]byte) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.BlockRoot")
 	defer span.End()
 
 	var blockRoot [32]byte
@@ -36,7 +36,7 @@ func (s *Store) SaveBlockRoot(ctx context.Context, stateRoot [32]byte, blockRoot
 
 // SaveBlockRoots bulk saves list of state root to block root mappings into DB
 func (s *Store) SaveBlockRoots(ctx context.Context, stateRoots [][32]byte, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockRoots")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockRoots")
 	defer span.End()
 
 	return s.db.Update(func(tx *bolt.Tx) error {

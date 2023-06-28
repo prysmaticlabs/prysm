@@ -389,7 +389,6 @@ func checkJustifiedAndFinalized(ctx context.Context, tx *bolt.Tx, blockRoot [32]
 		return err
 	}
 
-	bkt = tx.Bucket(stateBucket)
 	// Safeguard against deleting genesis, finalized, head state.
 	if bytes.Equal(blockRoot[:], finalized.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], justified.Root) {
 		return ErrDeleteJustifiedAndFinalized
