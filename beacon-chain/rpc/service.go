@@ -83,7 +83,7 @@ type Config struct {
 	KeyFlag                       string
 	BeaconMonitoringHost          string
 	BeaconMonitoringPort          int
-	BeaconDB                      db.HeadAccessDatabase
+	BeaconDB                      db.Database
 	ChainInfoFetcher              blockchain.ChainInfoFetcher
 	HeadFetcher                   blockchain.HeadFetcher
 	CanonicalFetcher              blockchain.CanonicalFetcher
