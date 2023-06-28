@@ -50,12 +50,9 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 	if features.Get().EnableExperimentalState {
 		if b.validatorsMultiValue == nil {
-			return []*ethpb.Validator{}
+			return nil
 		}
 		return b.validatorsMultiValue.Value(b)
-	}
-	if b.validators == nil {
-		return []*ethpb.Validator{}
 	}
 	return b.validators
 }
@@ -65,7 +62,7 @@ func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 // copy fully and instead just copies the reference.
 func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
 	if b.validators == nil {
-		return []*ethpb.Validator{}
+		return nil
 	}
 
 	res := make([]*ethpb.Validator, len(b.validators))
@@ -101,7 +98,7 @@ func (b *BeaconState) ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Va
 func (b *BeaconState) validatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Validator, error) {
 	if features.Get().EnableExperimentalState {
 		if b.validatorsMultiValue == nil {
-			return nil, state.ErrNilValidatorsInState
+			return &ethpb.Validator{}, nil
 		}
 		v, err := b.validatorsMultiValue.At(b, uint64(idx))
 		if err != nil {
@@ -111,7 +108,7 @@ func (b *BeaconState) validatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Va
 	}
 
 	if b.validators == nil {
-		return nil, state.ErrNilValidatorsInState
+		return &ethpb.Validator{}, nil
 	}
 	if uint64(len(b.validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
@@ -256,12 +253,9 @@ func (b *BeaconState) Balances() []uint64 {
 func (b *BeaconState) balancesVal() []uint64 {
 	if features.Get().EnableExperimentalState {
 		if b.balancesMultiValue == nil {
-			return []uint64{}
+			return nil
 		}
 		return b.balancesMultiValue.Value(b)
-	}
-	if b.balances == nil {
-		return []uint64{}
 	}
 	return b.balances
 }
@@ -346,12 +340,9 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 func (b *BeaconState) inactivityScoresVal() []uint64 {
 	if features.Get().EnableExperimentalState {
 		if b.inactivityScoresMultiValue == nil {
-			return []uint64{}
+			return nil
 		}
 		return b.inactivityScoresMultiValue.Value(b)
-	}
-	if b.inactivityScores == nil {
-		return []uint64{}
 	}
 	return b.inactivityScores
 }

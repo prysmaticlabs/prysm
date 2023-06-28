@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -65,9 +66,6 @@ func (b *BeaconState) blockRootsVal() [][32]byte {
 		}
 		return b.blockRootsMultiValue.Value(b)
 	}
-	if b.blockRoots == nil {
-		return nil
-	}
 	return b.blockRoots
 }
 
@@ -85,7 +83,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return r[:], nil
+		return bytesutil.SafeCopyBytes(r[:]), nil
 	}
 
 	if b.blockRoots == nil {
@@ -94,5 +92,5 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if uint64(len(b.blockRoots)) <= idx {
 		return []byte{}, fmt.Errorf("index %d out of bounds", idx)
 	}
-	return b.blockRoots[idx][:], nil
+	return bytesutil.SafeCopyBytes(b.blockRoots[idx][:]), nil
 }

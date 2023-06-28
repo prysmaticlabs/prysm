@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -331,9 +332,6 @@ func (b *BeaconState) stateRootsVal() [][32]byte {
 		}
 		return b.stateRootsMultiValue.Value(b)
 	}
-	if b.stateRoots == nil {
-		return nil
-	}
 	return b.stateRoots
 }
 
@@ -345,22 +343,22 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 
 	if features.Get().EnableExperimentalState {
 		if b.stateRootsMultiValue == nil {
-			return []byte{}, nil
+			return nil, nil
 		}
 		r, err := b.stateRootsMultiValue.At(b, idx)
 		if err != nil {
 			return nil, err
 		}
-		return r[:], nil
+		return bytesutil.SafeCopyBytes(r[:]), nil
 	}
 
 	if b.stateRoots == nil {
-		return []byte{}, nil
+		return nil, nil
 	}
 	if uint64(len(b.stateRoots)) <= idx {
 		return []byte{}, fmt.Errorf("index %d out of bounds", idx)
 	}
-	return b.stateRoots[idx][:], nil
+	return bytesutil.SafeCopyBytes(b.stateRoots[idx][:]), nil
 }
 
 // ProtobufBeaconStatePhase0 transforms an input into beacon state in the form of protobuf.

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
@@ -13,9 +14,9 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 
 	mixes := b.randaoMixesVal()
 	mixesCopy := make([][]byte, len(mixes))
-	for i, r := range mixes {
+	for i, m := range mixes {
 		mixesCopy[i] = make([]byte, 32)
-		copy(mixesCopy[i], r[:])
+		copy(mixesCopy[i], m[:])
 	}
 	return mixesCopy
 }
@@ -26,9 +27,6 @@ func (b *BeaconState) randaoMixesVal() [][32]byte {
 			return nil
 		}
 		return b.randaoMixesMultiValue.Value(b)
-	}
-	if b.randaoMixes == nil {
-		return nil
 	}
 	return b.randaoMixes
 }
@@ -41,22 +39,22 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 
 	if features.Get().EnableExperimentalState {
 		if b.randaoMixesMultiValue == nil {
-			return []byte{}, nil
+			return nil, nil
 		}
 		r, err := b.randaoMixesMultiValue.At(b, idx)
 		if err != nil {
 			return nil, err
 		}
-		return r[:], nil
+		return bytesutil.SafeCopyBytes(r[:]), nil
 	}
 
 	if b.randaoMixes == nil {
-		return []byte{}, nil
+		return nil, nil
 	}
 	if uint64(len(b.randaoMixes)) <= idx {
 		return []byte{}, fmt.Errorf("index %d out of bounds", idx)
 	}
-	return b.randaoMixes[idx][:], nil
+	return bytesutil.SafeCopyBytes(b.randaoMixes[idx][:]), nil
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.

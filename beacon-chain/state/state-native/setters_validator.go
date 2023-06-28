@@ -111,7 +111,6 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx primitives.ValidatorIndex, val 
 			ref.MinusRef()
 			b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
 		}
-
 		v[idx] = val
 		b.validators = v
 	}
@@ -168,7 +167,6 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx primitives.ValidatorIndex, val u
 			b.sharedFieldReferences[types.Balances].MinusRef()
 			b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
 		}
-
 		bals[idx] = val
 		b.balances = bals
 	}

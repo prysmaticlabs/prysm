@@ -492,7 +492,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.balancesMultiValue = NewMultiValueBalances(st.Balances)
 		b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
 		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
 	} else {
 		bRoots := make([][32]byte, len(st.BlockRoots))
 		for i, r := range st.BlockRoots {
@@ -640,15 +640,28 @@ func (b *BeaconState) Copy() state.BeaconState {
 		b.validatorsMultiValue.Copy(b, dst)
 	}
 
-	switch b.version {
-	case version.Phase0:
-		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
-	case version.Altair:
-		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
-	case version.Bellatrix:
-		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
-	case version.Capella:
-		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
+	if features.Get().EnableExperimentalState {
+		switch b.version {
+		case version.Phase0:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
+		case version.Altair:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
+		case version.Bellatrix:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
+		case version.Capella:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
+		}
+	} else {
+		switch b.version {
+		case version.Phase0:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount+phase0MultiValueFieldCount)
+		case version.Altair:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount+altairMultiValueFieldCount)
+		case version.Bellatrix:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount+bellatrixMultiValueFieldCount)
+		case version.Capella:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount+capellaMultiValueFieldCount)
+		}
 	}
 
 	for field, ref := range b.sharedFieldReferences {
