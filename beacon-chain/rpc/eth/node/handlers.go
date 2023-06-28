@@ -118,7 +118,7 @@ func (s *Server) RemoveTrustedPeer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// httpPeerInfo do the same thing as peerInfo function in node.go but return the
+// httpPeerInfo does the same thing as peerInfo function in node.go but returns the
 // http peer response.
 func httpPeerInfo(peerStatus *peers.Status, id peer.ID) (*Peer, error) {
 	enr, err := peerStatus.ENR(id)
