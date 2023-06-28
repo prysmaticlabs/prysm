@@ -158,8 +158,6 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, service.saveInitSyncBlock(ctx, root, wsb))
-		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
-		require.NoError(t, err)
 		blks = append(blks, wsb)
 		blkRoots = append(blkRoots, root)
 	}
