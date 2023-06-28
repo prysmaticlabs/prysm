@@ -158,8 +158,7 @@ func TestConfigureNetwork_ConfigFile(t *testing.T) {
 			return cmd.LoadFlagsFromConfig(cliCtx, comFlags)
 		},
 		Action: func(cliCtx *cli.Context) error {
-			//TODO: https://github.com/urfave/cli/issues/1197 right now does not set flag
-			require.Equal(t, false, cliCtx.IsSet(cmd.BootstrapNode.Name))
+			require.Equal(t, true, cliCtx.IsSet(cmd.BootstrapNode.Name))
 
 			require.Equal(t, strings.Join([]string{"node1", "node2"}, ","),
 				strings.Join(cliCtx.StringSlice(cmd.BootstrapNode.Name), ","))
