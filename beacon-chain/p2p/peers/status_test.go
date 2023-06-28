@@ -855,7 +855,6 @@ func TestPrunePeers_TrustedPeers(t *testing.T) {
 	currScore := p.Scorers().Score(peersToPrune[0])
 	for _, pid := range peersToPrune {
 		score := p.Scorers().Score(pid)
-		// score should bigger or equal to the currScore
 		assert.Equal(t, true, currScore <= score)
 		currScore = score
 	}
