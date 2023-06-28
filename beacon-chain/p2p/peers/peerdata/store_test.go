@@ -98,7 +98,6 @@ func TestStore_TrustedPeers(t *testing.T) {
 	assert.Equal(t, true, store.IsTrustedPeer(pid3))
 
 	tPeers = store.GetTrustedPeers()
-
 	assert.Equal(t, 3, len(tPeers))
 
 	store.DeleteTrustedPeers(tPeers)
