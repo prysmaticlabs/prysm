@@ -413,7 +413,7 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzVerifyExit_10000(_ *testing.T) {
+func TestFuzzVerifyExit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ve := &ethpb.SignedVoluntaryExit{}
 	rawVal := &ethpb.Validator{}
@@ -425,9 +425,18 @@ func TestFuzzVerifyExit_10000(_ *testing.T) {
 		fuzzer.Fuzz(rawVal)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
+
+		state := &ethpb.BeaconState{
+			Slot:                  slot,
+			Fork:                  fork,
+			GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:],
+		}
+		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
+		require.NoError(t, err)
+
 		val, err := state_native.NewValidator(&ethpb.Validator{})
 		_ = err
-		err = VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
+		err = VerifyExitAndSignature(val, s, ve)
 		_ = err
 	}
 }
