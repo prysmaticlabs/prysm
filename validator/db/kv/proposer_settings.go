@@ -123,7 +123,7 @@ func (s *Store) SaveProposerSettings(ctx context.Context, settings *validatorSer
 	defer span.End()
 	// nothing to save
 	if !settings.ShouldBeSaved() {
-		log.Warnf("proposer settings are empty, nothing has been saved")
+		log.Warn("proposer settings are empty, nothing has been saved")
 		return nil
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
