@@ -152,7 +152,7 @@ var (
 	// DisableRegistrationCache a flag for disabling the validator registration cache and use db instead.
 	DisableRegistrationCache = &cli.BoolFlag{
 		Name:  "diable-registration-cache",
-		Usage: "A temporary flag for disabling the validator registration cache instead of use the db. note: registrations do not clear on restart while using the db",
+		Usage: "A temporary flag for disabling the validator registration cache instead of using the db. note: registrations do not clear on restart while using the db",
 	}
 
 	aggregateParallel = &cli.BoolFlag{
