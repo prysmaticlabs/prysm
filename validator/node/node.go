@@ -637,7 +637,7 @@ func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
 		log.Info("successfully loaded proposer settings from db.")
 		return settings, nil
 	} else {
-		log.Infof("no proposer settings will be loaded from the db for the following reason: %v", err)
+		log.WithError(err).Warn("no proposer settings will be loaded from the db")
 	}
 
 	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
