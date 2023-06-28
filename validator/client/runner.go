@@ -67,7 +67,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		}
 	} else {
-		log.WithError(err).Warnln("Validator client started without proposer settings such as fee recipient" +
+		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
 
