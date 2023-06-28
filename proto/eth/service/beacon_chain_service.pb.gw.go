@@ -10,6 +10,9 @@ package service
 
 import (
 	"context"
+	"io"
+	"net/http"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -23,8 +26,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"io"
-	"net/http"
 )
 
 // Suppress "imported and not used" errors
@@ -763,7 +764,7 @@ func local_request_BeaconChain_GetBlockHeader_0(ctx context.Context, marshaler r
 }
 
 func request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SignedBeaconBlockContainer
+	var protoReq eth.SignedBeaconBlockContentsContainer
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -780,7 +781,7 @@ func request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Ma
 }
 
 func local_request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SignedBeaconBlockContainer
+	var protoReq eth.SignedBeaconBlockContentsContainer
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -831,7 +832,7 @@ func local_request_BeaconChain_SubmitBlockSSZ_0(ctx context.Context, marshaler r
 }
 
 func request_BeaconChain_SubmitBlindedBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SignedBlindedBeaconBlockContainer
+	var protoReq eth.SignedBlindedBeaconBlockContentsContainer
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -848,7 +849,7 @@ func request_BeaconChain_SubmitBlindedBlock_0(ctx context.Context, marshaler run
 }
 
 func local_request_BeaconChain_SubmitBlindedBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SignedBlindedBeaconBlockContainer
+	var protoReq eth.SignedBlindedBeaconBlockContentsContainer
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
