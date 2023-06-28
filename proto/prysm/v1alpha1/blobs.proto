@@ -45,7 +45,7 @@ message SignedBlobSidecar {
 }
 
 message BlindedBlobSidecars {
-        repeated BlindedBlobSidecar sidecars = 1 [(ethereum.eth.ext.ssz_max) = "4"];
+        repeated BlindedBlobSidecar sidecars = 1 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BlindedBlobSidecar {
