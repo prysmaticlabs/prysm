@@ -27,7 +27,7 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = bellatrixBlock
 
-	jsonBellatrixBlock := &apimiddleware.SignedBeaconBlockBellatrixContainerJson{
+	jsonBellatrixBlock := &apimiddleware.SignedBeaconBlockBellatrixJson{
 		Signature: hexutil.Encode(bellatrixBlock.Bellatrix.Signature),
 		Message: &apimiddleware.BeaconBlockBellatrixJson{
 			ParentRoot:    hexutil.Encode(bellatrixBlock.Bellatrix.Block.ParentRoot),
