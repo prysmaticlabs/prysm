@@ -35,7 +35,23 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	v := b.validatorsVal()
+	return b.validatorsVal()
+}
+
+func (b *BeaconState) validatorsVal() []*ethpb.Validator {
+	var v []*ethpb.Validator
+	if features.Get().EnableExperimentalState {
+		if b.validatorsMultiValue == nil {
+			return nil
+		}
+		v = b.validatorsMultiValue.Value(b)
+	} else {
+		if b.validators == nil {
+			return nil
+		}
+		v = b.validators
+	}
+
 	res := make([]*ethpb.Validator, len(v))
 	for i := 0; i < len(res); i++ {
 		val := v[i]
@@ -45,16 +61,6 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 		res[i] = ethpb.CopyValidator(val)
 	}
 	return res
-}
-
-func (b *BeaconState) validatorsVal() []*ethpb.Validator {
-	if features.Get().EnableExperimentalState {
-		if b.validatorsMultiValue == nil {
-			return nil
-		}
-		return b.validatorsMultiValue.Value(b)
-	}
-	return b.validators
 }
 
 // references of validators participating in consensus on the beacon chain.
@@ -244,20 +250,26 @@ func (b *BeaconState) Balances() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	v := b.balancesVal()
-	res := make([]uint64, len(v))
-	copy(res, v)
-	return res
+	return b.balancesVal()
 }
 
 func (b *BeaconState) balancesVal() []uint64 {
+	var bals []uint64
 	if features.Get().EnableExperimentalState {
 		if b.balancesMultiValue == nil {
 			return nil
 		}
-		return b.balancesMultiValue.Value(b)
+		bals = b.balancesMultiValue.Value(b)
+	} else {
+		if b.balances == nil {
+			return nil
+		}
+		bals = b.balances
 	}
-	return b.balances
+
+	res := make([]uint64, len(bals))
+	copy(res, bals)
+	return res
 }
 
 // BalanceAtIndex of validator with the provided index.
@@ -331,18 +343,24 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	v := b.inactivityScoresVal()
-	res := make([]uint64, len(v))
-	copy(res, v)
-	return res, nil
+	return b.inactivityScoresVal(), nil
 }
 
 func (b *BeaconState) inactivityScoresVal() []uint64 {
+	var scores []uint64
 	if features.Get().EnableExperimentalState {
 		if b.inactivityScoresMultiValue == nil {
 			return nil
 		}
-		return b.inactivityScoresMultiValue.Value(b)
+		scores = b.inactivityScoresMultiValue.Value(b)
+	} else {
+		if b.inactivityScores == nil {
+			return nil
+		}
+		scores = b.inactivityScores
 	}
-	return b.inactivityScores
+
+	res := make([]uint64, len(scores))
+	copy(res, scores)
+	return res
 }

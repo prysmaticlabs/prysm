@@ -317,6 +317,9 @@ func (b *BeaconState) StateRoots() [][]byte {
 	defer b.lock.RUnlock()
 
 	roots := b.stateRootsVal()
+	if roots == nil {
+		return nil
+	}
 	rootsCopy := make([][]byte, len(roots))
 	for i, r := range roots {
 		rootsCopy[i] = make([]byte, 32)

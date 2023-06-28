@@ -13,6 +13,9 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	defer b.lock.RUnlock()
 
 	mixes := b.randaoMixesVal()
+	if mixes == nil {
+		return nil
+	}
 	mixesCopy := make([][]byte, len(mixes))
 	for i, m := range mixes {
 		mixesCopy[i] = make([]byte, 32)
