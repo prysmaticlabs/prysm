@@ -67,7 +67,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		}
 	} else {
-		log.Warnln("Validator client started without proposer settings such as fee recipient" +
+		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
 
@@ -108,9 +108,10 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
+			// create call on a separate thread to push proposer settings from the middle of an epoch.
+			if slots.SinceEpochStarts(slot) == params.BeaconConfig().SlotsPerEpoch/2 && v.ProposerSettings() != nil {
 				go func() {
-					// deadline set for end of epoch
+					// deadline set for 1 epoch from call to not overlap.
 					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
 					if err := v.PushProposerSettings(ctx, km, slot, epochDeadline); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")
