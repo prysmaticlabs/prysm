@@ -516,7 +516,6 @@ func (r *testRunner) defaultEndToEndRun() error {
 		if err := r.testCheckpointSync(ctx, g, index, conns, httpEndpoints[0], benr, menr); err != nil {
 			return errors.Wrap(err, "checkpoint sync test failed")
 		}
-		index += 1
 	}
 
 	if config.ExtraEpochs > 0 {
