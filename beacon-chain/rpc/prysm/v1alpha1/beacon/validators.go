@@ -6,7 +6,9 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/pagination"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -661,21 +663,32 @@ func (bs *Server) GetValidatorPerformance(
 	if bs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
 	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	response, err := ComputeValidatorPerformance(ctx, req, bs.HeadFetcher, currSlot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute validator performance: %v", err)
+	}
+	return response, nil
+}
 
+func ComputeValidatorPerformance(
+	ctx context.Context,
+	req *ethpb.ValidatorPerformanceRequest,
+	headFetcher blockchain.HeadFetcher,
+	currSlot primitives.Slot,
+) (*ethpb.ValidatorPerformanceResponse, error) {
+	headState, err := headFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get head state")
+	}
 	if currSlot > headState.Slot() {
-		headRoot, err := bs.HeadFetcher.HeadRoot(ctx)
+		headRoot, err := headFetcher.HeadRoot(ctx)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+			return nil, errors.Wrap(err, "could not get head root")
 		}
 		headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, currSlot)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", currSlot, err)
+			return nil, errors.Wrapf(err, "could not process slots up to %d", currSlot)
 		}
 	}
 	var validatorSummary []*precompute.Validator
@@ -712,7 +725,7 @@ func (bs *Server) GetValidatorPerformance(
 		}
 		validatorSummary = vp
 	} else {
-		return nil, status.Errorf(codes.Internal, "Head state version %d not supported", headState.Version())
+		return nil, errors.Wrapf(err, "head state version %d not supported", headState.Version())
 	}
 
 	responseCap := len(req.Indices) + len(req.PublicKeys)
@@ -765,7 +778,7 @@ func (bs *Server) GetValidatorPerformance(
 	for _, idx := range validatorIndices {
 		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
+			return nil, errors.Wrap(err, "could not get validator")
 		}
 		pubKey := val.PublicKey()
 		if uint64(idx) >= uint64(len(validatorSummary)) {
