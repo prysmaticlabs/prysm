@@ -282,14 +282,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	if err := s.handleEpochBoundary(ctx, postState, blockRoot[:]); err != nil {
 		return err
 	}
-	// Save state root to block root mapping
-	postStateRoot, err := postState.HashTreeRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get postStateRoot")
-	}
-	if err := s.cfg.BeaconDB.SaveBlockRoot(ctx, postStateRoot, blockRoot); err != nil {
-		return errors.Wrap(err, "could not save blockRoot")
-	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
 }
@@ -389,11 +381,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			header:  h,
 		}
 		sigSet.Join(set)
-		stateRoot, err := preState.HashTreeRoot(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get stateRoot")
-		}
-		stateRoots = append(stateRoots, stateRoot)
+		stateRoots = append(stateRoots, b.Block().StateRoot())
 	}
 
 	var verify bool
@@ -585,6 +573,10 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 	}
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 		return errors.Wrap(err, "could not save state")
+	}
+	// Save state root to block root mapping
+	if err := s.cfg.BeaconDB.SaveBlockRoot(ctx, b.Block().StateRoot(), r); err != nil {
+		return errors.Wrap(err, "could not save blockRoot")
 	}
 	return nil
 }
