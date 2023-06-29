@@ -262,7 +262,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 				}
 				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
 			}
-			if err := UpdateProposerIndicesInCache(ctx, state); err != nil {
+			if err := UpdateProposerIndicesInCache(ctx, state, time.CurrentEpoch(state)); err != nil {
 				return 0, errors.Wrap(err, "could not update committee cache")
 			}
 		}

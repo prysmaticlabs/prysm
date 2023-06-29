@@ -121,6 +121,11 @@ func (s *Store) ProposerSettingsExists(ctx context.Context) (bool, error) {
 func (s *Store) SaveProposerSettings(ctx context.Context, settings *validatorServiceConfig.ProposerSettings) error {
 	_, span := trace.StartSpan(ctx, "validator.db.SaveProposerSettings")
 	defer span.End()
+	// nothing to save
+	if !settings.ShouldBeSaved() {
+		log.Warn("proposer settings are empty, nothing has been saved")
+		return nil
+	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
 		m, err := proto.Marshal(settings.ToPayload())
