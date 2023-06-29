@@ -84,6 +84,15 @@ type ProposerSettings struct {
 	DefaultConfig *ProposerOption
 }
 
+// ShouldBeSaved goes through checks to see if the value should be saveable
+// Pseudocode: conditions for being saved into the database
+// 1. settings are not nil
+// 2. proposeconfig is not nil (this defines specific settings for each validator key), default config can be nil in this case and fall back to beacon node settings
+// 3. defaultconfig is not nil, meaning it has at least fee recipient settings (this defines general settings for all validator keys but keys will use settings from propose config if available), propose config can be nil in this case
+func (settings *ProposerSettings) ShouldBeSaved() bool {
+	return settings != nil && (settings.ProposeConfig != nil || settings.DefaultConfig != nil && settings.DefaultConfig.FeeRecipientConfig != nil)
+}
+
 // ToPayload converts struct to ProposerSettingsPayload
 func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 	if ps == nil {

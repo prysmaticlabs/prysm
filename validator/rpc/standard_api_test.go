@@ -768,7 +768,8 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
 
 			m := &mock.MockValidator{}
-			m.SetProposerSettings(tt.args)
+			err := m.SetProposerSettings(ctx, tt.args)
+			require.NoError(t, err)
 
 			if tt.args == nil {
 				mockValidatorClient.EXPECT().GetFeeRecipientByPubKey(gomock.Any(), gomock.Any()).Return(tt.cached, nil)
@@ -1004,7 +1005,8 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
-			m.SetProposerSettings(tt.proposerSettings)
+			err := m.SetProposerSettings(ctx, tt.proposerSettings)
+			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 
 			// save a default here
@@ -1106,7 +1108,8 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
-			m.SetProposerSettings(tt.proposerSettings)
+			err := m.SetProposerSettings(ctx, tt.proposerSettings)
+			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
@@ -1202,7 +1205,8 @@ func TestServer_GetGasLimit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
-			m.SetProposerSettings(tt.args)
+			err := m.SetProposerSettings(ctx, tt.args)
+			require.NoError(t, err)
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
 			})
@@ -1351,7 +1355,8 @@ func TestServer_SetGasLimit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
-			m.SetProposerSettings(tt.proposerSettings)
+			err := m.SetProposerSettings(ctx, tt.proposerSettings)
+			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
@@ -1520,7 +1525,8 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mock.MockValidator{}
-			m.SetProposerSettings(tt.proposerSettings)
+			err := m.SetProposerSettings(ctx, tt.proposerSettings)
+			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
