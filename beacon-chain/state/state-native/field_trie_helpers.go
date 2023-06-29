@@ -102,7 +102,7 @@ func convertBlockRoots(state *BeaconState, indices []uint64, elements interface{
 	}
 	val, ok := elements.(customtypes.BlockRoots)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %T but got %T", [][]byte{}, elements)
+		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.BlockRoots{}, elements)
 	}
 	return handleByteArrays(val.Slice(), indices, convertAll)
 }
@@ -117,7 +117,7 @@ func convertStateRoots(state *BeaconState, indices []uint64, elements interface{
 	}
 	val, ok := elements.(customtypes.StateRoots)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %T but got %T", [][]byte{}, elements)
+		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.StateRoots{}, elements)
 	}
 	return handleByteArrays(val.Slice(), indices, convertAll)
 }
@@ -132,7 +132,7 @@ func convertRandaoMixes(state *BeaconState, indices []uint64, elements interface
 	}
 	val, ok := elements.(customtypes.RandaoMixes)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %T but got %T", [][]byte{}, elements)
+		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.RandaoMixes{}, elements)
 	}
 	return handleByteArrays(val.Slice(), indices, convertAll)
 }

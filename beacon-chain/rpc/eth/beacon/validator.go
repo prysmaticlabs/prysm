@@ -309,8 +309,8 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 }
 
 func handleValContainerErr(err error) error {
-	if outOfRangeErr, ok := err.(*statenative.ValidatorIndexOutOfRangeError); ok {
-		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
+	if strings.Contains(err.Error(), "out of bounds") {
+		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", err)
 	}
 	if invalidIdErr, ok := err.(*invalidValidatorIdError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", invalidIdErr)

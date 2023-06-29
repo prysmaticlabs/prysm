@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -909,8 +908,8 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	validators := make([]state.ReadOnlyValidator, len(req.Data))
 	for i, sub := range req.Data {
 		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
-		if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", err)
 		}
 		validators[i] = val
 	}
