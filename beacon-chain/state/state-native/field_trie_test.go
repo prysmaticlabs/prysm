@@ -40,7 +40,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	st, ok := newState.(*state_native.BeaconState)
 	require.Equal(t, true, ok)
 	// 10 represents the enum value of validators
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(11), types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.MultiValue}, state_native.NewMultiValueValidators(newState.Validators()), params.BeaconConfig().ValidatorRegistryLimit)
+	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(11), types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
 	oldroot, err := trie.TrieRoot()
@@ -64,7 +64,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
-	root, err := trie.RecomputeTrie(st, changedIdx, state_native.NewMultiValueValidators(newState.Validators()))
+	root, err := trie.RecomputeTrie(st, changedIdx, newState.Validators())
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoot, root)
 }
@@ -73,7 +73,7 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	st, ok := newState.(*state_native.BeaconState)
 	require.Equal(t, true, ok)
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.MultiValue}, state_native.NewMultiValueBalances(newState.Balances()), stateutil.ValidatorLimitForBalancesChunks())
+	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.SingleValue}, newState.Balances(), stateutil.ValidatorLimitForBalancesChunks())
 	require.NoError(t, err)
 	require.Equal(t, trie.Length(), stateutil.ValidatorLimitForBalancesChunks())
 	changedIdx := []uint64{4, 8}
@@ -81,7 +81,7 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 	require.NoError(t, newState.UpdateBalancesAtIndex(primitives.ValidatorIndex(changedIdx[1]), uint64(200000000)))
 	expectedRoot, err := stateutil.Uint64ListRootWithRegistryLimit(newState.Balances())
 	require.NoError(t, err)
-	root, err := trie.RecomputeTrie(st, changedIdx, state_native.NewMultiValueBalances(newState.Balances()))
+	root, err := trie.RecomputeTrie(st, changedIdx, newState.Balances())
 	require.NoError(t, err)
 
 	// not equal for some reason :(
@@ -92,7 +92,7 @@ func TestNewFieldTrie_UnknownType(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	st, ok := newState.(*state_native.BeaconState)
 	require.Equal(t, true, ok)
-	_, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: 4, ValueType: types.MultiValue}, state_native.NewMultiValueBalances(newState.Balances()), 32)
+	_, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: 4, ValueType: types.SingleValue}, newState.Balances(), 32)
 	require.ErrorContains(t, "unrecognized data type", err)
 }
 
@@ -134,7 +134,7 @@ func TestFieldTrie_TransferTrie(t *testing.T) {
 	st, ok := newState.(*state_native.BeaconState)
 	require.Equal(t, true, ok)
 	maxLength := (params.BeaconConfig().ValidatorRegistryLimit*8 + 31) / 32
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.MultiValue}, state_native.NewMultiValueBalances(newState.Balances()), maxLength)
+	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.SingleValue}, newState.Balances(), maxLength)
 	require.NoError(t, err)
 	oldRoot, err := trie.TrieRoot()
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func FuzzFieldTrie(f *testing.F) {
 		for i := 32; i < len(data); i += 32 {
 			roots = append(roots, data[i-32:i])
 		}
-		trie, err := state_native.NewFieldTrie(st, types.FieldIndex(idx), types.FieldInfo{ArrayType: types.ArrayType(typ), ValueType: types.MultiValue}, state_native.NewMultiValueStateRoots(roots), slotsPerHistRoot)
+		trie, err := state_native.NewFieldTrie(st, types.FieldIndex(idx), types.FieldInfo{ArrayType: types.ArrayType(typ), ValueType: types.SingleValue}, roots, slotsPerHistRoot)
 		if err != nil {
 			return // invalid inputs
 		}

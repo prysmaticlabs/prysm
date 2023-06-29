@@ -167,10 +167,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		return err
 	}
 
-	//if ctx.Bool(enableExperimentalState.Name) {
-	//logEnabled(enableExperimentalState)
-	//cfg.EnableExperimentalState = true
-	//}
+	if ctx.Bool(enableExperimentalState.Name) {
+		logEnabled(enableExperimentalState)
+		cfg.EnableExperimentalState = true
+	}
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		logEnabled(writeSSZStateTransitionsFlag)

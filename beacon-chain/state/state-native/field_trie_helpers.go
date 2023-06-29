@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -100,11 +99,11 @@ func convertBlockRoots(state *BeaconState, indices []uint64, elements interface{
 		}
 		return handle32ByteArrays(val.Value(state), indices, convertAll)
 	}
-	val, ok := elements.(customtypes.BlockRoots)
+	val, ok := elements.([][]byte)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", [][]byte{}, elements)
 	}
-	return handleByteArrays(val.Slice(), indices, convertAll)
+	return handleByteArrays(val, indices, convertAll)
 
 }
 
@@ -116,11 +115,11 @@ func convertStateRoots(state *BeaconState, indices []uint64, elements interface{
 		}
 		return handle32ByteArrays(val.Value(state), indices, convertAll)
 	}
-	val, ok := elements.(customtypes.StateRoots)
+	val, ok := elements.([][]byte)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", [][]byte{}, elements)
 	}
-	return handleByteArrays(val.Slice(), indices, convertAll)
+	return handleByteArrays(val, indices, convertAll)
 }
 
 func convertRandaoMixes(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
@@ -131,11 +130,11 @@ func convertRandaoMixes(state *BeaconState, indices []uint64, elements interface
 		}
 		return handle32ByteArrays(val.Value(state), indices, convertAll)
 	}
-	val, ok := elements.(customtypes.RandaoMixes)
+	val, ok := elements.([][]byte)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", [][]byte{}, elements)
 	}
-	return handleByteArrays(val.Slice(), indices, convertAll)
+	return handleByteArrays(val, indices, convertAll)
 }
 
 func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {

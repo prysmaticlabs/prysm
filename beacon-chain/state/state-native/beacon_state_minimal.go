@@ -23,9 +23,9 @@ type BeaconState struct {
 	slot                                primitives.Slot
 	fork                                *ethpb.Fork
 	latestBlockHeader                   *ethpb.BeaconBlockHeader
-	blockRoots                          *customtypes.BlockRoots
+	blockRoots                          customtypes.BlockRoots
 	blockRootsMultiValue                *MultiValueBlockRoots
-	stateRoots                          *customtypes.StateRoots
+	stateRoots                          customtypes.StateRoots
 	stateRootsMultiValue                *MultiValueStateRoots
 	historicalRoots                     customtypes.HistoricalRoots
 	historicalSummaries                 []*ethpb.HistoricalSummary
@@ -36,7 +36,7 @@ type BeaconState struct {
 	validatorsMultiValue                *MultiValueValidators
 	balances                            []uint64
 	balancesMultiValue                  *MultiValueBalances
-	randaoMixes                         *customtypes.RandaoMixes
+	randaoMixes                         customtypes.RandaoMixes
 	randaoMixesMultiValue               *MultiValueRandaoMixes
 	slashings                           []uint64
 	previousEpochAttestations           []*ethpb.PendingAttestation
