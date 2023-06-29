@@ -281,6 +281,7 @@ func (f *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSetti
 }
 
 // SetProposerSettings for mocking
-func (f *FakeValidator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+func (f *FakeValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
 	f.proposerSettings = settings
+	return nil
 }
