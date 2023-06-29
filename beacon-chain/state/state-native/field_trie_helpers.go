@@ -105,7 +105,6 @@ func convertBlockRoots(state *BeaconState, indices []uint64, elements interface{
 		return nil, errors.Errorf("Wanted type of %T but got %T", [][]byte{}, elements)
 	}
 	return handleByteArrays(val.Slice(), indices, convertAll)
-
 }
 
 func convertStateRoots(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
