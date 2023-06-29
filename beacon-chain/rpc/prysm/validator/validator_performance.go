@@ -1,9 +1,9 @@
-package beacon
+package validator
 
 import (
 	"net/http"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -27,14 +27,14 @@ type ValidatorPerformanceResponse struct {
 }
 
 // GetValidatorPerformance is an HTTP handler for Beacon API GetValidatorPerformance.
-func (bs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
+func (bs *beacon.Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
 	if bs.SyncChecker.Syncing() {
 		handleHTTPError(w, "Syncing", http.StatusInternalServerError)
 		return
 	}
 	ctx := r.Context()
 	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
-	computed, err := beacon.ComputeValidatorPerformance(
+	computed, err := rpc.ComputeValidatorPerformance(
 		ctx,
 		&ethpb.ValidatorPerformanceRequest{
 			PublicKeys: [][]byte{},
@@ -51,12 +51,12 @@ func (bs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 		PublicKeys:                    computed.PublicKeys,
 		CorrectlyVotedSource:          computed.CorrectlyVotedSource,
 		CorrectlyVotedTarget:          computed.CorrectlyVotedTarget, // In altair, when this is true then the attestation was definitely included.
-		CorrectlyVotedHead:            correctlyVotedHead,
-		CurrentEffectiveBalances:      effectiveBalances,
-		BalancesBeforeEpochTransition: beforeTransitionBalances,
-		BalancesAfterEpochTransition:  afterTransitionBalances,
-		MissingValidators:             missingValidators,
-		InactivityScores:              inactivityScores, // Only populated in Altair
+		CorrectlyVotedHead:            computed.CorrectlyVotedHead,
+		CurrentEffectiveBalances:      computed.CurrentEffectiveBalances,
+		BalancesBeforeEpochTransition: computed.BalancesBeforeEpochTransition,
+		BalancesAfterEpochTransition:  computed.BalancesAfterEpochTransition,
+		MissingValidators:             computed.MissingValidators,
+		InactivityScores:              computed.InactivityScores, // Only populated in Altair
 	}
 	network.WriteJson(w, response)
 }
