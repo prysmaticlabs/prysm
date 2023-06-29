@@ -23,7 +23,8 @@ func (s *Service) CurrentSlot() primitives.Slot {
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
-// is in the correct time window.
+// is in the correct time window. This function requires no block on forkchoice
+// as verifyBlkFinalizedSlot will acquire one
 func (s *Service) getBlockPreState(ctx context.Context, b interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
@@ -83,7 +84,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b interfaces.ReadOnlyBeaconBlock) error {
-	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
+	finalized := s.FinalizedCheckpt()
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
