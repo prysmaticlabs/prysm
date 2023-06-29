@@ -163,19 +163,19 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
 		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
 	} else {
-		bRoots := make([][32]byte, len(st.BlockRoots))
+		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
 			bRoots[i] = bytesutil.ToBytes32(r)
 		}
 		b.blockRoots = bRoots
 
-		sRoots := make([][32]byte, len(st.StateRoots))
+		sRoots := make([][32]byte, fieldparams.StateRootsLength)
 		for i, r := range st.StateRoots {
 			sRoots[i] = bytesutil.ToBytes32(r)
 		}
 		b.stateRoots = sRoots
 
-		mixes := make([][32]byte, len(st.RandaoMixes))
+		mixes := make([][32]byte, fieldparams.RandaoMixesLength)
 		for i, m := range st.RandaoMixes {
 			mixes[i] = bytesutil.ToBytes32(m)
 		}
@@ -270,19 +270,19 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
 		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
 	} else {
-		bRoots := make([][32]byte, len(st.BlockRoots))
+		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
 			bRoots[i] = bytesutil.ToBytes32(r)
 		}
 		b.blockRoots = bRoots
 
-		sRoots := make([][32]byte, len(st.StateRoots))
+		sRoots := make([][32]byte, fieldparams.StateRootsLength)
 		for i, r := range st.StateRoots {
 			sRoots[i] = bytesutil.ToBytes32(r)
 		}
 		b.stateRoots = sRoots
 
-		mixes := make([][32]byte, len(st.RandaoMixes))
+		mixes := make([][32]byte, fieldparams.RandaoMixesLength)
 		for i, m := range st.RandaoMixes {
 			mixes[i] = bytesutil.ToBytes32(m)
 		}
@@ -380,19 +380,19 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
 		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
 	} else {
-		bRoots := make([][32]byte, len(st.BlockRoots))
+		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
 			bRoots[i] = bytesutil.ToBytes32(r)
 		}
 		b.blockRoots = bRoots
 
-		sRoots := make([][32]byte, len(st.StateRoots))
+		sRoots := make([][32]byte, fieldparams.StateRootsLength)
 		for i, r := range st.StateRoots {
 			sRoots[i] = bytesutil.ToBytes32(r)
 		}
 		b.stateRoots = sRoots
 
-		mixes := make([][32]byte, len(st.RandaoMixes))
+		mixes := make([][32]byte, fieldparams.RandaoMixesLength)
 		for i, m := range st.RandaoMixes {
 			mixes[i] = bytesutil.ToBytes32(m)
 		}
@@ -494,19 +494,19 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
 		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
 	} else {
-		bRoots := make([][32]byte, len(st.BlockRoots))
+		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
 			bRoots[i] = bytesutil.ToBytes32(r)
 		}
 		b.blockRoots = bRoots
 
-		sRoots := make([][32]byte, len(st.StateRoots))
+		sRoots := make([][32]byte, fieldparams.StateRootsLength)
 		for i, r := range st.StateRoots {
 			sRoots[i] = bytesutil.ToBytes32(r)
 		}
 		b.stateRoots = sRoots
 
-		mixes := make([][32]byte, len(st.RandaoMixes))
+		mixes := make([][32]byte, fieldparams.RandaoMixesLength)
 		for i, m := range st.RandaoMixes {
 			mixes[i] = bytesutil.ToBytes32(m)
 		}
