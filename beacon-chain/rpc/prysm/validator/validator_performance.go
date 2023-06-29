@@ -26,7 +26,7 @@ type ValidatorPerformanceResponse struct {
 	InactivityScores              []uint64 `json:"inactivity_scores,omitempty"`
 }
 
-// GetValidatorPerformance is an HTTP handler for Beacon API GetValidatorPerformance.
+// GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
 func (bs *beacon.Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
 	if bs.SyncChecker.Syncing() {
 		handleHTTPError(w, "Syncing", http.StatusInternalServerError)
