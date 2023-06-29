@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
@@ -27,20 +28,27 @@ type ValidatorPerformanceResponse struct {
 }
 
 // GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
-func (bs *beacon.Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
-	if bs.SyncChecker.Syncing() {
+func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
+	if vs.SyncChecker.Syncing() {
 		handleHTTPError(w, "Syncing", http.StatusInternalServerError)
 		return
 	}
 	ctx := r.Context()
-	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	currSlot := vs.GenesisTimeFetcher.CurrentSlot()
+	var req ValidatorPerformanceRequest
+	if r.Body != http.NoBody {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			handleHTTPError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
 	computed, err := rpc.ComputeValidatorPerformance(
 		ctx,
 		&ethpb.ValidatorPerformanceRequest{
-			PublicKeys: [][]byte{},
-			Indices:    []uint64{},
+			PublicKeys: req.PublicKeys,
+			Indices:    req.Indices,
 		},
-		bs.HeadFetcher,
+		vs.HeadFetcher,
 		currSlot,
 	)
 	if err != nil {
