@@ -172,19 +172,23 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 	}
 
 	_, _, index, _ := v.config, v.validatorNum, v.index, v.offset
-	beaconRPCPort := e2e.TestParams.Ports.PrysmBeaconNodeRPCPort + index
-	if beaconRPCPort >= e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
-		// Point any extra validator clients to a node we know is running.
-		beaconRPCPort = e2e.TestParams.Ports.PrysmBeaconNodeRPCPort
-	}
 	kPath := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-validator-%d", index)
 	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-testnet-%d", index)
-	httpPort := e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+	httpPort := e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort + index
+	if httpPort >= e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort+e2e.TestParams.LighthouseBeaconNodeCount {
+		// Point any extra validator clients to a node we know is running.
+		httpPort = e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+	}
 	// In the event we want to run a LH validator with a non LH
 	// beacon node, we split half the validators to run with
 	// lighthouse and the other half with prysm.
 	if v.config.UseValidatorCrossClient && index%2 == 0 {
-		httpPort = e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort
+		beaconGatewayPort := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + index
+		if beaconGatewayPort >= e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+e2e.TestParams.BeaconNodeCount {
+			// Point any extra validator clients to a node we know is running.
+			beaconGatewayPort = e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort
+		}
+		httpPort = beaconGatewayPort
 	}
 	args := []string{
 		"validator_client",
@@ -192,7 +196,7 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 		"--init-slashing-protection",
 		fmt.Sprintf("--datadir=%s", kPath),
 		fmt.Sprintf("--testnet-dir=%s", testNetDir),
-		fmt.Sprintf("--beacon-nodes=http://localhost:%d", httpPort+index),
+		fmt.Sprintf("--beacon-nodes=http://localhost:%d", httpPort),
 		"--suggested-fee-recipient=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 	}
 
