@@ -2,11 +2,16 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["validator_performance.go"],
+    srcs = [
+        "server.go",
+        "validator_performance.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/rpc:go_default_library",
+        "//beacon-chain/sync:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//network:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

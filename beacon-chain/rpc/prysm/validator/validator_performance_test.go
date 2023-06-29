@@ -28,12 +28,12 @@ import (
 
 func TestServer_GetValidatorPerformance(t *testing.T) {
 	t.Run("Syncing", func(t *testing.T) {
-		bs := &beacon.Server{
+		vs := &Server{
 			SyncChecker: &mockSync.Sync{IsSyncing: true},
 		}
 
 		var buf bytes.Buffer
-		srv := httptest.NewServer(http.HandlerFunc(bs.GetValidatorPerformance))
+		srv := httptest.NewServer(http.HandlerFunc(vs.GetValidatorPerformance))
 		req := httptest.NewRequest("POST", "/foo", &buf)
 
 		client := &http.Client{}
@@ -57,7 +57,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
-		bs := &beacon.Server{
+		vs := &beacon.Server{
 			HeadFetcher: &mock.ChainService{
 				State: headState,
 			},
@@ -82,7 +82,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		err = json.NewEncoder(&buf).Encode(request)
 		require.NoError(t, err)
 
-		srv := httptest.NewServer(http.HandlerFunc(bs.GetValidatorPerformance))
+		srv := httptest.NewServer(http.HandlerFunc(vs.GetValidatorPerformance))
 		req := httptest.NewRequest("POST", "/foo", &buf)
 		client := &http.Client{}
 		rawResp, err := client.Post(srv.URL, "application/json", req.Body)
@@ -111,7 +111,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		headState = setHeadState(t, headState, publicKeys)
 
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
-		bs := &beacon.Server{
+		vs := &beacon.Server{
 			HeadFetcher: &mock.ChainService{
 				// 10 epochs into the future.
 				State: headState,
@@ -145,7 +145,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		err = json.NewEncoder(&buf).Encode(request)
 		require.NoError(t, err)
 
-		srv := httptest.NewServer(http.HandlerFunc(bs.GetValidatorPerformance))
+		srv := httptest.NewServer(http.HandlerFunc(vs.GetValidatorPerformance))
 		req := httptest.NewRequest("POST", "/foo", &buf)
 		client := &http.Client{}
 		rawResp, err := client.Post(srv.URL, "application/json", req.Body)
@@ -174,7 +174,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		headState = setHeadState(t, headState, publicKeys)
 
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
-		bs := &beacon.Server{
+		vs := &beacon.Server{
 			HeadFetcher: &mock.ChainService{
 				// 10 epochs into the future.
 				State: headState,
@@ -208,7 +208,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		err = json.NewEncoder(&buf).Encode(request)
 		require.NoError(t, err)
 
-		srv := httptest.NewServer(http.HandlerFunc(bs.GetValidatorPerformance))
+		srv := httptest.NewServer(http.HandlerFunc(vs.GetValidatorPerformance))
 		req := httptest.NewRequest("POST", "/foo", &buf)
 		client := &http.Client{}
 		rawResp, err := client.Post(srv.URL, "application/json", req.Body)
@@ -243,7 +243,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, headState.SetInactivityScores([]uint64{0, 0, 0}))
 		require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
-		bs := &beacon.Server{
+		vs := &beacon.Server{
 			HeadFetcher: &mock.ChainService{
 				State: headState,
 			},
@@ -268,7 +268,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		err := json.NewEncoder(&buf).Encode(request)
 		require.NoError(t, err)
 
-		srv := httptest.NewServer(http.HandlerFunc(bs.GetValidatorPerformance))
+		srv := httptest.NewServer(http.HandlerFunc(vs.GetValidatorPerformance))
 		req := httptest.NewRequest("POST", "/foo", &buf)
 		client := &http.Client{}
 		rawResp, err := client.Post(srv.URL, "application/json", req.Body)
@@ -303,7 +303,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, headState.SetInactivityScores([]uint64{0, 0, 0}))
 		require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
-		bs := &beacon.Server{
+		vs := &beacon.Server{
 			HeadFetcher: &mock.ChainService{
 				State: headState,
 			},
@@ -328,7 +328,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		err := json.NewEncoder(&buf).Encode(request)
 		require.NoError(t, err)
 
-		srv := httptest.NewServer(http.HandlerFunc(bs.GetValidatorPerformance))
+		srv := httptest.NewServer(http.HandlerFunc(vs.GetValidatorPerformance))
 		req := httptest.NewRequest("POST", "/foo", &buf)
 		client := &http.Client{}
 		rawResp, err := client.Post(srv.URL, "application/json", req.Body)
@@ -363,7 +363,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, headState.SetInactivityScores([]uint64{0, 0, 0}))
 		require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
-		bs := &beacon.Server{
+		vs := &beacon.Server{
 			HeadFetcher: &mock.ChainService{
 				State: headState,
 			},
@@ -388,7 +388,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		err := json.NewEncoder(&buf).Encode(request)
 		require.NoError(t, err)
 
-		srv := httptest.NewServer(http.HandlerFunc(bs.GetValidatorPerformance))
+		srv := httptest.NewServer(http.HandlerFunc(vs.GetValidatorPerformance))
 		req := httptest.NewRequest("POST", "/foo", &buf)
 		client := &http.Client{}
 		rawResp, err := client.Post(srv.URL, "application/json", req.Body)
