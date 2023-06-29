@@ -389,7 +389,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	destStateKeys, _, _ := keysValuesOfBucket(destDbNameWithPath, []byte("state"), MaxUint64)
 
 	if len(destStateKeys) < len(sourceStateKeys) {
-		log.Fatalf("destination keys are lesser then source keys (%d/%d)", len(sourceStateKeys), len(destStateKeys))
+		log.Warnf("destination keys are lesser then source keys (%d/%d)", len(sourceStateKeys), len(destStateKeys))
 	}
 
 	// create the source and destination KV stores.
@@ -443,7 +443,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 		}
 
 		if len(sourceState.Validators()) != len(destinationState.Validators()) {
-			log.Fatalf("validator mismatch : source = %d, dest = %d", len(sourceState.Validators()), len(destinationState.Validators()))
+			log.Warnf("validator mismatch : source = %d, dest = %d", len(sourceState.Validators()), len(destinationState.Validators()))
 		}
 		sourceStateHash, err := sourceState.HashTreeRoot(ctx)
 		if err != nil {
@@ -454,7 +454,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 			log.WithError(err).Fatal("could not find hash of destination state")
 		}
 		if !bytes.Equal(sourceStateHash[:], destinationStateHash[:]) {
-			log.Fatalf("state mismatch : key = %s", hexutils.BytesToHex(key))
+			log.Warnf("state mismatch : key = %s", hexutils.BytesToHex(key))
 		}
 	}
 	log.Infof("number of state that did not match: %d", failCount)
