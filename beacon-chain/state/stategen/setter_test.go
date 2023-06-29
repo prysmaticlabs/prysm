@@ -182,7 +182,7 @@ func TestSaveState_RecoverForEpochBoundary_NonCanonicalBoundaryState(t *testing.
 	nonCanonicalSt, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.epochBoundaryStateCache.put(nonCanonicalRoot, nonCanonicalSt))
 
-	_, ok, err = service.epochBoundaryStateCache.getByBlockRoot(nonCanonicalRoot)
+	_, ok, err := service.epochBoundaryStateCache.getByBlockRoot(nonCanonicalRoot)
 	assert.NoError(t, err)
 	assert.Equal(t, true, ok, "state does not exist in cache")
 
