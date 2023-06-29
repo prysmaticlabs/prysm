@@ -164,15 +164,15 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 		}
 	}
 	start := time.Now()
+	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
+		log.WithError(err).Warn("could not handle block's attestations")
+	}
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
-		log.WithError(err).Warn("could not handle block's attestations")
-	}
 	// verify conditions for FCU, notifies FCU, and saves the new head.
 	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
 	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
