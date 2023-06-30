@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
-	blocks2 "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -46,7 +45,6 @@ type stateMachine struct {
 	start    primitives.Slot
 	state    stateID
 	pid      peer.ID
-	blocks   []blocks2.ROBlock
 	bwb      []BlockWithVerifiedBlobs
 	blobsPid peer.ID
 	updated  time.Time
