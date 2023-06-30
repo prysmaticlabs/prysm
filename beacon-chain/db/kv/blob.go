@@ -33,7 +33,6 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		return err
 	}
 
-	slot := scs[0].Slot
 	return s.db.Update(func(tx *bolt.Tx) error {
 		encodedBlobSidecar, err := encode(ctx, &ethpb.BlobSidecars{Sidecars: scs})
 		if err != nil {
@@ -47,11 +46,6 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
 			if len(k) != 0 {
 				replacingKey = k
-				oldSlotBytes := replacingKey[8:16]
-				oldSlot := bytesutil.BytesToSlotBigEndian(oldSlotBytes)
-				if oldSlot >= slot {
-					return fmt.Errorf("attempted to save blob with slot %d but already have older blob with slot %d", slot, oldSlot)
-				}
 				break
 			}
 		}
