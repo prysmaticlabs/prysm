@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -69,7 +70,7 @@ type Server struct {
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
-	BeaconDB               db.HeadAccessDatabase
+	BeaconDB               db.Database
 	ExecutionEngineCaller  execution.EngineCaller
 	BlockBuilder           builder.BlockBuilder
 	BLSChangesPool         blstoexec.PoolManager
@@ -183,4 +184,34 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		GenesisValidatorsRoot: gvr[:],
 	}
 	return stream.Send(res)
+}
+
+func (vs *Server) RandomStuff() {
+	for vs.TimeFetcher.GenesisTime().IsZero() {
+		time.Sleep(5 * time.Second)
+	}
+	genTime := vs.TimeFetcher.GenesisTime()
+
+	ticker := slots.NewSlotTicker(genTime, params.BeaconConfig().SecondsPerSlot)
+	for {
+		select {
+		case <-vs.Ctx.Done():
+			ticker.Done()
+			return
+		case slot := <-ticker.C():
+			curr := time.Now()
+			time.Sleep(18 * time.Millisecond)
+			_, err := vs.GetBeaconBlock(context.Background(), &ethpb.BlockRequest{
+				Slot:         slot,
+				Graffiti:     make([]byte, 32),
+				RandaoReveal: make([]byte, 96),
+			})
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			log.Infof("proposer_mocker: successfully produced block %d in %s", slot, time.Since(curr).String())
+		}
+	}
+
 }

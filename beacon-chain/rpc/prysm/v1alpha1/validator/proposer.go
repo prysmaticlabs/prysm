@@ -1,9 +1,12 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
+	"path"
+	"runtime/pprof"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -53,6 +57,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		log.WithError(err).Error("Could not convert slot to time")
 	}
+	bf := bytes.NewBuffer([]byte{})
+	if err := pprof.StartCPUProfile(bf); err != nil {
+		log.WithError(err)
+	}
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
 		"sinceSlotStartTime": time.Since(t),
@@ -63,13 +71,16 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	curr := time.Now()
 	// process attestations and update head in forkchoice
 	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+	log.Infof("proposer_mocker: update head in rpc took %s", time.Since(curr).String())
 	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
 	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	if parentRoot != headRoot {
 		blockchain.LateBlockAttemptedReorgCount.Inc()
 	}
+	log.Infof("proposer_mocker: fetching head root in rpc took %s", time.Since(curr).String())
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
@@ -90,6 +101,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
+	log.Infof("proposer_mocker: fetching head state rpc took %s", time.Since(curr).String())
 
 	// Set slot, graffiti, randao reveal, and parent root.
 	sBlk.SetSlot(req.Slot)
@@ -103,9 +115,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
 	sBlk.SetProposerIndex(idx)
+	log.Infof("proposer_mocker: setting proposer index took %s", time.Since(curr).String())
 
 	if features.Get().BuildBlockParallel {
-		if err := vs.BuildBlockParallel(ctx, sBlk, head); err != nil {
+		if err := vs.BuildBlockParallel(ctx, sBlk, head, curr); err != nil {
 			return nil, errors.Wrap(err, "could not build block in parallel")
 		}
 	} else {
@@ -168,6 +181,20 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
+	pprof.StopCPUProfile()
+	if time.Since(t) > 1*time.Second {
+		dbPath := vs.BeaconDB.DatabasePath()
+		dbPath = path.Join(dbPath, "profiles")
+		err = file.MkdirAll(dbPath)
+		if err != nil {
+			log.WithError(err)
+		} else {
+			dbPath = path.Join(dbPath, fmt.Sprintf("%d.profile", req.Slot))
+			if err = file.WriteFile(dbPath, bf.Bytes()); err != nil {
+				log.WithError(err)
+			}
+		}
+	}
 
 	pb, err := sBlk.Block().Proto()
 	if err != nil {
@@ -191,7 +218,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) error {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, curr time.Time) error {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -205,6 +232,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 			log.WithError(err).Error("Could not get eth1data")
 		}
 		sBlk.SetEth1Data(eth1Data)
+		log.Infof("proposer_mocker: setting eth1data took %s", time.Since(curr).String())
 
 		// Set deposit and attestation.
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
@@ -216,20 +244,26 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 			sBlk.SetDeposits(deposits)
 			sBlk.SetAttestations(atts)
 		}
+		log.Infof("proposer_mocker: setting deposits and atts took %s", time.Since(curr).String())
 
 		// Set slashings.
 		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 		sBlk.SetProposerSlashings(validProposerSlashings)
 		sBlk.SetAttesterSlashings(validAttSlashings)
+		log.Infof("proposer_mocker: setting slashings took %s", time.Since(curr).String())
 
 		// Set exits.
 		sBlk.SetVoluntaryExits(vs.getExits(head, sBlk.Block().Slot()))
+		log.Infof("proposer_mocker: setting exits took %s", time.Since(curr).String())
 
 		// Set sync aggregate. New in Altair.
 		vs.setSyncAggregate(ctx, sBlk)
+		log.Infof("proposer_mocker: setting sync aggs took %s", time.Since(curr).String())
 
 		// Set bls to execution change. New in Capella.
 		vs.setBlsToExecData(sBlk, head)
+		log.Infof("proposer_mocker: setting bls data took %s", time.Since(curr).String())
+
 	}()
 
 	localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
@@ -246,6 +280,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
+	log.Infof("proposer_mocker: setting execution data took %s", time.Since(curr).String())
 
 	wg.Wait() // Wait until block is built via consensus and execution fields.
 
@@ -392,10 +427,12 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
+	curr := time.Now()
 	beaconState, err := vs.StateGen.StateByRoot(ctx, block.Block().ParentRoot())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
+	log.Infof("proposer_mocker: fetching parent state took %s", time.Since(curr).String())
 	root, err := transition.CalculateStateRoot(
 		ctx,
 		beaconState,
@@ -404,6 +441,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnl
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot())
 	}
+	log.Infof("proposer_mocker: calculating state root took %s", time.Since(curr).String())
 
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
 	return root[:], nil
