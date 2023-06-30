@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/checkpoint"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,6 +31,7 @@ func BeaconNodeOptions(c *cli.Context) (node.Option, error) {
 	statePath := c.Path(StatePath.Name)
 	remoteURL := c.String(BeaconAPIURL.Name)
 	if remoteURL == "" && c.String(checkpoint.RemoteURL.Name) != "" {
+		log.Infof("using checkpoint sync url %s for value in --%s flag", c.String(checkpoint.RemoteURL.Name), BeaconAPIURL.Name)
 		remoteURL = c.String(checkpoint.RemoteURL.Name)
 	}
 	if remoteURL != "" {
