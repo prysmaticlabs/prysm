@@ -172,3 +172,10 @@ func WithClockSynchronizer(gs *startup.ClockSynchronizer) Option {
 		return nil
 	}
 }
+
+func WithSyncComplete(c chan struct{}) Option {
+	return func(s *Service) error {
+		s.syncComplete = c
+		return nil
+	}
+}
