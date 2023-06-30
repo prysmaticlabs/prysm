@@ -843,6 +843,9 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	service, tr := minimalTestService(t)
 	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
 
 	var genesisStateRoot [32]byte
 	genesisBlk := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -873,6 +876,8 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	// Optimistic finalized checkpoint
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 320
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
 	blk.Block.ParentRoot = genesisRoot[:]
 	util.SaveBlock(t, ctx, beaconDB, blk)
 	opRoot, err := blk.Block.HashTreeRoot()
@@ -893,6 +898,17 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, opRoot))
+	newHead := &head{
+		root:       blkRoot,
+		block:      wsb,
+		state:      state,
+		slot:       service.CurrentSlot() + 2,
+		optimistic: true,
+	}
+	require.NoError(t, service.setHead(newHead))
+	op, err := service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, op)
 	require.NoError(t, service.updateFinalized(ctx, opCheckpoint))
 	cp, err := service.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
 	require.NoError(t, err)
@@ -924,6 +940,18 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, fcs.SetOptimisticToValid(ctx, validRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, validRoot))
+	newHead = &head{
+		root:       blkRoot,
+		block:      wsb,
+		state:      state,
+		slot:       service.CurrentSlot() + 2,
+		optimistic: false,
+	}
+	require.NoError(t, service.setHead(newHead))
+	op, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, op)
+
 	require.NoError(t, service.updateFinalized(ctx, validCheckpoint))
 	cp, err = service.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
 	require.NoError(t, err)
