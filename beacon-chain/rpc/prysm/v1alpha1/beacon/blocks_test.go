@@ -557,6 +557,20 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 			Block: &ethpb.BeaconBlockContainer_BlindedCapellaBlock{BlindedCapellaBlock: blindedProto}}
 		runListBlocksGenesis(t, wrapped, blkContainer)
 	})
+	t.Run("deneb block", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlockDeneb()
+		blk.Block.ParentRoot = parentRoot[:]
+		wrapped, err := blocks.NewSignedBeaconBlock(blk)
+		assert.NoError(t, err)
+		blinded, err := wrapped.ToBlinded()
+		assert.NoError(t, err)
+		blindedProto, err := blinded.PbBlindedDenebBlock()
+		assert.NoError(t, err)
+		blkContainer := &ethpb.BeaconBlockContainer{
+			Block: &ethpb.BeaconBlockContainer_BlindedDenebBlock{BlindedDenebBlock: blindedProto}}
+		runListBlocksGenesis(t, wrapped, blkContainer)
+	})
 }
 
 func runListBlocksGenesis(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
@@ -650,6 +664,21 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 			b := util.NewBeaconBlockCapella()
+			b.Block.Slot = i
+			wrappedB, err := blocks.NewSignedBeaconBlock(b)
+			assert.NoError(t, err)
+			return wrappedB
+		}
+		gBlock, err := blocks.NewSignedBeaconBlock(blk)
+		assert.NoError(t, err)
+		runListBeaconBlocksGenesisMultiBlocks(t, gBlock, blockCreator)
+	})
+	t.Run("deneb block", func(t *testing.T) {
+		parentRoot := [32]byte{1, 2, 3}
+		blk := util.NewBeaconBlockDeneb()
+		blk.Block.ParentRoot = parentRoot[:]
+		blockCreator := func(i primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
+			b := util.NewBeaconBlockDeneb()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
 			assert.NoError(t, err)
