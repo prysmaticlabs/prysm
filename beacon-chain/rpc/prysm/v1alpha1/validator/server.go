@@ -200,7 +200,7 @@ func (vs *Server) RandomStuff() {
 			return
 		case slot := <-ticker.C():
 			curr := time.Now()
-			time.Sleep(1200 * time.Millisecond)
+			time.Sleep(18 * time.Millisecond)
 			_, err := vs.GetBeaconBlock(context.Background(), &ethpb.BlockRequest{
 				Slot:         slot,
 				Graffiti:     make([]byte, 32),
