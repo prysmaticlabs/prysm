@@ -141,7 +141,7 @@ func (s *Slice[V, O]) At(obj O, i uint64) (V, error) {
 
 	if i >= uint64(len(s.SharedItems)+len(s.AppendedItems)) {
 		var def V
-		return def, fmt.Errorf("index %d is out of bounds", i)
+		return def, fmt.Errorf("index %d out of bounds", i)
 	}
 
 	isOriginal := i < uint64(len(s.SharedItems))
@@ -168,7 +168,7 @@ func (s *Slice[V, O]) At(obj O, i uint64) (V, error) {
 			}
 		}
 		var def V
-		return def, fmt.Errorf("index %d is out of bounds", i)
+		return def, fmt.Errorf("index %d out of bounds", i)
 	}
 }
 
@@ -177,7 +177,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 	defer s.lock.Unlock()
 
 	if i >= uint64(len(s.SharedItems)+len(s.AppendedItems)) {
-		return fmt.Errorf("index %d is out of bounds", i)
+		return fmt.Errorf("index %d out of bounds", i)
 	}
 
 	isOriginal := i < uint64(len(s.SharedItems))
@@ -241,7 +241,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("index %d is out of bounds", i)
+			return fmt.Errorf("index %d out of bounds", i)
 		}
 
 		newValue := true

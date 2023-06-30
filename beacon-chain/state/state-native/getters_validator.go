@@ -99,7 +99,7 @@ func (b *BeaconState) validatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Va
 		return &ethpb.Validator{}, nil
 	}
 	if uint64(len(b.validators)) <= uint64(idx) {
-		return nil, fmt.Errorf("index %d is out of bounds", idx)
+		return nil, fmt.Errorf("index %d out of bounds", idx)
 	}
 	val := b.validators[idx]
 	return ethpb.CopyValidator(val), nil
@@ -123,7 +123,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (s
 		return nil, state.ErrNilValidatorsInState
 	}
 	if uint64(len(b.validators)) <= uint64(idx) {
-		return nil, fmt.Errorf("index %d is out of bounds", idx)
+		return nil, fmt.Errorf("index %d out of bounds", idx)
 	}
 	val := b.validators[idx]
 	return NewValidator(val)
