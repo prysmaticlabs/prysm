@@ -26,9 +26,13 @@ func (q *blocksQueue) resetFromFork(fork *forkData) error {
 	if err := q.smm.removeAllStateMachines(); err != nil {
 		return err
 	}
+	robs, err := validROBlocks(fork.blocks)
+	if err != nil {
+		return err
+	}
 	fsm := q.smm.addStateMachine(firstBlock.Slot())
 	fsm.pid = fork.peer
-	fsm.blocks = fork.blocks
+	fsm.bwb = robs
 	fsm.state = stateDataParsed
 
 	// The rest of machines are in skipped state.

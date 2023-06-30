@@ -1598,8 +1598,9 @@ func fixtures() map[string]interface{} {
 
 func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	type args struct {
-		header *pb.ExecutionPayloadHeader
-		block  *pb.ExecutionBlock
+		header  *pb.ExecutionPayloadHeader
+		block   *pb.ExecutionBlock
+		version int
 	}
 	wantedHash := common.BytesToHash([]byte("foo"))
 	tests := []struct {
@@ -1615,9 +1616,9 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 					BlockHash: []byte("foo"),
 				},
 				block: &pb.ExecutionBlock{
-					Version: version.Bellatrix,
-					Hash:    common.BytesToHash([]byte("bar")),
+					Hash: common.BytesToHash([]byte("bar")),
 				},
+				version: version.Bellatrix,
 			},
 			err: "does not match execution block hash",
 		},
@@ -1628,9 +1629,9 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 					BlockHash: wantedHash[:],
 				},
 				block: &pb.ExecutionBlock{
-					Version: version.Bellatrix,
-					Hash:    wantedHash,
+					Hash: wantedHash,
 				},
+				version: version.Bellatrix,
 			},
 			want: func() interfaces.ExecutionData {
 				p, err := blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
@@ -1646,7 +1647,7 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			wrapped, err := blocks.WrappedExecutionPayloadHeader(tt.args.header)
 			require.NoError(t, err)
-			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
+			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
 				assert.ErrorContains(t, tt.err, err)
 			} else {
@@ -1658,8 +1659,9 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 
 func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 	type args struct {
-		header *pb.ExecutionPayloadHeaderCapella
-		block  *pb.ExecutionBlock
+		header  *pb.ExecutionPayloadHeaderCapella
+		block   *pb.ExecutionBlock
+		version int
 	}
 	wantedHash := common.BytesToHash([]byte("foo"))
 	tests := []struct {
@@ -1675,9 +1677,9 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 					BlockHash: []byte("foo"),
 				},
 				block: &pb.ExecutionBlock{
-					Version: version.Capella,
-					Hash:    common.BytesToHash([]byte("bar")),
+					Hash: common.BytesToHash([]byte("bar")),
 				},
+				version: version.Capella,
 			},
 			err: "does not match execution block hash",
 		},
@@ -1688,9 +1690,9 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 					BlockHash: wantedHash[:],
 				},
 				block: &pb.ExecutionBlock{
-					Version: version.Capella,
-					Hash:    wantedHash,
+					Hash: wantedHash,
 				},
+				version: version.Capella,
 			},
 			want: func() interfaces.ExecutionData {
 				p, err := blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
@@ -1706,7 +1708,7 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, 0)
 			require.NoError(t, err)
-			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
+			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
 				assert.ErrorContains(t, tt.err, err)
 			} else {
@@ -1718,8 +1720,9 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 
 func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 	type args struct {
-		header *pb.ExecutionPayloadHeaderDeneb
-		block  *pb.ExecutionBlock
+		header  *pb.ExecutionPayloadHeaderDeneb
+		block   *pb.ExecutionBlock
+		version int
 	}
 	wantedHash := common.BytesToHash([]byte("foo"))
 	tests := []struct {
@@ -1735,9 +1738,9 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 					BlockHash: []byte("foo"),
 				},
 				block: &pb.ExecutionBlock{
-					Version: version.Deneb,
-					Hash:    common.BytesToHash([]byte("bar")),
+					Hash: common.BytesToHash([]byte("bar")),
 				},
+				version: version.Deneb,
 			},
 			err: "does not match execution block hash",
 		},
@@ -1748,9 +1751,9 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 					BlockHash: wantedHash[:],
 				},
 				block: &pb.ExecutionBlock{
-					Version: version.Deneb,
-					Hash:    wantedHash,
+					Hash: wantedHash,
 				},
+				version: version.Deneb,
 			},
 			want: func() interfaces.ExecutionData {
 				p, err := blocks.WrappedExecutionPayloadDeneb(&pb.ExecutionPayloadDeneb{
@@ -1766,7 +1769,7 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, 0)
 			require.NoError(t, err)
-			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
+			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
 				assert.ErrorContains(t, tt.err, err)
 			} else {

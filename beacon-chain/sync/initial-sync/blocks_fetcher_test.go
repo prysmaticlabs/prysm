@@ -273,6 +273,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
 
+			gt := time.Now()
+			vr := [32]byte{}
+			clock := startup.NewClock(gt, vr)
 			mc := &mock.ChainService{
 				State: st,
 				Root:  genesisRoot[:],
@@ -288,6 +291,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 				chain: mc,
 				p2p:   p,
+				clock: clock,
 			})
 			require.NoError(t, fetcher.start())
 
@@ -299,9 +303,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				fetcher.stop()
 			}()
 
-			processFetchedBlocks := func() ([]interfaces.ReadOnlySignedBeaconBlock, error) {
+			processFetchedBlocks := func() ([]BlockWithVerifiedBlobs, error) {
 				defer cancel()
-				var unionRespBlocks []interfaces.ReadOnlySignedBeaconBlock
+				var unionRespBlocks []BlockWithVerifiedBlobs
 
 				for {
 					select {
@@ -313,8 +317,8 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 						if resp.err != nil {
 							log.WithError(resp.err).Debug("Block fetcher returned error")
 						} else {
-							unionRespBlocks = append(unionRespBlocks, resp.blocks...)
-							if len(resp.blocks) == 0 {
+							unionRespBlocks = append(unionRespBlocks, resp.bwb...)
+							if len(resp.bwb) == 0 {
 								log.WithFields(logrus.Fields{
 									"start": resp.start,
 									"count": resp.count,
@@ -337,30 +341,30 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				maxExpectedBlocks += requestParams.count
 			}
 
-			blocks, err := processFetchedBlocks()
+			bwb, err := processFetchedBlocks()
 			assert.NoError(t, err)
 
-			sort.Slice(blocks, func(i, j int) bool {
-				return blocks[i].Block().Slot() < blocks[j].Block().Slot()
+			sort.Slice(bwb, func(i, j int) bool {
+				return bwb[i].block.Block().Slot() < bwb[j].block.Block().Slot()
 			})
 
-			ss := make([]primitives.Slot, len(blocks))
-			for i, block := range blocks {
-				ss[i] = block.Block().Slot()
+			ss := make([]primitives.Slot, len(bwb))
+			for i, b := range bwb {
+				ss[i] = b.block.Block().Slot()
 			}
 
 			log.WithFields(logrus.Fields{
-				"blocksLen": len(blocks),
+				"blocksLen": len(bwb),
 				"slots":     ss,
 			}).Debug("Finished block fetching")
 
-			if len(blocks) > int(maxExpectedBlocks) {
-				t.Errorf("Too many blocks returned. Wanted %d got %d", maxExpectedBlocks, len(blocks))
+			if len(bwb) > int(maxExpectedBlocks) {
+				t.Errorf("Too many blocks returned. Wanted %d got %d", maxExpectedBlocks, len(bwb))
 			}
-			assert.Equal(t, len(tt.expectedBlockSlots), len(blocks), "Processes wrong number of blocks")
+			assert.Equal(t, len(tt.expectedBlockSlots), len(bwb), "Processes wrong number of blocks")
 			var receivedBlockSlots []primitives.Slot
-			for _, blk := range blocks {
-				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
+			for _, b := range bwb {
+				receivedBlockSlots = append(receivedBlockSlots, b.block.Block().Slot())
 			}
 			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
@@ -417,11 +421,13 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	mc.ValidatorsRoot = [32]byte{}
 	mc.Genesis = time.Now()
+
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			chain: mc,
 			p2p:   p2p,
+			clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 		})
 
 		cancel()
@@ -435,6 +441,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			chain: mc,
 			p2p:   p2p,
+			clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 		})
 
 		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -447,7 +454,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 			}
 		}()
 
-		var blocks []interfaces.ReadOnlySignedBeaconBlock
+		var bwb []BlockWithVerifiedBlobs
 		select {
 		case <-ctx.Done():
 			t.Error(ctx.Err())
@@ -455,16 +462,16 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 			if resp.err != nil {
 				t.Error(resp.err)
 			} else {
-				blocks = resp.blocks
+				bwb = resp.bwb
 			}
 		}
-		if uint64(len(blocks)) != uint64(blockBatchLimit) {
-			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchLimit, len(blocks))
+		if uint64(len(bwb)) != uint64(blockBatchLimit) {
+			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchLimit, len(bwb))
 		}
 
 		var receivedBlockSlots []primitives.Slot
-		for _, blk := range blocks {
-			receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
+		for _, b := range bwb {
+			receivedBlockSlots = append(receivedBlockSlots, b.block.Block().Slot())
 		}
 		missing := slice.NotSlot(slice.IntersectionSlot(chainConfig.expectedBlockSlots, receivedBlockSlots), chainConfig.expectedBlockSlots)
 		if len(missing) > 0 {
