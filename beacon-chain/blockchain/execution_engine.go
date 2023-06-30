@@ -220,32 +220,34 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		}).Info("Called new payload with optimistic block")
 		return false, nil
 	case execution.ErrInvalidPayloadStatus:
-		newPayloadInvalidNodeCount.Inc()
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return false, err
-		}
-		invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, blk.Block().ParentRoot(), bytesutil.ToBytes32(lastValidHash))
-		if err != nil {
-			return false, err
-		}
-		if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
-			return false, err
-		}
-		log.WithFields(logrus.Fields{
-			"slot":                 blk.Block().Slot(),
-			"blockRoot":            fmt.Sprintf("%#x", root),
-			"invalidChildrenCount": len(invalidRoots),
-		}).Warn("Pruned invalid blocks")
+		lvh := bytesutil.ToBytes32(lastValidHash)
 		return false, invalidBlock{
-			invalidAncestorRoots: invalidRoots,
-			error:                ErrInvalidPayload,
+			error:         ErrInvalidPayload,
+			lastValidHash: lvh,
 		}
-	case execution.ErrInvalidBlockHashPayloadStatus:
-		newPayloadInvalidNodeCount.Inc()
-		return false, ErrInvalidBlockHashPayloadStatus
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
+	}
+}
+
+// reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
+func (s *Service) reportInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
+	newPayloadInvalidNodeCount.Inc()
+	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	if err != nil {
+		return err
+	}
+	if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+		return err
+	}
+	log.WithFields(logrus.Fields{
+		"blockRoot":            fmt.Sprintf("%#x", root),
+		"invalidChildrenCount": len(invalidRoots),
+	}).Warn("Pruned invalid blocks")
+	return invalidBlock{
+		invalidAncestorRoots: invalidRoots,
+		error:                ErrInvalidPayload,
+		lastValidHash:        lvh,
 	}
 }
 

@@ -377,9 +377,7 @@ func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, s.insertBlockToForkchoiceStore(ctx, wsb.Block(), r, beaconState))
+	require.NoError(t, s.cfg.ForkChoiceStore.InsertNode(ctx, beaconState, r))
 
 	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
@@ -453,9 +451,7 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	beaconState, err := state_native.InitializeFromProtoPhase0(bs)
 	require.NoError(b, err)
-	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
-	require.NoError(b, err)
-	require.NoError(b, s.insertBlockToForkchoiceStore(ctx, wsb.Block(), r, beaconState))
+	require.NoError(b, s.cfg.ForkChoiceStore.InsertNode(ctx, beaconState, r))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

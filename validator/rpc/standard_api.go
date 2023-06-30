@@ -600,7 +600,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 		}
 	case settings.ProposeConfig == nil:
 		var builderConfig *validatorServiceConfig.BuilderConfig
-		if settings.DefaultConfig != nil {
+		if settings.DefaultConfig != nil && settings.DefaultConfig.BuilderConfig != nil {
 			builderConfig = settings.DefaultConfig.BuilderConfig.Clone()
 		}
 		settings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
@@ -619,7 +619,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 			}
 		} else {
 			var builderConfig = &validatorServiceConfig.BuilderConfig{}
-			if settings.DefaultConfig != nil {
+			if settings.DefaultConfig != nil && settings.DefaultConfig.BuilderConfig != nil {
 				builderConfig = settings.DefaultConfig.BuilderConfig.Clone()
 			}
 			settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &validatorServiceConfig.ProposerOption{

@@ -225,13 +225,14 @@ func notActive(t *testing.T) [fieldparams.BLSPubkeyLength]byte {
 
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
 	})
+	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch
@@ -249,13 +250,14 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 
 func TestUpdateProposerSettingsAt_EpochEndExceeded(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot+1) * time.Second}
-	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
 	})
+	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
@@ -273,13 +275,14 @@ func TestUpdateProposerSettingsAt_EpochEndExceeded(t *testing.T) {
 
 func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second}
-	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
 	})
+	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
@@ -301,13 +304,14 @@ func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *test
 		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeotherError.Error()),
 		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 	}
-	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
 	})
+	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch

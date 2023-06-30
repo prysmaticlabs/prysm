@@ -147,11 +147,11 @@
     }
   },
   "ineffassign": {
-    "only_files": {
-      "beacon-chain/.*": "",
-      "shared/.*": "",
-      "slasher/.*": "",
-      "validator/.*": ""
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code",
+      ".*\\.pb.*.go": "Generated code is ok",
+      ".*generated\\.ssz\\.go": "Generated code is ok"
     }
   },
   "properpermissions": {

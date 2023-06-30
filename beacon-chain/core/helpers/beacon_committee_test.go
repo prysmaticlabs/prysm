@@ -639,7 +639,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	indices, err := ActiveValidatorIndices(context.Background(), state, 0)
 	require.NoError(t, err)
 
-	proposerIndices, err := precomputeProposerIndices(state, indices)
+	proposerIndices, err := precomputeProposerIndices(state, indices, time.CurrentEpoch(state))
 	require.NoError(t, err)
 
 	var wantedProposerIndices []primitives.ValidatorIndex
