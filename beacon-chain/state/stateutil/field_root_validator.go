@@ -30,7 +30,7 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 }
 
 func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
-	roots, err := optimizedValidatorRoots(validators)
+	roots, err := OptimizedValidatorRoots(validators)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -51,7 +51,9 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	return res, nil
 }
 
-func optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
+// OptimizedValidatorRoots uses an optimized routine with gohashtree in order to
+// derive a list of validator roots from a list of validator objects.
+func OptimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
 	// Exit early if no validators are provided.
 	if len(validators) == 0 {
 		return [][32]byte{}, nil
