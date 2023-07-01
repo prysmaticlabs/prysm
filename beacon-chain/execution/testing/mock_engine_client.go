@@ -45,7 +45,7 @@ type EngineClient struct {
 }
 
 // NewPayload --
-func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData, _ [][32]byte) ([]byte, error) {
+func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData, _ []common.Hash) ([]byte, error) {
 	return e.NewPayloadResp, e.ErrNewPayload
 }
 

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -211,17 +212,18 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 
 	var lastValidHash []byte
 	if blk.Version() >= version.Deneb {
-		kzgs, err := blk.Block().Body().BlobKzgCommitments()
+		var kzgs [][]byte
+		kzgs, err = blk.Block().Body().BlobKzgCommitments()
 		if err != nil {
 			return false, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
 		}
-		versionedHashes := make([][32]byte, len(kzgs))
+		versionedHashes := make([]common.Hash, len(kzgs))
 		for i := range versionedHashes {
 			versionedHashes[i] = kzgToVersionedHash(kzgs[i])
 		}
 		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes)
 	} else {
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{} /*empty version hashes before Deneb*/)
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, []common.Hash{} /*empty version hashes before Deneb*/)
 	}
 	switch err {
 	case nil:

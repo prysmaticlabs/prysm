@@ -87,7 +87,7 @@ func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (inte
 func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, m.latestValidHash, m.payloadStatus
 }
-func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, [][32]byte) ([]byte, error) {
+func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, []common.Hash) ([]byte, error) {
 	return m.latestValidHash, m.payloadStatus
 }
 
