@@ -214,7 +214,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 
 	var lastValidHash []byte
 	if blk.Version() >= version.Deneb {
-		kzgs, err := blk.Block().Body().BlobKzgCommitments()
+		var kzgs [][]byte
+		kzgs, err = blk.Block().Body().BlobKzgCommitments()
 		if err != nil {
 			return false, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
 		}
