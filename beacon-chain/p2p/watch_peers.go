@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -9,11 +10,31 @@ import (
 
 // ensurePeerConnections will attempt to reestablish connection to the peers
 // if there are currently no connections to that peer.
-func ensurePeerConnections(ctx context.Context, h host.Host, peers ...string) {
-	if len(peers) == 0 {
+func ensurePeerConnections(ctx context.Context, h host.Host, peers *peers.Status, relayNodes ...string) {
+
+	// every time reset peersToWatch, add RelayNodes and trust peers
+	var peersToWatch []string
+	trustedPeers := peers.GetTrustedPeers()
+	for _, node := range relayNodes {
+		peersToWatch = append(peersToWatch, node)
+	}
+	for _, trustedPeer := range trustedPeers {
+		address, err := peers.Address(trustedPeer)
+
+		// avoid invalid trusted peers
+		if err != nil || address == nil {
+			continue
+		}
+
+		// any more appropriate way ?
+		peer := address.String() + "/p2p/" + trustedPeer.String()
+		peersToWatch = append(peersToWatch, peer)
+	}
+
+	if len(peersToWatch) == 0 {
 		return
 	}
-	for _, p := range peers {
+	for _, p := range peersToWatch {
 		if p == "" {
 			continue
 		}

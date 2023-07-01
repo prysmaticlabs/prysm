@@ -37,7 +37,7 @@ func (s *Server) ListTrustedPeer(w http.ResponseWriter, r *http.Request) {
 				PeerID:             id.String(),
 				Enr:                "",
 				LastSeenP2PAddress: "",
-				State:              stateDisconnected,
+				State:              eth.ConnectionState(corenet.NotConnected).String(),
 				Direction:          eth.PeerDirection(corenet.DirUnknown).String(),
 			}
 		}

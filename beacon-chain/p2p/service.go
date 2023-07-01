@@ -174,9 +174,9 @@ func (s *Service) Start() {
 	s.awaitStateInitialized()
 	s.isPreGenesis = false
 
-	var peersToWatch []string
+	var relayNodes []string
 	if s.cfg.RelayNodeAddr != "" {
-		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
+		relayNodes = append(relayNodes, s.cfg.RelayNodeAddr)
 		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
@@ -213,7 +213,6 @@ func (s *Service) Start() {
 		// Set trusted peers for those that are provided as static addresses.
 		pids := peerIdsFromMultiAddrs(addrs)
 		s.peers.SetTrustedPeers(pids)
-		peersToWatch = append(peersToWatch, s.cfg.StaticPeers...)
 		s.connectWithAllPeers(addrs)
 	}
 	// Initialize metadata according to the
@@ -226,23 +225,7 @@ func (s *Service) Start() {
 
 	// Periodic functions.
 	async.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
-		// every time reset peersToWatch, add RelayNodes and trust peers
-		peersToWatch = nil
-		trustedPeers := s.peers.GetTrustedPeers()
-		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
-		for _, trustedPeer := range trustedPeers {
-			address, err := s.peers.Address(trustedPeer)
-
-			// avoid invalid trusted peers
-			if err != nil || address == nil {
-				continue
-			}
-
-			// any more appropriate way ?
-			peer := address.String() + "/p2p/" + trustedPeer.String()
-			peersToWatch = append(peersToWatch, peer)
-		}
-		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
+		ensurePeerConnections(s.ctx, s.host, s.peers, relayNodes...)
 	})
 	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
 	async.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
