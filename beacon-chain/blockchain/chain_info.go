@@ -68,6 +68,7 @@ type HeadFetcher interface {
 	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
+	HeadGasUsed(ctx context.Context) uint64
 	HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
 	HeadGenesisValidatorsRoot() [32]byte
@@ -149,6 +150,10 @@ func (s *Service) HeadSlot() primitives.Slot {
 	}
 
 	return s.headSlot()
+}
+
+func (s *Service) HeadGasUsed(ctx context.Context) uint64 {
+	return s.head.gasUsed
 }
 
 // HeadRoot returns the root of the head of the chain.

@@ -149,7 +149,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Error("Could not get builder payload")
 		}
-		if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
+		if err := vs.setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 		}
 
@@ -243,7 +243,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		log.WithError(err).Error("Could not get builder payload")
 	}
 
-	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
+	if err := vs.setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 

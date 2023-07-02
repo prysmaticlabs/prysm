@@ -52,6 +52,7 @@ type head struct {
 	state      state.BeaconState                    // current head state.
 	slot       primitives.Slot                      // the head block slot number
 	optimistic bool                                 // optimistic status when saved head
+	gasUsed    uint64
 }
 
 // This saves head info to the local service cache, it also saves the
@@ -151,6 +152,11 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		reorgCount.Inc()
 	}
 
+	e, err := headBlock.Block().Body().Execution()
+	if err != nil {
+		return err
+	}
+
 	// Cache the new head info.
 	newHead := &head{
 		root:       newHeadRoot,
@@ -158,6 +164,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		state:      headState,
 		optimistic: isOptimistic,
 		slot:       headBlock.Block().Slot(),
+		gasUsed:    e.GasUsed(),
 	}
 	if err := s.setHead(newHead); err != nil {
 		return errors.Wrap(err, "could not set head")
@@ -214,12 +221,19 @@ func (s *Service) setHead(newHead *head) error {
 	if err != nil {
 		return err
 	}
+
+	e, err := bCp.Block().Body().Execution()
+	if err != nil {
+		return err
+	}
+
 	s.head = &head{
 		root:       newHead.root,
 		block:      bCp,
 		state:      newHead.state.Copy(),
 		optimistic: newHead.optimistic,
 		slot:       newHead.slot,
+		gasUsed:    e.GasUsed(),
 	}
 	return nil
 }

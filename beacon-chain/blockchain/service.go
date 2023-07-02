@@ -315,6 +315,7 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 		finalizedState,
 		finalizedBlock.Block().Slot(),
 		false,
+		0,
 	}); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
@@ -453,6 +454,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 		genesisState,
 		genesisBlk.Block().Slot(),
 		false,
+		0,
 	}); err != nil {
 		log.WithError(err).Fatal("Could not set head")
 	}

@@ -41,7 +41,7 @@ var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData) error {
+func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData) error {
 	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
 	defer span.End()
 
@@ -84,8 +84,15 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		boost := params.BeaconConfig().LocalBlockValueBoost
 		higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
 
+		localGasUsed := localPayload.GasUsed()
+		builderGasUsed := builderPayload.GasUsed()
+		builderHigherGas := builderGasUsed > localGasUsed/2
+
+		headGasUsed := vs.HeadFetcher.HeadGasUsed(ctx)
+		HigherGasThanHead := builderGasUsed > headGasUsed/2
+
 		// If we can't get the builder value, just use local block.
-		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
+		if higherValueBuilder && withdrawalsMatched && builderHigherGas && HigherGasThanHead { // Builder value is higher and withdrawals match.
 			blk.SetBlinded(true)
 			if err := blk.SetExecution(builderPayload); err != nil {
 				log.WithError(err).Warn("Proposer: failed to set builder payload")
@@ -102,6 +109,23 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 				"builderGweiValue":     builderValueGwei,
 			}).Warn("Proposer: using local execution payload because higher value")
 		}
+
+		if !builderHigherGas {
+			log.WithFields(logrus.Fields{
+				"localGasUsed":   localGasUsed,
+				"builderGasUsed": builderGasUsed,
+				"fraction":       1 / 2,
+			}).Warn("Proposer: using local execution payload because local higher gas")
+		}
+
+		if !HigherGasThanHead {
+			log.WithFields(logrus.Fields{
+				"headGasUsed":    headGasUsed,
+				"builderGasUsed": builderGasUsed,
+				"fraction":       1 / 2,
+			}).Warn("Proposer: using local execution payload because head higher gas")
+		}
+
 		span.AddAttributes(
 			trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
 			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
@@ -230,7 +254,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil /* genesis val root */)
+		nil  /* genesis val root */)
 	if err != nil {
 		return err
 	}
