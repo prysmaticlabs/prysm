@@ -148,6 +148,13 @@ var (
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager",
 	}
+
+	// DisableRegistrationCache a flag for disabling the validator registration cache and use db instead.
+	DisableRegistrationCache = &cli.BoolFlag{
+		Name:  "diable-registration-cache",
+		Usage: "A temporary flag for disabling the validator registration cache instead of using the db. note: registrations do not clear on restart while using the db",
+	}
+
 	aggregateParallel = &cli.BoolFlag{
 		Name:  "aggregate-parallel",
 		Usage: "Enables parallel aggregation of attestations",
@@ -204,6 +211,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateSecondInterval,
 	aggregateThirdInterval,
 	disableResourceManager,
+	DisableRegistrationCache,
 	aggregateParallel,
 }...)...)
 

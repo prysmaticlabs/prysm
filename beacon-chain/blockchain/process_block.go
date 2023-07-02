@@ -107,7 +107,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 
 	// Verify that the parent block is in forkchoice
-	if !s.cfg.ForkChoiceStore.HasNode(b.ParentRoot()) {
+	parentRoot := b.ParentRoot()
+	if !s.cfg.ForkChoiceStore.HasNode(parentRoot) {
 		return ErrNotDescendantOfFinalized
 	}
 
@@ -134,6 +135,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
+		if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
+			return s.reportInvalidBlock(ctx, blockRoot, parentRoot, InvalidBlockLVH(err))
+		}
 		return errors.Wrap(err, "could not validate new payload")
 	}
 	if signed.Version() < version.Capella && isValidPayload {
@@ -492,9 +496,20 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err := helpers.UpdateCommitteeCache(ctx, copied, coreTime.CurrentEpoch(copied)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
+		e := coreTime.CurrentEpoch(copied)
+		if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e); err != nil {
 			return err
 		}
+		go func() {
+			// Use a custom deadline here, since this method runs asynchronously.
+			// We ignore the parent method's context and instead create a new one
+			// with a custom deadline, therefore using the background context instead.
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := helpers.UpdateProposerIndicesInCache(slotCtx, copied, e+1); err != nil {
+				log.WithError(err).Warn("Failed to cache next epoch proposers")
+			}
+		}()
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
@@ -506,7 +521,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err := helpers.UpdateCommitteeCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 
@@ -518,7 +533,6 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 	}
-
 	return nil
 }
 

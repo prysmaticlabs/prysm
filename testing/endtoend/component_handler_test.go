@@ -256,7 +256,7 @@ func (c *componentHandler) required() []e2etypes.ComponentRunner {
 func (c *componentHandler) printPIDs(logger func(string, ...interface{})) {
 	msg := "\nPID of components. Attach a debugger... if you dare!\n\n"
 
-	msg = "This test PID: " + strconv.Itoa(os.Getpid()) + " (parent=" + strconv.Itoa(os.Getppid()) + ")\n"
+	msg += "This test PID: " + strconv.Itoa(os.Getpid()) + " (parent=" + strconv.Itoa(os.Getppid()) + ")\n"
 
 	// Beacon chain nodes
 	msg += fmt.Sprintf("Beacon chain nodes: %v\n", PIDsFromMultiComponentRunner(c.beaconNodes))
