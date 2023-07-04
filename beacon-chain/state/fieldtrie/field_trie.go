@@ -210,17 +210,22 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 		length:      f.length,
 		numOfElems:  f.numOfElems,
 	}
-	// For validator fields we special case the transferance process
-	if f.field == types.Validators {
-		newLyr := make([]*[32]byte, len(f.fieldLayers[0]))
-		copy(newLyr, f.fieldLayers[0])
-		f.fieldLayers = [][]*[32]byte{newLyr}
-		f.isCompressed = true
-	} else {
-		// Zero out field layers here.
-		f.fieldLayers = nil
-		f.isTransferred = true
-	}
+	/*
+		// For validator fields we special case the transferance process
+		if f.field == types.Validators {
+			newLyr := make([]*[32]byte, len(f.fieldLayers[0]))
+			copy(newLyr, f.fieldLayers[0])
+			f.fieldLayers = [][]*[32]byte{newLyr}
+			f.isCompressed = true
+		} else {
+			// Zero out field layers here.
+			f.fieldLayers = nil
+			f.isTransferred = true
+		}*/
+	// Zero out field layers here.
+	f.fieldLayers = nil
+	f.isTransferred = true
+
 	return nTrie
 }
 
