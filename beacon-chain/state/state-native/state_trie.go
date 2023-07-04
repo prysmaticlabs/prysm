@@ -885,7 +885,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 		}
 	}
 
-	if fTrie.FieldReference().Refs() > 1 && !fTrie.IsCompressed() {
+	if fTrie.FieldReference().Refs() > 1 {
 		fTrie.FieldReference().MinusRef()
 		newTrie := fTrie.TransferTrie()
 		b.stateFieldLeaves[index] = newTrie
