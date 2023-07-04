@@ -525,11 +525,13 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:           "phase 0 post state",
 			postState:      phase0State,
+			blk:            altairBlk, // same as phase 0 for this test
 			isValidPayload: true,
 		},
 		{
 			name:           "altair post state",
 			postState:      altairState,
+			blk:            altairBlk,
 			isValidPayload: true,
 		},
 		{

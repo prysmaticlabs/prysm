@@ -189,6 +189,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 
 	// Execution payload is only supported in Bellatrix and beyond. Pre
 	// merge blocks are never optimistic
+	if blk == nil {
+		return false, errors.New("signed beacon block can't be nil")
+	}
 	if blk.Version() < version.Bellatrix {
 		return true, nil
 	}
