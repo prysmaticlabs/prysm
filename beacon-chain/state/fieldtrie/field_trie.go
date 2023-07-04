@@ -201,7 +201,6 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 			numOfElems: f.numOfElems,
 		}
 	}
-	f.isTransferred = true
 	nTrie := &FieldTrie{
 		fieldLayers: f.fieldLayers,
 		field:       f.field,
@@ -220,6 +219,7 @@ func (f *FieldTrie) TransferTrie() *FieldTrie {
 	} else {
 		// Zero out field layers here.
 		f.fieldLayers = nil
+		f.isTransferred = true
 	}
 	return nTrie
 }
