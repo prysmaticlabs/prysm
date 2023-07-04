@@ -192,7 +192,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 	if blk == nil {
 		return false, errors.New("signed beacon block can't be nil")
 	}
-	if blk.Version() < version.Bellatrix {
+	if preStateVersion < version.Bellatrix {
 		return true, nil
 	}
 	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
