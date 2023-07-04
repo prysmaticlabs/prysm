@@ -11,9 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 )
 
-// Server defines a server implementation of the Node service,
-// providing endpoints for verifying a beacon node's sync status, genesis and
-// version information.
 type Server struct {
 	SyncChecker               sync.Checker
 	OptimisticModeFetcher     blockchain.OptimisticModeFetcher
