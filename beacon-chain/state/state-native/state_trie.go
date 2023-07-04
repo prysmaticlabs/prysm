@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 var phase0Fields = []types.FieldIndex{
@@ -858,6 +859,27 @@ func (b *BeaconState) CopyAllTries() {
 			fieldTrie.Unlock()
 		}
 	}
+}
+
+func (b *BeaconState) CheckFieldTries() string {
+	fLayer := b.stateFieldLeaves[types.Validators].FieldLayer()
+	fTrie, err := fieldtrie.NewFieldTrie(types.Validators, fieldMap[types.Validators], b.validators, b.stateFieldLeaves[types.Validators].Length())
+	if err != nil {
+		return err.Error()
+	}
+	nLayer := fTrie.FieldLayer()
+	fRoots := make([][32]byte, len(fLayer[0]))
+	for i, r := range fLayer[0] {
+		rt := *r
+		fRoots[i] = rt
+	}
+	nRoots := make([][32]byte, len(nLayer[0]))
+	for i, r := range nLayer[0] {
+		rt := *r
+		nRoots[i] = rt
+	}
+	dff, _ := messagediff.PrettyDiff(fRoots, nRoots)
+	return dff
 }
 
 func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {

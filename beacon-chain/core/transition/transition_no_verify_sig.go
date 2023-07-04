@@ -79,8 +79,8 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	}
 	stateRoot := signed.Block().StateRoot()
 	if !bytes.Equal(postStateRoot[:], stateRoot[:]) {
-		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x",
-			postStateRoot[:], signed.Block().StateRoot())
+		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x and output %s",
+			postStateRoot[:], signed.Block().StateRoot(), st.CheckFieldTries())
 	}
 
 	return set, st, nil

@@ -22,6 +22,7 @@ type BeaconState interface {
 	Copy() BeaconState
 	CopyAllTries()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
+	CheckFieldTries() string
 	StateProver
 }
 

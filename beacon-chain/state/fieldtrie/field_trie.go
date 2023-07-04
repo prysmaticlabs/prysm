@@ -287,6 +287,10 @@ func (f *FieldTrie) InsertFieldLayer(layer [][]*[32]byte) {
 	f.fieldLayers = layer
 }
 
+func (f *FieldTrie) FieldLayer() [][]*[32]byte {
+	return f.fieldLayers
+}
+
 func copyLayer(lyr []*[32]byte) []*[32]byte {
 	newLyr := make([]*[32]byte, len(lyr))
 	copy(newLyr, lyr)
