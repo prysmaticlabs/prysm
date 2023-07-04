@@ -135,10 +135,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	}
 	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
-		if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
-			return s.pruneInvalidBlocks(ctx, blockRoot, parentRoot, InvalidBlockLVH(err))
-		}
-		return errors.Wrap(err, "could not validate new payload")
+		return s.handleInvalidExecutionError(ctx, err, blockRoot, parentRoot)
 	}
 	if signed.Version() < version.Capella && isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
@@ -407,10 +404,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			postVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].header, b)
 		if err != nil {
-			if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
-				return s.pruneInvalidBlocks(ctx, blockRoots[i], b.Block().ParentRoot(), InvalidBlockLVH(err))
-			}
-			return err
+			return s.handleInvalidExecutionError(ctx, err, blockRoots[i], b.Block().ParentRoot())
 		}
 		if isValidPayload {
 			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
@@ -722,4 +716,11 @@ func (s *Service) waitForSync() error {
 	case <-s.ctx.Done():
 		return errors.New("context closed, exiting goroutine")
 	}
+}
+
+func (s *Service) handleInvalidExecutionError(ctx context.Context, err error, blockRoot [32]byte, parentRoot [32]byte) error {
+	if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
+		return s.pruneInvalidBlocks(ctx, blockRoot, parentRoot, InvalidBlockLVH(err))
+	}
+	return err
 }
