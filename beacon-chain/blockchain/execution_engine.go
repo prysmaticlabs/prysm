@@ -189,7 +189,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 
 	// Execution payload is only supported in Bellatrix and beyond. Pre
 	// merge blocks are never optimistic
-	if blocks.IsPreBellatrixVersion(preStateVersion) {
+	if blk.Version() < version.Bellatrix {
 		return true, nil
 	}
 	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
@@ -231,7 +231,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 }
 
 // reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
-func (s *Service) reportInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
+func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
 	invalidRoots, err := s.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
 	if err != nil {

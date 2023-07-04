@@ -75,23 +75,26 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return errors.Wrap(err, "could not notify the engine of the new payload")
 	}
+	if err := s.savePostStateInfo(ctx, blockRoot, blockCopy, postState); err != nil {
+		return errors.Wrap(err, "could not save post state info")
+	}
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
 	// Apply state transition on the new block.
-	if err := s.onBlock(ctx, blockCopy, blockRoot, postState, isValidPayload); err != nil {
+	if err := s.postBlockProcess(ctx, blockCopy, blockRoot, postState, isValidPayload); err != nil {
 		err := errors.Wrap(err, "could not process block")
 		tracing.AnnotateError(span, err)
 		return err
 	}
 
 	if err := s.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch); err != nil {
-		log.WithError(err).Error("could not update justified checkpoint")
+		return errors.Wrap(err, "could not update justified checkpoint")
 	}
 
 	newFinalized, err := s.updateFinalizationOnBlock(ctx, preState, postState, currStoreFinalizedEpoch)
 	if err != nil {
-		log.WithError(err).Error("could not update finalized checkpoint")
+		return errors.Wrap(err, "could not update finalized checkpoint")
 	}
 	// Send finalized events and finalized deposits in the background
 	if newFinalized {
@@ -296,6 +299,8 @@ func (s *Service) validateStateTransition(ctx context.Context, preState state.Be
 	return postState, nil
 }
 
+// updateJustificationOnBlock updates the justified checkpoint on DB if the
+// incoming block has updated it on forkchoice.
 func (s *Service) updateJustificationOnBlock(ctx context.Context, preState, postState state.BeaconState, preJustifiedEpoch primitives.Epoch) error {
 	justified := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	preStateJustifiedEpoch := preState.CurrentJustifiedCheckpoint().Epoch
@@ -368,12 +373,12 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 	}
 }
 
-// validateExecutionOnBlock notifies the engine of the incoming block execution payload returns true if the payload is valid
+// validateExecutionOnBlock notifies the engine of the incoming block execution payload and returns true if the payload is valid
 func (s *Service) validateExecutionOnBlock(ctx context.Context, ver int, header interfaces.ExecutionData, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) (bool, error) {
 	isValidPayload, err := s.notifyNewPayload(ctx, ver, header, signed)
 	if err != nil {
 		if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
-			return false, s.reportInvalidBlock(ctx, blockRoot, signed.Block().ParentRoot(), InvalidBlockLVH(err))
+			return false, s.pruneInvalidBlock(ctx, blockRoot, signed.Block().ParentRoot(), InvalidBlockLVH(err))
 		}
 		return false, errors.Wrap(err, "could not validate new payload")
 	}

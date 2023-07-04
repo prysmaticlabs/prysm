@@ -219,6 +219,7 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) {
 	finalizedState, err := s.cfg.StateGen.StateByRoot(ctx, fRoot)
 	if err != nil {
 		log.WithError(err).Error("could not fetch finalized state")
+		return
 	}
 	// We update the cache up to the last deposit index in the finalized block's state.
 	// We can be confident that these deposits will be included in some block
@@ -226,6 +227,7 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) {
 	eth1DepositIndex, err := mathutil.Int(finalizedState.Eth1DepositIndex())
 	if err != nil {
 		log.WithError(err).Error("could not cast eth1 deposit index")
+		return
 	}
 	// The deposit index in the state is always the index of the next deposit
 	// to be included(rather than the last one to be processed). This was most likely
@@ -233,6 +235,7 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) {
 	eth1DepositIndex -= 1
 	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(eth1DepositIndex)); err != nil {
 		log.WithError(err).Error("could not insert finalized deposits")
+		return
 	}
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
 	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {

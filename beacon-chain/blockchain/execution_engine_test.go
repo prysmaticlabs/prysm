@@ -764,7 +764,7 @@ func Test_reportInvalidBlock(t *testing.T) {
 	require.NoError(t, fcs.InsertNode(ctx, st, root))
 
 	require.NoError(t, fcs.SetOptimisticToValid(ctx, [32]byte{'A'}))
-	err = service.reportInvalidBlock(ctx, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'a'})
+	err = service.pruneInvalidBlock(ctx, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'a'})
 	require.Equal(t, IsInvalidBlock(err), true)
 	require.Equal(t, InvalidBlockLVH(err), [32]byte{'a'})
 	invalidRoots := InvalidAncestorRoots(err)

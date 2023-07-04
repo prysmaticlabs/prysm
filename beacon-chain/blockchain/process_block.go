@@ -39,59 +39,11 @@ const depositDeadline = 20 * time.Second
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 
-// onBlock is called when a gossip block is received. It runs regular state transition on the block.
-// The block's signing root should be computed before calling this method to avoid redundant
-// computation in this method and methods it calls into.
-//
-// Spec pseudocode definition:
-//
-//	def on_block(store: Store, signed_block: ReadOnlySignedBeaconBlock) -> None:
-//	 block = signed_block.message
-//	 # Parent block must be known
-//	 assert block.parent_root in store.block_states
-//	 # Make a copy of the state to avoid mutability issues
-//	 pre_state = copy(store.block_states[block.parent_root])
-//	 # Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
-//	 assert get_current_slot(store) >= block.slot
-//
-//	 # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
-//	 finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-//	 assert block.slot > finalized_slot
-//	 # Check block is a descendant of the finalized block at the checkpoint finalized slot
-//	 assert get_ancestor(store, block.parent_root, finalized_slot) == store.finalized_checkpoint.root
-//
-//	 # Check the block is valid and compute the post-state
-//	 state = pre_state.copy()
-//	 state_transition(state, signed_block, True)
-//	 # Add new block to the store
-//	 store.blocks[hash_tree_root(block)] = block
-//	 # Add new state for this block to the store
-//	 store.block_states[hash_tree_root(block)] = state
-//
-//	 # Update justified checkpoint
-//	 if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-//	     if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
-//	         store.best_justified_checkpoint = state.current_justified_checkpoint
-//	     if should_update_justified_checkpoint(store, state.current_justified_checkpoint):
-//	         store.justified_checkpoint = state.current_justified_checkpoint
-//
-//	 # Update finalized checkpoint
-//	 if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
-//	     store.finalized_checkpoint = state.finalized_checkpoint
-//
-//	     # Potentially update justified if different from store
-//	     if store.justified_checkpoint != state.current_justified_checkpoint:
-//	         # Update justified if new justified is later than store justified
-//	         if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-//	             store.justified_checkpoint = state.current_justified_checkpoint
-//	             return
-//
-//	         # Update justified if store justified is not in chain with finalized checkpoint
-//	         finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-//	         ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
-//	         if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
-//	             store.justified_checkpoint = state.current_justified_checkpoint
-func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, postState state.BeaconState, isValidPayload bool) error {
+// postBlockProcess is called when a gossip block is received. This function performs
+// several duties most importantly informing the engine if head was updated,
+// saving the new head information to the blockchain package and database and
+// handling attestations, slashings and similar included in the block.
+func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, postState state.BeaconState, isValidPayload bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 	if err := consensusblocks.BeaconBlockIsNil(signed); err != nil {
@@ -100,9 +52,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	startTime := time.Now()
 	b := signed.Block()
 
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
-		return err
-	}
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, postState, blockRoot); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
