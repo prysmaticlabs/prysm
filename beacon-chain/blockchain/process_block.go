@@ -136,7 +136,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
 		if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
-			return s.reportInvalidBlock(ctx, blockRoot, parentRoot, InvalidBlockLVH(err))
+			return s.pruneInvalidBlocks(ctx, blockRoot, parentRoot, InvalidBlockLVH(err))
 		}
 		return errors.Wrap(err, "could not validate new payload")
 	}
@@ -407,6 +407,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			postVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].header, b)
 		if err != nil {
+			if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
+				return s.pruneInvalidBlocks(ctx, blockRoots[i], b.Block().ParentRoot(), InvalidBlockLVH(err))
+			}
 			return err
 		}
 		if isValidPayload {
