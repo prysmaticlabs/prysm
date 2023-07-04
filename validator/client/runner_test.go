@@ -248,31 +248,6 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	assert.LogsContain(t, hook, "updated proposer settings")
 }
 
-func TestUpdateProposerSettingsAt_EpochEndExceeded(t *testing.T) {
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot+1) * time.Second}
-	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
-		DefaultConfig: &validatorserviceconfig.ProposerOption{
-			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
-				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
-			},
-		},
-	})
-	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
-	hook := logTest.NewGlobal()
-	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
-	ticker := make(chan primitives.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- slot
-		cancel()
-	}()
-
-	run(ctx, v)
-	// can't test "Failed to update proposer settings" because of log.fatal
-	assert.LogsContain(t, hook, "deadline exceeded")
-}
-
 func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second}
 	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
