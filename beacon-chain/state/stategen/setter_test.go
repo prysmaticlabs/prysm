@@ -7,6 +7,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
@@ -135,6 +136,81 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 	// Should have not been saved in DB.
 	require.Equal(t, false, beaconDB.HasState(ctx, r))
+}
+
+func TestSaveState_RecoverForEpochBoundary(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB, doublylinkedtree.New())
+
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
+	r := [32]byte{'A'}
+	boundaryRoot := [32]byte{'B'}
+	require.NoError(t, beaconState.UpdateBlockRootAtIndex(0, boundaryRoot))
+
+	b := util.NewBeaconBlock()
+	util.SaveBlock(t, ctx, beaconDB, b)
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+	// Save boundary state to the hot state cache.
+	boundaryState, _ := util.DeterministicGenesisState(t, 32)
+	service.hotStateCache.put(boundaryRoot, boundaryState)
+	require.NoError(t, service.SaveState(ctx, r, beaconState))
+
+	rInfo, ok, err := service.epochBoundaryStateCache.getByBlockRoot(boundaryRoot)
+	assert.NoError(t, err)
+	assert.Equal(t, true, ok, "state does not exist in cache")
+	assert.Equal(t, rInfo.root, boundaryRoot, "incorrect root of root state info")
+	assert.Equal(t, rInfo.state.Slot(), primitives.Slot(0), "incorrect slot of state")
+}
+
+func TestSaveState_RecoverForEpochBoundary_NonCanonicalBoundaryState(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB, doublylinkedtree.New())
+
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
+	r := [32]byte{'A'}
+	boundaryRoot := [32]byte{'B'}
+	require.NoError(t, beaconState.UpdateBlockRootAtIndex(0, boundaryRoot))
+
+	// Epoch boundary state is inserted for slot 0
+	nonCanonicalRoot := [32]byte{'C'}
+	nonCanonicalSt, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.epochBoundaryStateCache.put(nonCanonicalRoot, nonCanonicalSt))
+
+	_, ok, err := service.epochBoundaryStateCache.getByBlockRoot(nonCanonicalRoot)
+	assert.NoError(t, err)
+	assert.Equal(t, true, ok, "state does not exist in cache")
+
+	rInfo, ok, err := service.epochBoundaryStateCache.getBySlot(0)
+	require.NoError(t, err)
+	require.Equal(t, true, ok)
+	require.Equal(t, nonCanonicalRoot, rInfo.root)
+
+	b := util.NewBeaconBlock()
+	util.SaveBlock(t, ctx, beaconDB, b)
+	gRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+	// Save boundary state to the hot state cache.
+	boundaryState, _ := util.DeterministicGenesisState(t, 32)
+	service.hotStateCache.put(boundaryRoot, boundaryState)
+
+	require.NoError(t, service.SaveState(ctx, r, beaconState))
+
+	rInfo, ok, err = service.epochBoundaryStateCache.getBySlot(0)
+	assert.NoError(t, err)
+	assert.Equal(t, true, ok, "state does not exist in cache")
+	assert.Equal(t, rInfo.root, boundaryRoot, "incorrect root of root state info")
+	assert.Equal(t, rInfo.state.Slot(), primitives.Slot(0), "incorrect slot of state")
+
+	_, ok, err = service.epochBoundaryStateCache.getByBlockRoot(nonCanonicalRoot)
+	assert.NoError(t, err)
+	assert.Equal(t, false, ok, "state exists in cache")
 }
 
 func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
