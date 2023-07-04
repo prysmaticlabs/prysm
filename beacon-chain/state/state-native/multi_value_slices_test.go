@@ -3,6 +3,7 @@ package state_native
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -11,6 +12,11 @@ import (
 )
 
 func TestCorrectness_FixedSize(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableExperimentalState: true,
+	})
+	defer resetFn()
+
 	m1_0 := bytesutil.ToBytes32([]byte("m1_0"))
 	m2_0 := bytesutil.ToBytes32([]byte("m2_0"))
 	m1_1 := bytesutil.ToBytes32([]byte("m1_1"))
@@ -98,6 +104,11 @@ func TestCorrectness_FixedSize(t *testing.T) {
 }
 
 func TestCorrectness_VariableSize(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableExperimentalState: true,
+	})
+	defer resetFn()
+
 	var bRootsArray [fieldparams.BlockRootsLength][32]byte
 	bRootsSlice := make([][]byte, len(bRootsArray))
 	for i := range bRootsArray {
@@ -120,6 +131,7 @@ func TestCorrectness_VariableSize(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(100), b)
 	assert.DeepEqual(t, []uint64{100, 101, 102}, st1.Balances())
+	assert.Equal(t, 3, st1.BalancesLength())
 
 	st2 := st1.Copy()
 	require.NoError(t, st2.UpdateBalancesAtIndex(0, 200))

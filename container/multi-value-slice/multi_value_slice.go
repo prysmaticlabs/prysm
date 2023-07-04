@@ -26,30 +26,27 @@ type MultiValue[V any] struct {
 }
 
 type Slice[V comparable, O Identifiable] struct {
-	SharedItems     []V
-	IndividualItems map[Id]*MultiValue[V]
-	AppendedItems   []*MultiValue[V]
+	sharedItems     []V
+	individualItems map[Id]*MultiValue[V]
+	appendedItems   []*MultiValue[V]
+	lengths         map[Id]int
 	lock            sync.RWMutex
+}
+
+func (s *Slice[V, O]) Init(items []V) {
+	s.sharedItems = items
+	s.individualItems = map[Id]*MultiValue[V]{}
+	s.appendedItems = []*MultiValue[V]{}
+	s.lengths = map[Id]int{}
 }
 
 func (s *Slice[V, O]) Len(obj O) int {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	l := len(s.SharedItems)
-	for i := 0; i < len(s.AppendedItems); i++ {
-		found := false
-		for _, mv := range s.AppendedItems[i].Individual {
-			for _, o := range mv.objs {
-				if o == obj.Id() {
-					found = true
-					l++
-				}
-			}
-		}
-		if !found {
-			return l
-		}
+	l, ok := s.lengths[obj.Id()]
+	if !ok {
+		return len(s.sharedItems)
 	}
 	return l
 }
@@ -58,7 +55,7 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	for _, item := range s.IndividualItems {
+	for _, item := range s.individualItems {
 	outerLoop:
 		for _, mv := range item.Individual {
 			for _, o := range mv.objs {
@@ -70,7 +67,7 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 		}
 	}
 
-	for _, item := range s.AppendedItems {
+	for _, item := range s.appendedItems {
 		found := false
 	outerLoop2:
 		for _, mv := range item.Individual {
@@ -86,15 +83,21 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 			return
 		}
 	}
+
+	srcLen, ok := s.lengths[src.Id()]
+	if ok {
+		s.lengths[dst.Id()] = srcLen
+	}
+
 }
 
 func (s *Slice[V, O]) Value(obj O) []V {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	v := make([]V, len(s.SharedItems))
-	for i, item := range s.SharedItems {
-		ind, ok := s.IndividualItems[uint64(i)]
+	v := make([]V, len(s.sharedItems))
+	for i, item := range s.sharedItems {
+		ind, ok := s.individualItems[uint64(i)]
 		if !ok {
 			v[i] = item
 		} else {
@@ -115,7 +118,7 @@ func (s *Slice[V, O]) Value(obj O) []V {
 		}
 	}
 
-	for _, item := range s.AppendedItems {
+	for _, item := range s.appendedItems {
 		found := false
 	outerLoop2:
 		for _, mv := range item.Individual {
@@ -139,16 +142,16 @@ func (s *Slice[V, O]) At(obj O, i uint64) (V, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	if i >= uint64(len(s.SharedItems)+len(s.AppendedItems)) {
+	if i >= uint64(len(s.sharedItems)+len(s.appendedItems)) {
 		var def V
 		return def, fmt.Errorf("index %d out of bounds", i)
 	}
 
-	isOriginal := i < uint64(len(s.SharedItems))
+	isOriginal := i < uint64(len(s.sharedItems))
 	if isOriginal {
-		ind, ok := s.IndividualItems[i]
+		ind, ok := s.individualItems[i]
 		if !ok {
-			return s.SharedItems[i], nil
+			return s.sharedItems[i], nil
 		}
 		for _, mv := range ind.Individual {
 			for _, o := range mv.objs {
@@ -157,9 +160,9 @@ func (s *Slice[V, O]) At(obj O, i uint64) (V, error) {
 				}
 			}
 		}
-		return s.SharedItems[i], nil
+		return s.sharedItems[i], nil
 	} else {
-		item := s.AppendedItems[i-uint64(len(s.SharedItems))]
+		item := s.appendedItems[i-uint64(len(s.sharedItems))]
 		for _, mv := range item.Individual {
 			for _, o := range mv.objs {
 				if o == obj.Id() {
@@ -176,13 +179,13 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if i >= uint64(len(s.SharedItems)+len(s.AppendedItems)) {
+	if i >= uint64(len(s.sharedItems)+len(s.appendedItems)) {
 		return fmt.Errorf("index %d out of bounds", i)
 	}
 
-	isOriginal := i < uint64(len(s.SharedItems))
+	isOriginal := i < uint64(len(s.sharedItems))
 	if isOriginal {
-		ind, ok := s.IndividualItems[i]
+		ind, ok := s.individualItems[i]
 		if ok {
 		outerLoop:
 			for mvi, mv := range ind.Individual {
@@ -191,7 +194,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 						if len(mv.objs) == 1 {
 							// TODO: Can we delete this safely?
 							//if len(ind.Individual) == 1 {
-							//delete(s.IndividualItems, i)
+							//delete(s.individualItems, i)
 							//} else {
 							ind.Individual = append(ind.Individual[:mvi], ind.Individual[mvi+1:]...)
 							//}
@@ -204,12 +207,12 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 			}
 		}
 
-		if val == s.SharedItems[i] {
+		if val == s.sharedItems[i] {
 			return nil
 		}
 
 		if !ok {
-			s.IndividualItems[i] = &MultiValue[V]{Individual: []*Value[V]{{val: val, objs: []uint64{obj.Id()}}}}
+			s.individualItems[i] = &MultiValue[V]{Individual: []*Value[V]{{val: val, objs: []uint64{obj.Id()}}}}
 		} else {
 			newValue := true
 			for _, mv := range ind.Individual {
@@ -224,7 +227,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 			}
 		}
 	} else {
-		item := s.AppendedItems[i-uint64(len(s.SharedItems))]
+		item := s.appendedItems[i-uint64(len(s.sharedItems))]
 		found := false
 	outerLoop2:
 		for mvi, mv := range item.Individual {
@@ -264,12 +267,12 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if len(s.AppendedItems) == 0 {
-		s.AppendedItems = []*MultiValue[V]{{Individual: []*Value[V]{{val: val, objs: []uint64{obj.Id()}}}}}
+	if len(s.appendedItems) == 0 {
+		s.appendedItems = []*MultiValue[V]{{Individual: []*Value[V]{{val: val, objs: []uint64{obj.Id()}}}}}
 		return
 	}
 
-	for _, item := range s.AppendedItems {
+	for _, item := range s.appendedItems {
 		found := false
 	outerLoop:
 		for _, mv := range item.Individual {
@@ -296,21 +299,28 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 		}
 	}
 
-	s.AppendedItems = append(s.AppendedItems, &MultiValue[V]{Individual: []*Value[V]{{val: val, objs: []uint64{obj.Id()}}}})
+	s.appendedItems = append(s.appendedItems, &MultiValue[V]{Individual: []*Value[V]{{val: val, objs: []uint64{obj.Id()}}}})
+
+	srcLen, ok := s.lengths[obj.Id()]
+	if ok {
+		s.lengths[obj.Id()] = srcLen + 1
+	} else {
+		s.lengths[obj.Id()] = len(s.sharedItems) + 1
+	}
 }
 
 func (s *Slice[V, O]) Detach(obj O) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	for i, ind := range s.IndividualItems {
+	for i, ind := range s.individualItems {
 	outerLoop:
 		for mvi, mv := range ind.Individual {
 			for oi, o := range mv.objs {
 				if o == obj.Id() {
 					if len(mv.objs) == 1 {
 						if len(ind.Individual) == 1 {
-							delete(s.IndividualItems, i)
+							delete(s.individualItems, i)
 						} else {
 							ind.Individual = append(ind.Individual[:mvi], ind.Individual[mvi+1:]...)
 						}
@@ -322,7 +332,7 @@ func (s *Slice[V, O]) Detach(obj O) {
 			}
 		}
 	}
-	for _, item := range s.AppendedItems {
+	for _, item := range s.appendedItems {
 		found := false
 	outerLoop2:
 		for mvi, mv := range item.Individual {
@@ -342,4 +352,6 @@ func (s *Slice[V, O]) Detach(obj O) {
 			return
 		}
 	}
+
+	delete(s.lengths, obj.Id())
 }

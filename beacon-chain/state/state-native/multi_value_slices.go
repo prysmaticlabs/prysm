@@ -14,11 +14,9 @@ func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
 	for i, v := range mixes {
 		items[i] = [32]byte(bytesutil.PadTo(v, 32))
 	}
-	return &MultiValueRandaoMixes{
-		SharedItems:     items,
-		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[[32]byte]{},
-		AppendedItems:   []*multi_value_slice.MultiValue[[32]byte]{},
-	}
+	mv := &MultiValueRandaoMixes{}
+	mv.Init(items)
+	return mv
 }
 
 type MultiValueBlockRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
@@ -28,11 +26,9 @@ func NewMultiValueBlockRoots(roots [][]byte) *MultiValueBlockRoots {
 	for i, v := range roots {
 		items[i] = [32]byte(bytesutil.PadTo(v, 32))
 	}
-	return &MultiValueBlockRoots{
-		SharedItems:     items,
-		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[[32]byte]{},
-		AppendedItems:   []*multi_value_slice.MultiValue[[32]byte]{},
-	}
+	mv := &MultiValueBlockRoots{}
+	mv.Init(items)
+	return mv
 }
 
 type MultiValueStateRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
@@ -42,11 +38,9 @@ func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 	for i, v := range roots {
 		items[i] = [32]byte(bytesutil.PadTo(v, 32))
 	}
-	return &MultiValueStateRoots{
-		SharedItems:     items,
-		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[[32]byte]{},
-		AppendedItems:   []*multi_value_slice.MultiValue[[32]byte]{},
-	}
+	mv := &MultiValueStateRoots{}
+	mv.Init(items)
+	return mv
 }
 
 type MultiValueBalances = multi_value_slice.Slice[uint64, *BeaconState]
@@ -54,31 +48,25 @@ type MultiValueBalances = multi_value_slice.Slice[uint64, *BeaconState]
 func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
 	items := make([]uint64, len(balances))
 	copy(items, balances)
-	return &MultiValueBalances{
-		SharedItems:     items,
-		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[uint64]{},
-		AppendedItems:   []*multi_value_slice.MultiValue[uint64]{},
-	}
+	mv := &MultiValueBalances{}
+	mv.Init(items)
+	return mv
 }
 
 type MultiValueInactivityScores = multi_value_slice.Slice[uint64, *BeaconState]
 
-func NewMultiValueInactivityScores(balances []uint64) *MultiValueInactivityScores {
-	items := make([]uint64, len(balances))
-	copy(items, balances)
-	return &MultiValueInactivityScores{
-		SharedItems:     items,
-		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[uint64]{},
-		AppendedItems:   []*multi_value_slice.MultiValue[uint64]{},
-	}
+func NewMultiValueInactivityScores(scores []uint64) *MultiValueInactivityScores {
+	items := make([]uint64, len(scores))
+	copy(items, scores)
+	mv := &MultiValueInactivityScores{}
+	mv.Init(items)
+	return mv
 }
 
 type MultiValueValidators = multi_value_slice.Slice[*ethpb.Validator, *BeaconState]
 
 func NewMultiValueValidators(vals []*ethpb.Validator) *MultiValueValidators {
-	return &MultiValueValidators{
-		SharedItems:     vals,
-		IndividualItems: map[multi_value_slice.Id]*multi_value_slice.MultiValue[*ethpb.Validator]{},
-		AppendedItems:   []*multi_value_slice.MultiValue[*ethpb.Validator]{},
-	}
+	mv := &MultiValueValidators{}
+	mv.Init(vals)
+	return mv
 }
