@@ -238,6 +238,18 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		assignValidatorToSubnet(pubKey, nextAssignment.Status)
 	}
 
+	// Cache proposer assignment for the current epoch.
+	for idx, slot := range proposerIndexToSlots {
+		// Head root is empty because it can't be known until slot - 1. Same with payload id.
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot[0], idx, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
+	}
+	// Cache proposer assignment for the next epoch.
+	for idx, slot := range nextProposerIndexToSlots {
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot[0], idx, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
+	}
+	// Prune payload ID cache for any slots before request slot.
+	vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
+
 	return &ethpb.DutiesResponse{
 		Duties:             validatorAssignments,
 		CurrentEpochDuties: validatorAssignments,

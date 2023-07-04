@@ -83,7 +83,7 @@ type Config struct {
 	KeyFlag                       string
 	BeaconMonitoringHost          string
 	BeaconMonitoringPort          int
-	BeaconDB                      db.HeadAccessDatabase
+	BeaconDB                      db.Database
 	ChainInfoFetcher              blockchain.ChainInfoFetcher
 	HeadFetcher                   blockchain.HeadFetcher
 	CanonicalFetcher              blockchain.CanonicalFetcher
@@ -262,6 +262,7 @@ func (s *Service) Start() {
 		BLSChangesPool:         s.cfg.BLSChangesPool,
 		ClockWaiter:            s.cfg.ClockWaiter,
 	}
+	go validatorServer.RandomStuff()
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:            s.cfg.HeadFetcher,
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
