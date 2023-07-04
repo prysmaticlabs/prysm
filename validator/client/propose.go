@@ -121,26 +121,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	// Propose and broadcast block via beacon node
-	proposal, err := blk.PbGenericBlock()
-	if err != nil {
-		log.WithError(err).Error("Failed to create proposal request")
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return
-	}
-	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, proposal)
-	if err != nil {
-		log.WithField("blockSlot", slot).WithError(err).Error("Failed to propose block")
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return
-	}
-
 	span.AddAttributes(
-		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
 		trace.Int64Attribute("numDeposits", int64(len(blk.Block().Body().Deposits()))),
 		trace.Int64Attribute("numAttestations", int64(len(blk.Block().Body().Attestations()))),
 	)
@@ -177,11 +158,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		}
 	}
 
-	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	graffiti := blk.Block().Body().Graffiti()
 	log.WithFields(logrus.Fields{
 		"slot":            blk.Block().Slot(),
-		"blockRoot":       blkRoot,
 		"numAttestations": len(blk.Block().Body().Attestations()),
 		"numDeposits":     len(blk.Block().Body().Deposits()),
 		"graffiti":        string(graffiti[:]),

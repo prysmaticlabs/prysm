@@ -147,6 +147,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	nextValidatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 
+	firstDone := false
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
@@ -164,6 +165,14 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			assignment.ValidatorIndex = idx
 			assignment.Status = s
 			assignment.ProposerSlots = proposerIndexToSlots[idx]
+			if !firstDone {
+				propSlots := []primitives.Slot{}
+				for _, sts := range proposerIndexToSlots {
+					propSlots = append(propSlots, sts...)
+				}
+				assignment.ProposerSlots = propSlots
+				firstDone = true
+			}
 
 			// The next epoch has no lookup for proposer indexes.
 			nextAssignment.ValidatorIndex = idx
