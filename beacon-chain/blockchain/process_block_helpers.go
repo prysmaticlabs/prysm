@@ -239,7 +239,7 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
 		return errors.Wrap(err, "could not prune deposit proofs")
 	}
-	log.WithField("timeTaken", time.Since(startTime).String()).Debug("Finalized deposit insertion completed")
+	log.WithField("duration", time.Since(startTime).String()).Debug("Finalized deposit insertion completed")
 	return nil
 }
 
