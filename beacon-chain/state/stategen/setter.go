@@ -88,25 +88,20 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		if err != nil {
 			return err
 		}
-		rInfo, ok, err := s.epochBoundaryStateCache.getBySlot(epochStart)
-		if err != nil {
-			return err
-		}
 		bRoot, err := helpers.BlockRootAtSlot(st, epochStart)
 		if err != nil {
 			return err
 		}
+		_, ok, err := s.epochBoundaryStateCache.getByBlockRoot([32]byte(bRoot))
+		if err != nil {
+			return err
+		}
 
-		nonCanonicalState := ok && [32]byte(bRoot) != rInfo.root
-
-		// We would only recover the boundary states under 2 conditions:
+		// We would only recover the boundary states under this condition:
 		//
 		// 1) Would indicate that the epoch boundary was skipped due to a missed slot, we
 		// then recover by saving the state at that particular slot here.
-		//
-		// 2) Check that the canonical epoch boundary state has been saved
-		// in our epoch boundary cache.
-		if !ok || nonCanonicalState {
+		if !ok {
 			// Only recover the state if it is in our hot state cache, otherwise we
 			// simply skip this step.
 			if s.hotStateCache.has([32]byte(bRoot)) {
@@ -115,12 +110,6 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 					"root": fmt.Sprintf("%#x", bRoot),
 				}).Debug("Recovering state for epoch boundary cache")
 
-				// Remove the non-canonical state from our cache.
-				if nonCanonicalState {
-					if err := s.epochBoundaryStateCache.delete(rInfo.root); err != nil {
-						return err
-					}
-				}
 				hState := s.hotStateCache.get([32]byte(bRoot))
 				if err := s.epochBoundaryStateCache.put([32]byte(bRoot), hState); err != nil {
 					return err
