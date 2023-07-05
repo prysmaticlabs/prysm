@@ -568,6 +568,7 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
 		require.NoError(t, service.postBlockProcess(ctx, wsb, r, postState, true))
 		require.NoError(t, service.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch))
 		_, err = service.updateFinalizationOnBlock(ctx, preState, postState, currStoreFinalizedEpoch)
@@ -615,6 +616,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
 		require.NoError(t, service.postBlockProcess(ctx, wsb, r, postState, true))
 		require.NoError(t, service.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch))
 		_, err = service.updateFinalizationOnBlock(ctx, preState, postState, currStoreFinalizedEpoch)
@@ -688,6 +690,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
 		require.NoError(t, service.postBlockProcess(ctx, wsb, r, postState, false))
 		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
 		require.NoError(t, err)
@@ -1163,6 +1166,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
 	}
 
@@ -1180,6 +1184,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		err = service.postBlockProcess(ctx, wsb, root, postState, false)
 		require.NoError(t, err)
 	}
@@ -1198,6 +1203,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		err = service.postBlockProcess(ctx, wsb, root, postState, false)
 		require.NoError(t, err)
 	}
@@ -1219,6 +1225,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, firstInvalidRoot, wsb, postState))
 	err = service.postBlockProcess(ctx, wsb, firstInvalidRoot, postState, false)
 	require.NoError(t, err)
 	jc = service.cfg.ForkChoiceStore.JustifiedCheckpoint()
@@ -1246,6 +1253,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 	err = service.postBlockProcess(ctx, wsb, root, postState, false)
 	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
 	// Check that forkchoice's head is the last invalid block imported. The
@@ -1274,6 +1282,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 	err = service.postBlockProcess(ctx, wsb, root, postState, true)
 	require.NoError(t, err)
 	// Check the newly imported block is head, it justified the right
@@ -1335,6 +1344,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
 	}
 
@@ -1352,6 +1362,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		err = service.postBlockProcess(ctx, wsb, root, postState, false)
 		require.NoError(t, err)
 	}
@@ -1371,6 +1382,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		err = service.postBlockProcess(ctx, wsb, root, postState, false)
 		require.NoError(t, err)
 	}
@@ -1392,6 +1404,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, firstInvalidRoot, wsb, postState))
 	err = service.postBlockProcess(ctx, wsb, firstInvalidRoot, postState, false)
 	require.NoError(t, err)
 	jc = service.cfg.ForkChoiceStore.JustifiedCheckpoint()
@@ -1447,6 +1460,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 	err = service.postBlockProcess(ctx, wsb, root, postState, true)
 	require.NoError(t, err)
 	// Check the newly imported block is head, it justified the right
@@ -1510,6 +1524,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
 	}
 
@@ -1528,6 +1543,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		err = service.postBlockProcess(ctx, wsb, root, postState, false)
 		require.NoError(t, err)
 	}
@@ -1546,6 +1562,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, lastValidRoot, wsb, postState))
 	err = service.postBlockProcess(ctx, wsb, lastValidRoot, postState, false)
 	require.NoError(t, err)
 	// save the post state and the payload Hash of this block since it will
@@ -1572,6 +1589,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, invalidRoots[i-13], wsb, postState))
 		err = service.postBlockProcess(ctx, wsb, invalidRoots[i-13], postState, false)
 		require.NoError(t, err)
 	}
@@ -1636,6 +1654,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 	require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, true))
 	// Check that the head is still INVALID and the node is still optimistic
 	require.Equal(t, invalidHeadRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
@@ -1658,6 +1677,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		err = service.postBlockProcess(ctx, wsb, root, postState, true)
 		require.NoError(t, err)
 		st, err = service.cfg.StateGen.StateByRoot(ctx, root)
@@ -1683,6 +1703,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 	err = service.postBlockProcess(ctx, wsb, root, postState, true)
 	require.NoError(t, err)
 	require.Equal(t, root, service.cfg.ForkChoiceStore.CachedHeadRoot())
@@ -1738,6 +1759,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
 	}
 
@@ -1755,6 +1777,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		err = service.postBlockProcess(ctx, wsb, root, postState, false)
 		require.NoError(t, err)
 	}
@@ -1773,6 +1796,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, lastValidRoot, wsb, postState))
 	err = service.postBlockProcess(ctx, wsb, lastValidRoot, postState, false)
 	require.NoError(t, err)
 	// save the post state and the payload Hash of this block since it will
@@ -1801,6 +1825,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
+		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
 		require.NoError(t, service.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch))
 		_, err = service.updateFinalizationOnBlock(ctx, preState, postState, currStoreFinalizedEpoch)
@@ -1913,6 +1938,7 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
+	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 	require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
 
 	st, err = service.HeadState(ctx)
