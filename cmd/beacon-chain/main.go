@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	runtimeDebug "runtime/debug"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
@@ -203,6 +204,7 @@ func main() {
 		if err := fdlimits.SetMaxFdLimits(); err != nil {
 			return err
 		}
+		runtime.GOMAXPROCS(3)
 		return cmd.ValidateNoArgs(ctx)
 	}
 
