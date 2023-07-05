@@ -499,6 +499,13 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 	return ar[:], nil
 }
 
+// SetOptimisticToInvalid wraps the corresponding method in forkchoice
+func (s *Service) SetOptimisticToInvalid(ctx context.Context, root, parent, lvh [32]byte) ([][32]byte, error) {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	return s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parent, lvh)
+}
+
 // SetGenesisTime sets the genesis time of beacon chain.
 func (s *Service) SetGenesisTime(t time.Time) {
 	s.genesisTime = t
