@@ -204,7 +204,7 @@ func main() {
 		if err := fdlimits.SetMaxFdLimits(); err != nil {
 			return err
 		}
-		runtime.GOMAXPROCS(3)
+		runtime.GOMAXPROCS(2)
 		return cmd.ValidateNoArgs(ctx)
 	}
 

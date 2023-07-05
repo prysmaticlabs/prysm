@@ -8,6 +8,6 @@ import (
 
 func init() {
 	// Reserve 1 core for general application work
-	maxProcs := 2
+	maxProcs := 1
 	blst.SetMaxProcs(maxProcs)
 }
