@@ -243,7 +243,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			postVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].header, b)
 		if err != nil {
-			return err
+			return s.handleInvalidExecutionError(ctx, err, blockRoots[i], b.Block().ParentRoot())
 		}
 		if isValidPayload {
 			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
@@ -555,4 +555,11 @@ func (s *Service) waitForSync() error {
 	case <-s.ctx.Done():
 		return errors.New("context closed, exiting goroutine")
 	}
+}
+
+func (s *Service) handleInvalidExecutionError(ctx context.Context, err error, blockRoot [32]byte, parentRoot [32]byte) error {
+	if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
+		return s.pruneInvalidBlock(ctx, blockRoot, parentRoot, InvalidBlockLVH(err))
+	}
+	return err
 }

@@ -377,10 +377,7 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 func (s *Service) validateExecutionOnBlock(ctx context.Context, ver int, header interfaces.ExecutionData, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) (bool, error) {
 	isValidPayload, err := s.notifyNewPayload(ctx, ver, header, signed)
 	if err != nil {
-		if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
-			return false, s.pruneInvalidBlock(ctx, blockRoot, signed.Block().ParentRoot(), InvalidBlockLVH(err))
-		}
-		return false, errors.Wrap(err, "could not validate new payload")
+		return false, s.handleInvalidExecutionError(ctx, err, blockRoot, signed.Block().ParentRoot())
 	}
 	if signed.Version() < version.Capella && isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, ver, header, signed); err != nil {
