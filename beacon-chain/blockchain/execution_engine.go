@@ -182,21 +182,24 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 
 // notifyNewPayload signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
-func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
-	postStateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock) (bool, error) {
+func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
+	preStateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 
 	// Execution payload is only supported in Bellatrix and beyond. Pre
 	// merge blocks are never optimistic
-	if blocks.IsPreBellatrixVersion(postStateVersion) {
+	if blk == nil {
+		return false, errors.New("signed beacon block can't be nil")
+	}
+	if preStateVersion < version.Bellatrix {
 		return true, nil
 	}
 	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
 		return false, err
 	}
 	body := blk.Block().Body()
-	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
+	enabled, err := blocks.IsExecutionEnabledUsingHeader(preStateHeader, body)
 	if err != nil {
 		return false, errors.Wrap(invalidBlock{error: err}, "could not determine if execution is enabled")
 	}
@@ -231,9 +234,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 }
 
 // reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
-func (s *Service) reportInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
+func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
-	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	invalidRoots, err := s.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
 	if err != nil {
 		return err
 	}
