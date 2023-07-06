@@ -71,6 +71,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		blockchain.LateBlockAttemptedReorgCount.Inc()
 	}
 
+	log.Infof("Updated head at %s", time.Since(t))
+
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
 		if err := vs.optimisticStatus(ctx); err != nil {
@@ -91,6 +93,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
 
+	log.Infof("Processed slots at %s", time.Since(t))
+
 	// Set slot, graffiti, randao reveal, and parent root.
 	sBlk.SetSlot(req.Slot)
 	sBlk.SetGraffiti(req.Graffiti)
@@ -104,8 +108,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
+	log.Infof("Retrieved proposer index at %s", time.Since(t))
+
 	if features.Get().BuildBlockParallel {
-		if err := vs.BuildBlockParallel(ctx, sBlk, head); err != nil {
+		if err := vs.BuildBlockParallel(ctx, sBlk, head, t); err != nil {
 			return nil, errors.Wrap(err, "could not build block in parallel")
 		}
 	} else {
@@ -162,6 +168,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	sBlk.SetStateRoot(sr)
+	log.Infof("Computed state root at %s", time.Since(t))
 
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
@@ -191,7 +198,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) error {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, startTime time.Time) error {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -205,6 +212,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 			log.WithError(err).Error("Could not get eth1data")
 		}
 		sBlk.SetEth1Data(eth1Data)
+		log.Infof("checked eth1data majority at %s", time.Since(startTime))
 
 		// Set deposit and attestation.
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
@@ -216,20 +224,27 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 			sBlk.SetDeposits(deposits)
 			sBlk.SetAttestations(atts)
 		}
+		log.Infof("packed deposits and attestations at %s", time.Since(startTime))
 
 		// Set slashings.
 		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 		sBlk.SetProposerSlashings(validProposerSlashings)
 		sBlk.SetAttesterSlashings(validAttSlashings)
 
+		log.Infof("got slashings at %s", time.Since(startTime))
+
 		// Set exits.
 		sBlk.SetVoluntaryExits(vs.getExits(head, sBlk.Block().Slot()))
+		log.Infof("set voluntary exits at %s", time.Since(startTime))
 
 		// Set sync aggregate. New in Altair.
 		vs.setSyncAggregate(ctx, sBlk)
+		log.Infof("set sync aggregate at %s", time.Since(startTime))
 
 		// Set bls to execution change. New in Capella.
 		vs.setBlsToExecData(sBlk, head)
+		log.Infof("set bls data at %s", time.Since(startTime))
+
 	}()
 
 	localPayload, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
@@ -246,6 +261,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
 		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
+	log.Infof("set execution data at %s", time.Since(startTime))
 
 	wg.Wait() // Wait until block is built via consensus and execution fields.
 

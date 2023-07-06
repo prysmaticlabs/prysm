@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -23,6 +24,7 @@ func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.Be
 	var atts []*ethpb.Attestation
 
 	eg.Go(func() error {
+		stTime := time.Now()
 		// Pack ETH1 deposits which have not been included in the beacon chain.
 		localDeposits, err := vs.deposits(egctx, head, eth1Data)
 		if err != nil {
@@ -35,10 +37,13 @@ func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.Be
 		default:
 		}
 		deposits = localDeposits
+		log.Infof("took %s to retrieve deposits", time.Since(stTime))
+
 		return nil
 	})
 
 	eg.Go(func() error {
+		stTime := time.Now()
 		// Pack aggregated attestations which have not been included in the beacon chain.
 		localAtts, err := vs.packAttestations(egctx, head)
 		if err != nil {
@@ -51,6 +56,7 @@ func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.Be
 		default:
 		}
 		atts = localAtts
+		log.Infof("took %s to retrieve attestations", time.Since(stTime))
 		return nil
 	})
 
