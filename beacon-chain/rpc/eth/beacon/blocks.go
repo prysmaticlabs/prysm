@@ -25,8 +25,10 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -423,6 +425,9 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	// ErrUnsupportedField means that we have another block type
 	if !errors.Is(err, consensus_types.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
+	if err := grpc.SetHeader(ctx, metadata.Pairs("Eth-Consensus-Version", version.String(blk.Version()))); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set Eth-Consensus-Version header: %v", err)
 	}
 	result, err = getBlockAltair(blk)
 	if result != nil {

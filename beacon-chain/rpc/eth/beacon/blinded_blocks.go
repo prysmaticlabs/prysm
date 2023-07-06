@@ -17,7 +17,9 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -38,7 +40,9 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get block root")
 	}
-
+	if err := grpc.SetHeader(ctx, metadata.Pairs("Eth-Consensus-Version", version.String(blk.Version()))); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set Eth-Consensus-Version header: %v", err)
+	}
 	result, err := getBlindedBlockPhase0(blk)
 	if result != nil {
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
