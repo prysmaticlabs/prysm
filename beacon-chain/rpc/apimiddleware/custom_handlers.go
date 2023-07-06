@@ -21,7 +21,7 @@ import (
 
 const (
 	versionHeader        = "Eth-Consensus-Version"
-	grpcVersionHeader    = "Grpc-metadata-Eth-Consensus-Version"
+	grpcVersionHeader    = "Grpc-Metadata-Eth-Consensus-Version"
 	jsonMediaType        = "application/json"
 	octetStreamMediaType = "application/octet-stream"
 )
