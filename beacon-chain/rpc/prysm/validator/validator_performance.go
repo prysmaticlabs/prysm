@@ -30,7 +30,7 @@ type ValidatorPerformanceResponse struct {
 // GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
 func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
 	if vs.SyncChecker.Syncing() {
-		handleHTTPError(w, "Syncing", http.StatusInternalServerError)
+		handleHTTPError(w, "Syncing", http.StatusServiceUnavailable)
 		return
 	}
 	ctx := r.Context()
