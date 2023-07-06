@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -42,7 +42,7 @@ func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
-	computed, err := rpc.ComputeValidatorPerformance(
+	computed, err := core.ComputeValidatorPerformance(
 		ctx,
 		&ethpb.ValidatorPerformanceRequest{
 			PublicKeys: req.PublicKeys,
