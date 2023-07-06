@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
+	gatewaymiddleware "github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -931,7 +932,7 @@ func TestGetChainHead(t *testing.T) {
 }
 
 func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
-	const getValidatorPerformanceEndpoint = "/eth/v1/beacon/validator/performance"
+	const getValidatorPerformanceEndpoint = "/eth/v1/beacon/validators/performance"
 	publicKeys := [][48]byte{
 		bytesutil.ToBytes48([]byte{1}),
 		bytesutil.ToBytes48([]byte{2}),
@@ -943,22 +944,21 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		request := &ethpb.ValidatorPerformanceRequest{
+		request, err := json.Marshal(validator.ValidatorPerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
-		}
-		var buf bytes.Buffer
-		err := json.NewEncoder(&buf).Encode(request)
+		})
 		require.NoError(t, err)
 
+		wantResponse := &validator.ValidatorPerformanceResponse{}
 		jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 		jsonRestHandler.EXPECT().PostRestJson(
 			ctx,
 			getValidatorPerformanceEndpoint,
 			nil,
-			buf,
-			&validator.ValidatorPerformanceResponse{},
+			bytes.NewBuffer(request),
+			wantResponse,
 		).Return(
-			nil,
+			&gatewaymiddleware.DefaultErrorJson{},
 			nil,
 		)
 
@@ -966,7 +966,9 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 			jsonRestHandler: jsonRestHandler,
 		}
 
-		got, err := c.GetValidatorPerformance(ctx, request)
+		got, err := c.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
+		})
 		require.NoError(t, err)
 		fmt.Println(got)
 	})

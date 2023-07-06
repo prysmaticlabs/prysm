@@ -333,7 +333,7 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 		"/eth/v1/beacon/validators/performance",
 		nil,
 		bytes.NewBuffer(request),
-		&resp,
+		resp,
 	); err != nil {
 		return nil, errors.Wrap(err, "failed to get validator performance")
 	}
