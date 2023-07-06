@@ -5,6 +5,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"gopkg.in/yaml.v2"
 )
 
 // BeaconState has read and write access to beacon state methods.
@@ -23,6 +25,8 @@ type BeaconState interface {
 	CopyAllTries()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	StateProver
+	json.Marshaler
+	yaml.Marshaler
 }
 
 // SpecParametersProvider provides fork-specific configuration parameters as

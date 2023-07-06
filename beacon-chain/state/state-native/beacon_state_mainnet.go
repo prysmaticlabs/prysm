@@ -60,3 +60,11 @@ type BeaconState struct {
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }
+
+func (bs *BeaconState) MarshalJSON() ([]byte, error) {
+	return nil, nil
+}
+
+func (bs *BeaconState) MarshalYAML() ([]byte, error) {
+	return nil, nil
+}
