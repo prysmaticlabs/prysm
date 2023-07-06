@@ -13,7 +13,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -320,14 +320,14 @@ func (c beaconApiBeaconChainClient) GetValidatorQueue(ctx context.Context, in *e
 }
 
 func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context, in *ethpb.ValidatorPerformanceRequest) (*ethpb.ValidatorPerformanceResponse, error) {
-	request, err := json.Marshal(beacon.ValidatorPerformanceRequest{
+	request, err := json.Marshal(validator.ValidatorPerformanceRequest{
 		PublicKeys: in.PublicKeys,
 		Indices:    in.Indices,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal request")
 	}
-	resp := &beacon.ValidatorPerformanceResponse{}
+	resp := &validator.ValidatorPerformanceResponse{}
 	if _, err := c.jsonRestHandler.PostRestJson(
 		ctx,
 		"/eth/v1/beacon/validators/performance",
