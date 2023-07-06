@@ -115,6 +115,9 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []
 		responseHasError = true
 		// Something went wrong, but the request completed, meaning we can write headers and the error message.
 		for h, vs := range resp.Header {
+			if strings.HasSuffix(h, "Eth-Consensus-Version") {
+				w.Header().Set("Eth-Consensus-Version", vs[0])
+			}
 			for _, v := range vs {
 				w.Header().Set(h, v)
 			}
@@ -190,7 +193,7 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 		if strings.HasPrefix(h, "Grpc-Metadata") {
 			if h == "Grpc-Metadata-"+grpc.HttpCodeMetadataKey {
 				statusCodeHeader = vs[0]
-			} else if h == "Grpc-Metadata-Eth-Consensus-Version" {
+			} else if strings.HasSuffix(h, "Eth-Consensus-Version") {
 				w.Header().Set("Eth-Consensus-Version", vs[0])
 			}
 		} else {
