@@ -35,7 +35,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-const versionHeader = "eth-consensus-version"
+const versionHeader = "Eth-Consensus-Version"
 
 var (
 	errNilBlock = errors.New("nil block")
