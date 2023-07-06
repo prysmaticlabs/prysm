@@ -939,37 +939,36 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 		bytesutil.ToBytes48([]byte{3}),
 	}
 
-	t.Run("Ok", func(t *testing.T) {
-		ctx := context.Background()
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-		request, err := json.Marshal(validator.ValidatorPerformanceRequest{
-			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
-		})
-		require.NoError(t, err)
-
-		wantResponse := &validator.ValidatorPerformanceResponse{}
-		jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-		jsonRestHandler.EXPECT().PostRestJson(
-			ctx,
-			getValidatorPerformanceEndpoint,
-			nil,
-			bytes.NewBuffer(request),
-			wantResponse,
-		).Return(
-			&gatewaymiddleware.DefaultErrorJson{},
-			nil,
-		)
-
-		c := beaconApiBeaconChainClient{
-			jsonRestHandler: jsonRestHandler,
-		}
-
-		got, err := c.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
-			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
-		})
-		require.NoError(t, err)
-		fmt.Println(got)
+	request, err := json.Marshal(validator.ValidatorPerformanceRequest{
+		PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 	})
+	require.NoError(t, err)
+
+	wantResponse := &validator.ValidatorPerformanceResponse{}
+	want := &ethpb.ValidatorPerformanceResponse{}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
+		getValidatorPerformanceEndpoint,
+		nil,
+		bytes.NewBuffer(request),
+		wantResponse,
+	).Return(
+		&gatewaymiddleware.DefaultErrorJson{},
+		nil,
+	)
+
+	c := beaconApiBeaconChainClient{
+		jsonRestHandler: jsonRestHandler,
+	}
+
+	got, err := c.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+		PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
+	})
+	require.NoError(t, err)
+	require.DeepEqual(t, want.PublicKeys, got.PublicKeys)
 }
