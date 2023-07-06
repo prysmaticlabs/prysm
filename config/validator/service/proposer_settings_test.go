@@ -98,3 +98,117 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 
 	})
 }
+
+func TestProposerSettings_ShouldBeSaved(t *testing.T) {
+	key1hex := "0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a"
+	key1, err := hexutil.Decode(key1hex)
+	require.NoError(t, err)
+	type fields struct {
+		ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption
+		DefaultConfig *ProposerOption
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "Should be saved, proposeconfig populated and no default config",
+			fields: fields{
+				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption{
+					bytesutil.ToBytes48(key1): {
+						FeeRecipientConfig: &FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+						},
+						BuilderConfig: &BuilderConfig{
+							Enabled:  true,
+							GasLimit: validator.Uint64(40000000),
+							Relays:   []string{"https://example-relay.com"},
+						},
+					},
+				},
+				DefaultConfig: nil,
+			},
+			want: true,
+		},
+		{
+			name: "Should be saved, default populated and no proposeconfig ",
+			fields: fields{
+				ProposeConfig: nil,
+				DefaultConfig: &ProposerOption{
+					FeeRecipientConfig: &FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+					},
+					BuilderConfig: &BuilderConfig{
+						Enabled:  true,
+						GasLimit: validator.Uint64(40000000),
+						Relays:   []string{"https://example-relay.com"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "Should be saved, all populated",
+			fields: fields{
+				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption{
+					bytesutil.ToBytes48(key1): {
+						FeeRecipientConfig: &FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+						},
+						BuilderConfig: &BuilderConfig{
+							Enabled:  true,
+							GasLimit: validator.Uint64(40000000),
+							Relays:   []string{"https://example-relay.com"},
+						},
+					},
+				},
+				DefaultConfig: &ProposerOption{
+					FeeRecipientConfig: &FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+					},
+					BuilderConfig: &BuilderConfig{
+						Enabled:  true,
+						GasLimit: validator.Uint64(40000000),
+						Relays:   []string{"https://example-relay.com"},
+					},
+				},
+			},
+			want: true,
+		},
+
+		{
+			name: "Should not be saved, proposeconfig not populated and default not populated",
+			fields: fields{
+				ProposeConfig: nil,
+				DefaultConfig: nil,
+			},
+			want: false,
+		},
+		{
+			name: "Should not be saved, builder data only",
+			fields: fields{
+				ProposeConfig: nil,
+				DefaultConfig: &ProposerOption{
+					BuilderConfig: &BuilderConfig{
+						Enabled:  true,
+						GasLimit: validator.Uint64(40000000),
+						Relays:   []string{"https://example-relay.com"},
+					},
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settings := &ProposerSettings{
+				ProposeConfig: tt.fields.ProposeConfig,
+				DefaultConfig: tt.fields.DefaultConfig,
+			}
+			if got := settings.ShouldBeSaved(); got != tt.want {
+				t.Errorf("ShouldBeSaved() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

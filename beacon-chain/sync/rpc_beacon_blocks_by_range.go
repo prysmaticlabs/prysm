@@ -139,7 +139,7 @@ func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch,
 			continue
 		}
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
-			log.WithError(chunkErr).Error("Could not send a chunked response")
+			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			return chunkErr
 		}
 	}

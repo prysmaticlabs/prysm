@@ -71,6 +71,7 @@ type Flags struct {
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 
 	BuildBlockParallel bool // BuildBlockParallel builds beacon block for proposer in parallel.
+	AggregateParallel  bool // AggregateParallel aggregates attestations in parallel.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -230,14 +231,18 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableBuildBlockParallel)
 		cfg.BuildBlockParallel = false
 	}
-	if ctx.IsSet(enableEIP4881.Name) {
-		logEnabled(enableEIP4881)
-		cfg.EnableEIP4881 = true
+	if ctx.IsSet(aggregateParallel.Name) {
+		logEnabled(aggregateParallel)
+		cfg.AggregateParallel = true
 	}
 	if ctx.IsSet(disableResourceManager.Name) {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
+  if ctx.IsSet(enableEIP4881.Name) {
+		logEnabled(enableEIP4881)
+		cfg.EnableEIP4881 = true
+  }
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil

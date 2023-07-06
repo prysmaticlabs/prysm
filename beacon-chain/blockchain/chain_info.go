@@ -340,7 +340,13 @@ func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
 	}
 	s.headLock.RLock()
 	headRoot := s.head.root
+	headSlot := s.head.slot
+	headOptimistic := s.head.optimistic
 	s.headLock.RUnlock()
+	// we trust the head package for recent head slots, otherwise fallback to forkchoice
+	if headSlot+2 >= s.CurrentSlot() {
+		return headOptimistic, nil
+	}
 
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
@@ -491,6 +497,13 @@ func (s *Service) Ancestor(ctx context.Context, root []byte, slot primitives.Slo
 	}
 
 	return ar[:], nil
+}
+
+// SetOptimisticToInvalid wraps the corresponding method in forkchoice
+func (s *Service) SetOptimisticToInvalid(ctx context.Context, root, parent, lvh [32]byte) ([][32]byte, error) {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	return s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parent, lvh)
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
