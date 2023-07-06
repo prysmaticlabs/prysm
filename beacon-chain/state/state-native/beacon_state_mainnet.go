@@ -65,59 +65,111 @@ type BeaconState struct {
 
 type beaconStateMarshalable struct {
 	Version                             int                                     `json:"version" yaml:"version"`
-	GenesisTime                         uint64                                  `json:"genesisTime" yaml:"genesisTime"`
-	GenesisValidatorsRoot               [32]byte                                `json:"genesisValidatorsRoot" yaml:"genesisValidatorsRoot"`
+	GenesisTime                         uint64                                  `json:"genesis_time" yaml:"genesisTime"`
+	GenesisValidatorsRoot               [32]byte                                `json:"genesis_validators_root" yaml:"genesisValidatorsRoot"`
 	Slot                                primitives.Slot                         `json:"slot" yaml:"slot"`
 	Fork                                *ethpb.Fork                             `json:"fork" yaml:"fork"`
-	LatestBlockHeader                   *ethpb.BeaconBlockHeader                `json:"latestBlockHeader" yaml:"latestBlockHeader"`
-	BlockRoots                          *customtypes.BlockRoots                 `json:"blockRoots" yaml:"blockRoots"`
-	StateRoots                          *customtypes.StateRoots                 `json:"stateRoots" yaml:"stateRoots"`
-	HistoricalRoots                     customtypes.HistoricalRoots             `json:"historicalRoots" yaml:"historicalRoots"`
-	HistoricalSummaries                 []*ethpb.HistoricalSummary              `json:"historicalSummaries" yaml:"historicalSummaries"`
-	Eth1Data                            *ethpb.Eth1Data                         `json:"eth1Data" yaml:"eth1Data"`
-	Eth1DataVotes                       []*ethpb.Eth1Data                       `json:"eth1DataVotes" yaml:"eth1DataVotes"`
-	Eth1DepositIndex                    uint64                                  `json:"eth1DepositIndex" yaml:"eth1DepositIndex"`
+	LatestBlockHeader                   *ethpb.BeaconBlockHeader                `json:"latest_block_header" yaml:"latestBlockHeader"`
+	BlockRoots                          *customtypes.BlockRoots                 `json:"block_roots" yaml:"blockRoots"`
+	StateRoots                          *customtypes.StateRoots                 `json:"state_roots" yaml:"stateRoots"`
+	HistoricalRoots                     customtypes.HistoricalRoots             `json:"historical_roots" yaml:"historicalRoots"`
+	HistoricalSummaries                 []*ethpb.HistoricalSummary              `json:"historical_summaries" yaml:"historicalSummaries"`
+	Eth1Data                            *ethpb.Eth1Data                         `json:"eth_1_data" yaml:"eth1Data"`
+	Eth1DataVotes                       []*ethpb.Eth1Data                       `json:"eth_1_data_votes" yaml:"eth1DataVotes"`
+	Eth1DepositIndex                    uint64                                  `json:"eth_1_deposit_index" yaml:"eth1DepositIndex"`
 	Validators                          []*ethpb.Validator                      `json:"validators" yaml:"validators"`
 	Balances                            []uint64                                `json:"balances" yaml:"balances"`
-	RandaoMixes                         *customtypes.RandaoMixes                `json:"randaoMixes" yaml:"randaoMixes"`
+	RandaoMixes                         *customtypes.RandaoMixes                `json:"randao_mixes" yaml:"randaoMixes"`
 	Slashings                           []uint64                                `json:"slashings" yaml:"slashings"`
-	PreviousEpochAttestations           []*ethpb.PendingAttestation             `json:"previousEpochAttestations" yaml:"previousEpochAttestations"`
-	CurrentEpochAttestations            []*ethpb.PendingAttestation             `json:"currentEpochAttestations" yaml:"currentEpochAttestations"`
-	PreviousEpochParticipation          []byte                                  `json:"previousEpochParticipation" yaml:"previousEpochParticipation"`
-	CurrentEpochParticipation           []byte                                  `json:"currentEpochParticipation" yaml:"currentEpochParticipation"`
-	JustificationBits                   bitfield.Bitvector4                     `json:"justificationBits" yaml:"justificationBits"`
-	PreviousJustifiedCheckpoint         *ethpb.Checkpoint                       `json:"previousJustifiedCheckpoint" yaml:"previousJustifiedCheckpoint"`
-	CurrentJustifiedCheckpoint          *ethpb.Checkpoint                       `json:"currentJustifiedCheckpoint" yaml:"currentJustifiedCheckpoint"`
-	FinalizedCheckpoint                 *ethpb.Checkpoint                       `json:"finalizedCheckpoint" yaml:"finalizedCheckpoint"`
-	InactivityScores                    []uint64                                `json:"inactivityScores" yaml:"inactivityScores"`
-	CurrentSyncCommittee                *ethpb.SyncCommittee                    `json:"currentSyncCommittee" yaml:"currentSyncCommittee"`
-	NextSyncCommittee                   *ethpb.SyncCommittee                    `json:"nextSyncCommittee" yaml:"nextSyncCommittee"`
-	LatestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader        `json:"latestExecutionPayloadHeader" yaml:"latestExecutionPayloadHeader"`
-	LatestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella `json:"latestExecutionPayloadHeaderCapella" yaml:"latestExecutionPayloadHeaderCapella"`
-	NextWithdrawalIndex                 uint64                                  `json:"nextWithdrawalIndex" yaml:"nextWithdrawalIndex"`
-	NextWithdrawalValidatorIndex        primitives.ValidatorIndex               `json:"nextWithdrawalValidatorIndex" yaml:"nextWithdrawalValidatorIndex"`
+	PreviousEpochAttestations           []*ethpb.PendingAttestation             `json:"previous_epoch_attestations" yaml:"previousEpochAttestations"`
+	CurrentEpochAttestations            []*ethpb.PendingAttestation             `json:"current_epoch_attestations" yaml:"currentEpochAttestations"`
+	PreviousEpochParticipation          []byte                                  `json:"previous_epoch_participation" yaml:"previousEpochParticipation"`
+	CurrentEpochParticipation           []byte                                  `json:"current_epoch_participation" yaml:"currentEpochParticipation"`
+	JustificationBits                   bitfield.Bitvector4                     `json:"justification_bits" yaml:"justificationBits"`
+	PreviousJustifiedCheckpoint         *ethpb.Checkpoint                       `json:"previous_justified_checkpoint" yaml:"previousJustifiedCheckpoint"`
+	CurrentJustifiedCheckpoint          *ethpb.Checkpoint                       `json:"current_justified_checkpoint" yaml:"currentJustifiedCheckpoint"`
+	FinalizedCheckpoint                 *ethpb.Checkpoint                       `json:"finalized_checkpoint" yaml:"finalizedCheckpoint"`
+	InactivityScores                    []uint64                                `json:"inactivity_scores" yaml:"inactivityScores"`
+	CurrentSyncCommittee                *ethpb.SyncCommittee                    `json:"current_sync_committee" yaml:"currentSyncCommittee"`
+	NextSyncCommittee                   *ethpb.SyncCommittee                    `json:"next_sync_committee" yaml:"nextSyncCommittee"`
+	LatestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader        `json:"latest_execution_payload_header" yaml:"latestExecutionPayloadHeader"`
+	LatestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella `json:"latest_execution_payload_header_capella" yaml:"latestExecutionPayloadHeaderCapella"`
+	NextWithdrawalIndex                 uint64                                  `json:"next_withdrawal_index" yaml:"nextWithdrawalIndex"`
+	NextWithdrawalValidatorIndex        primitives.ValidatorIndex               `json:"next_withdrawal_validator_index" yaml:"nextWithdrawalValidatorIndex"`
 }
 
-func (bs *BeaconState) MarshalJSON() ([]byte, error) {
+func (b *BeaconState) MarshalJSON() ([]byte, error) {
 	marshalable := &beaconStateMarshalable{
-		Version:               bs.version,
-		GenesisTime:           bs.genesisTime,
-		GenesisValidatorsRoot: bs.genesisValidatorsRoot,
-		Fork:                  bs.fork,
-		LatestBlockHeader:     bs.latestBlockHeader,
-		BlockRoots:            bs.blockRoots,
+		Version:                             b.version,
+		GenesisTime:                         b.genesisTime,
+		GenesisValidatorsRoot:               b.genesisValidatorsRoot,
+		Slot:                                b.slot,
+		Fork:                                b.fork,
+		LatestBlockHeader:                   b.latestBlockHeader,
+		BlockRoots:                          b.blockRoots,
+		StateRoots:                          b.stateRoots,
+		HistoricalRoots:                     b.historicalRoots,
+		HistoricalSummaries:                 b.historicalSummaries,
+		Eth1Data:                            b.eth1Data,
+		Eth1DataVotes:                       b.eth1DataVotes,
+		Eth1DepositIndex:                    b.eth1DepositIndex,
+		Validators:                          b.validators,
+		Balances:                            b.balances,
+		RandaoMixes:                         b.randaoMixes,
+		Slashings:                           b.slashings,
+		PreviousEpochAttestations:           b.previousEpochAttestations,
+		CurrentEpochAttestations:            b.currentEpochAttestations,
+		PreviousEpochParticipation:          b.previousEpochParticipation,
+		CurrentEpochParticipation:           b.currentEpochParticipation,
+		JustificationBits:                   b.justificationBits,
+		PreviousJustifiedCheckpoint:         b.previousJustifiedCheckpoint,
+		CurrentJustifiedCheckpoint:          b.currentJustifiedCheckpoint,
+		FinalizedCheckpoint:                 b.finalizedCheckpoint,
+		InactivityScores:                    b.inactivityScores,
+		CurrentSyncCommittee:                b.currentSyncCommittee,
+		NextSyncCommittee:                   b.nextSyncCommittee,
+		LatestExecutionPayloadHeader:        b.latestExecutionPayloadHeader,
+		LatestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapella,
+		NextWithdrawalIndex:                 b.nextWithdrawalIndex,
+		NextWithdrawalValidatorIndex:        b.nextWithdrawalValidatorIndex,
 	}
 	return json.Marshal(marshalable)
 }
 
-func (bs *BeaconState) MarshalYAML() ([]byte, error) {
+func (b *BeaconState) MarshalYAML() (interface{}, error) {
 	marshalable := &beaconStateMarshalable{
-		Version:               bs.version,
-		GenesisTime:           bs.genesisTime,
-		GenesisValidatorsRoot: bs.genesisValidatorsRoot,
-		Fork:                  bs.fork,
-		LatestBlockHeader:     bs.latestBlockHeader,
-		BlockRoots:            bs.blockRoots,
+		Version:                             b.version,
+		GenesisTime:                         b.genesisTime,
+		GenesisValidatorsRoot:               b.genesisValidatorsRoot,
+		Slot:                                b.slot,
+		Fork:                                b.fork,
+		LatestBlockHeader:                   b.latestBlockHeader,
+		BlockRoots:                          b.blockRoots,
+		StateRoots:                          b.stateRoots,
+		HistoricalRoots:                     b.historicalRoots,
+		HistoricalSummaries:                 b.historicalSummaries,
+		Eth1Data:                            b.eth1Data,
+		Eth1DataVotes:                       b.eth1DataVotes,
+		Eth1DepositIndex:                    b.eth1DepositIndex,
+		Validators:                          b.validators,
+		Balances:                            b.balances,
+		RandaoMixes:                         b.randaoMixes,
+		Slashings:                           b.slashings,
+		PreviousEpochAttestations:           b.previousEpochAttestations,
+		CurrentEpochAttestations:            b.currentEpochAttestations,
+		PreviousEpochParticipation:          b.previousEpochParticipation,
+		CurrentEpochParticipation:           b.currentEpochParticipation,
+		JustificationBits:                   b.justificationBits,
+		PreviousJustifiedCheckpoint:         b.previousJustifiedCheckpoint,
+		CurrentJustifiedCheckpoint:          b.currentJustifiedCheckpoint,
+		FinalizedCheckpoint:                 b.finalizedCheckpoint,
+		InactivityScores:                    b.inactivityScores,
+		CurrentSyncCommittee:                b.currentSyncCommittee,
+		NextSyncCommittee:                   b.nextSyncCommittee,
+		LatestExecutionPayloadHeader:        b.latestExecutionPayloadHeader,
+		LatestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapella,
+		NextWithdrawalIndex:                 b.nextWithdrawalIndex,
+		NextWithdrawalValidatorIndex:        b.nextWithdrawalValidatorIndex,
 	}
 	return yaml.Marshal(marshalable)
 }

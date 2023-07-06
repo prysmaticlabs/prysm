@@ -16,7 +16,6 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/cmd/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
@@ -177,12 +176,7 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 	}
 
 	if outputJson != "" {
-		beaconState, ok := st.(*state_native.BeaconState)
-		log.Printf("%+v", beaconState.LatestBlockHeader())
-		if !ok {
-			return errors.New("Beacon state bad")
-		}
-		if err := writeToOutputFile(outputJson, beaconState, json.Marshal); err != nil {
+		if err := writeToOutputFile(outputJson, st, json.Marshal); err != nil {
 			return err
 		}
 	}
