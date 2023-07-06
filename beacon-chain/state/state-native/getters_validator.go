@@ -159,9 +159,6 @@ func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.
 
 	var v *ethpb.Validator
 	if features.Get().EnableExperimentalState {
-		if uint64(idx) >= uint64(b.validatorsMultiValue.Len(b)) {
-			return [fieldparams.BLSPubkeyLength]byte{}
-		}
 		var err error
 		v, err = b.validatorsMultiValue.At(b, uint64(idx))
 		if err != nil {
