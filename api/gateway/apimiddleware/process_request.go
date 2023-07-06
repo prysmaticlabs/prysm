@@ -115,11 +115,12 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []
 		responseHasError = true
 		// Something went wrong, but the request completed, meaning we can write headers and the error message.
 		for h, vs := range resp.Header {
-			if strings.HasSuffix(h, "Eth-Consensus-Version") {
-				w.Header().Set("Eth-Consensus-Version", vs[0])
-			}
 			for _, v := range vs {
-				w.Header().Set(h, v)
+				if strings.HasSuffix(h, "Eth-Consensus-Version") {
+					w.Header().Set("Eth-Consensus-Version", vs[0])
+				} else {
+					w.Header().Set(h, v)
+				}
 			}
 		}
 		// Handle gRPC timeout.
