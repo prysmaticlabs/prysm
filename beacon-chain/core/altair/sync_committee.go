@@ -195,6 +195,7 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 }
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
+// Spec: [IGNORE] The message's slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance), i.e. sync_committee_message.slot == current_slot
 func ValidateSyncMessageTime(slot primitives.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
 	if err := slots.ValidateClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
@@ -223,13 +224,12 @@ func ValidateSyncMessageTime(slot primitives.Slot, genesisTime time.Time, clockD
 	// Verify sync message slot is within the time range.
 	if messageTime.Before(lowerBound) || messageTime.After(upperBound) {
 		syncErr := fmt.Errorf(
-			"sync message time %v (slot %d) not within allowable range of %v (slot %d) to %v (slot %d)",
+			"sync message time %v (message slot %d) not within allowable range of %v to %v (current slot %d)",
 			messageTime,
 			slot,
 			lowerBound,
-			uint64(lowerBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
 			upperBound,
-			uint64(upperBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
+			currentSlot,
 		)
 		// Wrap error message if sync message is too late.
 		if messageTime.Before(lowerBound) {
