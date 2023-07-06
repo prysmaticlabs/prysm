@@ -190,6 +190,8 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 		if strings.HasPrefix(h, "Grpc-Metadata") {
 			if h == "Grpc-Metadata-"+grpc.HttpCodeMetadataKey {
 				statusCodeHeader = vs[0]
+			} else if h == "Grpc-Metadata-Eth-Consensus-Version" {
+				w.Header().Set("Eth-Consensus-Version", vs[0])
 			}
 		} else {
 			for _, v := range vs {
