@@ -243,7 +243,7 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) {
 	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(finalizedEth1DepIdx)); err != nil {
 		log.WithError(err).Error("could not prune deposit proofs")
 	}
-	// Prune deposits which have already been finalized, the below methods prunes all pending deposits(non-inclusive) up
+	// Prune deposits which have already been finalized, the below method prunes all pending deposits (non-inclusive) up
 	// to the provided eth1 deposit index.
 	s.cfg.DepositCache.PrunePendingDeposits(ctx, int64(eth1DepositIndex)) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
 
