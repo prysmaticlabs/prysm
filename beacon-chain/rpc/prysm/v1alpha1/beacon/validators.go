@@ -13,7 +13,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -663,7 +663,7 @@ func (bs *Server) GetValidatorPerformance(
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
-	response, err := rpc.ComputeValidatorPerformance(ctx, req, bs.HeadFetcher, currSlot)
+	response, err := core.ComputeValidatorPerformance(ctx, req, bs.HeadFetcher, currSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute validator performance: %v", err)
 	}
