@@ -40,7 +40,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get block root")
 	}
-	if err := grpc.SetHeader(ctx, metadata.Pairs("Eth-Consensus-Version", version.String(blk.Version()))); err != nil {
+	if err := grpc.SetHeader(ctx, metadata.Pairs(versionHeader, version.String(blk.Version()))); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set "+versionHeader+" header: %v", err)
 	}
 	result, err := getBlindedBlockPhase0(blk)
