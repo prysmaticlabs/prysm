@@ -1,7 +1,7 @@
 package assert
 
 import (
-	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
+	"github.com/prysmaticlabs/prysm/v4/container/multi-value-slice/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
 	"github.com/sirupsen/logrus/hooks/test"
 )
@@ -22,12 +22,12 @@ func NotEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, ms
 // For maps, please iterate through and compare the individual keys and values.
 func DeepEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	var savedIdE, savedIdA uint64
-	identifiableE, okE := expected.(multi_value_slice.Identifiable)
+	identifiableE, okE := expected.(interfaces.Identifiable)
 	if okE {
 		savedIdE = identifiableE.Id()
 		identifiableE.SetId(0)
 	}
-	identifiableA, okA := actual.(multi_value_slice.Identifiable)
+	identifiableA, okA := actual.(interfaces.Identifiable)
 	if okA {
 		savedIdA = identifiableA.Id()
 		identifiableA.SetId(0)
@@ -49,12 +49,12 @@ func DeepEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, m
 // For maps, please iterate through and compare the individual keys and values.
 func DeepNotEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	var savedIdE, savedIdA uint64
-	identifiableE, okE := expected.(multi_value_slice.Identifiable)
+	identifiableE, okE := expected.(interfaces.Identifiable)
 	if okE {
 		savedIdE = identifiableE.Id()
 		identifiableE.SetId(0)
 	}
-	identifiableA, okA := actual.(multi_value_slice.Identifiable)
+	identifiableA, okA := actual.(interfaces.Identifiable)
 	if okA {
 		savedIdA = identifiableA.Id()
 		identifiableA.SetId(0)
@@ -73,12 +73,12 @@ func DeepNotEqual(tb assertions.AssertionTestingTB, expected, actual interface{}
 // DeepSSZEqual compares values using ssz.DeepEqual.
 func DeepSSZEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	var savedIdE, savedIdA uint64
-	identifiableE, okE := expected.(multi_value_slice.Identifiable)
+	identifiableE, okE := expected.(interfaces.Identifiable)
 	if okE {
 		savedIdE = identifiableE.Id()
 		identifiableE.SetId(0)
 	}
-	identifiableA, okA := actual.(multi_value_slice.Identifiable)
+	identifiableA, okA := actual.(interfaces.Identifiable)
 	if okA {
 		savedIdA = identifiableA.Id()
 		identifiableA.SetId(0)
@@ -97,12 +97,12 @@ func DeepSSZEqual(tb assertions.AssertionTestingTB, expected, actual interface{}
 // DeepNotSSZEqual compares values using ssz.DeepEqual.
 func DeepNotSSZEqual(tb assertions.AssertionTestingTB, expected, actual interface{}, msg ...interface{}) {
 	var savedIdE, savedIdA uint64
-	identifiableE, okE := expected.(multi_value_slice.Identifiable)
+	identifiableE, okE := expected.(interfaces.Identifiable)
 	if okE {
 		savedIdE = identifiableE.Id()
 		identifiableE.SetId(0)
 	}
-	identifiableA, okA := actual.(multi_value_slice.Identifiable)
+	identifiableA, okA := actual.(interfaces.Identifiable)
 	if okA {
 		savedIdA = identifiableA.Id()
 		identifiableA.SetId(0)
