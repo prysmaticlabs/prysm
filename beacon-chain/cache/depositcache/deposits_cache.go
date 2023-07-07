@@ -163,8 +163,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	}
 	tree, ok := depositTrie.(*trie.SparseMerkleTrie)
 	if !ok {
-		log.Error("Not a sparse merkle tree")
-		return nil
+		return errors.New("not a sparse merkle tree")
 	}
 	dc.finalizedDeposits = FinalizedDeposits{
 		deposits:        tree,
