@@ -427,7 +427,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	if err := grpc.SetHeader(ctx, metadata.Pairs(versionHeader, version.String(blk.Version()))); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not set Eth-Consensus-Version header: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not set "+versionHeader+" header: %v", err)
 	}
 	result, err = getBlockAltair(blk)
 	if result != nil {
