@@ -144,7 +144,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, blobsBundle, override, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
+	localPayload, blobsBundle, overrideBuilder, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 	}
@@ -152,7 +152,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	// There's no reason to try to get a builder bid if local override is true.
 	var builderPayload interfaces.ExecutionData
 	var blindBlobsBundle *enginev1.BlindedBlobsBundle
-	if !override {
+	if !overrideBuilder {
 		builderPayload, blindBlobsBundle, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 		if err != nil {
 			builderGetPayloadMissCount.Inc()

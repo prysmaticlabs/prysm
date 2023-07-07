@@ -80,11 +80,11 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, blobsBundle, override, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		payload, blobsBundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
-			return payload, blobsBundle, override, nil
+			return payload, blobsBundle, overrideBuilder, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
 			return nil, nil, false, errors.Wrap(err, "could not get cached payload from execution client")
@@ -184,12 +184,12 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	if payloadID == nil {
 		return nil, nil, false, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, blobsBundle, override, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	payload, blobsBundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, nil, false, err
 	}
 	warnIfFeeRecipientDiffers(payload, feeRecipient)
-	return payload, blobsBundle, override, nil
+	return payload, blobsBundle, overrideBuilder, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
