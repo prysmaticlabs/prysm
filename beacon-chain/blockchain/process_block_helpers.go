@@ -234,15 +234,19 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) {
 	// The deposit index in the state is always the index of the next deposit
 	// to be included(rather than the last one to be processed). This was most likely
 	// done as the state cannot represent signed integers.
-	eth1DepositIndex -= 1
-	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(eth1DepositIndex)); err != nil {
+	finalizedEth1DepIdx := eth1DepositIndex - 1
+	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(finalizedEth1DepIdx)); err != nil {
 		log.WithError(err).Error("could not insert finalized deposits")
 		return
 	}
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
-	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
+	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(finalizedEth1DepIdx)); err != nil {
 		log.WithError(err).Error("could not prune deposit proofs")
 	}
+	// Prune deposits which have already been finalized, the below method prunes all pending deposits (non-inclusive) up
+	// to the provided eth1 deposit index.
+	s.cfg.DepositCache.PrunePendingDeposits(ctx, int64(eth1DepositIndex)) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
+
 	log.WithField("duration", time.Since(startTime).String()).Debug("Finalized deposit insertion completed")
 }
 
