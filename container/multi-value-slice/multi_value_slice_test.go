@@ -49,82 +49,13 @@ func TestCopy(t *testing.T) {
 	s.Copy(src, dst)
 
 	assert.Equal(t, (*MultiValue[int])(nil), dst.slice.individualItems[0])
-
-	found := false
-	for _, v := range dst.slice.individualItems[1].Individual {
-		for _, o := range v.objs {
-			if o == dst.id {
-				found = true
-				assert.Equal(t, 1, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-
-	found = false
-	for _, v := range s.individualItems[2].Individual {
-		for _, o := range v.objs {
-			if o == dst.id {
-				found = true
-				assert.Equal(t, 3, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-
-	found = false
-	for _, v := range s.individualItems[3].Individual {
-		for _, o := range v.objs {
-			if o == dst.id {
-				found = true
-				assert.Equal(t, 1, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-
-	found = false
-	for _, v := range s.individualItems[4].Individual {
-		for _, o := range v.objs {
-			if o == dst.id {
-				found = true
-			}
-		}
-	}
-	assert.Equal(t, false, found)
-
-	found = false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == dst.id {
-				found = true
-				assert.Equal(t, 1, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-
-	found = false
-	for _, v := range s.appendedItems[1].Individual {
-		for _, o := range v.objs {
-			if o == dst.id {
-				found = true
-				assert.Equal(t, 3, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-
-	found = false
-	for _, v := range s.appendedItems[2].Individual {
-		for _, o := range v.objs {
-			if o == dst.id {
-				found = true
-			}
-		}
-	}
-	assert.Equal(t, false, found)
-
+	assertIndividualFound(t, s, dst.id, 1, 1)
+	assertIndividualFound(t, s, dst.id, 2, 3)
+	assertIndividualFound(t, s, dst.id, 3, 1)
+	assertIndividualNotFound(t, s, dst.id, 4)
+	assertAppendedFound(t, s, dst.id, 0, 1)
+	assertAppendedFound(t, s, dst.id, 1, 3)
+	assertAppendedNotFound(t, s, dst.id, 2)
 	l, ok := s.cachedLengths[999]
 	require.Equal(t, true, ok)
 	assert.Equal(t, 7, l)
@@ -248,243 +179,49 @@ func TestUpdateAt(t *testing.T) {
 
 	require.NoError(t, s.UpdateAt(first, 0, 999))
 	assert.Equal(t, 123, s.sharedItems[0])
-	found := false
-	for _, v := range s.individualItems[0].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 999, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.individualItems[0].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-			}
-		}
-	}
-	assert.Equal(t, false, found)
+	assertIndividualFound(t, s, first.id, 0, 999)
+	assertIndividualNotFound(t, s, second.id, 0)
 
 	require.NoError(t, s.UpdateAt(first, 1, 999))
-	found = false
-	for _, v := range s.individualItems[1].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 999, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.individualItems[1].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertIndividualFound(t, s, first.id, 1, 999)
+	assertIndividualFound(t, s, second.id, 1, 2)
 
 	require.NoError(t, s.UpdateAt(first, 1, 2))
-	found = false
-	for _, v := range s.individualItems[1].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.individualItems[1].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertIndividualFound(t, s, first.id, 1, 2)
+	assertIndividualFound(t, s, second.id, 1, 2)
 
 	require.NoError(t, s.UpdateAt(first, 2, 999))
-	found = false
-	for _, v := range s.individualItems[2].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 999, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.individualItems[2].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 3, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertIndividualFound(t, s, first.id, 2, 999)
+	assertIndividualFound(t, s, second.id, 2, 3)
 
 	require.NoError(t, s.UpdateAt(first, 3, 999))
-	found = false
-	for _, v := range s.individualItems[3].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 999, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.individualItems[3].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-			}
-		}
-	}
-	assert.Equal(t, false, found)
+	assertIndividualFound(t, s, first.id, 3, 999)
+	assertIndividualNotFound(t, s, second.id, 3)
 
 	require.NoError(t, s.UpdateAt(first, 4, 999))
-	found = false
-	for _, v := range s.individualItems[4].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 999, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.individualItems[4].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertIndividualFound(t, s, first.id, 4, 999)
+	assertIndividualFound(t, s, second.id, 4, 2)
 
 	require.NoError(t, s.UpdateAt(first, 4, 123))
-	found = false
-	for _, v := range s.individualItems[4].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-			}
-		}
-	}
-	assert.Equal(t, false, found)
-	found = false
-	for _, v := range s.individualItems[4].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertIndividualNotFound(t, s, first.id, 4)
+	assertIndividualFound(t, s, second.id, 4, 2)
 
 	require.NoError(t, s.UpdateAt(first, 5, 999))
-	found = false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 999, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertAppendedFound(t, s, first.id, 0, 999)
+	assertAppendedFound(t, s, second.id, 0, 2)
 
 	require.NoError(t, s.UpdateAt(first, 5, 2))
-	found = false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertAppendedFound(t, s, first.id, 0, 2)
+	assertAppendedFound(t, s, second.id, 0, 2)
 
 	require.NoError(t, s.UpdateAt(first, 6, 999))
-	found = false
-	for _, v := range s.appendedItems[1].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 999, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.appendedItems[1].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 3, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertAppendedFound(t, s, first.id, 1, 999)
+	assertAppendedFound(t, s, second.id, 1, 3)
 
 	// we update the second object because there are no more appended items for the first object
 	require.NoError(t, s.UpdateAt(second, 7, 999))
-	found = false
-	for _, v := range s.appendedItems[2].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-			}
-		}
-	}
-	assert.Equal(t, false, found)
-	found = false
-	for _, v := range s.appendedItems[2].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 999, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertAppendedNotFound(t, s, first.id, 2)
+	assertAppendedFound(t, s, second.id, 2, 999)
 
 	assert.ErrorContains(t, "index 7 out of bounds", s.UpdateAt(first, 7, 999))
 	assert.ErrorContains(t, "index 8 out of bounds", s.UpdateAt(second, 8, 999))
@@ -507,25 +244,8 @@ func TestAppend(t *testing.T) {
 	// append first value ever
 	s.Append(first, 1)
 	require.Equal(t, 1, len(s.appendedItems))
-	found := false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 1, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-			}
-		}
-	}
-	assert.Equal(t, false, found)
+	assertAppendedFound(t, s, first.id, 0, 1)
+	assertAppendedNotFound(t, s, second.id, 0)
 	l, ok := s.cachedLengths[first.id]
 	require.Equal(t, true, ok)
 	assert.Equal(t, 2, l)
@@ -538,26 +258,8 @@ func TestAppend(t *testing.T) {
 	// append the first value to the second object, equal to the value for the first object
 	s.Append(second, 1)
 	require.Equal(t, 2, len(s.appendedItems))
-	found = false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 1, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.appendedItems[0].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 1, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertAppendedFound(t, s, first.id, 0, 1)
+	assertAppendedFound(t, s, second.id, 0, 1)
 	l, ok = s.cachedLengths[first.id]
 	require.Equal(t, true, ok)
 	assert.Equal(t, 3, l)
@@ -568,26 +270,8 @@ func TestAppend(t *testing.T) {
 	// append the first value to the second object, different than the value for the first object
 	s.Append(second, 2)
 	require.Equal(t, 2, len(s.appendedItems))
-	found = false
-	for _, v := range s.appendedItems[1].Individual {
-		for _, o := range v.objs {
-			if o == first.id {
-				found = true
-				assert.Equal(t, 1, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
-	found = false
-	for _, v := range s.appendedItems[1].Individual {
-		for _, o := range v.objs {
-			if o == second.id {
-				found = true
-				assert.Equal(t, 2, v.val)
-			}
-		}
-	}
-	assert.Equal(t, true, found)
+	assertAppendedFound(t, s, first.id, 1, 1)
+	assertAppendedFound(t, s, second.id, 1, 2)
 	l, ok = s.cachedLengths[first.id]
 	require.Equal(t, true, ok)
 	assert.Equal(t, 3, l)
@@ -713,4 +397,54 @@ func setup() *Slice[int, *testObject] {
 	s.cachedLengths[2] = 8
 
 	return s
+}
+
+func assertIndividualFound(t *testing.T, slice *Slice[int, *testObject], id interfaces.Id, itemIndex uint64, expected int) {
+	found := false
+	for _, v := range slice.individualItems[itemIndex].Individual {
+		for _, o := range v.objs {
+			if o == id {
+				found = true
+				assert.Equal(t, expected, v.val)
+			}
+		}
+	}
+	assert.Equal(t, true, found)
+}
+
+func assertIndividualNotFound(t *testing.T, slice *Slice[int, *testObject], id interfaces.Id, itemIndex uint64) {
+	found := false
+	for _, v := range slice.individualItems[itemIndex].Individual {
+		for _, o := range v.objs {
+			if o == id {
+				found = true
+			}
+		}
+	}
+	assert.Equal(t, false, found)
+}
+
+func assertAppendedFound(t *testing.T, slice *Slice[int, *testObject], id interfaces.Id, itemIndex uint64, expected int) {
+	found := false
+	for _, v := range slice.appendedItems[itemIndex].Individual {
+		for _, o := range v.objs {
+			if o == id {
+				found = true
+				assert.Equal(t, expected, v.val)
+			}
+		}
+	}
+	assert.Equal(t, true, found)
+}
+
+func assertAppendedNotFound(t *testing.T, slice *Slice[int, *testObject], id interfaces.Id, itemIndex uint64) {
+	found := false
+	for _, v := range slice.appendedItems[itemIndex].Individual {
+		for _, o := range v.objs {
+			if o == id {
+				found = true
+			}
+		}
+	}
+	assert.Equal(t, false, found)
 }

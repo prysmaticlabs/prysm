@@ -187,6 +187,9 @@ func (s *Slice[V, O]) UpdateAt(obj O, i uint64, val V) error {
 				for oi, o := range mv.objs {
 					if o == obj.Id() {
 						if len(mv.objs) == 1 {
+							// There is an improvement to be made here. If len(ind.Individual) == 1,
+							// then after removing the item from the slice s.individualItems[i]
+							// will be a useless map entry whose value is an empty slice.
 							ind.Individual = append(ind.Individual[:mvi], ind.Individual[mvi+1:]...)
 						} else {
 							mv.objs = append(mv.objs[:oi], mv.objs[oi+1:]...)
