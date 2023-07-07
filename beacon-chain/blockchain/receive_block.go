@@ -140,6 +140,8 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		log.WithError(err).Error("Unable to log state transition data")
 	}
 
+	chainServiceProcessingTime.Observe(float64(time.Since(receivedTime).Milliseconds()))
+
 	return nil
 }
 

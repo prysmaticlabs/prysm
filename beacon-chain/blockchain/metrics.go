@@ -172,11 +172,15 @@ var (
 	})
 	onBlockProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
 		Name: "on_block_processing_milliseconds",
-		Help: "Total time in milliseconds to complete a call to onBlock()",
+		Help: "Total time in milliseconds to complete a call to postBlockProcess()",
 	})
 	stateTransitionProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
 		Name: "state_transition_processing_milliseconds",
-		Help: "Total time to call a state transition in onBlock()",
+		Help: "Total time to call a state transition in validateStateTransition()",
+	})
+	chainServiceProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "chain_service_processing_milliseconds",
+		Help: "Total time to call a chain service in ReceiveBlock()",
 	})
 	processAttsElapsedTime = promauto.NewHistogram(
 		prometheus.HistogramOpts{
