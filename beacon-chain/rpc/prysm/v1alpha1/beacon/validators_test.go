@@ -1722,6 +1722,23 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 		assert.NoError(t, err)
 		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
 	})
+	t.Run("deneb", func(t *testing.T) {
+		validatorCount := uint64(32)
+		genState, _ := util.DeterministicGenesisStateDeneb(t, validatorCount)
+		c, err := altair.NextSyncCommittee(context.Background(), genState)
+		require.NoError(t, err)
+		require.NoError(t, genState.SetCurrentSyncCommittee(c))
+
+		bits := make([]byte, validatorCount)
+		for i := range bits {
+			bits[i] = 0xff
+		}
+		require.NoError(t, genState.SetCurrentParticipationBits(bits))
+		require.NoError(t, genState.SetPreviousParticipationBits(bits))
+		gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
+		assert.NoError(t, err)
+		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
+	})
 }
 
 func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState state.BeaconState, gb interfaces.SignedBeaconBlock) {

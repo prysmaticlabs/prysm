@@ -13,6 +13,7 @@ type blockMutator struct {
 	Altair    func(beaconBlock *eth.SignedBeaconBlockAltair)
 	Bellatrix func(beaconBlock *eth.SignedBeaconBlockBellatrix)
 	Capella   func(beaconBlock *eth.SignedBeaconBlockCapella)
+	Deneb     func(beaconBlock *eth.SignedBeaconBlockDeneb)
 }
 
 func (m blockMutator) apply(b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
@@ -45,6 +46,13 @@ func (m blockMutator) apply(b interfaces.SignedBeaconBlock) (interfaces.SignedBe
 		}
 		m.Capella(bb)
 		return blocks.NewSignedBeaconBlock(bb)
+	case version.Deneb:
+		bb, err := b.PbDenebBlock()
+		if err != nil {
+			return nil, err
+		}
+		m.Deneb(bb)
+		return blocks.NewSignedBeaconBlock(bb)
 	default:
 		return nil, blocks.ErrUnsupportedSignedBeaconBlock
 	}
@@ -57,6 +65,7 @@ func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) (interfaces.
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.StateRoot = sr[:] },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.StateRoot = sr[:] },
 		Capella:   func(bb *eth.SignedBeaconBlockCapella) { bb.Block.StateRoot = sr[:] },
+		Deneb:     func(bb *eth.SignedBeaconBlockDeneb) { bb.Block.StateRoot = sr[:] },
 	}.apply(b)
 }
 
@@ -67,6 +76,7 @@ func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) (interfaces
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ParentRoot = pr[:] },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.ParentRoot = pr[:] },
 		Capella:   func(bb *eth.SignedBeaconBlockCapella) { bb.Block.ParentRoot = pr[:] },
+		Deneb:     func(bb *eth.SignedBeaconBlockDeneb) { bb.Block.StateRoot = pr[:] },
 	}.apply(b)
 }
 
@@ -77,6 +87,7 @@ func SetBlockSlot(b interfaces.SignedBeaconBlock, s primitives.Slot) (interfaces
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.Slot = s },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.Slot = s },
 		Capella:   func(bb *eth.SignedBeaconBlockCapella) { bb.Block.Slot = s },
+		Deneb:     func(bb *eth.SignedBeaconBlockDeneb) { bb.Block.Slot = s },
 	}.apply(b)
 }
 
@@ -87,5 +98,6 @@ func SetProposerIndex(b interfaces.SignedBeaconBlock, idx primitives.ValidatorIn
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ProposerIndex = idx },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.ProposerIndex = idx },
 		Capella:   func(bb *eth.SignedBeaconBlockCapella) { bb.Block.ProposerIndex = idx },
+		Deneb:     func(bb *eth.SignedBeaconBlockDeneb) { bb.Block.ProposerIndex = idx },
 	}.apply(b)
 }
