@@ -30,7 +30,7 @@ type ValidatorPerformanceResponse struct {
 // GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
 func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
 	if vs.SyncChecker.Syncing() {
-		handleHTTPError(w, "Syncing", http.StatusServiceUnavailable)
+		handleHTTPError(w, "Syncing", core.ErrorReasonToHTTP(core.Unavailable))
 		return
 	}
 	ctx := r.Context()
@@ -38,7 +38,7 @@ func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 	var req ValidatorPerformanceRequest
 	if r.Body != http.NoBody {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			handleHTTPError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+			handleHTTPError(w, "Could not decode request body: "+err.Error(), core.ErrorReasonToHTTP(core.BadRequest))
 			return
 		}
 	}
