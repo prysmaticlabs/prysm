@@ -660,7 +660,7 @@ func (bs *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
 	if bs.SyncChecker.Syncing() {
-		return nil, status.Error(core.ErrorReasonToGRPC(core.Unavailable), "syncing to latest head, not ready to respond")
+		return nil, status.Error(codes.Unavailable, "syncing to latest head, not ready to respond")
 	}
 	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	response, err := core.ComputeValidatorPerformance(ctx, req, bs.HeadFetcher, currSlot)
