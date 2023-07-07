@@ -665,7 +665,7 @@ func (bs *Server) GetValidatorPerformance(
 	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	response, err := core.ComputeValidatorPerformance(ctx, req, bs.HeadFetcher, currSlot)
 	if err != nil {
-		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "could not compute validator performance: %w", err)
+		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "could not compute validator performance: %v", err.Err)
 	}
 	return response, nil
 }
