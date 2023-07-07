@@ -22,56 +22,56 @@ func ComputeValidatorPerformance(
 	req *ethpb.ValidatorPerformanceRequest,
 	headFetcher blockchain.HeadFetcher,
 	currSlot primitives.Slot,
-) (*ethpb.ValidatorPerformanceResponse, error) {
+) (*ethpb.ValidatorPerformanceResponse, *RpcError) {
 	headState, err := headFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get head state")
+		return nil, &RpcError{Err: errors.Wrap(err, "could not get head state"), Reason: Internal}
 	}
 	if currSlot > headState.Slot() {
 		headRoot, err := headFetcher.HeadRoot(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get head root")
+			return nil, &RpcError{Err: errors.Wrap(err, "could not get head root"), Reason: Internal}
 		}
 		headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, currSlot)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", currSlot)
+			return nil, &RpcError{Err: errors.Wrapf(err, "could not process slots up to %d", currSlot), Reason: Internal}
 		}
 	}
 	var validatorSummary []*precompute.Validator
 	if headState.Version() == version.Phase0 {
 		vp, bp, err := precompute.New(ctx, headState)
 		if err != nil {
-			return nil, err
+			return nil, &RpcError{Err: err, Reason: Internal}
 		}
 		vp, bp, err = precompute.ProcessAttestations(ctx, headState, vp, bp)
 		if err != nil {
-			return nil, err
+			return nil, &RpcError{Err: err, Reason: Internal}
 		}
 		headState, err = precompute.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp, precompute.AttestationsDelta, precompute.ProposersDelta)
 		if err != nil {
-			return nil, err
+			return nil, &RpcError{Err: err, Reason: Internal}
 		}
 		validatorSummary = vp
 	} else if headState.Version() >= version.Altair {
 		vp, bp, err := altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
-			return nil, err
+			return nil, &RpcError{Err: err, Reason: Internal}
 		}
 		vp, bp, err = altair.ProcessEpochParticipation(ctx, headState, bp, vp)
 		if err != nil {
-			return nil, err
+			return nil, &RpcError{Err: err, Reason: Internal}
 		}
 		headState, vp, err = altair.ProcessInactivityScores(ctx, headState, vp)
 		if err != nil {
-			return nil, err
+			return nil, &RpcError{Err: err, Reason: Internal}
 		}
 		headState, err = altair.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp)
 		if err != nil {
-			return nil, err
+			return nil, &RpcError{Err: err, Reason: Internal}
 		}
 		validatorSummary = vp
 	} else {
-		return nil, errors.Wrapf(err, "head state version %d not supported", headState.Version())
+		return nil, &RpcError{Err: errors.Wrapf(err, "head state version %d not supported", headState.Version()), Reason: Internal}
 	}
 
 	responseCap := len(req.Indices) + len(req.PublicKeys)
@@ -124,7 +124,7 @@ func ComputeValidatorPerformance(
 	for _, idx := range validatorIndices {
 		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get validator")
+			return nil, &RpcError{Err: errors.Wrap(err, "could not get validator"), Reason: Internal}
 		}
 		pubKey := val.PublicKey()
 		if uint64(idx) >= uint64(len(validatorSummary)) {

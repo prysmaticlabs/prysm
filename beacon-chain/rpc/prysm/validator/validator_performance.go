@@ -52,7 +52,7 @@ func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 		currSlot,
 	)
 	if err != nil {
-		handleHTTPError(w, "Could not compute validator performance: "+err.Error(), http.StatusInternalServerError)
+		handleHTTPError(w, "Could not compute validator performance: "+err.Err.Error(), core.ErrorReasonToHTTP(err.Reason))
 		return
 	}
 	response := &ValidatorPerformanceResponse{

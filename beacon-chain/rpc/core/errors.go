@@ -47,16 +47,3 @@ func ErrorReasonToHTTP(reason ErrorReason) int {
 		return http.StatusInternalServerError
 	}
 }
-
-func (e *RpcError) Error() string {
-	return e.Err.Error()
-}
-
-func (e *RpcError) Unwrap() error {
-	return e.Err
-}
-
-func (e *RpcError) Is(target error) bool {
-	_, ok := target.(*RpcError)
-	return ok
-}

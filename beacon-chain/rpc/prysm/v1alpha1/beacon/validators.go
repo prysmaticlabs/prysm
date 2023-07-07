@@ -660,18 +660,12 @@ func (bs *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
 	if bs.SyncChecker.Syncing() {
-		return nil, &core.RpcError{
-			Err:    fmt.Errorf("syncing to latest head, not ready to respond"),
-			Reason: core.Unavailable,
-		}
+		return nil, status.Error(core.ErrorReasonToGRPC(core.Unavailable), "syncing to latest head, not ready to respond")
 	}
 	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	response, err := core.ComputeValidatorPerformance(ctx, req, bs.HeadFetcher, currSlot)
 	if err != nil {
-		return nil, &core.RpcError{
-			Err:    fmt.Errorf("could not compute validator performance: %w", err),
-			Reason: core.Internal,
-		}
+		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "could not compute validator performance: %w", err)
 	}
 	return response, nil
 }
