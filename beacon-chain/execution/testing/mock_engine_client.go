@@ -39,6 +39,7 @@ type EngineClient struct {
 	NumReconstructedPayloads    uint64
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
+	BuilderOverride             bool
 	OverrideValidHash           [32]byte
 	BlockValue                  uint64
 	BlobsBundle                 *pb.BlobsBundle
@@ -60,26 +61,26 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error) {
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
 	if slots.ToEpoch(s) >= params.BeaconConfig().DenebForkEpoch {
 		ed, err := blocks.WrappedExecutionPayloadDeneb(e.ExecutionPayloadDeneb, math.Gwei(e.BlockValue))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
-		return ed, e.BlobsBundle, nil
+		return ed, e.BlobsBundle, e.BuilderOverride, nil
 	}
 	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
 		ed, err := blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, math.Gwei(e.BlockValue))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
-		return ed, nil, nil
+		return ed, nil, e.BuilderOverride, nil
 	}
 	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
-	return p, nil, e.ErrGetPayload
+	return p, nil, e.BuilderOverride, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --

@@ -82,6 +82,8 @@ func TestServer_getExecutionPayload(t *testing.T) {
 		terminalBlockHash common.Hash
 		activationEpoch   primitives.Epoch
 		validatorIndx     primitives.ValidatorIndex
+		override          bool
+		wantedOverride    bool
 	}{
 		{
 			name:      "transition completed, nil payload id",
@@ -127,6 +129,13 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			terminalBlockHash: [32]byte{0x1},
 			activationEpoch:   1,
 		},
+		{
+			name:           "local client override",
+			st:             transitionSt,
+			validatorIndx:  100,
+			override:       true,
+			wantedOverride: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -136,7 +145,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			params.OverrideBeaconConfig(cfg)
 
 			vs := &Server{
-				ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr, ExecutionPayload: &pb.ExecutionPayload{}},
+				ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr, ExecutionPayload: &pb.ExecutionPayload{}, BuilderOverride: tt.override},
 				HeadFetcher:            &chainMock.ChainService{State: tt.st},
 				FinalizationFetcher:    &chainMock.ChainService{},
 				BeaconDB:               beaconDB,
@@ -149,10 +158,12 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			blk.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 			b, err := blocks.NewSignedBeaconBlock(blk)
 			require.NoError(t, err)
-			_, _, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), tt.st)
+			var gotOverride bool
+			_, _, gotOverride, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), tt.st)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
+				require.Equal(t, tt.wantedOverride, gotOverride)
 				require.NoError(t, err)
 			}
 		})
@@ -191,7 +202,7 @@ func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
 	blk.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	b, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	_, _, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), nonTransitionSt)
+	_, _, _, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), nonTransitionSt)
 	require.NoError(t, err)
 }
 
@@ -243,7 +254,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	blk.Block.ParentRoot = bytesutil.PadTo([]byte{}, 32)
 	b, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	gotPayload, _, err := vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), transitionSt)
+	gotPayload, _, _, err := vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), transitionSt)
 	require.NoError(t, err)
 	require.NotNil(t, gotPayload)
 
@@ -255,7 +266,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	payload.FeeRecipient = evilRecipientAddress[:]
 	vs.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
-	gotPayload, _, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), transitionSt)
+	gotPayload, _, _, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), transitionSt)
 	require.NoError(t, err)
 	require.NotNil(t, gotPayload)
 
