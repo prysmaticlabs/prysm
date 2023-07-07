@@ -754,8 +754,9 @@ func TestInsertFinalizedDeposits_PrunePendingDeposits(t *testing.T) {
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root))
 	}
 	service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'})
-	fDeposits := depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	fDeposits, err := depositCache.FinalizedDeposits(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex()), "Finalized deposits not inserted correctly")
 	deps := depositCache.AllDeposits(ctx, big.NewInt(107))
 	for _, d := range deps {
 		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
