@@ -130,7 +130,7 @@ func TestModifiedE2E(t *testing.T) {
 	c.TerminalTotalDifficulty = "0"
 	c.AltairForkEpoch = 0
 	c.BellatrixForkEpoch = 0
-	y := params.ConfigToYaml(c)
+	y := c.MarshalToYAML()
 	cfg, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)
 	assertEqualConfigs(t, "modified-e2e", []string{}, c, cfg.BeaconChainConfig)
@@ -194,7 +194,7 @@ func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
 	// Set current config to minimal config
 	cfg := params.MinimalSpecConfig().Copy()
 	params.FillTestVersions(cfg, 128)
-	_, err = io.Copy(f, bytes.NewBuffer(params.ConfigToYaml(cfg)))
+	_, err = io.Copy(f, bytes.NewBuffer(cfg.MarshalToYAML()))
 	require.NoError(t, err)
 
 	// set active config to mainnet, so that we can confirm LoadChainConfigFile overrides it
@@ -297,7 +297,7 @@ func TestConfigParityYaml(t *testing.T) {
 	yamlDir := filepath.Join(testDir, "config.yaml")
 
 	testCfg := params.E2ETestConfig()
-	yamlObj := params.ConfigToYaml(testCfg)
+	yamlObj := testCfg.MarshalToYAML()
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
 
 	require.NoError(t, params.LoadChainConfigFile(yamlDir, params.E2ETestConfig().Copy()))

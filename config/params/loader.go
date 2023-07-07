@@ -2,7 +2,6 @@ package params
 
 import (
 	"encoding/hex"
-	"fmt"
 	"os"
 	"strings"
 
@@ -195,46 +194,4 @@ func ReplaceHexStringWithYAMLFormat(line string) []string {
 		parts[1] = string(fixedByte)
 	}
 	return parts
-}
-
-// ConfigToYaml takes a provided config and outputs its contents
-// in yaml. This allows prysm's custom configs to be read by other clients.
-func ConfigToYaml(cfg *BeaconChainConfig) []byte {
-	lines := []string{
-		fmt.Sprintf("PRESET_BASE: '%s'", cfg.PresetBase),
-		fmt.Sprintf("CONFIG_NAME: '%s'", cfg.ConfigName),
-		fmt.Sprintf("MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: %d", cfg.MinGenesisActiveValidatorCount),
-		fmt.Sprintf("GENESIS_DELAY: %d", cfg.GenesisDelay),
-		fmt.Sprintf("MIN_GENESIS_TIME: %d", cfg.MinGenesisTime),
-		fmt.Sprintf("GENESIS_FORK_VERSION: %#x", cfg.GenesisForkVersion),
-		fmt.Sprintf("CHURN_LIMIT_QUOTIENT: %d", cfg.ChurnLimitQuotient),
-		fmt.Sprintf("SECONDS_PER_SLOT: %d", cfg.SecondsPerSlot),
-		fmt.Sprintf("SLOTS_PER_EPOCH: %d", cfg.SlotsPerEpoch),
-		fmt.Sprintf("SECONDS_PER_ETH1_BLOCK: %d", cfg.SecondsPerETH1Block),
-		fmt.Sprintf("ETH1_FOLLOW_DISTANCE: %d", cfg.Eth1FollowDistance),
-		fmt.Sprintf("EPOCHS_PER_ETH1_VOTING_PERIOD: %d", cfg.EpochsPerEth1VotingPeriod),
-		fmt.Sprintf("SHARD_COMMITTEE_PERIOD: %d", cfg.ShardCommitteePeriod),
-		fmt.Sprintf("MIN_VALIDATOR_WITHDRAWABILITY_DELAY: %d", cfg.MinValidatorWithdrawabilityDelay),
-		fmt.Sprintf("MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: %d", cfg.MaxValidatorsPerWithdrawalsSweep),
-		fmt.Sprintf("MAX_SEED_LOOKAHEAD: %d", cfg.MaxSeedLookahead),
-		fmt.Sprintf("EJECTION_BALANCE: %d", cfg.EjectionBalance),
-		fmt.Sprintf("MIN_PER_EPOCH_CHURN_LIMIT: %d", cfg.MinPerEpochChurnLimit),
-		fmt.Sprintf("DEPOSIT_CHAIN_ID: %d", cfg.DepositChainID),
-		fmt.Sprintf("DEPOSIT_NETWORK_ID: %d", cfg.DepositNetworkID),
-		fmt.Sprintf("ALTAIR_FORK_EPOCH: %d", cfg.AltairForkEpoch),
-		fmt.Sprintf("ALTAIR_FORK_VERSION: %#x", cfg.AltairForkVersion),
-		fmt.Sprintf("BELLATRIX_FORK_EPOCH: %d", cfg.BellatrixForkEpoch),
-		fmt.Sprintf("BELLATRIX_FORK_VERSION: %#x", cfg.BellatrixForkVersion),
-		fmt.Sprintf("CAPELLA_FORK_EPOCH: %d", cfg.CapellaForkEpoch),
-		fmt.Sprintf("CAPELLA_FORK_VERSION: %#x", cfg.CapellaForkVersion),
-		fmt.Sprintf("INACTIVITY_SCORE_BIAS: %d", cfg.InactivityScoreBias),
-		fmt.Sprintf("INACTIVITY_SCORE_RECOVERY_RATE: %d", cfg.InactivityScoreRecoveryRate),
-		fmt.Sprintf("TERMINAL_TOTAL_DIFFICULTY: %s", cfg.TerminalTotalDifficulty),
-		fmt.Sprintf("TERMINAL_BLOCK_HASH: %#x", cfg.TerminalBlockHash),
-		fmt.Sprintf("TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: %d", cfg.TerminalBlockHashActivationEpoch),
-		fmt.Sprintf("DEPOSIT_CONTRACT_ADDRESS: %s", cfg.DepositContractAddress),
-	}
-
-	yamlFile := []byte(strings.Join(lines, "\n"))
-	return yamlFile
 }

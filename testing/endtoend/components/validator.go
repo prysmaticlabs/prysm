@@ -166,7 +166,7 @@ func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset in
 
 func (node *ValidatorNode) saveConfig() (string, error) {
 	cfg := params.BeaconConfig().Copy()
-	cfgBytes := params.ConfigToYaml(cfg)
+	cfgBytes := cfg.MarshalToYAML()
 	cfgDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("config/%d", node.index))
 	if err := file.MkdirAll(cfgDir); err != nil {
 		return "", err

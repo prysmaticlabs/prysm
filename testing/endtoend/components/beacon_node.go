@@ -204,7 +204,7 @@ func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 
 func (node *BeaconNode) saveConfig() (string, error) {
 	cfg := params.BeaconConfig().Copy()
-	cfgBytes := params.ConfigToYaml(cfg)
+	cfgBytes := cfg.MarshalToYAML()
 	cfgDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("config/%d", node.index))
 	if err := file.MkdirAll(cfgDir); err != nil {
 		return "", err

@@ -2,6 +2,8 @@
 package params
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -257,4 +259,46 @@ func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
 // BeaconChainConfig.
 func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
 	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+// MarshalToYAML takes a provided config and outputs its contents
+// in yaml. This allows prysm's custom configs to be read by other clients.
+func (b *BeaconChainConfig) MarshalToYAML() []byte {
+	lines := []string{
+		fmt.Sprintf("PRESET_BASE: '%s'", b.PresetBase),
+		fmt.Sprintf("CONFIG_NAME: '%s'", b.ConfigName),
+		fmt.Sprintf("MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: %d", b.MinGenesisActiveValidatorCount),
+		fmt.Sprintf("GENESIS_DELAY: %d", b.GenesisDelay),
+		fmt.Sprintf("MIN_GENESIS_TIME: %d", b.MinGenesisTime),
+		fmt.Sprintf("GENESIS_FORK_VERSION: %#x", b.GenesisForkVersion),
+		fmt.Sprintf("CHURN_LIMIT_QUOTIENT: %d", b.ChurnLimitQuotient),
+		fmt.Sprintf("SECONDS_PER_SLOT: %d", b.SecondsPerSlot),
+		fmt.Sprintf("SLOTS_PER_EPOCH: %d", b.SlotsPerEpoch),
+		fmt.Sprintf("SECONDS_PER_ETH1_BLOCK: %d", b.SecondsPerETH1Block),
+		fmt.Sprintf("ETH1_FOLLOW_DISTANCE: %d", b.Eth1FollowDistance),
+		fmt.Sprintf("EPOCHS_PER_ETH1_VOTING_PERIOD: %d", b.EpochsPerEth1VotingPeriod),
+		fmt.Sprintf("SHARD_COMMITTEE_PERIOD: %d", b.ShardCommitteePeriod),
+		fmt.Sprintf("MIN_VALIDATOR_WITHDRAWABILITY_DELAY: %d", b.MinValidatorWithdrawabilityDelay),
+		fmt.Sprintf("MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: %d", b.MaxValidatorsPerWithdrawalsSweep),
+		fmt.Sprintf("MAX_SEED_LOOKAHEAD: %d", b.MaxSeedLookahead),
+		fmt.Sprintf("EJECTION_BALANCE: %d", b.EjectionBalance),
+		fmt.Sprintf("MIN_PER_EPOCH_CHURN_LIMIT: %d", b.MinPerEpochChurnLimit),
+		fmt.Sprintf("DEPOSIT_CHAIN_ID: %d", b.DepositChainID),
+		fmt.Sprintf("DEPOSIT_NETWORK_ID: %d", b.DepositNetworkID),
+		fmt.Sprintf("ALTAIR_FORK_EPOCH: %d", b.AltairForkEpoch),
+		fmt.Sprintf("ALTAIR_FORK_VERSION: %#x", b.AltairForkVersion),
+		fmt.Sprintf("BELLATRIX_FORK_EPOCH: %d", b.BellatrixForkEpoch),
+		fmt.Sprintf("BELLATRIX_FORK_VERSION: %#x", b.BellatrixForkVersion),
+		fmt.Sprintf("CAPELLA_FORK_EPOCH: %d", b.CapellaForkEpoch),
+		fmt.Sprintf("CAPELLA_FORK_VERSION: %#x", b.CapellaForkVersion),
+		fmt.Sprintf("INACTIVITY_SCORE_BIAS: %d", b.InactivityScoreBias),
+		fmt.Sprintf("INACTIVITY_SCORE_RECOVERY_RATE: %d", b.InactivityScoreRecoveryRate),
+		fmt.Sprintf("TERMINAL_TOTAL_DIFFICULTY: %s", b.TerminalTotalDifficulty),
+		fmt.Sprintf("TERMINAL_BLOCK_HASH: %#x", b.TerminalBlockHash),
+		fmt.Sprintf("TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: %d", b.TerminalBlockHashActivationEpoch),
+		fmt.Sprintf("DEPOSIT_CONTRACT_ADDRESS: %s", b.DepositContractAddress),
+	}
+
+	yamlFile := []byte(strings.Join(lines, "\n"))
+	return yamlFile
 }

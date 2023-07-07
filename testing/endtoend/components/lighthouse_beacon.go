@@ -252,7 +252,7 @@ func (node *LighthouseBeaconNode) Stop() error {
 func (node *LighthouseBeaconNode) createTestnetDir(ctx context.Context, index int) (string, error) {
 	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-testnet-%d", index)
 	configPath := filepath.Join(testNetDir, "config.yaml")
-	rawYaml := params.ConfigToYaml(params.BeaconConfig())
+	rawYaml := params.BeaconConfig().MarshalToYAML()
 
 	if err := file.MkdirAll(testNetDir); err != nil {
 		return "", err
