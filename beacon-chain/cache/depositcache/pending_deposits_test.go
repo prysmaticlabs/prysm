@@ -17,7 +17,7 @@ func TestInsertPendingDeposit_OK(t *testing.T) {
 	dc := DepositCache{}
 	dc.InsertPendingDeposit(context.Background(), &ethpb.Deposit{}, 111, 100, [32]byte{})
 
-	assert.Equal(t, 1, len(dc.pendingDeposits), "Deposit not inserted")
+	assert.Equal(t, 1, len(dc.pendingDeposits), "deposit not inserted")
 }
 
 func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
@@ -56,7 +56,7 @@ func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 	dc := DepositCache{}
 	dc.pendingDeposits = []*ethpb.DepositContainer{{Deposit: &ethpb.Deposit{}}}
 	dc.RemovePendingDeposit(context.Background(), nil /*deposit*/)
-	assert.Equal(t, 1, len(dc.pendingDeposits), "Deposit unexpectedly removed")
+	assert.Equal(t, 1, len(dc.pendingDeposits), "deposit unexpectedly removed")
 }
 
 func TestPendingDeposit_RoundTrip(t *testing.T) {

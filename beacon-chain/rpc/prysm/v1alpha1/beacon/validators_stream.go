@@ -15,7 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	depositCache "github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -36,7 +36,7 @@ import (
 type infostream struct {
 	ctx                 context.Context
 	headFetcher         blockchain.HeadFetcher
-	depositFetcher      depositcache.DepositFetcher
+	depositFetcher      depositCache.DepositFetcher
 	blockFetcher        execution.POWBlockFetcher
 	beaconDB            db.ReadOnlyDatabase
 	pubKeys             [][]byte

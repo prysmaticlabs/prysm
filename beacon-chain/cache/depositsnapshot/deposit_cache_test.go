@@ -1,4 +1,4 @@
-package depositcache
+package depositsnapshot
 
 import (
 	"bytes"
@@ -7,87 +7,17 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 const nilDepositErr = "Ignoring nil deposit insertion"
 
-var _ cache.DepositFetcher = (*DepositCache)(nil)
-
-func TestInsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
-	hook := logTest.NewGlobal()
-	dc, err := New()
-	require.NoError(t, err)
-
-	assert.ErrorContains(t, "nil deposit inserted into the cache", dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{}))
-
-	require.Equal(t, 0, len(dc.deposits), "Number of deposits changed")
-	assert.Equal(t, nilDepositErr, hook.LastEntry().Message)
-}
-
-func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
-	dc, err := New()
-	require.NoError(t, err)
-
-	insertions := []struct {
-		blkNum      uint64
-		deposit     *ethpb.Deposit
-		index       int64
-		expectedErr string
-	}{
-		{
-			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'A'}}},
-			index:       0,
-			expectedErr: "",
-		},
-		{
-			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'B'}}},
-			index:       3,
-			expectedErr: "wanted deposit with index 1 to be inserted but received 3",
-		},
-		{
-			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'C'}}},
-			index:       1,
-			expectedErr: "",
-		},
-		{
-			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'D'}}},
-			index:       4,
-			expectedErr: "wanted deposit with index 2 to be inserted but received 4",
-		},
-		{
-			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'E'}}},
-			index:       2,
-			expectedErr: "",
-		},
-	}
-
-	for _, ins := range insertions {
-		if ins.expectedErr != "" {
-			assert.ErrorContains(t, ins.expectedErr, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
-		} else {
-			assert.NoError(t, dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{}))
-		}
-	}
-
-	expectedIndices := []int64{0, 1, 2}
-	for i, ei := range expectedIndices {
-		assert.Equal(t, ei, dc.deposits[i].Index,
-			fmt.Sprintf("dc.deposits[%d].Index = %d, wanted %d", i, dc.deposits[i].Index, ei))
-	}
-}
+//var _ cache.DepositCache = (*Cache)(nil)
 
 func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
 	dc, err := New()
@@ -416,8 +346,14 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		},
 		Index: 3,
 	})
-
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
+	for _, dep := range finalizedDeposits {
+		root, err := dep.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err)
+		err = dc.finalizedDeposits.depositTree.pushLeaf(root)
+		require.NoError(t, err)
+	}
+	err = dc.InsertFinalizedDeposits(context.Background(), 2)
+	require.NoError(t, err)
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
@@ -476,16 +412,25 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 		Index: 2,
 	}
 	dc.deposits = oldFinalizedDeposits
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1))
+	for _, deposit := range oldFinalizedDeposits {
+		root, err := deposit.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err)
+		err = dc.finalizedDeposits.Deposits().Insert(root[:], 0)
+		require.NoError(t, err)
+	}
+	err = dc.InsertFinalizedDeposits(context.Background(), 1)
+	require.NoError(t, err)
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
+	err = dc.InsertFinalizedDeposits(context.Background(), 2)
+	require.NoError(t, err)
 
 	dc.deposits = append(dc.deposits, []*ethpb.DepositContainer{newFinalizedDeposit}...)
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex())
+	require.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex())
+	require.Equal(t, cachedDeposits.Deposits().NumOfItems(), 2)
 
 	var deps [][]byte
 	for _, d := range oldFinalizedDeposits {
@@ -497,6 +442,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	require.NoError(t, err, "Could not generate deposit trie")
 	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
+
 	rootB, err := cachedDeposits.Deposits().HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, rootA, rootB)
@@ -506,7 +452,8 @@ func TestFinalizedDeposits_HandleZeroDeposits(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
+	err = dc.InsertFinalizedDeposits(context.Background(), 2)
+	require.NoError(t, err)
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
@@ -552,7 +499,8 @@ func TestFinalizedDeposits_HandleSmallerThanExpectedDeposits(t *testing.T) {
 	}
 	dc.deposits = finalizedDeposits
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 5))
+	err = dc.InsertFinalizedDeposits(context.Background(), 5)
+	require.NoError(t, err)
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
@@ -628,10 +576,12 @@ func TestFinalizedDeposits_HandleLowerEth1DepositIndex(t *testing.T) {
 	}
 	dc.deposits = finalizedDeposits
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 5))
+	err = dc.InsertFinalizedDeposits(context.Background(), 5)
+	require.NoError(t, err)
 
 	// Reinsert finalized deposits with a lower index.
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
+	err = dc.InsertFinalizedDeposits(context.Background(), 2)
+	require.NoError(t, err)
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
@@ -700,7 +650,8 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 			},
 			Index: 3,
 		})
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1))
+	err = dc.InsertFinalizedDeposits(context.Background(), 1)
+	require.NoError(t, err)
 
 	deps := dc.NonFinalizedDeposits(context.Background(), 1, nil)
 	assert.Equal(t, 2, len(deps))
@@ -757,7 +708,8 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 			},
 			Index: 3,
 		})
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1))
+	err = dc.InsertFinalizedDeposits(context.Background(), 1)
+	require.NoError(t, err)
 
 	deps := dc.NonFinalizedDeposits(context.Background(), 1, big.NewInt(10))
 	assert.Equal(t, 1, len(deps))
@@ -805,12 +757,16 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Perform this in a non-sensical ordering
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 10))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 3))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 4))
+	err = dc.InsertFinalizedDeposits(context.Background(), 10)
+	require.NoError(t, err)
+	err = dc.InsertFinalizedDeposits(context.Background(), 2)
+	require.NoError(t, err)
+	err = dc.InsertFinalizedDeposits(context.Background(), 3)
+	require.NoError(t, err)
+	err = dc.InsertFinalizedDeposits(context.Background(), 4)
+	require.NoError(t, err)
 
-	// Mimic finalized deposit trie fetch.
+	// Mimick finalized deposit trie fetch.
 	fd, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
 	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(14))
@@ -824,15 +780,24 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 		}
 		insertIndex++
 	}
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 15))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 15))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 14))
+	err = dc.InsertFinalizedDeposits(context.Background(), 15)
+	require.NoError(t, err)
+	err = dc.InsertFinalizedDeposits(context.Background(), 15)
+	require.NoError(t, err)
+	err = dc.InsertFinalizedDeposits(context.Background(), 14)
+	require.NoError(t, err)
 
 	fd, err = dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
 	deps = dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(30))
 	insertIndex = fd.MerkleTrieIndex() + 1
 
+	for _, dep := range dc.deposits {
+		root, err := dep.Deposit.Data.HashTreeRoot()
+		require.NoError(t, err)
+		err = dc.finalizedDeposits.depositTree.pushLeaf(root)
+		require.NoError(t, err)
+	}
 	for _, dep := range deps {
 		depHash, err := dep.Data.HashTreeRoot()
 		assert.NoError(t, err)
@@ -842,6 +807,51 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 		insertIndex++
 	}
 	assert.Equal(t, fd.Deposits().NumOfItems(), depositTrie.NumOfItems())
+}
+
+func TestMin(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+	generateCtr := func(height uint64, index int64) *ethpb.DepositContainer {
+		return &ethpb.DepositContainer{
+			Eth1BlockHeight: height,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{uint8(index)}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: index,
+		}
+	}
+
+	finalizedDeposits := []*ethpb.DepositContainer{
+		generateCtr(10, 0),
+		generateCtr(11, 1),
+		generateCtr(12, 2),
+		generateCtr(12, 3),
+		generateCtr(13, 4),
+		generateCtr(13, 5),
+		generateCtr(13, 6),
+		generateCtr(14, 7),
+	}
+	dc.deposits = finalizedDeposits
+
+	fd, err := dc.FinalizedDeposits(context.Background())
+	require.NoError(t, err)
+	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex(), big.NewInt(16))
+	insertIndex := fd.MerkleTrieIndex() + 1
+	for _, dep := range deps {
+		depHash, err := dep.Data.HashTreeRoot()
+		assert.NoError(t, err)
+		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
+			assert.NoError(t, err)
+		}
+		t.Log(fd.Deposits().NumOfItems(), deps)
+		insertIndex++
+	}
+
 }
 
 func TestPruneProofs_Ok(t *testing.T) {
@@ -1065,10 +1075,26 @@ func makeDepositProof() [][]byte {
 	return proof
 }
 
-func TestEmptyTree(t *testing.T) {
-	finalizedDepositsTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-	require.NoError(t, err)
-	v, err := finalizedDepositsTrie.HashTreeRoot()
-	require.NoError(t, err)
-	fmt.Printf("%x", v)
+func BenchmarkDepositTree_InsertNewImplementation(b *testing.B) {
+	totalDeposits := 10000
+	input := bytesutil.ToBytes32([]byte("foo"))
+	for i := 0; i < b.N; i++ {
+		dt := NewDepositTree()
+		for j := 0; j < totalDeposits; j++ {
+			err := dt.Insert(input[:], 0)
+			require.NoError(b, err)
+		}
+	}
+}
+func BenchmarkDepositTree_InsertOldImplementation(b *testing.B) {
+	totalDeposits := 10000
+	input := bytesutil.ToBytes32([]byte("foo"))
+	for i := 0; i < b.N; i++ {
+		dt, err := trie.NewTrie(33)
+		require.NoError(b, err)
+		for j := 0; j < totalDeposits; j++ {
+			err := dt.Insert(input[:], 0)
+			require.NoError(b, err)
+		}
+	}
 }

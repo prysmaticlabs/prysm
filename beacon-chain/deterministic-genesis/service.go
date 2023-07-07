@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -22,7 +22,7 @@ import (
 )
 
 var _ runtime.Service = (*Service)(nil)
-var _ depositcache.DepositFetcher = (*Service)(nil)
+var _ cache.FinalizedFetcher = (*Service)(nil)
 var _ execution.ChainStartFetcher = (*Service)(nil)
 
 // Service spins up an client interoperability service that handles responsibilities such
@@ -34,12 +34,42 @@ type Service struct {
 	chainStartDeposits []*ethpb.Deposit
 }
 
+// All of these methods are stubs as they are not used by a node running with deterministic-genesis.
+
+func (s *Service) AllDepositContainers(ctx context.Context) []*ethpb.DepositContainer {
+	log.Errorf("AllDepositContainers should not be called")
+	return nil
+}
+
+func (s *Service) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
+	log.Errorf("InsertPendingDeposit should not be called")
+}
+
+func (s *Service) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
+	log.Errorf("PendingDeposits should not be called")
+	return nil
+}
+
+func (s *Service) PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer {
+	log.Errorf("PendingContainers should not be called")
+	return nil
+}
+
+func (s *Service) PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64) {
+	log.Errorf("PrunePendingDeposits should not be called")
+}
+
+func (s *Service) PruneProofs(ctx context.Context, untilDepositIndex int64) error {
+	log.Errorf("PruneProofs should not be called")
+	return nil
+}
+
 // Config options for the interop service.
 type Config struct {
 	GenesisTime   uint64
 	NumValidators uint64
 	BeaconDB      db.HeadAccessDatabase
-	DepositCache  *depositcache.DepositCache
+	DepositCache  cache.DepositCache
 	GenesisPath   string
 }
 
@@ -148,8 +178,8 @@ func (_ *Service) DepositsNumberAndRootAtHeight(_ context.Context, _ *big.Int) (
 }
 
 // FinalizedDeposits mocks out the deposit cache functionality for interop.
-func (_ *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDeposits {
-	return nil
+func (_ *Service) FinalizedDeposits(ctx context.Context) (cache.FinalizedDeposits, error) {
+	return nil, nil
 }
 
 // NonFinalizedDeposits mocks out the deposit cache functionality for interop.

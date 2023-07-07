@@ -144,6 +144,10 @@ var (
 		Name:  "disable-build-block-parallel",
 		Usage: "Disables building a beacon block in parallel for consensus and execution",
 	}
+	enableEIP4881 = &cli.BoolFlag{
+		Name:  "enable-eip-4881",
+		Usage: "Enables the deposit tree specified in EIP4881",
+	}
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager",
@@ -210,6 +214,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
+	enableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
 	aggregateParallel,
@@ -218,6 +223,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
 	"--dev",
+	"--enable-eip-4881",
 }
 
 // NetworkFlags contains a list of network flags.

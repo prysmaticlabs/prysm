@@ -25,7 +25,8 @@ go_library(
         "//testing/spectest:__subpackages__",
     ],
     deps = [
-        "//beacon-chain/cache/depositcache:go_default_library",
+        "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/cache/depositsnapshot:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",

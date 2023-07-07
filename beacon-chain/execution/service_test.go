@@ -433,8 +433,9 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 
 	s.chainStartData.Chainstarted = true
 	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
-	fDeposits := s.cfg.depositCache.FinalizedDeposits(ctx)
-	deps := s.cfg.depositCache.NonFinalizedDeposits(context.Background(), fDeposits.MerkleTrieIndex, nil)
+	fDeposits, err := s.cfg.depositCache.FinalizedDeposits(ctx)
+	require.NoError(t, err)
+	deps := s.cfg.depositCache.NonFinalizedDeposits(context.Background(), fDeposits.MerkleTrieIndex(), nil)
 	assert.Equal(t, 0, len(deps))
 }
 

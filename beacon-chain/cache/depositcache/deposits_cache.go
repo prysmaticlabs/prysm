@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
@@ -30,20 +31,11 @@ var (
 	})
 )
 
-// DepositFetcher defines a struct which can retrieve deposit information from a store.
-type DepositFetcher interface {
-	AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
-	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
-	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
-	FinalizedDeposits(ctx context.Context) *FinalizedDeposits
-	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
-}
-
 // FinalizedDeposits stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
 type FinalizedDeposits struct {
-	Deposits        *trie.SparseMerkleTrie
-	MerkleTrieIndex int64
+	deposits        *trie.SparseMerkleTrie
+	merkleTrieIndex int64
 }
 
 // DepositCache stores all in-memory deposit objects. This
@@ -52,7 +44,7 @@ type DepositCache struct {
 	// Beacon chain deposits in memory.
 	pendingDeposits   []*ethpb.DepositContainer
 	deposits          []*ethpb.DepositContainer
-	finalizedDeposits *FinalizedDeposits
+	finalizedDeposits FinalizedDeposits
 	depositsByKey     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
@@ -64,13 +56,13 @@ func New() (*DepositCache, error) {
 		return nil, err
 	}
 
-	// finalizedDeposits.MerkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
+	// finalizedDeposits.merkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
 	// Inserting the first item into the trie will set the value of the index to 0.
 	return &DepositCache{
 		pendingDeposits:   []*ethpb.DepositContainer{},
 		deposits:          []*ethpb.DepositContainer{},
 		depositsByKey:     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer{},
-		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
+		finalizedDeposits: FinalizedDeposits{deposits: finalizedDepositsTrie, merkleTrieIndex: -1},
 	}, nil
 }
 
@@ -135,8 +127,8 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
 
-	depositTrie := dc.finalizedDeposits.Deposits
-	insertIndex := int(dc.finalizedDeposits.MerkleTrieIndex + 1)
+	depositTrie := dc.finalizedDeposits.Deposits()
+	insertIndex := int(dc.finalizedDeposits.merkleTrieIndex + 1)
 
 	// Don't insert into finalized trie if there is no deposit to
 	// insert.
@@ -154,7 +146,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 		return nil
 	}
 	for _, d := range dc.deposits {
-		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
+		if d.Index <= dc.finalizedDeposits.merkleTrieIndex {
 			continue
 		}
 		if d.Index > eth1DepositIndex {
@@ -169,10 +161,13 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 		}
 		insertIndex++
 	}
-
-	dc.finalizedDeposits = &FinalizedDeposits{
-		Deposits:        depositTrie,
-		MerkleTrieIndex: eth1DepositIndex,
+	tree, ok := depositTrie.(*trie.SparseMerkleTrie)
+	if !ok {
+		return errors.New("not a sparse merkle tree")
+	}
+	dc.finalizedDeposits = FinalizedDeposits{
+		deposits:        tree,
+		merkleTrieIndex: eth1DepositIndex,
 	}
 	return nil
 }
@@ -261,16 +256,16 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 }
 
 // FinalizedDeposits returns the finalized deposits trie.
-func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits {
+func (dc *DepositCache) FinalizedDeposits(ctx context.Context) (cache.FinalizedDeposits, error) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
 	return &FinalizedDeposits{
-		Deposits:        dc.finalizedDeposits.Deposits.Copy(),
-		MerkleTrieIndex: dc.finalizedDeposits.MerkleTrieIndex,
-	}
+		deposits:        dc.finalizedDeposits.deposits.Copy(),
+		merkleTrieIndex: dc.finalizedDeposits.merkleTrieIndex,
+	}, nil
 }
 
 // NonFinalizedDeposits returns the list of non-finalized deposits until the given block number (inclusive).
@@ -281,7 +276,7 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, lastFinalizedI
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	if dc.finalizedDeposits == nil {
+	if dc.finalizedDeposits.Deposits() == nil {
 		return dc.allDeposits(untilBlk)
 	}
 
@@ -318,4 +313,12 @@ func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64
 	}
 
 	return nil
+}
+
+func (fd *FinalizedDeposits) Deposits() cache.MerkleTree {
+	return fd.deposits
+}
+
+func (fd *FinalizedDeposits) MerkleTrieIndex() int64 {
+	return fd.merkleTrieIndex
 }

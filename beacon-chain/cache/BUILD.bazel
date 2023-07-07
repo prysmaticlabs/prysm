@@ -13,6 +13,7 @@ go_library(
         "common.go",
         "doc.go",
         "error.go",
+        "interfaces.go",
         "payload_id.go",
         "proposer_indices.go",
         "proposer_indices_disabled.go",  # keep

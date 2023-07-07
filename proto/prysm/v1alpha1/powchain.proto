@@ -20,8 +20,17 @@ message ETH1ChainData {
     BeaconState beacon_state = 3;
     SparseMerkleTrie trie = 4;
     repeated DepositContainer deposit_containers = 5;
+    DepositSnapshot deposit_snapshot = 6;
 }
 
+// DepositSnapshot represents an EIP-4881 deposit snapshot
+message DepositSnapshot {
+    repeated bytes finalized = 1;
+    bytes deposit_root = 2;
+    uint64 deposit_count = 3;
+    bytes execution_hash = 4;
+    uint64 execution_depth = 5;
+}
 // LatestETH1Data contains the current state of the eth1 chain.
 message LatestETH1Data {
     uint64 block_height = 2;
