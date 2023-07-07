@@ -30,7 +30,7 @@ func ErrorReasonToGRPC(reason ErrorReason) codes.Code {
 		return codes.InvalidArgument
 	// Add more cases for other error reasons as needed
 	default:
-		return codes.Unknown
+		return codes.Internal
 	}
 }
 
