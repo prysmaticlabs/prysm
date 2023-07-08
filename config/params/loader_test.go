@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -162,20 +163,36 @@ func TestModifiedE2E(t *testing.T) {
 	assertEqualChainConfigs(t, "modified-e2e", []string{}, c, cfg.BeaconChainConfig)
 }
 
-func TestLoadPraterNetworkConfig(t *testing.T) {
-	// get prater config yaml
-	//    store current network config (mainnet) for restoring later
-	mainnetNetworkConfig := params.BeaconNetworkConfig().Copy()
-	params.UsePraterNetworkConfig()
-	praterNetworkConfig := params.BeaconNetworkConfig().Copy()
-	y, err := yaml.Marshal(params.BeaconNetworkConfig().Copy())
+func TestLoadNetworkConfig(t *testing.T) {
+	customNetworkConfig := &params.NetworkConfig{
+		GossipMaxSize:                   1 << 42,
+		GossipMaxSizeBellatrix:          10 * 1 << 42,
+		MaxChunkSize:                    1 << 42,
+		MaxChunkSizeBellatrix:           10 * 1 << 42,
+		AttestationSubnetCount:          128,
+		AttestationPropagationSlotRange: 64,
+		MaxRequestBlocks:                42 << 10,
+		TtfbTimeout:                     42 * time.Second,
+		RespTimeout:                     420 * time.Second,
+		MaximumGossipClockDisparity:     4200 * time.Second,
+		MessageDomainInvalidSnappy:      [4]byte{000, 001, 010, 100},
+		MessageDomainValidSnappy:        [4]byte{01, 10, 01, 10},
+		ETH2Key:                         "eth2-test",
+		AttSubnetKey:                    "attnets-test",
+		SyncCommsSubnetKey:              "syncnets-test",
+		MinimumPeersInSubnetSearch:      42,
+		ContractDeploymentBlock:         420420420,
+		BootstrapNodes: []string{
+			"bootnode-1",
+			"bootnode-2",
+			"bootnode-3",
+		},
+	}
+	y, err := yaml.Marshal(customNetworkConfig)
 	require.NoError(t, err)
-	//    restore mainnet config
-	params.OverrideBeaconNetworkConfig(mainnetNetworkConfig)
-	// load prater config yaml
 	cfg, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)
-	assertEqualNetworkConfigs(t, "network-config", []string{}, praterNetworkConfig, cfg.NetworkConfig)
+	assertEqualNetworkConfigs(t, "custom-network-config", []string{}, customNetworkConfig, cfg.NetworkConfig)
 }
 
 func TestLoadCombinedPraterConfig(t *testing.T) {
@@ -196,8 +213,8 @@ func TestLoadCombinedPraterConfig(t *testing.T) {
 
 	c2, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)
-	assertEqualChainConfigs(t, "chain-config", []string{}, c1.BeaconChainConfig, c2.BeaconChainConfig)
-	assertEqualNetworkConfigs(t, "network-config", []string{}, c1.NetworkConfig, c2.NetworkConfig)
+	assertEqualChainConfigs(t, "prater-chain-config", []string{}, c1.BeaconChainConfig, c2.BeaconChainConfig)
+	assertEqualNetworkConfigs(t, "prater-network-config", []string{}, c1.NetworkConfig, c2.NetworkConfig)
 }
 
 func TestLoadConfigFile(t *testing.T) {
