@@ -178,6 +178,28 @@ func TestLoadPraterNetworkConfig(t *testing.T) {
 	assertEqualNetworkConfigs(t, "network-config", []string{}, praterNetworkConfig, cfg.NetworkConfig)
 }
 
+func TestLoadCombinedPraterConfig(t *testing.T) {
+	// store current network config (mainnet) for restoring later
+	mainnetNetworkConfig := params.BeaconNetworkConfig().Copy()
+
+	// populate combined prater config
+	var c1 params.CombinedConfig
+	c1.BeaconChainConfig = params.PraterConfig()
+	params.UsePraterNetworkConfig()
+	c1.NetworkConfig = params.BeaconNetworkConfig().Copy()
+
+	// restore mainnet network config
+	params.OverrideBeaconNetworkConfig(mainnetNetworkConfig)
+
+	y, err := c1.MarshalToYAML()
+	require.NoError(t, err)
+
+	c2, err := params.UnmarshalConfig(y, nil)
+	require.NoError(t, err)
+	assertEqualChainConfigs(t, "chain-config", []string{}, c1.BeaconChainConfig, c2.BeaconChainConfig)
+	assertEqualNetworkConfigs(t, "network-config", []string{}, c1.NetworkConfig, c2.NetworkConfig)
+}
+
 func TestLoadConfigFile(t *testing.T) {
 	t.Run("mainnet", func(t *testing.T) {
 		mn := &params.CombinedConfig{

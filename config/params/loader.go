@@ -2,6 +2,7 @@ package params
 
 import (
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strings"
 
@@ -31,6 +32,16 @@ func (c *CombinedConfig) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return errors.Wrap(errNilConfig, "network config")
 	}
 	return unmarshal(c.NetworkConfig)
+}
+
+func (c *CombinedConfig) MarshalToYAML() ([]byte, error) {
+	chainConfig := c.BeaconChainConfig.MarshalToYAML()
+	networkConfig, err := yaml.Marshal(c.NetworkConfig)
+	if err != nil {
+		return nil, err
+	}
+	combinedConfig := fmt.Sprintf("%s\n%s", string(chainConfig), string(networkConfig))
+	return []byte(combinedConfig), nil
 }
 
 func isMinimal(lines []string) bool {
