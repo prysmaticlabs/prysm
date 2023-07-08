@@ -255,33 +255,55 @@ func TestLoadConfigFile(t *testing.T) {
 func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
 	f, err := os.CreateTemp("", "")
 	require.NoError(t, err)
-	// Set current config to minimal config
-	cfg := params.MinimalSpecConfig().Copy()
-	params.FillTestVersions(cfg, 128)
-	_, err = io.Copy(f, bytes.NewBuffer(cfg.MarshalToYAML()))
+	// Set current chain config to minimal config
+	minimalChainConfig := params.MinimalSpecConfig().Copy()
+	params.FillTestVersions(minimalChainConfig, 128)
+	// Set current network config to prater config
+	mainnetNetworkConfig := params.BeaconNetworkConfig().Copy()
+	params.UsePraterNetworkConfig()
+	praterNetworkConfig := params.BeaconNetworkConfig().Copy()
+	cfg := params.CombinedConfig{
+		BeaconChainConfig: minimalChainConfig,
+		NetworkConfig:     praterNetworkConfig,
+	}
+	y, err := cfg.MarshalToYAML()
+	require.NoError(t, err)
+	_, err = io.Copy(f, bytes.NewBuffer(y))
 	require.NoError(t, err)
 
-	// set active config to mainnet, so that we can confirm LoadChainConfigFile overrides it
-	mainnet, err := params.ByName(params.MainnetName)
+	// set active chain config to mainnet, so that we can confirm LoadChainConfigFile overrides it
+	mainnetChainConfig, err := params.ByName(params.MainnetName)
 	require.NoError(t, err)
-	undo, err := params.SetActiveWithUndo(mainnet)
+	undo, err := params.SetActiveWithUndo(mainnetChainConfig)
 	require.NoError(t, err)
 	defer func() {
 		err := undo()
 		require.NoError(t, err)
 	}()
+	// set active network config to mainnet, so that we can confirm LoadChainConfigFile overrides it
+	params.OverrideBeaconNetworkConfig(mainnetNetworkConfig)
 
 	// load empty config file, so that it defaults to mainnet values
 	require.NoError(t, params.LoadChainConfigFile(f.Name(), nil))
-	if params.BeaconConfig().MinGenesisTime != cfg.MinGenesisTime {
+	if params.BeaconConfig().MinGenesisTime != cfg.BeaconChainConfig.MinGenesisTime {
 		t.Errorf("Expected MinGenesisTime to be set to value written to config: %d found: %d",
-			cfg.MinGenesisTime,
+			cfg.BeaconChainConfig.MinGenesisTime,
 			params.BeaconConfig().MinGenesisTime)
 	}
-	if params.BeaconConfig().SlotsPerEpoch != cfg.SlotsPerEpoch {
+	if params.BeaconConfig().SlotsPerEpoch != cfg.BeaconChainConfig.SlotsPerEpoch {
 		t.Errorf("Expected SlotsPerEpoch to be set to value written to config: %d found: %d",
-			cfg.SlotsPerEpoch,
+			cfg.BeaconChainConfig.SlotsPerEpoch,
 			params.BeaconConfig().SlotsPerEpoch)
+	}
+	if params.BeaconNetworkConfig().ContractDeploymentBlock != cfg.NetworkConfig.ContractDeploymentBlock {
+		t.Errorf("Expected ContractDeploymentBlock to be set to value written to config: %d found: %d",
+			cfg.NetworkConfig.ContractDeploymentBlock,
+			params.BeaconNetworkConfig().ContractDeploymentBlock)
+	}
+	if !reflect.DeepEqual(params.BeaconNetworkConfig().BootstrapNodes, cfg.NetworkConfig.BootstrapNodes) {
+		t.Errorf("Expected BootstrapNodes to be set to value written to config: %v found: %v",
+			cfg.NetworkConfig.BootstrapNodes,
+			params.BeaconNetworkConfig().BootstrapNodes)
 	}
 	require.Equal(t, params.MinimalName, params.BeaconConfig().ConfigName)
 }
