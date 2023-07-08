@@ -222,6 +222,7 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 	bb = &BeaconBlockBody{executionPayload: payloadInterface, executionPayloadHeader: headerInterface, randaoReveal: bytesutil.ToBytes96([]byte{246}), graffiti: bytesutil.ToBytes32([]byte("graffiti"))}
 	b = &BeaconBlock{body: bb, slot: 123, proposerIndex: 456, parentRoot: bytesutil.ToBytes32([]byte("parentroot")), stateRoot: bytesutil.ToBytes32([]byte("stateroot"))}
 	cp, err = b.Copy()
+	require.NoError(t, err)
 
 	b.version = version.Deneb
 	b.body.version = b.version
