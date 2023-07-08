@@ -26,7 +26,7 @@ var placeholderFields = []string{"UPDATE_TIMEOUT", "DENEB_FORK_EPOCH", "DENEB_FO
 	"MESSAGE_DOMAIN_VALID_SNAPPY", "GOSSIP_MAX_SIZE", "SUBNETS_PER_NODE", "ATTESTATION_SUBNET_COUNT",
 	"MAX_CHUNK_SIZE", "ATTESTATION_PROPAGATION_SLOT_RANGE", "ATTESTATION_SUBNET_PREFIX_BITS", "EIP6110_FORK_VERSION", "TTFB_TIMEOUT"}
 
-func assertEqualConfigs(t *testing.T, name string, fields []string, expected, actual *params.BeaconChainConfig) {
+func assertEqualChainConfigs(t *testing.T, name string, fields []string, expected, actual *params.BeaconChainConfig) {
 	//  Misc params.
 	assert.Equal(t, expected.MaxCommitteesPerSlot, actual.MaxCommitteesPerSlot, "%s: MaxCommitteesPerSlot", name)
 	assert.Equal(t, expected.TargetCommitteeSize, actual.TargetCommitteeSize, "%s: TargetCommitteeSize", name)
@@ -124,6 +124,32 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
 }
 
+func assertEqualNetworkConfigs(t *testing.T, name string, fields []string, expected, actual *params.NetworkConfig) {
+	assert.Equal(t, expected.GossipMaxSize, actual.GossipMaxSize, "%s: GossipMaxSize", name)
+	assert.Equal(t, expected.GossipMaxSize, actual.GossipMaxSize, "GossipMaxSize", name)
+	assert.Equal(t, expected.GossipMaxSizeBellatrix, actual.GossipMaxSizeBellatrix, "GossipMaxSizeBellatrix", name)
+	assert.Equal(t, expected.MaxChunkSize, actual.MaxChunkSize, "MaxChunkSize", name)
+	assert.Equal(t, expected.MaxChunkSizeBellatrix, actual.MaxChunkSizeBellatrix, "MaxChunkSizeBellatrix", name)
+	assert.Equal(t, expected.AttestationSubnetCount, actual.AttestationSubnetCount, "AttestationSubnetCount", name)
+	assert.Equal(t, expected.AttestationPropagationSlotRange, actual.AttestationPropagationSlotRange, "AttestationPropagationSlotRange", name)
+	assert.Equal(t, expected.MaxRequestBlocks, actual.MaxRequestBlocks, "MaxRequestBlocks", name)
+	assert.Equal(t, expected.TtfbTimeout, actual.TtfbTimeout, "TtfbTimeout", name)
+	assert.Equal(t, expected.RespTimeout, actual.RespTimeout, "RespTimeout", name)
+	assert.Equal(t, expected.MaximumGossipClockDisparity, actual.MaximumGossipClockDisparity, "MaximumGossipClockDisparity", name)
+	assert.Equal(t, expected.MessageDomainInvalidSnappy, actual.MessageDomainInvalidSnappy, "MessageDomainInvalidSnappy", name)
+	assert.Equal(t, expected.MessageDomainValidSnappy, actual.MessageDomainValidSnappy, "MessageDomainValidSnappy", name)
+
+	assert.Equal(t, expected.ETH2Key, actual.ETH2Key, "ETH2Key", name)
+	assert.Equal(t, expected.AttSubnetKey, actual.AttSubnetKey, "AttSubnetKey", name)
+	assert.Equal(t, expected.SyncCommsSubnetKey, actual.SyncCommsSubnetKey, "SyncCommsSubnetKey", name)
+	assert.Equal(t, expected.MinimumPeersInSubnetSearch, actual.MinimumPeersInSubnetSearch, "MinimumPeersInSubnetSearch", name)
+
+	assert.Equal(t, expected.ContractDeploymentBlock, actual.ContractDeploymentBlock, "ContractDeploymentBlock", name)
+	assert.DeepEqual(t, expected.BootstrapNodes, actual.BootstrapNodes, "BootstrapNodes", name)
+
+	assertYamlFieldsMatch(t, name, fields, expected, actual)
+}
+
 func TestModifiedE2E(t *testing.T) {
 	c := params.E2ETestConfig().Copy()
 	c.DepositContractAddress = "0x4242424242424242424242424242424242424242"
@@ -133,7 +159,23 @@ func TestModifiedE2E(t *testing.T) {
 	y := c.MarshalToYAML()
 	cfg, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)
-	assertEqualConfigs(t, "modified-e2e", []string{}, c, cfg.BeaconChainConfig)
+	assertEqualChainConfigs(t, "modified-e2e", []string{}, c, cfg.BeaconChainConfig)
+}
+
+func TestLoadPraterNetworkConfig(t *testing.T) {
+	// get prater config yaml
+	//    store current network config (mainnet) for restoring later
+	mainnetNetworkConfig := params.BeaconNetworkConfig().Copy()
+	params.UsePraterNetworkConfig()
+	praterNetworkConfig := params.BeaconNetworkConfig().Copy()
+	y, err := yaml.Marshal(params.BeaconNetworkConfig().Copy())
+	require.NoError(t, err)
+	//    restore mainnet config
+	params.OverrideBeaconNetworkConfig(mainnetNetworkConfig)
+	// load prater config yaml
+	cfg, err := params.UnmarshalConfig(y, nil)
+	require.NoError(t, err)
+	assertEqualNetworkConfigs(t, "network-config", []string{}, praterNetworkConfig, cfg.NetworkConfig)
 }
 
 func TestLoadConfigFile(t *testing.T) {
@@ -154,7 +196,7 @@ func TestLoadConfigFile(t *testing.T) {
 		mnf, err := params.UnmarshalConfigFile(mainnetConfigFile, nil)
 		require.NoError(t, err)
 		fields := fieldsFromYamls(t, append(mainnetPresetsFiles, mainnetConfigFile))
-		assertEqualConfigs(t, "mainnet", fields, mn.BeaconChainConfig, mnf.BeaconChainConfig)
+		assertEqualChainConfigs(t, "mainnet", fields, mn.BeaconChainConfig, mnf.BeaconChainConfig)
 	})
 
 	t.Run("minimal", func(t *testing.T) {
@@ -174,7 +216,7 @@ func TestLoadConfigFile(t *testing.T) {
 		minf, err := params.UnmarshalConfigFile(minimalConfigFile, nil)
 		require.NoError(t, err)
 		fields := fieldsFromYamls(t, append(minimalPresetsFiles, minimalConfigFile))
-		assertEqualConfigs(t, "minimal", fields, min.BeaconChainConfig, minf.BeaconChainConfig)
+		assertEqualChainConfigs(t, "minimal", fields, min.BeaconChainConfig, minf.BeaconChainConfig)
 	})
 
 	t.Run("e2e", func(t *testing.T) {
@@ -184,7 +226,7 @@ func TestLoadConfigFile(t *testing.T) {
 		e2ef, err := params.UnmarshalConfigFile(configFile, nil)
 		require.NoError(t, err)
 		fields := fieldsFromYamls(t, []string{configFile})
-		assertEqualConfigs(t, "e2e", fields, e2e, e2ef.BeaconChainConfig)
+		assertEqualChainConfigs(t, "e2e", fields, e2e, e2ef.BeaconChainConfig)
 	})
 }
 
@@ -348,7 +390,7 @@ func fieldsFromYamls(t *testing.T, fps []string) []string {
 	return keys
 }
 
-func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *params.BeaconChainConfig) {
+func assertYamlFieldsMatch[T params.BeaconChainConfig | params.NetworkConfig](t *testing.T, name string, fields []string, c1, c2 *T) {
 	// Ensure all fields from the yaml file exist, were set, and correctly match the expected value.
 	ft1 := reflect.TypeOf(*c1)
 	for _, field := range fields {
