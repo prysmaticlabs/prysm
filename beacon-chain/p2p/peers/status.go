@@ -560,6 +560,9 @@ func (p *Status) Prune() {
 	notBadPeer := func(pid peer.ID) bool {
 		return !p.isBad(pid)
 	}
+	notTrustedPeer := func(pid peer.ID) bool {
+		return !p.isTrustedPeers(pid)
+	}
 	type peerResp struct {
 		pid   peer.ID
 		score float64
@@ -567,7 +570,8 @@ func (p *Status) Prune() {
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerDisconnected && notBadPeer(pid) {
+		// Should not prune trusted peer or prune the peer dara and unset trusted peer.
+		if peerData.ConnState == PeerDisconnected && notBadPeer(pid) && notTrustedPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:   pid,
 				score: p.Scorers().ScoreNoLock(pid),
@@ -608,6 +612,9 @@ func (p *Status) deprecatedPrune() {
 	notBadPeer := func(peerData *peerdata.PeerData) bool {
 		return peerData.BadResponses < p.scorers.BadResponsesScorer().Params().Threshold
 	}
+	notTrustedPeer := func(pid peer.ID) bool {
+		return !p.isTrustedPeers(pid)
+	}
 	type peerResp struct {
 		pid     peer.ID
 		badResp int
@@ -615,7 +622,8 @@ func (p *Status) deprecatedPrune() {
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerDisconnected && notBadPeer(peerData) {
+		// Should not prune trusted peer or prune the peer dara and unset trusted peer.
+		if peerData.ConnState == PeerDisconnected && notBadPeer(peerData) && notTrustedPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
 				badResp: peerData.BadResponses,
@@ -930,6 +938,11 @@ func (p *Status) DeleteTrustedPeers(peers []peer.ID) {
 func (p *Status) IsTrustedPeers(pid peer.ID) bool {
 	p.store.Lock()
 	defer p.store.Unlock()
+	return p.isTrustedPeers(pid)
+}
+
+// isTrustedPeers is the lock-free version of IsTrustedPeers.
+func (p *Status) isTrustedPeers(pid peer.ID) bool {
 	return p.store.IsTrustedPeer(pid)
 }
 
