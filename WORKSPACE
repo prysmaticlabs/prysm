@@ -89,9 +89,12 @@ http_archive(
 
 http_archive(
     name = "rules_oci",
-    sha256 = "7824dcb6c9f9f87786d65592da006d9f1e2bea826d7560d96745e54cdecb5d47",
-    strip_prefix = "rules_oci-1.0.0-rc1",
-    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.0.0-rc1/rules_oci-v1.0.0-rc1.tar.gz",
+    #sha256 = "7824dcb6c9f9f87786d65592da006d9f1e2bea826d7560d96745e54cdecb5d47",
+    #strip_prefix = "rules_oci-1.0.0-rc1",
+    #url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.0.0-rc1/rules_oci-v1.0.0-rc1.tar.gz",
+    strip_prefix = "rules_oci-7d1cb8bcb07bbbae2086adae9030e2cfb689f8fd",
+    sha256 = "ccbb0868ae681199b966efe9497676fc5b9c3379b3cf3536a85422b2dae35b3d",
+    url = "https://github.com/jamiees2/rules_oci/archive/7d1cb8bcb07bbbae2086adae9030e2cfb689f8fd.tar.gz",
 )
 
 load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
