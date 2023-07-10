@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "error_handling.go",
+        "http.go",
         "sync.go",
         "validator_status.go",
     ],
@@ -32,6 +33,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "http_test.go",
         "sync_test.go",
         "validator_status_test.go",
     ],
