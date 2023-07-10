@@ -126,7 +126,7 @@ func TestAt(t *testing.T) {
 	v, err = s.At(first, 6)
 	require.NoError(t, err)
 	assert.Equal(t, 3, v)
-	v, err = s.At(first, 7)
+	_, err = s.At(first, 7)
 	assert.ErrorContains(t, "index 7 out of bounds", err)
 
 	v, err = s.At(second, 0)
@@ -153,7 +153,7 @@ func TestAt(t *testing.T) {
 	v, err = s.At(second, 7)
 	require.NoError(t, err)
 	assert.Equal(t, 2, v)
-	v, err = s.At(second, 8)
+	_, err = s.At(second, 8)
 	assert.ErrorContains(t, "index 8 out of bounds", err)
 }
 
