@@ -4,9 +4,6 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
 load("//tools:go_image.bzl", "go_image_alpine", "go_image_debug")
 load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push")
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
-load("//tools:multi_arch.bzl", "multi_arch")
 load("//tools:prysm_image.bzl", "prysm_image_upload")
 
 go_library(
