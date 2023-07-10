@@ -953,12 +953,21 @@ func (v *validator) logDuties(slot primitives.Slot, duties []*ethpb.DutiesRespon
 	}
 }
 
+// ProposerSettings gets the current proposer settings saved in memory validator
 func (v *validator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
 	return v.proposerSettings
 }
 
-func (v *validator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+// SetProposerSettings sets and saves the passed in proposer settings overriding the in memory one
+func (v *validator) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+	if v.db == nil {
+		return errors.New("db is not set")
+	}
+	if err := v.db.SaveProposerSettings(ctx, settings); err != nil {
+		return err
+	}
 	v.proposerSettings = settings
+	return nil
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.

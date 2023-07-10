@@ -92,113 +92,113 @@ type MockValidator struct {
 	proposerSettings *validatorserviceconfig.ProposerSettings
 }
 
-func (_ MockValidator) LogSyncCommitteeMessagesSubmitted() {}
+func (_ *MockValidator) LogSyncCommitteeMessagesSubmitted() {}
 
-func (_ MockValidator) Done() {
+func (_ *MockValidator) Done() {
 	panic("implement me")
 }
 
-func (_ MockValidator) WaitForChainStart(_ context.Context) error {
+func (_ *MockValidator) WaitForChainStart(_ context.Context) error {
 	panic("implement me")
 }
 
-func (_ MockValidator) WaitForSync(_ context.Context) error {
+func (_ *MockValidator) WaitForSync(_ context.Context) error {
 	panic("implement me")
 }
 
-func (_ MockValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) error {
+func (_ *MockValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) error {
 	panic("implement me")
 }
 
-func (_ MockValidator) CanonicalHeadSlot(_ context.Context) (primitives.Slot, error) {
+func (_ *MockValidator) CanonicalHeadSlot(_ context.Context) (primitives.Slot, error) {
 	panic("implement me")
 }
 
-func (_ MockValidator) NextSlot() <-chan primitives.Slot {
+func (_ *MockValidator) NextSlot() <-chan primitives.Slot {
 	panic("implement me")
 }
 
-func (_ MockValidator) SlotDeadline(_ primitives.Slot) time.Time {
+func (_ *MockValidator) SlotDeadline(_ primitives.Slot) time.Time {
 	panic("implement me")
 }
 
-func (_ MockValidator) LogValidatorGainsAndLosses(_ context.Context, _ primitives.Slot) error {
+func (_ *MockValidator) LogValidatorGainsAndLosses(_ context.Context, _ primitives.Slot) error {
 	panic("implement me")
 }
 
-func (_ MockValidator) UpdateDuties(_ context.Context, _ primitives.Slot) error {
+func (_ *MockValidator) UpdateDuties(_ context.Context, _ primitives.Slot) error {
 	panic("implement me")
 }
 
-func (_ MockValidator) RolesAt(_ context.Context, _ primitives.Slot) (map[[48]byte][]iface2.ValidatorRole, error) {
+func (_ *MockValidator) RolesAt(_ context.Context, _ primitives.Slot) (map[[48]byte][]iface2.ValidatorRole, error) {
 	panic("implement me")
 }
 
-func (_ MockValidator) SubmitAttestation(_ context.Context, _ primitives.Slot, _ [48]byte) {
+func (_ *MockValidator) SubmitAttestation(_ context.Context, _ primitives.Slot, _ [48]byte) {
 	panic("implement me")
 }
 
-func (_ MockValidator) ProposeBlock(_ context.Context, _ primitives.Slot, _ [48]byte) {
+func (_ *MockValidator) ProposeBlock(_ context.Context, _ primitives.Slot, _ [48]byte) {
 	panic("implement me")
 }
 
-func (_ MockValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Slot, _ [48]byte) {
+func (_ *MockValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Slot, _ [48]byte) {
 	panic("implement me")
 }
 
-func (_ MockValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [48]byte) {
+func (_ *MockValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [48]byte) {
 	panic("implement me")
 }
 
-func (_ MockValidator) SubmitSignedContributionAndProof(_ context.Context, _ primitives.Slot, _ [48]byte) {
+func (_ *MockValidator) SubmitSignedContributionAndProof(_ context.Context, _ primitives.Slot, _ [48]byte) {
 	panic("implement me")
 }
 
-func (_ MockValidator) LogAttestationsSubmitted() {
+func (_ *MockValidator) LogAttestationsSubmitted() {
 	panic("implement me")
 }
 
-func (_ MockValidator) UpdateDomainDataCaches(_ context.Context, _ primitives.Slot) {
+func (_ *MockValidator) UpdateDomainDataCaches(_ context.Context, _ primitives.Slot) {
 	panic("implement me")
 }
 
-func (_ MockValidator) WaitForKeymanagerInitialization(_ context.Context) error {
+func (_ *MockValidator) WaitForKeymanagerInitialization(_ context.Context) error {
 	panic("implement me")
 }
 
-func (m MockValidator) Keymanager() (keymanager.IKeymanager, error) {
+func (m *MockValidator) Keymanager() (keymanager.IKeymanager, error) {
 	return m.Km, nil
 }
 
-func (_ MockValidator) ReceiveBlocks(_ context.Context, _ chan<- error) {
+func (_ *MockValidator) ReceiveBlocks(_ context.Context, _ chan<- error) {
 	panic("implement me")
 }
 
-func (_ MockValidator) HandleKeyReload(_ context.Context, _ [][48]byte) (bool, error) {
+func (_ *MockValidator) HandleKeyReload(_ context.Context, _ [][48]byte) (bool, error) {
 	panic("implement me")
 }
 
-func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
+func (_ *MockValidator) CheckDoppelGanger(_ context.Context) error {
 	panic("implement me")
 }
 
 // HasProposerSettings for mocking
-func (MockValidator) HasProposerSettings() bool {
+func (*MockValidator) HasProposerSettings() bool {
 	panic("implement me")
 }
 
 // PushProposerSettings for mocking
-func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager, _ primitives.Slot, _ time.Time) error {
+func (_ *MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager, _ primitives.Slot, _ time.Time) error {
 	panic("implement me")
 }
 
 // SetPubKeyToValidatorIndexMap for mocking
-func (_ MockValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
+func (_ *MockValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
 	panic("implement me")
 }
 
 // SignValidatorRegistrationRequest for mocking
-func (_ MockValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface2.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
+func (_ *MockValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface2.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
 	panic("implement me")
 }
 
@@ -208,6 +208,7 @@ func (m *MockValidator) ProposerSettings() *validatorserviceconfig.ProposerSetti
 }
 
 // SetProposerSettings for mocking
-func (m *MockValidator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+func (m *MockValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
 	m.proposerSettings = settings
+	return nil
 }
