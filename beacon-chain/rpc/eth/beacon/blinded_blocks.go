@@ -40,8 +40,8 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get block root")
 	}
-	if err := grpc.SetHeader(ctx, metadata.Pairs(versionHeader, version.String(blk.Version()))); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not set "+versionHeader+" header: %v", err)
+	if err := grpc.SetHeader(ctx, metadata.Pairs(params.VersionHeader, version.String(blk.Version()))); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set "+params.VersionHeader+" header: %v", err)
 	}
 	result, err := getBlindedBlockPhase0(blk)
 	if result != nil {
@@ -200,11 +200,11 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+versionHeader+" header")
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+params.VersionHeader+" header")
 	}
-	ver := md.Get(versionHeader)
+	ver := md.Get(params.VersionHeader)
 	if len(ver) == 0 {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+versionHeader+" header")
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+params.VersionHeader+" header")
 	}
 	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
 	forkVer, err := schedule.VersionForName(ver[0])

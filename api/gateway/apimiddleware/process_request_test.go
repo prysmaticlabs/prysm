@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -280,8 +281,8 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpc.HttpCodeMetadataKey: []string{"204"},
-				"Grpc-Metadata-Eth-Consensus-Version":       []string{"capella"},
+				grpc.WithPrefix(grpc.HttpCodeMetadataKey): []string{"204"},
+				grpc.WithPrefix(api.VersionHeader):        []string{"capella"},
 			},
 		}
 		container := defaultResponseContainer()
@@ -328,8 +329,8 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		}
 
 		// Set invalid status code.
-		response.Header["Grpc-Metadata-"+grpc.HttpCodeMetadataKey] = []string{"invalid"}
-		response.Header["Grpc-Metadata-Eth-Consensus-Version"] = []string{"capella"}
+		response.Header[grpc.WithPrefix(grpc.HttpCodeMetadataKey)] = []string{"invalid"}
+		response.Header[grpc.WithPrefix(api.VersionHeader)] = []string{"capella"}
 
 		container := defaultResponseContainer()
 		responseJson, err := json.Marshal(container)
@@ -395,7 +396,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 func TestWriteError(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		responseHeader := http.Header{
-			"Grpc-Metadata-" + grpc.CustomErrorMetadataKey: []string{"{\"CustomField\":\"bar\"}"},
+			grpc.WithPrefix(grpc.CustomErrorMetadataKey): []string{"{\"CustomField\":\"bar\"}"},
 		}
 		errJson := &testErrorJson{
 			Message: "foo",
@@ -425,7 +426,7 @@ func TestWriteError(t *testing.T) {
 		logHook := test.NewGlobal()
 
 		responseHeader := http.Header{
-			"Grpc-Metadata-" + grpc.CustomErrorMetadataKey: []string{"invalid"},
+			grpc.WithPrefix(grpc.CustomErrorMetadataKey): []string{"invalid"},
 		}
 
 		WriteError(httptest.NewRecorder(), &testErrorJson{}, responseHeader)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
@@ -324,7 +325,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 			Data: ssz,
 		}
 		md := metadata.MD{}
-		md.Set(versionHeader, "phase0")
+		md.Set(api.VersionHeader, "phase0")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err)
@@ -345,7 +346,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 			Data: ssz,
 		}
 		md := metadata.MD{}
-		md.Set(versionHeader, "altair")
+		md.Set(api.VersionHeader, "altair")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err)
@@ -366,7 +367,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 			Data: ssz,
 		}
 		md := metadata.MD{}
-		md.Set(versionHeader, "bellatrix")
+		md.Set(api.VersionHeader, "bellatrix")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err)
@@ -384,7 +385,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 			Data: ssz,
 		}
 		md := metadata.MD{}
-		md.Set(versionHeader, "bellatrix")
+		md.Set(api.VersionHeader, "bellatrix")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NotNil(t, err)
@@ -405,7 +406,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 			Data: ssz,
 		}
 		md := metadata.MD{}
-		md.Set(versionHeader, "capella")
+		md.Set(api.VersionHeader, "capella")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err)
@@ -423,7 +424,7 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 			Data: ssz,
 		}
 		md := metadata.MD{}
-		md.Set(versionHeader, "capella")
+		md.Set(api.VersionHeader, "capella")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NotNil(t, err)
