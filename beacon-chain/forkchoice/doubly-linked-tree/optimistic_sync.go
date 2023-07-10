@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 )
 
-func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [32]byte) ([][32]byte, error) {
+func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, lastValidHash [32]byte) ([][32]byte, error) {
 	invalidRoots := make([][32]byte, 0)
 	node, ok := s.nodeByRoot[root]
 	if !ok {
@@ -16,7 +16,7 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, pa
 			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		// return early if the parent is LVH
-		if node.payloadHash == payloadHash {
+		if node.payloadHash == lastValidHash {
 			return invalidRoots, nil
 		}
 	} else {
@@ -28,7 +28,7 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, pa
 		}
 	}
 	firstInvalid := node
-	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payloadHash; firstInvalid = firstInvalid.parent {
+	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != lastValidHash; firstInvalid = firstInvalid.parent {
 		if ctx.Err() != nil {
 			return invalidRoots, ctx.Err()
 		}

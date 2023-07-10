@@ -202,11 +202,7 @@ var (
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
 	}
-	// EnableRegistrationCache a temporary flag for enabling the validator registration cache instead of db.
-	EnableRegistrationCache = &cli.BoolFlag{
-		Name:  "enable-registration-cache",
-		Usage: "A temporary flag for enabling the validator registration cache instead of persisting in db. The cache will clear on restart.",
-	}
+
 	// WeakSubjectivityCheckpoint defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
 	WeakSubjectivityCheckpoint = &cli.StringFlag{
 		Name: "weak-subjectivity-checkpoint",

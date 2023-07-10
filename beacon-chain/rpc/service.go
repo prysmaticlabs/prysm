@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
@@ -41,6 +42,7 @@ import (
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
+	httpserver "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	slasherservice "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
@@ -212,8 +214,19 @@ func (s *Service) Start() {
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		ReplayerBuilder:       ch,
+		TimeFetcher:           s.cfg.GenesisTimeFetcher,
+		Stater:                stater,
+		HeadFetcher:           s.cfg.HeadFetcher,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards)
+
+	builderServer := &rpcBuilder.Server{
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		Stater:                stater,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
@@ -359,6 +372,12 @@ func (s *Service) Start() {
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
 		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
 	}
+	httpServer := &httpserver.Server{
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		HeadFetcher:        s.cfg.HeadFetcher,
+		SyncChecker:        s.cfg.SyncService,
+	}
+	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2)
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)

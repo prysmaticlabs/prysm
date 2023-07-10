@@ -227,6 +227,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		if dataDir == "" && c.wallet != nil {
 			dataDir = c.wallet.AccountsDir()
 			if dataDir == "" {
+				// skipcq: RVV-A0003
 				log.Fatal(
 					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
 						"to use for your validator data",
@@ -310,6 +311,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
 			if dataDir == "" {
+				// skipcq: RVV-A0003
 				log.Fatal(
 					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
 						"to use for your validator data",
@@ -496,21 +498,20 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
 	}
-
+	builderConfigFromFlag, err := BuilderSettingsFromFlags(cliCtx)
+	if err != nil {
+		return nil, err
+	}
 	// is overridden by file and URL flags
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
-		if err != nil {
-			return nil, err
-		}
 		fileConfig = &validatorpb.ProposerSettingsPayload{
 			ProposerConfig: nil,
 			DefaultConfig: &validatorpb.ProposerOptionPayload{
 				FeeRecipient: suggestedFee,
-				Builder:      builderConfig.ToPayload(),
+				Builder:      builderConfigFromFlag.ToPayload(),
 			},
 		}
 	}
@@ -526,13 +527,13 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		}
 	}
 
-	// nothing is set, so just return nil
+	// this condition triggers if SuggestedFeeRecipientFlag,ProposerSettingsFlag or ProposerSettingsURLFlag did not create any settings
 	if fileConfig == nil {
-		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
-			return nil, fmt.Errorf("%s flag can only be used when a default fee recipient is present on the validator client", flags.EnableBuilderFlag.Name)
-		}
-		return nil, nil
+		// Checks the db or enable builder settings before starting the node without proposer settings
+		// starting the node without proposer settings, will skip API calls for push proposer settings and register validator
+		return handleNoProposerSettingsFlagsProvided(cliCtx, db, builderConfigFromFlag)
 	}
+
 	// convert file config to proposer config for internal use
 	vpSettings := &validatorServiceConfig.ProposerSettings{}
 
@@ -556,16 +557,13 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		},
 		BuilderConfig: validatorServiceConfig.ToBuilderConfig(fileConfig.DefaultConfig.Builder),
 	}
-	if vpSettings.DefaultConfig.BuilderConfig == nil {
-		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
-		if err != nil {
-			return nil, err
-		}
-		vpSettings.DefaultConfig.BuilderConfig = builderConfig
-	}
 
-	if vpSettings.DefaultConfig.BuilderConfig != nil {
-		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
+	if builderConfigFromFlag != nil {
+		config := builderConfigFromFlag
+		if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && vpSettings.DefaultConfig.BuilderConfig != nil {
+			config.GasLimit = vpSettings.DefaultConfig.BuilderConfig.GasLimit
+		}
+		vpSettings.DefaultConfig.BuilderConfig = config
 	}
 
 	if psExists {
@@ -594,14 +592,14 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
 				return nil, err
 			}
-			if option.Builder != nil {
-				option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
-			} else {
-				builderConfig, err := BuilderSettingsFromFlags(cliCtx)
-				if err != nil {
-					return nil, err
+			if builderConfigFromFlag != nil {
+				config := builderConfigFromFlag.ToPayload()
+				if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && option.Builder != nil {
+					config.GasLimit = option.Builder.GasLimit
 				}
-				option.Builder = builderConfig.ToPayload()
+				option.Builder = config
+			} else if option.Builder != nil {
+				option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
 			}
 			o := &validatorServiceConfig.ProposerOption{
 				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
@@ -626,6 +624,49 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		}
 	}
 	return vpSettings, nil
+}
+
+func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
+	db iface.ValidatorDB,
+	builderConfigFromFlag *validatorServiceConfig.BuilderConfig) (*validatorServiceConfig.ProposerSettings, error) {
+	log.Info("no proposer settings files have been provided, attempting to load from db.")
+	// checks db if proposer settings exist if none is provided.
+	settings, err := db.ProposerSettings(cliCtx.Context)
+	if err == nil {
+		// process any overrides to builder settings
+		overrideBuilderSettings(settings, builderConfigFromFlag)
+		// if settings are empty
+		log.Info("successfully loaded proposer settings from db.")
+		return settings, nil
+	} else {
+		log.WithError(err).Warn("no proposer settings will be loaded from the db")
+	}
+
+	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+		// if there are no proposer settings provided, create a default where fee recipient is not populated, this will be skipped for validator registration on validators that don't have a fee recipient set.
+		// skip saving to DB if only builder settings are provided until a trigger like keymanager API updates with fee recipient values
+		return &validatorServiceConfig.ProposerSettings{
+			DefaultConfig: &validatorServiceConfig.ProposerOption{
+				BuilderConfig: builderConfigFromFlag,
+			},
+		}, nil
+	}
+	return nil, nil
+}
+
+func overrideBuilderSettings(settings *validatorServiceConfig.ProposerSettings, builderConfigFromFlag *validatorServiceConfig.BuilderConfig) {
+	// override the db settings with the results based on whether the --enable-builder flag is provided.
+	if builderConfigFromFlag == nil {
+		log.Infof("proposer settings loaded from db. validator registration to builder is not enabled, please use the --%s flag if you wish to use a builder.", flags.EnableBuilderFlag.Name)
+	}
+	if settings.ProposeConfig != nil {
+		for key := range settings.ProposeConfig {
+			settings.ProposeConfig[key].BuilderConfig = builderConfigFromFlag
+		}
+	}
+	if settings.DefaultConfig != nil {
+		settings.DefaultConfig.BuilderConfig = builderConfigFromFlag
+	}
 }
 
 func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.BuilderConfig, error) {
