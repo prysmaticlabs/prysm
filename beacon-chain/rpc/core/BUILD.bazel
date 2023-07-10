@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["validator.go"],
+    srcs = [
+        "errors.go",
+        "validator.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core",
     visibility = ["//visibility:public"],
     deps = [
@@ -17,5 +20,6 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
     ],
 )
