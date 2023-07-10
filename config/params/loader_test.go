@@ -129,8 +129,9 @@ func TestModifiedE2E(t *testing.T) {
 	c := params.E2ETestConfig().Copy()
 	c.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	c.TerminalTotalDifficulty = "0"
-	c.AltairForkEpoch = 0
-	c.BellatrixForkEpoch = 0
+	c.AltairForkEpoch = 112
+	c.BellatrixForkEpoch = 123
+	c.CapellaForkEpoch = 235
 	c.DenebForkEpoch = 358
 	y := params.ConfigToYaml(c)
 	cfg, err := params.UnmarshalConfig(y, nil)
