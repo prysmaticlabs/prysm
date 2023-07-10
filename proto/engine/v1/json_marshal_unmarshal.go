@@ -14,7 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
+
+var errExecutionUnmarshal = errors.New("unable to unmarshal execution engine data")
 
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
 // client with proper JSON Marshal and Unmarshal methods to hex.
@@ -34,8 +37,8 @@ type ExecutionBlock struct {
 	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
-	DataGasUsed     uint64                   `json:"dataGasUsed"`
-	ExcessDataGas   uint64                   `json:"excessDataGas"`
+	DataGasUsed     *hexutil.Uint64          `json:"dataGasUsed"`
+	ExcessDataGas   *hexutil.Uint64          `json:"excessDataGas"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -113,7 +116,9 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 				return err
 			}
 		}
+
 		dgu, has := decoded["dataGasUsed"]
+		log.Error(has, dgu != nil)
 		if has && dgu != nil {
 			e.Version = version.Deneb
 			e.DataGasUsed, err = hexutil.DecodeUint64(dgu.(string))
