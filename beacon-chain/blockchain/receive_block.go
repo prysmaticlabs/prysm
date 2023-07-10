@@ -101,8 +101,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 		go s.sendNewFinalizedEvent(ctx, blockCopy, postState, finalized)
 		depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
-		defer cancel()
-		go s.insertFinalizedDeposits(depCtx, finalized.Root)
+		go func() {
+			s.insertFinalizedDeposits(depCtx, finalized.Root)
+			cancel()
+		}()
 	}
 
 	// If slasher is configured, forward the attestations in the block via an event feed for processing.

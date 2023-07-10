@@ -726,6 +726,45 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	}
 }
 
+func TestInsertFinalizedDeposits_PrunePendingDeposits(t *testing.T) {
+	service, tr := minimalTestService(t)
+	ctx, depositCache := tr.ctx, tr.dc
+
+	gs, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gs = gs.Copy()
+	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
+	assert.NoError(t, gs.SetEth1DepositIndex(8))
+	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
+	var zeroSig [96]byte
+	for i := uint64(0); i < uint64(4*params.BeaconConfig().SlotsPerEpoch); i++ {
+		root := []byte(strconv.Itoa(int(i)))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, &ethpb.Deposit{Data: &ethpb.Deposit_Data{
+			PublicKey:             bytesutil.FromBytes48([fieldparams.BLSPubkeyLength]byte{}),
+			WithdrawalCredentials: params.BeaconConfig().ZeroHash[:],
+			Amount:                0,
+			Signature:             zeroSig[:],
+		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
+		depositCache.InsertPendingDeposit(ctx, &ethpb.Deposit{Data: &ethpb.Deposit_Data{
+			PublicKey:             bytesutil.FromBytes48([fieldparams.BLSPubkeyLength]byte{}),
+			WithdrawalCredentials: params.BeaconConfig().ZeroHash[:],
+			Amount:                0,
+			Signature:             zeroSig[:],
+		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root))
+	}
+	service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'})
+	fDeposits := depositCache.FinalizedDeposits(ctx)
+	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	deps := depositCache.AllDeposits(ctx, big.NewInt(107))
+	for _, d := range deps {
+		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
+	}
+	pendingDeps := depositCache.PendingContainers(ctx, nil)
+	for _, d := range pendingDeps {
+		assert.DeepEqual(t, true, d.Index >= 8, "Pending deposits were not pruned")
+	}
+}
+
 func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 	service, tr := minimalTestService(t)
 	ctx, depositCache := tr.ctx, tr.dc
