@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/blob"
 	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
@@ -231,6 +232,12 @@ func (s *Service) Start() {
 		Stater:                stater,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals).Methods(http.MethodGet)
+
+	blobServer := &blob.Server{
+		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		BeaconDB:         s.cfg.BeaconDB,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blobs/{block_id}", blobServer.Blobs)
 
 	coreService := &core.Service{
 		HeadFetcher:        s.cfg.HeadFetcher,

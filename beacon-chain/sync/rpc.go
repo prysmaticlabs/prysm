@@ -126,10 +126,13 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 	s.cfg.p2p.SetStreamHandler(topic, func(stream network.Stream) {
 		defer func() {
 			if r := recover(); r != nil {
-				log.WithField("error", r).Error("Panic occurred")
-				log.Errorf("%s", debug.Stack())
+				log.WithField("error", r).
+					WithField("recovered_at", "registerRPC").
+					WithField("stack", string(debug.Stack())).
+					Error("Panic occurred")
 			}
 		}()
+
 		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
 		defer cancel()
 
