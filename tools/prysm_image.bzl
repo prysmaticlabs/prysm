@@ -1,15 +1,13 @@
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index", "oci_push")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//tools:multi_arch.bzl", "multi_arch")
-load("@rules_multirun//:defs.bzl", "command", "multirun")
-
 
 def prysm_image_upload(
     name,
     binary,
     entrypoint,
     symlinks,
-    repositories):
+    repository):
 
     pkg_tar(
         name = "binary_tar",
@@ -45,29 +43,8 @@ def prysm_image_upload(
         ],
     )
 
-    [
-        oci_push(
-            name = "push_{}".format(i),
-            image = ":oci_image_index",
-            repository = repo,
-        )
-        for i, repo in enumerate(repositories)
-    ]
-
-    [
-        command(
-            name = "cmd_{}".format(i),
-            command = ":push_{}".format(i),
-            arguments = ["--tag", "{DOCKER_TAG}"],
-        )
-        for i in range(len(repositories))
-    ]
-
-    multirun(
+    oci_push(
         name = name,
-        commands = [
-        "cmd_{}".format(i)
-            for i in range(len(repositories))
-        ],
-        #jobs = 0, # Set to 0 to run in parallel, defaults to sequential
+        image = ":oci_image_index",
+        repository = repository,
     )

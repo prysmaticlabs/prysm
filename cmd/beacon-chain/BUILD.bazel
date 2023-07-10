@@ -162,10 +162,7 @@ prysm_image_upload(
     name = "push_oci_image",
     binary = ":beacon-chain",
     entrypoint = ["/beacon-chain"],
-    repositories = [
-        "gcr.io/prylabs-dev/prysm/beacon-chain",
-        "gcr.io/prylabs-dev/prysm/beacon-chain2",
-    ],
+    repository = "gcr.io/prylabs-dev/prysm/beacon-chain",
     symlinks = {
         # Backwards compatiability for images that depended on the old filepath.
         "/app/cmd/beacon-chain/beacon-chain": "/beacon-chain",

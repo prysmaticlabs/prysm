@@ -422,14 +422,6 @@ filegroup(
     ],
 )
 
-
-http_archive(
-    name = "rules_multirun",
-    sha256 = "9cd384e42b2da00104f0e18f25e66285aa21f64b573c667638a7a213206885ab",
-    strip_prefix = "rules_multirun-0.6.1",
-    url = "https://github.com/keith/rules_multirun/archive/refs/tags/0.6.1.tar.gz",
-)
-
 load("//:deps.bzl", "prysm_deps")
 
 # gazelle:repository_macro deps.bzl%prysm_deps
