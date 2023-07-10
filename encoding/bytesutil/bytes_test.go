@@ -258,7 +258,7 @@ func TestSafeCopyBytes_Copy(t *testing.T) {
 
 	assert.NotEqual(t, fmt.Sprintf("%p", slice), fmt.Sprintf("%p", copiedSlice))
 	assert.Equal(t, slice[0], copiedSlice[0])
-	slice[1] = 'A'
+	slice[1] = 'B'
 
 	assert.NotEqual(t, slice[1], copiedSlice[1])
 }
