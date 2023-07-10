@@ -146,7 +146,9 @@ func TestUnmarshalState(t *testing.T) {
 	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
 	require.NoError(t, err)
 	bellaSlot, err := slots.EpochStart(bc.BellatrixForkEpoch)
+	require.NoError(t, err)
 	capellaSlot, err := slots.EpochStart(bc.CapellaForkEpoch)
+	require.NoError(t, err)
 	denebSlot, err := slots.EpochStart(bc.DenebForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
@@ -234,7 +236,9 @@ func TestUnmarshalBlock(t *testing.T) {
 	altairS, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 	require.NoError(t, err)
 	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+	require.NoError(t, err)
 	capellaS, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+	require.NoError(t, err)
 	denebS, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
@@ -348,7 +352,9 @@ func TestUnmarshalBlindedBlock(t *testing.T) {
 	altairS, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 	require.NoError(t, err)
 	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+	require.NoError(t, err)
 	capellaS, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+	require.NoError(t, err)
 	denebS, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
