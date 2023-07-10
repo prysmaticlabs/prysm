@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
@@ -24,6 +25,7 @@ import (
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -579,8 +581,8 @@ func TestServer_GetBlock(t *testing.T) {
 }
 
 func TestServer_GetBlockV2(t *testing.T) {
-	ctx := context.Background()
-
+	stream := &runtime.ServerTransportStream{}
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), stream)
 	t.Run("Phase 0", func(t *testing.T) {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = 123

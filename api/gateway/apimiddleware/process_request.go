@@ -117,7 +117,7 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []
 		for h, vs := range resp.Header {
 			for _, v := range vs {
 				if strings.HasSuffix(h, "Eth-Consensus-Version") {
-					w.Header().Set("Eth-Consensus-Version", vs[0])
+					w.Header().Set("Eth-Consensus-Version", v)
 				} else {
 					w.Header().Set(h, v)
 				}
