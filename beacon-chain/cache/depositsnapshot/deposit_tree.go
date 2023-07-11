@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/math"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 var (
@@ -83,7 +83,7 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (*DepositTree, error) {
 }
 
 // finalize marks a deposit as finalized.
-func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) error {
+func (d *DepositTree) Finalize(eth1data *ethpb.Eth1Data, executionBlockHeight uint64) error {
 	var blockHash [32]byte
 	copy(blockHash[:], eth1data.BlockHash)
 	d.finalizedExecutionBlock = executionBlock{

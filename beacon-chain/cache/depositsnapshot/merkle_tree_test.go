@@ -92,7 +92,7 @@ func Test_fromSnapshotParts(t *testing.T) {
 			require.Equal(t, want, got)
 
 			// Test finalization
-			err = test.finalize(&v1.Eth1Data{
+			err = test.Finalize(&v1.Eth1Data{
 				DepositCount: 2,
 			}, DepositContractDepth)
 			require.NoError(t, err)

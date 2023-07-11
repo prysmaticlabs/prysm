@@ -303,7 +303,7 @@ func TestFinalization(t *testing.T) {
 	}
 	originalRoot := tree.getRoot()
 	require.DeepEqual(t, testCases[127].Eth1Data.DepositRoot, originalRoot)
-	err = tree.finalize(&eth.Eth1Data{
+	err = tree.Finalize(&eth.Eth1Data{
 		DepositRoot:  testCases[100].Eth1Data.DepositRoot[:],
 		DepositCount: testCases[100].Eth1Data.DepositCount,
 		BlockHash:    testCases[100].Eth1Data.BlockHash[:],
@@ -320,7 +320,7 @@ func TestFinalization(t *testing.T) {
 	// ensure original and copy have the same root
 	require.Equal(t, tree.getRoot(), cp.getRoot())
 	//	finalize original again to check double finalization
-	err = tree.finalize(&eth.Eth1Data{
+	err = tree.Finalize(&eth.Eth1Data{
 		DepositRoot:  testCases[105].Eth1Data.DepositRoot[:],
 		DepositCount: testCases[105].Eth1Data.DepositCount,
 		BlockHash:    testCases[105].Eth1Data.BlockHash[:],
@@ -353,7 +353,7 @@ func TestSnapshotCases(t *testing.T) {
 		require.NoError(t, err)
 	}
 	for _, c := range testCases {
-		err = tree.finalize(&eth.Eth1Data{
+		err = tree.Finalize(&eth.Eth1Data{
 			DepositRoot:  c.Eth1Data.DepositRoot[:],
 			DepositCount: c.Eth1Data.DepositCount,
 			BlockHash:    c.Eth1Data.BlockHash[:],
