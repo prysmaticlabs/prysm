@@ -182,13 +182,7 @@ func (b *BeaconState) NumValidators() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if features.Get().EnableExperimentalState {
-		if b.blockRootsMultiValue == nil {
-			return 0
-		}
-		return b.validatorsMultiValue.Len(b)
-	}
-	return len(b.validators)
+	return b.validatorsLen()
 }
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.

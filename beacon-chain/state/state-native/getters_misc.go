@@ -6,8 +6,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
+// Id is the identifier of the beacon state.
 func (b *BeaconState) Id() uint64 {
-	return b.index
+	return b.id
 }
 
 // GenesisTime of the beacon state as a uint64.

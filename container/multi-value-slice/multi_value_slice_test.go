@@ -292,8 +292,8 @@ func TestDetach(t *testing.T) {
 
 	for _, item := range s.individualItems {
 		found := false
-		for _, v := range item.Individual {
-			for _, o := range v.objs {
+		for _, v := range item.Values {
+			for _, o := range v.ids {
 				if o == obj.id {
 					found = true
 				}
@@ -303,8 +303,8 @@ func TestDetach(t *testing.T) {
 	}
 	for _, item := range s.appendedItems {
 		found := false
-		for _, v := range item.Individual {
-			for _, o := range v.objs {
+		for _, v := range item.Values {
+			for _, o := range v.ids {
 				if o == obj.id {
 					found = true
 				}
@@ -330,36 +330,36 @@ func setup() *Slice[int, *testObject] {
 	s.individualItems[1] = &MultiValue[int]{
 		Individual: []*Value[int]{
 			{
-				val:  1,
-				objs: []interfaces.Id{1},
+				val: 1,
+				ids: []interfaces.Id{1},
 			},
 			{
-				val:  2,
-				objs: []interfaces.Id{2},
+				val: 2,
+				ids: []interfaces.Id{2},
 			},
 		},
 	}
 	s.individualItems[2] = &MultiValue[int]{
 		Individual: []*Value[int]{
 			{
-				val:  3,
-				objs: []interfaces.Id{1, 2},
+				val: 3,
+				ids: []interfaces.Id{1, 2},
 			},
 		},
 	}
 	s.individualItems[3] = &MultiValue[int]{
 		Individual: []*Value[int]{
 			{
-				val:  1,
-				objs: []interfaces.Id{1},
+				val: 1,
+				ids: []interfaces.Id{1},
 			},
 		},
 	}
 	s.individualItems[4] = &MultiValue[int]{
 		Individual: []*Value[int]{
 			{
-				val:  2,
-				objs: []interfaces.Id{2},
+				val: 2,
+				ids: []interfaces.Id{2},
 			},
 		},
 	}
@@ -367,28 +367,28 @@ func setup() *Slice[int, *testObject] {
 		{
 			Individual: []*Value[int]{
 				{
-					val:  1,
-					objs: []interfaces.Id{1},
+					val: 1,
+					ids: []interfaces.Id{1},
 				},
 				{
-					val:  2,
-					objs: []interfaces.Id{2},
-				},
-			},
-		},
-		{
-			Individual: []*Value[int]{
-				{
-					val:  3,
-					objs: []interfaces.Id{1, 2},
+					val: 2,
+					ids: []interfaces.Id{2},
 				},
 			},
 		},
 		{
 			Individual: []*Value[int]{
 				{
-					val:  2,
-					objs: []interfaces.Id{2},
+					val: 3,
+					ids: []interfaces.Id{1, 2},
+				},
+			},
+		},
+		{
+			Individual: []*Value[int]{
+				{
+					val: 2,
+					ids: []interfaces.Id{2},
 				},
 			},
 		},
@@ -401,8 +401,8 @@ func setup() *Slice[int, *testObject] {
 
 func assertIndividualFound(t *testing.T, slice *Slice[int, *testObject], id interfaces.Id, itemIndex uint64, expected int) {
 	found := false
-	for _, v := range slice.individualItems[itemIndex].Individual {
-		for _, o := range v.objs {
+	for _, v := range slice.individualItems[itemIndex].Values {
+		for _, o := range v.ids {
 			if o == id {
 				found = true
 				assert.Equal(t, expected, v.val)
@@ -414,8 +414,8 @@ func assertIndividualFound(t *testing.T, slice *Slice[int, *testObject], id inte
 
 func assertIndividualNotFound(t *testing.T, slice *Slice[int, *testObject], id interfaces.Id, itemIndex uint64) {
 	found := false
-	for _, v := range slice.individualItems[itemIndex].Individual {
-		for _, o := range v.objs {
+	for _, v := range slice.individualItems[itemIndex].Values {
+		for _, o := range v.ids {
 			if o == id {
 				found = true
 			}
@@ -426,8 +426,8 @@ func assertIndividualNotFound(t *testing.T, slice *Slice[int, *testObject], id i
 
 func assertAppendedFound(t *testing.T, slice *Slice[int, *testObject], id interfaces.Id, itemIndex uint64, expected int) {
 	found := false
-	for _, v := range slice.appendedItems[itemIndex].Individual {
-		for _, o := range v.objs {
+	for _, v := range slice.appendedItems[itemIndex].Values {
+		for _, o := range v.ids {
 			if o == id {
 				found = true
 				assert.Equal(t, expected, v.val)
@@ -439,8 +439,8 @@ func assertAppendedFound(t *testing.T, slice *Slice[int, *testObject], id interf
 
 func assertAppendedNotFound(t *testing.T, slice *Slice[int, *testObject], id interfaces.Id, itemIndex uint64) {
 	found := false
-	for _, v := range slice.appendedItems[itemIndex].Individual {
-		for _, o := range v.objs {
+	for _, v := range slice.appendedItems[itemIndex].Values {
+		for _, o := range v.ids {
 			if o == id {
 				found = true
 			}
