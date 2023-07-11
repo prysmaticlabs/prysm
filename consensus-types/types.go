@@ -21,11 +21,6 @@ func ErrNotSupported(funcName string, ver int) error {
 	return errors2.Wrap(ErrUnsupportedField, fmt.Sprintf("%s is not supported for %s", funcName, version.String(ver)))
 }
 
-// Enumerator keeps track of the number of objects created since the node's start.
-type Enumerator interface {
-	Inc() uint64
-}
-
 // ThreadSafeEnumerator is a thread-safe counter of all objects created since the node's start.
 type ThreadSafeEnumerator struct {
 	counter uint64

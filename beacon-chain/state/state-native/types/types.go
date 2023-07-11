@@ -228,4 +228,4 @@ const (
 )
 
 // Enumerator keeps track of the number of states created since the node's start.
-var Enumerator consensus_types.Enumerator = &consensus_types.ThreadSafeEnumerator{}
+var Enumerator = &consensus_types.ThreadSafeEnumerator{}
