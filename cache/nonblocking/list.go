@@ -77,6 +77,10 @@ func (l *lruList[K, V]) insertValue(k K, v V, at *entry[K, V]) *entry[K, V] {
 
 // remove removes e from its list, decrements l.len
 func (l *lruList[K, V]) remove(e *entry[K, V]) V {
+	// If already removed, do nothing.
+	if e.prev == nil && e.next == nil {
+		return e.value
+	}
 	e.prev.next = e.next
 	e.next.prev = e.prev
 	e.next = nil // avoid memory leaks

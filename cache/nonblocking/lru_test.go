@@ -3,15 +3,62 @@
 
 package nonblocking
 
-import "testing"
+import (
+	"context"
+	"testing"
+	"time"
+)
+
+func TestLRU_Concurrency(t *testing.T) {
+	onEvicted := func(_ int, _ int) {}
+	size := 20
+	cache, err := NewLRU(size, onEvicted)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+	for i := 0; i < 100; i++ {
+		go func(j int) {
+			for {
+				if ctx.Err() != nil {
+					return
+				}
+				cache.Add(j, j)
+				cache.Get(j)
+				time.Sleep(time.Millisecond * 50)
+			}
+		}(i)
+	}
+	<-ctx.Done()
+}
+
+func TestLRU_Eviction(t *testing.T) {
+	evictCounter := 0
+	onEvicted := func(_ int, _ int) {
+		evictCounter++
+	}
+	size := 20
+	cache, err := NewLRU(size, onEvicted)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i := 0; i < 20; i++ {
+		cache.Add(i, i)
+		cache.Get(i)
+	}
+	cache.Add(20, 20)
+	if evictCounter != 1 {
+		t.Fatalf("should have evicted 1 element: %d", evictCounter)
+	}
+}
 
 // Test that Add returns true/false if an eviction occurred
 func TestLRU_Add(t *testing.T) {
 	evictCounter := 0
-	onEvicted := func(k int, v int) {
+	onEvicted := func(_ int, _ int) {
 		evictCounter++
 	}
-
 	l, err := NewLRU(1, onEvicted)
 	if err != nil {
 		t.Fatalf("err: %v", err)
