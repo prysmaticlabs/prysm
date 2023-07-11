@@ -108,9 +108,28 @@ func (s *Store) DeletePeerData(pid peer.ID) {
 }
 
 // SetTrustedPeers sets our desired trusted peer set.
+// Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) SetTrustedPeers(peers []peer.ID) {
 	for _, p := range peers {
 		s.trustedPeers[p] = true
+	}
+}
+
+// GetTrustedPeers gets our desired trusted peer ids.
+// Important: it is assumed that store mutex is locked when calling this method.
+func (s *Store) GetTrustedPeers() []peer.ID {
+	peers := []peer.ID{}
+	for p := range s.trustedPeers {
+		peers = append(peers, p)
+	}
+	return peers
+}
+
+// DeleteTrustedPeers removes peers from trusted peer set.
+// Important: it is assumed that store mutex is locked when calling this method.
+func (s *Store) DeleteTrustedPeers(peers []peer.ID) {
+	for _, p := range peers {
+		delete(s.trustedPeers, p)
 	}
 }
 

@@ -174,9 +174,9 @@ func (s *Service) Start() {
 	s.awaitStateInitialized()
 	s.isPreGenesis = false
 
-	var peersToWatch []string
+	var relayNodes []string
 	if s.cfg.RelayNodeAddr != "" {
-		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
+		relayNodes = append(relayNodes, s.cfg.RelayNodeAddr)
 		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
@@ -213,8 +213,7 @@ func (s *Service) Start() {
 		// Set trusted peers for those that are provided as static addresses.
 		pids := peerIdsFromMultiAddrs(addrs)
 		s.peers.SetTrustedPeers(pids)
-		peersToWatch = append(peersToWatch, s.cfg.StaticPeers...)
-		s.connectWithAllPeers(addrs)
+		s.connectWithAllTrustedPeers(addrs)
 	}
 	// Initialize metadata according to the
 	// current epoch.
@@ -226,7 +225,7 @@ func (s *Service) Start() {
 
 	// Periodic functions.
 	async.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
-		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
+		ensurePeerConnections(s.ctx, s.host, s.peers, relayNodes...)
 	})
 	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
 	async.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
@@ -396,6 +395,24 @@ func (s *Service) awaitStateInitialized() {
 	_, err = s.currentForkDigest() // initialize fork digest cache
 	if err != nil {
 		log.WithError(err).Error("Could not initialize fork digest")
+	}
+}
+
+func (s *Service) connectWithAllTrustedPeers(multiAddrs []multiaddr.Multiaddr) {
+	addrInfos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
+	if err != nil {
+		log.WithError(err).Error("Could not convert to peer address info's from multiaddresses")
+		return
+	}
+	for _, info := range addrInfos {
+		// add peer into peer status
+		s.peers.Add(nil, info.ID, info.Addrs[0], network.DirUnknown)
+		// make each dial non-blocking
+		go func(info peer.AddrInfo) {
+			if err := s.connectWithPeer(s.ctx, info); err != nil {
+				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+			}
+		}(info)
 	}
 }
 
