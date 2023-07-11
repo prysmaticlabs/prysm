@@ -13,9 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -86,7 +87,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "blobs are not supported for Phase 0 fork", e.Message)
@@ -250,7 +251,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "blobs are not supported before Deneb fork", e.Message)
@@ -265,9 +266,38 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "could not parse block ID"))
+	})
+	t.Run("ssz", func(t *testing.T) {
+		require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.BlobSidecar{
+			{
+				BlockRoot:       blockroot,
+				Index:           0,
+				Slot:            3,
+				BlockParentRoot: make([]byte, fieldparams.RootLength),
+				ProposerIndex:   123,
+				Blob:            make([]byte, fieldparams.BlobLength),
+				KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
+				KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
+			},
+		}))
+		u := "http://foo.example/finalized?indices=0"
+		request := httptest.NewRequest("GET", u, nil)
+		request.Header.Add("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		s := &Server{
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockroot}},
+			BeaconDB:         db,
+		}
+
+		s.Blobs(writer, request)
+
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, len(writer.Body.Bytes()), 131260)
+		assert.Equal(t, true, strings.HasPrefix(hexutil.Encode(writer.Body.Bytes()), "0x04000000626c6f636b726f6f7400000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000000000000000007b"))
 	})
 }
