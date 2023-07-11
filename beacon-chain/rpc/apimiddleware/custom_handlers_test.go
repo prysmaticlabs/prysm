@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
@@ -45,7 +46,7 @@ func (t testSSZResponseJson) SSZFinalized() bool {
 func TestSSZRequested(t *testing.T) {
 	t.Run("ssz_requested", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{octetStreamMediaType}
+		request.Header["Accept"] = []string{api.OctetStreamMediaType}
 		result, err := sszRequested(request)
 		require.NoError(t, err)
 		assert.Equal(t, true, result)
@@ -53,7 +54,7 @@ func TestSSZRequested(t *testing.T) {
 
 	t.Run("ssz_content_type_first", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s", octetStreamMediaType, jsonMediaType)}
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s", api.OctetStreamMediaType, api.JsonMediaType)}
 		result, err := sszRequested(request)
 		require.NoError(t, err)
 		assert.Equal(t, true, result)
@@ -61,7 +62,7 @@ func TestSSZRequested(t *testing.T) {
 
 	t.Run("ssz_content_type_preferred_1", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.9,%s", jsonMediaType, octetStreamMediaType)}
+		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.9,%s", api.JsonMediaType, api.OctetStreamMediaType)}
 		result, err := sszRequested(request)
 		require.NoError(t, err)
 		assert.Equal(t, true, result)
@@ -69,7 +70,7 @@ func TestSSZRequested(t *testing.T) {
 
 	t.Run("ssz_content_type_preferred_2", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.95,%s;q=0.9", octetStreamMediaType, jsonMediaType)}
+		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.95,%s;q=0.9", api.OctetStreamMediaType, api.JsonMediaType)}
 		result, err := sszRequested(request)
 		require.NoError(t, err)
 		assert.Equal(t, true, result)
@@ -77,7 +78,7 @@ func TestSSZRequested(t *testing.T) {
 
 	t.Run("other_content_type_preferred", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9", jsonMediaType, octetStreamMediaType)}
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9", api.JsonMediaType, api.OctetStreamMediaType)}
 		result, err := sszRequested(request)
 		require.NoError(t, err)
 		assert.Equal(t, false, result)
@@ -85,7 +86,7 @@ func TestSSZRequested(t *testing.T) {
 
 	t.Run("other_params", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9,otherparam=xyz", jsonMediaType, octetStreamMediaType)}
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9,otherparam=xyz", api.JsonMediaType, api.OctetStreamMediaType)}
 		result, err := sszRequested(request)
 		require.NoError(t, err)
 		assert.Equal(t, false, result)
@@ -153,7 +154,7 @@ func TestPreparePostedSszData(t *testing.T) {
 
 	preparePostedSSZData(request)
 	assert.Equal(t, int64(19), request.ContentLength)
-	assert.Equal(t, jsonMediaType, request.Header.Get("Content-Type"))
+	assert.Equal(t, api.JsonMediaType, request.Header.Get("Content-Type"))
 }
 
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
@@ -209,12 +210,12 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		v, ok = writer.Header()["Content-Type"]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
-		assert.Equal(t, octetStreamMediaType, v[0])
+		assert.Equal(t, api.OctetStreamMediaType, v[0])
 		v, ok = writer.Header()["Content-Disposition"]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "attachment; filename=test.ssz", v[0])
-		v, ok = writer.Header()[versionHeader]
+		v, ok = writer.Header()[api.VersionHeader]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "version", v[0])
