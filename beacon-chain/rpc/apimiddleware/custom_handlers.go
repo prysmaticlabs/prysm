@@ -16,8 +16,16 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/r3labs/sse"
+)
+
+const (
+	versionHeader        = "Eth-Consensus-Version"
+	grpcVersionHeader    = "Grpc-metadata-Eth-Consensus-Version"
+	jsonMediaType        = "application/json"
+	octetStreamMediaType = "application/octet-stream"
 )
 
 // match a number with optional decimals
@@ -114,7 +122,7 @@ func handleGetSSZ(
 	req *http.Request,
 	config sszConfig,
 ) (handled bool) {
-	ssz, err := sszRequested(req)
+	ssz, err := network.SszRequested(req)
 	if err != nil {
 		apimiddleware.WriteError(w, apimiddleware.InternalServerError(err), nil)
 		return true

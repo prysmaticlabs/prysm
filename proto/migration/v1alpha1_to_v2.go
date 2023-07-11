@@ -172,6 +172,23 @@ func V1Alpha1BeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.BeaconBlockDeneb) (*
 	return v2Block, nil
 }
 
+// V1Alpha1BlobSidecarsToV2 converts an array of v1alpha1 blinded blob sidecars to its v2 equivalent.
+func V1Alpha1BlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlobSidecar) ([]*ethpbv2.BlobSidecar, error) {
+	v2Blobs := make([]*ethpbv2.BlobSidecar, len(v1alpha1Blobs))
+	for index, v1Blob := range v1alpha1Blobs {
+		marshaledBlob, err := proto.Marshal(v1Blob)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not marshal blob sidecar")
+		}
+		v2Blob := &ethpbv2.BlobSidecar{}
+		if err := proto.Unmarshal(marshaledBlob, v2Blob); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blob sidecar")
+		}
+		v2Blobs[index] = v2Blob
+	}
+	return v2Blobs, nil
+}
+
 // V1Alpha1BlindedBlobSidecarsToV2 converts an array of v1alpha1 blinded blob sidecars to its v2 equivalent.
 func V1Alpha1BlindedBlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlindedBlobSidecar) ([]*ethpbv2.BlindedBlobSidecar, error) {
 	v2Blobs := make([]*ethpbv2.BlindedBlobSidecar, len(v1alpha1Blobs))
@@ -182,7 +199,7 @@ func V1Alpha1BlindedBlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlindedBlobSide
 		}
 		v2Blob := &ethpbv2.BlindedBlobSidecar{}
 		if err := proto.Unmarshal(marshaledBlob, v2Blob); err != nil {
-			return nil, errors.Wrap(err, "could not unmarshal blobs idecar")
+			return nil, errors.Wrap(err, "could not unmarshal blob sidecar")
 		}
 		v2Blobs[index] = v2Blob
 	}
