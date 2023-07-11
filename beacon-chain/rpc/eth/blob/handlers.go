@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
@@ -131,6 +133,43 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
+
+	ssz, err := network.SszRequested(r)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	if ssz {
+		v2sidecars, err := migration.V1Alpha1BlobSidecarsToV2(sidecars)
+		if err != nil {
+			errJson := &network.DefaultErrorJson{
+				Message: err.Error(),
+				Code:    http.StatusInternalServerError,
+			}
+			network.WriteError(w, errJson)
+			return
+		}
+		sidecarResp := &ethpb.BlobSidecars{
+			Sidecars: v2sidecars,
+		}
+		sszResp, err := sidecarResp.MarshalSSZ()
+		if err != nil {
+			errJson := &network.DefaultErrorJson{
+				Message: err.Error(),
+				Code:    http.StatusInternalServerError,
+			}
+			network.WriteError(w, errJson)
+			return
+		}
+		network.WriteSsz(w, sszResp, "blob_sidecars.ssz")
+		return
+	}
+
 	network.WriteJson(w, buildSidecardsResponse(sidecars))
 }
 
