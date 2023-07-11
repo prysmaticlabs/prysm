@@ -328,7 +328,7 @@ func setup() *Slice[int, *testObject] {
 	s := &Slice[int, *testObject]{}
 	s.Init([]int{123, 123, 123, 123, 123})
 	s.individualItems[1] = &MultiValue[int]{
-		Individual: []*Value[int]{
+		Values: []*Value[int]{
 			{
 				val: 1,
 				ids: []interfaces.Id{1},
@@ -340,7 +340,7 @@ func setup() *Slice[int, *testObject] {
 		},
 	}
 	s.individualItems[2] = &MultiValue[int]{
-		Individual: []*Value[int]{
+		Values: []*Value[int]{
 			{
 				val: 3,
 				ids: []interfaces.Id{1, 2},
@@ -348,7 +348,7 @@ func setup() *Slice[int, *testObject] {
 		},
 	}
 	s.individualItems[3] = &MultiValue[int]{
-		Individual: []*Value[int]{
+		Values: []*Value[int]{
 			{
 				val: 1,
 				ids: []interfaces.Id{1},
@@ -356,7 +356,7 @@ func setup() *Slice[int, *testObject] {
 		},
 	}
 	s.individualItems[4] = &MultiValue[int]{
-		Individual: []*Value[int]{
+		Values: []*Value[int]{
 			{
 				val: 2,
 				ids: []interfaces.Id{2},
@@ -365,7 +365,7 @@ func setup() *Slice[int, *testObject] {
 	}
 	s.appendedItems = []*MultiValue[int]{
 		{
-			Individual: []*Value[int]{
+			Values: []*Value[int]{
 				{
 					val: 1,
 					ids: []interfaces.Id{1},
@@ -377,7 +377,7 @@ func setup() *Slice[int, *testObject] {
 			},
 		},
 		{
-			Individual: []*Value[int]{
+			Values: []*Value[int]{
 				{
 					val: 3,
 					ids: []interfaces.Id{1, 2},
@@ -385,7 +385,7 @@ func setup() *Slice[int, *testObject] {
 			},
 		},
 		{
-			Individual: []*Value[int]{
+			Values: []*Value[int]{
 				{
 					val: 2,
 					ids: []interfaces.Id{2},
