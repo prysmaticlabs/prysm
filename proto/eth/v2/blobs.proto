@@ -25,7 +25,7 @@ option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
 
 message BlobSidecars {
-    repeated BlobSidecar sidecars = 1;
+    repeated BlobSidecar sidecars = 1 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BlobSidecar {
