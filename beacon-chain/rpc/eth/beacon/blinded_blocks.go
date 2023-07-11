@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -17,7 +18,9 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -38,7 +41,9 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get block root")
 	}
-
+	if err := grpc.SetHeader(ctx, metadata.Pairs(api.VersionHeader, version.String(blk.Version()))); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set "+api.VersionHeader+" header: %v", err)
+	}
 	result, err := getBlindedBlockPhase0(blk)
 	if result != nil {
 		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
@@ -146,7 +151,7 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -189,18 +194,18 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlockSSZ")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+versionHeader+" header")
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+api.VersionHeader+" header")
 	}
-	ver := md.Get(versionHeader)
+	ver := md.Get(api.VersionHeader)
 	if len(ver) == 0 {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+versionHeader+" header")
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+api.VersionHeader+" header")
 	}
 	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
 	forkVer, err := schedule.VersionForName(ver[0])

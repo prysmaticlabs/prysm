@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -209,35 +210,44 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)
 }
 
-// inserts finalized deposits into our finalized deposit trie.
-func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) error {
+// inserts finalized deposits into our finalized deposit trie, needs to be
+// called in the background
+func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertFinalizedDeposits")
 	defer span.End()
+	startTime := time.Now()
 
 	// Update deposit cache.
 	finalizedState, err := s.cfg.StateGen.StateByRoot(ctx, fRoot)
 	if err != nil {
-		return errors.Wrap(err, "could not fetch finalized state")
+		log.WithError(err).Error("could not fetch finalized state")
+		return
 	}
 	// We update the cache up to the last deposit index in the finalized block's state.
 	// We can be confident that these deposits will be included in some block
 	// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
 	eth1DepositIndex, err := mathutil.Int(finalizedState.Eth1DepositIndex())
 	if err != nil {
-		return errors.Wrap(err, "could not cast eth1 deposit index")
+		log.WithError(err).Error("could not cast eth1 deposit index")
+		return
 	}
 	// The deposit index in the state is always the index of the next deposit
 	// to be included(rather than the last one to be processed). This was most likely
 	// done as the state cannot represent signed integers.
-	eth1DepositIndex -= 1
-	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(eth1DepositIndex)); err != nil {
-		return err
+	finalizedEth1DepIdx := eth1DepositIndex - 1
+	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(finalizedEth1DepIdx)); err != nil {
+		log.WithError(err).Error("could not insert finalized deposits")
+		return
 	}
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
-	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
-		return errors.Wrap(err, "could not prune deposit proofs")
+	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(finalizedEth1DepIdx)); err != nil {
+		log.WithError(err).Error("could not prune deposit proofs")
 	}
-	return nil
+	// Prune deposits which have already been finalized, the below method prunes all pending deposits (non-inclusive) up
+	// to the provided eth1 deposit index.
+	s.cfg.DepositCache.PrunePendingDeposits(ctx, int64(eth1DepositIndex)) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
+
+	log.WithField("duration", time.Since(startTime).String()).Debug("Finalized deposit insertion completed")
 }
 
 // This ensures that the input root defaults to using genesis root instead of zero hashes. This is needed for handling

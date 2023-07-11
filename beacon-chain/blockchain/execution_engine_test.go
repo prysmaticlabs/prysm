@@ -525,11 +525,13 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:           "phase 0 post state",
 			postState:      phase0State,
+			blk:            altairBlk, // same as phase 0 for this test
 			isValidPayload: true,
 		},
 		{
 			name:           "altair post state",
 			postState:      altairState,
+			blk:            altairBlk,
 			isValidPayload: true,
 		},
 		{
@@ -741,6 +743,37 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	validated, err := service.notifyNewPayload(ctx, postVersion, postHeader, bellatrixBlk)
 	require.NoError(t, err)
 	require.Equal(t, true, validated)
+}
+
+func Test_reportInvalidBlock(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	service, tr := minimalTestService(t)
+	ctx, _, fcs := tr.ctx, tr.db, tr.fcs
+	jcp := &ethpb.Checkpoint{}
+	st, root, err := prepareForkchoiceState(ctx, 0, [32]byte{'A'}, [32]byte{}, [32]byte{'a'}, jcp, jcp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+	st, root, err = prepareForkchoiceState(ctx, 1, [32]byte{'B'}, [32]byte{'A'}, [32]byte{'b'}, jcp, jcp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+	st, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'C'}, [32]byte{'B'}, [32]byte{'c'}, jcp, jcp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 3, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'d'}, jcp, jcp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+
+	require.NoError(t, fcs.SetOptimisticToValid(ctx, [32]byte{'A'}))
+	err = service.pruneInvalidBlock(ctx, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'a'})
+	require.Equal(t, IsInvalidBlock(err), true)
+	require.Equal(t, InvalidBlockLVH(err), [32]byte{'a'})
+	invalidRoots := InvalidAncestorRoots(err)
+	require.Equal(t, 3, len(invalidRoots))
+	require.Equal(t, [32]byte{'D'}, invalidRoots[0])
+	require.Equal(t, [32]byte{'C'}, invalidRoots[1])
+	require.Equal(t, [32]byte{'B'}, invalidRoots[2])
 }
 
 func Test_GetPayloadAttribute(t *testing.T) {

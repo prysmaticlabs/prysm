@@ -335,6 +335,10 @@ func (p *Status) IsBad(pid peer.ID) bool {
 
 // isBad is the lock-free version of IsBad.
 func (p *Status) isBad(pid peer.ID) bool {
+	// Do not disconnect from trusted peers.
+	if p.store.IsTrustedPeer(pid) {
+		return false
+	}
 	return p.isfromBadIP(pid) || p.scorers.IsBadPeerNoLock(pid)
 }
 
@@ -556,6 +560,9 @@ func (p *Status) Prune() {
 	notBadPeer := func(pid peer.ID) bool {
 		return !p.isBad(pid)
 	}
+	notTrustedPeer := func(pid peer.ID) bool {
+		return !p.isTrustedPeers(pid)
+	}
 	type peerResp struct {
 		pid   peer.ID
 		score float64
@@ -563,7 +570,8 @@ func (p *Status) Prune() {
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerDisconnected && notBadPeer(pid) {
+		// Should not prune trusted peer or prune the peer dara and unset trusted peer.
+		if peerData.ConnState == PeerDisconnected && notBadPeer(pid) && notTrustedPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:   pid,
 				score: p.Scorers().ScoreNoLock(pid),
@@ -604,6 +612,9 @@ func (p *Status) deprecatedPrune() {
 	notBadPeer := func(peerData *peerdata.PeerData) bool {
 		return peerData.BadResponses < p.scorers.BadResponsesScorer().Params().Threshold
 	}
+	notTrustedPeer := func(pid peer.ID) bool {
+		return !p.isTrustedPeers(pid)
+	}
 	type peerResp struct {
 		pid     peer.ID
 		badResp int
@@ -611,7 +622,8 @@ func (p *Status) deprecatedPrune() {
 	peersToPrune := make([]*peerResp, 0)
 	// Select disconnected peers with a smaller bad response count.
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerDisconnected && notBadPeer(peerData) {
+		// Should not prune trusted peer or prune the peer dara and unset trusted peer.
+		if peerData.ConnState == PeerDisconnected && notBadPeer(peerData) && notTrustedPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
 				badResp: peerData.BadResponses,
@@ -769,7 +781,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 	// Select connected and inbound peers to prune.
 	for pid, peerData := range p.store.Peers() {
 		if peerData.ConnState == PeerConnected &&
-			peerData.Direction == network.DirInbound {
+			peerData.Direction == network.DirInbound && !p.store.IsTrustedPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:   pid,
 				score: p.scorers.ScoreNoLock(pid),
@@ -835,7 +847,7 @@ func (p *Status) deprecatedPeersToPrune() []peer.ID {
 	// Select connected and inbound peers to prune.
 	for pid, peerData := range p.store.Peers() {
 		if peerData.ConnState == PeerConnected &&
-			peerData.Direction == network.DirInbound {
+			peerData.Direction == network.DirInbound && !p.store.IsTrustedPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
 				pid:     pid,
 				badResp: peerData.BadResponses,
@@ -898,6 +910,40 @@ func (p *Status) ConnectedPeerLimit() uint64 {
 		return 0
 	}
 	return uint64(maxLim) - maxLimitBuffer
+}
+
+// SetTrustedPeers sets our trusted peer set into
+// our peerstore.
+func (p *Status) SetTrustedPeers(peers []peer.ID) {
+	p.store.Lock()
+	defer p.store.Unlock()
+	p.store.SetTrustedPeers(peers)
+}
+
+// GetTrustedPeers returns a list of all trusted peers' ids
+func (p *Status) GetTrustedPeers() []peer.ID {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	return p.store.GetTrustedPeers()
+}
+
+// DeleteTrustedPeers removes peers from trusted peer set
+func (p *Status) DeleteTrustedPeers(peers []peer.ID) {
+	p.store.Lock()
+	defer p.store.Unlock()
+	p.store.DeleteTrustedPeers(peers)
+}
+
+// IsTrustedPeers returns if given peer is a Trusted peer
+func (p *Status) IsTrustedPeers(pid peer.ID) bool {
+	p.store.RLock()
+	defer p.store.RUnlock()
+	return p.isTrustedPeers(pid)
+}
+
+// isTrustedPeers is the lock-free version of IsTrustedPeers.
+func (p *Status) isTrustedPeers(pid peer.ID) bool {
+	return p.store.IsTrustedPeer(pid)
 }
 
 // this method assumes the store lock is acquired before

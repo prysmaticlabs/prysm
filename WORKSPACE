@@ -16,27 +16,37 @@ load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 
 rules_pkg_dependencies()
 
+HERMETIC_CC_TOOLCHAIN_VERSION = "v2.0.0"
+
 http_archive(
-    name = "com_grail_bazel_toolchain",
-    sha256 = "b210fc8e58782ef171f428bfc850ed7179bdd805543ebd1aa144b9c93489134f",
-    strip_prefix = "bazel-toolchain-83e69ba9e4b4fdad0d1d057fcb87addf77c281c9",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/83e69ba9e4b4fdad0d1d057fcb87addf77c281c9.tar.gz"],
+    name = "hermetic_cc_toolchain",
+    sha256 = "57f03a6c29793e8add7bd64186fc8066d23b5ffd06fe9cc6b0b8c499914d3a65",
+    urls = [
+        "https://mirror.bazel.build/github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
+        "https://github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
+    ],
 )
 
-load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
+load("@hermetic_cc_toolchain//toolchain:defs.bzl", zig_toolchains = "toolchains")
 
-bazel_toolchain_dependencies()
+zig_toolchains()
 
-load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
-
-llvm_toolchain(
-    name = "llvm_toolchain",
-    llvm_version = "13.0.1",
+# Register zig sdk toolchains with support for Ubuntu 20.04 (Focal Fossa) which has an EOL date of April, 2025.
+# For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc
+register_toolchains(
+    "@zig_sdk//toolchain:linux_amd64_gnu.2.31",
+    "@zig_sdk//toolchain:linux_arm64_gnu.2.31",
+    # Hermetic cc toolchain is not yet supported on darwin. Sysroot needs to be provided.
+    # See https://github.com/uber/hermetic_cc_toolchain#osx-sysroot
+    #    "@zig_sdk//toolchain:darwin_amd64",
+    #    "@zig_sdk//toolchain:darwin_arm64",
+    # Windows builds are not supported yet.
+    #    "@zig_sdk//toolchain:windows_amd64",
 )
 
-load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
+load("@prysm//tools/cross-toolchain:darwin_cc_hack.bzl", "configure_nonhermetic_darwin")
 
-llvm_register_toolchains()
+configure_nonhermetic_darwin()
 
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
@@ -205,7 +215,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.4.0-alpha.0"
+consensus_spec_version = "v1.4.0-alpha.1"
 
 bls_test_version = "v0.1.1"
 
@@ -221,7 +231,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "afd64b47edb689b2f4e9fe5d3bcc9c64c342a950a01a675bc56da629aa099cd8",
+    sha256 = "1118a663be4a00ba00f0635eb20287157f2b2f993aed64335bfbcd04af424c2b",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -237,7 +247,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "cae3293f30e538d1c478925a58284ad163931cc9fddcb3974dd417eaf7080fff",
+    sha256 = "acde6e10940d14f22277eda5b55b65a24623ac88e4c7a2e34134a6069f5eea82",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -253,7 +263,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "5cf94d30eba3d35312c90b42745c2c496f018c8a0a5e56e878f0a8b9a53e4e90",
+    sha256 = "49c022f3a3478cea849ba8f877a9f7e4c1ded549edddc09993550bbc5bb192e1",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -268,7 +278,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "97d61ad60ebef68ae0f94f6d4d9d3d56b432a751602dc28d690dd41aa9b3e6f5",
+    sha256 = "c3e246ff01f6b7b9e9e41939954a6ff89dfca7297415f88781809165fa83267c",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -311,11 +321,13 @@ http_archive(
     url = "https://github.com/bazelbuild/buildtools/archive/f2aed9ee205d62d45c55cfabbfd26342f8526862.zip",
 )
 
-git_repository(
+http_archive(
     name = "com_google_protobuf",
-    commit = "436bd7880e458532901c58f4d9d1ea23fa7edd52",
-    remote = "https://github.com/protocolbuffers/protobuf",
-    shallow_since = "1617835118 -0700",
+    sha256 = "4e176116949be52b0408dfd24f8925d1eb674a781ae242a75296b17a1c721395",
+    strip_prefix = "protobuf-23.3",
+    urls = [
+        "https://github.com/protocolbuffers/protobuf/archive/v23.3.tar.gz",
+    ],
 )
 
 # Group the sources of the library so that CMake rule have access to it

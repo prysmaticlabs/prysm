@@ -154,7 +154,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
-	} else if hasAttr && payloadID == nil {
+	} else if hasAttr && payloadID == nil && !features.Get().PrepareAllPayloads {
 		log.WithFields(logrus.Fields{
 			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
 			"slot":      headBlk.Slot(),
@@ -182,21 +182,24 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 
 // notifyNewPayload signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
-func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
-	postStateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock) (bool, error) {
+func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
+	preStateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 
 	// Execution payload is only supported in Bellatrix and beyond. Pre
 	// merge blocks are never optimistic
-	if blocks.IsPreBellatrixVersion(postStateVersion) {
+	if blk == nil {
+		return false, errors.New("signed beacon block can't be nil")
+	}
+	if preStateVersion < version.Bellatrix {
 		return true, nil
 	}
 	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
 		return false, err
 	}
 	body := blk.Block().Body()
-	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
+	enabled, err := blocks.IsExecutionEnabledUsingHeader(preStateHeader, body)
 	if err != nil {
 		return false, errors.Wrap(invalidBlock{error: err}, "could not determine if execution is enabled")
 	}
@@ -220,32 +223,34 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		}).Info("Called new payload with optimistic block")
 		return false, nil
 	case execution.ErrInvalidPayloadStatus:
-		newPayloadInvalidNodeCount.Inc()
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return false, err
-		}
-		invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, blk.Block().ParentRoot(), bytesutil.ToBytes32(lastValidHash))
-		if err != nil {
-			return false, err
-		}
-		if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
-			return false, err
-		}
-		log.WithFields(logrus.Fields{
-			"slot":                 blk.Block().Slot(),
-			"blockRoot":            fmt.Sprintf("%#x", root),
-			"invalidChildrenCount": len(invalidRoots),
-		}).Warn("Pruned invalid blocks")
+		lvh := bytesutil.ToBytes32(lastValidHash)
 		return false, invalidBlock{
-			invalidAncestorRoots: invalidRoots,
-			error:                ErrInvalidPayload,
+			error:         ErrInvalidPayload,
+			lastValidHash: lvh,
 		}
-	case execution.ErrInvalidBlockHashPayloadStatus:
-		newPayloadInvalidNodeCount.Inc()
-		return false, ErrInvalidBlockHashPayloadStatus
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
+	}
+}
+
+// reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
+func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
+	newPayloadInvalidNodeCount.Inc()
+	invalidRoots, err := s.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	if err != nil {
+		return err
+	}
+	if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+		return err
+	}
+	log.WithFields(logrus.Fields{
+		"blockRoot":            fmt.Sprintf("%#x", root),
+		"invalidChildrenCount": len(invalidRoots),
+	}).Warn("Pruned invalid blocks")
+	return invalidBlock{
+		invalidAncestorRoots: invalidRoots,
+		error:                ErrInvalidPayload,
+		lastValidHash:        lvh,
 	}
 }
 

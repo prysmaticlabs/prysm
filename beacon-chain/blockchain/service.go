@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
@@ -60,6 +61,7 @@ type Service struct {
 	wsVerifier            *WeakSubjectivityVerifier
 	clockSetter           startup.ClockSetter
 	clockWaiter           startup.ClockWaiter
+	syncComplete          chan struct{}
 }
 
 // config options for the service.
@@ -307,7 +309,13 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
-	if err := s.setHead(finalizedRoot, finalizedBlock, finalizedState); err != nil {
+	if err := s.setHead(&head{
+		finalizedRoot,
+		finalizedBlock,
+		finalizedState,
+		finalizedBlock.Block().Slot(),
+		false,
+	}); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
 
@@ -401,7 +409,7 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateCommitteeCache(ctx, genesisState, 0); err != nil {
 		return nil, err
 	}
-	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState); err != nil {
+	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState, coreTime.CurrentEpoch(genesisState)); err != nil {
 		return nil, err
 	}
 
@@ -439,7 +447,13 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
-	if err := s.setHead(genesisBlkRoot, genesisBlk, genesisState); err != nil {
+	if err := s.setHead(&head{
+		genesisBlkRoot,
+		genesisBlk,
+		genesisState,
+		genesisBlk.Block().Slot(),
+		false,
+	}); err != nil {
 		log.WithError(err).Fatal("Could not set head")
 	}
 	return nil

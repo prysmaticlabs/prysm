@@ -58,7 +58,7 @@ func run(ctx context.Context, v iface.Validator) {
 	if v.ProposerSettings() != nil {
 		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
 			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
-		deadline := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+		deadline := time.Now().Add(5 * time.Minute)
 		if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
 			if errors.Is(err, ErrBuilderValidatorRegistration) {
 				log.WithError(err).Warn("Push proposer settings error")
@@ -67,7 +67,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		}
 	} else {
-		log.Warnln("Validator client started without proposer settings such as fee recipient" +
+		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
 
@@ -93,14 +93,6 @@ func run(ctx context.Context, v iface.Validator) {
 			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
-			allExited, err := v.AllValidatorsAreExited(ctx)
-			if err != nil {
-				log.WithError(err).Error("Could not check if validators are exited")
-			}
-			if allExited {
-				log.Info("All validators are exited, no more work to perform...")
-				continue
-			}
 
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
@@ -116,9 +108,10 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
+			// create call on a separate thread to push proposer settings from the middle of an epoch.
+			if slots.SinceEpochStarts(slot) == params.BeaconConfig().SlotsPerEpoch/2 && v.ProposerSettings() != nil {
 				go func() {
-					// deadline set for end of epoch
+					// deadline set for 1 epoch from call to not overlap.
 					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
 					if err := v.PushProposerSettings(ctx, km, slot, epochDeadline); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")
@@ -276,7 +269,9 @@ func isConnectionError(err error) bool {
 }
 
 func handleAssignmentError(err error, slot primitives.Slot) {
-	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
+	if errors.Is(err, ErrValidatorsAllExited) {
+		log.Warn(ErrValidatorsAllExited)
+	} else if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,
 		).Warn("Validator not yet assigned to epoch")

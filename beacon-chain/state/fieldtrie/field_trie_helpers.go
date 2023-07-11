@@ -207,7 +207,7 @@ func handle32ByteArrays(val [][32]byte, indices []uint64, convertAll bool) ([][3
 func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
-		length = len(val)
+		return stateutil.OptimizedValidatorRoots(val)
 	}
 	roots := make([][32]byte, 0, length)
 	rootCreator := func(input *ethpb.Validator) error {
@@ -217,15 +217,6 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 		}
 		roots = append(roots, newRoot)
 		return nil
-	}
-	if convertAll {
-		for i := range val {
-			err := rootCreator(val[i])
-			if err != nil {
-				return nil, err
-			}
-		}
-		return roots, nil
 	}
 	if len(val) > 0 {
 		for _, idx := range indices {

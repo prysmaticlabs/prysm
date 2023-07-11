@@ -80,3 +80,32 @@ func TestStore_PeerDataGetOrCreate(t *testing.T) {
 	assert.Equal(t, uint64(0), peerData.ProcessedBlocks)
 	require.Equal(t, 1, len(store.Peers()))
 }
+
+func TestStore_TrustedPeers(t *testing.T) {
+	store := peerdata.NewStore(context.Background(), &peerdata.StoreConfig{
+		MaxPeers: 12,
+	})
+
+	pid1 := peer.ID("00001")
+	pid2 := peer.ID("00002")
+	pid3 := peer.ID("00003")
+
+	tPeers := []peer.ID{pid1, pid2, pid3}
+	store.SetTrustedPeers(tPeers)
+
+	assert.Equal(t, true, store.IsTrustedPeer(pid1))
+	assert.Equal(t, true, store.IsTrustedPeer(pid2))
+	assert.Equal(t, true, store.IsTrustedPeer(pid3))
+
+	tPeers = store.GetTrustedPeers()
+	assert.Equal(t, 3, len(tPeers))
+
+	store.DeleteTrustedPeers(tPeers)
+	tPeers = store.GetTrustedPeers()
+	assert.Equal(t, 0, len(tPeers))
+
+	assert.Equal(t, false, store.IsTrustedPeer(pid1))
+	assert.Equal(t, false, store.IsTrustedPeer(pid2))
+	assert.Equal(t, false, store.IsTrustedPeer(pid3))
+
+}

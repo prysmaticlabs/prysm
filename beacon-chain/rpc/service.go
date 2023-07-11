@@ -30,16 +30,19 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
+	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
+	httpserver "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	slasherservice "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
@@ -211,8 +214,19 @@ func (s *Service) Start() {
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		ReplayerBuilder:       ch,
+		TimeFetcher:           s.cfg.GenesisTimeFetcher,
+		Stater:                stater,
+		HeadFetcher:           s.cfg.HeadFetcher,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards)
+
+	builderServer := &rpcBuilder.Server{
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		Stater:                stater,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
@@ -294,6 +308,22 @@ func (s *Service) Start() {
 		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	}
 
+	nodeServerPrysm := &nodeprysm.Server{
+		BeaconDB:                  s.cfg.BeaconDB,
+		SyncChecker:               s.cfg.SyncService,
+		OptimisticModeFetcher:     s.cfg.OptimisticModeFetcher,
+		GenesisTimeFetcher:        s.cfg.GenesisTimeFetcher,
+		PeersFetcher:              s.cfg.PeersFetcher,
+		PeerManager:               s.cfg.PeerManager,
+		MetadataProvider:          s.cfg.MetadataProvider,
+		HeadFetcher:               s.cfg.HeadFetcher,
+		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
+	}
+
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods("GET")
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods("POST")
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods("Delete")
+
 	beaconChainServer := &beaconv1alpha1.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.cfg.BeaconDB,
@@ -340,7 +370,16 @@ func (s *Service) Start() {
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
 		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
+		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
 	}
+	httpServer := &httpserver.Server{
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		HeadFetcher:        s.cfg.HeadFetcher,
+		SyncChecker:        s.cfg.SyncService,
+	}
+	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance)
+	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2)
+	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2)
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)

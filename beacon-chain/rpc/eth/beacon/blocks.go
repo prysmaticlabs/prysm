@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
@@ -25,15 +26,15 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-const versionHeader = "eth-consensus-version"
 
 var (
 	errNilBlock = errors.New("nil block")
@@ -43,7 +44,7 @@ var (
 // determines the best block root and state root to use for a Checkpoint Sync starting from that point.
 // DEPRECATED: GetWeakSubjectivity endpoint will no longer be supported
 func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
-	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher, bs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// This is already a grpc error, so we can't wrap it any further
 		return nil, err
 	}
@@ -206,7 +207,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -246,18 +247,18 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlockSSZ")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
+	if err := rpchelpers.ValidateSyncGRPC(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read "+versionHeader+" header")
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read "+api.VersionHeader+" header")
 	}
-	ver := md.Get(versionHeader)
+	ver := md.Get(api.VersionHeader)
 	if len(ver) == 0 {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read "+versionHeader+" header")
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read "+api.VersionHeader+" header")
 	}
 	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
 	forkVer, err := schedule.VersionForName(ver[0])
@@ -423,6 +424,9 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	// ErrUnsupportedField means that we have another block type
 	if !errors.Is(err, consensus_types.ErrUnsupportedField) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
+	if err := grpc.SetHeader(ctx, metadata.Pairs(api.VersionHeader, version.String(blk.Version()))); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set "+api.VersionHeader+" header: %v", err)
 	}
 	result, err = getBlockAltair(blk)
 	if result != nil {

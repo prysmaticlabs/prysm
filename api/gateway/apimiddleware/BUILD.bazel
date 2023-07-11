@@ -13,6 +13,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware",
     visibility = ["//visibility:public"],
     deps = [
+        "//api:go_default_library",
         "//api/grpc:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
@@ -32,6 +33,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//api:go_default_library",
         "//api/grpc:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
