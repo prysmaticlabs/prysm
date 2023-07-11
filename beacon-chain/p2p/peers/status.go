@@ -922,8 +922,8 @@ func (p *Status) SetTrustedPeers(peers []peer.ID) {
 
 // GetTrustedPeers returns a list of all trusted peers' ids
 func (p *Status) GetTrustedPeers() []peer.ID {
-	p.store.Lock()
-	defer p.store.Unlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	return p.store.GetTrustedPeers()
 }
 
@@ -936,8 +936,8 @@ func (p *Status) DeleteTrustedPeers(peers []peer.ID) {
 
 // IsTrustedPeers returns if given peer is a Trusted peer
 func (p *Status) IsTrustedPeers(pid peer.ID) bool {
-	p.store.Lock()
-	defer p.store.Unlock()
+	p.store.RLock()
+	defer p.store.RUnlock()
 	return p.isTrustedPeers(pid)
 }
 
