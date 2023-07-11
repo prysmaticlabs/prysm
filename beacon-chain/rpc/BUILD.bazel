@@ -32,6 +32,7 @@ go_library(
         "//beacon-chain/rpc/eth/rewards:go_default_library",
         "//beacon-chain/rpc/eth/validator:go_default_library",
         "//beacon-chain/rpc/lookup:go_default_library",
+        "//beacon-chain/rpc/prysm/node:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/beacon:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/debug:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/node:go_default_library",
