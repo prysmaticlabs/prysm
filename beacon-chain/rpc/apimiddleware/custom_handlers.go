@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/r3labs/sse"
 )
@@ -25,9 +25,6 @@ const (
 	jsonMediaType        = "application/json"
 	octetStreamMediaType = "application/octet-stream"
 )
-
-// match a number with optional decimals
-var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
 
 type sszConfig struct {
 	fileName     string
@@ -120,7 +117,7 @@ func handleGetSSZ(
 	req *http.Request,
 	config sszConfig,
 ) (handled bool) {
-	ssz, err := sszRequested(req)
+	ssz, err := network.SszRequested(req)
 	if err != nil {
 		apimiddleware.WriteError(w, apimiddleware.InternalServerError(err), nil)
 		return true
@@ -211,44 +208,6 @@ func handlePostSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.E
 	}
 
 	return true
-}
-
-func sszRequested(req *http.Request) (bool, error) {
-	accept := req.Header.Values("Accept")
-	if len(accept) == 0 {
-		return false, nil
-	}
-	types := strings.Split(accept[0], ",")
-	currentType, currentPriority := "", 0.0
-	for _, t := range types {
-		values := strings.Split(t, ";")
-		name := values[0]
-		if name != jsonMediaType && name != octetStreamMediaType {
-			continue
-		}
-		// no params specified
-		if len(values) == 1 {
-			priority := 1.0
-			if priority > currentPriority {
-				currentType, currentPriority = name, priority
-			}
-			continue
-		}
-		params := values[1]
-		match := priorityRegex.FindAllStringSubmatch(params, 1)
-		if len(match) != 1 {
-			continue
-		}
-		priority, err := strconv.ParseFloat(match[0][1], 32)
-		if err != nil {
-			return false, err
-		}
-		if priority > currentPriority {
-			currentType, currentPriority = name, priority
-		}
-	}
-
-	return currentType == octetStreamMediaType, nil
 }
 
 func sszPosted(req *http.Request) bool {

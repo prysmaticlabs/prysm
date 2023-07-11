@@ -50,6 +50,8 @@ ssz_gen_marshal(
         "SignedBlsToExecutionChange",
         "SignedBlindedBlobSidecar",
         "BlindedBlobSidecar",
+        "BlobSidecar",
+        "BlobSidecars",
     ],
 )
 
