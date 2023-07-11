@@ -5,6 +5,27 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
+// HydrateBlobSidecar hydrates a blob sidecar with correct field length sizes
+// to comply with SSZ marshalling and unmarshalling rules.
+func HydrateBlobSidecar(b *ethpb.BlobSidecar) *ethpb.BlobSidecar {
+	if b.BlockRoot == nil {
+		b.BlockRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.BlockParentRoot == nil {
+		b.BlockParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.Blob == nil {
+		b.Blob = make([]byte, fieldparams.BlobLength)
+	}
+	if b.KzgCommitment == nil {
+		b.KzgCommitment = make([]byte, fieldparams.BLSPubkeyLength)
+	}
+	if b.KzgProof == nil {
+		b.KzgProof = make([]byte, fieldparams.BLSPubkeyLength)
+	}
+	return b
+}
+
 // HydrateSignedBlindedBlobSidecar hydrates a signed blinded blob sidecar with correct field length sizes
 // to comply with SSZ marshalling and unmarshalling rules.
 func HydrateSignedBlindedBlobSidecar(b *ethpb.SignedBlindedBlobSidecar) *ethpb.SignedBlindedBlobSidecar {
