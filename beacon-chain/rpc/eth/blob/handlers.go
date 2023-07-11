@@ -14,7 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
@@ -29,42 +31,42 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	blockId := segments[len(segments)-1]
 	switch blockId {
 	case "genesis":
-		errJson := &network.DefaultErrorJson{
+		errJson := &http2.DefaultErrorJson{
 			Message: "blobs are not supported for Phase 0 fork",
 			Code:    http.StatusBadRequest,
 		}
-		network.WriteError(w, errJson)
+		http2.WriteError(w, errJson)
 		return
 	case "head":
 		var err error
 		root, err = s.ChainInfoFetcher.HeadRoot(r.Context())
 		if err != nil {
-			errJson := &network.DefaultErrorJson{
+			errJson := &http2.DefaultErrorJson{
 				Message: errors.Wrapf(err, "could not retrieve head root").Error(),
 				Code:    http.StatusInternalServerError,
 			}
-			network.WriteError(w, errJson)
+			http2.WriteError(w, errJson)
 			return
 		}
 	case "finalized":
 		fcp := s.ChainInfoFetcher.FinalizedCheckpt()
 		if fcp == nil {
-			errJson := &network.DefaultErrorJson{
+			errJson := &http2.DefaultErrorJson{
 				Message: "received nil finalized checkpoint",
 				Code:    http.StatusInternalServerError,
 			}
-			network.WriteError(w, errJson)
+			http2.WriteError(w, errJson)
 			return
 		}
 		root = fcp.Root
 	case "justified":
 		jcp := s.ChainInfoFetcher.CurrentJustifiedCheckpt()
 		if jcp == nil {
-			errJson := &network.DefaultErrorJson{
+			errJson := &http2.DefaultErrorJson{
 				Message: "received nil justified checkpoint",
 				Code:    http.StatusInternalServerError,
 			}
-			network.WriteError(w, errJson)
+			http2.WriteError(w, errJson)
 			return
 		}
 		root = jcp.Root
@@ -73,50 +75,50 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 			var err error
 			root, err = hexutil.Decode(blockId)
 			if err != nil {
-				errJson := &network.DefaultErrorJson{
+				errJson := &http2.DefaultErrorJson{
 					Message: errors.Wrap(err, "could not decode block ID into hex").Error(),
 					Code:    http.StatusInternalServerError,
 				}
-				network.WriteError(w, errJson)
+				http2.WriteError(w, errJson)
 				return
 			}
 		} else {
 			slot, err := strconv.ParseUint(blockId, 10, 64)
 			if err != nil {
-				errJson := &network.DefaultErrorJson{
+				errJson := &http2.DefaultErrorJson{
 					Message: lookup.NewBlockIdParseError(err).Error(),
 					Code:    http.StatusBadRequest,
 				}
-				network.WriteError(w, errJson)
+				http2.WriteError(w, errJson)
 				return
 			}
 			denebStart, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 			if err != nil {
-				errJson := &network.DefaultErrorJson{
+				errJson := &http2.DefaultErrorJson{
 					Message: errors.Wrap(err, "could not calculate Deneb start slot").Error(),
 					Code:    http.StatusInternalServerError,
 				}
-				network.WriteError(w, errJson)
+				http2.WriteError(w, errJson)
 				return
 			}
 			if primitives.Slot(slot) < denebStart {
-				errJson := &network.DefaultErrorJson{
+				errJson := &http2.DefaultErrorJson{
 					Message: "blobs are not supported before Deneb fork",
 					Code:    http.StatusBadRequest,
 				}
-				network.WriteError(w, errJson)
+				http2.WriteError(w, errJson)
 				return
 			}
 			sidecars, err = s.BeaconDB.BlobSidecarsBySlot(r.Context(), primitives.Slot(slot), indices...)
 			if err != nil {
-				errJson := &network.DefaultErrorJson{
+				errJson := &http2.DefaultErrorJson{
 					Message: errors.Wrapf(err, "could not retrieve blobs for slot %d", slot).Error(),
 					Code:    http.StatusInternalServerError,
 				}
-				network.WriteError(w, errJson)
+				http2.WriteError(w, errJson)
 				return
 			}
-			network.WriteJson(w, buildSidecardsResponse(sidecars))
+			http2.WriteJson(w, buildSidecardsResponse(sidecars))
 			return
 		}
 	}
@@ -124,14 +126,51 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	var err error
 	sidecars, err = s.BeaconDB.BlobSidecarsByRoot(r.Context(), bytesutil.ToBytes32(root), indices...)
 	if err != nil {
-		errJson := &network.DefaultErrorJson{
+		errJson := &http2.DefaultErrorJson{
 			Message: errors.Wrapf(err, "could not retrieve blobs for root %#x", root).Error(),
 			Code:    http.StatusInternalServerError,
 		}
-		network.WriteError(w, errJson)
+		http2.WriteError(w, errJson)
 		return
 	}
-	network.WriteJson(w, buildSidecardsResponse(sidecars))
+
+	ssz, err := http2.SszRequested(r)
+	if err != nil {
+		errJson := &http2.DefaultErrorJson{
+			Message: err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		http2.WriteError(w, errJson)
+		return
+	}
+
+	if ssz {
+		v2sidecars, err := migration.V1Alpha1BlobSidecarsToV2(sidecars)
+		if err != nil {
+			errJson := &http2.DefaultErrorJson{
+				Message: err.Error(),
+				Code:    http.StatusInternalServerError,
+			}
+			http2.WriteError(w, errJson)
+			return
+		}
+		sidecarResp := &ethpb.BlobSidecars{
+			Sidecars: v2sidecars,
+		}
+		sszResp, err := sidecarResp.MarshalSSZ()
+		if err != nil {
+			errJson := &http2.DefaultErrorJson{
+				Message: err.Error(),
+				Code:    http.StatusInternalServerError,
+			}
+			http2.WriteError(w, errJson)
+			return
+		}
+		http2.WriteSsz(w, sszResp, "blob_sidecars.ssz")
+		return
+	}
+
+	http2.WriteJson(w, buildSidecardsResponse(sidecars))
 }
 
 // parseIndices filters out invalid and duplicate blob indices
