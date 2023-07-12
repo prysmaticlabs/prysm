@@ -9,7 +9,6 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -88,7 +87,7 @@ func convertBlockRoots(indices []uint64, elements interface{}, convertAll bool) 
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.BlockRoots{}, elements)
 	}
-	return handleByteArrays(val.Slice(), indices, convertAll)
+	return handle32ByteArrays(val, indices, convertAll)
 }
 
 func convertStateRoots(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
@@ -96,7 +95,7 @@ func convertStateRoots(indices []uint64, elements interface{}, convertAll bool) 
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.StateRoots{}, elements)
 	}
-	return handleByteArrays(val.Slice(), indices, convertAll)
+	return handle32ByteArrays(val, indices, convertAll)
 }
 
 func convertRandaoMixes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
@@ -104,7 +103,7 @@ func convertRandaoMixes(indices []uint64, elements interface{}, convertAll bool)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.RandaoMixes{}, elements)
 	}
-	return handleByteArrays(val.Slice(), indices, convertAll)
+	return handle32ByteArrays(val, indices, convertAll)
 }
 
 func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
@@ -137,34 +136,6 @@ func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([
 		return nil, errors.Errorf("Wanted type of %T but got %T", []uint64{}, elements)
 	}
 	return handleBalanceSlice(val, indices, convertAll)
-}
-
-// handleByteArrays computes and returns byte arrays in a slice of root format.
-func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]byte, error) {
-	length := len(indices)
-	if convertAll {
-		length = len(val)
-	}
-	roots := make([][32]byte, 0, length)
-	rootCreator := func(input []byte) {
-		newRoot := bytesutil.ToBytes32(input)
-		roots = append(roots, newRoot)
-	}
-	if convertAll {
-		for i := range val {
-			rootCreator(val[i])
-		}
-		return roots, nil
-	}
-	if len(val) > 0 {
-		for _, idx := range indices {
-			if idx > uint64(len(val))-1 {
-				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
-			}
-			rootCreator(val[idx])
-		}
-	}
-	return roots, nil
 }
 
 // handle32ByteArrays computes and returns 32 byte arrays in a slice of root format.
