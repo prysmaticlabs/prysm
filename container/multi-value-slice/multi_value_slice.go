@@ -63,13 +63,12 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 	defer s.lock.Unlock()
 
 	for _, item := range s.individualItems {
-	individualLoop:
 		for _, v := range item.Values {
-			for _, id := range v.ids {
-				if id == src.Id() {
-					v.ids = append(v.ids, dst.Id())
-					break individualLoop
-				}
+			found := compareIds(v.ids, src.Id(), func(_ int) {
+				v.ids = append(v.ids, dst.Id())
+			})
+			if found {
+				break
 			}
 		}
 	}
@@ -77,14 +76,12 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 appendedLoop:
 	for _, item := range s.appendedItems {
 		found := false
-	individualLoop2:
 		for _, v := range item.Values {
-			for _, id := range v.ids {
-				if id == src.Id() {
-					found = true
-					v.ids = append(v.ids, dst.Id())
-					break individualLoop2
-				}
+			found = compareIds(v.ids, src.Id(), func(_ int) {
+				v.ids = append(v.ids, dst.Id())
+			})
+			if found {
+				break
 			}
 		}
 		if !found {
@@ -112,14 +109,12 @@ func (s *Slice[V, O]) Value(obj O) []V {
 			result[i] = item
 		} else {
 			found := false
-		individualLoop:
 			for _, v := range ind.Values {
-				for _, id := range v.ids {
-					if id == obj.Id() {
-						result[i] = v.val
-						found = true
-						break individualLoop
-					}
+				found = compareIds(v.ids, obj.Id(), func(_ int) {
+					result[i] = v.val
+				})
+				if found {
+					break
 				}
 			}
 			if !found {
@@ -130,14 +125,12 @@ func (s *Slice[V, O]) Value(obj O) []V {
 
 	for _, item := range s.appendedItems {
 		found := false
-	individualLoop2:
 		for _, v := range item.Values {
-			for _, id := range v.ids {
-				if id == obj.Id() {
-					found = true
-					result = append(result, v.val)
-					break individualLoop2
-				}
+			found = compareIds(v.ids, obj.Id(), func(_ int) {
+				result = append(result, v.val)
+			})
+			if found {
+				break
 			}
 		}
 		if !found {
@@ -203,20 +196,19 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 	if isOriginal {
 		ind, ok := s.individualItems[index]
 		if ok {
-		individualLoop:
 			for mvi, v := range ind.Values {
-				for idi, id := range v.ids {
-					if id == obj.Id() {
-						if len(v.ids) == 1 {
-							// There is an improvement to be made here. If len(ind.Values) == 1,
-							// then after removing the item from the slice s.individualItems[i]
-							// will be a useless map entry whose value is an empty slice.
-							ind.Values = append(ind.Values[:mvi], ind.Values[mvi+1:]...)
-						} else {
-							v.ids = append(v.ids[:idi], v.ids[idi+1:]...)
-						}
-						break individualLoop
+				found := compareIds(v.ids, obj.Id(), func(index int) {
+					if len(v.ids) == 1 {
+						// There is an improvement to be made here. If len(ind.Values) == 1,
+						// then after removing the item from the slice s.individualItems[i]
+						// will be a useless map entry whose value is an empty slice.
+						ind.Values = append(ind.Values[:mvi], ind.Values[mvi+1:]...)
+					} else {
+						v.ids = append(v.ids[:index], v.ids[index+1:]...)
 					}
+				})
+				if found {
+					break
 				}
 			}
 		}
@@ -243,18 +235,16 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 	} else {
 		item := s.appendedItems[index-uint64(len(s.sharedItems))]
 		found := false
-	individualLoop2:
 		for vi, v := range item.Values {
-			for idi, id := range v.ids {
-				if id == obj.Id() {
-					found = true
-					if len(v.ids) == 1 {
-						item.Values = append(item.Values[:vi], item.Values[vi+1:]...)
-					} else {
-						v.ids = append(v.ids[:idi], v.ids[idi+1:]...)
-					}
-					break individualLoop2
+			found = compareIds(v.ids, obj.Id(), func(index int) {
+				if len(v.ids) == 1 {
+					item.Values = append(item.Values[:vi], item.Values[vi+1:]...)
+				} else {
+					v.ids = append(v.ids[:index], v.ids[index+1:]...)
 				}
+			})
+			if found {
+				break
 			}
 		}
 		if !found {
@@ -290,13 +280,10 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 
 	for _, item := range s.appendedItems {
 		found := false
-	individualLoop:
 		for _, v := range item.Values {
-			for _, id := range v.ids {
-				if id == obj.Id() {
-					found = true
-					break individualLoop
-				}
+			found = compareIds(v.ids, obj.Id(), nil)
+			if found {
+				break
 			}
 		}
 		if !found {
@@ -335,48 +322,57 @@ func (s *Slice[V, O]) Detach(obj O) {
 	defer s.lock.Unlock()
 
 	for i, ind := range s.individualItems {
-	individualLoop:
 		for vi, v := range ind.Values {
-			for idi, id := range v.ids {
-				if id == obj.Id() {
-					if len(v.ids) == 1 {
-						if len(ind.Values) == 1 {
-							delete(s.individualItems, i)
-						} else {
-							ind.Values = append(ind.Values[:vi], ind.Values[vi+1:]...)
-						}
+			found := compareIds(v.ids, obj.Id(), func(index int) {
+				if len(v.ids) == 1 {
+					if len(ind.Values) == 1 {
+						delete(s.individualItems, i)
 					} else {
-						v.ids = append(v.ids[:idi], v.ids[idi+1:]...)
+						ind.Values = append(ind.Values[:vi], ind.Values[vi+1:]...)
 					}
-					break individualLoop
+				} else {
+					v.ids = append(v.ids[:index], v.ids[index+1:]...)
 				}
+			})
+			if found {
+				break
 			}
 		}
 	}
 
-appendedLoop:
 	for _, item := range s.appendedItems {
 		found := false
-	individualLoop2:
 		for vi, v := range item.Values {
-			for idi, id := range v.ids {
-				if id == obj.Id() {
-					found = true
-					if len(v.ids) == 1 {
-						item.Values = append(item.Values[:vi], item.Values[vi+1:]...)
-					} else {
-						v.ids = append(v.ids[:idi], v.ids[idi+1:]...)
-					}
-					break individualLoop2
+			found = compareIds(v.ids, obj.Id(), func(index int) {
+				if len(v.ids) == 1 {
+					item.Values = append(item.Values[:vi], item.Values[vi+1:]...)
+				} else {
+					v.ids = append(v.ids[:index], v.ids[index+1:]...)
 				}
+			})
+			if found {
+				break
 			}
 		}
 		if !found {
 			// This is an optimization. If we didn't find an appended item at index i,
 			// then all larger indices don't have an appended item for the object either.
-			break appendedLoop
+			break
 		}
 	}
 
 	delete(s.cachedLengths, obj.Id())
+}
+
+// compareIds executes a custom action when the wanted ID is found. It returns whether the ID was found.
+func compareIds(ids []interfaces.Id, wanted interfaces.Id, action func(int)) bool {
+	for i, id := range ids {
+		if id == wanted {
+			if action != nil {
+				action(i)
+			}
+			return true
+		}
+	}
+	return false
 }
