@@ -197,6 +197,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 		ind, ok := s.individualItems[index]
 		if ok {
 			for mvi, v := range ind.Values {
+				// if we find an existing value, we remove it
 				found := compareIds(v.ids, obj.Id(), func(index int) {
 					if len(v.ids) == 1 {
 						// There is an improvement to be made here. If len(ind.Values) == 1,
@@ -236,6 +237,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 		item := s.appendedItems[index-uint64(len(s.sharedItems))]
 		found := false
 		for vi, v := range item.Values {
+			// if we find an existing value, we remove it
 			found = compareIds(v.ids, obj.Id(), func(index int) {
 				if len(v.ids) == 1 {
 					item.Values = append(item.Values[:vi], item.Values[vi+1:]...)
@@ -365,7 +367,7 @@ func (s *Slice[V, O]) Detach(obj O) {
 }
 
 // compareIds executes a custom action when the wanted ID is found. It returns whether the ID was found.
-func compareIds(ids []interfaces.Id, wanted interfaces.Id, action func(int)) bool {
+func compareIds(ids []interfaces.Id, wanted interfaces.Id, action func(index int)) bool {
 	for i, id := range ids {
 		if id == wanted {
 			if action != nil {
