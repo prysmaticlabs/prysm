@@ -77,7 +77,7 @@ func TestValidateIndices_CompressedField(t *testing.T) {
 		reference:   stateutil.NewRef(0),
 		fieldLayers: nil,
 		field:       types.Balances,
-		fieldInfo:   types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.SingleValue},
+		fieldInfo:   types.CompressedArray,
 		length:      params.BeaconConfig().ValidatorRegistryLimit / 4,
 		numOfElems:  0,
 	}
@@ -308,7 +308,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			roots, err := fieldConverters(nil, tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
+			roots, err := fieldConverters(tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
 			if err != nil {
 				if tt.errMsg != "" {
 					require.ErrorContains(t, tt.errMsg, err)

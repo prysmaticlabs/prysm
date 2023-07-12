@@ -17,15 +17,14 @@ import (
 
 func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 40)
-	st, ok := newState.(*state_native.BeaconState)
-	require.Equal(t, true, ok)
 	roots := newState.BlockRoots()
 	blockRoots := make([][32]byte, len(roots))
 	for i, r := range roots {
 		blockRoots[i] = [32]byte(r)
 	}
+
 	// 5 represents the enum value of block roots
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(5), types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, customtypes.BlockRoots(blockRoots), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+	trie, err := state_native.NewFieldTrie(types.FieldIndex(5), types.BasicArray, customtypes.BlockRoots(blockRoots), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
 	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
@@ -35,7 +34,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 }
 
 func TestFieldTrie_NewTrie_NilElements(t *testing.T) {
-	trie, err := state_native.NewFieldTrie(nil, types.FieldIndex(5), types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 8234)
+	trie, err := state_native.NewFieldTrie(types.FieldIndex(5), types.BasicArray, nil, 8234)
 	require.NoError(t, err)
 	_, err = trie.TrieRoot()
 	require.ErrorIs(t, err, state_native.ErrEmptyFieldTrie)
@@ -43,10 +42,8 @@ func TestFieldTrie_NewTrie_NilElements(t *testing.T) {
 
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	st, ok := newState.(*state_native.BeaconState)
-	require.Equal(t, true, ok)
 	// 10 represents the enum value of validators
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(11), types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
+	trie, err := state_native.NewFieldTrie(types.FieldIndex(11), types.CompositeArray, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
 	oldroot, err := trie.TrieRoot()
@@ -70,16 +67,14 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
-	root, err := trie.RecomputeTrie(st, changedIdx, newState.Validators())
+	root, err := trie.RecomputeTrie(changedIdx, newState.Validators())
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoot, root)
 }
 
 func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	st, ok := newState.(*state_native.BeaconState)
-	require.Equal(t, true, ok)
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.SingleValue}, newState.Balances(), stateutil.ValidatorLimitForBalancesChunks())
+	trie, err := state_native.NewFieldTrie(types.FieldIndex(12), types.CompressedArray, newState.Balances(), stateutil.ValidatorLimitForBalancesChunks())
 	require.NoError(t, err)
 	require.Equal(t, trie.Length(), stateutil.ValidatorLimitForBalancesChunks())
 	changedIdx := []uint64{4, 8}
@@ -87,7 +82,7 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 	require.NoError(t, newState.UpdateBalancesAtIndex(primitives.ValidatorIndex(changedIdx[1]), uint64(200000000)))
 	expectedRoot, err := stateutil.Uint64ListRootWithRegistryLimit(newState.Balances())
 	require.NoError(t, err)
-	root, err := trie.RecomputeTrie(st, changedIdx, newState.Balances())
+	root, err := trie.RecomputeTrie(changedIdx, newState.Balances())
 	require.NoError(t, err)
 
 	// not equal for some reason :(
@@ -96,23 +91,20 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 
 func TestNewFieldTrie_UnknownType(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	st, ok := newState.(*state_native.BeaconState)
-	require.Equal(t, true, ok)
-	_, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: 4, ValueType: types.SingleValue}, newState.Balances(), 32)
+	_, err := state_native.NewFieldTrie(types.FieldIndex(12), 4, newState.Balances(), 32)
 	require.ErrorContains(t, "unrecognized data type", err)
 }
 
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	st, ok := newState.(*state_native.BeaconState)
-	require.Equal(t, true, ok)
 	mixes := newState.RandaoMixes()
 	randaoMixes := make([][32]byte, len(mixes))
 	for i, r := range mixes {
 		randaoMixes[i] = [32]byte(r)
 	}
+
 	// 13 represents the enum value of randao mixes.
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(13), types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, customtypes.RandaoMixes(randaoMixes), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+	trie, err := state_native.NewFieldTrie(types.FieldIndex(13), types.BasicArray, customtypes.RandaoMixes(randaoMixes), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	newTrie := trie.CopyTrie()
@@ -128,7 +120,7 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	for i, r := range mixes {
 		randaoMixes[i] = [32]byte(r)
 	}
-	root, err := trie.RecomputeTrie(st, changedIdx, customtypes.RandaoMixes(randaoMixes))
+	root, err := trie.RecomputeTrie(changedIdx, customtypes.RandaoMixes(randaoMixes))
 	require.NoError(t, err)
 	newRoot, err := newTrie.TrieRoot()
 	require.NoError(t, err)
@@ -138,7 +130,7 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 }
 
 func TestFieldTrie_CopyAndTransferEmpty(t *testing.T) {
-	trie, err := state_native.NewFieldTrie(nil, types.FieldIndex(13), types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+	trie, err := state_native.NewFieldTrie(types.FieldIndex(13), types.BasicArray, nil, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	require.DeepEqual(t, trie, trie.CopyTrie())
@@ -147,10 +139,8 @@ func TestFieldTrie_CopyAndTransferEmpty(t *testing.T) {
 
 func TestFieldTrie_TransferTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	st, ok := newState.(*state_native.BeaconState)
-	require.Equal(t, true, ok)
 	maxLength := (params.BeaconConfig().ValidatorRegistryLimit*8 + 31) / 32
-	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(12), types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.SingleValue}, newState.Balances(), maxLength)
+	trie, err := state_native.NewFieldTrie(types.FieldIndex(12), types.CompressedArray, newState.Balances(), maxLength)
 	require.NoError(t, err)
 	oldRoot, err := trie.TrieRoot()
 	require.NoError(t, err)
@@ -167,8 +157,6 @@ func TestFieldTrie_TransferTrie(t *testing.T) {
 
 func FuzzFieldTrie(f *testing.F) {
 	newState, _ := util.DeterministicGenesisState(f, 40)
-	st, ok := newState.(*state_native.BeaconState)
-	require.Equal(f, true, ok)
 	var data []byte
 	for _, root := range newState.StateRoots() {
 		data = append(data, root...)
@@ -180,7 +168,7 @@ func FuzzFieldTrie(f *testing.F) {
 		for i := 32; i < len(data); i += 32 {
 			roots = append(roots, data[i-32:i])
 		}
-		trie, err := state_native.NewFieldTrie(st, types.FieldIndex(idx), types.FieldInfo{ArrayType: types.ArrayType(typ), ValueType: types.SingleValue}, roots, slotsPerHistRoot)
+		trie, err := state_native.NewFieldTrie(types.FieldIndex(idx), types.DataType(typ), roots, slotsPerHistRoot)
 		if err != nil {
 			return // invalid inputs
 		}

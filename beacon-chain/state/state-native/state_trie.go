@@ -191,7 +191,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(b, f, types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 0)
+		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -299,7 +299,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(b, f, types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 0)
+		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -409,7 +409,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(b, f, types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 0)
+		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -523,7 +523,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(b, f, types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, nil, 0)
+		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -968,7 +968,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]
 	})
-	root, err := fTrie.RecomputeTrie(b, b.dirtyIndices[index], elements)
+	root, err := fTrie.RecomputeTrie(b.dirtyIndices[index], elements)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -977,7 +977,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 }
 
 func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
-	fTrie, err := NewFieldTrie(b, index, FieldMap[index], elements, length)
+	fTrie, err := NewFieldTrie(index, FieldMap[index], elements, length)
 	if err != nil {
 		return err
 	}
@@ -1038,7 +1038,7 @@ func finalizerCleanup(b *BeaconState) {
 func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, b.blockRootsMultiValue, fieldparams.BlockRootsLength)
+			err := b.resetFieldTrie(field, customtypes.BlockRoots(b.blockRootsMultiValue.Value(b)), fieldparams.BlockRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1052,7 +1052,7 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, b.blockRootsMultiValue)
+		return b.recomputeFieldTrie(field, customtypes.BlockRoots(b.blockRootsMultiValue.Value(b)))
 	} else {
 		return b.recomputeFieldTrie(field, b.blockRoots)
 	}
@@ -1061,7 +1061,7 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, b.stateRootsMultiValue, fieldparams.StateRootsLength)
+			err := b.resetFieldTrie(field, customtypes.StateRoots(b.stateRootsMultiValue.Value(b)), fieldparams.StateRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1075,7 +1075,7 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, b.stateRootsMultiValue)
+		return b.recomputeFieldTrie(field, customtypes.StateRoots(b.stateRootsMultiValue.Value(b)))
 	} else {
 		return b.recomputeFieldTrie(field, b.stateRoots)
 	}
@@ -1084,7 +1084,7 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, b.validatorsMultiValue, fieldparams.ValidatorRegistryLimit)
+			err := b.resetFieldTrie(field, b.validatorsMultiValue.Value(b), fieldparams.ValidatorRegistryLimit)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1098,7 +1098,7 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(11, b.validatorsMultiValue)
+		return b.recomputeFieldTrie(11, b.validatorsMultiValue.Value(b))
 	} else {
 		return b.recomputeFieldTrie(11, b.validators)
 	}
@@ -1107,7 +1107,7 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, b.balancesMultiValue, stateutil.ValidatorLimitForBalancesChunks())
+			err := b.resetFieldTrie(field, b.balancesMultiValue.Value(b), stateutil.ValidatorLimitForBalancesChunks())
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1121,7 +1121,7 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(12, b.balancesMultiValue)
+		return b.recomputeFieldTrie(12, b.balancesMultiValue.Value(b))
 	} else {
 		return b.recomputeFieldTrie(12, b.balances)
 	}
@@ -1130,7 +1130,7 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, b.randaoMixesMultiValue, fieldparams.RandaoMixesLength)
+			err := b.resetFieldTrie(field, customtypes.RandaoMixes(b.randaoMixesMultiValue.Value(b)), fieldparams.RandaoMixesLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1144,7 +1144,7 @@ func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte,
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(13, b.randaoMixesMultiValue)
+		return b.recomputeFieldTrie(13, customtypes.RandaoMixes(b.randaoMixesMultiValue.Value(b)))
 	} else {
 		return b.recomputeFieldTrie(13, b.randaoMixes)
 	}

@@ -12,10 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -103,7 +100,6 @@ func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...St
 	for _, o := range opts {
 		o(s)
 	}
-	initFieldMap()
 	fc.Lock()
 	defer fc.Unlock()
 	fc.SetBalancesByRooter(s.ActiveNonSlashedBalancesByRoot)
@@ -190,30 +186,4 @@ func (s *State) finalizedState() state.BeaconState {
 	s.finalizedInfo.lock.RLock()
 	defer s.finalizedInfo.lock.RUnlock()
 	return s.finalizedInfo.state.Copy()
-}
-
-func initFieldMap() {
-	state_native.FieldMap = make(map[types.FieldIndex]types.FieldInfo)
-	// Initialize the fixed sized arrays.
-	if features.Get().EnableExperimentalState {
-		state_native.FieldMap[types.BlockRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.MultiValue}
-		state_native.FieldMap[types.StateRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.MultiValue}
-		state_native.FieldMap[types.RandaoMixes] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.MultiValue}
-	} else {
-		state_native.FieldMap[types.BlockRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}
-		state_native.FieldMap[types.StateRoots] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}
-		state_native.FieldMap[types.RandaoMixes] = types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}
-	}
-
-	// Initialize the composite arrays.
-	state_native.FieldMap[types.Eth1DataVotes] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
-	state_native.FieldMap[types.PreviousEpochAttestations] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
-	state_native.FieldMap[types.CurrentEpochAttestations] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
-	if features.Get().EnableExperimentalState {
-		state_native.FieldMap[types.Validators] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.MultiValue}
-		state_native.FieldMap[types.Balances] = types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.MultiValue}
-	} else {
-		state_native.FieldMap[types.Validators] = types.FieldInfo{ArrayType: types.CompositeArray, ValueType: types.SingleValue}
-		state_native.FieldMap[types.Balances] = types.FieldInfo{ArrayType: types.CompressedArray, ValueType: types.SingleValue}
-	}
 }

@@ -9,8 +9,6 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
-	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -33,7 +31,7 @@ func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex int) [][]byte {
 
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	length := f.length
-	if f.fieldInfo.ArrayType == types.CompressedArray {
+	if f.fieldInfo == types.CompressedArray {
 		comLength, err := f.field.ElemsInChunk()
 		if err != nil {
 			return err
@@ -48,58 +46,44 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	return nil
 }
 
-func validateElements(state *BeaconState, field types.FieldIndex, fieldInfo types.FieldInfo, elements interface{}, length uint64) error {
-	if fieldInfo.ArrayType == types.CompressedArray {
+func validateElements(field types.FieldIndex, fieldInfo types.DataType, elements interface{}, length uint64) error {
+	if fieldInfo == types.CompressedArray {
 		comLength, err := field.ElemsInChunk()
 		if err != nil {
 			return err
 		}
 		length *= comLength
 	}
-	if fieldInfo.ValueType == types.MultiValue {
-		l := uint64(elements.(multi_value_slice.MultiValueSlice[*BeaconState]).Len(state))
-		if l > length {
-			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), l, length)
-		}
-	} else {
-		val := reflect.Indirect(reflect.ValueOf(elements))
-		if uint64(val.Len()) > length {
-			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), val.Len(), length)
-		}
+	val := reflect.Indirect(reflect.ValueOf(elements))
+	if uint64(val.Len()) > length {
+		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), val.Len(), length)
 	}
 	return nil
 }
 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConverters(state *BeaconState, field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
-		return convertBlockRoots(state, indices, elements, convertAll)
+		return convertBlockRoots(indices, elements, convertAll)
 	case types.StateRoots:
-		return convertStateRoots(state, indices, elements, convertAll)
+		return convertStateRoots(indices, elements, convertAll)
 	case types.RandaoMixes:
-		return convertRandaoMixes(state, indices, elements, convertAll)
+		return convertRandaoMixes(indices, elements, convertAll)
 	case types.Eth1DataVotes:
 		return convertEth1DataVotes(indices, elements, convertAll)
 	case types.Validators:
-		return convertValidators(state, indices, elements, convertAll)
+		return convertValidators(indices, elements, convertAll)
 	case types.PreviousEpochAttestations, types.CurrentEpochAttestations:
 		return convertAttestations(indices, elements, convertAll)
 	case types.Balances:
-		return convertBalances(state, indices, elements, convertAll)
+		return convertBalances(indices, elements, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}
 }
 
-func convertBlockRoots(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	if features.Get().EnableExperimentalState {
-		val, ok := elements.(*MultiValueBlockRoots)
-		if !ok {
-			return nil, errors.Errorf("Wanted type of %T but got %T", &MultiValueBlockRoots{}, elements)
-		}
-		return handle32ByteArrays(val.Value(state), indices, convertAll)
-	}
+func convertBlockRoots(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.(customtypes.BlockRoots)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.BlockRoots{}, elements)
@@ -107,14 +91,7 @@ func convertBlockRoots(state *BeaconState, indices []uint64, elements interface{
 	return handleByteArrays(val.Slice(), indices, convertAll)
 }
 
-func convertStateRoots(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	if features.Get().EnableExperimentalState {
-		val, ok := elements.(*MultiValueStateRoots)
-		if !ok {
-			return nil, errors.Errorf("Wanted type of %T but got %T", &MultiValueStateRoots{}, elements)
-		}
-		return handle32ByteArrays(val.Value(state), indices, convertAll)
-	}
+func convertStateRoots(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.(customtypes.StateRoots)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.StateRoots{}, elements)
@@ -122,14 +99,7 @@ func convertStateRoots(state *BeaconState, indices []uint64, elements interface{
 	return handleByteArrays(val.Slice(), indices, convertAll)
 }
 
-func convertRandaoMixes(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	if features.Get().EnableExperimentalState {
-		val, ok := elements.(*MultiValueRandaoMixes)
-		if !ok {
-			return nil, errors.Errorf("Wanted type of %T but got %T", &MultiValueRandaoMixes{}, elements)
-		}
-		return handle32ByteArrays(val.Value(state), indices, convertAll)
-	}
+func convertRandaoMixes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.(customtypes.RandaoMixes)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.RandaoMixes{}, elements)
@@ -145,14 +115,7 @@ func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll boo
 	return handleEth1DataSlice(val, indices, convertAll)
 }
 
-func convertValidators(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	if features.Get().EnableExperimentalState {
-		val, ok := elements.(*MultiValueValidators)
-		if !ok {
-			return nil, errors.Errorf("Wanted type of %T but got %T", &MultiValueValidators{}, elements)
-		}
-		return handleValidatorSlice(val.Value(state), indices, convertAll)
-	}
+func convertValidators(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.Validator)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Validator{}, elements)
@@ -168,14 +131,7 @@ func convertAttestations(indices []uint64, elements interface{}, convertAll bool
 	return handlePendingAttestationSlice(val, indices, convertAll)
 }
 
-func convertBalances(state *BeaconState, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	if features.Get().EnableExperimentalState {
-		val, ok := elements.(*MultiValueBalances)
-		if !ok {
-			return nil, errors.Errorf("Wanted type of %T but got %T", &MultiValueBalances{}, elements)
-		}
-		return handleBalanceSlice(val.Value(state), indices, convertAll)
-	}
+func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]uint64)
 	if !ok {
 		return nil, errors.Errorf("Wanted type of %T but got %T", []uint64{}, elements)

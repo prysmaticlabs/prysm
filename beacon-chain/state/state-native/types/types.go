@@ -5,19 +5,13 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 )
 
-// FieldInfo contains various information about a state's field.
-type FieldInfo struct {
-	ArrayType
-	ValueType
-}
-
-// ArrayType signifies the array type of the field.
-type ArrayType int
+// DataType signifies the data type of the field.
+type DataType int
 
 // List of current data types the state supports.
 const (
 	// BasicArray represents a simple array type for a field.
-	BasicArray ArrayType = iota
+	BasicArray DataType = iota
 	// CompositeArray represents a variable length array with
 	// a non primitive type.
 	CompositeArray
