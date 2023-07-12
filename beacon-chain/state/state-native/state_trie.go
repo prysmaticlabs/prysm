@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
@@ -150,7 +151,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -191,7 +192,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -256,7 +257,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -299,7 +300,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +367,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -409,7 +410,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -480,7 +481,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -523,7 +524,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -623,7 +624,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 
 		// Share the reference to validator index map.
 		valMapHandler: b.valMapHandler,
@@ -977,7 +978,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 }
 
 func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
-	fTrie, err := NewFieldTrie(index, FieldMap[index], elements, length)
+	fTrie, err := fieldtrie.NewFieldTrie(index, FieldMap[index], elements, length)
 	if err != nil {
 		return err
 	}

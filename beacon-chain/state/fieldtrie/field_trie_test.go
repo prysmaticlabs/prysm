@@ -1,9 +1,9 @@
-package state_native_test
+package fieldtrie_test
 
 import (
 	"testing"
 
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
