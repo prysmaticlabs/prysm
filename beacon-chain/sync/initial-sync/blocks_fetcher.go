@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -113,12 +114,11 @@ type fetchRequestParams struct {
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
-	pid      peer.ID
-	start    primitives.Slot
-	count    uint64
-	blobsPid peer.ID
-	bwb      []BlockWithVerifiedBlobs
-	err      error
+	pid   peer.ID
+	start primitives.Slot
+	count uint64
+	bwb   []BlockWithVerifiedBlobs
+	err   error
 }
 
 // newBlocksFetcher creates ready to use fetcher.
@@ -287,9 +287,11 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 
 	response.bwb, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
 	if response.err == nil {
-		if err := f.fetchBlobsForResponse(ctx, response, peers); err != nil {
+		bwb, err := f.fetchBlobsFromPeer(ctx, response.bwb, response.pid)
+		if err != nil {
 			response.err = err
 		}
+		response.bwb = bwb
 	}
 	return response
 }
@@ -360,20 +362,20 @@ func (s BlockWithVerifiedBlobsSlice) ROBlocks() []blocks2.ROBlock {
 }
 
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
-func (f *blocksFetcher) fetchBlobsForResponse(ctx context.Context, resp *fetchRequestResponse, peers []peer.ID) error {
+func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []BlockWithVerifiedBlobs, pid peer.ID) ([]BlockWithVerifiedBlobs, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsForResponse")
 	defer span.End()
-	if len(resp.bwb) == 0 {
-		return nil
+	if len(bwb) == 0 {
+		return bwb, nil
 	}
 	denebStart, err := prysmsync.BlobsByRangeMinStartSlot(f.clock.CurrentSlot())
 	if err != nil {
-		return err
+		return bwb, err
 	}
 	// Short-circuit if the highest block is before the deneb start epoch or retention period start.
 	// This assumes blocks are sorted by validROBlocks.
-	if resp.bwb[len(resp.bwb)-1].block.Block().Slot() < denebStart {
-		return nil
+	if bwb[len(bwb)-1].block.Block().Slot() < denebStart {
+		return bwb, nil
 	}
 
 	req := &p2ppb.BlobSidecarsByRangeRequest{
@@ -387,7 +389,7 @@ func (f *blocksFetcher) fetchBlobsForResponse(ctx context.Context, resp *fetchRe
 	expectedCommits := make(map[[32]byte]commitVerification)
 	var highest primitives.Slot
 	// Loop through the blocks, looking for the earliest deneb block in the slice.
-	for i, b := range resp.bwb {
+	for i, b := range bwb {
 		slot := b.block.Block().Slot()
 		if slot < denebStart {
 			continue
@@ -397,7 +399,7 @@ func (f *blocksFetcher) fetchBlobsForResponse(ctx context.Context, resp *fetchRe
 			if errors.Is(err, consensus_types.ErrUnsupportedField) {
 				continue
 			}
-			return err
+			return nil, err
 		}
 		if len(commits) == 0 {
 			continue
@@ -416,52 +418,51 @@ func (f *blocksFetcher) fetchBlobsForResponse(ctx context.Context, resp *fetchRe
 			cv.c[bytesutil.ToBytes48(c)] = uint64(y)
 		}
 		expectedCommits[b.block.Root()] = cv
-		resp.bwb[i].blobs = make([]*p2ppb.BlobSidecar, len(commits))
+		bwb[i].blobs = make([]*p2ppb.BlobSidecar, len(commits))
 	}
 
 	// We didn't find any blobs with commitments, stop here.
 	if len(expectedCommits) == 0 {
-		return nil
+		return bwb, nil
 	}
 	req.Count = uint64(highest.SubSlot(req.StartSlot))
 
 	// Request blobs from the same peer that gave us the blob batch.
-	pid := resp.pid
 	blobs, err := f.requestBlobs(ctx, req, pid)
 	if err != nil {
-		return errors.Wrap(err, "Could not request blobs by range")
+		return nil, errors.Wrap(err, "Could not request blobs by range")
 	}
 	f.p2p.Peers().Scorers().BlockProviderScorer().Touch(pid)
-	resp.blobsPid = pid
 	for _, b := range blobs {
 		cv := expectedCommits[bytesutil.ToBytes32(b.BlockRoot)]
 		kc := bytesutil.ToBytes48(b.KzgCommitment)
 		bidx := int(b.Index)
 		expected, ok := cv.c[kc]
 		if !ok {
-			return errors.Wrapf(ErrUnexpectedBlobCommitment, "block root %#x, slot %d, blob commitment %#x, Index %d",
+			return nil, errors.Wrapf(ErrUnexpectedBlobCommitment, "block root %#x, slot %d, blob commitment %#x, Index %d",
 				b.BlockRoot, b.Slot, kc, b.Index)
 		}
 		// Compare expected kzg commitment to what we received.
 		if expected != b.Index {
-			return errors.Wrapf(ErrBlobCommitmentMismatch, "block root %#x, slot %d, commitment %#x, blob index %d, block index %d",
+			return nil, errors.Wrapf(ErrBlobCommitmentMismatch, "block root %#x, slot %d, commitment %#x, blob index %d, block index %d",
 				b.BlockRoot, b.Slot, kc, b.Index, expected)
 		}
-		resp.bwb[cv.o].blobs[bidx] = b
+		bwb[cv.o].blobs[bidx] = b
 		delete(cv.c, kc)
 	}
-	// Check if we failed to satisfy any of the expected commitments.
+	// Return error if we failed to satisfy any of the expected commitments.
 	for br, c := range expectedCommits {
 		if len(c.c) > 0 {
 			missingCommits := make([]string, 0)
 			for k := range c.c {
 				missingCommits = append(missingCommits, fmt.Sprintf("%#x", k))
 			}
-			return errors.Wrapf(ErrMissingBlobsForBlockCommitments, "block root %#x missing %d commitments %s", br, len(c.c), missingCommits)
+			return nil, errors.Wrapf(ErrMissingBlobsForBlockCommitments,
+				"block root %#x missing %d commitments %s", br, len(c.c), strings.Join(missingCommits, ","))
 		}
 	}
 	// We've satisfied all the expected commits, so everything is looking good!
-	return nil
+	return bwb, nil
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.

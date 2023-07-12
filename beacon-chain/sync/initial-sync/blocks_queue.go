@@ -90,9 +90,8 @@ type blocksQueue struct {
 
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
-	pid      peer.ID
-	bwb      []BlockWithVerifiedBlobs
-	blobsPid peer.ID
+	pid peer.ID
+	bwb []BlockWithVerifiedBlobs
 }
 
 // newBlocksQueue creates initialized priority queue.
@@ -338,7 +337,6 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 		}
 		m.pid = response.pid
 		m.bwb = response.bwb
-		m.blobsPid = response.blobsPid
 		return stateDataParsed, nil
 	}
 }
@@ -359,9 +357,8 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 
 		send := func() (stateID, error) {
 			data := &blocksQueueFetchedData{
-				pid:      m.pid,
-				bwb:      m.bwb,
-				blobsPid: m.blobsPid,
+				pid: m.pid,
+				bwb: m.bwb,
 			}
 			select {
 			case <-ctx.Done():

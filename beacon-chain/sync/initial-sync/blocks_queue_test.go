@@ -1224,15 +1224,16 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		// required forked data, including data on and after slot 201.
 		forkedEpochStartSlot, err := slots.EpochStart(slots.ToEpoch(forkedSlot))
 		require.NoError(t, err)
-		firstFSM, ok := queue.smm.findStateMachine(forkedEpochStartSlot + 1)
+		firstFSM, ok := queue.smm.findStateMachine(forkedSlot)
 		require.Equal(t, true, ok)
 		require.Equal(t, stateDataParsed, firstFSM.state)
 		require.Equal(t, forkedPeer, firstFSM.pid)
-		require.Equal(t, 64, len(firstFSM.bwb))
-		require.Equal(t, forkedEpochStartSlot+1, firstFSM.bwb[0].block.Block().Slot())
+		reqEnd := testForkStartSlot(t, 251) + primitives.Slot(findForkReqRangeSize())
+		require.Equal(t, int(reqEnd-forkedSlot), len(firstFSM.bwb))
+		require.Equal(t, forkedSlot, firstFSM.bwb[0].block.Block().Slot())
 
 		// Assert that forked data from chain2 is available (within 64 fetched blocks).
-		for i, blk := range chain2[forkedEpochStartSlot+1:] {
+		for i, blk := range chain2[forkedSlot:] {
 			if i >= len(firstFSM.bwb) {
 				break
 			}
@@ -1243,7 +1244,8 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		}
 
 		// Assert that machines are in the expected state.
-		startSlot = forkedEpochStartSlot.Add(1 + uint64(len(firstFSM.bwb)))
+		startSlot = forkedEpochStartSlot.Add(1 + blocksPerRequest)
+		require.Equal(t, int(blocksPerRequest)-int(forkedSlot-(forkedEpochStartSlot+1)), len(firstFSM.bwb))
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*(lookaheadSteps-1)); i += primitives.Slot(blocksPerRequest) {
 			fsm, ok := queue.smm.findStateMachine(i)
 			require.Equal(t, true, ok)

@@ -41,13 +41,12 @@ type stateMachineManager struct {
 // stateMachine holds a state of a single block processing FSM.
 // Each FSM allows deterministic state transitions: State(S) x Event(E) -> Actions (A), State(S').
 type stateMachine struct {
-	smm      *stateMachineManager
-	start    primitives.Slot
-	state    stateID
-	pid      peer.ID
-	bwb      []BlockWithVerifiedBlobs
-	blobsPid peer.ID
-	updated  time.Time
+	smm     *stateMachineManager
+	start   primitives.Slot
+	state   stateID
+	pid     peer.ID
+	bwb     []BlockWithVerifiedBlobs
+	updated time.Time
 }
 
 // eventHandlerFn is an event handler function's signature.
