@@ -246,7 +246,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			postVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].header, b)
 		if err != nil {
-			return s.handleInvalidExecutionError(ctx, err, blockRoots[i], b.Block().ParentRoot())
+			return s.handleInvalidExecutionError(ctx, err, root, b.Block().ParentRoot())
 		}
 		if isValidPayload {
 			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
