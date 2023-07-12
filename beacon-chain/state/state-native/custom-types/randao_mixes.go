@@ -44,7 +44,7 @@ func (r *RandaoMixes) UnmarshalSSZ(buf []byte) error {
 }
 
 // MarshalSSZTo marshals RandaoMixes with the provided byte slice.
-func (r *RandaoMixes) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (r RandaoMixes) MarshalSSZTo(dst []byte) ([]byte, error) {
 	marshalled, err := r.MarshalSSZ()
 	if err != nil {
 		return nil, err
@@ -53,9 +53,9 @@ func (r *RandaoMixes) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // MarshalSSZ marshals RandaoMixes into a serialized object.
-func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
+func (r RandaoMixes) MarshalSSZ() ([]byte, error) {
 	marshalled := make([]byte, fieldparams.RandaoMixesLength*32)
-	for i, r32 := range *r {
+	for i, r32 := range r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
 		}
@@ -64,17 +64,17 @@ func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (_ *RandaoMixes) SizeSSZ() int {
+func (_ RandaoMixes) SizeSSZ() int {
 	return fieldparams.RandaoMixesLength * 32
 }
 
 // Slice converts a customtypes.RandaoMixes object into a 2D byte slice.
-func (r *RandaoMixes) Slice() [][]byte {
+func (r RandaoMixes) Slice() [][]byte {
 	if r == nil {
 		return nil
 	}
-	mixes := make([][]byte, len(*r))
-	for i, root := range *r {
+	mixes := make([][]byte, len(r))
+	for i, root := range r {
 		tmp := root
 		mixes[i] = tmp[:]
 	}

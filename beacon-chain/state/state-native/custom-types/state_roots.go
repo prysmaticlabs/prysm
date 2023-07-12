@@ -44,7 +44,7 @@ func (r *StateRoots) UnmarshalSSZ(buf []byte) error {
 }
 
 // MarshalSSZTo marshals StateRoots with the provided byte slice.
-func (r *StateRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (r StateRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 	marshalled, err := r.MarshalSSZ()
 	if err != nil {
 		return nil, err
@@ -53,9 +53,9 @@ func (r *StateRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // MarshalSSZ marshals StateRoots into a serialized object.
-func (r *StateRoots) MarshalSSZ() ([]byte, error) {
+func (r StateRoots) MarshalSSZ() ([]byte, error) {
 	marshalled := make([]byte, fieldparams.StateRootsLength*32)
-	for i, r32 := range *r {
+	for i, r32 := range r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
 		}
@@ -64,17 +64,17 @@ func (r *StateRoots) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (_ *StateRoots) SizeSSZ() int {
+func (_ StateRoots) SizeSSZ() int {
 	return fieldparams.StateRootsLength * 32
 }
 
 // Slice converts a customtypes.StateRoots object into a 2D byte slice.
-func (r *StateRoots) Slice() [][]byte {
+func (r StateRoots) Slice() [][]byte {
 	if r == nil {
 		return nil
 	}
-	sRoots := make([][]byte, len(*r))
-	for i, root := range *r {
+	sRoots := make([][]byte, len(r))
+	for i, root := range r {
 		tmp := root
 		sRoots[i] = tmp[:]
 	}

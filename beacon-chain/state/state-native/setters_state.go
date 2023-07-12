@@ -1,13 +1,12 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 )
 
 // SetStateRoots for the beacon state. Updates the state roots
@@ -49,7 +48,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		}
 	} else {
 		if uint64(len(b.stateRoots)) <= idx {
-			return fmt.Errorf("index %d out of bounds", idx)
+			return errors.Wrapf(consensus_types.ErrOutOfBounds, "state root index %d does not exist", idx)
 		}
 		r := b.stateRoots
 		if ref := b.sharedFieldReferences[types.StateRoots]; ref.Refs() > 1 {

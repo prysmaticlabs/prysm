@@ -1,11 +1,11 @@
 package state_native
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -99,7 +99,7 @@ func (b *BeaconState) validatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Va
 		return &ethpb.Validator{}, nil
 	}
 	if uint64(len(b.validators)) <= uint64(idx) {
-		return nil, fmt.Errorf("index %d out of bounds", idx)
+		return nil, errors.Wrapf(consensus_types.ErrOutOfBounds, "validator index %d does not exist", idx)
 	}
 	val := b.validators[idx]
 	return ethpb.CopyValidator(val), nil
@@ -123,7 +123,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (s
 		return nil, state.ErrNilValidatorsInState
 	}
 	if uint64(len(b.validators)) <= uint64(idx) {
-		return nil, fmt.Errorf("index %d out of bounds", idx)
+		return nil, errors.Wrapf(consensus_types.ErrOutOfBounds, "validator index %d does not exist", idx)
 	}
 	val := b.validators[idx]
 	return NewValidator(val)
@@ -262,7 +262,7 @@ func (b *BeaconState) balanceAtIndex(idx primitives.ValidatorIndex) (uint64, err
 		return 0, nil
 	}
 	if uint64(len(b.balances)) <= uint64(idx) {
-		return 0, fmt.Errorf("index %d out of bounds", idx)
+		return 0, errors.Wrapf(consensus_types.ErrOutOfBounds, "balance index %d does not exist", idx)
 	}
 	return b.balances[idx], nil
 }

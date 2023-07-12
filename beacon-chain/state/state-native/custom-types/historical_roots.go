@@ -43,7 +43,7 @@ func (r *HistoricalRoots) UnmarshalSSZ(buf []byte) error {
 }
 
 // MarshalSSZTo marshals HistoricalRoots with the provided byte slice.
-func (r *HistoricalRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (r HistoricalRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 	marshalled, err := r.MarshalSSZ()
 	if err != nil {
 		return nil, err
@@ -52,9 +52,9 @@ func (r *HistoricalRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // MarshalSSZ marshals HistoricalRoots into a serialized object.
-func (r *HistoricalRoots) MarshalSSZ() ([]byte, error) {
-	marshalled := make([]byte, len(*r)*32)
-	for i, r32 := range *r {
+func (r HistoricalRoots) MarshalSSZ() ([]byte, error) {
+	marshalled := make([]byte, len(r)*32)
+	for i, r32 := range r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
 		}
@@ -63,17 +63,17 @@ func (r *HistoricalRoots) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (r *HistoricalRoots) SizeSSZ() int {
-	return len(*r) * 32
+func (r HistoricalRoots) SizeSSZ() int {
+	return len(r) * 32
 }
 
 // Slice converts a customtypes.HistoricalRoots object into a 2D byte slice.
-func (r *HistoricalRoots) Slice() [][]byte {
+func (r HistoricalRoots) Slice() [][]byte {
 	if r == nil {
 		return nil
 	}
-	hRoots := make([][]byte, len(*r))
-	for i, root := range *r {
+	hRoots := make([][]byte, len(r))
+	for i, root := range r {
 		tmp := root
 		hRoots[i] = tmp[:]
 	}

@@ -1,9 +1,9 @@
 package state_native
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -93,7 +93,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 		return []byte{}, nil
 	}
 	if uint64(len(b.blockRoots)) <= idx {
-		return []byte{}, fmt.Errorf("index %d out of bounds", idx)
+		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "block root index %d does not exist", idx)
 	}
 	return bytesutil.SafeCopyBytes(b.blockRoots[idx][:]), nil
 }

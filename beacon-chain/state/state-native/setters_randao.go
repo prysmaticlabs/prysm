@@ -1,13 +1,12 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 )
 
 // SetRandaoMixes for the beacon state. Updates the entire
@@ -49,7 +48,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error {
 		}
 	} else {
 		if uint64(len(b.randaoMixes)) <= idx {
-			return fmt.Errorf("index %d out of bounds", idx)
+			return errors.Wrapf(consensus_types.ErrOutOfBounds, "randao mix index %d does not exist", idx)
 		}
 		m := b.randaoMixes
 		if ref := b.sharedFieldReferences[types.RandaoMixes]; ref.Refs() > 1 {

@@ -44,7 +44,7 @@ func (r *BlockRoots) UnmarshalSSZ(buf []byte) error {
 }
 
 // MarshalSSZTo marshals BlockRoots with the provided byte slice.
-func (r *BlockRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (r BlockRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 	marshalled, err := r.MarshalSSZ()
 	if err != nil {
 		return nil, err
@@ -53,9 +53,9 @@ func (r *BlockRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // MarshalSSZ marshals BlockRoots into a serialized object.
-func (r *BlockRoots) MarshalSSZ() ([]byte, error) {
+func (r BlockRoots) MarshalSSZ() ([]byte, error) {
 	marshalled := make([]byte, fieldparams.BlockRootsLength*32)
-	for i, r32 := range *r {
+	for i, r32 := range r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
 		}
@@ -64,17 +64,17 @@ func (r *BlockRoots) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (_ *BlockRoots) SizeSSZ() int {
+func (_ BlockRoots) SizeSSZ() int {
 	return fieldparams.BlockRootsLength * 32
 }
 
 // Slice converts a customtypes.BlockRoots object into a 2D byte slice.
-func (r *BlockRoots) Slice() [][]byte {
+func (r BlockRoots) Slice() [][]byte {
 	if r == nil {
 		return nil
 	}
-	bRoots := make([][]byte, len(*r))
-	for i, root := range *r {
+	bRoots := make([][]byte, len(r))
+	for i, root := range r {
 		tmp := root
 		bRoots[i] = tmp[:]
 	}

@@ -127,7 +127,7 @@ func TestAt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 3, v)
 	_, err = s.At(first, 7)
-	assert.ErrorContains(t, "index 7 out of bounds", err)
+	assert.ErrorContains(t, "no item at index 7", err)
 
 	v, err = s.At(second, 0)
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestAt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, v)
 	_, err = s.At(second, 8)
-	assert.ErrorContains(t, "index 8 out of bounds", err)
+	assert.ErrorContains(t, "no item at index 8", err)
 }
 
 func TestUpdateAt(t *testing.T) {
@@ -223,8 +223,8 @@ func TestUpdateAt(t *testing.T) {
 	assertAppendedNotFound(t, s, first.id, 2)
 	assertAppendedFound(t, s, second.id, 2, 999)
 
-	assert.ErrorContains(t, "index 7 out of bounds", s.UpdateAt(first, 7, 999))
-	assert.ErrorContains(t, "index 8 out of bounds", s.UpdateAt(second, 8, 999))
+	assert.ErrorContains(t, "no item at index 7", s.UpdateAt(first, 7, 999))
+	assert.ErrorContains(t, "no item at index 8", s.UpdateAt(second, 8, 999))
 }
 
 func TestAppend(t *testing.T) {

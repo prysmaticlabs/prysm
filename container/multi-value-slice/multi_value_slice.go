@@ -1,9 +1,10 @@
 package multi_value_slice
 
 import (
-	"fmt"
 	"sync"
 
+	"github.com/pkg/errors"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/container/multi-value-slice/interfaces"
 )
 
@@ -159,7 +160,7 @@ func (s *Slice[V, O]) At(obj O, index uint64) (V, error) {
 
 	if index >= uint64(len(s.sharedItems)+len(s.appendedItems)) {
 		var def V
-		return def, fmt.Errorf("index %d out of bounds", index)
+		return def, errors.Wrapf(consensus_types.ErrOutOfBounds, "no item at index %d", index)
 	}
 
 	isOriginal := index < uint64(len(s.sharedItems))
@@ -186,7 +187,7 @@ func (s *Slice[V, O]) At(obj O, index uint64) (V, error) {
 			}
 		}
 		var def V
-		return def, fmt.Errorf("index %d out of bounds", index)
+		return def, errors.Wrapf(consensus_types.ErrOutOfBounds, "no item at index %d", index)
 	}
 }
 
@@ -196,7 +197,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 	defer s.lock.Unlock()
 
 	if index >= uint64(len(s.sharedItems)+len(s.appendedItems)) {
-		return fmt.Errorf("index %d out of bounds", index)
+		return errors.Wrapf(consensus_types.ErrOutOfBounds, "no item at index %d", index)
 	}
 
 	isOriginal := index < uint64(len(s.sharedItems))
@@ -258,7 +259,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("index %d out of bounds", index)
+			return errors.Wrapf(consensus_types.ErrOutOfBounds, "no item at index %d", index)
 		}
 
 		newValue := true

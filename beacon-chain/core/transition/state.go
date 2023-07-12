@@ -12,7 +12,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -225,15 +224,15 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 func EmptyGenesisState() (state.BeaconState, error) {
 	blockRoots := make([][]byte, fieldparams.BlockRootsLength)
 	for i := range blockRoots {
-		blockRoots[i] = bytesutil.PadTo([]byte{}, 32)
+		blockRoots[i] = make([]byte, fieldparams.RootLength)
 	}
 	stateRoots := make([][]byte, fieldparams.StateRootsLength)
 	for i := range stateRoots {
-		stateRoots[i] = bytesutil.PadTo([]byte{}, 32)
+		stateRoots[i] = make([]byte, fieldparams.RootLength)
 	}
 	mixes := make([][]byte, fieldparams.RandaoMixesLength)
 	for i := range mixes {
-		mixes[i] = bytesutil.PadTo([]byte{}, 32)
+		mixes[i] = make([]byte, fieldparams.RootLength)
 	}
 	st := &ethpb.BeaconState{
 		// Misc fields.

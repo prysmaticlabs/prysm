@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -11,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -280,7 +280,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				valIndex = primitives.ValidatorIndex(index)
 			}
 			validator, err := state.ValidatorAtIndex(valIndex)
-			if err != nil && strings.Contains(err.Error(), "out of bounds") {
+			if err != nil && errors.Is(err, consensus_types.ErrOutOfBounds) {
 				// Ignore indexes out of bounds.
 				continue
 			}
@@ -309,7 +309,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 }
 
 func handleValContainerErr(err error) error {
-	if strings.Contains(err.Error(), "out of bounds") {
+	if errors.Is(err, consensus_types.ErrOutOfBounds) {
 		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", err)
 	}
 	if invalidIdErr, ok := err.(*invalidValidatorIdError); ok {

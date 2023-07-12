@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -99,7 +100,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx primitives.ValidatorIndex, val 
 		}
 	} else {
 		if uint64(len(b.validators)) <= uint64(idx) {
-			return errors.Errorf("index %d out of bounds", idx)
+			return errors.Wrapf(consensus_types.ErrOutOfBounds, "validator index %d does not exist", idx)
 		}
 
 		b.lock.Lock()
@@ -155,7 +156,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx primitives.ValidatorIndex, val u
 		}
 	} else {
 		if uint64(len(b.balances)) <= uint64(idx) {
-			return errors.Errorf("index %d out of bounds", idx)
+			return errors.Wrapf(consensus_types.ErrOutOfBounds, "balance index %d does not exist", idx)
 		}
 
 		b.lock.Lock()

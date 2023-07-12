@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -23,7 +22,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	roots := newState.BlockRoots()
 	blockRoots := make([][32]byte, len(roots))
 	for i, r := range roots {
-		blockRoots[i] = bytesutil.ToBytes32(r)
+		blockRoots[i] = [32]byte(r)
 	}
 	// 5 represents the enum value of block roots
 	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(5), types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, customtypes.BlockRoots(blockRoots), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
@@ -110,7 +109,7 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	mixes := newState.RandaoMixes()
 	randaoMixes := make([][32]byte, len(mixes))
 	for i, r := range mixes {
-		randaoMixes[i] = bytesutil.ToBytes32(r)
+		randaoMixes[i] = [32]byte(r)
 	}
 	// 13 represents the enum value of randao mixes.
 	trie, err := state_native.NewFieldTrie(st, types.FieldIndex(13), types.FieldInfo{ArrayType: types.BasicArray, ValueType: types.SingleValue}, customtypes.RandaoMixes(randaoMixes), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
@@ -127,7 +126,7 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	mixes = newState.RandaoMixes()
 	randaoMixes = make([][32]byte, len(mixes))
 	for i, r := range mixes {
-		randaoMixes[i] = bytesutil.ToBytes32(r)
+		randaoMixes[i] = [32]byte(r)
 	}
 	root, err := trie.RecomputeTrie(st, changedIdx, customtypes.RandaoMixes(randaoMixes))
 	require.NoError(t, err)

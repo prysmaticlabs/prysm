@@ -1,13 +1,12 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -60,7 +59,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		}
 	} else {
 		if uint64(len(b.blockRoots)) <= idx {
-			return fmt.Errorf("index %d out of bounds", idx)
+			return errors.Wrapf(consensus_types.ErrOutOfBounds, "block root index %d does not exist", idx)
 		}
 		r := b.blockRoots
 		if ref := b.sharedFieldReferences[types.BlockRoots]; ref.Refs() > 1 {

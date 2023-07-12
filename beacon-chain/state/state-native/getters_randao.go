@@ -1,9 +1,9 @@
 package state_native
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
@@ -55,7 +55,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, nil
 	}
 	if uint64(len(b.randaoMixes)) <= idx {
-		return []byte{}, fmt.Errorf("index %d out of bounds", idx)
+		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "randao mix index %d does not exist", idx)
 	}
 	return bytesutil.SafeCopyBytes(b.randaoMixes[idx][:]), nil
 }
