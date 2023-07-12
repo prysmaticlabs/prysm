@@ -320,10 +320,11 @@ func TestDetach(t *testing.T) {
 // Index 0: Shared value
 // Index 1: Different individual value
 // Index 2: Same individual value
-// Index 3: Individual value ONLY for the second object
-// Index 4: Different appended value
-// Index 5: Same appended value
-// Index 6: Appended value ONLY for the second object
+// Index 3: Individual value ONLY for the first object
+// Index 4: Individual value ONLY for the second object
+// Index 5: Different appended value
+// Index 6: Same appended value
+// Index 7: Appended value ONLY for the second object
 func setup() *Slice[int, *testObject] {
 	s := &Slice[int, *testObject]{}
 	s.Init([]int{123, 123, 123, 123, 123})
