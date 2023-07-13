@@ -181,7 +181,7 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 		return nil
 	}
 
-	// The following checks are only for Deneb fork and beyond.
+	// EIP-7045: Starting in Deneb, allow any attestations from the current or previous epoch.
 
 	currentEpoch := slots.ToEpoch(currentSlot)
 	prevEpoch, err := currentEpoch.SafeSub(1)
