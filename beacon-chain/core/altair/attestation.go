@@ -297,6 +297,7 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconState, data *et
 	}
 	matchedSrcTgt := matchedSrc && matchedTgt
 	if beaconState.Version() >= version.Deneb {
+		// EIP-7045: Starting in Deneb, include attestations with a correct vote without considering a delay.
 		if matchedSrcTgt {
 			participatedFlags[targetFlagIndex] = true
 		}
