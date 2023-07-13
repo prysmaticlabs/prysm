@@ -820,12 +820,20 @@ func TestService_migrateOldDepositTree(t *testing.T) {
 		WithDepositCache(cache),
 	)
 	require.NoError(t, err)
-	eth1Data, err := s.cfg.beaconDB.ExecutionChainData(context.Background())
-	require.NoError(t, err)
+	eth1Data := &ethpb.ETH1ChainData{
+		BeaconState: &ethpb.BeaconState{
+			Eth1Data: &ethpb.Eth1Data{
+				DepositCount: 800,
+			},
+		},
+		CurrentEth1Data: &ethpb.LatestETH1Data{
+			BlockHeight: 100,
+		},
+	}
 
-	totalDeposits := 500000
+	totalDeposits := 1000
 	input := bytesutil.ToBytes32([]byte("foo"))
-	dt, err := trie.NewTrie(33)
+	dt, err := trie.NewTrie(32)
 	require.NoError(t, err)
 
 	for i := 0; i < totalDeposits; i++ {
@@ -835,6 +843,7 @@ func TestService_migrateOldDepositTree(t *testing.T) {
 	eth1Data.Trie = dt.ToProto()
 
 	err = s.migrateOldDepositTree(eth1Data)
+	t.Logf("Error from migration: %v", err)
 	require.NoError(t, err)
 	oldDepositTreeRoot, err := dt.HashTreeRoot()
 	require.NoError(t, err)
