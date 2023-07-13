@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
@@ -98,10 +97,10 @@ func TestTopicFromMessage_CorrectType(t *testing.T) {
 		topic, err := TopicFromMessage(m, 0)
 		assert.NoError(t, err)
 
-		assert.Equal(t, true, strings.Contains(topic, SchemaVersionV1))
-		_, _, version, err := TopicDeconstructor(topic)
-		assert.NoError(t, err)
-		assert.Equal(t, SchemaVersionV1, version)
+		assert.Equal(t, true, topic.SchemaVersion == SchemaVersionV1)
+		//_, _, version, err := TopicDeconstructor(topic)
+		//assert.NoError(t, err)
+		assert.Equal(t, SchemaVersionV1, topic.SchemaVersion)
 	}
 
 	// Altair Fork
@@ -110,15 +109,15 @@ func TestTopicFromMessage_CorrectType(t *testing.T) {
 		assert.NoError(t, err)
 
 		if altairMapping[m] {
-			assert.Equal(t, true, strings.Contains(topic, SchemaVersionV2))
-			_, _, version, err := TopicDeconstructor(topic)
-			assert.NoError(t, err)
-			assert.Equal(t, SchemaVersionV2, version)
+			assert.Equal(t, true, topic.SchemaVersion == SchemaVersionV2)
+			//_, _, version, err := TopicDeconstructor(topic)
+			//assert.NoError(t, err)
+			assert.Equal(t, SchemaVersionV2, topic.SchemaVersion)
 		} else {
-			assert.Equal(t, true, strings.Contains(topic, SchemaVersionV1))
-			_, _, version, err := TopicDeconstructor(topic)
-			assert.NoError(t, err)
-			assert.Equal(t, SchemaVersionV1, version)
+			assert.Equal(t, true, topic.SchemaVersion == SchemaVersionV2)
+			//_, _, version, err := TopicDeconstructor(topic)
+			//assert.NoError(t, err)
+			assert.Equal(t, SchemaVersionV1, topic.SchemaVersion)
 		}
 	}
 }

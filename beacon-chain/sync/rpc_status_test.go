@@ -65,7 +65,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
-	pcl := protocol.ID(p2p.RPCStatusTopicV1)
+	pcl := protocol.ID(p2p.RPCStatusTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 
@@ -136,7 +136,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
-	pcl := protocol.ID(p2p.RPCStatusTopicV1)
+	pcl := protocol.ID(p2p.RPCStatusTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 
@@ -223,7 +223,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup streams
-	pcl := protocol.ID(p2p.RPCStatusTopicV1)
+	pcl := protocol.ID(p2p.RPCStatusTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 	var wg sync.WaitGroup

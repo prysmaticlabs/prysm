@@ -65,7 +65,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: clock, chain: &chainMock.ChainService{}}, rateLimiter: newRateLimiter(p1)}
-	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(req.Count*10), time.Second, false)
 	var wg sync.WaitGroup
@@ -128,7 +128,7 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 	clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	r := &Service{cfg: &config{p2p: p1, beaconDB: d, chain: &chainMock.ChainService{}, clock: clock}, rateLimiter: newRateLimiter(p1)}
-	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(req.Count*10), time.Second, false)
 	var wg sync.WaitGroup
@@ -246,7 +246,7 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
-	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(req.Count*10), time.Second, false)
 	var wg sync.WaitGroup
@@ -315,7 +315,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: clock, chain: &chainMock.ChainService{}}, rateLimiter: newRateLimiter(p1)}
-	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(req.Count*10), time.Second, false)
 
@@ -381,7 +381,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 
 	clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
 	r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: clock, chain: &chainMock.ChainService{}}, rateLimiter: newRateLimiter(p1)}
-	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
 
@@ -433,7 +433,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		req *ethpb.BeaconBlocksByRangeRequest, validateBlocks bool, success bool) error {
 		var wg sync.WaitGroup
 		wg.Add(1)
-		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 			defer wg.Done()
 			if !validateBlocks {
@@ -474,7 +474,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
 		r := &Service{cfg: &config{p2p: p1, beaconDB: d, chain: &chainMock.ChainService{}, clock: clock}, rateLimiter: newRateLimiter(p1)}
 
-		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 		topic := string(pcl)
 		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, capacity, time.Second, false)
 		req := &ethpb.BeaconBlocksByRangeRequest{
@@ -501,7 +501,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
 		r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: clock, chain: &chainMock.ChainService{}}, rateLimiter: newRateLimiter(p1)}
 
-		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 		topic := string(pcl)
 		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, capacity, time.Second, false)
 
@@ -531,7 +531,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		capacity := int64(flags.Get().BlockBatchLimit * flags.Get().BlockBatchLimitBurstFactor)
 		clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
 		r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: clock, chain: &chainMock.ChainService{}}, rateLimiter: newRateLimiter(p1)}
-		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 		topic := string(pcl)
 		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, capacity, time.Second, false)
 
@@ -685,7 +685,7 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 			parentRoot = rt
 		}
 	}
-	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 	sendRequest := func(p1, p2 *p2ptest.TestP2P, r *Service,
 		req *ethpb.BeaconBlocksByRangeRequest, processBlocks func([]*ethpb.SignedBeaconBlock)) error {
 		var wg sync.WaitGroup
@@ -846,7 +846,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			}))
 		}
 	}
-	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1.String())
 	sendRequest := func(p1, p2 *p2ptest.TestP2P, r *Service,
 		req *ethpb.BeaconBlocksByRangeRequest, processBlocks func([]*ethpb.SignedBeaconBlock)) error {
 		var wg sync.WaitGroup

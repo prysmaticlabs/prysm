@@ -4,7 +4,6 @@ import (
 	"context"
 	"reflect"
 	"runtime/debug"
-	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	corenet "github.com/libp2p/go-libp2p/core/network"
@@ -17,8 +16,9 @@ import (
 type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
-	topic := baseTopic + c.Encoding().ProtocolSuffix()
+func (c *client) registerRPCHandler(baseTopic p2ptypes.RpcTopic, handle rpcHandler) {
+	protocolSuffix := c.Encoding().ProtocolSuffix()
+	topic := baseTopic.ConvertToStringWithSuffix(protocolSuffix)
 	c.host.SetStreamHandler(protocol.ID(topic), func(stream corenet.Stream) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -49,7 +49,8 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 
 		// since metadata requests do not have any data in the payload, we
 		// do not decode anything.
-		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
+		//if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
+		if baseTopic.CompareTopics(p2p.RPCStatusTopicV1, protocolSuffix) || baseTopic.CompareTopics(p2p.RPCMetaDataTopicV2, protocolSuffix) {
 			if err := handle(context.Background(), base, stream); err != nil {
 				if err != p2ptypes.ErrWrongForkDigestVersion {
 					log.WithError(err).Debug("Could not handle p2p RPC")
@@ -69,7 +70,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 			}
 			if err := c.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 				// Debug logs for goodbye/status errors
-				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
+				if baseTopic.CompareTopics(p2p.RPCGoodByeTopicV1, protocolSuffix) || baseTopic.CompareTopics(p2p.RPCStatusTopicV1, protocolSuffix) {
 					log.WithError(err).Debug("Could not decode goodbye stream message")
 					return
 				}

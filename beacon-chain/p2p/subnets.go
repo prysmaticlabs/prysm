@@ -47,7 +47,6 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		return false, nil
 	}
 
-	topic += s.Encoding().ProtocolSuffix()
 	iterator := s.dv5Listener.RandomNodes()
 	defer iterator.Close()
 	switch {

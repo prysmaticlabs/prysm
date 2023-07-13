@@ -53,7 +53,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: startup.NewClock(time.Unix(0, 0), [32]byte{})}, rateLimiter: newRateLimiter(p1)}
 	r.cfg.chain = &mock.ChainService{ValidatorsRoot: [32]byte{}}
-	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
 
@@ -152,7 +152,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 		chain:                         &mock.ChainService{ValidatorsRoot: [32]byte{}},
 		clock:                         startup.NewClock(time.Unix(0, 0), [32]byte{}),
 	}, rateLimiter: newRateLimiter(p1)}
-	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
 
@@ -263,7 +263,7 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 	d := db.SetupDB(t)
 
 	r := &Service{cfg: &config{p2p: p1, beaconDB: d}, rateLimiter: newRateLimiter(p1)}
-	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
+	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 

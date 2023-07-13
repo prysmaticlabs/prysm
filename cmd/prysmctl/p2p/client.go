@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"net"
 	"time"
 
@@ -106,12 +107,13 @@ func (c *client) MetadataSeq() uint64 {
 func (c *client) Send(
 	ctx context.Context,
 	message interface{},
-	baseTopic string,
+	baseTopic p2ptypes.RpcTopic,
 	pid peer.ID,
 ) (corenet.Stream, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
-	topic := baseTopic + c.Encoding().ProtocolSuffix()
+	protocolSuffix := c.Encoding().ProtocolSuffix()
+	topic := baseTopic.ConvertToStringWithSuffix(protocolSuffix)
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	// Apply max dial timeout when opening a new stream.
@@ -124,7 +126,19 @@ func (c *client) Send(
 		return nil, errors.Wrap(err, "could not open new stream")
 	}
 	// do not encode anything if we are sending a metadata request
-	if baseTopic != p2p.RPCMetaDataTopicV1 && baseTopic != p2p.RPCMetaDataTopicV2 {
+	//if baseTopic != p2p.RPCMetaDataTopicV1 && baseTopic != p2p.RPCMetaDataTopicV2 {
+	//	castedMsg, ok := message.(ssz.Marshaler)
+	//	if !ok {
+	//		return nil, errors.Errorf("%T does not support the ssz marshaller interface", message)
+	//	}
+	//	if _, err := c.Encoding().EncodeWithMaxLength(stream, castedMsg); err != nil {
+	//		tracing.AnnotateError(span, err)
+	//		_err := stream.Reset()
+	//		_ = _err
+	//		return nil, err
+	//	}
+	//}
+	if baseTopic.CompareTopics(p2p.RPCMetaDataTopicV1, protocolSuffix) && baseTopic.CompareTopics(p2p.RPCMetaDataTopicV2, protocolSuffix) {
 		castedMsg, ok := message.(ssz.Marshaler)
 		if !ok {
 			return nil, errors.Errorf("%T does not support the ssz marshaller interface", message)

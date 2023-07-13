@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -191,7 +190,8 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *eth.Attes
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
-	if !strings.HasPrefix(t, fmt.Sprintf(format, digest, subnet)) {
+
+	if !strings.HasPrefix(t, format.ConvertToStringWithForkDigestAndIndex(digest, subnet)) {
 		return pubsub.ValidationReject, errors.New("attestation's subnet does not match with pubsub topic")
 	}
 

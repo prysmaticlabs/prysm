@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"reflect"
 	"sync"
 	"testing"
@@ -59,7 +60,11 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	var err error
 	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
-	topic := "/eth2/%x/voluntary_exit"
+	//topic := "/eth2/%x/voluntary_exit"
+	topic := p2ptypes.GossipTopic{
+		ProtocolPrefix: "/eth2/%x",
+		BaseTopic:      "/voluntary_exit",
+	}
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -74,7 +79,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	}, p2pService.Digest)
 	r.markForChainStart()
 
-	p2pService.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	p2pService.ReceivePubSub(topic.String(), &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 
 	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -102,14 +107,16 @@ func TestSubscribe_UnsubscribeTopic(t *testing.T) {
 	var err error
 	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
-	topic := "/eth2/%x/voluntary_exit"
-
+	topic := p2ptypes.GossipTopic{
+		ProtocolPrefix: "/eth2/%x",
+		BaseTopic:      "/voluntary_exit",
+	}
 	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		return nil
 	}, p2pService.Digest)
 	r.markForChainStart()
 
-	fullTopic := fmt.Sprintf(topic, p2pService.Digest) + p2pService.Encoding().ProtocolSuffix()
+	fullTopic := fmt.Sprintf(topic.String(), p2pService.Digest) + p2pService.Encoding().ProtocolSuffix()
 	assert.Equal(t, true, r.subHandler.topicExists(fullTopic))
 	topics := p2pService.PubSub().GetTopics()
 	assert.Equal(t, fullTopic, topics[0])
@@ -150,7 +157,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		chainStarted:              abool.New(),
 		subHandler:                newSubTopicHandler(),
 	}
-	topic := "/eth2/%x/attester_slashing"
+	topic := p2ptypes.GossipTopic{
+		ProtocolPrefix: "/eth2/%x",
+		BaseTopic:      "/attester_slashing",
+	}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	var err error
@@ -172,7 +182,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	require.NoError(t, err, "Error generating attester slashing")
 	err = r.cfg.beaconDB.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
 	require.NoError(t, err)
-	p2pService.ReceivePubSub(topic, attesterSlashing)
+	p2pService.ReceivePubSub(topic.String(), attesterSlashing)
 
 	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -203,7 +213,11 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		chainStarted:              abool.New(),
 		subHandler:                newSubTopicHandler(),
 	}
-	topic := "/eth2/%x/proposer_slashing"
+	//topic := "/eth2/%x/proposer_slashing"
+	topic := p2ptypes.GossipTopic{
+		ProtocolPrefix: "/eth2/%x",
+		BaseTopic:      "/proposer_slashing",
+	}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	params.SetupTestConfigCleanup(t)
@@ -226,7 +240,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	)
 	require.NoError(t, err, "Error generating proposer slashing")
 
-	p2pService.ReceivePubSub(topic, proposerSlashing)
+	p2pService.ReceivePubSub(topic.String(), proposerSlashing)
 
 	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -264,7 +278,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		panic("bad")
 	}, p.Digest)
 	r.markForChainStart()
-	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	p.ReceivePubSub(topic.String(), &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 
 	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -292,16 +306,22 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	require.NoError(t, err)
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 
-	defaultTopic := "/eth2/testing/%#x/committee%d"
+	//defaultTopic := "/eth2/testing/%#x/committee%d"
+	defaultTopic := p2ptypes.GossipTopic{
+		ProtocolPrefix: "/eth2/testing/%#x",
+		BaseTopic:      "/committee%d",
+	}
 	// committee index 1
-	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	//fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	fullTopic := defaultTopic.ConvertToString(digest, r.cfg.p2p.Encoding().ProtocolSuffix(), 1)
 	_, topVal := r.wrapAndReportValidation(fullTopic, r.noopValidator)
 	require.NoError(t, r.cfg.p2p.PubSub().RegisterTopicValidator(fullTopic, topVal))
 	subscriptions[1], err = r.cfg.p2p.SubscribeToTopic(fullTopic)
 	require.NoError(t, err)
 
 	// committee index 2
-	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	//fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	fullTopic = defaultTopic.ConvertToString(digest, r.cfg.p2p.Encoding().ProtocolSuffix(), 2)
 	_, topVal = r.wrapAndReportValidation(fullTopic, r.noopValidator)
 	err = r.cfg.p2p.PubSub().RegisterTopicValidator(fullTopic, topVal)
 	require.NoError(t, err)
@@ -329,7 +349,11 @@ func TestStaticSubnets(t *testing.T) {
 		chainStarted: abool.New(),
 		subHandler:   newSubTopicHandler(),
 	}
-	defaultTopic := "/eth2/%x/beacon_attestation_%d"
+	//defaultTopic := "/eth2/%x/beacon_attestation_%d"
+	defaultTopic := p2ptypes.GossipTopic{
+		ProtocolPrefix: "/eth2/%x",
+		BaseTopic:      "/beacon_attestation_%d",
+	}
 	d, err := r.currentForkDigest()
 	assert.NoError(t, err)
 	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
@@ -350,7 +374,8 @@ func Test_wrapAndReportValidation(t *testing.T) {
 	}
 	fd, err := forks.CreateForkDigest(mChain.GenesisTime(), mChain.ValidatorsRoot[:])
 	assert.NoError(t, err)
-	mockTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
+	//mockTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
+	mockTopic := p2p.BlockSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(fd, encoder.SszNetworkEncoder{}.ProtocolSuffix())
 	type args struct {
 		topic        string
 		v            wrappedVal
@@ -500,11 +525,17 @@ func TestFilterSubnetPeers(t *testing.T) {
 	defer cache.SubnetIDs.EmptyAllCaches()
 	digest, err := r.currentForkDigest()
 	assert.NoError(t, err)
-	defaultTopic := "/eth2/%x/beacon_attestation_%d" + r.cfg.p2p.Encoding().ProtocolSuffix()
-	subnet10 := r.addDigestAndIndexToTopic(defaultTopic, digest, 10)
+	topic := p2ptypes.GossipTopic{
+		ProtocolPrefix: "/eth2/%x",
+		BaseTopic:      "/beacon_attestation_%d",
+	}
+	//defaultTopic := "/eth2/%x/beacon_attestation_%d" + r.cfg.p2p.Encoding().ProtocolSuffix()
+	//subnet10 := r.addDigestAndIndexToTopic(defaultTopic, digest, 10)
+	subnet10 := topic.ConvertToString(digest, r.cfg.p2p.Encoding().ProtocolSuffix(), 10)
 	cache.SubnetIDs.AddAggregatorSubnetID(currSlot, 10)
 
-	subnet20 := r.addDigestAndIndexToTopic(defaultTopic, digest, 20)
+	//subnet20 := r.addDigestAndIndexToTopic(defaultTopic, digest, 20)
+	subnet20 := topic.ConvertToString(digest, r.cfg.p2p.Encoding().ProtocolSuffix(), 20)
 	cache.SubnetIDs.AddAttesterSubnetID(currSlot, 20)
 
 	p1 := createPeer(t, subnet10)
@@ -607,10 +638,12 @@ func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
 	for _, t := range r.cfg.p2p.PubSub().GetTopics() {
 		topicMap[t] = true
 	}
-	firstSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 0) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	//firstSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 0) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	firstSub := p2p.SyncCommitteeSubnetTopicFormat.ConvertToString(digest, r.cfg.p2p.Encoding().ProtocolSuffix(), 0)
 	assert.Equal(t, true, topicMap[firstSub])
 
-	secondSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 1) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	//secondSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 1) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	secondSub := p2p.SyncCommitteeSubnetTopicFormat.ConvertToString(digest, r.cfg.p2p.Encoding().ProtocolSuffix(), 1)
 	assert.Equal(t, true, topicMap[secondSub])
 	cancel()
 }
@@ -696,10 +729,12 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 	for _, t := range r.cfg.p2p.PubSub().GetTopics() {
 		topicMap[t] = true
 	}
-	firstSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 0) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	//firstSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 0) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	firstSub := p2p.SyncCommitteeSubnetTopicFormat.ConvertToString(digest, r.cfg.p2p.Encoding().ProtocolSuffix(), 0)
 	assert.Equal(t, true, topicMap[firstSub])
 
-	secondSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 1) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	//secondSub := fmt.Sprintf(p2p.SyncCommitteeSubnetTopicFormat, digest, 1) + r.cfg.p2p.Encoding().ProtocolSuffix()
+	secondSub := p2p.SyncContributionAndProofSubnetTopicFormat.ConvertToString(digest, r.cfg.p2p.Encoding().ProtocolSuffix(), 1)
 	assert.Equal(t, true, topicMap[secondSub])
 
 	// Expect that all old topics will be unsubscribed.

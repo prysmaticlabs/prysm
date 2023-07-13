@@ -3,7 +3,6 @@ package p2p
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -49,7 +48,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	if !ok {
 		return errors.Errorf("message of %T does not support marshaller interface", msg)
 	}
-	return s.broadcastObject(ctx, castMsg, fmt.Sprintf(topic, forkDigest))
+	return s.broadcastObject(ctx, castMsg, topic.ConvertToStringWithForkDigest(forkDigest))
 }
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
@@ -105,7 +104,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 
 	// Ensure we have peers with this subnet.
 	s.subnetLocker(subnet).RLock()
-	hasPeer := s.hasPeerWithSubnet(attestationToTopic(subnet, forkDigest))
+	hasPeer := s.hasPeerWithSubnet(attestationToTopic(subnet, forkDigest, s.Encoding().ProtocolSuffix()))
 	s.subnetLocker(subnet).RUnlock()
 
 	span.AddAttributes(
@@ -119,7 +118,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 		if err := func() error {
 			s.subnetLocker(subnet).Lock()
 			defer s.subnetLocker(subnet).Unlock()
-			ok, err := s.FindPeersWithSubnet(ctx, attestationToTopic(subnet, forkDigest), subnet, 1)
+			ok, err := s.FindPeersWithSubnet(ctx, attestationToTopic(subnet, forkDigest, s.Encoding().ProtocolSuffix()), subnet, 1)
 			if err != nil {
 				return err
 			}
@@ -141,7 +140,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 		return
 	}
 
-	if err := s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest)); err != nil {
+	if err := s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest, s.Encoding().ProtocolSuffix())); err != nil {
 		log.WithError(err).Error("Failed to broadcast attestation")
 		tracing.AnnotateError(span, err)
 	}
@@ -161,7 +160,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 	// to ensure that we can re-use the same subnet locker.
 	wrappedSubIdx := subnet + syncLockerVal
 	s.subnetLocker(wrappedSubIdx).RLock()
-	hasPeer := s.hasPeerWithSubnet(syncCommitteeToTopic(subnet, forkDigest))
+	hasPeer := s.hasPeerWithSubnet(syncCommitteeToTopic(subnet, forkDigest, s.Encoding().ProtocolSuffix()))
 	s.subnetLocker(wrappedSubIdx).RUnlock()
 
 	span.AddAttributes(
@@ -175,7 +174,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 		if err := func() error {
 			s.subnetLocker(wrappedSubIdx).Lock()
 			defer s.subnetLocker(wrappedSubIdx).Unlock()
-			ok, err := s.FindPeersWithSubnet(ctx, syncCommitteeToTopic(subnet, forkDigest), subnet, 1)
+			ok, err := s.FindPeersWithSubnet(ctx, syncCommitteeToTopic(subnet, forkDigest, s.Encoding().ProtocolSuffix()), subnet, 1)
 			if err != nil {
 				return err
 			}
@@ -196,7 +195,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 		return
 	}
 
-	if err := s.broadcastObject(ctx, sMsg, syncCommitteeToTopic(subnet, forkDigest)); err != nil {
+	if err := s.broadcastObject(ctx, sMsg, syncCommitteeToTopic(subnet, forkDigest, s.Encoding().ProtocolSuffix())); err != nil {
 		log.WithError(err).Error("Failed to broadcast sync committee message")
 		tracing.AnnotateError(span, err)
 	}
@@ -223,7 +222,7 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 		iid := int64(id)
 		span.AddMessageSendEvent(iid, messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
-	if err := s.PublishToTopic(ctx, topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
+	if err := s.PublishToTopic(ctx, topic, buf.Bytes()); err != nil {
 		err := errors.Wrap(err, "could not publish message")
 		tracing.AnnotateError(span, err)
 		return err
@@ -231,10 +230,12 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 	return nil
 }
 
-func attestationToTopic(subnet uint64, forkDigest [4]byte) string {
-	return fmt.Sprintf(AttestationSubnetTopicFormat, forkDigest, subnet)
+func attestationToTopic(subnet uint64, forkDigest [4]byte, protocolSuffix string) string {
+	//return fmt.Sprintf(AttestationSubnetTopicFormat, forkDigest, subnet)
+	return AttestationSubnetTopicFormat.ConvertToString(forkDigest, protocolSuffix, subnet)
 }
 
-func syncCommitteeToTopic(subnet uint64, forkDigest [4]byte) string {
-	return fmt.Sprintf(SyncCommitteeSubnetTopicFormat, forkDigest, subnet)
+func syncCommitteeToTopic(subnet uint64, forkDigest [4]byte, protocolSuffix string) string {
+	//return fmt.Sprintf(SyncCommitteeSubnetTopicFormat, forkDigest, subnet)
+	return SyncCommitteeSubnetTopicFormat.ConvertToString(forkDigest, protocolSuffix, subnet)
 }

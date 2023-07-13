@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"sync"
 	"testing"
 	"time"
@@ -36,12 +37,22 @@ func TestService_Send(t *testing.T) {
 	// Register external listener which will repeat the message back.
 	var wg sync.WaitGroup
 	wg.Add(1)
-	topic := "/testing/1"
+	//topic := "/testing/1"
+	topic := p2ptypes.RpcTopic{BaseTopic: "testing", SchemaVersion: SchemaVersionV1}
 	RPCTopicMappings[topic] = new(ethpb.Fork)
 	defer func() {
 		delete(RPCTopicMappings, topic)
 	}()
-	p2.SetStreamHandler(topic+"/ssz_snappy", func(stream network.Stream) {
+	//p2.SetStreamHandler(topic+"/ssz_snappy", func(stream network.Stream) {
+	//	rcvd := &ethpb.Fork{}
+	//	require.NoError(t, svc.Encoding().DecodeWithMaxLength(stream, rcvd))
+	//	_, err := svc.Encoding().EncodeWithMaxLength(stream, rcvd)
+	//	require.NoError(t, err)
+	//	assert.NoError(t, stream.Close())
+	//	wg.Done()
+	//})
+
+	p2.SetStreamHandler(topic.ConvertToStringWithSuffix("/ssz_snappy"), func(stream network.Stream) {
 		rcvd := &ethpb.Fork{}
 		require.NoError(t, svc.Encoding().DecodeWithMaxLength(stream, rcvd))
 		_, err := svc.Encoding().EncodeWithMaxLength(stream, rcvd)
@@ -50,7 +61,7 @@ func TestService_Send(t *testing.T) {
 		wg.Done()
 	})
 
-	stream, err := svc.Send(context.Background(), msg, "/testing/1", p2.BHost.ID())
+	stream, err := svc.Send(context.Background(), msg, topic, p2.BHost.ID())
 	require.NoError(t, err)
 
 	util.WaitTimeout(&wg, 1*time.Second)

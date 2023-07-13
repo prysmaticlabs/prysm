@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -40,7 +39,8 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 	s.host = p0.BHost
 	s.pubsub = p0.PubSub()
 
-	topic := fmt.Sprintf(BlockSubnetTopicFormat, fd) + "/" + encoder.ProtocolSuffixSSZSnappy
+	//topic := fmt.Sprintf(BlockSubnetTopicFormat, fd) + "/" + encoder.ProtocolSuffixSSZSnappy
+	topic := BlockSubnetTopicFormat.ConvertToString(fd, "/"+encoder.ProtocolSuffixSSZSnappy, 0)
 
 	// Establish the remote peer to be subscribed to the outgoing topic.
 	_, err = p1.SubscribeToTopic(topic)
@@ -94,8 +94,9 @@ func TestExtractGossipDigest(t *testing.T) {
 			error:   errors.New("encoding/hex: invalid byte"),
 		},
 		{
-			name:    "short digest",
-			topic:   fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f}) + "/" + encoder.ProtocolSuffixSSZSnappy,
+			name: "short digest",
+			//topic:   fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f}) + "/" + encoder.ProtocolSuffixSSZSnappy,
+			topic:   BlockSubnetTopicFormat.ConvertToString([4]byte{0xb5, 0x30, 0x3f, 0x0}, "/"+encoder.ProtocolSuffixSSZSnappy, 0),
 			want:    [4]byte{},
 			wantErr: true,
 			error:   errors.New("invalid digest length wanted"),
@@ -108,8 +109,9 @@ func TestExtractGossipDigest(t *testing.T) {
 			error:   errors.New("invalid topic format"),
 		},
 		{
-			name:    "valid topic",
-			topic:   fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy,
+			name: "valid topic",
+			//topic:   fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy,
+			topic:   BlockSubnetTopicFormat.ConvertToString([4]byte{0xb5, 0x30, 0x3f, 0x2a}, "/"+encoder.ProtocolSuffixSSZSnappy, 0),
 			want:    [4]byte{0xb5, 0x30, 0x3f, 0x2a},
 			wantErr: false,
 			error:   nil,
@@ -128,7 +130,8 @@ func TestExtractGossipDigest(t *testing.T) {
 }
 
 func BenchmarkExtractGossipDigest(b *testing.B) {
-	topic := fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy
+	//topic := fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy
+	topic := BlockSubnetTopicFormat.ConvertToString([4]byte{0xb5, 0x30, 0x3f, 0x2a}, "/"+encoder.ProtocolSuffixSSZSnappy, 0)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := ExtractGossipDigest(topic)

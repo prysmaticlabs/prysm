@@ -2,7 +2,6 @@ package sync
 
 import (
 	"bytes"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -26,6 +25,7 @@ import (
 
 func TestService_decodePubsubMessage(t *testing.T) {
 	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, make([]byte, 32))
+	signedBeaconBlockTopic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlock{})]
 	require.NoError(t, err)
 	tests := []struct {
 		name    string
@@ -60,7 +60,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 		},
 		{
 			name:  "valid message -- beacon block",
-			topic: fmt.Sprintf(p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlock{})], digest),
+			topic: signedBeaconBlockTopic.ConvertToStringWithForkDigest(digest),
 			input: &pubsub.Message{
 				Message: &pb.Message{
 					Data: func() []byte {

@@ -83,9 +83,10 @@ func FuzzValidateBeaconBlockPubSub_Phase0(f *testing.F) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	digest, err := r.currentForkDigest()
 	assert.NoError(f, err)
-	topic = r.addDigestToTopic(topic, digest)
+	//topic = r.addDigestToTopic(topic, digest)
+	gossipTopic := topic.ConvertToStringWithForkDigest(digest)
 
-	f.Add("junk", []byte("junk"), buf.Bytes(), []byte(topic))
+	f.Add("junk", []byte("junk"), buf.Bytes(), []byte(gossipTopic))
 	f.Fuzz(func(t *testing.T, pid string, from, data, topic []byte) {
 		r.cfg.p2p = p2ptest.NewFuzzTestP2P()
 		r.rateLimiter = newRateLimiter(r.cfg.p2p)
@@ -165,9 +166,10 @@ func FuzzValidateBeaconBlockPubSub_Altair(f *testing.F) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	digest, err := r.currentForkDigest()
 	assert.NoError(f, err)
-	topic = r.addDigestToTopic(topic, digest)
+	//topic = r.addDigestToTopic(topic, digest)
+	gossipTopic := topic.ConvertToStringWithForkDigest(digest)
 
-	f.Add("junk", []byte("junk"), buf.Bytes(), []byte(topic))
+	f.Add("junk", []byte("junk"), buf.Bytes(), []byte(gossipTopic))
 	f.Fuzz(func(t *testing.T, pid string, from, data, topic []byte) {
 		r.cfg.p2p = p2ptest.NewFuzzTestP2P()
 		r.rateLimiter = newRateLimiter(r.cfg.p2p)
@@ -247,9 +249,10 @@ func FuzzValidateBeaconBlockPubSub_Bellatrix(f *testing.F) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	digest, err := r.currentForkDigest()
 	assert.NoError(f, err)
-	topic = r.addDigestToTopic(topic, digest)
+	//topic = r.addDigestToTopic(topic, digest)
+	gossipTopic := topic.ConvertToStringWithForkDigest(digest)
 
-	f.Add("junk", []byte("junk"), buf.Bytes(), []byte(topic))
+	f.Add("junk", []byte("junk"), buf.Bytes(), []byte(gossipTopic))
 	f.Fuzz(func(t *testing.T, pid string, from, data, topic []byte) {
 		r.cfg.p2p = p2ptest.NewFuzzTestP2P()
 		r.rateLimiter = newRateLimiter(r.cfg.p2p)

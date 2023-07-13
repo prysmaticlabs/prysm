@@ -2,7 +2,7 @@ package p2p
 
 import (
 	"context"
-	"fmt"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"net"
 	"reflect"
 	"sync"
@@ -50,16 +50,20 @@ func TestService_Broadcast(t *testing.T) {
 		PreviousVersion: []byte("barr"),
 	}
 
-	topic := "/eth2/%x/testing"
+	//topic := "/eth2/%x/testing"
+	topic := p2ptypes.GossipTopic{
+		ProtocolPrefix: "/eth2/%x/",
+		BaseTopic:      "testing",
+	}
 	// Set a test gossip mapping for testpb.TestSimpleMessage.
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
-	topic = fmt.Sprintf(topic, digest)
 
 	// External peer subscribes to the topic.
-	topic += p.Encoding().ProtocolSuffix()
-	sub, err := p2.SubscribeToTopic(topic)
+	//stringifiedTopic += p.Encoding().ProtocolSuffix()
+	stringifiedTopic := topic.ConvertToString(digest, p.Encoding().ProtocolSuffix(), 0)
+	sub, err := p2.SubscribeToTopic(stringifiedTopic)
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // libp2p fails without this delay...
@@ -98,7 +102,23 @@ func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 }
 
 func TestService_Attestation_Subnet(t *testing.T) {
-	if gtm := GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]; gtm != AttestationSubnetTopicFormat {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	if len(p1.BHost.Network().Peers()) == 0 {
+		t.Fatal("No peers")
+	}
+
+	p := &Service{
+		host:                  p1.BHost,
+		pubsub:                p1.PubSub(),
+		joinedTopics:          map[string]*pubsub.Topic{},
+		cfg:                   &Config{},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+	}
+
+	if gtm := GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]; gtm.String() != AttestationSubnetTopicFormat.String() {
 		t.Errorf("Constant is out of date. Wanted %s, got %s", AttestationSubnetTopicFormat, gtm)
 	}
 
@@ -113,7 +133,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					Slot:           2,
 				},
 			},
-			topic: "/eth2/00000000/beacon_attestation_2",
+			topic: "/eth2/00000000/beacon_attestation_2" + p.Encoding().ProtocolSuffix(),
 		},
 		{
 			att: &ethpb.Attestation{
@@ -122,7 +142,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					Slot:           10,
 				},
 			},
-			topic: "/eth2/00000000/beacon_attestation_21",
+			topic: "/eth2/00000000/beacon_attestation_21" + p.Encoding().ProtocolSuffix(),
 		},
 		{
 			att: &ethpb.Attestation{
@@ -131,12 +151,12 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					Slot:           529,
 				},
 			},
-			topic: "/eth2/00000000/beacon_attestation_8",
+			topic: "/eth2/00000000/beacon_attestation_8" + p.Encoding().ProtocolSuffix(),
 		},
 	}
 	for _, tt := range tests {
 		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(100, tt.att.Data.CommitteeIndex, tt.att.Data.Slot)
-		assert.Equal(t, tt.topic, attestationToTopic(subnet, [4]byte{} /* fork digest */), "Wrong topic")
+		assert.Equal(t, tt.topic, attestationToTopic(subnet, [4]byte{}, p.Encoding().ProtocolSuffix()), "Wrong topic")
 	}
 }
 
@@ -169,11 +189,12 @@ func TestService_BroadcastAttestation(t *testing.T) {
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
-	topic = fmt.Sprintf(topic, digest, subnet)
-
-	// External peer subscribes to the topic.
-	topic += p.Encoding().ProtocolSuffix()
-	sub, err := p2.SubscribeToTopic(topic)
+	//topic = fmt.Sprintf(topic, digest, subnet)
+	//
+	//// External peer subscribes to the topic.
+	//topic += p.Encoding().ProtocolSuffix()
+	stringifiedTopic := topic.ConvertToString(digest, p.Encoding().ProtocolSuffix(), subnet)
+	sub, err := p2.SubscribeToTopic(stringifiedTopic)
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // libp2p fails without this delay...
@@ -332,26 +353,27 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
-	topic = fmt.Sprintf(topic, digest, subnet)
-
-	// External peer subscribes to the topic.
-	topic += p.Encoding().ProtocolSuffix()
+	//topic = fmt.Sprintf(topic, digest, subnet)
+	//
+	//// External peer subscribes to the topic.
+	//topic += p.Encoding().ProtocolSuffix()
+	stringifiedTopic := topic.ConvertToString(digest, p.Encoding().ProtocolSuffix(), subnet)
 	// We don't use our internal subscribe method
 	// due to using floodsub over here.
-	tpHandle, err := p2.JoinTopic(topic)
+	tpHandle, err := p2.JoinTopic(stringifiedTopic)
 	require.NoError(t, err)
 	sub, err := tpHandle.Subscribe()
 	require.NoError(t, err)
 
-	tpHandle, err = p.JoinTopic(topic)
+	tpHandle, err = p.JoinTopic(stringifiedTopic)
 	require.NoError(t, err)
 	_, err = tpHandle.Subscribe()
 	require.NoError(t, err)
 
 	time.Sleep(500 * time.Millisecond) // libp2p fails without this delay...
 
-	nodePeers := p.pubsub.ListPeers(topic)
-	nodePeers2 := p2.pubsub.ListPeers(topic)
+	nodePeers := p.pubsub.ListPeers(stringifiedTopic)
+	nodePeers2 := p2.pubsub.ListPeers(stringifiedTopic)
 
 	assert.Equal(t, 1, len(nodePeers))
 	assert.Equal(t, 1, len(nodePeers2))
@@ -410,11 +432,12 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
-	topic = fmt.Sprintf(topic, digest, subnet)
-
-	// External peer subscribes to the topic.
-	topic += p.Encoding().ProtocolSuffix()
-	sub, err := p2.SubscribeToTopic(topic)
+	//topic = fmt.Sprintf(topic, digest, subnet)
+	//
+	//// External peer subscribes to the topic.
+	//topic += p.Encoding().ProtocolSuffix()
+	stringifiedTopic := topic.ConvertToString(digest, p.Encoding().ProtocolSuffix(), subnet)
+	sub, err := p2.SubscribeToTopic(stringifiedTopic)
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // libp2p fails without this delay...

@@ -37,29 +37,80 @@ const PingMessageName = "/ping"
 // MetadataMessageName specifies the name for the metadata message topic.
 const MetadataMessageName = "/metadata"
 
-const (
-	// V1 RPC Topics
-	// RPCStatusTopicV1 defines the v1 topic for the status rpc method.
-	RPCStatusTopicV1 = protocolPrefix + StatusMessageName + SchemaVersionV1
-	// RPCGoodByeTopicV1 defines the v1 topic for the goodbye rpc method.
-	RPCGoodByeTopicV1 = protocolPrefix + GoodbyeMessageName + SchemaVersionV1
-	// RPCBlocksByRangeTopicV1 defines v1 the topic for the blocks by range rpc method.
-	RPCBlocksByRangeTopicV1 = protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV1
-	// RPCBlocksByRootTopicV1 defines the v1 topic for the blocks by root rpc method.
-	RPCBlocksByRootTopicV1 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV1
-	// RPCPingTopicV1 defines the v1 topic for the ping rpc method.
-	RPCPingTopicV1 = protocolPrefix + PingMessageName + SchemaVersionV1
-	// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
-	RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
+// V1 RPC Topics
+// RPCStatusTopicV1 defines the v1 topic for the status rpc method.
+// RPCStatusTopicV1 = protocolPrefix + StatusMessageName + SchemaVersionV1
+var RPCStatusTopicV1 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      StatusMessageName,
+	SchemaVersion:  SchemaVersionV1,
+}
 
-	// V2 RPC Topics
-	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
-	RPCBlocksByRangeTopicV2 = protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV2
-	// RPCBlocksByRootTopicV2 defines the v2 topic for the blocks by root rpc method.
-	RPCBlocksByRootTopicV2 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV2
-	// RPCMetaDataTopicV2 defines the v2 topic for the metadata rpc method.
-	RPCMetaDataTopicV2 = protocolPrefix + MetadataMessageName + SchemaVersionV2
-)
+// RPCGoodByeTopicV1 defines the v1 topic for the goodbye rpc method.
+//
+//	RPCGoodByeTopicV1 = protocolPrefix + GoodbyeMessageName + SchemaVersionV1
+var RPCGoodByeTopicV1 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      GoodbyeMessageName,
+	SchemaVersion:  SchemaVersionV1,
+}
+
+// RPCBlocksByRangeTopicV1 defines v1 the topic for the blocks by range rpc method.
+// RPCBlocksByRangeTopicV1 = protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV1
+var RPCBlocksByRangeTopicV1 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      BeaconBlocksByRangeMessageName,
+	SchemaVersion:  SchemaVersionV1,
+}
+
+// RPCBlocksByRootTopicV1 defines the v1 topic for the blocks by root rpc method.
+// RPCBlocksByRootTopicV1 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV1
+var RPCBlocksByRootTopicV1 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      BeaconBlocksByRootsMessageName,
+	SchemaVersion:  SchemaVersionV1,
+}
+
+// RPCPingTopicV1 defines the v1 topic for the ping rpc method.
+// RPCPingTopicV1 = protocolPrefix + PingMessageName + SchemaVersionV1
+var RPCPingTopicV1 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      PingMessageName,
+	SchemaVersion:  SchemaVersionV1,
+}
+
+// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
+// RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
+var RPCMetaDataTopicV1 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      MetadataMessageName,
+	SchemaVersion:  SchemaVersionV1,
+}
+
+// V2 RPC Topics
+// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
+// RPCBlocksByRangeTopicV2 = protocolPrefix + BeaconBlocksByRangeMessageName + SchemaVersionV2
+var RPCBlocksByRangeTopicV2 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      BeaconBlocksByRangeMessageName,
+	SchemaVersion:  SchemaVersionV2,
+}
+
+// RPCBlocksByRootTopicV2 defines the v2 topic for the blocks by root rpc method.
+// RPCBlocksByRootTopicV2 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV2
+var RPCBlocksByRootTopicV2 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      BeaconBlocksByRootsMessageName,
+	SchemaVersion:  SchemaVersionV2,
+}
+
+// RPCMetaDataTopicV2 defines the v2 topic for the metadata rpc method.
+// RPCMetaDataTopicV2 = protocolPrefix + MetadataMessageName + SchemaVersionV2
+var RPCMetaDataTopicV2 = p2ptypes.RpcTopic{
+	ProtocolPrefix: protocolPrefix,
+	BaseTopic:      MetadataMessageName,
+	SchemaVersion:  SchemaVersionV2,
+}
 
 // RPC errors for topic parsing.
 const (
@@ -67,7 +118,7 @@ const (
 )
 
 // RPCTopicMappings map the base message type to the rpc request.
-var RPCTopicMappings = map[string]interface{}{
+var RPCTopicMappings = map[p2ptypes.RpcTopic]interface{}{
 	// RPC Status Message
 	RPCStatusTopicV1: new(pb.Status),
 	// RPC Goodbye Message
@@ -115,7 +166,7 @@ var versionMapping = map[string]bool{
 
 // VerifyTopicMapping verifies that the topic and its accompanying
 // message type is correct.
-func VerifyTopicMapping(topic string, msg interface{}) error {
+func VerifyTopicMapping(topic p2ptypes.RpcTopic, msg interface{}) error {
 	msgType, ok := RPCTopicMappings[topic]
 	if !ok {
 		return errors.New("rpc topic is not registered currently")
@@ -224,14 +275,19 @@ func (r RPCTopic) Version() string {
 
 // TopicFromMessage constructs the rpc topic from the provided message
 // type and epoch.
-func TopicFromMessage(msg string, epoch primitives.Epoch) (string, error) {
+func TopicFromMessage(msg string, epoch primitives.Epoch) (p2ptypes.RpcTopic, error) {
 	if !messageMapping[msg] {
-		return "", errors.Errorf("%s: %s", invalidRPCMessageType, msg)
+		return p2ptypes.RpcTopic{}, errors.Errorf("%s: %s", invalidRPCMessageType, msg)
 	}
 	version := SchemaVersionV1
 	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
 	if isAltair && altairMapping[msg] {
 		version = SchemaVersionV2
 	}
-	return protocolPrefix + msg + version, nil
+	//return protocolPrefix + msg + version, nil
+	return p2ptypes.RpcTopic{
+		ProtocolPrefix: protocolPrefix,
+		BaseTopic:      msg,
+		SchemaVersion:  version,
+	}, nil
 }

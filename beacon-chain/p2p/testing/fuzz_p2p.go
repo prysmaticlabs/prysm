@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -89,7 +90,7 @@ func (_ *FakeP2P) PublishToTopic(_ context.Context, _ string, _ []byte, _ ...pub
 }
 
 // Send -- fake.
-func (_ *FakeP2P) Send(_ context.Context, _ interface{}, _ string, _ peer.ID) (network.Stream, error) {
+func (_ *FakeP2P) Send(_ context.Context, _ interface{}, _ p2ptypes.RpcTopic, _ peer.ID) (network.Stream, error) {
 	return nil, nil
 }
 

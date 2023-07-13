@@ -67,8 +67,8 @@ var metricComparisonTests = []comparisonTest{
 	},
 	{
 		name:               "committee index beacon attestations",
-		topic1:             fmt.Sprintf(p2pFailValidationTopic, formatTopic(p2p.AttestationSubnetTopicFormat)),
-		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, formatTopic(p2p.AttestationSubnetTopicFormat)),
+		topic1:             fmt.Sprintf(p2pFailValidationTopic, formatTopic(p2p.AttestationSubnetTopicFormat.String())),
+		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, formatTopic(p2p.AttestationSubnetTopicFormat.String())),
 		expectedComparison: 0.15,
 	},
 	{

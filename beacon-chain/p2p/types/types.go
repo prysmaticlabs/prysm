@@ -4,9 +4,24 @@
 package types
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+)
+
+// redeclared here to avoid cyclic imports
+const (
+	// Message Types
+	//
+	// GossipAttestationMessage is the name for the attestation message type. It is
+	// specially extracted so as to determine the correct message type from an attestation
+	// subnet.
+	GossipAttestationMessage = "beacon_attestation"
+	// GossipSyncCommitteeMessage is the name for the sync committee message type. It is
+	// specially extracted so as to determine the correct message type from a sync committee
+	// subnet.
+	GossipSyncCommitteeMessage = "sync_committee"
 )
 
 const rootLength = 32
@@ -119,4 +134,68 @@ func (m *ErrorMessage) UnmarshalSSZ(buf []byte) error {
 	copy(errMsg, buf)
 	*m = errMsg
 	return nil
+}
+
+// RPC topics
+type RpcTopic struct {
+	ProtocolPrefix string
+	BaseTopic      string
+	SchemaVersion  string
+}
+
+func (r *RpcTopic) ConvertToStringWithSuffix(protocolSuffix string) string {
+	return r.ProtocolPrefix + r.BaseTopic + r.SchemaVersion + protocolSuffix
+}
+
+func (r *RpcTopic) String() string {
+	return r.ProtocolPrefix + r.BaseTopic + r.SchemaVersion
+}
+
+func (r *RpcTopic) CompareTopics(r1 RpcTopic, protocolSuffix string) bool {
+	rTopic := r.ConvertToStringWithSuffix(protocolSuffix)
+	r1Topic := r1.ConvertToStringWithSuffix(protocolSuffix)
+
+	return rTopic == r1Topic
+}
+
+// Gossip topics
+type GossipTopic struct {
+	ProtocolPrefix string
+	BaseTopic      string
+}
+
+func (g *GossipTopic) String() string {
+	return g.ProtocolPrefix + g.BaseTopic
+}
+
+func (g *GossipTopic) ConvertToStringWithForkDigest(forkDigest [4]byte) string {
+	return fmt.Sprintf(g.ProtocolPrefix+g.BaseTopic, forkDigest)
+}
+
+func (g *GossipTopic) ConvertToStringWithForkDigestAndIndex(forkDigest [4]byte, index uint64) string {
+	return fmt.Sprintf(g.ProtocolPrefix+g.BaseTopic, forkDigest, index)
+}
+
+func (g *GossipTopic) ConvertToStringWithForkDigestAndSuffix(forkDigest [4]byte, protocolSuffix string) string {
+	return fmt.Sprintf(g.ProtocolPrefix+g.BaseTopic+protocolSuffix, forkDigest)
+}
+
+func (g *GossipTopic) ConvertToStringWithSuffix(protocolSuffix string) string {
+	return g.ProtocolPrefix + g.BaseTopic + protocolSuffix
+}
+
+func (g *GossipTopic) ConvertToString(forkDigest [4]byte, protocolSuffix string, index uint64) string {
+	// index only comes into play only if it is an GossipAttestationMessage or GossipSyncCommitteeMessage
+	if g.BaseTopic == GossipAttestationMessage+"_%d" || g.BaseTopic == GossipSyncCommitteeMessage+"_%d" {
+		return fmt.Sprintf(g.ProtocolPrefix+g.BaseTopic+protocolSuffix, forkDigest, index)
+	}
+
+	return fmt.Sprintf(g.ProtocolPrefix+g.BaseTopic+protocolSuffix, forkDigest)
+}
+
+func (g *GossipTopic) CompareTopics(g1 *GossipTopic, forkDigest [4]byte, protocolSuffix string, index uint64) bool {
+	gossipTopic1 := g.ConvertToString(forkDigest, protocolSuffix, index)
+	gossipTopic2 := g1.ConvertToString(forkDigest, protocolSuffix, index)
+
+	return gossipTopic1 == gossipTopic2
 }

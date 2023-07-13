@@ -32,25 +32,30 @@ func TestService_CanSubscribe(t *testing.T) {
 		topic string
 		want  bool
 	}
+
 	tests := []test{
 		{
-			name:  "block topic on current fork",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix,
+			name: "block topic on current fork",
+			//topic: fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix,
+			topic: BlockSubnetTopicFormat.ConvertToString(digest, validProtocolSuffix, 0),
 			want:  true,
 		},
 		{
-			name:  "block topic on unknown fork",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, [4]byte{0xFF, 0xEE, 0x56, 0x21}) + validProtocolSuffix,
+			name: "block topic on unknown fork",
+			//topic: fmt.Sprintf(BlockSubnetTopicFormat, [4]byte{0xFF, 0xEE, 0x56, 0x21}) + validProtocolSuffix,
+			topic: BlockSubnetTopicFormat.ConvertToString([4]byte{0xFF, 0xEE, 0x56, 0x21}, validProtocolSuffix, 0),
 			want:  false,
 		},
 		{
-			name:  "block topic missing protocol suffix",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork),
+			name: "block topic missing protocol suffix",
+			//topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork),
+			topic: BlockSubnetTopicFormat.ConvertToStringWithForkDigest(currentFork),
 			want:  false,
 		},
 		{
-			name:  "block topic wrong protocol suffix",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + "/foobar",
+			name: "block topic wrong protocol suffix",
+			//topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + "/foobar",
+			topic: BlockSubnetTopicFormat.ConvertToString(currentFork, "/foobar", 0),
 			want:  false,
 		},
 		{
@@ -74,13 +79,15 @@ func TestService_CanSubscribe(t *testing.T) {
 			want:  false,
 		},
 		{
-			name:  "att subnet topic on current fork",
-			topic: fmt.Sprintf(AttestationSubnetTopicFormat, digest, 55 /*subnet*/) + validProtocolSuffix,
+			name: "att subnet topic on current fork",
+			//topic: fmt.Sprintf(AttestationSubnetTopicFormat, digest, 55 /*subnet*/) + validProtocolSuffix,
+			topic: AttestationSubnetTopicFormat.ConvertToString(digest, validProtocolSuffix, 55),
 			want:  true,
 		},
 		{
-			name:  "att subnet topic on unknown fork",
-			topic: fmt.Sprintf(AttestationSubnetTopicFormat, [4]byte{0xCC, 0xBB, 0xAA, 0xA1} /*fork digest*/, 54 /*subnet*/) + validProtocolSuffix,
+			name: "att subnet topic on unknown fork",
+			//topic: fmt.Sprintf(AttestationSubnetTopicFormat, [4]byte{0xCC, 0xBB, 0xAA, 0xA1} /*fork digest*/, 54 /*subnet*/) + validProtocolSuffix,
+			topic: AttestationSubnetTopicFormat.ConvertToString([4]byte{0xCC, 0xBB, 0xAA, 0xA1}, validProtocolSuffix, 54),
 			want:  false,
 		},
 	}
@@ -95,8 +102,8 @@ func TestService_CanSubscribe(t *testing.T) {
 		}
 
 		tt := test{
-			name:  topic,
-			topic: fmt.Sprintf(topic, formatting...) + validProtocolSuffix,
+			name:  topic.String(),
+			topic: fmt.Sprintf(topic.String(), formatting...) + validProtocolSuffix,
 			want:  true,
 		}
 		tests = append(tests, tt)
@@ -197,10 +204,10 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 	// scanfcheck only supports integer based substitutions at the moment. Any others will
 	// inaccurately fail validation.
 	for _, topic := range AllTopics() {
-		t.Run(topic, func(t *testing.T) {
-			for i, c := range topic {
+		t.Run(topic.String(), func(t *testing.T) {
+			for i, c := range topic.String() {
 				if string(c) == "%" {
-					next := string(topic[i+1])
+					next := string(topic.String()[i+1])
 					if next != "d" && next != "x" {
 						t.Errorf("Topic %s has formatting incompatible with scanfcheck. Only %%d and %%x are supported", topic)
 					}
@@ -252,7 +259,8 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							//s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							s := BlockSubnetTopicFormat.ConvertToString(digest, validProtocolSuffix, 0)
 							return &s
 						}(),
 					},
@@ -266,7 +274,8 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 						return &b
 					}(),
 					Topicid: func() *string {
-						s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+						//s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+						s := BlockSubnetTopicFormat.ConvertToString(digest, validProtocolSuffix, 0)
 						return &s
 					}(),
 				},
@@ -282,7 +291,8 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							//s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							s := BlockSubnetTopicFormat.ConvertToString(digest, validProtocolSuffix, 0)
 							return &s
 						}(),
 					},
@@ -292,7 +302,8 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							//s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							s := BlockSubnetTopicFormat.ConvertToString(digest, validProtocolSuffix, 0)
 							return &s
 						}(),
 					},
@@ -306,7 +317,8 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 						return &b
 					}(),
 					Topicid: func() *string {
-						s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+						//s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+						s := BlockSubnetTopicFormat.ConvertToString(digest, validProtocolSuffix, 0)
 						return &s
 					}(),
 				},

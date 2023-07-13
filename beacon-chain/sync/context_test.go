@@ -23,11 +23,11 @@ func TestContextWrite_NoWrites(t *testing.T) {
 	wg := new(sync.WaitGroup)
 	prID := p2p.RPCPingTopicV1
 	wg.Add(1)
-	nPeer.BHost.SetStreamHandler(core.ProtocolID(prID), func(stream network.Stream) {
+	nPeer.BHost.SetStreamHandler(core.ProtocolID(prID.String()), func(stream network.Stream) {
 		wg.Done()
 		// no-op
 	})
-	strm, err := p1.BHost.NewStream(context.Background(), nPeer.PeerID(), p2p.RPCPingTopicV1)
+	strm, err := p1.BHost.NewStream(context.Background(), nPeer.PeerID(), core.ProtocolID(prID.String()))
 	assert.NoError(t, err)
 
 	// Nothing will be written to the stream
@@ -46,7 +46,7 @@ func TestContextRead_NoReads(t *testing.T) {
 	prID := p2p.RPCPingTopicV1
 	wg.Add(1)
 	wantedData := []byte{'A', 'B', 'C', 'D'}
-	nPeer.BHost.SetStreamHandler(core.ProtocolID(prID), func(stream network.Stream) {
+	nPeer.BHost.SetStreamHandler(core.ProtocolID(prID.String()), func(stream network.Stream) {
 		// No Context will be read from it
 		dt, err := readContextFromStream(stream)
 		assert.NoError(t, err)
@@ -61,7 +61,7 @@ func TestContextRead_NoReads(t *testing.T) {
 
 		wg.Done()
 	})
-	strm, err := p1.BHost.NewStream(context.Background(), nPeer.PeerID(), p2p.RPCPingTopicV1)
+	strm, err := p1.BHost.NewStream(context.Background(), nPeer.PeerID(), core.ProtocolID(prID.String()))
 	assert.NoError(t, err)
 
 	n, err := strm.Write(wantedData)
@@ -100,14 +100,14 @@ func TestValidateVersion(t *testing.T) {
 		{
 			name:     "valid topic with incorrect version",
 			version:  p2p.SchemaVersionV1,
-			protocol: p2p.RPCBlocksByRootTopicV2,
+			protocol: p2p.RPCBlocksByRootTopicV2.String(),
 			error:    "doesn't match provided version",
 			wantErr:  true,
 		},
 		{
 			name:     "valid topic with correct version",
 			version:  p2p.SchemaVersionV2,
-			protocol: p2p.RPCBlocksByRootTopicV2,
+			protocol: p2p.RPCBlocksByRootTopicV2.String(),
 			error:    "",
 			wantErr:  false,
 		},

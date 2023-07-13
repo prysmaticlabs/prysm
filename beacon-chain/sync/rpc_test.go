@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"sync"
 	"testing"
 	"time"
@@ -58,7 +59,12 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	topic := "/testing/foobar/1"
+	//topic := "/testing/foobar/1"
+	topic := p2ptypes.RpcTopic{
+		ProtocolPrefix: "/testing",
+		BaseTopic:      "/foobar",
+		SchemaVersion:  "/1",
+	}
 	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 		m, ok := msg.(*ethpb.Fork)
 		if !ok {
@@ -94,7 +100,12 @@ func TestRPC_ReceivesInvalidMessage(t *testing.T) {
 		rateLimiter: newRateLimiter(p2p),
 	}
 
-	topic := "/testing/foobar/1"
+	//topic := "/testing/foobar/1"
+	topic := p2ptypes.RpcTopic{
+		ProtocolPrefix: "/testing",
+		BaseTopic:      "/foobar",
+		SchemaVersion:  "/1",
+	}
 	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 		m, ok := msg.(*ethpb.Fork)
 		if !ok {
@@ -112,7 +123,7 @@ func TestRPC_ReceivesInvalidMessage(t *testing.T) {
 	}()
 	r.registerRPC(topic, handler)
 
-	stream, err := remotePeer.Host().NewStream(context.Background(), p2p.BHost.ID(), protocol.ID(topic+p2p.Encoding().ProtocolSuffix()))
+	stream, err := remotePeer.Host().NewStream(context.Background(), p2p.BHost.ID(), protocol.ID(topic.ConvertToStringWithSuffix(p2p.Encoding().ProtocolSuffix())))
 	require.NoError(t, err)
 	// Write invalid SSZ object to peer.
 	_, err = stream.Write([]byte("JUNK MESSAGE"))

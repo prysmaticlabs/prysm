@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -190,7 +189,11 @@ func (s *Service) rejectIncorrectSyncCommittee(
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		for _, idx := range committeeIndices {
 			subnet := uint64(idx) / subCommitteeSize
-			if strings.HasPrefix(topic, fmt.Sprintf(format, digest, subnet)) {
+			//if strings.HasPrefix(topic, fmt.Sprintf(format, digest, subnet)) {
+			//	isValid = true
+			//	break
+			//}
+			if strings.HasPrefix(topic, format.ConvertToStringWithForkDigestAndIndex(digest, subnet)) {
 				isValid = true
 				break
 			}

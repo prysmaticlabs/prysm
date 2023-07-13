@@ -1,6 +1,7 @@
 package sync
 
 import (
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"reflect"
 	"strings"
 
@@ -30,16 +31,19 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		return nil, err
 	}
 	// Specially handle subnet messages.
+	var gossipTopic p2ptypes.GossipTopic
 	switch {
-	case strings.Contains(topic, p2p.GossipAttestationMessage):
-		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
+	//case strings.Contains(topic, p2p.GossipAttestationMessage):
+	case p2p.AttestationSubnetTopicFormat.String() == topic:
+		gossipTopic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
 		// Given that both sync message related subnets have the same message name, we have to
 		// differentiate them below.
-	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
-		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
+	//case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
+	case p2p.SyncCommitteeSubnetTopicFormat.String() == topic && p2p.SyncContributionAndProofSubnetTopicFormat.String() == topic:
+		gossipTopic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
 	}
 
-	base := p2p.GossipTopicMappings(topic, 0)
+	base := p2p.GossipTopicMappings(gossipTopic, 0)
 	if base == nil {
 		return nil, p2p.ErrMessageNotMapped
 	}
@@ -48,7 +52,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		return nil, errors.Errorf("message of %T does not support marshaller interface", base)
 	}
 	// Handle different message types across forks.
-	if topic == p2p.BlockSubnetTopicFormat {
+	if gossipTopic.String() == p2p.BlockSubnetTopicFormat.String() {
 		m, err = extractBlockDataType(fDigest[:], s.cfg.clock)
 		if err != nil {
 			return nil, err

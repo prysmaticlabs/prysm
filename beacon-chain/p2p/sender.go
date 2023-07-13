@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 
 	"github.com/kr/pretty"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -18,13 +19,13 @@ import (
 // closed for writing.
 //
 // When done, the caller must Close or Reset on the stream.
-func (s *Service) Send(ctx context.Context, message interface{}, baseTopic string, pid peer.ID) (network.Stream, error) {
+func (s *Service) Send(ctx context.Context, message interface{}, baseTopic p2ptypes.RpcTopic, pid peer.ID) (network.Stream, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
 	if err := VerifyTopicMapping(baseTopic, message); err != nil {
 		return nil, err
 	}
-	topic := baseTopic + s.Encoding().ProtocolSuffix()
+	topic := baseTopic.ConvertToStringWithSuffix(s.Encoding().ProtocolSuffix())
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	log.WithFields(logrus.Fields{

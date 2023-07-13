@@ -96,9 +96,9 @@ func (s *Service) registerRPCHandlersAltair() {
 // Remove all v1 Stream handlers that are no longer supported
 // from altair onwards.
 func (s *Service) unregisterPhase0Handlers() {
-	fullBlockRangeTopic := p2p.RPCBlocksByRangeTopicV1 + s.cfg.p2p.Encoding().ProtocolSuffix()
-	fullBlockRootTopic := p2p.RPCBlocksByRootTopicV1 + s.cfg.p2p.Encoding().ProtocolSuffix()
-	fullMetadataTopic := p2p.RPCMetaDataTopicV1 + s.cfg.p2p.Encoding().ProtocolSuffix()
+	fullBlockRangeTopic := p2p.RPCBlocksByRangeTopicV1.ConvertToStringWithSuffix(s.cfg.p2p.Encoding().ProtocolSuffix())
+	fullBlockRootTopic := p2p.RPCBlocksByRootTopicV1.ConvertToStringWithSuffix(s.cfg.p2p.Encoding().ProtocolSuffix())
+	fullMetadataTopic := p2p.RPCMetaDataTopicV1.ConvertToStringWithSuffix(s.cfg.p2p.Encoding().ProtocolSuffix())
 
 	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullBlockRangeTopic))
 	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullBlockRootTopic))
@@ -106,8 +106,9 @@ func (s *Service) unregisterPhase0Handlers() {
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
-	topic := baseTopic + s.cfg.p2p.Encoding().ProtocolSuffix()
+func (s *Service) registerRPC(baseTopic p2ptypes.RpcTopic, handle rpcHandler) {
+	protocolSuffix := s.cfg.p2p.Encoding().ProtocolSuffix()
+	topic := baseTopic.ConvertToStringWithSuffix(protocolSuffix)
 	log := log.WithField("topic", topic)
 	s.cfg.p2p.SetStreamHandler(topic, func(stream network.Stream) {
 		defer func() {
@@ -168,7 +169,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		// since metadata requests do not have any data in the payload, we
 		// do not decode anything.
-		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
+		if baseTopic.CompareTopics(p2p.RPCMetaDataTopicV1, protocolSuffix) || baseTopic.CompareTopics(p2p.RPCMetaDataTopicV2, protocolSuffix) {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {

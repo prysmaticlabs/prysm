@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"testing"
 	"time"
 
@@ -30,10 +31,17 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// We have to declare this again here to prevent a circular dependency
-// with the main p2p package.
-const metatadataV1Topic = "/eth2/beacon_chain/req/metadata/1"
-const metatadataV2Topic = "/eth2/beacon_chain/req/metadata/2"
+var metadataV1Topic = p2ptypes.RpcTopic{
+	ProtocolPrefix: "/eth2/beacon_chain/req",
+	BaseTopic:      "/metadata",
+	SchemaVersion:  "/1",
+}
+
+var metadataV2Topic = p2ptypes.RpcTopic{
+	ProtocolPrefix: "/eth2/beacon_chain/req",
+	BaseTopic:      "/metadata",
+	SchemaVersion:  "/2",
+}
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
@@ -90,12 +98,12 @@ func connect(a, b host.Host) error {
 }
 
 // ReceiveRPC simulates an incoming RPC.
-func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
+func (p *TestP2P) ReceiveRPC(topic p2ptypes.RpcTopic, msg proto.Message) {
 	h := bhost.NewBlankHost(swarmt.GenSwarm(p.t))
 	if err := connect(h, p.BHost); err != nil {
 		p.t.Fatalf("Failed to connect two peers for RPC: %v", err)
 	}
-	s, err := h.NewStream(context.Background(), p.BHost.ID(), protocol.ID(topic+p.Encoding().ProtocolSuffix()))
+	s, err := h.NewStream(context.Background(), p.BHost.ID(), protocol.ID(topic.ConvertToStringWithSuffix(p.Encoding().ProtocolSuffix())))
 	if err != nil {
 		p.t.Fatalf("Failed to open stream %v", err)
 	}
@@ -302,17 +310,17 @@ func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID
 }
 
 // Send a message to a specific peer.
-func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid peer.ID) (network.Stream, error) {
+func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic p2ptypes.RpcTopic, pid peer.ID) (network.Stream, error) {
 	t := topic
-	if t == "" {
+	if t.String() == "" {
 		return nil, fmt.Errorf("protocol doesn't exist for proto message: %v", msg)
 	}
-	stream, err := p.BHost.NewStream(ctx, pid, core.ProtocolID(t+p.Encoding().ProtocolSuffix()))
+	stream, err := p.BHost.NewStream(ctx, pid, core.ProtocolID(t.ConvertToStringWithSuffix(p.Encoding().ProtocolSuffix())))
 	if err != nil {
 		return nil, err
 	}
 
-	if topic != metatadataV1Topic && topic != metatadataV2Topic {
+	if topic.CompareTopics(metadataV1Topic, p.Encoding().ProtocolSuffix()) && topic.CompareTopics(metadataV2Topic, p.Encoding().ProtocolSuffix()) {
 		castedMsg, ok := msg.(ssz.Marshaler)
 		if !ok {
 			p.t.Fatalf("%T doesn't support ssz marshaler", msg)

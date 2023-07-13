@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -88,7 +89,7 @@ type PeerManager interface {
 
 // Sender abstracts the sending functionality from libp2p.
 type Sender interface {
-	Send(context.Context, interface{}, string, peer.ID) (network.Stream, error)
+	Send(context.Context, interface{}, p2ptypes.RpcTopic, peer.ID) (network.Stream, error)
 }
 
 // PeersProvider abstracts obtaining our current list of known peers status.

@@ -73,7 +73,7 @@ func (s *Service) CanSubscribe(topic string) bool {
 
 	// Check the incoming topic matches any topic mapping. This includes a check for part[3].
 	for gt := range gossipTopicMappings {
-		if _, err := scanfcheck(strings.Join(parts[0:4], "/"), gt); err == nil {
+		if _, err := scanfcheck(strings.Join(parts[0:4], "/"), gt.String()); err == nil {
 			return true
 		}
 	}

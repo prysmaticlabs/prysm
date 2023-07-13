@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -150,36 +149,40 @@ func (s *Service) updateMetrics() {
 	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	syncTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SyncCommitteeMessage{})]
-	attTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
-	syncTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
+	//attTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
+	//syncTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
 	if flags.Get().SubscribeToAllSubnets {
 		for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-			s.collectMetricForSubnet(attTopic, digest, i)
+			s.collectMetricForSubnet(attTopic.ConvertToString(digest, s.cfg.p2p.Encoding().ProtocolSuffix(), i))
 		}
 		for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
-			s.collectMetricForSubnet(syncTopic, digest, i)
+			s.collectMetricForSubnet(syncTopic.ConvertToString(digest, s.cfg.p2p.Encoding().ProtocolSuffix(), i))
 		}
 	} else {
 		for _, committeeIdx := range indices {
-			s.collectMetricForSubnet(attTopic, digest, committeeIdx)
+			s.collectMetricForSubnet(attTopic.ConvertToString(digest, s.cfg.p2p.Encoding().ProtocolSuffix(), committeeIdx))
 		}
 		for _, committeeIdx := range syncIndices {
-			s.collectMetricForSubnet(syncTopic, digest, committeeIdx)
+			s.collectMetricForSubnet(syncTopic.ConvertToString(digest, s.cfg.p2p.Encoding().ProtocolSuffix(), committeeIdx))
 		}
 	}
 
 	// We update all other gossip topics.
 	for _, topic := range p2p.AllTopics() {
 		// We already updated attestation subnet topics.
-		if strings.Contains(topic, p2p.GossipAttestationMessage) || strings.Contains(topic, p2p.GossipSyncCommitteeMessage) {
+		//if strings.Contains(topic, p2p.GossipAttestationMessage) || strings.Contains(topic, p2p.GossipSyncCommitteeMessage) {
+		//	continue
+		//}
+		if topic.String() == p2p.AttestationSubnetTopicFormat.String() || topic.String() == p2p.SyncCommitteeSubnetTopicFormat.String() {
 			continue
 		}
-		topic += s.cfg.p2p.Encoding().ProtocolSuffix()
-		if !strings.Contains(topic, "%x") {
-			topicPeerCount.WithLabelValues(topic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(topic))))
+		suffixedTopic := topic.ConvertToStringWithSuffix(s.cfg.p2p.Encoding().ProtocolSuffix())
+		if !strings.Contains(suffixedTopic, "%x") {
+			topicPeerCount.WithLabelValues(suffixedTopic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(suffixedTopic))))
 			continue
 		}
-		formattedTopic := fmt.Sprintf(topic, digest)
+		//formattedTopic := fmt.Sprintf(topic, digest)
+		formattedTopic := topic.ConvertToStringWithForkDigestAndSuffix(digest, s.cfg.p2p.Encoding().ProtocolSuffix())
 		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(formattedTopic))))
 	}
 
@@ -188,7 +191,6 @@ func (s *Service) updateMetrics() {
 	}
 }
 
-func (s *Service) collectMetricForSubnet(topic string, digest [4]byte, index uint64) {
-	formattedTopic := fmt.Sprintf(topic, digest, index)
-	topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(formattedTopic))))
+func (s *Service) collectMetricForSubnet(topic string) {
+	topicPeerCount.WithLabelValues(topic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(topic))))
 }

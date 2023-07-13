@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -23,7 +22,8 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 	enc := encoder.SszNetworkEncoder{}
 
 	// Valid topic added in.
-	topic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic := p2p.BlockSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 	assert.Equal(t, true, h.digestExists(digest))
@@ -36,46 +36,56 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 
 	h = newSubTopicHandler()
 	// Multiple Topics added in.
-	topic = fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.BlockSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.ExitSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.ExitSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.ExitSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.ProposerSlashingSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.ProposerSlashingSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.ProposerSlashingSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.AttesterSlashingSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.AttesterSlashingSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.AttesterSlashingSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.AggregateAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.AggregateAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.AggregateAndProofSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.SyncContributionAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.SyncContributionAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.SyncContributionAndProofSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.BlsToExecutionChangeSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.BlsToExecutionChangeSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.BlsToExecutionChangeSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
 	assert.Equal(t, 7, len(h.allTopics()))
 
 	// Remove multiple topics
-	topic = fmt.Sprintf(p2p.AttesterSlashingSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.AttesterSlashingSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.AttesterSlashingSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.ExitSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.ExitSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.ExitSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.ProposerSlashingSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.ProposerSlashingSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.ProposerSlashingSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
@@ -83,19 +93,23 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 	assert.Equal(t, 4, len(h.allTopics()))
 
 	// Remove remaining topics.
-	topic = fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.BlockSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.AggregateAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.AggregateAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.AggregateAndProofSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.SyncContributionAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.SyncContributionAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.SyncContributionAndProofSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.BlsToExecutionChangeSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	//topic = fmt.Sprintf(p2p.BlsToExecutionChangeSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = p2p.BlsToExecutionChangeSubnetTopicFormat.ConvertToStringWithForkDigestAndSuffix(digest, enc.ProtocolSuffix())
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 

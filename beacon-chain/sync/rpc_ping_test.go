@@ -53,7 +53,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p1.Peers().SetMetadata(p2.BHost.ID(), p2.LocalMetadata)
 
 	// Setup streams
-	pcl := protocol.ID(p2p.RPCPingTopicV1)
+	pcl := protocol.ID(p2p.RPCPingTopicV1.String())
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 	var wg sync.WaitGroup

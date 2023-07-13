@@ -1,5 +1,7 @@
 package p2p
 
+import p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+
 const (
 	// GossipProtocolAndDigest represents the protocol and fork digest prefix in a gossip topic.
 	GossipProtocolAndDigest = "/eth2/%x/"
@@ -28,25 +30,67 @@ const (
 	GossipContributionAndProofMessage = "sync_committee_contribution_and_proof"
 	// GossipBlsToExecutionChangeMessage is the name for the bls to execution change message type.
 	GossipBlsToExecutionChangeMessage = "bls_to_execution_change"
-
-	// Topic Formats
-	//
-	// AttestationSubnetTopicFormat is the topic format for the attestation subnet.
-	AttestationSubnetTopicFormat = GossipProtocolAndDigest + GossipAttestationMessage + "_%d"
-	// SyncCommitteeSubnetTopicFormat is the topic format for the sync committee subnet.
-	SyncCommitteeSubnetTopicFormat = GossipProtocolAndDigest + GossipSyncCommitteeMessage + "_%d"
-	// BlockSubnetTopicFormat is the topic format for the block subnet.
-	BlockSubnetTopicFormat = GossipProtocolAndDigest + GossipBlockMessage
-	// ExitSubnetTopicFormat is the topic format for the voluntary exit subnet.
-	ExitSubnetTopicFormat = GossipProtocolAndDigest + GossipExitMessage
-	// ProposerSlashingSubnetTopicFormat is the topic format for the proposer slashing subnet.
-	ProposerSlashingSubnetTopicFormat = GossipProtocolAndDigest + GossipProposerSlashingMessage
-	// AttesterSlashingSubnetTopicFormat is the topic format for the attester slashing subnet.
-	AttesterSlashingSubnetTopicFormat = GossipProtocolAndDigest + GossipAttesterSlashingMessage
-	// AggregateAndProofSubnetTopicFormat is the topic format for the aggregate and proof subnet.
-	AggregateAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipAggregateAndProofMessage
-	// SyncContributionAndProofSubnetTopicFormat is the topic format for the sync aggregate and proof subnet.
-	SyncContributionAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipContributionAndProofMessage
-	// BlsToExecutionChangeSubnetTopicFormat is the topic format for the bls to execution change subnet.
-	BlsToExecutionChangeSubnetTopicFormat = GossipProtocolAndDigest + GossipBlsToExecutionChangeMessage
 )
+
+// Topic Formats
+//
+// AttestationSubnetTopicFormat is the topic format for the attestation subnet.
+var AttestationSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipAttestationMessage + "_%d",
+}
+
+// SyncCommitteeSubnetTopicFormat is the topic format for the sync committee subnet.
+var SyncCommitteeSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipSyncCommitteeMessage + "_%d",
+}
+
+// BlockSubnetTopicFormat is the topic format for the block subnet.
+// var BlockSubnetTopicFormat = GossipProtocolAndDigest + GossipBlockMessage
+var BlockSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipBlockMessage,
+}
+
+// ExitSubnetTopicFormat is the topic format for the voluntary exit subnet.
+// var ExitSubnetTopicFormat = GossipProtocolAndDigest + GossipExitMessage
+var ExitSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipExitMessage,
+}
+
+// ProposerSlashingSubnetTopicFormat is the topic format for the proposer slashing subnet.
+// var ProposerSlashingSubnetTopicFormat = GossipProtocolAndDigest + GossipProposerSlashingMessage
+var ProposerSlashingSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipProposerSlashingMessage,
+}
+
+// AttesterSlashingSubnetTopicFormat is the topic format for the attester slashing subnet.
+// var AttesterSlashingSubnetTopicFormat = GossipProtocolAndDigest + GossipAttesterSlashingMessage
+var AttesterSlashingSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipAttesterSlashingMessage,
+}
+
+// AggregateAndProofSubnetTopicFormat is the topic format for the aggregate and proof subnet.
+// var AggregateAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipAggregateAndProofMessage
+var AggregateAndProofSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipAggregateAndProofMessage,
+}
+
+// SyncContributionAndProofSubnetTopicFormat is the topic format for the sync aggregate and proof subnet.
+// var SyncContributionAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipContributionAndProofMessage
+var SyncContributionAndProofSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipContributionAndProofMessage,
+}
+
+// BlsToExecutionChangeSubnetTopicFormat is the topic format for the bls to execution change subnet.
+// var BlsToExecutionChangeSubnetTopicFormat = GossipProtocolAndDigest + GossipBlsToExecutionChangeMessage
+var BlsToExecutionChangeSubnetTopicFormat = p2ptypes.GossipTopic{
+	ProtocolPrefix: GossipProtocolAndDigest,
+	BaseTopic:      GossipBlsToExecutionChangeMessage,
+}

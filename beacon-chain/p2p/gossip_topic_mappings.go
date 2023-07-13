@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"reflect"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -11,7 +12,7 @@ import (
 
 // gossipTopicMappings represent the protocol ID to protobuf message type map for easy
 // lookup.
-var gossipTopicMappings = map[string]proto.Message{
+var gossipTopicMappings = map[p2ptypes.GossipTopic]proto.Message{
 	BlockSubnetTopicFormat:                    &ethpb.SignedBeaconBlock{},
 	AttestationSubnetTopicFormat:              &ethpb.Attestation{},
 	ExitSubnetTopicFormat:                     &ethpb.SignedVoluntaryExit{},
@@ -25,7 +26,7 @@ var gossipTopicMappings = map[string]proto.Message{
 
 // GossipTopicMappings is a function to return the assigned data type
 // versioned by epoch.
-func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
+func GossipTopicMappings(topic p2ptypes.GossipTopic, epoch primitives.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat {
 		if epoch >= params.BeaconConfig().CapellaForkEpoch {
 			return &ethpb.SignedBeaconBlockCapella{}
@@ -42,8 +43,8 @@ func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 
 // AllTopics returns all topics stored in our
 // gossip mapping.
-func AllTopics() []string {
-	var topics []string
+func AllTopics() []p2ptypes.GossipTopic {
+	var topics []p2ptypes.GossipTopic
 	for k := range gossipTopicMappings {
 		topics = append(topics, k)
 	}
@@ -52,7 +53,7 @@ func AllTopics() []string {
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message
 // can be mapped to a protocol ID string.
-var GossipTypeMapping = make(map[reflect.Type]string, len(gossipTopicMappings))
+var GossipTypeMapping = make(map[reflect.Type]p2ptypes.GossipTopic, len(gossipTopicMappings))
 
 func init() {
 	for k, v := range gossipTopicMappings {
