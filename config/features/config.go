@@ -147,11 +147,11 @@ func configureTestnet(ctx *cli.Context) error {
 }
 
 // Insert feature flags within the function to be enabled for Prater testnet.
-func applyPraterFeatureFlags(_ *cli.Context) {
+func applyPraterFeatureFlags(ctx *cli.Context) {
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
-func applySepoliaFeatureFlags(_ *cli.Context) {
+func applySepoliaFeatureFlags(ctx *cli.Context) {
 }
 
 // ConfigureBeaconChain sets the global config based

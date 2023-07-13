@@ -275,7 +275,7 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedB
 // if a `saveBlindedBeaconBlocks` key exists in the database. Otherwise, we check if the last
 // blocked stored to check if it is blinded, and then write that `saveBlindedBeaconBlocks` key
 // to the DB for future checks.
-func (s *Store) shouldSaveBlinded(_ context.Context) (bool, error) {
+func (s *Store) shouldSaveBlinded(ctx context.Context) (bool, error) {
 	var saveBlinded bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		metadataBkt := tx.Bucket(chainMetadataBucket)

@@ -205,7 +205,7 @@ func (s *Service) rejectIncorrectSyncCommittee(
 // There has been no other valid sync committee signature for the declared `slot`, `validator_index`,
 // and `subcommittee_index`. In the event of `validator_index` belongs to multiple subnets, as long
 // as one subnet has not been seen, we should let it in.
-func (s *Service) ignoreHasSeenSyncMsg(_ context.Context,
+func (s *Service) ignoreHasSeenSyncMsg(ctx context.Context,
 	m *ethpb.SyncCommitteeMessage, committeeIndices []primitives.CommitteeIndex,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {

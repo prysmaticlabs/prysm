@@ -31,7 +31,7 @@ func TestLen(t *testing.T) {
 	}
 }
 
-func TestPeak(_ *testing.T) {
+func TestPeak(t *testing.T) {
 	q := make(priorityQueue, 0, 4096)
 
 	for i := 0; i < 5; i++ {

@@ -175,9 +175,13 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 		return err
 	}
 
-	return s.db.Update(func(tx *bolt.Tx) error {
+	if err := s.db.Update(func(tx *bolt.Tx) error {
 		return s.saveStatesEfficientInternal(ctx, tx, blockRoots, states, validatorKeys, validatorsEntries)
-	})
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getValidators(states []state.ReadOnlyBeaconState) ([][]byte, map[string]*ethpb.Validator, error) {

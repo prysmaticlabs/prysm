@@ -135,7 +135,7 @@ func (_ *FinalizedNode) IsFull() bool {
 }
 
 // Finalize marks deposits of the Merkle tree as finalized.
-func (f *FinalizedNode) Finalize(_ uint64, _ uint64) (MerkleTreeNode, error) {
+func (f *FinalizedNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
 	return f, nil
 }
 
@@ -177,7 +177,7 @@ func (_ *LeafNode) IsFull() bool {
 }
 
 // Finalize marks deposits of the Merkle tree as finalized.
-func (l *LeafNode) Finalize(_ uint64, _ uint64) (MerkleTreeNode, error) {
+func (l *LeafNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
 	return &FinalizedNode{1, l.hash}, nil
 }
 
@@ -299,7 +299,7 @@ func (_ *ZeroNode) IsFull() bool {
 }
 
 // Finalize marks deposits of the Merkle tree as finalized.
-func (_ *ZeroNode) Finalize(_ uint64, _ uint64) (MerkleTreeNode, error) {
+func (_ *ZeroNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
 	return nil, nil
 }
 

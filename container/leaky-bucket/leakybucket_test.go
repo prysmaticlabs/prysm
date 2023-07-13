@@ -24,7 +24,7 @@ func addToElapsed(v time.Duration) {
 	atomic.AddInt64(&elapsed, int64(v))
 }
 
-func reset(_ *testing.T, c *Collector) {
+func reset(t *testing.T, c *Collector) {
 	c.Reset()
 	setElapsed(0)
 }
