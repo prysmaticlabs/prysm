@@ -26,6 +26,8 @@ type beaconApiBeaconChainClient struct {
 	stateValidatorsProvider stateValidatorsProvider
 }
 
+const getValidatorPerformanceEndpoint = "/eth/v1/beacon/validators/performance"
+
 func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*apimiddleware.BlockHeaderResponseJson, error) {
 	blockHeader := apimiddleware.BlockHeaderResponseJson{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
@@ -330,7 +332,7 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 	resp := &validator.ValidatorPerformanceResponse{}
 	if _, err := c.jsonRestHandler.PostRestJson(
 		ctx,
-		"/eth/v1/beacon/validators/performance",
+		getValidatorPerformanceEndpoint,
 		nil,
 		bytes.NewBuffer(request),
 		resp,

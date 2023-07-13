@@ -932,7 +932,6 @@ func TestGetChainHead(t *testing.T) {
 }
 
 func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
-	const getValidatorPerformanceEndpoint = "/eth/v1/beacon/validators/performance"
 	publicKeys := [][48]byte{
 		bytesutil.ToBytes48([]byte{1}),
 		bytesutil.ToBytes48([]byte{2}),
