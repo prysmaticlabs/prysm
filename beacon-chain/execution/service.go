@@ -752,31 +752,8 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		if eth1DataInDB.DepositSnapshot != nil {
 			s.depositTrie, err = depositsnapshot.DepositTreeFromSnapshotProto(eth1DataInDB.DepositSnapshot)
 		} else {
-			oldDepositTrie, err := trie.CreateTrieFromProto(eth1DataInDB.Trie)
-			if err != nil {
-				return err
-			}
-			newDepositTrie := depositsnapshot.NewDepositTree()
-			for i, item := range oldDepositTrie.Items() {
-				if err = newDepositTrie.Insert(item, i); err != nil {
-					return errors.Wrapf(err, "could not insert item at index %d into deposit snapshot tree", i)
-				}
-			}
-			if err = newDepositTrie.Finalize(eth1DataInDB.BeaconState.Eth1Data, eth1DataInDB.CurrentEth1Data.BlockHeight); err != nil {
-				return errors.Wrap(err, "could not finalize deposit snapshot tree")
-			}
-			newDepositRoot, err := newDepositTrie.HashTreeRoot()
-			if err != nil {
-				return err
-			}
-			depositRoot, err := oldDepositTrie.HashTreeRoot()
-			if err != nil {
-				return err
-			}
-			if newDepositRoot != depositRoot {
-				return errors.Wrapf(err, "mismatched deposit roots, old %#x != new %#x", depositRoot, newDepositRoot)
-			}
-			s.depositTrie = newDepositTrie
+			err = s.migrateOldDepositTree(eth1DataInDB)
+			return err
 		}
 	} else {
 		s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
@@ -887,4 +864,33 @@ func dedupEndpoints(endpoints []string) []string {
 		selectionMap[point] = true
 	}
 	return newEndpoints
+}
+
+func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error {
+	oldDepositTrie, err := trie.CreateTrieFromProto(eth1DataInDB.Trie)
+	if err != nil {
+		return err
+	}
+	newDepositTrie := depositsnapshot.NewDepositTree()
+	for i, item := range oldDepositTrie.Items() {
+		if err = newDepositTrie.Insert(item, i); err != nil {
+			return errors.Wrapf(err, "could not insert item at index %d into deposit snapshot tree", i)
+		}
+	}
+	if err = newDepositTrie.Finalize(eth1DataInDB.BeaconState.Eth1Data, eth1DataInDB.CurrentEth1Data.BlockHeight); err != nil {
+		return errors.Wrap(err, "could not finalize deposit snapshot tree")
+	}
+	newDepositRoot, err := newDepositTrie.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	depositRoot, err := oldDepositTrie.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	if newDepositRoot != depositRoot {
+		return errors.Wrapf(err, "mismatched deposit roots, old %#x != new %#x", depositRoot, newDepositRoot)
+	}
+	s.depositTrie = newDepositTrie
+	return nil
 }

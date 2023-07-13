@@ -82,7 +82,7 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (*DepositTree, error) {
 	}, nil
 }
 
-// finalize marks a deposit as finalized.
+// Finalize marks a deposit as finalized.
 func (d *DepositTree) Finalize(eth1data *ethpb.Eth1Data, executionBlockHeight uint64) error {
 	var blockHash [32]byte
 	copy(blockHash[:], eth1data.BlockHash)

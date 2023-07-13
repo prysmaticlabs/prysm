@@ -22,6 +22,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v4/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -801,4 +802,43 @@ func (s *slowRPCClient) BatchCall(b []rpc.BatchElem) error {
 
 func (s *slowRPCClient) CallContext(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
 	panic("implement me")
+}
+
+func TestService_migrateOldDepositTree(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	cache, err := depositcache.New()
+	require.NoError(t, err)
+
+	srv, endpoint, err := mockExecution.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		srv.Stop()
+	})
+	s, err := NewService(context.Background(),
+		WithHttpEndpoint(endpoint),
+		WithDatabase(beaconDB),
+		WithDepositCache(cache),
+	)
+	require.NoError(t, err)
+	eth1Data, err := s.cfg.beaconDB.ExecutionChainData(context.Background())
+	require.NoError(t, err)
+
+	totalDeposits := 500000
+	input := bytesutil.ToBytes32([]byte("foo"))
+	dt, err := trie.NewTrie(33)
+	require.NoError(t, err)
+
+	for i := 0; i < totalDeposits; i++ {
+		err := dt.Insert(input[:], 0)
+		require.NoError(t, err)
+	}
+	eth1Data.Trie = dt.ToProto()
+
+	err = s.migrateOldDepositTree(eth1Data)
+	require.NoError(t, err)
+	oldDepositTreeRoot, err := dt.HashTreeRoot()
+	require.NoError(t, err)
+	newDepositTreeRoot, err := s.depositTrie.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, oldDepositTreeRoot, newDepositTreeRoot)
 }
