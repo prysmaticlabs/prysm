@@ -1,6 +1,7 @@
 package multi_value_slice
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/container/multi-value-slice/interfaces"
@@ -448,4 +449,197 @@ func assertAppendedNotFound(t *testing.T, slice *Slice[int, *testObject], id int
 		}
 	}
 	assert.Equal(t, false, found)
+}
+
+func BenchmarkValue(b *testing.B) {
+	const _100k = 100000
+	const _1m = 1000000
+	const _10m = 10000000
+
+	b.Run("100,000 shared items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _100k))
+		for i := 0; i < b.N; i++ {
+			s.Value(&testObject{})
+		}
+	})
+	b.Run("100,000 equal individual items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _100k))
+		s.individualItems[0] = &MultiValue[int]{Values: []*Value[int]{{val: 999, ids: []interfaces.Id{}}}}
+		objs := make([]*testObject, _100k)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.individualItems[0].Values[0].ids = append(s.individualItems[0].Values[0].ids, uint64(i))
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_100k)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("100,000 different individual items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _100k))
+		objs := make([]*testObject, _100k)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.individualItems[uint64(i)] = &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []interfaces.Id{uint64(i)}}}}
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_100k)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("100,000 shared items and 100,000 equal appended items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _100k))
+		s.appendedItems = []*MultiValue[int]{{Values: []*Value[int]{{val: 999, ids: []interfaces.Id{}}}}}
+		objs := make([]*testObject, _100k)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.appendedItems[0].Values[0].ids = append(s.appendedItems[0].Values[0].ids, uint64(i))
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_100k)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("100,000 shared items and 100,000 different appended items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _100k))
+		s.appendedItems = []*MultiValue[int]{}
+		objs := make([]*testObject, _100k)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.appendedItems = append(s.appendedItems, &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []interfaces.Id{uint64(i)}}}})
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_100k)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("1,000,000 shared items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _1m))
+		for i := 0; i < b.N; i++ {
+			s.Value(&testObject{})
+		}
+	})
+	b.Run("1,000,000 equal individual items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _1m))
+		s.individualItems[0] = &MultiValue[int]{Values: []*Value[int]{{val: 999, ids: []interfaces.Id{}}}}
+		objs := make([]*testObject, _1m)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.individualItems[0].Values[0].ids = append(s.individualItems[0].Values[0].ids, uint64(i))
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_1m)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("1,000,000 different individual items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _1m))
+		objs := make([]*testObject, _1m)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.individualItems[uint64(i)] = &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []interfaces.Id{uint64(i)}}}}
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_1m)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("1,000,000 shared items and 1,000,000 equal appended items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _1m))
+		s.appendedItems = []*MultiValue[int]{{Values: []*Value[int]{{val: 999, ids: []interfaces.Id{}}}}}
+		objs := make([]*testObject, _1m)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.appendedItems[0].Values[0].ids = append(s.appendedItems[0].Values[0].ids, uint64(i))
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_1m)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("1,000,000 shared items and 1,000,000 different appended items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _1m))
+		s.appendedItems = []*MultiValue[int]{}
+		objs := make([]*testObject, _1m)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.appendedItems = append(s.appendedItems, &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []interfaces.Id{uint64(i)}}}})
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_1m)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("10,000,000 shared items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _10m))
+		for i := 0; i < b.N; i++ {
+			s.Value(&testObject{})
+		}
+	})
+	b.Run("10,000,000 equal individual items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _10m))
+		s.individualItems[0] = &MultiValue[int]{Values: []*Value[int]{{val: 999, ids: []interfaces.Id{}}}}
+		objs := make([]*testObject, _10m)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.individualItems[0].Values[0].ids = append(s.individualItems[0].Values[0].ids, uint64(i))
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_10m)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("10,000,000 different individual items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _10m))
+		objs := make([]*testObject, _10m)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.individualItems[uint64(i)] = &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []interfaces.Id{uint64(i)}}}}
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_10m)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("10,000,000 shared items and 10,000,000 equal appended items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _10m))
+		s.appendedItems = []*MultiValue[int]{{Values: []*Value[int]{{val: 999, ids: []interfaces.Id{}}}}}
+		objs := make([]*testObject, _10m)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.appendedItems[0].Values[0].ids = append(s.appendedItems[0].Values[0].ids, uint64(i))
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_10m)
+			s.Value(objs[id])
+		}
+	})
+	b.Run("10,000,000 shared items and 10,000,000 different appended items", func(b *testing.B) {
+		s := &Slice[int, *testObject]{}
+		s.Init(make([]int, _10m))
+		s.appendedItems = []*MultiValue[int]{}
+		objs := make([]*testObject, _10m)
+		for i := 0; i < len(objs); i++ {
+			objs[i] = &testObject{id: uint64(i), slice: s}
+			s.appendedItems = append(s.appendedItems, &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []interfaces.Id{uint64(i)}}}})
+		}
+		for i := 0; i < b.N; i++ {
+			id := rand.Intn(_10m)
+			s.Value(objs[id])
+		}
+	})
 }
