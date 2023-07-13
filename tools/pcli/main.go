@@ -273,16 +273,18 @@ func benchmarkHash(sszPath string, sszType string) {
 		if err := dataFetcher(sszPath, data); err != nil {
 			log.Fatal(err)
 		}
+		startDeserialize := time.Now()
 		st, err := state_native.InitializeFromProtoCapella(data)
 		if err != nil {
 			log.Fatal("not a state")
 		}
+		deserializeDuration := time.Since(startDeserialize)
 		start := time.Now()
 		root, err := st.HashTreeRoot(context.Background())
 		if err != nil {
 			log.Fatal("couldn't hash")
 		}
-		fmt.Printf("Duration: %v HTR: %#x\n", time.Since(start), root)
+		fmt.Printf("Deserialize Duration: %v, Hashing Duration: %v HTR: %#x\n", deserializeDuration, time.Since(start), root)
 		return
 	default:
 		log.Fatal("Invalid type")
