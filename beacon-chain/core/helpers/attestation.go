@@ -183,7 +183,11 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 	// The following checks are only for Deneb fork and beyond.
 
 	currentEpoch := slots.ToEpoch(currentSlot)
-	prevEpoch := currentEpoch.Sub(1)
+	prevEpoch, err := currentEpoch.SafeSub(1)
+	if err != nil {
+	   log.WithError(err).Debug("Ignoring underflow for a deneb attestation inclusion check in epoch 0")
+	   prevEpoch = 0
+	}
 	attSlotEpoch := slots.ToEpoch(attSlot)
 	if attSlotEpoch != currentEpoch && attSlotEpoch != prevEpoch {
 		return fmt.Errorf("attestation slot %d not within current epoch %d or previous epoch %d", attSlot, currentEpoch, prevEpoch)
