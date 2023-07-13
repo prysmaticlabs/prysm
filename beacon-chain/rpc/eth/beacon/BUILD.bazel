@@ -18,6 +18,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//api:go_default_library",
         "//api/grpc:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
@@ -67,6 +68,7 @@ go_library(
         "@com_github_wealdtech_go_bytesutil//:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@io_opencensus_go//trace:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
@@ -91,6 +93,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//api:go_default_library",
         "//api/grpc:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
