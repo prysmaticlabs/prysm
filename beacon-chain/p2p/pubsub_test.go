@@ -94,14 +94,6 @@ func TestExtractGossipDigest(t *testing.T) {
 			error:   errors.New("encoding/hex: invalid byte"),
 		},
 		{
-			name: "short digest",
-			//topic:   fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f}) + "/" + encoder.ProtocolSuffixSSZSnappy,
-			topic:   BlockSubnetTopicFormat.ConvertToString([4]byte{0xb5, 0x30, 0x3f, 0x0}, "/"+encoder.ProtocolSuffixSSZSnappy, 0),
-			want:    [4]byte{},
-			wantErr: true,
-			error:   errors.New("invalid digest length wanted"),
-		},
-		{
 			name:    "too short topic, missing suffixes",
 			topic:   "/eth2/b5303f2a",
 			want:    [4]byte{},

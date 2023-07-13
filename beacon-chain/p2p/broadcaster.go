@@ -48,7 +48,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	if !ok {
 		return errors.Errorf("message of %T does not support marshaller interface", msg)
 	}
-	return s.broadcastObject(ctx, castMsg, topic.ConvertToStringWithForkDigest(forkDigest))
+	return s.broadcastObject(ctx, castMsg, topic.ConvertToStringWithForkDigestAndSuffix(forkDigest, s.Encoding().ProtocolSuffix()))
 }
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be

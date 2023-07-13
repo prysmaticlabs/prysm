@@ -52,8 +52,8 @@ func TestService_Broadcast(t *testing.T) {
 
 	//topic := "/eth2/%x/testing"
 	topic := p2ptypes.GossipTopic{
-		ProtocolPrefix: "/eth2/%x/",
-		BaseTopic:      "testing",
+		ProtocolPrefix: "/eth2/%x",
+		BaseTopic:      "/testing",
 	}
 	// Set a test gossip mapping for testpb.TestSimpleMessage.
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic

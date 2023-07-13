@@ -114,7 +114,7 @@ func TestTopicFromMessage_CorrectType(t *testing.T) {
 			//assert.NoError(t, err)
 			assert.Equal(t, SchemaVersionV2, topic.SchemaVersion)
 		} else {
-			assert.Equal(t, true, topic.SchemaVersion == SchemaVersionV2)
+			assert.Equal(t, true, topic.SchemaVersion == SchemaVersionV1)
 			//_, _, version, err := TopicDeconstructor(topic)
 			//assert.NoError(t, err)
 			assert.Equal(t, SchemaVersionV1, topic.SchemaVersion)
