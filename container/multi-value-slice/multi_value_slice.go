@@ -4,9 +4,16 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/container/multi-value-slice/interfaces"
 )
+
+var multiValueSliceStatesGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "multi_value_slice_states_count",
+	Help: "Number of states sharing one or more multi value slices in the system. Doesn't include states with no individual/appended items.",
+})
 
 // MultiValueSlice defines an abstraction over all concrete implementations of the generic Slice.
 type MultiValueSlice[O interfaces.Identifiable] interface {
@@ -44,6 +51,7 @@ func (s *Slice[V, O]) Init(items []V) {
 	s.individualItems = map[interfaces.Id]*MultiValue[V]{}
 	s.appendedItems = []*MultiValue[V]{}
 	s.cachedLengths = map[interfaces.Id]int{}
+	multiValueSliceStatesGauge.Inc()
 }
 
 // Len returns the number of items for the input object.
@@ -99,6 +107,8 @@ appendedLoop:
 	if ok {
 		s.cachedLengths[dst.Id()] = srcLen
 	}
+
+	multiValueSliceStatesGauge.Inc()
 }
 
 // Value returns all items for the input object.
@@ -284,6 +294,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 	defer s.lock.Unlock()
 
 	if len(s.appendedItems) == 0 {
+		multiValueSliceStatesGauge.Inc()
 		s.appendedItems = append(s.appendedItems, &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}})
 		s.cachedLengths[obj.Id()] = len(s.sharedItems) + 1
 		return
@@ -380,4 +391,6 @@ appendedLoop:
 	}
 
 	delete(s.cachedLengths, obj.Id())
+
+	multiValueSliceStatesGauge.Dec()
 }

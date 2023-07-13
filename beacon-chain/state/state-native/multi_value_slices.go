@@ -1,10 +1,35 @@
 package state_native
 
 import (
+	"runtime"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+)
+
+var (
+	multiValueRandaoMixesCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "multi_value_randao_mixes_count",
+	})
+	multiValueBlockRootsCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "multi_value_block_roots_count",
+	})
+	multiValueStateRootsCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "multi_value_state_roots_count",
+	})
+	multiValueBalancesCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "multi_value_balances_count",
+	})
+	multiValueValidatorsCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "multi_value_validators_count",
+	})
+	multiValueInactivityScoresCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "multi_value_inactivity_scores_count",
+	})
 )
 
 // MultiValueRandaoMixes is a multi-value slice of randao mixes.
@@ -18,6 +43,8 @@ func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
 	}
 	mv := &MultiValueRandaoMixes{}
 	mv.Init(items)
+	multiValueRandaoMixesCountGauge.Inc()
+	runtime.SetFinalizer(mv, randaoMixesFinalizer)
 	return mv
 }
 
@@ -32,6 +59,8 @@ func NewMultiValueBlockRoots(roots [][]byte) *MultiValueBlockRoots {
 	}
 	mv := &MultiValueBlockRoots{}
 	mv.Init(items)
+	multiValueBlockRootsCountGauge.Inc()
+	runtime.SetFinalizer(mv, blockRootsFinalizer)
 	return mv
 }
 
@@ -46,6 +75,8 @@ func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 	}
 	mv := &MultiValueStateRoots{}
 	mv.Init(items)
+	multiValueStateRootsCountGauge.Inc()
+	runtime.SetFinalizer(mv, stateRootsFinalizer)
 	return mv
 }
 
@@ -58,6 +89,8 @@ func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
 	copy(items, balances)
 	mv := &MultiValueBalances{}
 	mv.Init(items)
+	multiValueBalancesCountGauge.Inc()
+	runtime.SetFinalizer(mv, balancesFinalizer)
 	return mv
 }
 
@@ -70,6 +103,8 @@ func NewMultiValueInactivityScores(scores []uint64) *MultiValueInactivityScores 
 	copy(items, scores)
 	mv := &MultiValueInactivityScores{}
 	mv.Init(items)
+	multiValueInactivityScoresCountGauge.Inc()
+	runtime.SetFinalizer(mv, inactivityScoresFinalizer)
 	return mv
 }
 
@@ -80,5 +115,31 @@ type MultiValueValidators = multi_value_slice.Slice[*ethpb.Validator, *BeaconSta
 func NewMultiValueValidators(vals []*ethpb.Validator) *MultiValueValidators {
 	mv := &MultiValueValidators{}
 	mv.Init(vals)
+	multiValueValidatorsCountGauge.Inc()
+	runtime.SetFinalizer(mv, validatorsFinalizer)
 	return mv
+}
+
+func randaoMixesFinalizer(m *MultiValueRandaoMixes) {
+	multiValueRandaoMixesCountGauge.Dec()
+}
+
+func blockRootsFinalizer(m *MultiValueBlockRoots) {
+	multiValueBlockRootsCountGauge.Dec()
+}
+
+func stateRootsFinalizer(m *MultiValueStateRoots) {
+	multiValueStateRootsCountGauge.Dec()
+}
+
+func balancesFinalizer(m *MultiValueBalances) {
+	multiValueBalancesCountGauge.Dec()
+}
+
+func validatorsFinalizer(m *MultiValueValidators) {
+	multiValueValidatorsCountGauge.Dec()
+}
+
+func inactivityScoresFinalizer(m *MultiValueInactivityScores) {
+	multiValueInactivityScoresCountGauge.Dec()
 }
