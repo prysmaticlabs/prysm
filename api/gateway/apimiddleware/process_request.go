@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 )
 
@@ -116,7 +117,11 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []
 		// Something went wrong, but the request completed, meaning we can write headers and the error message.
 		for h, vs := range resp.Header {
 			for _, v := range vs {
-				w.Header().Set(h, v)
+				if strings.HasSuffix(h, api.VersionHeader) {
+					w.Header().Set(api.VersionHeader, v)
+				} else {
+					w.Header().Set(h, v)
+				}
 			}
 		}
 		// Handle gRPC timeout.
@@ -187,9 +192,11 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 	var statusCodeHeader string
 	for h, vs := range grpcResp.Header {
 		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
-		if strings.HasPrefix(h, "Grpc-Metadata") {
-			if h == "Grpc-Metadata-"+grpc.HttpCodeMetadataKey {
+		if strings.HasPrefix(h, grpc.MetadataPrefix) {
+			if h == grpc.WithPrefix(grpc.HttpCodeMetadataKey) {
 				statusCodeHeader = vs[0]
+			} else if strings.HasSuffix(h, api.VersionHeader) {
+				w.Header().Set(api.VersionHeader, vs[0])
 			}
 		} else {
 			for _, v := range vs {
@@ -223,7 +230,7 @@ func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.He
 	// Include custom error in the error JSON.
 	hasCustomError := false
 	if responseHeader != nil {
-		customError, ok := responseHeader["Grpc-Metadata-"+grpc.CustomErrorMetadataKey]
+		customError, ok := responseHeader[grpc.WithPrefix(grpc.CustomErrorMetadataKey)]
 		if ok {
 			hasCustomError = true
 			// Assume header has only one value and read the 0 index.
