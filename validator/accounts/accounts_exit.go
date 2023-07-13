@@ -180,7 +180,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 	}
 }
 
-func writeSignedVoluntaryExitJSON(ctx context.Context, sve *eth.SignedVoluntaryExit, outputDirectory string) error {
+func writeSignedVoluntaryExitJSON(_ context.Context, sve *eth.SignedVoluntaryExit, outputDirectory string) error {
 	if err := file.MkdirAll(outputDirectory); err != nil {
 		return err
 	}

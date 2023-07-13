@@ -128,7 +128,7 @@ func (m *mockKeymanager) removeOne(kp keypair) {
 	}
 }
 
-func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	if m.fetchNoKeys {

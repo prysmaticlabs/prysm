@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
+func (s *Service) blobSubscriber(_ context.Context, msg proto.Message) error {
 	b, ok := msg.(*eth.SignedBlobSidecar)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.SignedBlobSidecar, type=%T", msg)

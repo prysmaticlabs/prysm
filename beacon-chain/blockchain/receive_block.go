@@ -340,7 +340,7 @@ func (s *Service) updateFinalizationOnBlock(ctx context.Context, preState, postS
 
 // sendNewFinalizedEvent sends a new finalization checkpoint event over the
 // event feed. It needs to be called on the background
-func (s *Service) sendNewFinalizedEvent(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, postState state.BeaconState, finalized *forkchoicetypes.Checkpoint) {
+func (s *Service) sendNewFinalizedEvent(_ context.Context, signed interfaces.ReadOnlySignedBeaconBlock, postState state.BeaconState, _ *forkchoicetypes.Checkpoint) {
 	isValidPayload := false
 	s.headLock.RLock()
 	if s.head != nil {

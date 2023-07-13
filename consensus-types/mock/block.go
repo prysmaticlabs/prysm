@@ -255,7 +255,7 @@ func (BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChang
 	panic("implement me")
 }
 
-func (b *BeaconBlock) SetStateRoot(root []byte) {
+func (b *BeaconBlock) SetStateRoot(_ []byte) {
 	panic("implement me")
 }
 

@@ -66,7 +66,7 @@ func selectAccounts(selectionPrompt string, pubKeys [][fieldparams.BLSPubkeyLeng
 			break
 		}
 		idx := strings.Index(result, " |")
-		accountIndexStr := result[:idx]
+		accountIndexStr := result[:idx+1]
 		accountIndex, err := strconv.Atoi(accountIndexStr)
 		if err != nil {
 			return nil, err

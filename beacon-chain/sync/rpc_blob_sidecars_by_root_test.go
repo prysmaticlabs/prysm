@@ -31,7 +31,7 @@ func blobRootRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
 	return &req
 }
 
-func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSidecar, r interface{}) []*expectedBlobChunk {
+func (c *blobsTestCase) filterExpectedByRoot(_ *testing.T, scs []*ethpb.BlobSidecar, r interface{}) []*expectedBlobChunk {
 	rp, ok := r.(*p2pTypes.BlobSidecarsByRootReq)
 	if !ok {
 		panic("unexpected request type in filterExpectedByRoot")

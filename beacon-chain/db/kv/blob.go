@@ -225,7 +225,7 @@ func slotKey(slot types.Slot) []byte {
 }
 
 func checkEpochsForBlobSidecarsRequestBucket(db *bolt.DB) error {
-	if err := db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(epochsForBlobSidecarsRequestBucket)
 		k := []byte("epoch-key")
 		v := b.Get(k)
@@ -240,8 +240,5 @@ func checkEpochsForBlobSidecarsRequestBucket(db *bolt.DB) error {
 			return fmt.Errorf("epochs for blobs request value in DB %d does not match config value %d", e, params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
 		}
 		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
 }

@@ -17,12 +17,12 @@ type gossipTracer struct {
 }
 
 // AddPeer .
-func (g gossipTracer) AddPeer(p peer.ID, proto protocol.ID) {
+func (g gossipTracer) AddPeer(_ peer.ID, _ protocol.ID) {
 	// no-op
 }
 
 // RemovePeer .
-func (g gossipTracer) RemovePeer(p peer.ID) {
+func (g gossipTracer) RemovePeer(_ peer.ID) {
 	// no-op
 }
 
@@ -37,12 +37,12 @@ func (g gossipTracer) Leave(topic string) {
 }
 
 // Graft .
-func (g gossipTracer) Graft(p peer.ID, topic string) {
+func (g gossipTracer) Graft(_ peer.ID, topic string) {
 	pubsubTopicsGraft.WithLabelValues(topic).Inc()
 }
 
 // Prune .
-func (g gossipTracer) Prune(p peer.ID, topic string) {
+func (g gossipTracer) Prune(_ peer.ID, topic string) {
 	pubsubTopicsPrune.WithLabelValues(topic).Inc()
 }
 
@@ -57,7 +57,7 @@ func (g gossipTracer) DeliverMessage(msg *pubsub.Message) {
 }
 
 // RejectMessage .
-func (g gossipTracer) RejectMessage(msg *pubsub.Message, reason string) {
+func (g gossipTracer) RejectMessage(msg *pubsub.Message, _ string) {
 	pubsubMessageReject.WithLabelValues(*msg.Topic).Inc()
 }
 
@@ -83,12 +83,12 @@ func (g gossipTracer) RecvRPC(rpc *pubsub.RPC) {
 }
 
 // SendRPC .
-func (g gossipTracer) SendRPC(rpc *pubsub.RPC, p peer.ID) {
+func (g gossipTracer) SendRPC(rpc *pubsub.RPC, _ peer.ID) {
 	setMetricFromRPC(pubsubRPCSubSent, pubsubRPCSent, rpc)
 }
 
 // DropRPC .
-func (g gossipTracer) DropRPC(rpc *pubsub.RPC, p peer.ID) {
+func (g gossipTracer) DropRPC(rpc *pubsub.RPC, _ peer.ID) {
 	setMetricFromRPC(pubsubRPCSubDrop, pubsubRPCDrop, rpc)
 }
 

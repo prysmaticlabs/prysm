@@ -21,7 +21,7 @@ func BuiltWithBazel() bool {
 }
 
 // FindBinary is not implemented.
-func FindBinary(pkg, name string) (string, bool) {
+func FindBinary(_, _ string) (string, bool) {
 	panic("not build with Bazel")
 }
 
@@ -41,7 +41,7 @@ func TestTmpDir() string {
 }
 
 // NewTmpDir is not implemented.
-func NewTmpDir(prefix string) (string, error) {
+func NewTmpDir(_ string) (string, error) {
 	panic("not built with Bazel")
 }
 

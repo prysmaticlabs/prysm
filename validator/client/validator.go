@@ -1068,7 +1068,7 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 	return filteredKeys, nil
 }
 
-func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
+func (v *validator) buildPrepProposerReqs(_ context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
 	var prepareProposerReqs []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	for _, k := range pubkeys {
 		// Default case: Define fee recipient to burn address
