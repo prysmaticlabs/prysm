@@ -201,8 +201,10 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 		defer func() {
 			if r := recover(); r != nil {
 				tracing.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
-				log.WithField("error", r).Error("Panic occurred")
-				debug.PrintStack()
+				log.WithField("error", r).
+					WithField("recovered_at", "subscribeWithBase").
+					WithField("stack", string(debug.Stack())).
+					Error("Panic occurred")
 			}
 		}()
 

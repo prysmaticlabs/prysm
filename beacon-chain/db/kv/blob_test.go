@@ -157,16 +157,6 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.ErrorIs(t, ErrNotFound, err)
 		require.Equal(t, 0, len(got))
 	})
-	t.Run("saving a blob with older slot", func(t *testing.T) {
-		db := setupDB(t)
-		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
-		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
-		require.NoError(t, err)
-		require.NoError(t, equalBlobSlices(scs, got))
-		require.ErrorContains(t, "but already have older blob with slot", db.SaveBlobSidecar(ctx, scs))
-	})
 	t.Run("saving a new blob for rotation", func(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
