@@ -238,7 +238,7 @@ func (s *Service) Start() {
 		BeaconDB:         s.cfg.BeaconDB,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blobs/{block_id}", blobServer.Blobs)
-	
+
 	coreService := &core.Service{
 		HeadFetcher:        s.cfg.HeadFetcher,
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,

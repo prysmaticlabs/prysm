@@ -40,6 +40,7 @@ const (
 	AltairE2EForkEpoch    = params.AltairE2EForkEpoch
 	BellatrixE2EForkEpoch = params.BellatrixE2EForkEpoch
 	CapellaE2EForkEpoch   = params.CapellaE2EForkEpoch
+	DenebE2eForkEpoch     = params.DenebE2EForkEpoch
 )
 
 // Graffiti is a list of sample graffiti strings.
