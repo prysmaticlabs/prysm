@@ -262,10 +262,6 @@ func (s *Service) processBlock(
 	return blockReceiver(ctx, blk, blkRoot)
 }
 
-var ErrMissingBlobsForBlockCommitments = errors.New("blobs unavailable for processing block with kzg commitments")
-var ErrBlobCommitmentMismatch = errors.New("kzg_commitment in blob does not match block")
-var ErrUnexpectedBlobCommitment = errors.New("kzg_commitment in blob not referenced in block")
-
 type processedChecker func(context.Context, blocks.ROBlock) bool
 
 func validUnprocessed(ctx context.Context, bwb []BlockWithVerifiedBlobs, headSlot primitives.Slot, isProc processedChecker) ([]BlockWithVerifiedBlobs, error) {
