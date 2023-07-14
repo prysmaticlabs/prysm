@@ -226,6 +226,8 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 	network.WriteJson(w, resp)
 }
 
+// SyncCommitteeRewards retrieves rewards info for sync committee members specified by array of public keys or validator index.
+// If no array is provided, return reward info for every committee member.
 func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 	segments := strings.Split(r.URL.Path, "/")
 	blockId := segments[len(segments)-1]
@@ -243,7 +245,6 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-
 	st, err := s.ReplayerBuilder.ReplayerForSlot(blk.Block().Slot()-1).ReplayToSlot(r.Context(), blk.Block().Slot())
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
@@ -262,8 +263,25 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
-	var syncCommitteeReward uint64
-	_, syncCommitteeReward, err = altair.ProcessSyncAggregate(r.Context(), st, sa)
+
+	vals, valIndices, ok := syncRewardsVals(w, r, st)
+	if !ok {
+		return
+	}
+	preProcessBals := make([]uint64, len(vals))
+	for i, valIdx := range valIndices {
+		preProcessBals[i], err = st.BalanceAtIndex(valIdx)
+		if err != nil {
+			errJson := &network.DefaultErrorJson{
+				Message: "Could not get validator's balance: " + err.Error(),
+				Code:    http.StatusInternalServerError,
+			}
+			network.WriteError(w, errJson)
+			return
+		}
+	}
+
+	_, syncCommitteeReward, err := altair.ProcessSyncAggregate(r.Context(), st, sa)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: "Could not get sync aggregate rewards: " + err.Error(),
@@ -273,11 +291,23 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, vals, valIndices, ok := attRewardsBalancesAndVals(w, r, st)
-	if !ok {
-		return
-	}
+	rewards := make([]uint64, len(preProcessBals))
 	proposerIndex := blk.Block().ProposerIndex()
+	for i, valIdx := range valIndices {
+		bal, err := st.BalanceAtIndex(valIdx)
+		if err != nil {
+			errJson := &network.DefaultErrorJson{
+				Message: "Could not get validator's balance: " + err.Error(),
+				Code:    http.StatusInternalServerError,
+			}
+			network.WriteError(w, errJson)
+			return
+		}
+		rewards[i] = bal - preProcessBals[i]
+		if valIdx == proposerIndex {
+			rewards[i] = rewards[i] - syncCommitteeReward
+		}
+	}
 
 	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
 	if err != nil {
@@ -297,6 +327,20 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		network.WriteError(w, errJson)
 		return
 	}
+
+	scRewards := make([]SyncCommitteeReward, len(valIndices))
+	for i, valIdx := range valIndices {
+		scRewards[i] = SyncCommitteeReward{
+			ValidatorIndex: strconv.FormatUint(uint64(valIdx), 10),
+			Reward:         strconv.FormatUint(rewards[i], 10),
+		}
+	}
+	response := &SyncCommitteeRewardsResponse{
+		Data:                scRewards,
+		ExecutionOptimistic: optimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(r.Context(), blkRoot),
+	}
+	network.WriteJson(w, response)
 }
 
 func (s *Server) attRewardsState(w http.ResponseWriter, r *http.Request) (state.BeaconState, bool) {
@@ -602,7 +646,7 @@ func syncRewardsVals(
 		network.WriteError(w, errJson)
 		return nil, nil, false
 	}
-	scIndices := make([]primitives.ValidatorIndex, len(sc.Pubkeys))
+	allScIndices := make([]primitives.ValidatorIndex, len(sc.Pubkeys))
 	for i, pk := range sc.Pubkeys {
 		valIdx, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pk))
 		if !ok {
@@ -613,20 +657,22 @@ func syncRewardsVals(
 			network.WriteError(w, errJson)
 			return nil, nil, false
 		}
-		scIndices[i] = valIdx
+		allScIndices[i] = valIdx
 	}
 
-	// TODO filter by scIndices
-
-	if len(valIndices) == len(allVals) {
-		return allVals, valIndices, true
-	} else {
-		filteredVals := make([]*precompute.Validator, len(valIndices))
-		for i, valIx := range valIndices {
-			filteredVals[i] = allVals[valIx]
+	scIndices := make([]primitives.ValidatorIndex, 0, len(allScIndices))
+	scVals := make([]*precompute.Validator, 0, len(allScIndices))
+	for _, valIdx := range valIndices {
+		for _, scIdx := range scIndices {
+			if valIdx == scIdx {
+				scVals = append(scVals, allVals[valIdx])
+				scIndices = append(scIndices, valIdx)
+				break
+			}
 		}
-		return filteredVals, valIndices, true
 	}
+
+	return scVals, scIndices, true
 }
 
 func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) *network.DefaultErrorJson {
