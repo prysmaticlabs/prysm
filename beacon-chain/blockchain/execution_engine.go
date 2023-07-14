@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -213,12 +214,16 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 
 	var lastValidHash []byte
 	if blk.Version() >= version.Deneb {
-		_, err = blk.Block().Body().BlobKzgCommitments()
+		var kzgs [][]byte
+		kzgs, err = blk.Block().Body().BlobKzgCommitments()
 		if err != nil {
 			return false, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
 		}
-		// TODO: Convert kzg commitment to version hashes and feed to below
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{})
+		versionedHashes := make([][32]byte, len(kzgs))
+		for i := range versionedHashes {
+			versionedHashes[i] = kzgToVersionedHash(kzgs[i])
+		}
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes)
 	} else {
 		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{} /*empty version hashes before Deneb*/)
 	}
@@ -370,4 +375,15 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 		}
 	}
 	return nil
+}
+
+const (
+	blobCommitmentVersionKZG uint8 = 0x01
+)
+
+// kzgToVersionedHash implements kzg_to_versioned_hash from EIP-4844
+func kzgToVersionedHash(kzg []byte) (h [32]byte) {
+	h = sha256.Sum256(kzg)
+	h[0] = blobCommitmentVersionKZG
+	return
 }
