@@ -388,7 +388,6 @@ func (s *Service) Start() {
 	ethpbservice.RegisterEventsServer(s.grpcServer, &events.Server{
 		Ctx:               s.ctx,
 		StateNotifier:     s.cfg.StateNotifier,
-		BlockNotifier:     s.cfg.BlockNotifier,
 		OperationNotifier: s.cfg.OperationNotifier,
 		HeadFetcher:       s.cfg.HeadFetcher,
 		ChainInfoFetcher:  s.cfg.ChainInfoFetcher,
