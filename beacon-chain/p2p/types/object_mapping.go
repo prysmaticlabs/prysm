@@ -53,6 +53,11 @@ func InitializeDataMaps() {
 				&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}},
 			)
 		},
+		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() (interfaces.ReadOnlySignedBeaconBlock, error) {
+			return blocks.NewSignedBeaconBlock(
+				&ethpb.SignedBeaconBlockDeneb{Block: &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{}}},
+			)
+		},
 	}
 
 	// Reset our metadata map.
@@ -67,6 +72,9 @@ func InitializeDataMaps() {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion): func() metadata.Metadata {
+			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 	}
