@@ -14,7 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
+
+var errExecutionUnmarshal = errors.New("unable to unmarshal execution engine data")
 
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
 // client with proper JSON Marshal and Unmarshal methods to hex.
@@ -34,8 +37,8 @@ type ExecutionBlock struct {
 	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
-	DataGasUsed     uint64                   `json:"dataGasUsed"`
-	ExcessDataGas   uint64                   `json:"excessDataGas"`
+	DataGasUsed     *hexutil.Uint64          `json:"dataGasUsed"`
+	ExcessDataGas   *hexutil.Uint64          `json:"excessDataGas"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -108,10 +111,32 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		edg, has := decoded["excessDataGas"]
 		if has && edg != nil {
 			e.Version = version.Deneb
+			u := new(hexutil.Uint64)
+			sedg, ok := edg.(string)
+			if !ok {
+				return errors.Wrap(errExecutionUnmarshal, "excessDataGas is not a string, can not decode")
+			}
+			err = u.UnmarshalText([]byte(sedg))
+			if err != nil {
+				return errors.Wrap(err, "unable to unmarshal excessDataGas as hexutil.Uint64")
+			}
+			e.ExcessDataGas = u
 		}
+
 		dgu, has := decoded["dataGasUsed"]
+		log.Error(has, dgu != nil)
 		if has && dgu != nil {
 			e.Version = version.Deneb
+			u := new(hexutil.Uint64)
+			sdgu, ok := dgu.(string)
+			if !ok {
+				return errors.Wrap(errExecutionUnmarshal, "dataGasUsed is not a string, can not decode")
+			}
+			err = u.UnmarshalText([]byte(sdgu))
+			if err != nil {
+				return errors.Wrap(err, "unable to unmarshal dataGasUsed as hexutil.Uint64")
+			}
+			e.DataGasUsed = u
 		}
 	}
 
