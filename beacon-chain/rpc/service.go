@@ -220,6 +220,7 @@ func (s *Service) Start() {
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/sync_committee/{block_id}", rewardsServer.SyncCommitteeRewards)
 
 	builderServer := &rpcBuilder.Server{
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,

@@ -291,7 +291,7 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rewards := make([]uint64, len(preProcessBals))
+	rewards := make([]int, len(preProcessBals))
 	proposerIndex := blk.Block().ProposerIndex()
 	for i, valIdx := range valIndices {
 		bal, err := st.BalanceAtIndex(valIdx)
@@ -303,9 +303,9 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 			network.WriteError(w, errJson)
 			return
 		}
-		rewards[i] = bal - preProcessBals[i]
+		rewards[i] = int(bal - preProcessBals[i]) // lint:ignore uintcast
 		if valIdx == proposerIndex {
-			rewards[i] = rewards[i] - syncCommitteeReward
+			rewards[i] = rewards[i] - int(syncCommitteeReward) // lint:ignore uintcast
 		}
 	}
 
@@ -332,7 +332,7 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 	for i, valIdx := range valIndices {
 		scRewards[i] = SyncCommitteeReward{
 			ValidatorIndex: strconv.FormatUint(uint64(valIdx), 10),
-			Reward:         strconv.FormatUint(rewards[i], 10),
+			Reward:         strconv.Itoa(rewards[i]),
 		}
 	}
 	response := &SyncCommitteeRewardsResponse{
@@ -663,7 +663,7 @@ func syncRewardsVals(
 	scIndices := make([]primitives.ValidatorIndex, 0, len(allScIndices))
 	scVals := make([]*precompute.Validator, 0, len(allScIndices))
 	for _, valIdx := range valIndices {
-		for _, scIdx := range scIndices {
+		for _, scIdx := range allScIndices {
 			if valIdx == scIdx {
 				scVals = append(scVals, allVals[valIdx])
 				scIndices = append(scIndices, valIdx)
