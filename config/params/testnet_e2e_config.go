@@ -4,6 +4,7 @@ const (
 	AltairE2EForkEpoch    = 6
 	BellatrixE2EForkEpoch = 8
 	CapellaE2EForkEpoch   = 10
+	DenebE2EForkEpoch     = 12
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -38,6 +39,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
 	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
 	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
+	e2eConfig.DenebForkEpoch = DenebE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "480"
@@ -79,6 +81,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
 	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
 	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
+	e2eConfig.DenebForkEpoch = DenebE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "480"

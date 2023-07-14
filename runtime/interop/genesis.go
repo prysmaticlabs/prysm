@@ -117,6 +117,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 	}
 
 	shanghaiTime := GethShanghaiTime(genesisTime, cfg)
+	cancunTime := GethCancunTime(genesisTime, cfg)
 	cc := &params.ChainConfig{
 		ChainID:                       big.NewInt(defaultTestChainId),
 		HomesteadBlock:                bigz,
@@ -141,6 +142,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 			Epoch:  20000,
 		},
 		ShanghaiTime: shanghaiTime,
+		CancunTime:   cancunTime,
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()
