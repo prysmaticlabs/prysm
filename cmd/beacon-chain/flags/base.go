@@ -165,7 +165,7 @@ var (
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 2,
 	}
-	// BlockBatchLimit specifies the requested block batch size.
+	// BlobBatchLimit specifies the requested blob batch size.
 	BlobBatchLimit = &cli.IntFlag{
 		Name:  "blob-batch-limit",
 		Usage: "The amount of blobs the local peer is bounded to request and respond to in a batch.",
