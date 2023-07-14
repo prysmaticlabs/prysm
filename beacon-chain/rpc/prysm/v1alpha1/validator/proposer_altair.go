@@ -25,7 +25,7 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.SignedBea
 		log.WithError(err).Error("Could not get sync aggregate")
 		emptySig := [96]byte{0xC0}
 		emptyAggregate := &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
+			SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize/8),
 			SyncCommitteeSignature: emptySig[:],
 		}
 		if err := blk.SetSyncAggregate(emptyAggregate); err != nil {

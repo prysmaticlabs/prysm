@@ -802,6 +802,11 @@ func TestPrunePeers_TrustedPeers(t *testing.T) {
 		}
 	}
 	p.SetTrustedPeers(trustedPeers)
+
+	// Assert we have correct trusted peers
+	trustedPeers = p.GetTrustedPeers()
+	assert.Equal(t, 6, len(trustedPeers))
+
 	// Assert all peers more than max are prunable.
 	peersToPrune = p.PeersToPrune()
 	assert.Equal(t, 16, len(peersToPrune))
@@ -812,6 +817,34 @@ func TestPrunePeers_TrustedPeers(t *testing.T) {
 			assert.NotEqual(t, pid.String(), tPid.String())
 		}
 	}
+
+	// Add more peers to check if trusted peers can be pruned after they are deleted from trusted peer set.
+	for i := 0; i < 9; i++ {
+		// Peer added to peer handler.
+		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+	}
+
+	// Delete trusted peers.
+	p.DeleteTrustedPeers(trustedPeers)
+
+	peersToPrune = p.PeersToPrune()
+	assert.Equal(t, 25, len(peersToPrune))
+
+	// Check that trusted peers are pruned.
+	for _, tPid := range trustedPeers {
+		pruned := false
+		for _, pid := range peersToPrune {
+			if pid.String() == tPid.String() {
+				pruned = true
+			}
+		}
+		assert.Equal(t, true, pruned)
+	}
+
+	// Assert have zero trusted peers
+	trustedPeers = p.GetTrustedPeers()
+	assert.Equal(t, 0, len(trustedPeers))
+
 	for _, pid := range peersToPrune {
 		dir, err := p.Direction(pid)
 		require.NoError(t, err)
@@ -821,8 +854,8 @@ func TestPrunePeers_TrustedPeers(t *testing.T) {
 	// Ensure it is in the descending order.
 	currScore := p.Scorers().Score(peersToPrune[0])
 	for _, pid := range peersToPrune {
-		score := p.Scorers().BadResponsesScorer().Score(pid)
-		assert.Equal(t, true, currScore >= score)
+		score := p.Scorers().Score(pid)
+		assert.Equal(t, true, currScore <= score)
 		currScore = score
 	}
 }

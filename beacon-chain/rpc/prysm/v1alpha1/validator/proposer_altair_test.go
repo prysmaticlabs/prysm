@@ -21,7 +21,7 @@ func TestServer_SetSyncAggregate_EmptyCase(t *testing.T) {
 
 	emptySig := [96]byte{0xC0}
 	want := &ethpb.SyncAggregate{
-		SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
+		SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize/8),
 		SyncCommitteeSignature: emptySig[:],
 	}
 	require.DeepEqual(t, want, agg)
