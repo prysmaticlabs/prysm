@@ -274,7 +274,7 @@ func benchmarkHash(sszPath string, sszType string) {
 			log.Fatal(err)
 		}
 		startDeserialize := time.Now()
-		st, err := state_native.InitializeFromProtoCapella(data)
+		st, err := state_native.InitializeFromProtoUnsafeCapella(data)
 		if err != nil {
 			log.Fatal("not a state")
 		}
