@@ -269,18 +269,20 @@ func prettyPrint(sszPath string, data fssz.Unmarshaler) {
 func benchmarkHash(sszPath string, sszType string) {
 	switch sszType {
 	case "state_capella":
-		data := &ethpb.BeaconStateCapella{}
-		if err := dataFetcher(sszPath, data); err != nil {
+		st := &ethpb.BeaconStateCapella{}
+		rawFile, err := os.ReadFile(sszPath) // #nosec G304
+		if err != nil {
 			log.Fatal(err)
 		}
+
 		startDeserialize := time.Now()
-		st, err := state_native.InitializeFromProtoCapella(data)
-		if err != nil {
-			log.Fatal("not a state")
+		if err := st.UnmarshalSSZ(rawFile); err != nil {
+			log.Fatal(err)
 		}
 		deserializeDuration := time.Since(startDeserialize)
+
 		start := time.Now()
-		root, err := st.HashTreeRoot(context.Background())
+		root, err := st.HashTreeRoot()
 		if err != nil {
 			log.Fatal("couldn't hash")
 		}
