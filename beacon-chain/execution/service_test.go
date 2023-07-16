@@ -837,13 +837,12 @@ func TestService_migrateOldDepositTree(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < totalDeposits; i++ {
-		err := dt.Insert(input[:], 0)
+		err := dt.Insert(input[:], i)
 		require.NoError(t, err)
 	}
 	eth1Data.Trie = dt.ToProto()
 
 	err = s.migrateOldDepositTree(eth1Data)
-	t.Logf("Error from migration: %v", err)
 	require.NoError(t, err)
 	oldDepositTreeRoot, err := dt.HashTreeRoot()
 	require.NoError(t, err)

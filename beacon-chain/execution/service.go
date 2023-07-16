@@ -888,7 +888,6 @@ func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%#x == %#x\n", newDepositRoot, depositRoot)
 	if newDepositRoot != depositRoot {
 		return errors.Wrapf(err, "mismatched deposit roots, old %#x != new %#x", depositRoot, newDepositRoot)
 	}
