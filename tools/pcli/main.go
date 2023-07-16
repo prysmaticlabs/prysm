@@ -281,8 +281,12 @@ func benchmarkHash(sszPath string, sszType string) {
 		}
 		deserializeDuration := time.Since(startDeserialize)
 
+		stateTrieState, err := state_native.InitializeFromProtoCapella(st)
+		if err != nil {
+			log.Fatal(err)
+		}
 		start := time.Now()
-		root, err := st.HashTreeRoot()
+		root, err := stateTrieState.HashTreeRoot(context.Background())
 		if err != nil {
 			log.Fatal("couldn't hash")
 		}
