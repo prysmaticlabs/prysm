@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"gopkg.in/yaml.v2"
 )
 
 // BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
@@ -134,42 +133,4 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		NextWithdrawalValidatorIndex:        b.nextWithdrawalValidatorIndex,
 	}
 	return json.Marshal(marshalable)
-}
-
-func (b *BeaconState) MarshalYAML() (interface{}, error) {
-	marshalable := &beaconStateMarshalable{
-		Version:                             b.version,
-		GenesisTime:                         b.genesisTime,
-		GenesisValidatorsRoot:               b.genesisValidatorsRoot,
-		Slot:                                b.slot,
-		Fork:                                b.fork,
-		LatestBlockHeader:                   b.latestBlockHeader,
-		BlockRoots:                          b.blockRoots,
-		StateRoots:                          b.stateRoots,
-		HistoricalRoots:                     b.historicalRoots,
-		HistoricalSummaries:                 b.historicalSummaries,
-		Eth1Data:                            b.eth1Data,
-		Eth1DataVotes:                       b.eth1DataVotes,
-		Eth1DepositIndex:                    b.eth1DepositIndex,
-		Validators:                          b.validators,
-		Balances:                            b.balances,
-		RandaoMixes:                         b.randaoMixes,
-		Slashings:                           b.slashings,
-		PreviousEpochAttestations:           b.previousEpochAttestations,
-		CurrentEpochAttestations:            b.currentEpochAttestations,
-		PreviousEpochParticipation:          b.previousEpochParticipation,
-		CurrentEpochParticipation:           b.currentEpochParticipation,
-		JustificationBits:                   b.justificationBits,
-		PreviousJustifiedCheckpoint:         b.previousJustifiedCheckpoint,
-		CurrentJustifiedCheckpoint:          b.currentJustifiedCheckpoint,
-		FinalizedCheckpoint:                 b.finalizedCheckpoint,
-		InactivityScores:                    b.inactivityScores,
-		CurrentSyncCommittee:                b.currentSyncCommittee,
-		NextSyncCommittee:                   b.nextSyncCommittee,
-		LatestExecutionPayloadHeader:        b.latestExecutionPayloadHeader,
-		LatestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapella,
-		NextWithdrawalIndex:                 b.nextWithdrawalIndex,
-		NextWithdrawalValidatorIndex:        b.nextWithdrawalValidatorIndex,
-	}
-	return yaml.Marshal(marshalable)
 }
