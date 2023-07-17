@@ -83,22 +83,25 @@ message SignedBeaconBlockContentsContainer {
   }
 }
 
+// used in produce block
 message BlindedBeaconBlockContainer {
   oneof block {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
     BlindedBeaconBlockCapella capella_block = 4;
+    BlindedBeaconBlockContentsDeneb deneb_contents = 5; // is contents
   }
 }
 
+// used in get block
 message SignedBlindedBeaconBlockContainer {
   oneof message {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
     BlindedBeaconBlockCapella capella_block = 4;
-    BlindedBeaconBlockDeneb deneb_block = 5;
+    BlindedBeaconBlockDeneb deneb_block = 5; // is block
   }
 
   // 96 byte BLS signature from the validator that produced this block.

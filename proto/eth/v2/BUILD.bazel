@@ -54,6 +54,8 @@ ssz_gen_marshal(
         "BlobSidecars",
         "SignedBeaconBlockContentsDeneb",
         "SignedBlindedBeaconBlockContentsDeneb",
+        "BeaconBlockContentsDeneb",
+        "BlindedBeaconBlockContentsDeneb",
     ],
 )
 
