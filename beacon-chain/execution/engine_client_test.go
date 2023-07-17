@@ -1479,9 +1479,9 @@ func fixtures() map[string]interface{} {
 		},
 		BlockValue: "0x11fffffffff",
 		BlobsBundle: &pb.BlobBundleJSON{
-			Commitments: [][48]byte{bytesutil.ToBytes48([]byte("commitment1")), bytesutil.ToBytes48([]byte("commitment2"))},
-			Proofs:      [][48]byte{bytesutil.ToBytes48([]byte("proof1")), bytesutil.ToBytes48([]byte("proof2"))},
-			Blobs:       [][]byte{{'a'}, {'b'}},
+			Commitments: []hexutil.Bytes{[]byte("commitment1"), []byte("commitment2")},
+			Proofs:      []hexutil.Bytes{[]byte("proof1"), []byte("proof2")},
+			Blobs:       []hexutil.Bytes{{'a'}, {'b'}},
 		},
 	}
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
