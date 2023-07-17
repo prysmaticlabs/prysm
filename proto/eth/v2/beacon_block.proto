@@ -83,16 +83,6 @@ message SignedBeaconBlockContentsContainer {
   }
 }
 
-message SignedBeaconBlockContentsContainer {
-  oneof message {
-    v1.SignedBeaconBlock phase0_block = 1;
-    SignedBeaconBlockAltair altair_block = 2;
-    SignedBeaconBlockBellatrix bellatrix_block = 3;
-    SignedBeaconBlockCapella capella_block = 4;
-    SignedBeaconBlockContentsDeneb deneb_contents = 5;
-  }
-}
-
 // used in produce block
 message BlindedBeaconBlockContainer {
   oneof block {
@@ -111,7 +101,7 @@ message SignedBlindedBeaconBlockContainer {
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
     BlindedBeaconBlockCapella capella_block = 4;
-    BlindedBeaconBlockDeneb deneb_block = 5;
+    BlindedBeaconBlockDeneb deneb_block = 5; // is block
   }
 
   // 96 byte BLS signature from the validator that produced this block.
