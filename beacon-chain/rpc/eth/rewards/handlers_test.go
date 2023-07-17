@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -34,6 +35,8 @@ import (
 )
 
 func TestBlockRewards(t *testing.T) {
+	helpers.ClearCache()
+
 	valCount := 64
 
 	st, err := util.NewBeaconStateCapella()
@@ -206,6 +209,7 @@ func TestAttestationRewards(t *testing.T) {
 	cfg := params.BeaconConfig()
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
+	helpers.ClearCache()
 
 	valCount := 64
 
@@ -485,6 +489,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 	cfg := params.BeaconConfig()
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
+	helpers.ClearCache()
 
 	const valCount = 1024
 	// we have to set the proposer index to the value that will be randomly chosen (fortunately it's deterministic)
@@ -559,6 +564,12 @@ func TestSyncCommiteeRewards(t *testing.T) {
 	}
 
 	t.Run("ok - filtered vals", func(t *testing.T) {
+		balances := make([]uint64, 0, valCount)
+		for i := 0; i < valCount; i++ {
+			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+		}
+		require.NoError(t, st.SetBalances(balances))
+
 		url := "http://only.the.slot.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		pubkey := fmt.Sprintf("%#x", secretKeys[10].PublicKey().Marshal())
@@ -586,6 +597,12 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		assert.Equal(t, false, resp.Finalized)
 	})
 	t.Run("ok - all vals", func(t *testing.T) {
+		balances := make([]uint64, 0, valCount)
+		for i := 0; i < valCount; i++ {
+			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+		}
+		require.NoError(t, st.SetBalances(balances))
+
 		url := "http://only.the.slot.number.at.the.end.is.important/32"
 		request := httptest.NewRequest("POST", url, nil)
 		writer := httptest.NewRecorder()
@@ -605,6 +622,12 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		assert.Equal(t, 343416, sum)
 	})
 	t.Run("ok - validator outside sync committee is ignored", func(t *testing.T) {
+		balances := make([]uint64, 0, valCount)
+		for i := 0; i < valCount; i++ {
+			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+		}
+		require.NoError(t, st.SetBalances(balances))
+
 		url := "http://only.the.slot.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		pubkey := fmt.Sprintf("%#x", secretKeys[10].PublicKey().Marshal())
@@ -630,6 +653,12 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		assert.Equal(t, 1396, sum)
 	})
 	t.Run("ok - proposer reward is deducted", func(t *testing.T) {
+		balances := make([]uint64, 0, valCount)
+		for i := 0; i < valCount; i++ {
+			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+		}
+		require.NoError(t, st.SetBalances(balances))
+
 		url := "http://only.the.slot.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		pubkey := fmt.Sprintf("%#x", secretKeys[10].PublicKey().Marshal())
@@ -655,6 +684,12 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		assert.Equal(t, 2094, sum)
 	})
 	t.Run("invalid validator index/pubkey", func(t *testing.T) {
+		balances := make([]uint64, 0, valCount)
+		for i := 0; i < valCount; i++ {
+			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+		}
+		require.NoError(t, st.SetBalances(balances))
+
 		url := "http://only.the.epoch.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		valIds, err := json.Marshal([]string{"10", "foo"})
@@ -673,6 +708,12 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		assert.Equal(t, "foo is not a validator index or pubkey", e.Message)
 	})
 	t.Run("unknown validator pubkey", func(t *testing.T) {
+		balances := make([]uint64, 0, valCount)
+		for i := 0; i < valCount; i++ {
+			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+		}
+		require.NoError(t, st.SetBalances(balances))
+
 		url := "http://only.the.epoch.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		privkey, err := bls.RandKey()
@@ -694,6 +735,12 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		assert.Equal(t, "No validator index found for pubkey "+pubkey, e.Message)
 	})
 	t.Run("validator index too large", func(t *testing.T) {
+		balances := make([]uint64, 0, valCount)
+		for i := 0; i < valCount; i++ {
+			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+		}
+		require.NoError(t, st.SetBalances(balances))
+
 		url := "http://only.the.epoch.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		valIds, err := json.Marshal([]string{"10", "9999"})
@@ -712,6 +759,12 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		assert.Equal(t, "Validator index 9999 is too large. Maximum allowed index is 1023", e.Message)
 	})
 	t.Run("phase 0", func(t *testing.T) {
+		balances := make([]uint64, 0, valCount)
+		for i := 0; i < valCount; i++ {
+			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+		}
+		require.NoError(t, st.SetBalances(balances))
+
 		url := "http://only.the.epoch.number.at.the.end.is.important/0"
 		request := httptest.NewRequest("POST", url, nil)
 		writer := httptest.NewRecorder()
