@@ -53,29 +53,56 @@ func NewBlindedBeaconBlockCapellaV2() *v2.SignedBlindedBeaconBlockCapella {
 	return HydrateV2SignedBlindedBeaconBlockCapella(&v2.SignedBlindedBeaconBlockCapella{})
 }
 
-// NewBeaconBlockAndBlobsDeneb creates a beacon block content including blobs with minimum marshalable fields.
-func NewBeaconBlockAndBlobsDeneb(numOfBlobs uint64) (*ethpb.SignedBeaconBlockAndBlobsDeneb, error) {
+// NewBeaconBlockContentsDeneb creates a beacon block content including blobs with minimum marshalable fields.
+func NewBeaconBlockContentsDeneb(numOfBlobs uint64) (*v2.SignedBeaconBlockContentsDeneb, error) {
 	if numOfBlobs > fieldparams.MaxBlobsPerBlock {
 		return nil, fmt.Errorf("declared too many blobs: %v", numOfBlobs)
 	}
-	blobs := make([]*ethpb.SignedBlobSidecar, numOfBlobs)
+	blobs := make([]*v2.SignedBlobSidecar, numOfBlobs)
 	for i := range blobs {
-		blobs[i] = &ethpb.SignedBlobSidecar{
-			Message: &ethpb.BlobSidecar{
+		blobs[i] = &v2.SignedBlobSidecar{
+			Message: &v2.BlobSidecar{
 				BlockRoot:       make([]byte, fieldparams.RootLength),
 				Index:           0,
 				Slot:            0,
 				BlockParentRoot: make([]byte, fieldparams.RootLength),
 				ProposerIndex:   0,
 				Blob:            make([]byte, fieldparams.BlobLength),
-				KzgCommitment:   make([]byte, 48),
-				KzgProof:        make([]byte, 48),
+				KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
+				KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
 			},
 			Signature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
-	return &ethpb.SignedBeaconBlockAndBlobsDeneb{
-		Block: HydrateSignedBeaconBlockDeneb(&ethpb.SignedBeaconBlockDeneb{}),
-		Blobs: blobs,
+	return &v2.SignedBeaconBlockContentsDeneb{
+		SignedBlock:        HydrateV2SignedBeaconBlockDeneb(&v2.SignedBeaconBlockDeneb{}),
+		SignedBlobSidecars: blobs,
+	}, nil
+}
+
+// NewBlindedBeaconBlockContentsDeneb creates a blinded beacon block content including blobs with minimum marshalable fields.
+func NewBlindedBeaconBlockContentsDeneb(numOfBlobs uint64) (*v2.SignedBlindedBeaconBlockContentsDeneb, error) {
+	if numOfBlobs > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("declared too many blobs: %v", numOfBlobs)
+	}
+	blobs := make([]*v2.SignedBlindedBlobSidecar, numOfBlobs)
+	for i := range blobs {
+		blobs[i] = &v2.SignedBlindedBlobSidecar{
+			Message: &v2.BlindedBlobSidecar{
+				BlockRoot:       make([]byte, fieldparams.RootLength),
+				Index:           0,
+				Slot:            0,
+				BlockParentRoot: make([]byte, fieldparams.RootLength),
+				ProposerIndex:   0,
+				BlobRoot:        make([]byte, fieldparams.RootLength),
+				KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
+				KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
+			},
+			Signature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	return &v2.SignedBlindedBeaconBlockContentsDeneb{
+		SignedBlindedBlock:        HydrateV2SignedBlindedBeaconBlockDeneb(&v2.SignedBlindedBeaconBlockDeneb{}),
+		SignedBlindedBlobSidecars: blobs,
 	}, nil
 }
