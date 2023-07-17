@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
@@ -238,13 +239,46 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not create unmarshaler: %v", err)
 	}
-	block, err := unmarshaler.UnmarshalBlindedBeaconBlock(req.Data)
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
-	}
 
 	switch forkVer {
+	case bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion):
+		blkContent := &ethpbv2.SignedBlindedBeaconBlockContentsDeneb{}
+		if err := blkContent.UnmarshalSSZ(req.Data); err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Could not unmarshal ssz signed blinded block contents: %v", err)
+		}
+		blindedBlock, err := migration.BlindedDenebToV1Alpha1SignedBlock(blkContent.SignedBlindedBlock)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert signed blinded block to v1alpha1: %v", err)
+		}
+		block, err := blocks.NewSignedBeaconBlock(blindedBlock)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not init block: %v", err)
+		}
+		b, err := block.PbBlindedDenebBlock()
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
+		}
+		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
+				BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
+					Block: b,
+					Blobs: migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(blkContent.SignedBlindedBlobSidecars),
+				},
+			},
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+			}
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
+		}
+		return &emptypb.Empty{}, nil
+
 	case bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion):
+		block, err := unmarshaler.UnmarshalBlindedBeaconBlock(req.Data)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
+		}
 		if !block.IsBlinded() {
 			return nil, status.Error(codes.InvalidArgument, "Submitted block is not blinded")
 		}
@@ -265,6 +299,10 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		}
 		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion):
+		block, err := unmarshaler.UnmarshalBlindedBeaconBlock(req.Data)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
+		}
 		if !block.IsBlinded() {
 			return nil, status.Error(codes.InvalidArgument, "Submitted block is not blinded")
 		}
@@ -285,6 +323,10 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		}
 		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion):
+		block, err := unmarshaler.UnmarshalBlindedBeaconBlock(req.Data)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
+		}
 		b, err := block.PbAltairBlock()
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
@@ -302,6 +344,10 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		}
 		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion):
+		block, err := unmarshaler.UnmarshalBlindedBeaconBlock(req.Data)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
+		}
 		b, err := block.PbPhase0Block()
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
