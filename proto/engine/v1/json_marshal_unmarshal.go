@@ -703,16 +703,16 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type BlobBundleJSON struct {
-	Commitments [][48]byte `json:"commitments"`
-	Proofs      [][48]byte `json:"proofs"`
-	Blobs       [][]byte   `json:"blobs"`
+	Commitments []hexutil.Bytes `json:"commitments"`
+	Proofs      []hexutil.Bytes `json:"proofs"`
+	Blobs       []hexutil.Bytes `json:"blobs"`
 }
 
 func (b BlobBundleJSON) ToProto() *BlobsBundle {
 	return &BlobsBundle{
-		KzgCommitments: bytesutil.SafeCopy2dBytes(bytesutil.FromBytes48Array(b.Commitments)),
-		Proofs:         bytesutil.SafeCopy2dBytes(bytesutil.FromBytes48Array(b.Proofs)),
-		Blobs:          bytesutil.SafeCopy2dBytes(b.Blobs),
+		KzgCommitments: bytesutil.SafeCopy2dHexUtilBytes(b.Commitments),
+		Proofs:         bytesutil.SafeCopy2dHexUtilBytes(b.Proofs),
+		Blobs:          bytesutil.SafeCopy2dHexUtilBytes(b.Blobs),
 	}
 }
 
