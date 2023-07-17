@@ -690,7 +690,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}
 		require.NoError(t, st.SetBalances(balances))
 
-		url := "http://only.the.epoch.number.at.the.end.is.important/32"
+		url := "http://only.the.slot.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		valIds, err := json.Marshal([]string{"10", "foo"})
 		require.NoError(t, err)
@@ -714,7 +714,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}
 		require.NoError(t, st.SetBalances(balances))
 
-		url := "http://only.the.epoch.number.at.the.end.is.important/32"
+		url := "http://only.the.slot.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		privkey, err := bls.RandKey()
 		require.NoError(t, err)
@@ -741,7 +741,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}
 		require.NoError(t, st.SetBalances(balances))
 
-		url := "http://only.the.epoch.number.at.the.end.is.important/32"
+		url := "http://only.the.slot.number.at.the.end.is.important/32"
 		var body bytes.Buffer
 		valIds, err := json.Marshal([]string{"10", "9999"})
 		require.NoError(t, err)
@@ -765,7 +765,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}
 		require.NoError(t, st.SetBalances(balances))
 
-		url := "http://only.the.epoch.number.at.the.end.is.important/0"
+		url := "http://only.the.slot.number.at.the.end.is.important/0"
 		request := httptest.NewRequest("POST", url, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
