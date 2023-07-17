@@ -655,7 +655,6 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 	executionHashes []common.Hash,
 	validExecPayloads []int,
 	blindedBlocks []interfaces.ReadOnlySignedBeaconBlock) ([]interfaces.SignedBeaconBlock, error) {
-
 	fullBlocks := make([]interfaces.SignedBeaconBlock, len(blindedBlocks))
 	var execBlocks []*pb.ExecutionBlock
 	var payloadBodies []*pb.ExecutionPayloadBodyV1
