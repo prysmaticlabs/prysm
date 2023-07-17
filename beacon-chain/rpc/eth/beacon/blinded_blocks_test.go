@@ -124,9 +124,9 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		resp, err := bs.GetBlindedBlock(ctx, &ethpbv1.BlockRequest{})
 		require.NoError(t, err)
-		capellaBlock, ok := resp.Data.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_DenebBlock)
+		denebBlock, ok := resp.Data.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_DenebBlock)
 		require.Equal(t, true, ok)
-		assert.DeepEqual(t, expected, capellaBlock.DenebBlock)
+		assert.DeepEqual(t, expected, denebBlock.DenebBlock)
 		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
