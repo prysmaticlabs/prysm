@@ -84,6 +84,7 @@ go_test(
         "//network/http:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
+        "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/mock:go_default_library",
