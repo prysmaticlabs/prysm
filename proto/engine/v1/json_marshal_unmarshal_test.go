@@ -223,9 +223,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 
 		resp := &enginev1.GetPayloadV3ResponseJson{
 			BlobsBundle: &enginev1.BlobBundleJSON{
-				Commitments: [][48]byte{{'a'}, {'b'}, {'c'}, {'d'}},
-				Proofs:      [][48]byte{{'e'}, {'f'}, {'g'}, {'h'}},
-				Blobs:       [][]byte{{'i'}, {'j'}, {'k'}, {'l'}},
+				Commitments: []hexutil.Bytes{{'a'}, {'b'}, {'c'}, {'d'}},
+				Proofs:      []hexutil.Bytes{{'e'}, {'f'}, {'g'}, {'h'}},
+				Blobs:       []hexutil.Bytes{{'i'}, {'j'}, {'k'}, {'l'}},
 			},
 			BlockValue: fmt.Sprint("0x123"),
 			ExecutionPayload: &enginev1.ExecutionPayloadDenebJSON{
