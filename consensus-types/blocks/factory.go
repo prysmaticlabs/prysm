@@ -215,9 +215,11 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		}
 		if payloadRoot != payloadHeaderRoot {
 			return nil, fmt.Errorf(
-				"payload %#x and header %#x roots do not match",
+				"payload %#x and header %#x roots do not match. Payload %+v and header %+v",
 				payloadRoot,
 				payloadHeaderRoot,
+				wrappedPayload,
+				payloadHeader,
 			)
 		}
 	}
