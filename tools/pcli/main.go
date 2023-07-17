@@ -269,20 +269,28 @@ func prettyPrint(sszPath string, data fssz.Unmarshaler) {
 func benchmarkHash(sszPath string, sszType string) {
 	switch sszType {
 	case "state_capella":
-		data := &ethpb.BeaconStateCapella{}
-		if err := dataFetcher(sszPath, data); err != nil {
+		st := &ethpb.BeaconStateCapella{}
+		rawFile, err := os.ReadFile(sszPath) // #nosec G304
+		if err != nil {
 			log.Fatal(err)
 		}
-		st, err := state_native.InitializeFromProtoCapella(data)
+
+		startDeserialize := time.Now()
+		if err := st.UnmarshalSSZ(rawFile); err != nil {
+			log.Fatal(err)
+		}
+		deserializeDuration := time.Since(startDeserialize)
+
+		stateTrieState, err := state_native.InitializeFromProtoCapella(st)
 		if err != nil {
-			log.Fatal("not a state")
+			log.Fatal(err)
 		}
 		start := time.Now()
-		root, err := st.HashTreeRoot(context.Background())
+		root, err := stateTrieState.HashTreeRoot(context.Background())
 		if err != nil {
 			log.Fatal("couldn't hash")
 		}
-		fmt.Printf("Duration: %v HTR: %#x\n", time.Since(start), root)
+		fmt.Printf("Deserialize Duration: %v, Hashing Duration: %v HTR: %#x\n", deserializeDuration, time.Since(start), root)
 		return
 	default:
 		log.Fatal("Invalid type")
