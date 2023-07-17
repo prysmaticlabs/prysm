@@ -172,6 +172,20 @@ func V1Alpha1BeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.BeaconBlockDeneb) (*
 	return v2Block, nil
 }
 
+// V2BeaconBlockDenebToV1Alpha1 converts a v2 Deneb beacon block to a v1alpha1
+// Deneb block.
+func V2BeaconBlockDenebToV1Alpha1(v2block *ethpbv2.BeaconBlockDeneb) (*ethpbalpha.BeaconBlockDeneb, error) {
+	marshaledBlk, err := proto.Marshal(v2block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v1alpha1block := &ethpbalpha.BeaconBlockDeneb{}
+	if err := proto.Unmarshal(marshaledBlk, v1alpha1block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v1alpha1block, nil
+}
+
 // V1Alpha1BlobSidecarsToV2 converts an array of v1alpha1 blinded blob sidecars to its v2 equivalent.
 func V1Alpha1BlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlobSidecar) ([]*ethpbv2.BlobSidecar, error) {
 	v2Blobs := make([]*ethpbv2.BlobSidecar, len(v1alpha1Blobs))
@@ -208,16 +222,16 @@ func V1Alpha1BlindedBlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlindedBlobSide
 
 // V1Alpha1BeaconBlockDenebAndBlobsToV2 converts a v1alpha1 Deneb beacon block and blobs to a v2
 // Deneb block.
-func V1Alpha1BeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.BeaconBlockAndBlobsDeneb) (*ethpbv2.BeaconBlockAndBlobsDeneb, error) {
-	marshaledBlkandBlobs, err := proto.Marshal(v1alpha1Block)
+func V1Alpha1BeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.BeaconBlockAndBlobsDeneb) (*ethpbv2.BeaconBlockContentsDeneb, error) {
+	v2Block, err := V1Alpha1BeaconBlockDenebToV2(v1alpha1Block.Block)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal block")
+		return nil, errors.Wrap(err, "could not convert block")
 	}
-	v2BlocknBlobs := &ethpbv2.BeaconBlockAndBlobsDeneb{}
-	if err := proto.Unmarshal(marshaledBlkandBlobs, v2BlocknBlobs); err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal block")
+	v2Blobs, err := V1Alpha1BlobSidecarsToV2(v1alpha1Block.Blobs)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert blobs")
 	}
-	return v2BlocknBlobs, nil
+	return &ethpbv2.BeaconBlockContentsDeneb{Block: v2Block, BlobSidecars: v2Blobs}, nil
 }
 
 // V1Alpha1BlindedBlockAndBlobsDenebToV2Blinded converts a v1alpha1 Deneb blinded beacon block and blobs to v2 blinded block contents.

@@ -60,11 +60,6 @@ message BeaconBlockContainerV2 {
   }
 }
 
-message BeaconBlockAndBlobsDeneb {
-    BeaconBlockDeneb block = 1;
-    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "4"];
-}
-
 message SignedBeaconBlockContainer {
   oneof message {
     v1.BeaconBlock phase0_block = 1;
