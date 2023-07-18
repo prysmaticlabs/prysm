@@ -19,8 +19,8 @@ type Value[V any] struct {
 	ids []uuid.UUID
 }
 
-// MultiValue defines a collection of Value items.
-type MultiValue[V any] struct {
+// MultiValueItem defines a collection of Value items.
+type MultiValueItem[V any] struct {
 	Values []*Value[V]
 }
 
@@ -32,8 +32,8 @@ type MultiValue[V any] struct {
 //     values should be accessed.
 type Slice[V comparable, O interfaces.Identifiable] struct {
 	sharedItems     []V
-	individualItems map[uint64]*MultiValue[V]
-	appendedItems   []*MultiValue[V]
+	individualItems map[uint64]*MultiValueItem[V]
+	appendedItems   []*MultiValueItem[V]
 	cachedLengths   map[uuid.UUID]int
 	lock            sync.RWMutex
 }
@@ -41,8 +41,8 @@ type Slice[V comparable, O interfaces.Identifiable] struct {
 // Init initializes the slice with sensible defaults. Input values are assigned to shared items.
 func (s *Slice[V, O]) Init(items []V) {
 	s.sharedItems = items
-	s.individualItems = map[uint64]*MultiValue[V]{}
-	s.appendedItems = []*MultiValue[V]{}
+	s.individualItems = map[uint64]*MultiValueItem[V]{}
+	s.appendedItems = []*MultiValueItem[V]{}
 	s.cachedLengths = map[uuid.UUID]int{}
 }
 
@@ -65,10 +65,9 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 
 	for _, item := range s.individualItems {
 		for _, v := range item.Values {
-			found := compareIds(v.ids, src.Id(), func(_ int) {
-				v.ids = append(v.ids, dst.Id())
-			})
+			_, found := containsId(v.ids, src.Id())
 			if found {
+				v.ids = append(v.ids, dst.Id())
 				break
 			}
 		}
@@ -78,10 +77,9 @@ appendedLoop:
 	for _, item := range s.appendedItems {
 		found := false
 		for _, v := range item.Values {
-			found = compareIds(v.ids, src.Id(), func(_ int) {
-				v.ids = append(v.ids, dst.Id())
-			})
+			_, found = containsId(v.ids, src.Id())
 			if found {
+				v.ids = append(v.ids, dst.Id())
 				break
 			}
 		}
@@ -111,10 +109,9 @@ func (s *Slice[V, O]) Value(obj O) []V {
 		} else {
 			found := false
 			for _, v := range ind.Values {
-				found = compareIds(v.ids, obj.Id(), func(_ int) {
-					result[i] = v.val
-				})
+				_, found = containsId(v.ids, obj.Id())
 				if found {
+					result[i] = v.val
 					break
 				}
 			}
@@ -127,10 +124,9 @@ func (s *Slice[V, O]) Value(obj O) []V {
 	for _, item := range s.appendedItems {
 		found := false
 		for _, v := range item.Values {
-			found = compareIds(v.ids, obj.Id(), func(_ int) {
-				result = append(result, v.val)
-			})
+			_, found = containsId(v.ids, obj.Id())
 			if found {
+				result = append(result, v.val)
 				break
 			}
 		}
@@ -199,17 +195,16 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 		if ok {
 			for mvi, v := range ind.Values {
 				// if we find an existing value, we remove it
-				found := compareIds(v.ids, obj.Id(), func(index int) {
+				foundIndex, found := containsId(v.ids, obj.Id())
+				if found {
 					if len(v.ids) == 1 {
 						// There is an improvement to be made here. If len(ind.Values) == 1,
 						// then after removing the item from the slice s.individualItems[i]
 						// will be a useless map entry whose value is an empty slice.
 						ind.Values = deleteElemFromSlice(ind.Values, mvi)
 					} else {
-						v.ids = deleteElemFromSlice(v.ids, index)
+						v.ids = deleteElemFromSlice(v.ids, foundIndex)
 					}
-				})
-				if found {
 					break
 				}
 			}
@@ -220,7 +215,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 		}
 
 		if !ok {
-			s.individualItems[index] = &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}}
+			s.individualItems[index] = &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}}
 		} else {
 			newValue := true
 			for _, v := range ind.Values {
@@ -238,15 +233,15 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 		item := s.appendedItems[index-uint64(len(s.sharedItems))]
 		found := false
 		for vi, v := range item.Values {
+			var foundIndex int
 			// if we find an existing value, we remove it
-			found = compareIds(v.ids, obj.Id(), func(index int) {
+			foundIndex, found = containsId(v.ids, obj.Id())
+			if found {
 				if len(v.ids) == 1 {
 					item.Values = deleteElemFromSlice(item.Values, vi)
 				} else {
-					v.ids = deleteElemFromSlice(v.ids, index)
+					v.ids = deleteElemFromSlice(v.ids, foundIndex)
 				}
-			})
-			if found {
 				break
 			}
 		}
@@ -276,7 +271,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 	defer s.lock.Unlock()
 
 	if len(s.appendedItems) == 0 {
-		s.appendedItems = append(s.appendedItems, &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
+		s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
 		s.cachedLengths[obj.Id()] = len(s.sharedItems) + 1
 		return
 	}
@@ -284,7 +279,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 	for _, item := range s.appendedItems {
 		found := false
 		for _, v := range item.Values {
-			found = compareIds(v.ids, obj.Id(), nil)
+			_, found = containsId(v.ids, obj.Id())
 			if found {
 				break
 			}
@@ -313,7 +308,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 		}
 	}
 
-	s.appendedItems = append(s.appendedItems, &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
+	s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
 
 	s.cachedLengths[obj.Id()] = s.cachedLengths[obj.Id()] + 1
 }
@@ -326,7 +321,8 @@ func (s *Slice[V, O]) Detach(obj O) {
 
 	for i, ind := range s.individualItems {
 		for vi, v := range ind.Values {
-			found := compareIds(v.ids, obj.Id(), func(index int) {
+			foundIndex, found := containsId(v.ids, obj.Id())
+			if found {
 				if len(v.ids) == 1 {
 					if len(ind.Values) == 1 {
 						delete(s.individualItems, i)
@@ -334,10 +330,8 @@ func (s *Slice[V, O]) Detach(obj O) {
 						ind.Values = deleteElemFromSlice(ind.Values, vi)
 					}
 				} else {
-					v.ids = deleteElemFromSlice(v.ids, index)
+					v.ids = deleteElemFromSlice(v.ids, foundIndex)
 				}
-			})
-			if found {
 				break
 			}
 		}
@@ -346,14 +340,14 @@ func (s *Slice[V, O]) Detach(obj O) {
 	for _, item := range s.appendedItems {
 		found := false
 		for vi, v := range item.Values {
-			found = compareIds(v.ids, obj.Id(), func(index int) {
+			var foundIndex int
+			foundIndex, found = containsId(v.ids, obj.Id())
+			if found {
 				if len(v.ids) == 1 {
 					item.Values = deleteElemFromSlice(item.Values, vi)
 				} else {
-					v.ids = deleteElemFromSlice(v.ids, index)
+					v.ids = deleteElemFromSlice(v.ids, foundIndex)
 				}
-			})
-			if found {
 				break
 			}
 		}
@@ -367,17 +361,13 @@ func (s *Slice[V, O]) Detach(obj O) {
 	delete(s.cachedLengths, obj.Id())
 }
 
-// compareIds executes a custom action when the wanted ID is found. It returns whether the ID was found.
-func compareIds(ids []uuid.UUID, wanted uuid.UUID, action func(index int)) bool {
+func containsId(ids []uuid.UUID, wanted uuid.UUID) (int, bool) {
 	for i, id := range ids {
 		if id == wanted {
-			if action != nil {
-				action(i)
-			}
-			return true
+			return i, true
 		}
 	}
-	return false
+	return 0, false
 }
 
 // deleteElemFromSlice does not relocate the slice, but it also does not preserve the order of items.

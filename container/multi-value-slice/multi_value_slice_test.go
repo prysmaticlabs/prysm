@@ -56,7 +56,7 @@ func TestCopy(t *testing.T) {
 
 	s.Copy(src, dst)
 
-	assert.Equal(t, (*MultiValue[int])(nil), dst.slice.individualItems[0])
+	assert.Equal(t, (*MultiValueItem[int])(nil), dst.slice.individualItems[0])
 	assertIndividualFound(t, s, dst.id, 1, 1)
 	assertIndividualFound(t, s, dst.id, 2, 3)
 	assertIndividualFound(t, s, dst.id, 3, 1)
@@ -336,7 +336,7 @@ func TestDetach(t *testing.T) {
 func setup() *Slice[int, *testObject] {
 	s := &Slice[int, *testObject]{}
 	s.Init([]int{123, 123, 123, 123, 123})
-	s.individualItems[1] = &MultiValue[int]{
+	s.individualItems[1] = &MultiValueItem[int]{
 		Values: []*Value[int]{
 			{
 				val: 1,
@@ -348,7 +348,7 @@ func setup() *Slice[int, *testObject] {
 			},
 		},
 	}
-	s.individualItems[2] = &MultiValue[int]{
+	s.individualItems[2] = &MultiValueItem[int]{
 		Values: []*Value[int]{
 			{
 				val: 3,
@@ -356,7 +356,7 @@ func setup() *Slice[int, *testObject] {
 			},
 		},
 	}
-	s.individualItems[3] = &MultiValue[int]{
+	s.individualItems[3] = &MultiValueItem[int]{
 		Values: []*Value[int]{
 			{
 				val: 1,
@@ -364,7 +364,7 @@ func setup() *Slice[int, *testObject] {
 			},
 		},
 	}
-	s.individualItems[4] = &MultiValue[int]{
+	s.individualItems[4] = &MultiValueItem[int]{
 		Values: []*Value[int]{
 			{
 				val: 2,
@@ -372,7 +372,7 @@ func setup() *Slice[int, *testObject] {
 			},
 		},
 	}
-	s.appendedItems = []*MultiValue[int]{
+	s.appendedItems = []*MultiValueItem[int]{
 		{
 			Values: []*Value[int]{
 				{
@@ -473,7 +473,7 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("100,000 equal individual items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _100k))
-		s.individualItems[0] = &MultiValue[int]{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}
+		s.individualItems[0] = &MultiValueItem[int]{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}
 		objs := make([]*testObject, _100k)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
@@ -491,7 +491,7 @@ func BenchmarkValue(b *testing.B) {
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
 			objs[i] = &testObject{id: id, slice: s}
-			s.individualItems[uint64(i)] = &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}}
+			s.individualItems[uint64(i)] = &MultiValueItem[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}}
 		}
 		for i := 0; i < b.N; i++ {
 			s.Value(objs[rand.Intn(_100k)])
@@ -500,7 +500,7 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("100,000 shared items and 100,000 equal appended items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _100k))
-		s.appendedItems = []*MultiValue[int]{{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}}
+		s.appendedItems = []*MultiValueItem[int]{{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}}
 		objs := make([]*testObject, _100k)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
@@ -514,12 +514,12 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("100,000 shared items and 100,000 different appended items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _100k))
-		s.appendedItems = []*MultiValue[int]{}
+		s.appendedItems = []*MultiValueItem[int]{}
 		objs := make([]*testObject, _100k)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
 			objs[i] = &testObject{id: id, slice: s}
-			s.appendedItems = append(s.appendedItems, &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}})
+			s.appendedItems = append(s.appendedItems, &MultiValueItem[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}})
 		}
 		for i := 0; i < b.N; i++ {
 			s.Value(objs[rand.Intn(_100k)])
@@ -535,7 +535,7 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("1,000,000 equal individual items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _1m))
-		s.individualItems[0] = &MultiValue[int]{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}
+		s.individualItems[0] = &MultiValueItem[int]{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}
 		objs := make([]*testObject, _1m)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
@@ -553,7 +553,7 @@ func BenchmarkValue(b *testing.B) {
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
 			objs[i] = &testObject{id: id, slice: s}
-			s.individualItems[uint64(i)] = &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}}
+			s.individualItems[uint64(i)] = &MultiValueItem[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}}
 		}
 		for i := 0; i < b.N; i++ {
 			s.Value(objs[rand.Intn(_1m)])
@@ -562,7 +562,7 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("1,000,000 shared items and 1,000,000 equal appended items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _1m))
-		s.appendedItems = []*MultiValue[int]{{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}}
+		s.appendedItems = []*MultiValueItem[int]{{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}}
 		objs := make([]*testObject, _1m)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
@@ -576,12 +576,12 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("1,000,000 shared items and 1,000,000 different appended items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _1m))
-		s.appendedItems = []*MultiValue[int]{}
+		s.appendedItems = []*MultiValueItem[int]{}
 		objs := make([]*testObject, _1m)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
 			objs[i] = &testObject{id: id, slice: s}
-			s.appendedItems = append(s.appendedItems, &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}})
+			s.appendedItems = append(s.appendedItems, &MultiValueItem[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}})
 		}
 		for i := 0; i < b.N; i++ {
 			s.Value(objs[rand.Intn(_1m)])
@@ -597,7 +597,7 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("10,000,000 equal individual items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _10m))
-		s.individualItems[0] = &MultiValue[int]{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}
+		s.individualItems[0] = &MultiValueItem[int]{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}
 		objs := make([]*testObject, _10m)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
@@ -615,7 +615,7 @@ func BenchmarkValue(b *testing.B) {
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
 			objs[i] = &testObject{id: id, slice: s}
-			s.individualItems[uint64(i)] = &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}}
+			s.individualItems[uint64(i)] = &MultiValueItem[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}}
 		}
 		for i := 0; i < b.N; i++ {
 			s.Value(objs[rand.Intn(_10m)])
@@ -624,7 +624,7 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("10,000,000 shared items and 10,000,000 equal appended items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _10m))
-		s.appendedItems = []*MultiValue[int]{{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}}
+		s.appendedItems = []*MultiValueItem[int]{{Values: []*Value[int]{{val: 999, ids: []uuid.UUID{}}}}}
 		objs := make([]*testObject, _10m)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
@@ -638,12 +638,12 @@ func BenchmarkValue(b *testing.B) {
 	b.Run("10,000,000 shared items and 10,000,000 different appended items", func(b *testing.B) {
 		s := &Slice[int, *testObject]{}
 		s.Init(make([]int, _10m))
-		s.appendedItems = []*MultiValue[int]{}
+		s.appendedItems = []*MultiValueItem[int]{}
 		objs := make([]*testObject, _10m)
 		for i := 0; i < len(objs); i++ {
 			id := uuid.New()
 			objs[i] = &testObject{id: id, slice: s}
-			s.appendedItems = append(s.appendedItems, &MultiValue[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}})
+			s.appendedItems = append(s.appendedItems, &MultiValueItem[int]{Values: []*Value[int]{{val: i, ids: []uuid.UUID{id}}}})
 		}
 		for i := 0; i < b.N; i++ {
 			s.Value(objs[rand.Intn(_10m)])
