@@ -659,49 +659,55 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 	var execBlocks []*pb.ExecutionBlock
 	var payloadBodies []*pb.ExecutionPayloadBodyV1
 	var err error
-	if features.Get().EnableOptionalEngineMethods {
-		payloadBodies, err = s.GetPayloadBodiesByHash(ctx, executionHashes)
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch payload bodies by hash %#x: %v", executionHashes, err)
-		}
-	} else {
-		execBlocks, err = s.ExecutionBlocksByHashes(ctx, executionHashes, true /* with txs*/)
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch execution blocks with txs by hash %#x: %v", executionHashes, err)
-		}
+	payloadBodies, err = s.GetPayloadBodiesByHash(ctx, executionHashes)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch payload bodies by hash %#x: %v", executionHashes, err)
+	}
+	execBlocks, err = s.ExecutionBlocksByHashes(ctx, executionHashes, true /* with txs*/)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch execution blocks with txs by hash %#x: %v", executionHashes, err)
 	}
 
 	// For each valid payload, we reconstruct the full block from it with the
 	// blinded block.
 	for sliceIdx, realIdx := range validExecPayloads {
 		var payload interfaces.ExecutionData
-		if features.Get().EnableOptionalEngineMethods {
-			b := payloadBodies[sliceIdx]
-			if b == nil {
-				return nil, fmt.Errorf("received nil payload body for request by hash %#x", executionHashes[sliceIdx])
-			}
-			header, err := blindedBlocks[realIdx].Block().Body().Execution()
-			if err != nil {
-				return nil, err
-			}
-			payload, err = fullPayloadFromPayloadBody(header, b, blindedBlocks[realIdx].Version())
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			b := execBlocks[sliceIdx]
-			if b == nil {
-				return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
-			}
-			header, err := blindedBlocks[realIdx].Block().Body().Execution()
-			if err != nil {
-				return nil, err
-			}
-			payload, err = fullPayloadFromExecutionBlock(header, b)
-			if err != nil {
-				return nil, err
-			}
+		b := payloadBodies[sliceIdx]
+		if b == nil {
+			return nil, fmt.Errorf("received nil payload body for request by hash %#x", executionHashes[sliceIdx])
 		}
+		header, err := blindedBlocks[realIdx].Block().Body().Execution()
+		if err != nil {
+			return nil, err
+		}
+		payload, err = fullPayloadFromPayloadBody(header, b, blindedBlocks[realIdx].Version())
+		if err != nil {
+			return nil, err
+		}
+		blk := execBlocks[sliceIdx]
+		if blk == nil {
+			return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
+		}
+		header, err = blindedBlocks[realIdx].Block().Body().Execution()
+		if err != nil {
+			return nil, err
+		}
+		nPayload, err := fullPayloadFromExecutionBlock(header, b)
+		if err != nil {
+			return nil, err
+		}
+		rt, err := payload.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		nRt, err := nPayload.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		if rt != nRt {
+			return nil, errors.Errorf("different roots %#x and %#x for slot %d", rt, nRt, blindedBlocks[realIdx].Block().Slot())
+		}
+
 		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload.Proto())
 		if err != nil {
 			return nil, err
