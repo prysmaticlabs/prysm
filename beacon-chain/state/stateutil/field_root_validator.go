@@ -3,6 +3,8 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
+	"runtime"
+	"sync"
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -51,6 +53,19 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	return res, nil
 }
 
+func hashValidatorHelper(validators []*ethpb.Validator, roots [][32]byte, j int, groupSize int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for i := 0; i < groupSize; i++ {
+		fRoots, err := ValidatorFieldRoots(validators[j*groupSize+i])
+		if err != nil {
+			return
+		}
+		for k, root := range fRoots {
+			roots[(j*groupSize+i)*validatorFieldRoots+k] = root
+		}
+	}
+}
+
 // OptimizedValidatorRoots uses an optimized routine with gohashtree in order to
 // derive a list of validator roots from a list of validator objects.
 func OptimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
@@ -58,14 +73,25 @@ func OptimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) 
 	if len(validators) == 0 {
 		return [][32]byte{}, nil
 	}
-	roots := make([][32]byte, 0, len(validators)*validatorFieldRoots)
-	for i := 0; i < len(validators); i++ {
+	wg := sync.WaitGroup{}
+	n := runtime.GOMAXPROCS(0)
+	rootsSize := len(validators) * validatorFieldRoots
+	groupSize := len(validators) / n
+	roots := make([][32]byte, rootsSize)
+	wg.Add(n - 1)
+	for j := 0; j < n-1; j++ {
+		go hashValidatorHelper(validators, roots, j, groupSize, &wg)
+	}
+	for i := (n - 1) * groupSize; i < len(validators); i++ {
 		fRoots, err := ValidatorFieldRoots(validators[i])
 		if err != nil {
 			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
-		roots = append(roots, fRoots...)
+		for k, root := range fRoots {
+			roots[i*validatorFieldRoots+k] = root
+		}
 	}
+	wg.Wait()
 
 	// A validator's tree can represented with a depth of 3. As log2(8) = 3
 	// Using this property we can lay out all the individual fields of a
