@@ -1,10 +1,9 @@
 package interfaces
 
-// Id is an object identifier.
-type Id = uint64
+import "github.com/google/uuid"
 
 // Identifiable represents an object that can be uniquely identified by its Id.
 type Identifiable interface {
-	Id() Id
-	SetId(id uint64)
+	Id() uuid.UUID
+	SetId(id uuid.UUID)
 }

@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/v4/container/multi-value-slice/interfaces"
 )
 
 // MultiValueSlice defines an abstraction over all concrete implementations of the generic Slice.
 type MultiValueSlice[O interfaces.Identifiable] interface {
-	Len(obj O) int
+	Len(obj O) uuid.UUID
 }
 
 // Value defines a single value along with one or more IDs that share this value.
 type Value[V any] struct {
 	val V
-	ids []interfaces.Id
+	ids []uuid.UUID
 }
 
 // MultiValue defines a collection of Value items.
@@ -33,16 +34,16 @@ type Slice[V comparable, O interfaces.Identifiable] struct {
 	sharedItems     []V
 	individualItems map[uint64]*MultiValue[V]
 	appendedItems   []*MultiValue[V]
-	cachedLengths   map[interfaces.Id]int
+	cachedLengths   map[uuid.UUID]int
 	lock            sync.RWMutex
 }
 
 // Init initializes the slice with sensible defaults. Input values are assigned to shared items.
 func (s *Slice[V, O]) Init(items []V) {
 	s.sharedItems = items
-	s.individualItems = map[interfaces.Id]*MultiValue[V]{}
+	s.individualItems = map[uint64]*MultiValue[V]{}
 	s.appendedItems = []*MultiValue[V]{}
-	s.cachedLengths = map[interfaces.Id]int{}
+	s.cachedLengths = map[uuid.UUID]int{}
 }
 
 // Len returns the number of items for the input object.
@@ -219,7 +220,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 		}
 
 		if !ok {
-			s.individualItems[index] = &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}}
+			s.individualItems[index] = &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}}
 		} else {
 			newValue := true
 			for _, v := range ind.Values {
@@ -230,7 +231,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 				}
 			}
 			if newValue {
-				ind.Values = append(ind.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
+				ind.Values = append(ind.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
 			}
 		}
 	} else {
@@ -262,7 +263,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 			}
 		}
 		if newValue {
-			item.Values = append(item.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
+			item.Values = append(item.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
 		}
 	}
 
@@ -275,7 +276,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 	defer s.lock.Unlock()
 
 	if len(s.appendedItems) == 0 {
-		s.appendedItems = append(s.appendedItems, &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}})
+		s.appendedItems = append(s.appendedItems, &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
 		s.cachedLengths[obj.Id()] = len(s.sharedItems) + 1
 		return
 	}
@@ -298,7 +299,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 				}
 			}
 			if newValue {
-				item.Values = append(item.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
+				item.Values = append(item.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
 			}
 
 			l, ok := s.cachedLengths[obj.Id()]
@@ -312,7 +313,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 		}
 	}
 
-	s.appendedItems = append(s.appendedItems, &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}})
+	s.appendedItems = append(s.appendedItems, &MultiValue[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
 
 	s.cachedLengths[obj.Id()] = s.cachedLengths[obj.Id()] + 1
 }
@@ -367,7 +368,7 @@ func (s *Slice[V, O]) Detach(obj O) {
 }
 
 // compareIds executes a custom action when the wanted ID is found. It returns whether the ID was found.
-func compareIds(ids []interfaces.Id, wanted interfaces.Id, action func(index int)) bool {
+func compareIds(ids []uuid.UUID, wanted uuid.UUID, action func(index int)) bool {
 	for i, id := range ids {
 		if id == wanted {
 			if action != nil {
