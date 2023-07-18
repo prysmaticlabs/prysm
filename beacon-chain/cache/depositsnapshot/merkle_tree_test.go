@@ -8,7 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -92,7 +92,7 @@ func Test_fromSnapshotParts(t *testing.T) {
 			require.Equal(t, want, got)
 
 			// Test finalization
-			err = test.finalize(&v1.Eth1Data{
+			err = test.Finalize(&ethpb.Eth1Data{
 				DepositCount: 2,
 			}, DepositContractDepth)
 			require.NoError(t, err)

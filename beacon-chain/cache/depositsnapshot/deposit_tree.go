@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/math"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 var (
@@ -82,8 +82,8 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (*DepositTree, error) {
 	}, nil
 }
 
-// finalize marks a deposit as finalized.
-func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) error {
+// Finalize marks a deposit as finalized.
+func (d *DepositTree) Finalize(eth1data *ethpb.Eth1Data, executionBlockHeight uint64) error {
 	var blockHash [32]byte
 	copy(blockHash[:], eth1data.BlockHash)
 	d.finalizedExecutionBlock = executionBlock{
@@ -137,7 +137,7 @@ func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 }
 
 // Insert is defined as part of MerkleTree interface and adds a new leaf to the tree.
-func (d *DepositTree) Insert(item []byte, index int) error {
+func (d *DepositTree) Insert(item []byte, _ int) error {
 	var err error
 	var leaf [32]byte
 	copy(leaf[:], item[:32])
