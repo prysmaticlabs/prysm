@@ -297,9 +297,6 @@ func (s *Service) ExchangeTransitionConfiguration(
 }
 
 func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
-	if !features.Get().EnableOptionalEngineMethods {
-		return nil, errors.New("optional engine methods not enabled")
-	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeCapabilities")
 	defer span.End()
 
@@ -510,9 +507,6 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 
 // GetPayloadBodiesByRange returns the relevant payload bodies for the provided range.
 func (s *Service) GetPayloadBodiesByRange(ctx context.Context, start, count uint64) ([]*pb.ExecutionPayloadBodyV1, error) {
-	if !features.Get().EnableOptionalEngineMethods {
-		return nil, errors.New("optional engine methods not enabled")
-	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByRangeV1")
 	defer span.End()
 
