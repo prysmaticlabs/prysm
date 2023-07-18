@@ -204,9 +204,9 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 						// There is an improvement to be made here. If len(ind.Values) == 1,
 						// then after removing the item from the slice s.individualItems[i]
 						// will be a useless map entry whose value is an empty slice.
-						ind.Values = append(ind.Values[:mvi], ind.Values[mvi+1:]...)
+						ind.Values = deleteElemFromSlice(ind.Values, mvi)
 					} else {
-						v.ids = append(v.ids[:index], v.ids[index+1:]...)
+						v.ids = deleteElemFromSlice(v.ids, index)
 					}
 				})
 				if found {
@@ -241,9 +241,9 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 			// if we find an existing value, we remove it
 			found = compareIds(v.ids, obj.Id(), func(index int) {
 				if len(v.ids) == 1 {
-					item.Values = append(item.Values[:vi], item.Values[vi+1:]...)
+					item.Values = deleteElemFromSlice(item.Values, vi)
 				} else {
-					v.ids = append(v.ids[:index], v.ids[index+1:]...)
+					v.ids = deleteElemFromSlice(v.ids, index)
 				}
 			})
 			if found {
@@ -331,10 +331,10 @@ func (s *Slice[V, O]) Detach(obj O) {
 					if len(ind.Values) == 1 {
 						delete(s.individualItems, i)
 					} else {
-						ind.Values = append(ind.Values[:vi], ind.Values[vi+1:]...)
+						ind.Values = deleteElemFromSlice(ind.Values, vi)
 					}
 				} else {
-					v.ids = append(v.ids[:index], v.ids[index+1:]...)
+					v.ids = deleteElemFromSlice(v.ids, index)
 				}
 			})
 			if found {
@@ -348,9 +348,9 @@ func (s *Slice[V, O]) Detach(obj O) {
 		for vi, v := range item.Values {
 			found = compareIds(v.ids, obj.Id(), func(index int) {
 				if len(v.ids) == 1 {
-					item.Values = append(item.Values[:vi], item.Values[vi+1:]...)
+					item.Values = deleteElemFromSlice(item.Values, vi)
 				} else {
-					v.ids = append(v.ids[:index], v.ids[index+1:]...)
+					v.ids = deleteElemFromSlice(v.ids, index)
 				}
 			})
 			if found {
@@ -378,4 +378,12 @@ func compareIds(ids []uuid.UUID, wanted uuid.UUID, action func(index int)) bool 
 		}
 	}
 	return false
+}
+
+// deleteElemFromSlice does not relocate the slice, but it also does not preserve the order of items.
+// This is not a problem here because the order of individual values and object IDs doesn't matter.
+func deleteElemFromSlice[T any](s []T, i int) []T {
+	s[i] = s[len(s)-1] // Copy last element to index i.
+	s = s[:len(s)-1]   // Truncate slice.
+	return s
 }
