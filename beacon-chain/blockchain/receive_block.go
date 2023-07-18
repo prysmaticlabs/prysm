@@ -75,13 +75,13 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return errors.Wrap(err, "could not notify the engine of the new payload")
 	}
-	if err := s.savePostStateInfo(ctx, blockRoot, blockCopy, postState); err != nil {
-		return errors.Wrap(err, "could not save post state info")
-	}
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	// Apply state transition on the new block.
+	if err := s.savePostStateInfo(ctx, blockRoot, blockCopy, postState); err != nil {
+		return errors.Wrap(err, "could not save post state info")
+	}
+
 	if err := s.postBlockProcess(ctx, blockCopy, blockRoot, postState, isValidPayload); err != nil {
 		err := errors.Wrap(err, "could not process block")
 		tracing.AnnotateError(span, err)
@@ -101,8 +101,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 		go s.sendNewFinalizedEvent(ctx, blockCopy, postState, finalized)
 		depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
-		defer cancel()
-		go s.insertFinalizedDeposits(depCtx, finalized.Root)
+		go func() {
+			s.insertFinalizedDeposits(depCtx, finalized.Root)
+			cancel()
+		}()
 	}
 
 	// If slasher is configured, forward the attestations in the block via an event feed for processing.

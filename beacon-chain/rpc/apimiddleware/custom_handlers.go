@@ -12,18 +12,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/r3labs/sse"
-)
-
-const (
-	versionHeader        = "Eth-Consensus-Version"
-	grpcVersionHeader    = "Grpc-metadata-Eth-Consensus-Version"
-	jsonMediaType        = "application/json"
-	octetStreamMediaType = "application/octet-stream"
 )
 
 // match a number with optional decimals
@@ -223,7 +217,7 @@ func sszRequested(req *http.Request) (bool, error) {
 	for _, t := range types {
 		values := strings.Split(t, ";")
 		name := values[0]
-		if name != jsonMediaType && name != octetStreamMediaType {
+		if name != api.JsonMediaType && name != api.OctetStreamMediaType {
 			continue
 		}
 		// no params specified
@@ -248,7 +242,7 @@ func sszRequested(req *http.Request) (bool, error) {
 		}
 	}
 
-	return currentType == octetStreamMediaType, nil
+	return currentType == api.OctetStreamMediaType, nil
 }
 
 func sszPosted(req *http.Request) bool {
@@ -259,7 +253,7 @@ func sszPosted(req *http.Request) bool {
 	if len(ct) != 1 {
 		return false
 	}
-	return ct[0] == octetStreamMediaType
+	return ct[0] == api.OctetStreamMediaType
 }
 
 func prepareSSZRequestForProxying(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, req *http.Request) apimiddleware.ErrorJson {
@@ -278,10 +272,10 @@ func prepareSSZRequestForProxying(m *apimiddleware.ApiProxyMiddleware, endpoint 
 }
 
 func prepareCustomHeaders(req *http.Request) {
-	ver := req.Header.Get(versionHeader)
+	ver := req.Header.Get(api.VersionHeader)
 	if ver != "" {
-		req.Header.Del(versionHeader)
-		req.Header.Add(grpcVersionHeader, ver)
+		req.Header.Del(api.VersionHeader)
+		req.Header.Add(grpc.WithPrefix(api.VersionHeader), ver)
 	}
 }
 
@@ -297,7 +291,7 @@ func preparePostedSSZData(req *http.Request) apimiddleware.ErrorJson {
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(data))
 	req.ContentLength = int64(len(data))
-	req.Header.Set("Content-Type", jsonMediaType)
+	req.Header.Set("Content-Type", api.JsonMediaType)
 	return nil
 }
 
@@ -325,9 +319,9 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 		}
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
-	w.Header().Set("Content-Type", octetStreamMediaType)
+	w.Header().Set("Content-Type", api.OctetStreamMediaType)
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
-	w.Header().Set(versionHeader, respVersion)
+	w.Header().Set(api.VersionHeader, respVersion)
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {

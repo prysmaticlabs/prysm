@@ -2,6 +2,7 @@ package bytesutil_test
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -247,4 +248,34 @@ func TestFromBytes48Array(t *testing.T) {
 		a := bytesutil.FromBytes48Array(tt.b)
 		assert.DeepEqual(t, tt.a, a)
 	}
+}
+
+func TestSafeCopyBytes_Copy(t *testing.T) {
+	slice := make([]byte, 32)
+	slice[0] = 'A'
+
+	copiedSlice := bytesutil.SafeCopyBytes(slice)
+
+	assert.NotEqual(t, fmt.Sprintf("%p", slice), fmt.Sprintf("%p", copiedSlice))
+	assert.Equal(t, slice[0], copiedSlice[0])
+	slice[1] = 'B'
+
+	assert.NotEqual(t, slice[1], copiedSlice[1])
+}
+
+func BenchmarkSafeCopyBytes(b *testing.B) {
+	dSlice := make([][]byte, 900000)
+	for i := 0; i < 900000; i++ {
+		slice := make([]byte, 32)
+		slice[0] = 'A'
+		dSlice[i] = slice
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.Run("Copy Bytes", func(b *testing.B) {
+		cSlice := bytesutil.SafeCopy2dBytes(dSlice)
+		a := cSlice
+		_ = a
+	})
 }

@@ -41,7 +41,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 
 // postBlockProcess is called when a gossip block is received. This function performs
 // several duties most importantly informing the engine if head was updated,
-// saving the new head information to the blockchain package and database and
+// saving the new head information to the blockchain package and
 // handling attestations, slashings and similar included in the block.
 func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, postState state.BeaconState, isValidPayload bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
