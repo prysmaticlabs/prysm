@@ -219,8 +219,10 @@ func (s *Service) Start() {
 		Stater:                stater,
 		HeadFetcher:           s.cfg.HeadFetcher,
 	}
+
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/sync_committee/{block_id}", rewardsServer.SyncCommitteeRewards).Methods(http.MethodPost)
 
 	builderServer := &rpcBuilder.Server{
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
