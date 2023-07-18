@@ -710,7 +710,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 			_ = err
 			nwds, err := nPayload.Withdrawals()
 			_ = err
-			df, ok := messagediff.PrettyDiff(wds, nwds)
+			df, ok := messagediff.DeepDiff(wds, nwds)
 			_ = ok
 			return nil, errors.Errorf("different roots %#x and %#x for slot %d: %v", rt, nRt, blindedBlocks[realIdx].Block().Slot(), df)
 		}
