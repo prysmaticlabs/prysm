@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 var (
@@ -706,13 +705,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 			return nil, err
 		}
 		if rt != nRt {
-			wds, err := payload.Withdrawals()
-			_ = err
-			nwds, err := nPayload.Withdrawals()
-			_ = err
-			df, ok := messagediff.DeepDiff(wds, nwds)
-			_ = ok
-			return nil, errors.Errorf("different roots %#x and %#x for slot %d: %v", rt, nRt, blindedBlocks[realIdx].Block().Slot(), df)
+			return nil, errors.Errorf("different roots %#x and %#x for slot %d", rt, nRt, blindedBlocks[realIdx].Block().Slot())
 		}
 
 		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload.Proto())
