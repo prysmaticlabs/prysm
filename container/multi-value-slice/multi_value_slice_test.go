@@ -1,4 +1,4 @@
-package multi_value_slice
+package mvslice
 
 import (
 	"math/rand"

@@ -1,4 +1,40 @@
-package multi_value_slice
+// Package mvslice defines a multi value slice container. The purpose of the container is to be a replacement for a slice
+// in scenarios where many objects of the same type share a copy of an identical or nearly identical slice.
+// In such case using the multi value slice should result in less memory allocation because many values of the slice can be shared between objects.
+//
+// The multi value slice should be initialized by calling the Init function and passing the initial values of the slice.
+// After initializing the slice, it can be shared between object by using the Copy function.
+// Note that simply assigning the same multi value slice to several objects is not enough for it to work properly.
+// Calling Copy is required in most circumstances (an exception is when the source object has only shared values).
+//
+//	s := &Slice[int, *testObject]{}
+//	s.Init([]int{1, 2, 3})
+//	src := &testObject{id: id1, slice: s} // id1 is some UUID
+//	dst := &testObject{id: id2, slice: s} // id2 is some UUID
+//	s.Copy(src, dst)
+//
+// Each Value stores a value of type V along with identifiers to objects that have this value.
+// A MultiValueItem is a slice of Value elements. A Slice contains shared items, individual items and appended items.
+//
+// You can think of a shared value as the original value (i.e. the value at the point in time when the multi value slice was constructed),
+// and of an individual value as a changed value.
+// There is no notion of a shared appended value because appended values never have an original value (appended values are empty when the slice is created).
+//
+// Whenever any of the slice’s functions (apart from Init) is called, the function needs to know which object it is dealing with.
+// This is because if an object has an individual/appended value, the function must get/set/change this particular value instead of the shared value
+// or another individual/appended value.
+//
+// The way appended items are stored is as follows. Let’s say appended items were a regular slice that is initially empty,
+// and we append an item for object0 and then append another item for object1.
+// Now we have two items in the slice, but object1 only has an item in index 1. This makes things very confusing and hard to deal with.
+// If we make appended items a []*Value, things don’t become much better.
+// It is therefore easiest to make appended items a []*MultiValueItem, which allows each object to have its own values starting at index 0
+// and not having any “gaps”.
+//
+// The Detach function should be called when an object gets garbage collected.
+// Its purpose is to clean up the slice from individual/appended values of the collected object.
+// Otherwise the slice will get polluted with values for non-existing objects.
+package mvslice
 
 import (
 	"fmt"
@@ -141,8 +177,10 @@ func (s *Slice[V, O]) Value(obj O) []V {
 }
 
 // At returns the item at the requested index for the input object.
-// If the object has an individual value at that index, it will be returned. Otherwise the shared value will be returned.
-// If the object has an appended value at that index, it will be returned.
+// Appended items' indices are always larger than shared/individual items' indices.
+// We first check if the index is within the length of shared items.
+// If it is, then we return an individual value at that index - if it exists - or a shared value otherwise.
+// If the index is beyond the length of shared values, it is an appended item and that's what gets returned.
 func (s *Slice[V, O]) At(obj O, index uint64) (V, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
