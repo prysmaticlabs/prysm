@@ -692,7 +692,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 		if err != nil {
 			return nil, err
 		}
-		nPayload, err := fullPayloadFromExecutionBlock(header, blk)
+		nPayload, err := fullPayloadFromExecutionBlock(header, b)
 		if err != nil {
 			return nil, err
 		}
