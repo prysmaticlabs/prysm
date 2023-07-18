@@ -409,7 +409,7 @@ func containsId(ids []uuid.UUID, wanted uuid.UUID) (int, bool) {
 }
 
 // deleteElemFromSlice does not relocate the slice, but it also does not preserve the order of items.
-// This is not a problem here because the order of individual values and object IDs doesn't matter.
+// This is not a problem here because the order of values in a MultiValueItem and object IDs doesn't matter.
 func deleteElemFromSlice[T any](s []T, i int) []T {
 	s[i] = s[len(s)-1] // Copy last element to index i.
 	s = s[:len(s)-1]   // Truncate slice.
