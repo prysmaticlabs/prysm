@@ -239,10 +239,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
-  if ctx.IsSet(enableEIP4881.Name) {
+	if ctx.IsSet(enableEIP4881.Name) {
 		logEnabled(enableEIP4881)
 		cfg.EnableEIP4881 = true
-  }
+	}
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
