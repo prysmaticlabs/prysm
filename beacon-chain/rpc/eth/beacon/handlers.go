@@ -336,7 +336,6 @@ func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	} else {
 		publishBlockV2(bs, w, r)
 	}
-
 }
 
 func publishBlockV2SSZ(bs *Server, w http.ResponseWriter, r *http.Request) {
