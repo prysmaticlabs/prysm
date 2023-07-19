@@ -6,10 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	dbval "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/val"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
+	"google.golang.org/protobuf/proto"
 )
 
 // NewStatus correctly initializes a StatusUpdater value with the required database value.
@@ -28,7 +29,7 @@ type StatusUpdater struct {
 	sync.RWMutex
 	store       BackfillDB
 	genesisSync bool
-	status      dbval.BackfillStatus
+	status      *dbval.BackfillStatus
 }
 
 // SlotCovered determines if the given slot is covered by the current chain history.
@@ -59,7 +60,7 @@ func (s *StatusUpdater) FillFwd(ctx context.Context, newLow primitives.Slot, roo
 		return errors.Wrapf(ErrFillFwdPastUpper, "advance slot=%d, origin slot=%d", unl, status.HighSlot)
 	}
 	status.LowSlot = unl
-	status.LowRoot = root
+	status.LowRoot = root[:]
 	return s.updateStatus(ctx, status)
 }
 
@@ -72,7 +73,7 @@ func (s *StatusUpdater) FillBack(ctx context.Context, newHigh primitives.Slot, r
 		return errors.Wrapf(ErrFillBackPastLower, "advance slot=%d, origin slot=%d", unh, status.LowSlot)
 	}
 	status.HighSlot = unh
-	status.HighRoot = root
+	status.HighRoot = root[:]
 	return s.updateStatus(ctx, status)
 }
 
@@ -100,13 +101,13 @@ func (s *StatusUpdater) recoverLegacy(ctx context.Context) error {
 		return err
 	}
 	os := uint64(cpb.Block().Slot())
-	bs := dbval.BackfillStatus{
+	bs := &dbval.BackfillStatus{
 		HighSlot:   os,
-		HighRoot:   cpr,
+		HighRoot:   cpr[:],
 		LowSlot:    0,
-		LowRoot:    gbr,
+		LowRoot:    gbr[:],
 		OriginSlot: os,
-		OriginRoot: cpr,
+		OriginRoot: cpr[:],
 	}
 	return s.updateStatus(ctx, bs)
 }
@@ -122,10 +123,10 @@ func (s *StatusUpdater) Reload(ctx context.Context) error {
 	return s.updateStatus(ctx, status)
 }
 
-func (s *StatusUpdater) updateStatus(ctx context.Context, bs dbval.BackfillStatus) error {
+func (s *StatusUpdater) updateStatus(ctx context.Context, bs *dbval.BackfillStatus) error {
 	s.Lock()
 	defer s.Unlock()
-	if s.status == bs {
+	if proto.Equal(s.status, bs) {
 		return nil
 	}
 	if err := s.store.SaveBackfillStatus(ctx, bs); err != nil {
@@ -136,16 +137,16 @@ func (s *StatusUpdater) updateStatus(ctx context.Context, bs dbval.BackfillStatu
 	return nil
 }
 
-func (s *StatusUpdater) Status() dbval.BackfillStatus {
+func (s *StatusUpdater) Status() *dbval.BackfillStatus {
 	s.RLock()
 	defer s.RUnlock()
-	return s.status
+	return proto.Clone(s.status).(*dbval.BackfillStatus)
 }
 
 // BackfillDB describes the set of DB methods that the StatusUpdater type needs to function.
 type BackfillDB interface {
-	SaveBackfillStatus(context.Context, dbval.BackfillStatus) error
-	BackfillStatus(context.Context) (dbval.BackfillStatus, error)
+	SaveBackfillStatus(context.Context, *dbval.BackfillStatus) error
+	BackfillStatus(context.Context) (*dbval.BackfillStatus, error)
 	OriginCheckpointBlockRoot(context.Context) ([32]byte, error)
 	Block(context.Context, [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 	GenesisBlockRoot(context.Context) ([32]byte, error)

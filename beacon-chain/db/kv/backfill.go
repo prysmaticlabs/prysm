@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	dbval "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/val"
+	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *Store) SaveBackfillStatus(ctx context.Context, bf dbval.BackfillStatus) error {
+func (s *Store) SaveBackfillStatus(ctx context.Context, bf *dbval.BackfillStatus) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBackfillStatus")
 	defer span.End()
 	bfb, err := proto.Marshal(bf)
@@ -23,7 +23,7 @@ func (s *Store) SaveBackfillStatus(ctx context.Context, bf dbval.BackfillStatus)
 	})
 }
 
-func (s *Store) BackfillStatus(ctx context.Context) (dbval.BackfillStatus, error) {
+func (s *Store) BackfillStatus(ctx context.Context) (*dbval.BackfillStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBackfillStatus")
 	defer span.End()
 	bf := &dbval.BackfillStatus{}

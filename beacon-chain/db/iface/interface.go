@@ -9,12 +9,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
-	dbval "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/val"
 	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/backup"
+	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -57,7 +57,7 @@ type ReadOnlyDatabase interface {
 	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
-	BackfillStatus(context.Context) (dbval.BackfillStatus, error)
+	BackfillStatus(context.Context) (*dbval.BackfillStatus, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -108,7 +108,7 @@ type HeadAccessDatabase interface {
 
 	// initialization method needed for origin checkpoint sync
 	SaveOrigin(ctx context.Context, serState, serBlock []byte) error
-	SaveBackfillStatus(context.Context, dbval.BackfillStatus) error
+	SaveBackfillStatus(context.Context, *dbval.BackfillStatus) error
 }
 
 // SlasherDatabase interface for persisting data related to detecting slashable offenses on Ethereum.

@@ -14,8 +14,9 @@ const defaultWorkerCount = 1
 
 type Service struct {
 	ctx           context.Context
-	genesisWaiter startup.ClockWaiter
-	clock         *startup.Clock
+	genesisWaiter startup.GenesisWaiter
+	genesis       *startup.Genesis
+	clock         startup.Clock
 	su            *StatusUpdater
 	db            BackfillDB
 	p2p           p2p.P2P
@@ -39,7 +40,7 @@ func WithStatusUpdater(su *StatusUpdater) ServiceOption {
 	}
 }
 
-func WithGenesisWaiter(gw startup.ClockWaiter) ServiceOption {
+func WithGenesisWaiter(gw startup.GenesisWaiter) ServiceOption {
 	return func(s *Service) error {
 		s.genesisWaiter = gw
 		return nil
@@ -89,11 +90,11 @@ func NewService(ctx context.Context, opts ...ServiceOption) (*Service, error) {
 }
 
 func (s *Service) Start() {
-	clock, err := s.genesisWaiter.WaitForClock(s.ctx)
+	genesis, err := s.genesisWaiter.WaitForGenesis(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("backfill service failed to start while waiting for genesis data")
 	}
-	s.clock = clock
+	s.clock = genesis.Clock()
 	if err := s.spawnBatcher(); err != nil {
 		log.WithError(err).Fatal("error starting backfill service")
 	}
