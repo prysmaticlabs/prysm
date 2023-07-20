@@ -26,7 +26,7 @@ type beaconApiBeaconChainClient struct {
 	stateValidatorsProvider stateValidatorsProvider
 }
 
-const getValidatorPerformanceEndpoint = "/eth/v1/beacon/validators/performance"
+const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
 
 func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*apimiddleware.BlockHeaderResponseJson, error) {
 	blockHeader := apimiddleware.BlockHeaderResponseJson{}
