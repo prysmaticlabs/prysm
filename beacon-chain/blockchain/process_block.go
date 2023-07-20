@@ -109,7 +109,8 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blockRoot)
 	if err != nil {
-		return errors.Wrap(err, "could not check if block is optimistic")
+		log.WithError(err).Error("Could not check if block is optimistic")
+		optimistic = true
 	}
 
 	// Send notification of the processed block to the state feed.
