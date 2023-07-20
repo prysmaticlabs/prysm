@@ -295,7 +295,8 @@ func benchmarkHash(sszPath string, sszType string) {
 		}
 		newStat := &runtime.MemStats{}
 		runtime.ReadMemStats(newStat)
-		fmt.Printf("Deserialize Duration: %v, Hashing Duration: %v HTR: %#x, Memory Allocation: %d bytes \n", deserializeDuration, time.Since(start), root, int64(newStat.TotalAlloc)-int64(stat.TotalAlloc))
+		fmt.Printf("Deserialize Duration: %v, Hashing Duration: %v HTR: %#x\n", deserializeDuration, time.Since(start), root)
+		fmt.Printf("Total Memory Allocation Differential: %d bytes, Heap Memory Allocation Differential: %d bytes\n", int64(newStat.TotalAlloc)-int64(stat.TotalAlloc), int64(newStat.HeapAlloc)-int64(stat.HeapAlloc))
 		return
 	default:
 		log.Fatal("Invalid type")
