@@ -226,6 +226,123 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 	network.WriteJson(w, resp)
 }
 
+// SyncCommitteeRewards retrieves rewards info for sync committee members specified by array of public keys or validator index.
+// If no array is provided, return reward info for every committee member.
+func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
+	segments := strings.Split(r.URL.Path, "/")
+	blockId := segments[len(segments)-1]
+
+	blk, err := s.Blocker.Block(r.Context(), []byte(blockId))
+	if errJson := handleGetBlockError(blk, err); errJson != nil {
+		network.WriteError(w, errJson)
+		return
+	}
+	if blk.Version() == version.Phase0 {
+		errJson := &network.DefaultErrorJson{
+			Message: "Sync committee rewards are not supported for Phase 0",
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	st, err := s.ReplayerBuilder.ReplayerForSlot(blk.Block().Slot()-1).ReplayToSlot(r.Context(), blk.Block().Slot())
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get state: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	sa, err := blk.Block().Body().SyncAggregate()
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get sync aggregate: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	vals, valIndices, ok := syncRewardsVals(w, r, st)
+	if !ok {
+		return
+	}
+	preProcessBals := make([]uint64, len(vals))
+	for i, valIdx := range valIndices {
+		preProcessBals[i], err = st.BalanceAtIndex(valIdx)
+		if err != nil {
+			errJson := &network.DefaultErrorJson{
+				Message: "Could not get validator's balance: " + err.Error(),
+				Code:    http.StatusInternalServerError,
+			}
+			network.WriteError(w, errJson)
+			return
+		}
+	}
+
+	_, proposerReward, err := altair.ProcessSyncAggregate(r.Context(), st, sa)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get sync aggregate rewards: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	rewards := make([]int, len(preProcessBals))
+	proposerIndex := blk.Block().ProposerIndex()
+	for i, valIdx := range valIndices {
+		bal, err := st.BalanceAtIndex(valIdx)
+		if err != nil {
+			errJson := &network.DefaultErrorJson{
+				Message: "Could not get validator's balance: " + err.Error(),
+				Code:    http.StatusInternalServerError,
+			}
+			network.WriteError(w, errJson)
+			return
+		}
+		rewards[i] = int(bal - preProcessBals[i]) // lint:ignore uintcast
+		if valIdx == proposerIndex {
+			rewards[i] = rewards[i] - int(proposerReward) // lint:ignore uintcast
+		}
+	}
+
+	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get optimistic mode info: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	blkRoot, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get block root: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	scRewards := make([]SyncCommitteeReward, len(valIndices))
+	for i, valIdx := range valIndices {
+		scRewards[i] = SyncCommitteeReward{
+			ValidatorIndex: strconv.FormatUint(uint64(valIdx), 10),
+			Reward:         strconv.Itoa(rewards[i]),
+		}
+	}
+	response := &SyncCommitteeRewardsResponse{
+		Data:                scRewards,
+		ExecutionOptimistic: optimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(r.Context(), blkRoot),
+	}
+	network.WriteJson(w, response)
+}
+
 func (s *Server) attRewardsState(w http.ResponseWriter, r *http.Request) (state.BeaconState, bool) {
 	segments := strings.Split(r.URL.Path, "/")
 	requestedEpoch, err := strconv.ParseUint(segments[len(segments)-1], 10, 64)
@@ -298,57 +415,9 @@ func attRewardsBalancesAndVals(
 		network.WriteError(w, errJson)
 		return nil, nil, nil, false
 	}
-	var rawValIds []string
-	if r.Body != http.NoBody {
-		if err = json.NewDecoder(r.Body).Decode(&rawValIds); err != nil {
-			errJson := &network.DefaultErrorJson{
-				Message: "Could not decode validators: " + err.Error(),
-				Code:    http.StatusBadRequest,
-			}
-			network.WriteError(w, errJson)
-			return nil, nil, nil, false
-		}
-	}
-	valIndices := make([]primitives.ValidatorIndex, len(rawValIds))
-	for i, v := range rawValIds {
-		index, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			pubkey, err := bytesutil.FromHexString(v)
-			if err != nil || len(pubkey) != fieldparams.BLSPubkeyLength {
-				errJson := &network.DefaultErrorJson{
-					Message: fmt.Sprintf("%s is not a validator index or pubkey", v),
-					Code:    http.StatusBadRequest,
-				}
-				network.WriteError(w, errJson)
-				return nil, nil, nil, false
-			}
-			var ok bool
-			valIndices[i], ok = st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
-			if !ok {
-				errJson := &network.DefaultErrorJson{
-					Message: fmt.Sprintf("No validator index found for pubkey %#x", pubkey),
-					Code:    http.StatusBadRequest,
-				}
-				network.WriteError(w, errJson)
-				return nil, nil, nil, false
-			}
-		} else {
-			if index >= uint64(st.NumValidators()) {
-				errJson := &network.DefaultErrorJson{
-					Message: fmt.Sprintf("Validator index %d is too large. Maximum allowed index is %d", index, st.NumValidators()-1),
-					Code:    http.StatusBadRequest,
-				}
-				network.WriteError(w, errJson)
-				return nil, nil, nil, false
-			}
-			valIndices[i] = primitives.ValidatorIndex(index)
-		}
-	}
-	if len(valIndices) == 0 {
-		valIndices = make([]primitives.ValidatorIndex, len(allVals))
-		for i := 0; i < len(allVals); i++ {
-			valIndices[i] = primitives.ValidatorIndex(i)
-		}
+	valIndices, ok := requestedValIndices(w, r, st, allVals)
+	if !ok {
+		return nil, nil, nil, false
 	}
 	if len(valIndices) == len(allVals) {
 		return bal, allVals, valIndices, true
@@ -453,6 +522,120 @@ func totalAttRewards(
 	return totalRewards, true
 }
 
+func syncRewardsVals(
+	w http.ResponseWriter,
+	r *http.Request,
+	st state.BeaconState,
+) ([]*precompute.Validator, []primitives.ValidatorIndex, bool) {
+	allVals, _, err := altair.InitializePrecomputeValidators(r.Context(), st)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not initialize precompute validators: " + err.Error(),
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return nil, nil, false
+	}
+	valIndices, ok := requestedValIndices(w, r, st, allVals)
+	if !ok {
+		return nil, nil, false
+	}
+
+	sc, err := st.CurrentSyncCommittee()
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not get current sync committee: " + err.Error(),
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return nil, nil, false
+	}
+	allScIndices := make([]primitives.ValidatorIndex, len(sc.Pubkeys))
+	for i, pk := range sc.Pubkeys {
+		valIdx, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pk))
+		if !ok {
+			errJson := &network.DefaultErrorJson{
+				Message: fmt.Sprintf("No validator index found for pubkey %#x", pk),
+				Code:    http.StatusBadRequest,
+			}
+			network.WriteError(w, errJson)
+			return nil, nil, false
+		}
+		allScIndices[i] = valIdx
+	}
+
+	scIndices := make([]primitives.ValidatorIndex, 0, len(allScIndices))
+	scVals := make([]*precompute.Validator, 0, len(allScIndices))
+	for _, valIdx := range valIndices {
+		for _, scIdx := range allScIndices {
+			if valIdx == scIdx {
+				scVals = append(scVals, allVals[valIdx])
+				scIndices = append(scIndices, valIdx)
+				break
+			}
+		}
+	}
+
+	return scVals, scIndices, true
+}
+
+func requestedValIndices(w http.ResponseWriter, r *http.Request, st state.BeaconState, allVals []*precompute.Validator) ([]primitives.ValidatorIndex, bool) {
+	var rawValIds []string
+	if r.Body != http.NoBody {
+		if err := json.NewDecoder(r.Body).Decode(&rawValIds); err != nil {
+			errJson := &network.DefaultErrorJson{
+				Message: "Could not decode validators: " + err.Error(),
+				Code:    http.StatusBadRequest,
+			}
+			network.WriteError(w, errJson)
+			return nil, false
+		}
+	}
+	valIndices := make([]primitives.ValidatorIndex, len(rawValIds))
+	for i, v := range rawValIds {
+		index, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			pubkey, err := bytesutil.FromHexString(v)
+			if err != nil || len(pubkey) != fieldparams.BLSPubkeyLength {
+				errJson := &network.DefaultErrorJson{
+					Message: fmt.Sprintf("%s is not a validator index or pubkey", v),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return nil, false
+			}
+			var ok bool
+			valIndices[i], ok = st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
+			if !ok {
+				errJson := &network.DefaultErrorJson{
+					Message: fmt.Sprintf("No validator index found for pubkey %#x", pubkey),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return nil, false
+			}
+		} else {
+			if index >= uint64(st.NumValidators()) {
+				errJson := &network.DefaultErrorJson{
+					Message: fmt.Sprintf("Validator index %d is too large. Maximum allowed index is %d", index, st.NumValidators()-1),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return nil, false
+			}
+			valIndices[i] = primitives.ValidatorIndex(index)
+		}
+	}
+	if len(valIndices) == 0 {
+		valIndices = make([]primitives.ValidatorIndex, len(allVals))
+		for i := 0; i < len(allVals); i++ {
+			valIndices[i] = primitives.ValidatorIndex(i)
+		}
+	}
+
+	return valIndices, true
+}
+
 func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) *network.DefaultErrorJson {
 	if errors.Is(err, lookup.BlockIdParseError{}) {
 		return &network.DefaultErrorJson{
@@ -468,7 +651,7 @@ func handleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) *n
 	}
 	if err := blocks.BeaconBlockIsNil(blk); err != nil {
 		return &network.DefaultErrorJson{
-			Message: "Could not find requested block" + err.Error(),
+			Message: "Could not find requested block: " + err.Error(),
 			Code:    http.StatusNotFound,
 		}
 	}

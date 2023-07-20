@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -269,22 +270,33 @@ func prettyPrint(sszPath string, data fssz.Unmarshaler) {
 func benchmarkHash(sszPath string, sszType string) {
 	switch sszType {
 	case "state_capella":
-		data := &ethpb.BeaconStateCapella{}
-		if err := dataFetcher(sszPath, data); err != nil {
+		st := &ethpb.BeaconStateCapella{}
+		rawFile, err := os.ReadFile(sszPath) // #nosec G304
+		if err != nil {
 			log.Fatal(err)
 		}
+
 		startDeserialize := time.Now()
-		st, err := state_native.InitializeFromProtoCapella(data)
-		if err != nil {
-			log.Fatal("not a state")
+		if err := st.UnmarshalSSZ(rawFile); err != nil {
+			log.Fatal(err)
 		}
 		deserializeDuration := time.Since(startDeserialize)
+
+		stateTrieState, err := state_native.InitializeFromProtoCapella(st)
+		if err != nil {
+			log.Fatal(err)
+		}
 		start := time.Now()
-		root, err := st.HashTreeRoot(context.Background())
+		stat := &runtime.MemStats{}
+		runtime.ReadMemStats(stat)
+		root, err := stateTrieState.HashTreeRoot(context.Background())
 		if err != nil {
 			log.Fatal("couldn't hash")
 		}
+		newStat := &runtime.MemStats{}
+		runtime.ReadMemStats(newStat)
 		fmt.Printf("Deserialize Duration: %v, Hashing Duration: %v HTR: %#x\n", deserializeDuration, time.Since(start), root)
+		fmt.Printf("Total Memory Allocation Differential: %d bytes, Heap Memory Allocation Differential: %d bytes\n", int64(newStat.TotalAlloc)-int64(stat.TotalAlloc), int64(newStat.HeapAlloc)-int64(stat.HeapAlloc))
 		return
 	default:
 		log.Fatal("Invalid type")
