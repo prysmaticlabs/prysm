@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/status-im/keycard-go/hexutils"
 )
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
@@ -32,7 +32,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		network.WriteError(w, errJson)
 		return
 	}
-	rawSlot := r.URL.Query().Get("rawSlot")
+	rawSlot := r.URL.Query().Get("slot")
 	if rawSlot == "" {
 		errJson := &network.DefaultErrorJson{
 			Message: "Slot is required",
@@ -91,21 +91,21 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 
 	response := &AggregateAttestationResponse{
 		Data: shared.Attestation{
-			AggregationBits: string(bestMatchingAtt.AggregationBits),
+			AggregationBits: hexutil.Encode(bestMatchingAtt.AggregationBits),
 			Data: shared.AttestationData{
 				Slot:            strconv.FormatUint(uint64(bestMatchingAtt.Data.Slot), 10),
 				CommitteeIndex:  strconv.FormatUint(uint64(bestMatchingAtt.Data.CommitteeIndex), 10),
-				BeaconBlockRoot: hexutils.BytesToHex(bestMatchingAtt.Data.BeaconBlockRoot),
+				BeaconBlockRoot: hexutil.Encode(bestMatchingAtt.Data.BeaconBlockRoot),
 				Source: shared.Checkpoint{
 					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Source.Epoch), 10),
-					Root:  hexutils.BytesToHex(bestMatchingAtt.Data.Source.Root),
+					Root:  hexutil.Encode(bestMatchingAtt.Data.Source.Root),
 				},
 				Target: shared.Checkpoint{
 					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Target.Epoch), 10),
-					Root:  hexutils.BytesToHex(bestMatchingAtt.Data.Target.Root),
+					Root:  hexutil.Encode(bestMatchingAtt.Data.Target.Root),
 				},
 			},
-			Signature: hexutils.BytesToHex(bestMatchingAtt.Signature),
+			Signature: hexutil.Encode(bestMatchingAtt.Signature),
 		}}
 	network.WriteJson(w, response)
 }
