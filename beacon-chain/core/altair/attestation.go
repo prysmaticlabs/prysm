@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -290,21 +289,14 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconState, data *et
 	sourceFlagIndex := cfg.TimelySourceFlagIndex
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
-	slotsPerEpoch := cfg.SlotsPerEpoch
 	sqtRootSlots := cfg.SqrRootSlotsPerEpoch
 	if matchedSrc && delay <= sqtRootSlots {
 		participatedFlags[sourceFlagIndex] = true
 	}
 	matchedSrcTgt := matchedSrc && matchedTgt
-	if beaconState.Version() >= version.Deneb {
-		// EIP-7045: Starting in Deneb, include attestations with a correct vote without considering a delay.
-		if matchedSrcTgt {
-			participatedFlags[targetFlagIndex] = true
-		}
-	} else {
-		if matchedSrcTgt && delay <= slotsPerEpoch {
-			participatedFlags[targetFlagIndex] = true
-		}
+	// Before Deneb no attestation should pass validation without having delay <= slotsPerEpoch.
+	if matchedSrcTgt {
+		participatedFlags[targetFlagIndex] = true
 	}
 	matchedSrcTgtHead := matchedHead && matchedSrcTgt
 	if matchedSrcTgtHead && delay == cfg.MinAttestationInclusionDelay {

@@ -690,8 +690,10 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 			},
-			inputDelay:           params.BeaconConfig().SlotsPerEpoch + 1,
-			participationIndices: map[uint8]bool{},
+			inputDelay: params.BeaconConfig().SlotsPerEpoch + 1,
+			participationIndices: map[uint8]bool{
+				targetFlagIndex: true,
+			},
 		},
 		{
 			name: "participated source and target with delay in deneb",
@@ -725,7 +727,6 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 			},
 		},
 	}
-
 	for _, test := range tests {
 		flagIndices, err := altair.AttestationParticipationFlagIndices(test.inputState, test.inputData, test.inputDelay)
 		require.NoError(t, err)
