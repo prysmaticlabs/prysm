@@ -244,6 +244,10 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	if len(blocks) == 0 {
 		return nil, errNoAlternateBlocks
 	}
+
+	// If the first block is not connected to the current canonical chain, we'll stop processing this batch.
+	// Instead, we'll work backwards from the first block until we find a common ancestor,
+	// and then begin processing from there.
 	first := blocks[0]
 	if !f.chain.HasBlock(ctx, first.Block().ParentRoot()) {
 		// Backtrack on a root, to find a common ancestor from which we can resume syncing.
@@ -255,9 +259,14 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	}
 
 	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
+	// Note that we start from the second element in the array, because we know that the first element is in the db,
+	// otherwise we would have gone into the findAncestor early return path above.
 	for i := 1; i < len(blocks); i++ {
 		block := blocks[i]
 		parentRoot := block.Block().ParentRoot()
+		// Step through blocks until we find one that is not in the chain. The goal is to find the point where the
+		// chain observed in the peer diverges from the locally known chain, and then collect up the remainder of the
+		// observed chain chunk to start initial-sync processing from the fork point.
 		if f.chain.HasBlock(ctx, parentRoot) {
 			continue
 		}
@@ -270,12 +279,14 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 		if err != nil {
 			return nil, errors.Wrap(err, "invalid blocks received in findForkWithPeer")
 		}
+		// We need to fetch the blobs for the given alt-chain if any exist, so that we can try to verify and import
+		// the blocks.
 		bwb, err := f.fetchBlobsFromPeer(ctx, altBlocks, pid)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findForkWithPeer")
 		}
-		// Backtrack only if the first block is diverging,
-		// otherwise we already know the common ancestor slot.
+		// The caller will use the BlocksWith VerifiedBlobs in bwb as the starting point for
+		// round-robin syncing the alternate chain.
 		return &forkData{peer: pid, bwb: bwb}, nil
 	}
 	return nil, errNoAlternateBlocks

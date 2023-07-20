@@ -460,7 +460,7 @@ func missingCommitError(root [32]byte, missing [][]byte) error {
 
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.BlockWithVerifiedBlobs, pid peer.ID) ([]blocks2.BlockWithVerifiedBlobs, error) {
-	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsForResponse")
+	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
 	defer span.End()
 	if slots.ToEpoch(f.clock.CurrentSlot()) < params.BeaconConfig().DenebForkEpoch {
 		return bwb, nil
@@ -477,7 +477,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 	// Request blobs from the same peer that gave us the blob batch.
 	blobs, err := f.requestBlobs(ctx, req, pid)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not request blobs by range")
+		return nil, errors.Wrap(err, "could not request blobs by range")
 	}
 	f.p2p.Peers().Scorers().BlockProviderScorer().Touch(pid)
 	return verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
@@ -526,6 +526,9 @@ func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecar
 		"capacity": f.rateLimiter.Remaining(pid.String()),
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blobs")
+	// We're intentionally abusing the block rate limit here, treating blob requests as if they were blob requests.
+	// Since blob requests take more bandwidth than blocks, we should improve how we account for the different kinds
+	// of requests, more in proportion to the cost of serving them.
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		if err := f.waitForBandwidth(pid, req.Count); err != nil {
 			l.Unlock()
