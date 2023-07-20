@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -20,16 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/r3labs/sse"
 )
-
-const (
-	versionHeader        = "Eth-Consensus-Version"
-	grpcVersionHeader    = "Grpc-metadata-Eth-Consensus-Version"
-	jsonMediaType        = "application/json"
-	octetStreamMediaType = "application/octet-stream"
-)
-
-// match a number with optional decimals
-var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
 
 type sszConfig struct {
 	fileName     string
@@ -213,44 +202,6 @@ func handlePostSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.E
 	}
 
 	return true
-}
-
-func sszRequested(req *http.Request) (bool, error) {
-	accept := req.Header.Values("Accept")
-	if len(accept) == 0 {
-		return false, nil
-	}
-	types := strings.Split(accept[0], ",")
-	currentType, currentPriority := "", 0.0
-	for _, t := range types {
-		values := strings.Split(t, ";")
-		name := values[0]
-		if name != api.JsonMediaType && name != api.OctetStreamMediaType {
-			continue
-		}
-		// no params specified
-		if len(values) == 1 {
-			priority := 1.0
-			if priority > currentPriority {
-				currentType, currentPriority = name, priority
-			}
-			continue
-		}
-		params := values[1]
-		match := priorityRegex.FindAllStringSubmatch(params, 1)
-		if len(match) != 1 {
-			continue
-		}
-		priority, err := strconv.ParseFloat(match[0][1], 32)
-		if err != nil {
-			return false, err
-		}
-		if priority > currentPriority {
-			currentType, currentPriority = name, priority
-		}
-	}
-
-	return currentType == api.OctetStreamMediaType, nil
 }
 
 func sszPosted(req *http.Request) bool {
