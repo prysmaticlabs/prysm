@@ -85,7 +85,6 @@ func publishBlindedBlockV2SSZ(bs *Server, w http.ResponseWriter, r *http.Request
 		}
 		bs.proposeBlock(r.Context(), w, genericBlock)
 		return
-
 	}
 	bellatrixBlock := &ethpbv2.SignedBlindedBeaconBlockBellatrix{}
 	if err := bellatrixBlock.UnmarshalSSZ(body); err == nil {
@@ -118,7 +117,6 @@ func publishBlindedBlockV2SSZ(bs *Server, w http.ResponseWriter, r *http.Request
 	// blinded is not supported before bellatrix hardfork
 	altairBlock := &ethpbv2.SignedBeaconBlockAltair{}
 	if err := altairBlock.UnmarshalSSZ(body); err == nil {
-
 		v1block, err := migration.AltairToV1Alpha1SignedBlock(altairBlock)
 		if err != nil {
 			errJson := &network.DefaultErrorJson{
@@ -143,7 +141,6 @@ func publishBlindedBlockV2SSZ(bs *Server, w http.ResponseWriter, r *http.Request
 		}
 		bs.proposeBlock(r.Context(), w, genericBlock)
 		return
-
 	}
 	phase0Block := &ethpbv1.SignedBeaconBlock{}
 	if err := phase0Block.UnmarshalSSZ(body); err == nil {
