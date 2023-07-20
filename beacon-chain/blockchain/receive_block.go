@@ -170,7 +170,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock
 		if err != nil {
 			return err
 		}
-		optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blkRoots[i])
+		optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(b.Root())
 		if err != nil {
 			log.WithError(err).Error("Could not check if block is optimistic")
 			optimistic = true

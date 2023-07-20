@@ -679,7 +679,7 @@ func (s *Service) retrievePayloadFromExecutionHash(ctx context.Context, executio
 	}
 
 	executionBlock.Version = version
-	return fullPayloadFromExecutionBlock(header, executionBlock)
+	return fullPayloadFromExecutionBlock(version, header, executionBlock)
 }
 
 func (s *Service) retrievePayloadsFromExecutionHashes(
@@ -707,6 +707,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 	// blinded block.
 	for sliceIdx, realIdx := range validExecPayloads {
 		var payload interfaces.ExecutionData
+		bblock := blindedBlocks[realIdx]
 		if features.Get().EnableOptionalEngineMethods {
 			b := payloadBodies[sliceIdx]
 			if b == nil {
@@ -729,7 +730,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 			if err != nil {
 				return nil, err
 			}
-			payload, err = fullPayloadFromExecutionBlock(header, b)
+			payload, err = fullPayloadFromExecutionBlock(bblock.Version(), header, b)
 			if err != nil {
 				return nil, err
 			}
