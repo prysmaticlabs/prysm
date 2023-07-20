@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -58,7 +59,7 @@ func hashValidatorHelper(validators []*ethpb.Validator, roots [][32]byte, j int,
 	for i := 0; i < groupSize; i++ {
 		fRoots, err := ValidatorFieldRoots(validators[j*groupSize+i])
 		if err != nil {
-			return
+			logrus.WithError(err).Error("could not get validator field roots")
 		}
 		for k, root := range fRoots {
 			roots[(j*groupSize+i)*validatorFieldRoots+k] = root
