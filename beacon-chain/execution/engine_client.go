@@ -297,9 +297,6 @@ func (s *Service) ExchangeTransitionConfiguration(
 }
 
 func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
-	if !features.Get().EnableOptionalEngineMethods {
-		return nil, errors.New("optional engine methods not enabled")
-	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeCapabilities")
 	defer span.End()
 
@@ -491,9 +488,6 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 
 // GetPayloadBodiesByHash returns the relevant payload bodies for the provided block hash.
 func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHashes []common.Hash) ([]*pb.ExecutionPayloadBodyV1, error) {
-	if !features.Get().EnableOptionalEngineMethods {
-		return nil, errors.New("optional engine methods not enabled")
-	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByHashV1")
 	defer span.End()
 
@@ -513,9 +507,6 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 
 // GetPayloadBodiesByRange returns the relevant payload bodies for the provided range.
 func (s *Service) GetPayloadBodiesByRange(ctx context.Context, start, count uint64) ([]*pb.ExecutionPayloadBodyV1, error) {
-	if !features.Get().EnableOptionalEngineMethods {
-		return nil, errors.New("optional engine methods not enabled")
-	}
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByRangeV1")
 	defer span.End()
 
@@ -560,19 +551,7 @@ func (s *Service) ReconstructFullBlock(
 	}
 
 	executionBlockHash := common.BytesToHash(header.BlockHash())
-	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
-	}
-	if executionBlock == nil {
-		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
-	}
-	if bytes.Equal(executionBlock.Hash.Bytes(), []byte{}) {
-		return nil, EmptyBlockHash
-	}
-
-	executionBlock.Version = blindedBlock.Version()
-	payload, err := fullPayloadFromExecutionBlock(header, executionBlock)
+	payload, err := s.retrievePayloadFromExecutionHash(ctx, executionBlockHash, header, blindedBlock.Version())
 	if err != nil {
 		return nil, err
 	}
@@ -619,32 +598,9 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 			executionHashes = append(executionHashes, executionBlockHash)
 		}
 	}
-	execBlocks, err := s.ExecutionBlocksByHashes(ctx, executionHashes, true /* with txs*/)
+	fullBlocks, err := s.retrievePayloadsFromExecutionHashes(ctx, executionHashes, validExecPayloads, blindedBlocks)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch execution blocks with txs by hash %#x: %v", executionHashes, err)
-	}
-
-	// For each valid payload, we reconstruct the full block from it with the
-	// blinded block.
-	fullBlocks := make([]interfaces.SignedBeaconBlock, len(blindedBlocks))
-	for sliceIdx, realIdx := range validExecPayloads {
-		b := execBlocks[sliceIdx]
-		if b == nil {
-			return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
-		}
-		header, err := blindedBlocks[realIdx].Block().Body().Execution()
-		if err != nil {
-			return nil, err
-		}
-		payload, err := fullPayloadFromExecutionBlock(header, b)
-		if err != nil {
-			return nil, err
-		}
-		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload.Proto())
-		if err != nil {
-			return nil, err
-		}
-		fullBlocks[realIdx] = fullBlock
+		return nil, err
 	}
 	// For blocks that are pre-merge we simply reconstruct them via an empty
 	// execution payload.
@@ -657,6 +613,95 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		fullBlocks[realIdx] = fullBlock
 	}
 	reconstructedExecutionPayloadCount.Add(float64(len(blindedBlocks)))
+	return fullBlocks, nil
+}
+
+func (s *Service) retrievePayloadFromExecutionHash(ctx context.Context, executionBlockHash common.Hash, header interfaces.ExecutionData, version int) (interfaces.ExecutionData, error) {
+	if features.Get().EnableOptionalEngineMethods {
+		pBodies, err := s.GetPayloadBodiesByHash(ctx, []common.Hash{executionBlockHash})
+		if err != nil {
+			return nil, fmt.Errorf("could not get payload body by hash %#x: %v", executionBlockHash, err)
+		}
+		if len(pBodies) != 1 {
+			return nil, errors.Errorf("could not retrieve the correct number of payload bodies: wanted 1 but got %d", len(pBodies))
+		}
+		bdy := pBodies[0]
+		return fullPayloadFromPayloadBody(header, bdy, version)
+	}
+
+	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
+	}
+	if executionBlock == nil {
+		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
+	}
+	if bytes.Equal(executionBlock.Hash.Bytes(), []byte{}) {
+		return nil, EmptyBlockHash
+	}
+
+	executionBlock.Version = version
+	return fullPayloadFromExecutionBlock(header, executionBlock)
+}
+
+func (s *Service) retrievePayloadsFromExecutionHashes(
+	ctx context.Context,
+	executionHashes []common.Hash,
+	validExecPayloads []int,
+	blindedBlocks []interfaces.ReadOnlySignedBeaconBlock) ([]interfaces.SignedBeaconBlock, error) {
+	fullBlocks := make([]interfaces.SignedBeaconBlock, len(blindedBlocks))
+	var execBlocks []*pb.ExecutionBlock
+	var payloadBodies []*pb.ExecutionPayloadBodyV1
+	var err error
+	if features.Get().EnableOptionalEngineMethods {
+		payloadBodies, err = s.GetPayloadBodiesByHash(ctx, executionHashes)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch payload bodies by hash %#x: %v", executionHashes, err)
+		}
+	} else {
+		execBlocks, err = s.ExecutionBlocksByHashes(ctx, executionHashes, true /* with txs*/)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch execution blocks with txs by hash %#x: %v", executionHashes, err)
+		}
+	}
+
+	// For each valid payload, we reconstruct the full block from it with the
+	// blinded block.
+	for sliceIdx, realIdx := range validExecPayloads {
+		var payload interfaces.ExecutionData
+		if features.Get().EnableOptionalEngineMethods {
+			b := payloadBodies[sliceIdx]
+			if b == nil {
+				return nil, fmt.Errorf("received nil payload body for request by hash %#x", executionHashes[sliceIdx])
+			}
+			header, err := blindedBlocks[realIdx].Block().Body().Execution()
+			if err != nil {
+				return nil, err
+			}
+			payload, err = fullPayloadFromPayloadBody(header, b, blindedBlocks[realIdx].Version())
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			b := execBlocks[sliceIdx]
+			if b == nil {
+				return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
+			}
+			header, err := blindedBlocks[realIdx].Block().Body().Execution()
+			if err != nil {
+				return nil, err
+			}
+			payload, err = fullPayloadFromExecutionBlock(header, b)
+			if err != nil {
+				return nil, err
+			}
+		}
+		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload.Proto())
+		if err != nil {
+			return nil, err
+		}
+		fullBlocks[realIdx] = fullBlock
+	}
 	return fullBlocks, nil
 }
 
@@ -718,6 +763,50 @@ func fullPayloadFromExecutionBlock(
 		BlockHash:     blockHash[:],
 		Transactions:  txs,
 		Withdrawals:   block.Withdrawals,
+	}, 0) // We can't get the block value and don't care about the block value for this instance
+}
+
+func fullPayloadFromPayloadBody(
+	header interfaces.ExecutionData, body *pb.ExecutionPayloadBodyV1, bVersion int,
+) (interfaces.ExecutionData, error) {
+	if header.IsNil() || body == nil {
+		return nil, errors.New("execution block and header cannot be nil")
+	}
+
+	if bVersion == version.Bellatrix {
+		return blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
+			ParentHash:    header.ParentHash(),
+			FeeRecipient:  header.FeeRecipient(),
+			StateRoot:     header.StateRoot(),
+			ReceiptsRoot:  header.ReceiptsRoot(),
+			LogsBloom:     header.LogsBloom(),
+			PrevRandao:    header.PrevRandao(),
+			BlockNumber:   header.BlockNumber(),
+			GasLimit:      header.GasLimit(),
+			GasUsed:       header.GasUsed(),
+			Timestamp:     header.Timestamp(),
+			ExtraData:     header.ExtraData(),
+			BaseFeePerGas: header.BaseFeePerGas(),
+			BlockHash:     header.BlockHash(),
+			Transactions:  body.Transactions,
+		})
+	}
+	return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
+		ParentHash:    header.ParentHash(),
+		FeeRecipient:  header.FeeRecipient(),
+		StateRoot:     header.StateRoot(),
+		ReceiptsRoot:  header.ReceiptsRoot(),
+		LogsBloom:     header.LogsBloom(),
+		PrevRandao:    header.PrevRandao(),
+		BlockNumber:   header.BlockNumber(),
+		GasLimit:      header.GasLimit(),
+		GasUsed:       header.GasUsed(),
+		Timestamp:     header.Timestamp(),
+		ExtraData:     header.ExtraData(),
+		BaseFeePerGas: header.BaseFeePerGas(),
+		BlockHash:     header.BlockHash(),
+		Transactions:  body.Transactions,
+		Withdrawals:   body.Withdrawals,
 	}, 0) // We can't get the block value and don't care about the block value for this instance
 }
 
