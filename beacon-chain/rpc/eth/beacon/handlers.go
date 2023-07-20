@@ -62,7 +62,7 @@ func publishBlindedBlockV2SSZ(bs *Server, w http.ResponseWriter, r *http.Request
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		errJson := &network.DefaultErrorJson{
-			Message: "Could not read request body",
+			Message: "Could not read request body: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 		network.WriteError(w, errJson)
