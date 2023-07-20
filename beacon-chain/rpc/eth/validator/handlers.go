@@ -1,0 +1,111 @@
+package validator
+
+import (
+	"bytes"
+	"net/http"
+	"strconv"
+
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/status-im/keycard-go/hexutils"
+)
+
+// GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
+func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request) {
+	attDataRoot := r.URL.Query().Get("attestation_data_root")
+	if attDataRoot == "" {
+		errJson := &network.DefaultErrorJson{
+			Message: "Attestation data root is required",
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	if !bytesutil.IsHex([]byte(attDataRoot)) {
+		errJson := &network.DefaultErrorJson{
+			Message: "Attestation data root is invalid",
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	rawSlot := r.URL.Query().Get("rawSlot")
+	if rawSlot == "" {
+		errJson := &network.DefaultErrorJson{
+			Message: "Slot is required",
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+	slot, err := strconv.ParseUint(rawSlot, 10, 64)
+	if err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Slot is invalid: " + err.Error(),
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	if err = s.AttestationsPool.AggregateUnaggregatedAttestations(r.Context()); err != nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "Could not aggregate unaggregated attestations: " + err.Error(),
+			Code:    http.StatusBadRequest,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	allAtts := s.AttestationsPool.AggregatedAttestations()
+	var bestMatchingAtt *ethpbalpha.Attestation
+	for _, att := range allAtts {
+		if att.Data.Slot == primitives.Slot(slot) {
+			root, err := att.Data.HashTreeRoot()
+			if err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: "Could not get attestation data root: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
+			if bytes.Equal(root[:], []byte(attDataRoot)) {
+				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
+					bestMatchingAtt = att
+				}
+			}
+		}
+	}
+	if bestMatchingAtt == nil {
+		errJson := &network.DefaultErrorJson{
+			Message: "No matching attestation found",
+			Code:    http.StatusNotFound,
+		}
+		network.WriteError(w, errJson)
+		return
+	}
+
+	response := &AggregateAttestationResponse{
+		Data: shared.Attestation{
+			AggregationBits: string(bestMatchingAtt.AggregationBits),
+			Data: shared.AttestationData{
+				Slot:            strconv.FormatUint(uint64(bestMatchingAtt.Data.Slot), 10),
+				CommitteeIndex:  strconv.FormatUint(uint64(bestMatchingAtt.Data.CommitteeIndex), 10),
+				BeaconBlockRoot: hexutils.BytesToHex(bestMatchingAtt.Data.BeaconBlockRoot),
+				Source: shared.Checkpoint{
+					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Source.Epoch), 10),
+					Root:  hexutils.BytesToHex(bestMatchingAtt.Data.Source.Root),
+				},
+				Target: shared.Checkpoint{
+					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Target.Epoch), 10),
+					Root:  hexutils.BytesToHex(bestMatchingAtt.Data.Target.Root),
+				},
+			},
+			Signature: hexutils.BytesToHex(bestMatchingAtt.Signature),
+		}}
+	network.WriteJson(w, response)
+}

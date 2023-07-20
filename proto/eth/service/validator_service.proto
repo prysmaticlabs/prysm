@@ -200,19 +200,6 @@ service BeaconValidator {
     option (google.api.http) = { get: "/internal/eth/v1/validator/attestation_data" };
   }
 
-  // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot,
-  // returning the aggregated result.
-  //
-  // HTTP response usage:
-  // - 200: Successful response
-  // - 400: Invalid request syntax
-  // - 500: Beacon node internal error
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/getAggregatedAttestation
-  rpc GetAggregateAttestation(v1.AggregateAttestationRequest) returns (v1.AggregateAttestationResponse) {
-    option (google.api.http) = { get: "/internal/eth/v1/validator/aggregate_attestation" };
-  }
-
   // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
   //
   // Response usage:

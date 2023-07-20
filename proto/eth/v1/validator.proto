@@ -175,18 +175,6 @@ message ProduceAttestationDataResponse {
     AttestationData data = 1;
 }
 
-message AggregateAttestationRequest {
-    // The root of the attestation data requesting the aggregate for.
-    bytes attestation_data_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-
-    // The slot for the requested aggregate attestation.
-    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-}
-
-message AggregateAttestationResponse {
-    Attestation data = 1;
-}
-
 message SubmitAggregateAndProofsRequest {
     repeated SignedAggregateAttestationAndProof data = 1;
 }
