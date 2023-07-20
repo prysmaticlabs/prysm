@@ -9,6 +9,7 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	p2ppb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -23,7 +24,7 @@ import (
 type forkData struct {
 	peer   peer.ID
 	blocks []interfaces.ReadOnlySignedBeaconBlock
-	bwb    []BlockWithVerifiedBlobs
+	bwb    []blocks.BlockWithVerifiedBlobs
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -265,7 +266,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 			"slot": block.Block().Slot(),
 			"root": fmt.Sprintf("%#x", parentRoot),
 		}).Debug("Block with unknown parent root has been found")
-		altBlocks, err := validROBlocks(blocks[i-1:])
+		altBlocks, err := sortedBlockWithVerifiedBlobSlice(blocks[i-1:])
 		if err != nil {
 			return nil, errors.Wrap(err, "invalid blocks received in findForkWithPeer")
 		}
@@ -287,7 +288,7 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfa
 		parentRoot := outBlocks[len(outBlocks)-1].Block().ParentRoot()
 		if f.chain.HasBlock(ctx, parentRoot) {
 			// Common ancestor found, forward blocks back to processor.
-			bwb, err := validROBlocks(outBlocks)
+			bwb, err := sortedBlockWithVerifiedBlobSlice(outBlocks)
 			if err != nil {
 				return nil, errors.Wrap(err, "received invalid blocks in findAncestor")
 			}

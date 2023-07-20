@@ -178,9 +178,9 @@ func (s *Service) processFetchedDataRegSync(
 	}
 	if blksWithoutParentCount > 0 {
 		log.WithFields(logrus.Fields{
-			"missingParent": fmt.Sprintf("%#x", data.bwb[0].block.Block().ParentRoot()),
-			"firstSlot":     data.bwb[0].block.Block().Slot(),
-			"lastSlot":      data.bwb[blksWithoutParentCount-1].block.Block().Slot(),
+			"missingParent": fmt.Sprintf("%#x", data.bwb[0].Block.Block().ParentRoot()),
+			"firstSlot":     data.bwb[0].Block.Block().Slot(),
+			"lastSlot":      data.bwb[blksWithoutParentCount-1].Block.Block().Slot(),
 		}).Debug("Could not process batch blocks due to missing parent")
 	}
 	// Add more visible logging if all blocks cannot be processed.
@@ -246,10 +246,10 @@ func (s *Service) logBatchSyncStatus(genesis time.Time, firstBlk blocks.ROBlock,
 func (s *Service) processBlock(
 	ctx context.Context,
 	genesis time.Time,
-	bwb BlockWithVerifiedBlobs,
+	bwb blocks.BlockWithVerifiedBlobs,
 	blockReceiver blockReceiverFn,
 ) error {
-	blk := bwb.block
+	blk := bwb.Block
 	blkRoot := blk.Root()
 	if s.isProcessedBlock(ctx, blk) {
 		return fmt.Errorf("slot: %d , root %#x: %w", blk.Block().Slot(), blkRoot, errBlockAlreadyProcessed)
@@ -264,17 +264,17 @@ func (s *Service) processBlock(
 
 type processedChecker func(context.Context, blocks.ROBlock) bool
 
-func validUnprocessed(ctx context.Context, bwb []BlockWithVerifiedBlobs, headSlot primitives.Slot, isProc processedChecker) ([]BlockWithVerifiedBlobs, error) {
+func validUnprocessed(ctx context.Context, bwb []blocks.BlockWithVerifiedBlobs, headSlot primitives.Slot, isProc processedChecker) ([]blocks.BlockWithVerifiedBlobs, error) {
 	// use a pointer to avoid confusing the zero-value with the case where the first element is processed.
 	var processed *int
 	for i := range bwb {
-		b := bwb[i].block
+		b := bwb[i].Block
 		if headSlot >= b.Block().Slot() && isProc(ctx, b) {
 			processed = &i
 			continue
 		}
 		if i > 0 {
-			parent := bwb[i-1].block
+			parent := bwb[i-1].Block
 			if parent.Root() != b.Block().ParentRoot() {
 				return nil, fmt.Errorf("expected linear block list with parent root of %#x (slot %d) but received %#x (slot %d)",
 					parent, parent.Block().Slot(), b.Block().ParentRoot(), b.Block().Slot())
@@ -285,7 +285,7 @@ func validUnprocessed(ctx context.Context, bwb []BlockWithVerifiedBlobs, headSlo
 		return bwb, nil
 	}
 	if *processed+1 == len(bwb) {
-		maxIncoming := bwb[len(bwb)-1].block
+		maxIncoming := bwb[len(bwb)-1].Block
 		maxRoot := maxIncoming.Root()
 		return nil, fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, maxIncoming.Block().Slot(), maxRoot, errBlockAlreadyProcessed)
 	}
@@ -293,7 +293,7 @@ func validUnprocessed(ctx context.Context, bwb []BlockWithVerifiedBlobs, headSlo
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	bwb []BlockWithVerifiedBlobs, bFunc batchBlockReceiverFn) error {
+	bwb []blocks.BlockWithVerifiedBlobs, bFunc batchBlockReceiverFn) error {
 	if len(bwb) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -304,21 +304,21 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		return err
 	}
 
-	first := bwb[0].block
+	first := bwb[0].Block
 	if !s.cfg.Chain.HasBlock(ctx, first.Block().ParentRoot()) {
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)",
 			errParentDoesNotExist, first.Block().ParentRoot(), first.Block().Slot())
 	}
 	s.logBatchSyncStatus(genesis, first, len(bwb))
 	for _, bb := range bwb {
-		if len(bb.blobs) == 0 {
+		if len(bb.Blobs) == 0 {
 			continue
 		}
-		if err := s.cfg.DB.SaveBlobSidecar(ctx, bb.blobs); err != nil {
-			return errors.Wrapf(err, "failed to save blobs for block %#x", bb.block.Root())
+		if err := s.cfg.DB.SaveBlobSidecar(ctx, bb.Blobs); err != nil {
+			return errors.Wrapf(err, "failed to save blobs for block %#x", bb.Block.Root())
 		}
 	}
-	return bFunc(ctx, BlockWithVerifiedBlobsSlice(bwb).ROBlocks())
+	return bFunc(ctx, blocks.BlockWithVerifiedBlobsSlice(bwb).ROBlocks())
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.

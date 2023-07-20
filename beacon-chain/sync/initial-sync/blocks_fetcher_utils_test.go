@@ -260,7 +260,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	require.NoError(t, err)
 
 	reqEnd := testForkStartSlot(t, 251) + primitives.Slot(findForkReqRangeSize())
-	require.Equal(t, primitives.Slot(len(chain1)), fork.bwb[0].block.Block().Slot())
+	require.Equal(t, primitives.Slot(len(chain1)), fork.bwb[0].Block.Block().Slot())
 	require.Equal(t, int(reqEnd-forkSlot1b), len(fork.bwb))
 	require.Equal(t, curForkMoreBlocksPeer, fork.peer)
 	// Save all chain1b blocks (so that they do not interfere with alternative fork)
@@ -286,14 +286,14 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	assert.Equal(t, 65, len(fork.bwb))
 	ind := forkSlot
 	for _, blk := range fork.bwb {
-		require.Equal(t, blk.block.Block().Slot(), chain2[ind].Block.Slot)
+		require.Equal(t, blk.Block.Block().Slot(), chain2[ind].Block.Slot)
 		ind++
 	}
 
 	// Process returned blocks and then attempt to extend chain (ensuring that parent block exists).
 	for _, blk := range fork.bwb {
-		require.NoError(t, beaconDB.SaveBlock(ctx, blk.block))
-		require.NoError(t, st.SetSlot(blk.block.Block().Slot()))
+		require.NoError(t, beaconDB.SaveBlock(ctx, blk.Block))
+		require.NoError(t, st.SetSlot(blk.Block.Block().Slot()))
 	}
 	assert.Equal(t, forkSlot.Add(uint64(len(fork.bwb)-1)), mc.HeadSlot())
 	for i := forkSlot.Add(uint64(len(fork.bwb))); i < primitives.Slot(len(chain2)); i++ {
@@ -415,7 +415,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
 		require.NoError(t, err)
 		require.Equal(t, 10, len(fork.bwb))
-		assert.Equal(t, forkedSlot, fork.bwb[0].block.Block().Slot(), "Expected slot %d to be ancestor", forkedSlot)
+		assert.Equal(t, forkedSlot, fork.bwb[0].Block.Block().Slot(), "Expected slot %d to be ancestor", forkedSlot)
 	})
 
 	t.Run("first block is diverging - no common ancestor", func(t *testing.T) {
@@ -444,7 +444,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		expectedLen := reqEnd - forkedSlot
 		// there are 4 blocks that are different before the beginning
 		require.Equal(t, int(expectedLen), len(fork.bwb))
-		assert.Equal(t, primitives.Slot(60), fork.bwb[0].block.Block().Slot())
+		assert.Equal(t, primitives.Slot(60), fork.bwb[0].Block.Block().Slot())
 	})
 }
 

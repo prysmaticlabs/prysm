@@ -17,7 +17,7 @@ func (q *blocksQueue) resetFromFork(fork *forkData) error {
 	if len(fork.bwb) == 0 {
 		return errors.New("no blocks to reset from")
 	}
-	firstBlock := fork.bwb[0].block.Block()
+	firstBlock := fork.bwb[0].Block.Block()
 
 	blocksPerRequest := q.blocksFetcher.blocksPerPeriod
 	if err := q.smm.removeAllStateMachines(); err != nil {

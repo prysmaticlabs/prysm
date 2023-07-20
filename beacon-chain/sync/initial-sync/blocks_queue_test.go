@@ -263,8 +263,8 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())
-			processBlock := func(b BlockWithVerifiedBlobs) error {
-				block := b.block
+			processBlock := func(b blocks.BlockWithVerifiedBlobs) error {
+				block := b.Block
 				if !beaconDB.HasBlock(ctx, block.Block().ParentRoot()) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
@@ -275,7 +275,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				return mc.ReceiveBlock(ctx, block, root)
 			}
 
-			var blocks []BlockWithVerifiedBlobs
+			var blocks []blocks.BlockWithVerifiedBlobs
 			for data := range queue.fetchedData {
 				for _, b := range data.bwb {
 					if err := processBlock(b); err != nil {
@@ -294,7 +294,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			assert.Equal(t, len(tt.expectedBlockSlots), len(blocks), "Processes wrong number of blocks")
 			var receivedBlockSlots []primitives.Slot
 			for _, b := range blocks {
-				receivedBlockSlots = append(receivedBlockSlots, b.block.Block().Slot())
+				receivedBlockSlots = append(receivedBlockSlots, b.Block.Block().Slot())
 			}
 			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
@@ -538,9 +538,9 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		require.NoError(t, err)
 		response := &fetchRequestResponse{
 			pid: "abc",
-			bwb: []BlockWithVerifiedBlobs{
-				{block: blocks.ROBlock{ReadOnlySignedBeaconBlock: wsb}},
-				{block: blocks.ROBlock{ReadOnlySignedBeaconBlock: wsbCopy}},
+			bwb: []blocks.BlockWithVerifiedBlobs{
+				{Block: blocks.ROBlock{ReadOnlySignedBeaconBlock: wsb}},
+				{Block: blocks.ROBlock{ReadOnlySignedBeaconBlock: wsbCopy}},
 			},
 		}
 		fsm := &stateMachine{
@@ -638,8 +638,8 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[256].pid = pidDataParsed
 		rwsb, err := blocks.NewROBlock(wsb)
 		require.NoError(t, err)
-		queue.smm.machines[256].bwb = []BlockWithVerifiedBlobs{
-			{block: rwsb},
+		queue.smm.machines[256].bwb = []blocks.BlockWithVerifiedBlobs{
+			{Block: rwsb},
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -672,8 +672,8 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[320].pid = pidDataParsed
 		rwsb, err := blocks.NewROBlock(wsb)
 		require.NoError(t, err)
-		queue.smm.machines[320].bwb = []BlockWithVerifiedBlobs{
-			{block: rwsb},
+		queue.smm.machines[320].bwb = []blocks.BlockWithVerifiedBlobs{
+			{Block: rwsb},
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -703,8 +703,8 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.machines[320].pid = pidDataParsed
 		rwsb, err := blocks.NewROBlock(wsb)
 		require.NoError(t, err)
-		queue.smm.machines[320].bwb = []BlockWithVerifiedBlobs{
-			{block: rwsb},
+		queue.smm.machines[320].bwb = []blocks.BlockWithVerifiedBlobs{
+			{Block: rwsb},
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -1230,14 +1230,14 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		require.Equal(t, forkedPeer, firstFSM.pid)
 		reqEnd := testForkStartSlot(t, 251) + primitives.Slot(findForkReqRangeSize())
 		require.Equal(t, int(reqEnd-forkedSlot), len(firstFSM.bwb))
-		require.Equal(t, forkedSlot, firstFSM.bwb[0].block.Block().Slot())
+		require.Equal(t, forkedSlot, firstFSM.bwb[0].Block.Block().Slot())
 
 		// Assert that forked data from chain2 is available (within 64 fetched blocks).
 		for i, blk := range chain2[forkedSlot:] {
 			if i >= len(firstFSM.bwb) {
 				break
 			}
-			rootFromFSM := firstFSM.bwb[i].block.Root()
+			rootFromFSM := firstFSM.bwb[i].Block.Root()
 			blkRoot, err := blk.Block.HashTreeRoot()
 			require.NoError(t, err)
 			assert.Equal(t, blkRoot, rootFromFSM)
@@ -1348,7 +1348,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 		t.Fatal("test takes too long to complete")
 	case data := <-queue.fetchedData:
 		for _, b := range data.bwb {
-			blk := b.block
+			blk := b.Block
 			blkRoot, err := blk.Block().HashTreeRoot()
 			require.NoError(t, err)
 			if isProcessedBlock(ctx, blk, blkRoot) {

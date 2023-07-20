@@ -305,9 +305,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				fetcher.stop()
 			}()
 
-			processFetchedBlocks := func() ([]BlockWithVerifiedBlobs, error) {
+			processFetchedBlocks := func() ([]blocks.BlockWithVerifiedBlobs, error) {
 				defer cancel()
-				var unionRespBlocks []BlockWithVerifiedBlobs
+				var unionRespBlocks []blocks.BlockWithVerifiedBlobs
 
 				for {
 					select {
@@ -346,13 +346,10 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			bwb, err := processFetchedBlocks()
 			assert.NoError(t, err)
 
-			sort.Slice(bwb, func(i, j int) bool {
-				return bwb[i].block.Block().Slot() < bwb[j].block.Block().Slot()
-			})
-
+			sort.Sort(blocks.BlockWithVerifiedBlobsSlice(bwb))
 			ss := make([]primitives.Slot, len(bwb))
 			for i, b := range bwb {
-				ss[i] = b.block.Block().Slot()
+				ss[i] = b.Block.Block().Slot()
 			}
 
 			log.WithFields(logrus.Fields{
@@ -366,7 +363,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			assert.Equal(t, len(tt.expectedBlockSlots), len(bwb), "Processes wrong number of blocks")
 			var receivedBlockSlots []primitives.Slot
 			for _, b := range bwb {
-				receivedBlockSlots = append(receivedBlockSlots, b.block.Block().Slot())
+				receivedBlockSlots = append(receivedBlockSlots, b.Block.Block().Slot())
 			}
 			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
@@ -456,7 +453,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 			}
 		}()
 
-		var bwb []BlockWithVerifiedBlobs
+		var bwb []blocks.BlockWithVerifiedBlobs
 		select {
 		case <-ctx.Done():
 			t.Error(ctx.Err())
@@ -473,7 +470,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 
 		var receivedBlockSlots []primitives.Slot
 		for _, b := range bwb {
-			receivedBlockSlots = append(receivedBlockSlots, b.block.Block().Slot())
+			receivedBlockSlots = append(receivedBlockSlots, b.Block.Block().Slot())
 		}
 		missing := slice.NotSlot(slice.IntersectionSlot(chainConfig.expectedBlockSlots, receivedBlockSlots), chainConfig.expectedBlockSlots)
 		if len(missing) > 0 {
@@ -990,7 +987,7 @@ func TestLowestSlotNeedsBlob(t *testing.T) {
 		sbbs[i] = blks[i]
 	}
 	retentionStart := primitives.Slot(5)
-	bwb, err := validROBlocks(sbbs)
+	bwb, err := sortedBlockWithVerifiedBlobSlice(sbbs)
 	require.NoError(t, err)
 	lowest := lowestSlotNeedsBlob(retentionStart, bwb)
 	require.Equal(t, retentionStart, *lowest)
@@ -1003,14 +1000,14 @@ func TestLowestSlotNeedsBlob(t *testing.T) {
 func TestBlobRequest(t *testing.T) {
 	var nilReq *ethpb.BlobSidecarsByRangeRequest
 	// no blocks
-	req := blobRequest([]BlockWithVerifiedBlobs{}, 0)
+	req := blobRequest([]blocks.BlockWithVerifiedBlobs{}, 0)
 	require.Equal(t, nilReq, req)
 	blks, _ := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
 	for i := range blks {
 		sbbs[i] = blks[i]
 	}
-	bwb, err := validROBlocks(sbbs)
+	bwb, err := sortedBlockWithVerifiedBlobSlice(sbbs)
 	require.NoError(t, err)
 	maxBlkSlot := primitives.Slot(len(blks) - 1)
 
@@ -1028,20 +1025,20 @@ func TestBlobRequest(t *testing.T) {
 	// adding 1 to include the halfway slot itself
 	require.Equal(t, uint64(1+maxBlkSlot-halfway), req.Count)
 
-	before := bwb[0].block.Block().Slot()
+	before := bwb[0].Block.Block().Slot()
 	allAfter := bwb[1:]
 	req = blobRequest(allAfter, before)
-	require.Equal(t, allAfter[0].block.Block().Slot(), req.StartSlot)
+	require.Equal(t, allAfter[0].Block.Block().Slot(), req.StartSlot)
 	require.Equal(t, len(allAfter), int(req.Count))
 }
 
-func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]BlockWithVerifiedBlobs, []*ethpb.BlobSidecar) {
+func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithVerifiedBlobs, []*ethpb.BlobSidecar) {
 	blks, blobs := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, nblocks)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
 	for i := range blks {
 		sbbs[i] = blks[i]
 	}
-	bwb, err := validROBlocks(sbbs)
+	bwb, err := sortedBlockWithVerifiedBlobSlice(sbbs)
 	require.NoError(t, err)
 	return bwb, blobs
 }
@@ -1050,11 +1047,11 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	bwb, blobs := testSequenceBlockWithBlob(t, 10)
 	lastBlobIdx := len(blobs) - 1
 	// Blocks are all before the retention window, blobs argument is ignored.
-	windowAfter := bwb[len(bwb)-1].block.Block().Slot() + 1
+	windowAfter := bwb[len(bwb)-1].Block.Block().Slot() + 1
 	_, err := verifyAndPopulateBlobs(bwb, nil, windowAfter)
 	require.NoError(t, err)
 
-	firstBlockSlot := bwb[0].block.Block().Slot()
+	firstBlockSlot := bwb[0].Block.Block().Slot()
 	// slice off blobs for the last block so we hit the out of bounds / blob exhaustion check.
 	_, err = verifyAndPopulateBlobs(bwb, blobs[0:len(blobs)-6], firstBlockSlot)
 	require.ErrorIs(t, err, errMissingBlobsForBlockCommitments)
@@ -1099,12 +1096,12 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	bwb, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
 	require.NoError(t, err)
 	for _, bw := range bwb {
-		commits, err := bw.block.Block().Body().BlobKzgCommitments()
+		commits, err := bw.Block.Block().Body().BlobKzgCommitments()
 		require.NoError(t, err)
-		require.Equal(t, len(commits), len(bw.blobs))
+		require.Equal(t, len(commits), len(bw.Blobs))
 		for i := range commits {
 			bc := bytesutil.ToBytes48(commits[i])
-			require.Equal(t, bc, bytesutil.ToBytes48(bw.blobs[i].KzgCommitment))
+			require.Equal(t, bc, bytesutil.ToBytes48(bw.Blobs[i].KzgCommitment))
 			// Since we delete entries we've seen, duplicates will cause an error here.
 			_, ok := expectedCommits[bc]
 			// Make sure this was an expected delete, then delete it from the map so we can make sure we saw all of them.

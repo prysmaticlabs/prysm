@@ -183,7 +183,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 	}
 	parentRoot := block.Block().ParentRoot()
 	if !bytes.Equal(s.Root, parentRoot[:]) {
-		return errors.Errorf("ReceiveBlockInitialSync wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
+		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 	}
 	if err := s.State.SetSlot(block.Block().Slot()); err != nil {
 		return err

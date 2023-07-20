@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -91,7 +92,7 @@ type blocksQueue struct {
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
 	pid peer.ID
-	bwb []BlockWithVerifiedBlobs
+	bwb []blocks.BlockWithVerifiedBlobs
 }
 
 // newBlocksQueue creates initialized priority queue.

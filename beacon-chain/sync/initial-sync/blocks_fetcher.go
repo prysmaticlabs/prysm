@@ -118,7 +118,7 @@ type fetchRequestResponse struct {
 	pid   peer.ID
 	start primitives.Slot
 	count uint64
-	bwb   []BlockWithVerifiedBlobs
+	bwb   []blocks2.BlockWithVerifiedBlobs
 	err   error
 }
 
@@ -261,7 +261,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 	response := &fetchRequestResponse{
 		start: start,
 		count: count,
-		bwb:   []BlockWithVerifiedBlobs{},
+		bwb:   []blocks2.BlockWithVerifiedBlobs{},
 		err:   nil,
 	}
 
@@ -302,7 +302,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
 	start primitives.Slot, count uint64,
 	peers []peer.ID,
-) ([]BlockWithVerifiedBlobs, peer.ID, error) {
+) ([]blocks2.BlockWithVerifiedBlobs, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
@@ -320,7 +320,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 			continue
 		}
 		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
-		robs, err := validROBlocks(blocks)
+		robs, err := sortedBlockWithVerifiedBlobSlice(blocks)
 		if err != nil {
 			log.WithField("peer", p).WithError(err).Debug("invalid BeaconBlocksByRange response")
 			continue
@@ -330,45 +330,26 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	return nil, "", errNoPeersAvailable
 }
 
-func validROBlocks(blocks []interfaces.ReadOnlySignedBeaconBlock) ([]BlockWithVerifiedBlobs, error) {
-	robs := make([]blocks2.ROBlock, len(blocks))
+func sortedBlockWithVerifiedBlobSlice(blocks []interfaces.ReadOnlySignedBeaconBlock) ([]blocks2.BlockWithVerifiedBlobs, error) {
+	rb := make([]blocks2.BlockWithVerifiedBlobs, len(blocks))
 	for i, b := range blocks {
-		rb, err := blocks2.NewROBlock(b)
+		ro, err := blocks2.NewROBlock(b)
 		if err != nil {
 			return nil, err
 		}
-		robs[i] = rb
+		rb[i] = blocks2.BlockWithVerifiedBlobs{Block: ro}
 	}
-	sort.Sort(blocks2.ROBlockSlice(robs))
-	rb := make([]BlockWithVerifiedBlobs, len(robs))
-	for i := range robs {
-		rb[i] = BlockWithVerifiedBlobs{block: robs[i]}
-	}
+	sort.Sort(blocks2.BlockWithVerifiedBlobsSlice(rb))
 	return rb, nil
 }
 
-type BlockWithVerifiedBlobs struct {
-	block blocks2.ROBlock
-	blobs []*p2ppb.BlobSidecar
-}
-
-type BlockWithVerifiedBlobsSlice []BlockWithVerifiedBlobs
-
-func (s BlockWithVerifiedBlobsSlice) ROBlocks() []blocks2.ROBlock {
-	r := make([]blocks2.ROBlock, len(s))
-	for i := range s {
-		r[i] = s[i].block
-	}
-	return r
-}
-
-func blobRequest(bwb []BlockWithVerifiedBlobs, blobWindowStart primitives.Slot) *p2ppb.BlobSidecarsByRangeRequest {
+func blobRequest(bwb []blocks2.BlockWithVerifiedBlobs, blobWindowStart primitives.Slot) *p2ppb.BlobSidecarsByRangeRequest {
 	if len(bwb) == 0 {
 		return nil
 	}
 	// Short-circuit if the highest block is before the deneb start epoch or retention period start.
-	// This assumes blocks are sorted by validROBlocks.
-	highest := bwb[len(bwb)-1].block.Block().Slot()
+	// This assumes blocks are sorted by sortedBlockWithVerifiedBlobSlice.
+	highest := bwb[len(bwb)-1].Block.Block().Slot()
 	// bwb is sorted by slot, so if the last element is outside the retention window, no blobs are needed.
 	if highest < blobWindowStart {
 		return nil
@@ -383,14 +364,14 @@ func blobRequest(bwb []BlockWithVerifiedBlobs, blobWindowStart primitives.Slot) 
 	}
 }
 
-func lowestSlotNeedsBlob(retentionStart primitives.Slot, bwb []BlockWithVerifiedBlobs) *primitives.Slot {
+func lowestSlotNeedsBlob(retentionStart primitives.Slot, bwb []blocks2.BlockWithVerifiedBlobs) *primitives.Slot {
 	i := sort.Search(len(bwb), func(i int) bool {
-		return bwb[i].block.Block().Slot() >= retentionStart
+		return bwb[i].Block.Block().Slot() >= retentionStart
 	})
 	if i >= len(bwb) {
 		return nil
 	}
-	s := bwb[i].block.Block().Slot()
+	s := bwb[i].Block.Block().Slot()
 	return &s
 }
 
@@ -411,15 +392,15 @@ var errMismatchedBlobBlockRoot = errors.Wrap(errBlobVerification, "BlockRoot in 
 var errMissingBlobIndex = errors.Wrap(errBlobVerification, "missing expected blob index")
 var errMismatchedBlobCommitments = errors.Wrap(errBlobVerification, "commitments at given slot, root and index do not match")
 
-func verifyAndPopulateBlobs(bwb []BlockWithVerifiedBlobs, blobs []*p2ppb.BlobSidecar, blobWindowStart primitives.Slot) ([]BlockWithVerifiedBlobs, error) {
-	// Assumes bwb has already been sorted by validROBlocks.
+func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb.BlobSidecar, blobWindowStart primitives.Slot) ([]blocks2.BlockWithVerifiedBlobs, error) {
+	// Assumes bwb has already been sorted by sortedBlockWithVerifiedBlobSlice.
 	blobs = sortBlobs(blobs)
 	blobi := 0
 	// Loop over all blocks, and each time a commitment is observed, advance the index into the blob slice.
 	// The assumption is that the blob slice contains a value for every commitment in the blocks it is based on,
 	// correctly ordered by slot and blob index.
 	for i, bb := range bwb {
-		block := bb.block.Block()
+		block := bb.Block.Block()
 		if block.Slot() < blobWindowStart {
 			continue
 		}
@@ -434,33 +415,33 @@ func verifyAndPopulateBlobs(bwb []BlockWithVerifiedBlobs, blobs []*p2ppb.BlobSid
 			}
 			return nil, err
 		}
-		bb.blobs = make([]*p2ppb.BlobSidecar, len(commits))
+		bb.Blobs = make([]*p2ppb.BlobSidecar, len(commits))
 		for ci := range commits {
 			// There are more expected commitments in this block, but we've run out of blobs from the response
 			// (out-of-bound error guard).
 			if blobi == len(blobs) {
-				return nil, missingCommitError(bb.block.Root(), commits[ci:])
+				return nil, missingCommitError(bb.Block.Root(), commits[ci:])
 			}
 			bl := blobs[blobi]
 			if bl.Slot != block.Slot() {
-				return nil, missingCommitError(bb.block.Root(), commits[ci:])
+				return nil, missingCommitError(bb.Block.Root(), commits[ci:])
 			}
-			if bytesutil.ToBytes32(bl.BlockRoot) != bb.block.Root() {
+			if bytesutil.ToBytes32(bl.BlockRoot) != bb.Block.Root() {
 				return nil, errors.Wrapf(errMismatchedBlobBlockRoot,
-					"block root %#x != BlobSidecar.BlockRoot %#x at slot %d", bb.block.Root(), bl.BlockRoot, block.Slot())
+					"block root %#x != BlobSidecar.BlockRoot %#x at slot %d", bb.Block.Root(), bl.BlockRoot, block.Slot())
 			}
 			if ci != int(bl.Index) {
 				return nil, errors.Wrapf(errMissingBlobIndex,
-					"did not receive blob index %d for block root %#x at slot %d", ci, bb.block.Root(), block.Slot())
+					"did not receive blob index %d for block root %#x at slot %d", ci, bb.Block.Root(), block.Slot())
 			}
 			ec := bytesutil.ToBytes48(commits[ci])
 			ac := bytesutil.ToBytes48(bl.KzgCommitment)
 			if ec != ac {
 				return nil, errors.Wrapf(errMismatchedBlobCommitments,
 					"commitment %#x != block commitment %#x, at index %d for block root %#x at slot %d ",
-					ac, ec, bl.Index, bb.block.Root(), block.Slot())
+					ac, ec, bl.Index, bb.Block.Root(), block.Slot())
 			}
-			bb.blobs[ci] = bl
+			bb.Blobs[ci] = bl
 			blobi += 1
 		}
 		bwb[i] = bb
@@ -478,7 +459,7 @@ func missingCommitError(root [32]byte, missing [][]byte) error {
 }
 
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
-func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []BlockWithVerifiedBlobs, pid peer.ID) ([]BlockWithVerifiedBlobs, error) {
+func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.BlockWithVerifiedBlobs, pid peer.ID) ([]blocks2.BlockWithVerifiedBlobs, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsForResponse")
 	defer span.End()
 	if slots.ToEpoch(f.clock.CurrentSlot()) < params.BeaconConfig().DenebForkEpoch {
