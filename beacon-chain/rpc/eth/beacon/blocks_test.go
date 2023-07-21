@@ -585,7 +585,7 @@ func TestServer_SubmitBlockSSZ(t *testing.T) {
 			Data: ssz,
 		}
 		md := metadata.MD{}
-		md.Set(versionHeader, "deneb")
+		md.Set(api.VersionHeader, "deneb")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err)
@@ -605,7 +605,7 @@ func TestServer_SubmitBlockSSZ(t *testing.T) {
 			Data: ssz,
 		}
 		md := metadata.MD{}
-		md.Set(versionHeader, "deneb")
+		md.Set(api.VersionHeader, "deneb")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NotNil(t, err)
