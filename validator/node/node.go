@@ -557,7 +557,16 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		},
 		BuilderConfig: validatorServiceConfig.ToBuilderConfig(fileConfig.DefaultConfig.Builder),
 	}
-	handleBuilderProcessing(builderConfigFromFlag, vpSettings.DefaultConfig.BuilderConfig)
+
+	if builderConfigFromFlag != nil {
+		config := builderConfigFromFlag
+		if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && vpSettings.DefaultConfig.BuilderConfig != nil {
+			config.GasLimit = vpSettings.DefaultConfig.BuilderConfig.GasLimit
+		}
+		vpSettings.DefaultConfig.BuilderConfig = config
+	} else if vpSettings.DefaultConfig.BuilderConfig != nil {
+		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
+	}
 
 	if psExists {
 		// if settings exist update the default
@@ -576,18 +585,19 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			if len(decodedKey) != fieldparams.BLSPubkeyLength {
 				return nil, fmt.Errorf("%v  is not a bls public key", key)
 			}
-			if option == nil {
-				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
-			}
-
-			if !common.IsHexAddress(option.FeeRecipient) {
-				return nil, errors.New("fee recipient is not a valid eth1 address")
-			}
-			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
+			if err := verifyOption(key, option); err != nil {
 				return nil, err
 			}
 			currentBuilderConfig := validatorServiceConfig.ToBuilderConfig(option.Builder)
-			handleBuilderProcessing(builderConfigFromFlag, currentBuilderConfig)
+			if builderConfigFromFlag != nil {
+				config := builderConfigFromFlag
+				if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && currentBuilderConfig != nil {
+					config.GasLimit = currentBuilderConfig.GasLimit
+				}
+				currentBuilderConfig = config
+			} else if currentBuilderConfig != nil {
+				currentBuilderConfig.GasLimit = reviewGasLimit(currentBuilderConfig.GasLimit)
+			}
 			o := &validatorServiceConfig.ProposerOption{
 				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
 					FeeRecipient: common.HexToAddress(option.FeeRecipient),
@@ -613,16 +623,17 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 	return vpSettings, nil
 }
 
-func handleBuilderProcessing(builderConfigFromFlag *validatorServiceConfig.BuilderConfig, currentBuilderConfig *validatorServiceConfig.BuilderConfig) {
-	if builderConfigFromFlag != nil {
-		config := builderConfigFromFlag
-		if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && currentBuilderConfig != nil {
-			config.GasLimit = currentBuilderConfig.GasLimit
-		}
-		currentBuilderConfig = config
-	} else if currentBuilderConfig != nil {
-		currentBuilderConfig.GasLimit = reviewGasLimit(currentBuilderConfig.GasLimit)
+func verifyOption(key string, option *validatorpb.ProposerOptionPayload) error {
+	if option == nil {
+		return fmt.Errorf("fee recipient is required for proposer %s", key)
 	}
+	if !common.IsHexAddress(option.FeeRecipient) {
+		return errors.New("fee recipient is not a valid eth1 address")
+	}
+	if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
+		return err
+	}
+	return nil
 }
 
 func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
