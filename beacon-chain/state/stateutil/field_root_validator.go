@@ -60,6 +60,7 @@ func hashValidatorHelper(validators []*ethpb.Validator, roots [][32]byte, j int,
 		fRoots, err := ValidatorFieldRoots(validators[j*groupSize+i])
 		if err != nil {
 			logrus.WithError(err).Error("could not get validator field roots")
+			return
 		}
 		for k, root := range fRoots {
 			roots[(j*groupSize+i)*validatorFieldRoots+k] = root
