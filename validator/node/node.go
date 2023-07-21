@@ -564,6 +564,8 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			config.GasLimit = vpSettings.DefaultConfig.BuilderConfig.GasLimit
 		}
 		vpSettings.DefaultConfig.BuilderConfig = config
+	} else if vpSettings.DefaultConfig.BuilderConfig != nil {
+		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
 	}
 
 	if psExists {
@@ -573,7 +575,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		}
 	}
 
-	if fileConfig.ProposerConfig != nil {
+	if fileConfig.ProposerConfig != nil && len(fileConfig.ProposerConfig) != 0 {
 		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
 		for key, option := range fileConfig.ProposerConfig {
 			decodedKey, err := hexutil.Decode(key)
