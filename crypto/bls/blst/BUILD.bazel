@@ -17,7 +17,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/crypto/bls/blst",
     visibility = ["//visibility:public"],
     deps = [
-        "//cache/lru:go_default_library",
+        "//cache/nonblocking:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls/common:go_default_library",
