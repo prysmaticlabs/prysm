@@ -108,6 +108,9 @@ func (b *BeaconState) validatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Va
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if features.Get().EnableExperimentalState {
 		if b.validatorsMultiValue == nil {
 			return nil, state.ErrNilValidatorsInState
@@ -193,11 +196,13 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 	b.lock.RLock()
 	if features.Get().EnableExperimentalState {
 		if b.validatorsMultiValue == nil {
+			b.lock.RUnlock()
 			return state.ErrNilValidatorsInState
 		}
 		validators = b.validatorsMultiValue.Value(b)
 	} else {
 		if b.validators == nil {
+			b.lock.RUnlock()
 			return state.ErrNilValidatorsInState
 		}
 		validators = b.validators
