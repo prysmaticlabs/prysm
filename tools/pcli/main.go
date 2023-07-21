@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -286,11 +287,16 @@ func benchmarkHash(sszPath string, sszType string) {
 			log.Fatal(err)
 		}
 		start := time.Now()
+		stat := &runtime.MemStats{}
+		runtime.ReadMemStats(stat)
 		root, err := stateTrieState.HashTreeRoot(context.Background())
 		if err != nil {
 			log.Fatal("couldn't hash")
 		}
+		newStat := &runtime.MemStats{}
+		runtime.ReadMemStats(newStat)
 		fmt.Printf("Deserialize Duration: %v, Hashing Duration: %v HTR: %#x\n", deserializeDuration, time.Since(start), root)
+		fmt.Printf("Total Memory Allocation Differential: %d bytes, Heap Memory Allocation Differential: %d bytes\n", int64(newStat.TotalAlloc)-int64(stat.TotalAlloc), int64(newStat.HeapAlloc)-int64(stat.HeapAlloc))
 		return
 	default:
 		log.Fatal("Invalid type")
