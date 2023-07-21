@@ -487,6 +487,32 @@ func TestPayloadIDBytes_MarshalUnmarshalJSON(t *testing.T) {
 	require.Equal(t, true, item == *res)
 }
 
+func TestExecutionPayloadBody_MarshalUnmarshalJSON(t *testing.T) {
+	pBody := &enginev1.ExecutionPayloadBodyV1{
+		Transactions: [][]byte{[]byte("random1"), []byte("random2"), []byte("random3")},
+		Withdrawals: []*enginev1.Withdrawal{
+			&enginev1.Withdrawal{
+				Index:          200,
+				ValidatorIndex: 20303,
+				Amount:         3200000000,
+				Address:        bytesutil.PadTo([]byte("junk"), 20),
+			},
+			&enginev1.Withdrawal{
+				Index:          200,
+				ValidatorIndex: 70303,
+				Amount:         3200000800,
+				Address:        bytesutil.PadTo([]byte("junk2"), 20),
+			},
+		},
+	}
+	enc, err := json.Marshal(pBody)
+	require.NoError(t, err)
+	res := &enginev1.ExecutionPayloadBodyV1{}
+	err = res.UnmarshalJSON(enc)
+	require.NoError(t, err)
+	require.DeepEqual(t, pBody, res)
+}
+
 func TestExecutionBlock_MarshalUnmarshalJSON_MainnetBlock(t *testing.T) {
 	newBlock := &enginev1.ExecutionBlock{}
 	require.NoError(t, newBlock.UnmarshalJSON([]byte(blockJson)))
