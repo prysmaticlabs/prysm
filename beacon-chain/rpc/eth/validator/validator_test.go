@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
@@ -1304,63 +1303,6 @@ func TestProduceAttestationData(t *testing.T) {
 	if !proto.Equal(res.Data, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
 	}
-}
-
-func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *testing.T) {
-	ctx := context.Background()
-	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
-	att1 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{3, 0, 0, 1},
-		Data: &ethpbalpha.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: root,
-			Source: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root,
-			},
-			Target: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root,
-			},
-		},
-		Signature: sig,
-	}
-	att2 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 3, 0, 1},
-		Data: &ethpbalpha.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: root,
-			Source: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root,
-			},
-			Target: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root,
-			},
-		},
-		Signature: sig,
-	}
-	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{att1, att2})
-	assert.NoError(t, err)
-	vs := &Server{
-		AttestationsPool: pool,
-	}
-	reqRoot, err := att1.Data.HashTreeRoot()
-	require.NoError(t, err)
-	req := &ethpbv1.AggregateAttestationRequest{
-		AttestationDataRoot: reqRoot[:],
-		Slot:                1,
-	}
-	att, err := vs.GetAggregateAttestation(ctx, req)
-	require.NoError(t, err)
-	require.NotNil(t, att)
-	require.NotNil(t, att.Data)
-	assert.DeepEqual(t, bitfield.Bitlist{3, 0, 0, 1}, att.Data.AggregationBits)
 }
 
 func TestSubmitBeaconCommitteeSubscription(t *testing.T) {

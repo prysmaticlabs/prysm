@@ -73,7 +73,16 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 				network.WriteError(w, errJson)
 				return
 			}
-			if bytes.Equal(root[:], []byte(attDataRoot)) {
+			attDataRootBytes, err := hexutil.Decode(attDataRoot)
+			if err != nil {
+				errJson := &network.DefaultErrorJson{
+					Message: "Could not decode attestation data root into bytes: " + err.Error(),
+					Code:    http.StatusBadRequest,
+				}
+				network.WriteError(w, errJson)
+				return
+			}
+			if bytes.Equal(root[:], attDataRootBytes) {
 				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
 					bestMatchingAtt = att
 				}
