@@ -559,7 +559,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 	}
 
 	if builderConfigFromFlag != nil {
-		config := builderConfigFromFlag
+		config := builderConfigFromFlag.Clone()
 		if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && vpSettings.DefaultConfig.BuilderConfig != nil {
 			config.GasLimit = vpSettings.DefaultConfig.BuilderConfig.GasLimit
 		}
@@ -590,7 +590,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			}
 			currentBuilderConfig := validatorServiceConfig.ToBuilderConfig(option.Builder)
 			if builderConfigFromFlag != nil {
-				config := builderConfigFromFlag
+				config := builderConfigFromFlag.Clone()
 				if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && currentBuilderConfig != nil {
 					config.GasLimit = currentBuilderConfig.GasLimit
 				}
