@@ -557,16 +557,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		},
 		BuilderConfig: validatorServiceConfig.ToBuilderConfig(fileConfig.DefaultConfig.Builder),
 	}
-
-	if builderConfigFromFlag != nil {
-		config := builderConfigFromFlag
-		if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && vpSettings.DefaultConfig.BuilderConfig != nil {
-			config.GasLimit = vpSettings.DefaultConfig.BuilderConfig.GasLimit
-		}
-		vpSettings.DefaultConfig.BuilderConfig = config
-	} else if vpSettings.DefaultConfig.BuilderConfig != nil {
-		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
-	}
+	handleBuilderProcessing(builderConfigFromFlag, vpSettings.DefaultConfig.BuilderConfig)
 
 	if psExists {
 		// if settings exist update the default
@@ -588,26 +579,20 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			if option == nil {
 				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
 			}
+
 			if !common.IsHexAddress(option.FeeRecipient) {
 				return nil, errors.New("fee recipient is not a valid eth1 address")
 			}
 			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
 				return nil, err
 			}
-			if builderConfigFromFlag != nil {
-				config := builderConfigFromFlag.ToPayload()
-				if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && option.Builder != nil {
-					config.GasLimit = option.Builder.GasLimit
-				}
-				option.Builder = config
-			} else if option.Builder != nil {
-				option.Builder.GasLimit = reviewGasLimit(option.Builder.GasLimit)
-			}
+			currentBuilderConfig := validatorServiceConfig.ToBuilderConfig(option.Builder)
+			handleBuilderProcessing(builderConfigFromFlag, currentBuilderConfig)
 			o := &validatorServiceConfig.ProposerOption{
 				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
 					FeeRecipient: common.HexToAddress(option.FeeRecipient),
 				},
-				BuilderConfig: validatorServiceConfig.ToBuilderConfig(option.Builder),
+				BuilderConfig: currentBuilderConfig,
 			}
 			pubkeyB := bytesutil.ToBytes48(decodedKey)
 			vpSettings.ProposeConfig[pubkeyB] = o
@@ -626,6 +611,18 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 		}
 	}
 	return vpSettings, nil
+}
+
+func handleBuilderProcessing(builderConfigFromFlag *validatorServiceConfig.BuilderConfig, currentBuilderConfig *validatorServiceConfig.BuilderConfig) {
+	if builderConfigFromFlag != nil {
+		config := builderConfigFromFlag
+		if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && currentBuilderConfig != nil {
+			config.GasLimit = currentBuilderConfig.GasLimit
+		}
+		currentBuilderConfig = config
+	} else if currentBuilderConfig != nil {
+		currentBuilderConfig.GasLimit = reviewGasLimit(currentBuilderConfig.GasLimit)
+	}
 }
 
 func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
