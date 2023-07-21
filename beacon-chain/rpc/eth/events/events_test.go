@@ -13,7 +13,6 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	b "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -48,55 +47,6 @@ func TestStreamEvents_Preconditions(t *testing.T) {
 		mockStream := mock.NewMockEvents_StreamEventsServer(ctrl)
 		err := srv.StreamEvents(&ethpb.StreamEventsRequest{Topics: []string{"foobar"}}, mockStream)
 		require.ErrorContains(t, "Topic foobar not allowed", err)
-	})
-}
-
-func TestStreamEvents_BlockEvents(t *testing.T) {
-	t.Run(BlockTopic, func(t *testing.T) {
-		ctx := context.Background()
-		srv, ctrl, mockStream := setupServer(ctx, t)
-		defer ctrl.Finish()
-
-		blk := util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
-			Block: &eth.BeaconBlock{
-				Slot: 8,
-			},
-		})
-		bodyRoot, err := blk.Block.Body.HashTreeRoot()
-		require.NoError(t, err)
-		wantedHeader := util.HydrateBeaconHeader(&eth.BeaconBlockHeader{
-			Slot:     8,
-			BodyRoot: bodyRoot[:],
-		})
-		wantedBlockRoot, err := wantedHeader.HashTreeRoot()
-		require.NoError(t, err)
-		genericResponse, err := anypb.New(&ethpb.EventBlock{
-			Slot:                8,
-			Block:               wantedBlockRoot[:],
-			ExecutionOptimistic: true,
-		})
-		require.NoError(t, err)
-		wantedMessage := &gateway.EventSource{
-			Event: BlockTopic,
-			Data:  genericResponse,
-		}
-		wsb, err := blocks.NewSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		assertFeedSendAndReceive(ctx, &assertFeedArgs{
-			t:             t,
-			srv:           srv,
-			topics:        []string{BlockTopic},
-			stream:        mockStream,
-			shouldReceive: wantedMessage,
-			itemToSend: &feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{
-					SignedBlock:  wsb,
-					IsOptimistic: true,
-				},
-			},
-			feed: srv.BlockNotifier.BlockFeed(),
-		})
 	})
 }
 
@@ -588,6 +538,53 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			feed: srv.StateNotifier.StateFeed(),
 		})
 	})
+	t.Run(BlockTopic, func(t *testing.T) {
+		ctx := context.Background()
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+
+		blk := util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
+			Block: &eth.BeaconBlock{
+				Slot: 8,
+			},
+		})
+		bodyRoot, err := blk.Block.Body.HashTreeRoot()
+		require.NoError(t, err)
+		wantedHeader := util.HydrateBeaconHeader(&eth.BeaconBlockHeader{
+			Slot:     8,
+			BodyRoot: bodyRoot[:],
+		})
+		wantedBlockRoot, err := wantedHeader.HashTreeRoot()
+		require.NoError(t, err)
+		genericResponse, err := anypb.New(&ethpb.EventBlock{
+			Slot:                8,
+			Block:               wantedBlockRoot[:],
+			ExecutionOptimistic: true,
+		})
+		require.NoError(t, err)
+		wantedMessage := &gateway.EventSource{
+			Event: BlockTopic,
+			Data:  genericResponse,
+		}
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{BlockTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: statefeed.BlockProcessed,
+				Data: &statefeed.BlockProcessedData{
+					Slot:        8,
+					SignedBlock: wsb,
+					Optimistic:  true,
+				},
+			},
+			feed: srv.StateNotifier.StateFeed(),
+		})
+	})
 }
 
 func TestStreamEvents_CommaSeparatedTopics(t *testing.T) {
@@ -651,7 +648,6 @@ func TestStreamEvents_CommaSeparatedTopics(t *testing.T) {
 
 func setupServer(ctx context.Context, t testing.TB) (*Server, *gomock.Controller, *mock.MockEvents_StreamEventsServer) {
 	srv := &Server{
-		BlockNotifier:     &mockChain.MockBlockNotifier{},
 		StateNotifier:     &mockChain.MockStateNotifier{},
 		OperationNotifier: &mockChain.MockOperationNotifier{},
 		Ctx:               ctx,
