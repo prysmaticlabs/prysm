@@ -842,7 +842,8 @@ func fullPayloadFromPayloadBody(
 		return nil, errors.New("execution block and header cannot be nil")
 	}
 
-	if bVersion == version.Bellatrix {
+	switch bVersion {
+	case version.Bellatrix:
 		return blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
 			ParentHash:    header.ParentHash(),
 			FeeRecipient:  header.FeeRecipient(),
@@ -859,24 +860,56 @@ func fullPayloadFromPayloadBody(
 			BlockHash:     header.BlockHash(),
 			Transactions:  body.Transactions,
 		})
+	case version.Capella:
+		return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
+			ParentHash:    header.ParentHash(),
+			FeeRecipient:  header.FeeRecipient(),
+			StateRoot:     header.StateRoot(),
+			ReceiptsRoot:  header.ReceiptsRoot(),
+			LogsBloom:     header.LogsBloom(),
+			PrevRandao:    header.PrevRandao(),
+			BlockNumber:   header.BlockNumber(),
+			GasLimit:      header.GasLimit(),
+			GasUsed:       header.GasUsed(),
+			Timestamp:     header.Timestamp(),
+			ExtraData:     header.ExtraData(),
+			BaseFeePerGas: header.BaseFeePerGas(),
+			BlockHash:     header.BlockHash(),
+			Transactions:  body.Transactions,
+			Withdrawals:   body.Withdrawals,
+		}, 0) // We can't get the block value and don't care about the block value for this instance
+	case version.Deneb:
+		edg, err := header.ExcessDataGas()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract ExcessDataGas attribute from excution payload header")
+		}
+		dgu, err := header.DataGasUsed()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to extract DataGasUsed attribute from excution payload header")
+		}
+		return blocks.WrappedExecutionPayloadDeneb(
+			&pb.ExecutionPayloadDeneb{
+				ParentHash:    header.ParentHash(),
+				FeeRecipient:  header.FeeRecipient(),
+				StateRoot:     header.StateRoot(),
+				ReceiptsRoot:  header.ReceiptsRoot(),
+				LogsBloom:     header.LogsBloom(),
+				PrevRandao:    header.PrevRandao(),
+				BlockNumber:   header.BlockNumber(),
+				GasLimit:      header.GasLimit(),
+				GasUsed:       header.GasUsed(),
+				Timestamp:     header.Timestamp(),
+				ExtraData:     header.ExtraData(),
+				BaseFeePerGas: header.BaseFeePerGas(),
+				BlockHash:     header.BlockHash(),
+				Transactions:  body.Transactions,
+				Withdrawals:   body.Withdrawals,
+				ExcessDataGas: edg,
+				DataGasUsed:   dgu,
+			}, 0) // We can't get the block value and don't care about the block value for this instance
+	default:
+		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)
 	}
-	return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
-		ParentHash:    header.ParentHash(),
-		FeeRecipient:  header.FeeRecipient(),
-		StateRoot:     header.StateRoot(),
-		ReceiptsRoot:  header.ReceiptsRoot(),
-		LogsBloom:     header.LogsBloom(),
-		PrevRandao:    header.PrevRandao(),
-		BlockNumber:   header.BlockNumber(),
-		GasLimit:      header.GasLimit(),
-		GasUsed:       header.GasUsed(),
-		Timestamp:     header.Timestamp(),
-		ExtraData:     header.ExtraData(),
-		BaseFeePerGas: header.BaseFeePerGas(),
-		BlockHash:     header.BlockHash(),
-		Transactions:  body.Transactions,
-		Withdrawals:   body.Withdrawals,
-	}, 0) // We can't get the block value and don't care about the block value for this instance
 }
 
 // Handles errors received from the RPC server according to the specification.
