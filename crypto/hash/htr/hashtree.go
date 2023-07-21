@@ -7,10 +7,7 @@ import (
 	"github.com/prysmaticlabs/gohashtree"
 )
 
-const (
-	minSliceSizeToParallelize  = 5000
-	minProcessorsToParallelize = 5
-)
+const minSliceSizeToParallelize = 5000
 
 func hashParallel(inputList [][32]byte, outputList [][32]byte, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -27,14 +24,14 @@ func hashParallel(inputList [][32]byte, outputList [][32]byte, wg *sync.WaitGrou
 // lists.
 func VectorizedSha256(inputList [][32]byte) [][32]byte {
 	outputList := make([][32]byte, len(inputList)/2)
-	n := runtime.GOMAXPROCS(0) - 1
-	if (len(inputList) < minSliceSizeToParallelize) || n <= minProcessorsToParallelize {
+	if len(inputList) < minSliceSizeToParallelize {
 		err := gohashtree.Hash(outputList, inputList)
 		if err != nil {
 			panic(err)
 		}
 		return outputList
 	}
+	n := runtime.GOMAXPROCS(0) - 1
 	wg := sync.WaitGroup{}
 	wg.Add(n)
 	groupSize := len(inputList) / (2 * (n + 1))
