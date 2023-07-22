@@ -213,9 +213,7 @@ func MerkleizeVector(elements [][32]byte, length uint64) [32]byte {
 			zerohash := trie.ZeroHashes[i]
 			elements = append(elements, zerohash)
 		}
-		outputLen := len(elements) / 2
-		htr.VectorizedSha256(elements, elements)
-		elements = elements[:outputLen]
+		elements = htr.VectorizedSha256(elements)
 	}
 	return elements[0]
 }
