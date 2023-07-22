@@ -298,7 +298,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
 	}
 	alphaExit := migration.V1ExitToV1Alpha1(req)
-	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), alphaExit, headState.GenesisValidatorsRoot())
+	err = blocks.VerifyExitAndSignature(validator, headState, alphaExit)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid voluntary exit: %v", err)
 	}
