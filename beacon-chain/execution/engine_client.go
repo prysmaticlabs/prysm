@@ -102,7 +102,7 @@ type EngineCaller interface {
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error)
+	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -237,7 +237,7 @@ func (s *Service) ForkchoiceUpdated(
 
 // GetPayload calls the engine_getPayloadVX method via JSON-RPC.
 // It returns the execution data as well as the blobs bundle.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -253,38 +253,38 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		result := &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
 		if err != nil {
-			return nil, nil, handleRPCError(err)
+			return nil, nil, false, handleRPCError(err)
 		}
 		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToGwei(result.Value))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
-		return ed, result.BlobsBundle, nil
+		return ed, result.BlobsBundle, result.ShouldOverrideBuilder, nil
 	}
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
 		result := &pb.ExecutionPayloadCapellaWithValue{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
 		if err != nil {
-			return nil, nil, handleRPCError(err)
+			return nil, nil, false, handleRPCError(err)
 		}
 		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToGwei(result.Value))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
-		return ed, nil, nil
+		return ed, nil, false, nil
 	}
 
 	result := &pb.ExecutionPayload{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	if err != nil {
-		return nil, nil, handleRPCError(err)
+		return nil, nil, false, handleRPCError(err)
 	}
 	ed, err := blocks.WrappedExecutionPayload(result)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
-	return ed, nil, nil
+	return ed, nil, false, nil
 }
 
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
