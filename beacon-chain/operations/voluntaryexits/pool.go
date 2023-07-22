@@ -90,7 +90,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 			}
 			continue
 		}
-		if err = blocks.VerifyExitAndSignature(validator, state.Slot(), state.Fork(), exit, state.GenesisValidatorsRoot()); err != nil {
+		if err = blocks.VerifyExitAndSignature(validator, state, exit); err != nil {
 			logrus.WithError(err).Warning("removing invalid exit from pool")
 			p.lock.RUnlock()
 			// MarkIncluded removes the invalid exit from the pool
