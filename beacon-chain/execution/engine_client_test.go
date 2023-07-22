@@ -75,8 +75,9 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, _, err := srv.GetPayload(ctx, payloadId, 1)
+		resp, _, override, err := srv.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
+		require.Equal(t, false, override)
 		resPb, err := resp.PbBellatrix()
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resPb)
@@ -85,8 +86,9 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, _, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, override, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
+		require.Equal(t, false, override)
 		resPb, err := resp.PbCapella()
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resPb)
@@ -204,8 +206,9 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, _, err := client.GetPayload(ctx, payloadId, 1)
+		resp, _, override, err := client.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
+		require.Equal(t, false, override)
 		pb, err := resp.PbBellatrix()
 		require.NoError(t, err)
 		require.DeepEqual(t, want, pb)
@@ -248,8 +251,9 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, _, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		resp, _, override, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
+		require.Equal(t, false, override)
 		pb, err := resp.PbCapella()
 		require.NoError(t, err)
 		require.DeepEqual(t, want.ExecutionPayload.BlockHash.Bytes(), pb.BlockHash)
@@ -301,8 +305,9 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, blobsBundle, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
+		resp, blobsBundle, override, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
+		require.Equal(t, true, override)
 		g, err := resp.ExcessDataGas()
 		require.NoError(t, err)
 		require.DeepEqual(t, uint64(3), g)
@@ -1459,6 +1464,7 @@ func fixtures() map[string]interface{} {
 	dgu := hexutil.Uint64(2)
 	edg := hexutil.Uint64(3)
 	executionPayloadWithValueFixtureDeneb := &pb.GetPayloadV3ResponseJson{
+		ShouldOverrideBuilder: true,
 		ExecutionPayload: &pb.ExecutionPayloadDenebJSON{
 			ParentHash:    &common.Hash{'a'},
 			FeeRecipient:  &common.Address{'b'},

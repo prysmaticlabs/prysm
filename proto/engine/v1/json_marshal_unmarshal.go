@@ -264,9 +264,10 @@ type ExecutionPayloadCapellaJSON struct {
 }
 
 type GetPayloadV3ResponseJson struct {
-	ExecutionPayload *ExecutionPayloadDenebJSON `json:"executionPayload"`
-	BlockValue       string                     `json:"blockValue"`
-	BlobsBundle      *BlobBundleJSON            `json:"blobsBundle"`
+	ExecutionPayload      *ExecutionPayloadDenebJSON `json:"executionPayload"`
+	BlockValue            string                     `json:"blockValue"`
+	BlobsBundle           *BlobBundleJSON            `json:"blobsBundle"`
+	ShouldOverrideBuilder bool                       `json:"shouldOverrideBuilder"`
 }
 
 type ExecutionPayloadDenebJSON struct {
@@ -878,6 +879,8 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 		blobs[i] = b
 	}
 	e.BlobsBundle.Blobs = blobs
+
+	e.ShouldOverrideBuilder = dec.ShouldOverrideBuilder
 
 	return nil
 }
