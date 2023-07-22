@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -166,14 +167,33 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 		lowerBoundsSlot,
 		currentSlot,
 	)
-	if attTime.Before(lowerBounds) {
-		attReceivedTooLateCount.Inc()
-		return errors.Join(ErrTooLate, attError)
-	}
 	if attTime.After(upperBounds) {
 		attReceivedTooEarlyCount.Inc()
 		return attError
 	}
+
+	attEpoch := slots.ToEpoch(attSlot)
+	if attEpoch < params.BeaconConfig().DenebForkEpoch {
+		if attTime.Before(lowerBounds) {
+			attReceivedTooLateCount.Inc()
+			return errors.Join(ErrTooLate, attError)
+		}
+		return nil
+	}
+
+	// EIP-7045: Starting in Deneb, allow any attestations from the current or previous epoch.
+
+	currentEpoch := slots.ToEpoch(currentSlot)
+	prevEpoch, err := currentEpoch.SafeSub(1)
+	if err != nil {
+		log.WithError(err).Debug("Ignoring underflow for a deneb attestation inclusion check in epoch 0")
+		prevEpoch = 0
+	}
+	attSlotEpoch := slots.ToEpoch(attSlot)
+	if attSlotEpoch != currentEpoch && attSlotEpoch != prevEpoch {
+		return fmt.Errorf("attestation slot %d not within current epoch %d or previous epoch %d", attSlot, currentEpoch, prevEpoch)
+	}
+
 	return nil
 }
 
