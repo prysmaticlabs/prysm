@@ -35,7 +35,8 @@ type multipleEndpointsGrpcResolver struct {
 }
 
 func (r *multipleEndpointsGrpcResolver) start() {
-	endpoints := strings.Split(r.target.Endpoint(), ",")
+	ep := r.target.Endpoint()
+	endpoints := strings.Split(ep, ",")
 	var addrs []resolver.Address
 	for _, endpoint := range endpoints {
 		addrs = append(addrs, resolver.Address{Addr: endpoint, ServerName: endpoint})

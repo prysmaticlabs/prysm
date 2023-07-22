@@ -95,6 +95,7 @@ message ExecutionPayloadDenebWithValueAndBlobsBundle {
 	ExecutionPayloadDeneb payload = 1;
 	bytes value = 2;
 	BlobsBundle blobs_bundle = 3;
+	bool should_override_builder = 4;
 }
 
 
