@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -81,7 +82,6 @@ func VerifyAttestationNoVerifySignature(
 
 	s := att.Data.Slot
 	minInclusionCheck := s+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot()
-	epochInclusionCheck := beaconState.Slot() <= s+params.BeaconConfig().SlotsPerEpoch
 	if !minInclusionCheck {
 		return fmt.Errorf(
 			"attestation slot %d + inclusion delay %d > state slot %d",
@@ -90,13 +90,17 @@ func VerifyAttestationNoVerifySignature(
 			beaconState.Slot(),
 		)
 	}
-	if !epochInclusionCheck {
-		return fmt.Errorf(
-			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
-			beaconState.Slot(),
-			s,
-			params.BeaconConfig().SlotsPerEpoch,
-		)
+
+	if beaconState.Version() < version.Deneb {
+		epochInclusionCheck := beaconState.Slot() <= s+params.BeaconConfig().SlotsPerEpoch
+		if !epochInclusionCheck {
+			return fmt.Errorf(
+				"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
+				beaconState.Slot(),
+				s,
+				params.BeaconConfig().SlotsPerEpoch,
+			)
+		}
 	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, beaconState, att.Data.Target.Epoch)
 	if err != nil {
