@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -143,15 +144,20 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, blobsBundle, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
+	localPayload, blobsBundle, overrideBuilder, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 	}
 
-	builderPayload, blindBlobsBundle, err := vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
-	if err != nil {
-		builderGetPayloadMissCount.Inc()
-		log.WithError(err).Error("Could not get builder payload")
+	// There's no reason to try to get a builder bid if local override is true.
+	var builderPayload interfaces.ExecutionData
+	var blindBlobsBundle *enginev1.BlindedBlobsBundle
+	if !overrideBuilder {
+		builderPayload, blindBlobsBundle, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+		if err != nil {
+			builderGetPayloadMissCount.Inc()
+			log.WithError(err).Error("Could not get builder payload")
+		}
 	}
 
 	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
