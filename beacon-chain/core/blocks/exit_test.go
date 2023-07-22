@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -133,38 +134,38 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 }
 
 func TestVerifyExitAndSignature(t *testing.T) {
-	type args struct {
-		currentSlot primitives.Slot
-	}
-
 	tests := []struct {
 		name    string
-		args    args
-		setup   func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error)
+		setup   func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, state.ReadOnlyBeaconState, error)
 		wantErr string
 	}{
 		{
 			name: "Empty Exit",
-			args: args{
-				currentSlot: 0,
-			},
-			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, state.ReadOnlyBeaconState, error) {
 				fork := &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 					Epoch:           0,
 				}
 				genesisRoot := [32]byte{'a'}
-				return &ethpb.Validator{}, &ethpb.SignedVoluntaryExit{}, fork, genesisRoot[:], nil
+
+				st := &ethpb.BeaconState{
+					Slot:                  0,
+					Fork:                  fork,
+					GenesisValidatorsRoot: genesisRoot[:],
+				}
+
+				s, err := state_native.InitializeFromProtoUnsafePhase0(st)
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				return &ethpb.Validator{}, &ethpb.SignedVoluntaryExit{}, s, nil
 			},
 			wantErr: "nil exit",
 		},
 		{
 			name: "Happy Path",
-			args: args{
-				currentSlot: (params.BeaconConfig().SlotsPerEpoch * 2) + 1,
-			},
-			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, state.ReadOnlyBeaconState, error) {
 				fork := &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -186,15 +187,18 @@ func TestVerifyExitAndSignature(t *testing.T) {
 				sig, err := bls.SignatureFromBytes(sb)
 				require.NoError(t, err)
 				signedExit.Signature = sig.Marshal()
-				return validator, signedExit, fork, bs.GenesisValidatorsRoot(), nil
+				if err := bs.SetFork(fork); err != nil {
+					return nil, nil, nil, err
+				}
+				if err := bs.SetSlot((params.BeaconConfig().SlotsPerEpoch * 2) + 1); err != nil {
+					return nil, nil, nil, err
+				}
+				return validator, signedExit, bs, nil
 			},
 		},
 		{
 			name: "bad signature",
-			args: args{
-				currentSlot: (params.BeaconConfig().SlotsPerEpoch * 2) + 1,
-			},
-			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, state.ReadOnlyBeaconState, error) {
 				fork := &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -215,27 +219,72 @@ func TestVerifyExitAndSignature(t *testing.T) {
 				sig, err := bls.SignatureFromBytes(sb)
 				require.NoError(t, err)
 				signedExit.Signature = sig.Marshal()
-				genesisRoot := [32]byte{'a'}
+				if err := bs.SetFork(fork); err != nil {
+					return nil, nil, nil, err
+				}
+				if err := bs.SetSlot((params.BeaconConfig().SlotsPerEpoch * 2) + 1); err != nil {
+					return nil, nil, nil, err
+				}
+
 				// use wrong genesis root and don't update validator
-				return validator, signedExit, fork, genesisRoot[:], nil
+				genesisRoot := [32]byte{'a'}
+				if err := bs.SetGenesisValidatorsRoot(genesisRoot[:]); err != nil {
+					return nil, nil, nil, err
+				}
+				return validator, signedExit, bs, nil
 			},
 			wantErr: "signature did not verify",
+		},
+		{
+			name: "EIP-7044: deneb exits should verify with capella fork information",
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, state.ReadOnlyBeaconState, error) {
+				fork := &ethpb.Fork{
+					PreviousVersion: params.BeaconConfig().CapellaForkVersion,
+					CurrentVersion:  params.BeaconConfig().DenebForkVersion,
+					Epoch:           primitives.Epoch(2),
+				}
+				signedExit := &ethpb.SignedVoluntaryExit{
+					Exit: &ethpb.VoluntaryExit{
+						Epoch:          2,
+						ValidatorIndex: 0,
+					},
+				}
+				bs, keys := util.DeterministicGenesisState(t, 1)
+				bs, err := state_native.InitializeFromProtoUnsafeDeneb(&ethpb.BeaconStateDeneb{
+					GenesisValidatorsRoot: bs.GenesisValidatorsRoot(),
+					Fork:                  fork,
+					Slot:                  (params.BeaconConfig().SlotsPerEpoch * 2) + 1,
+					Validators:            bs.Validators(),
+				})
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				validator := bs.Validators()[0]
+				validator.ActivationEpoch = 1
+				err = bs.UpdateValidatorAtIndex(0, validator)
+				require.NoError(t, err)
+				sb, err := signing.ComputeDomainAndSign(bs, signedExit.Exit.Epoch, signedExit.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				signedExit.Signature = sig.Marshal()
+
+				return validator, signedExit, bs, nil
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := params.BeaconConfig().ShardCommitteePeriod
 			params.BeaconConfig().ShardCommitteePeriod = 0
-			validator, signedExit, fork, genesisRoot, err := tt.setup()
+			validator, signedExit, st, err := tt.setup()
 			require.NoError(t, err)
 			rvalidator, err := state_native.NewValidator(validator)
 			require.NoError(t, err)
 			err = blocks.VerifyExitAndSignature(
 				rvalidator,
-				tt.args.currentSlot,
-				fork,
+				st,
 				signedExit,
-				genesisRoot,
 			)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
