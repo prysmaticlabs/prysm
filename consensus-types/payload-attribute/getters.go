@@ -44,7 +44,7 @@ func (a *data) PbV1() (*enginev1.PayloadAttributes, error) {
 		return nil, errNilPayloadAttribute
 	}
 	if a.version != version.Bellatrix {
-		return nil, consensus_types.ErrNotSupported("PayloadAttributePbV1", a.version)
+		return nil, consensus_types.ErrNotSupported("PbV1", a.version)
 	}
 	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
 		return nil, nil
@@ -62,7 +62,7 @@ func (a *data) PbV2() (*enginev1.PayloadAttributesV2, error) {
 		return nil, errNilPayloadAttribute
 	}
 	if a.version < version.Capella {
-		return nil, consensus_types.ErrNotSupported("PayloadAttributePbV2", a.version)
+		return nil, consensus_types.ErrNotSupported("PbV2", a.version)
 	}
 	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
 		return nil, nil
@@ -81,7 +81,7 @@ func (a *data) PbV3() (*enginev1.PayloadAttributesV3, error) {
 		return nil, errNilPayloadAttribute
 	}
 	if a.version != version.Deneb {
-		return nil, consensus_types.ErrNotSupported("PayloadAttributePbV3", a.version)
+		return nil, consensus_types.ErrNotSupported("PbV3", a.version)
 	}
 	return &enginev1.PayloadAttributesV3{
 		Timestamp:             a.timeStamp,

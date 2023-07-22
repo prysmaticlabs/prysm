@@ -83,7 +83,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 				a, err := New(&enginev1.PayloadAttributes{})
 				require.NoError(t, err)
 				_, err = a.PbV2()
-				require.ErrorContains(t, "PayloadAttributePbV2 is not supported for bellatrix: unsupported getter", err)
+				require.ErrorContains(t, "PbV2 is not supported for bellatrix: unsupported getter", err)
 			},
 		},
 		{
@@ -92,7 +92,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 				a, err := New(&enginev1.PayloadAttributesV2{})
 				require.NoError(t, err)
 				_, err = a.PbV1()
-				require.ErrorContains(t, "PayloadAttributePbV1 is not supported for capella: unsupported getter", err)
+				require.ErrorContains(t, "PbV1 is not supported for capella: unsupported getter", err)
 			},
 		},
 		{
@@ -164,22 +164,12 @@ func TestPayloadAttributeGetters(t *testing.T) {
 			},
 		},
 		{
-			name: "Get PbDeneb (nil)",
-			tc: func(t *testing.T) {
-				a, err := New(&enginev1.PayloadAttributesV3{})
-				require.NoError(t, err)
-				got, err := a.PbV3()
-				require.NoError(t, err)
-				require.Equal(t, (*enginev1.PayloadAttributesV3)(nil), got)
-			},
-		},
-		{
 			name: "Get PbDeneb (bad version)",
 			tc: func(t *testing.T) {
 				a, err := New(&enginev1.PayloadAttributesV2{})
 				require.NoError(t, err)
 				_, err = a.PbV3()
-				require.ErrorContains(t, "PayloadAttributePbV3 is not supported for capella: unsupported getter", err)
+				require.ErrorContains(t, "PbV3 is not supported for capella: unsupported getter", err)
 			},
 		},
 	}

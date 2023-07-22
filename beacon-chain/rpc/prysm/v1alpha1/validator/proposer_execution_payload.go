@@ -153,7 +153,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	case version.Deneb:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
 			Timestamp:             uint64(t.Unix()),
@@ -163,7 +163,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 			ParentBeaconBlockRoot: headRoot[:],
 		})
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
