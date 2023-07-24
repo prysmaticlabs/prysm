@@ -516,7 +516,8 @@ func (s *Service) runLateBlockTasks() {
 // It calls FCU and sets the right attributes if we are proposing next slot
 // it also updates the next slot cache to deal with skipped slots.
 func (s *Service) lateBlockTasks(ctx context.Context) {
-	if s.CurrentSlot() == s.HeadSlot() {
+	currentSlot := s.CurrentSlot()
+	if currentSlot == s.HeadSlot() {
 		return
 	}
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
@@ -537,11 +538,10 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	}
 
 	// Update caches when across epoch boundary
-	if s.CurrentSlot()%params.BeaconConfig().SlotsPerEpoch == params.BeaconConfig().SlotsPerEpoch-1 {
-		e := slots.ToEpoch(headState.Slot()) + 1                             // next epoch
-		epochStartSlot := e.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)) // first slot of next epoch
+	if currentSlot%params.BeaconConfig().SlotsPerEpoch == params.BeaconConfig().SlotsPerEpoch-1 {
 		st := headState.Copy()
-		st, err := transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot[:], primitives.Slot(epochStartSlot))
+		nextEpochSlot := currentSlot + 1
+		st, err := transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot[:], nextEpochSlot)
 		if err != nil {
 			log.WithError(err).Debug("could not process slots for skip slot")
 		} else {
@@ -549,6 +549,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 				log.WithError(err).Debug("could not update epoch boundary caches for skip slot")
 			}
 		}
+		s.nextEpochBoundarySlot = nextEpochSlot + params.BeaconConfig().SlotsPerEpoch
 	}
 
 	// Head root should be empty when retrieving proposer index for the next slot.
