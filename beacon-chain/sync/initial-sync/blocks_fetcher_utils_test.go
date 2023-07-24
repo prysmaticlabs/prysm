@@ -13,6 +13,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -453,6 +454,18 @@ func TestTestForkStartSlot(t *testing.T) {
 	require.Equal(t, primitives.Slot(193), testForkStartSlot(t, 251))
 }
 
+func consumeBlockRootRequest(t *testing.T, p *p2pt.TestP2P) func(network.Stream) {
+	return func(stream network.Stream) {
+		defer func() {
+			_err := stream.Close()
+			_ = _err
+		}()
+
+		req := new(p2pTypes.BeaconBlockByRootsReq)
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
+	}
+}
+
 func TestBlocksFetcher_findAncestor(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
@@ -507,9 +520,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 		p2 := p2pt.NewTestP2P(t)
 		p2p.Connect(p2)
 
-		p2.SetStreamHandler(pcl, func(stream network.Stream) {
-			assert.NoError(t, stream.Close())
-		})
+		p2.SetStreamHandler(pcl, consumeBlockRootRequest(t, p2))
 
 		wsb, err := blocks.NewSignedBeaconBlock(knownBlocks[4])
 		require.NoError(t, err)
