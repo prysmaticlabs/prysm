@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -16,42 +15,17 @@ import (
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request) {
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
-	if attDataRoot == "" {
-		errJson := &network.DefaultErrorJson{
-			Message: "Attestation data root is required",
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	if !bytesutil.IsHex([]byte(attDataRoot)) {
-		errJson := &network.DefaultErrorJson{
-			Message: "Attestation data root is invalid",
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
+	valid := shared.ValidateHex(w, "Attestation data root", attDataRoot)
+	if !valid {
 		return
 	}
 	rawSlot := r.URL.Query().Get("slot")
-	if rawSlot == "" {
-		errJson := &network.DefaultErrorJson{
-			Message: "Slot is required",
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
-		return
-	}
-	slot, err := strconv.ParseUint(rawSlot, 10, 64)
-	if err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "Slot is invalid: " + err.Error(),
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
 		return
 	}
 
-	if err = s.AttestationsPool.AggregateUnaggregatedAttestations(r.Context()); err != nil {
+	if err := s.AttestationsPool.AggregateUnaggregatedAttestations(r.Context()); err != nil {
 		errJson := &network.DefaultErrorJson{
 			Message: "Could not aggregate unaggregated attestations: " + err.Error(),
 			Code:    http.StatusBadRequest,
