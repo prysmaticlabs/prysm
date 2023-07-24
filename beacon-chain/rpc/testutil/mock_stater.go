@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 // MockStater is a fake implementation of lookup.Stater.
@@ -12,11 +13,15 @@ type MockStater struct {
 	BeaconState     state.BeaconState
 	BeaconStateRoot []byte
 	StatesBySlot    map[primitives.Slot]state.BeaconState
+	StatesByRoot    map[[32]byte]state.BeaconState
 }
 
 // State --
-func (m *MockStater) State(context.Context, []byte) (state.BeaconState, error) {
-	return m.BeaconState, nil
+func (m *MockStater) State(_ context.Context, id []byte) (state.BeaconState, error) {
+	if m.BeaconState != nil {
+		return m.BeaconState, nil
+	}
+	return m.StatesByRoot[bytesutil.ToBytes32(id)], nil
 }
 
 // StateRoot --
