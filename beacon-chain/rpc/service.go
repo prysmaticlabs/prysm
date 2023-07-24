@@ -380,7 +380,7 @@ func (s *Service) Start() {
 		HeadFetcher:        s.cfg.HeadFetcher,
 		SyncChecker:        s.cfg.SyncService,
 	}
-	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2).Methods(http.MethodPost)
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
