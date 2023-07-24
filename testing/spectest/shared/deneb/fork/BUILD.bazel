@@ -5,7 +5,6 @@ go_library(
     testonly = True,
     srcs = [
         "transition.go",
-        "upgrade_to_capella.go",
         "upgrade_to_deneb.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/testing/spectest/shared/deneb/fork",
