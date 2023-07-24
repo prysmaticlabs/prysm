@@ -284,6 +284,8 @@ func (s *Service) Start() {
 		BlockBuilder:           s.cfg.BlockBuilder,
 	}
 
+	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_attestation", validatorServerV1.GetAggregateAttestation).Methods("GET")
+
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.
