@@ -42,7 +42,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 			if err != nil {
 				errJson := &network.DefaultErrorJson{
 					Message: "Could not get attestation data root: " + err.Error(),
-					Code:    http.StatusBadRequest,
+					Code:    http.StatusInternalServerError,
 				}
 				network.WriteError(w, errJson)
 				return
