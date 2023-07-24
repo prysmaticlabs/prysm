@@ -335,7 +335,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err != nil {
 			return err
 		}
-		if err := s.updateEpochBoundaryCaches(ctx, copied, blockRoot); err != nil {
+		if err := s.updateEpochBoundaryCaches(ctx, copied); err != nil {
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
@@ -364,17 +364,13 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	return nil
 }
 
-func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState, blockRoot []byte) error {
-	copied, err := transition.ProcessSlotsUsingNextSlotCache(ctx, st, blockRoot, st.Slot()+1)
-	if err != nil {
-		return err
-	}
+func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
 	// Update caches for the next epoch at epoch boundary slot - 1.
-	if err := helpers.UpdateCommitteeCache(ctx, copied, coreTime.CurrentEpoch(copied)); err != nil {
+	if err := helpers.UpdateCommitteeCache(ctx, st, coreTime.CurrentEpoch(st)); err != nil {
 		return err
 	}
-	e := coreTime.CurrentEpoch(copied)
-	if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e); err != nil {
+	e := coreTime.CurrentEpoch(st)
+	if err := helpers.UpdateProposerIndicesInCache(ctx, st, e); err != nil {
 		return err
 	}
 	go func() {
@@ -383,7 +379,7 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 		// with a custom deadline, therefore using the background context instead.
 		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 		defer cancel()
-		if err := helpers.UpdateProposerIndicesInCache(slotCtx, copied, e+1); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(slotCtx, st, e+1); err != nil {
 			log.WithError(err).Warn("Failed to cache next epoch proposers")
 		}
 	}()
@@ -542,15 +538,14 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 
 	// Update caches when across epoch boundary
 	if s.CurrentSlot()%params.BeaconConfig().SlotsPerEpoch == params.BeaconConfig().SlotsPerEpoch-1 {
-		e := slots.ToEpoch(headState.Slot())
-		epochStartSlot := e.Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
-		boundarySlot := primitives.Slot(epochStartSlot) + params.BeaconConfig().SlotsPerEpoch - 1
+		e := slots.ToEpoch(headState.Slot()) + 1                             // next epoch
+		epochStartSlot := e.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)) // first slot of next epoch
 		st := headState.Copy()
-		st, err := transition.ProcessSlotsIfPossible(ctx, st, boundarySlot)
+		st, err := transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot[:], primitives.Slot(epochStartSlot))
 		if err != nil {
 			log.WithError(err).Debug("could not process slots for skip slot")
 		} else {
-			if err = s.updateEpochBoundaryCaches(ctx, st, headRoot[:]); err != nil {
+			if err = s.updateEpochBoundaryCaches(ctx, st); err != nil {
 				log.WithError(err).Debug("could not update epoch boundary caches for skip slot")
 			}
 		}
