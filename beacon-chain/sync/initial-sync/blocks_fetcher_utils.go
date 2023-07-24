@@ -22,9 +22,8 @@ import (
 // Blocks are stored in an ascending slot order. The first block is guaranteed to have parent
 // either in DB or initial sync cache.
 type forkData struct {
-	peer   peer.ID
-	blocks []interfaces.ReadOnlySignedBeaconBlock
-	bwb    []blocks.BlockWithVerifiedBlobs
+	peer peer.ID
+	bwb  []blocks.BlockWithVerifiedBlobs
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.

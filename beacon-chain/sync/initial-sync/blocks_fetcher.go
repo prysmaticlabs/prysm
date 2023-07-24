@@ -467,7 +467,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 	}
 	blobWindowStart, err := prysmsync.BlobsByRangeMinStartSlot(f.clock.CurrentSlot())
 	if err != nil {
-		return bwb, nil
+		return nil, err
 	}
 	// Construct request message based on observed interval of blocks in need of blobs.
 	req := blobRequest(bwb, blobWindowStart)
