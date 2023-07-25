@@ -232,7 +232,7 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 	assert.NotEqual(t, cp.Body(), bb)
 	e, err := cp.Body().Execution()
 	require.NoError(t, err)
-	gas, err := e.ExcessDataGas()
+	gas, err := e.ExcessBlobGas()
 	require.NoError(t, err)
 	require.DeepEqual(t, gas, uint64(123))
 
@@ -243,7 +243,7 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 	assert.NotEqual(t, cp.Body(), bb)
 	e, err = cp.Body().Execution()
 	require.NoError(t, err)
-	gas, err = e.ExcessDataGas()
+	gas, err = e.ExcessBlobGas()
 	require.NoError(t, err)
 	require.DeepEqual(t, gas, uint64(223))
 }
@@ -450,7 +450,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	result, err = bb.Block().Body().Execution()
 	require.NoError(t, err)
 	assert.DeepEqual(t, result, eDeneb)
-	gas, err := eDeneb.ExcessDataGas()
+	gas, err := eDeneb.ExcessBlobGas()
 	require.NoError(t, err)
 	require.DeepEqual(t, gas, uint64(123))
 
@@ -462,7 +462,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	result, err = bb.Block().Body().Execution()
 	require.NoError(t, err)
 	assert.DeepEqual(t, result, eDenebHeader)
-	gas, err = eDenebHeader.ExcessDataGas()
+	gas, err = eDenebHeader.ExcessBlobGas()
 	require.NoError(t, err)
 	require.DeepEqual(t, gas, uint64(223))
 }

@@ -439,7 +439,8 @@ func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 				BlockHash:     make([]byte, 32),
 				Transactions:  make([][]byte, 0),
 				Withdrawals:   make([]*enginev1.Withdrawal, 0),
-				ExcessDataGas: 0,
+				ExcessBlobGas: 0,
+				BlobGasUsed:   0,
 			},
 			BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
 			BlobKzgCommitments:    make([][]byte, 0),
@@ -545,7 +546,8 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 			BlockHash:     gb.Hash().Bytes(),
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*enginev1.Withdrawal, 0),
-			ExcessDataGas: 0,
+			ExcessBlobGas: 0,
+			BlobGasUsed:   0,
 		}
 		wep, err := blocks.WrappedExecutionPayloadDeneb(payload, 0)
 		if err != nil {
