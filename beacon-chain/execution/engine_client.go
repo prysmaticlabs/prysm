@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -582,7 +583,10 @@ func (s *Service) ReconstructFullBlock(
 	// If the payload header has a block hash of 0x0, it means we are pre-merge and should
 	// simply return the block with an empty execution payload.
 	if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
-		payload := buildEmptyExecutionPayload()
+		payload, err := buildEmptyExecutionPayload(blindedBlock.Version())
+		if err != nil {
+			return nil, err
+		}
 		return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 	}
 
@@ -641,7 +645,11 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	// For blocks that are pre-merge we simply reconstruct them via an empty
 	// execution payload.
 	for _, realIdx := range zeroExecPayloads {
-		payload := buildEmptyExecutionPayload()
+		bblock := blindedBlocks[realIdx]
+		payload, err := buildEmptyExecutionPayload(bblock.Version())
+		if err != nil {
+			return nil, err
+		}
 		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload)
 		if err != nil {
 			return nil, err
@@ -677,7 +685,7 @@ func (s *Service) retrievePayloadFromExecutionHash(ctx context.Context, executio
 	}
 
 	executionBlock.Version = version
-	return fullPayloadFromExecutionBlock(header, executionBlock)
+	return fullPayloadFromExecutionBlock(version, header, executionBlock)
 }
 
 func (s *Service) retrievePayloadsFromExecutionHashes(
@@ -705,6 +713,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 	// blinded block.
 	for sliceIdx, realIdx := range validExecPayloads {
 		var payload interfaces.ExecutionData
+		bblock := blindedBlocks[realIdx]
 		if features.Get().EnableOptionalEngineMethods {
 			b := payloadBodies[sliceIdx]
 			if b == nil {
@@ -727,7 +736,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 			if err != nil {
 				return nil, err
 			}
-			payload, err = fullPayloadFromExecutionBlock(header, b)
+			payload, err = fullPayloadFromExecutionBlock(bblock.Version(), header, b)
 			if err != nil {
 				return nil, err
 			}
@@ -742,7 +751,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 }
 
 func fullPayloadFromExecutionBlock(
-	header interfaces.ExecutionData, block *pb.ExecutionBlock,
+	blockVersion int, header interfaces.ExecutionData, block *pb.ExecutionBlock,
 ) (interfaces.ExecutionData, error) {
 	if header.IsNil() || block == nil {
 		return nil, errors.New("execution block and header cannot be nil")
@@ -765,7 +774,7 @@ func fullPayloadFromExecutionBlock(
 		txs[i] = txBin
 	}
 
-	switch block.Version {
+	switch blockVersion {
 	case version.Bellatrix:
 		return blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
 			ParentHash:    header.ParentHash(),
@@ -997,18 +1006,51 @@ func tDStringToUint256(td string) (*uint256.Int, error) {
 	return i, nil
 }
 
-func buildEmptyExecutionPayload() *pb.ExecutionPayload {
-	return &pb.ExecutionPayload{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.RootLength),
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		ExtraData:     make([]byte, 0),
+func buildEmptyExecutionPayload(v int) (proto.Message, error) {
+	switch v {
+	case version.Bellatrix:
+		return &pb.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
+		}, nil
+	case version.Capella:
+		return &pb.ExecutionPayloadCapella{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
+		}, nil
+	case version.Deneb:
+		return &pb.ExecutionPayloadDeneb{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
+		}, nil
+	default:
+		return nil, errors.Wrapf(ErrUnsupportedVersion, "version=%s", version.String(v))
 	}
 }
 
