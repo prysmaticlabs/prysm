@@ -49,8 +49,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 	bState := st.Copy()
 
-	var blks []interfaces.ReadOnlySignedBeaconBlock
-	var blkRoots [][32]byte
+	var blks []consensusblocks.ROBlock
 	for i := 0; i < 97; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), primitives.Slot(i))
 		require.NoError(t, err)
@@ -63,16 +62,15 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		require.NoError(t, service.saveInitSyncBlock(ctx, root, wsb))
 		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		blks = append(blks, wsb)
-		blkRoots = append(blkRoots, root)
+		rwsb, err := consensusblocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		blks = append(blks, rwsb)
 	}
-	err := service.onBlockBatch(ctx, blks, blkRoots[1:])
-	require.ErrorIs(t, errWrongBlockCount, err)
-	err = service.onBlockBatch(ctx, blks, blkRoots)
+	err := service.onBlockBatch(ctx, blks)
 	require.NoError(t, err)
 	jcp := service.CurrentJustifiedCheckpt()
 	jroot := bytesutil.ToBytes32(jcp.Root)
-	require.Equal(t, blkRoots[63], jroot)
+	require.Equal(t, blks[63].Root(), jroot)
 	require.Equal(t, primitives.Epoch(2), service.cfg.ForkChoiceStore.JustifiedCheckpoint().Epoch)
 }
 
@@ -84,8 +82,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 	bState := st.Copy()
 
-	var blks []interfaces.ReadOnlySignedBeaconBlock
-	var blkRoots [][32]byte
+	var blks []consensusblocks.ROBlock
 	blkCount := 4
 	for i := 0; i <= blkCount; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), primitives.Slot(i))
@@ -94,13 +91,12 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 		require.NoError(t, err)
 		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
-		root, err := b.Block.HashTreeRoot()
+		rwsb, err := consensusblocks.NewROBlock(wsb)
 		require.NoError(t, err)
-		require.NoError(t, service.saveInitSyncBlock(ctx, root, wsb))
-		blks = append(blks, wsb)
-		blkRoots = append(blkRoots, root)
+		require.NoError(t, service.saveInitSyncBlock(ctx, rwsb.Root(), wsb))
+		blks = append(blks, rwsb)
 	}
-	require.NoError(t, service.onBlockBatch(ctx, blks, blkRoots))
+	require.NoError(t, service.onBlockBatch(ctx, blks))
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
@@ -1932,8 +1928,10 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
+	rwsb, err := consensusblocks.NewROBlock(wsb)
+	require.NoError(t, err)
 	// We use onBlockBatch here because the valid chain is missing in forkchoice
-	require.NoError(t, service.onBlockBatch(ctx, []interfaces.ReadOnlySignedBeaconBlock{wsb}, [][32]byte{root}))
+	require.NoError(t, service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}))
 	// Check that the head is now VALID and the node is not optimistic
 	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.cfg.ForkChoiceStore.CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
