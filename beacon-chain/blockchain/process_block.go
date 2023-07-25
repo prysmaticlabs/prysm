@@ -355,11 +355,11 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 // Epoch boundary tasks: it copies the poststate and updates the epoch boundary
 // caches.
 func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot, postState state.BeaconState, blockRoot []byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
+	defer span.End()
 	if (slot+1)%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return nil
 	}
-	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
-	defer span.End()
 	copied := postState.Copy()
 	copied, err := transition.ProcessSlotsUsingNextSlotCache(ctx, copied, blockRoot, slot+1)
 	if err != nil {
