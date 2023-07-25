@@ -366,7 +366,14 @@ func blobRequest(bwb []blocks2.BlockWithVerifiedBlobs, blobWindowStart primitive
 
 func lowestSlotNeedsBlob(retentionStart primitives.Slot, bwb []blocks2.BlockWithVerifiedBlobs) *primitives.Slot {
 	i := sort.Search(len(bwb), func(i int) bool {
-		return bwb[i].Block.Block().Slot() >= retentionStart
+		if bwb[i].Block.Block().Slot() < retentionStart {
+			return false
+		}
+		commits, err := bwb[i].Block.Block().Body().BlobKzgCommitments()
+		if err != nil || len(commits) == 0 {
+			return false
+		}
+		return true
 	})
 	if i >= len(bwb) {
 		return nil
