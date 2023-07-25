@@ -934,7 +934,7 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 		validatorNotTruncatedKey := fmt.Sprintf("%#x", duty.PublicKey)
 
 		// Only interested in validators who are attesting/proposing.
-		// Note that SLASHING validators will have duties but their results are ignored by the network so we don't bother with them.
+		// Note that slashed validators will have duties but their results are ignored by the network so we don't bother with them.
 		if duty.Status != ethpb.ValidatorStatus_ACTIVE && duty.Status != ethpb.ValidatorStatus_EXITING {
 			continue
 		}
