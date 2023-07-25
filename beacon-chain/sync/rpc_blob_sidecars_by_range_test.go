@@ -177,7 +177,7 @@ func TestBlobsByRangeValidation(t *testing.T) {
 		and clients MUST support serving requests of blobs on this range.
 	*/
 	defaultCurrent := denebSlot + 100 + minReqSlots
-	defaultMinStart, err := blobsByRangeMinStartSlot(defaultCurrent)
+	defaultMinStart, err := BlobsByRangeMinStartSlot(defaultCurrent)
 	require.NoError(t, err)
 	cases := []struct {
 		name    string
