@@ -495,7 +495,7 @@ func TestBlobValidatorFromRootReq(t *testing.T) {
 			name:     "invalid",
 			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
 			response: []*ethpb.BlobSidecar{{BlockRoot: invalidRoot}},
-			err:      ErrUnrequestedRoot,
+			err:      errUnrequestedRoot,
 		},
 	}
 	for _, c := range cases {
@@ -544,7 +544,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				Count:     1,
 			},
 			response: []*ethpb.BlobSidecar{{Slot: 9}},
-			err:      ErrBlobResponseOutOfBounds,
+			err:      errBlobResponseOutOfBounds,
 		},
 		{
 			name: "invalid - after, count 1",
@@ -553,7 +553,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				Count:     1,
 			},
 			response: []*ethpb.BlobSidecar{{Slot: 11}},
-			err:      ErrBlobResponseOutOfBounds,
+			err:      errBlobResponseOutOfBounds,
 		},
 		{
 			name: "invalid - after, multi",
@@ -562,7 +562,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				Count:     10,
 			},
 			response: []*ethpb.BlobSidecar{{Slot: 23}},
-			err:      ErrBlobResponseOutOfBounds,
+			err:      errBlobResponseOutOfBounds,
 		},
 		{
 			name: "invalid - after, at boundary, multi",
@@ -571,7 +571,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				Count:     10,
 			},
 			response: []*ethpb.BlobSidecar{{Slot: 20}},
-			err:      ErrBlobResponseOutOfBounds,
+			err:      errBlobResponseOutOfBounds,
 		},
 	}
 	for _, c := range cases {
