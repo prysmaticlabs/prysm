@@ -19,14 +19,16 @@ func RunSSZStaticTests(t *testing.T, config string) {
 }
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
-	switch object.(type) {
-	case *ethpb.BeaconStateDeneb:
-		htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-			beaconState, err := state_native.InitializeFromProtoDeneb(s.(*ethpb.BeaconStateDeneb))
-			require.NoError(t, err)
-			return beaconState.HashTreeRoot(context.Background())
-		})
+	_, ok := object.(*ethpb.BeaconStateDeneb)
+	if !ok {
+		return htrs
 	}
+
+	htrs = append(htrs, func(s interface{}) ([32]byte, error) {
+		beaconState, err := state_native.InitializeFromProtoDeneb(s.(*ethpb.BeaconStateDeneb))
+		require.NoError(t, err)
+		return beaconState.HashTreeRoot(context.Background())
+	})
 	return htrs
 }
 
