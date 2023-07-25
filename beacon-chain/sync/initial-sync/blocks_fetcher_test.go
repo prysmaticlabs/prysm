@@ -995,6 +995,20 @@ func TestLowestSlotNeedsBlob(t *testing.T) {
 	lowest = lowestSlotNeedsBlob(higher, bwb)
 	var nilSlot *primitives.Slot
 	require.Equal(t, nilSlot, lowest)
+
+	blks, _ = util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
+	sbbs = make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
+	for i := range blks {
+		sbbs[i] = blks[i]
+	}
+	bwb, err = sortedBlockWithVerifiedBlobSlice(sbbs)
+	require.NoError(t, err)
+	retentionStart = bwb[5].Block.Block().Slot()
+	next := bwb[6].Block.Block().Slot()
+	skip := bwb[5].Block.Block()
+	bwb[5].Block, _ = util.GenerateTestDenebBlockWithSidecar(t, skip.ParentRoot(), skip.Slot(), 0)
+	lowest = lowestSlotNeedsBlob(retentionStart, bwb)
+	require.Equal(t, next, *lowest)
 }
 
 func TestBlobRequest(t *testing.T) {
