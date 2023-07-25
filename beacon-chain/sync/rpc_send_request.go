@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/encoder"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -21,8 +22,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// ErrInvalidFetchedData is thrown if stream fails to provide requested blocks.
+// ErrInvalidFetchedData is used to signal that an error occurred which should result in peer downscoring.
 var ErrInvalidFetchedData = errors.New("invalid data returned from peer")
+
+var errMaxRequestBlobSidecarsExceeded = errors.Wrap(ErrInvalidFetchedData, "peer exceeded req blob chunk tx limit")
+var errBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
+var errBlobUnmarshal = errors.New("Could not unmarshal chunk-encoded blob")
+var errUnrequestedRoot = errors.New("Received BlobSidecar in response that was not requested")
+var errBlobResponseOutOfBounds = errors.New("received BlobSidecar with slot outside BlobSidecarsByRangeRequest bounds")
 
 // BeaconBlockProcessor defines a block processing function, which allows to start utilizing
 // blocks even before all blocks are ready.
@@ -135,8 +142,8 @@ func SendBeaconBlocksByRootRequest(
 	return blocks, nil
 }
 
-func SendBlobsByRangeRequest(ctx context.Context, ci blockchain.ForkFetcher, p2pApi p2p.SenderEncoder, pid peer.ID, ctxMap ContextByteVersions, req *pb.BlobSidecarsByRangeRequest) ([]*pb.BlobSidecar, error) {
-	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRangeName, slots.ToEpoch(ci.CurrentSlot()))
+func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.SenderEncoder, pid peer.ID, ctxMap ContextByteVersions, req *pb.BlobSidecarsByRangeRequest) ([]*pb.BlobSidecar, error) {
+	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRangeName, slots.ToEpoch(tor.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +154,11 @@ func SendBlobsByRangeRequest(ctx context.Context, ci blockchain.ForkFetcher, p2p
 	}
 	defer closeStream(stream, log)
 
-	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobValidatorFromRangeReq(req))
+	max := params.BeaconNetworkConfig().MaxRequestBlobSidecars
+	if max > req.Count*fieldparams.MaxBlobsPerBlock {
+		max = req.Count * fieldparams.MaxBlobsPerBlock
+	}
+	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobValidatorFromRangeReq(req), max)
 }
 
 func SendBlobSidecarByRoot(
@@ -169,13 +180,12 @@ func SendBlobSidecarByRoot(
 	}
 	defer closeStream(stream, log)
 
-	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobValidatorFromRootReq(req))
+	max := params.BeaconNetworkConfig().MaxRequestBlobSidecars
+	if max > uint64(len(*req))*fieldparams.MaxBlobsPerBlock {
+		max = uint64(len(*req)) * fieldparams.MaxBlobsPerBlock
+	}
+	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobValidatorFromRootReq(req), max)
 }
-
-var ErrBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
-var ErrBlobUnmarshal = errors.New("Could not unmarshal chunk-encoded blob")
-var ErrUnrequestedRoot = errors.New("Received BlobSidecar in response that was not requested")
-var ErrBlobResponseOutOfBounds = errors.New("received BlobSidecar with slot outside BlobSidecarsByRangeRequest bounds")
 
 type blobResponseValidation func(*pb.BlobSidecar) error
 
@@ -186,7 +196,7 @@ func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) blobResponseV
 	}
 	return func(sc *pb.BlobSidecar) error {
 		if requested := roots[bytesutil.ToBytes32(sc.BlockRoot)]; !requested {
-			return errors.Wrapf(ErrUnrequestedRoot, "root=%#x", sc.BlockRoot)
+			return errors.Wrapf(errUnrequestedRoot, "root=%#x", sc.BlockRoot)
 		}
 		return nil
 	}
@@ -196,52 +206,69 @@ func blobValidatorFromRangeReq(req *pb.BlobSidecarsByRangeRequest) blobResponseV
 	end := req.StartSlot + primitives.Slot(req.Count)
 	return func(sc *pb.BlobSidecar) error {
 		if sc.Slot < req.StartSlot || sc.Slot >= end {
-			return errors.Wrapf(ErrBlobResponseOutOfBounds, "req start,end:%d,%d, resp:%d", req.StartSlot, end, sc.Slot)
+			return errors.Wrapf(errBlobResponseOutOfBounds, "req start,end:%d,%d, resp:%d", req.StartSlot, end, sc.Slot)
 		}
 		return nil
 	}
 }
 
-func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation) ([]*pb.BlobSidecar, error) {
-	decode := encoding.DecodeWithMaxLength
-	max := int(params.BeaconNetworkConfig().MaxRequestBlobSidecars)
-	var (
-		code uint8
-		msg  string
-		err  error
-	)
+func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation, max uint64) ([]*pb.BlobSidecar, error) {
 	sidecars := make([]*pb.BlobSidecar, 0)
-	for i := 0; i < max; i++ {
-		code, msg, err = ReadStatusCode(stream, encoding)
+	// Attempt an extra read beyond max to check if the peer is violating the spec by
+	// sending more than MAX_REQUEST_BLOB_SIDECARS, or more blobs than requested.
+	for i := uint64(0); i < max+1; i++ {
+		sc, err := readChunkedBlobSidecar(stream, encoding, ctxMap, vf)
 		if err != nil {
-			break
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
 		}
-		if code != 0 {
-			return nil, errors.Wrap(ErrBlobChunkedReadFailure, msg)
-		}
-		ctxb, err := readContextFromStream(stream)
-		if err != nil {
-			return nil, errors.Wrap(err, "error reading chunk context bytes from stream")
-		}
-
-		v, found := ctxMap[bytesutil.ToBytes4(ctxb)]
-		if !found {
-			return nil, errors.Wrapf(ErrBlobUnmarshal, fmt.Sprintf("unrecognized fork digest %#x", ctxb))
-		}
-		if v != version.Deneb {
-			return nil, fmt.Errorf("unexpected context bytes for deneb BlobSidecar, ctx=%#x, v=%s", ctxb, version.String(v))
-		}
-		sc := &pb.BlobSidecar{}
-		if err := decode(stream, sc); err != nil {
-			return nil, errors.Wrap(err, "failed to decode the protobuf-encoded BlobSidecar message from RPC chunk stream")
-		}
-		if err := vf(sc); err != nil {
-			return nil, errors.Wrap(err, "validation failure decoding blob RPC response")
+		if i == max {
+			// We have read an extra sidecar beyond what the spec allows. Since this is a spec violation, we return
+			// an error that wraps ErrInvalidFetchedData. The part of the state machine that handles rpc peer scoring
+			// will downscore the peer if the request ends in an error that wraps that one.
+			return nil, errMaxRequestBlobSidecarsExceeded
 		}
 		sidecars = append(sidecars, sc)
 	}
-	if !errors.Is(err, io.EOF) {
+
+	return sidecars, nil
+}
+
+func readChunkedBlobSidecar(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation) (*pb.BlobSidecar, error) {
+	decode := encoding.DecodeWithMaxLength
+	var (
+		code uint8
+		msg  string
+	)
+	code, msg, err := ReadStatusCode(stream, encoding)
+	if err != nil {
 		return nil, err
 	}
-	return sidecars, nil
+	if code != 0 {
+		return nil, errors.Wrap(errBlobChunkedReadFailure, msg)
+	}
+	ctxb, err := readContextFromStream(stream)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading chunk context bytes from stream")
+	}
+
+	v, found := ctxMap[bytesutil.ToBytes4(ctxb)]
+	if !found {
+		return nil, errors.Wrapf(errBlobUnmarshal, fmt.Sprintf("unrecognized fork digest %#x", ctxb))
+	}
+	// Only deneb is supported at this time, because we lack a fork-spanning interface/union type for blobs.
+	if v != version.Deneb {
+		return nil, fmt.Errorf("unexpected context bytes for deneb BlobSidecar, ctx=%#x, v=%s", ctxb, version.String(v))
+	}
+	sc := &pb.BlobSidecar{}
+	if err := decode(stream, sc); err != nil {
+		return nil, errors.Wrap(err, "failed to decode the protobuf-encoded BlobSidecar message from RPC chunk stream")
+	}
+	if err := vf(sc); err != nil {
+		return nil, errors.Wrap(err, "validation failure decoding blob RPC response")
+	}
+
+	return sc, nil
 }

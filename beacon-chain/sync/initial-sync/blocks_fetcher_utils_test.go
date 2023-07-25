@@ -13,6 +13,8 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -187,6 +189,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		ctx,
 		&blocksFetcherConfig{
 			chain: mc,
+			clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 			p2p:   p2p,
 			db:    beaconDB,
 		},
@@ -252,10 +255,14 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	// is smart enough to link back to common ancestor, w/o discriminating between forks. This is
 	// by design: fork exploration is undertaken when FSMs are stuck, so any progress is good.
 	chain1b := extendBlockSequence(t, chain1, 64)
+	forkSlot1b := primitives.Slot(len(chain1))
 	curForkMoreBlocksPeer := connectPeerHavingBlocks(t, p2p, chain1b, finalizedSlot, p2p.Peers())
 	fork, err = fetcher.findFork(ctx, 251)
 	require.NoError(t, err)
-	require.Equal(t, 64, len(fork.blocks))
+
+	reqEnd := testForkStartSlot(t, 251) + primitives.Slot(findForkReqRangeSize())
+	require.Equal(t, primitives.Slot(len(chain1)), fork.bwb[0].Block.Block().Slot())
+	require.Equal(t, int(reqEnd-forkSlot1b), len(fork.bwb))
 	require.Equal(t, curForkMoreBlocksPeer, fork.peer)
 	// Save all chain1b blocks (so that they do not interfere with alternative fork)
 	for _, blk := range chain1b {
@@ -277,20 +284,20 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	fork, err = fetcher.findFork(ctx, 251)
 	require.NoError(t, err)
 	assert.Equal(t, alternativePeer, fork.peer)
-	assert.Equal(t, 65, len(fork.blocks))
+	assert.Equal(t, 65, len(fork.bwb))
 	ind := forkSlot
-	for _, blk := range fork.blocks {
-		require.Equal(t, blk.Block().Slot(), chain2[ind].Block.Slot)
+	for _, blk := range fork.bwb {
+		require.Equal(t, blk.Block.Block().Slot(), chain2[ind].Block.Slot)
 		ind++
 	}
 
 	// Process returned blocks and then attempt to extend chain (ensuring that parent block exists).
-	for _, blk := range fork.blocks {
-		require.NoError(t, beaconDB.SaveBlock(ctx, blk))
-		require.NoError(t, st.SetSlot(blk.Block().Slot()))
+	for _, blk := range fork.bwb {
+		require.NoError(t, beaconDB.SaveBlock(ctx, blk.Block))
+		require.NoError(t, st.SetSlot(blk.Block.Block().Slot()))
 	}
-	assert.Equal(t, forkSlot.Add(uint64(len(fork.blocks)-1)), mc.HeadSlot())
-	for i := forkSlot.Add(uint64(len(fork.blocks))); i < primitives.Slot(len(chain2)); i++ {
+	assert.Equal(t, forkSlot.Add(uint64(len(fork.bwb)-1)), mc.HeadSlot())
+	for i := forkSlot.Add(uint64(len(fork.bwb))); i < primitives.Slot(len(chain2)); i++ {
 		blk := chain2[i]
 		require.Equal(t, blk.Block.Slot, i, "incorrect block selected for slot %d", i)
 		// Only save is parent block exists.
@@ -307,6 +314,21 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasBlock(ctx, blkRoot), "slot %d", blk.Block.Slot)
 	}
+}
+
+func testForkStartSlot(t *testing.T, slot primitives.Slot) primitives.Slot {
+	// When we call find fork, the way we find the first common ancestor is:
+	// - start at the first slot of the given epoch (epochStart below)
+	// - look back an additional epoch, which findForkWithPeer comments say is done to ensure
+	//   there will be more overlap, since this routine kicks off when we're losing sight of the canonical chain
+	// - add one: this happens in nonSkippedSlotAfterWithPeersTarget and isn't really explained why this method takes
+	//   the slot before the beginning of the search range and not the actual search range.
+	// Anyway, since findFork returns the last common ancestor between the known chain and the forked chain,
+	// we need to figure out how much the two overlap so we can ignore the common blocks when looking at the
+	// size of the response.
+	epochStart, err := slots.EpochStart(slots.ToEpoch(slot))
+	require.NoError(t, err)
+	return 1 + (epochStart - params.BeaconConfig().SlotsPerEpoch)
 }
 
 func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
@@ -335,6 +357,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		ctx,
 		&blocksFetcherConfig{
 			chain: mc,
+			clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 			p2p:   p1,
 			db:    beaconDB,
 		},
@@ -392,8 +415,8 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		}()
 		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
 		require.NoError(t, err)
-		require.Equal(t, 10, len(fork.blocks))
-		assert.Equal(t, forkedSlot, fork.blocks[0].Block().Slot(), "Expected slot %d to be ancestor", forkedSlot)
+		require.Equal(t, 10, len(fork.bwb))
+		assert.Equal(t, forkedSlot, fork.bwb[0].Block.Block().Slot(), "Expected slot %d to be ancestor", forkedSlot)
 	})
 
 	t.Run("first block is diverging - no common ancestor", func(t *testing.T) {
@@ -417,9 +440,30 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		}()
 		fork, err := fetcher.findForkWithPeer(ctx, p2, 64)
 		require.NoError(t, err)
-		require.Equal(t, 64, len(fork.blocks))
-		assert.Equal(t, primitives.Slot(33), fork.blocks[0].Block().Slot())
+
+		reqEnd := testForkStartSlot(t, 64) + primitives.Slot(findForkReqRangeSize())
+		expectedLen := reqEnd - forkedSlot
+		// there are 4 blocks that are different before the beginning
+		require.Equal(t, int(expectedLen), len(fork.bwb))
+		assert.Equal(t, primitives.Slot(60), fork.bwb[0].Block.Block().Slot())
 	})
+}
+
+func TestTestForkStartSlot(t *testing.T) {
+	require.Equal(t, primitives.Slot(33), testForkStartSlot(t, 64))
+	require.Equal(t, primitives.Slot(193), testForkStartSlot(t, 251))
+}
+
+func consumeBlockRootRequest(t *testing.T, p *p2pt.TestP2P) func(network.Stream) {
+	return func(stream network.Stream) {
+		defer func() {
+			_err := stream.Close()
+			_ = _err
+		}()
+
+		req := new(p2pTypes.BeaconBlockByRootsReq)
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
+	}
 }
 
 func TestBlocksFetcher_findAncestor(t *testing.T) {
@@ -476,9 +520,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 		p2 := p2pt.NewTestP2P(t)
 		p2p.Connect(p2)
 
-		p2.SetStreamHandler(pcl, func(stream network.Stream) {
-			assert.NoError(t, stream.Close())
-		})
+		p2.SetStreamHandler(pcl, consumeBlockRootRequest(t, p2))
 
 		wsb, err := blocks.NewSignedBeaconBlock(knownBlocks[4])
 		require.NoError(t, err)
