@@ -608,8 +608,13 @@ func (bs *Server) validateBroadcast(r *http.Request, blk *eth.GenericSignedBeaco
 }
 
 func (bs *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) error {
-	parentRoot := blk.Block().ParentRoot()
-	parentState, err := bs.Stater.State(ctx, parentRoot[:])
+	parentBlockRoot := blk.Block().ParentRoot()
+	parentBlock, err := bs.Blocker.Block(ctx, parentBlockRoot[:])
+	if err != nil {
+		return errors.Wrap(err, "could not get parent block")
+	}
+	parentStateRoot := parentBlock.Block().StateRoot()
+	parentState, err := bs.Stater.State(ctx, parentStateRoot[:])
 	if err != nil {
 		return errors.Wrap(err, "could not get parent state")
 	}
