@@ -803,39 +803,6 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 	return &ethpbv1.ProduceAttestationDataResponse{Data: attData}, nil
 }
 
-// GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
-func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
-	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
-	defer span.End()
-
-	if err := vs.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations: %v", err)
-	}
-
-	allAtts := vs.AttestationsPool.AggregatedAttestations()
-	var bestMatchingAtt *ethpbalpha.Attestation
-	for _, att := range allAtts {
-		if att.Data.Slot == req.Slot {
-			root, err := att.Data.HashTreeRoot()
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get attestation data root: %v", err)
-			}
-			if bytes.Equal(root[:], req.AttestationDataRoot) {
-				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
-					bestMatchingAtt = att
-				}
-			}
-		}
-	}
-
-	if bestMatchingAtt == nil {
-		return nil, status.Error(codes.NotFound, "No matching attestation found")
-	}
-	return &ethpbv1.AggregateAttestationResponse{
-		Data: migration.V1Alpha1AttestationToV1(bestMatchingAtt),
-	}, nil
-}
-
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.SubmitAggregateAndProofsRequest) (*empty.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProofs")
