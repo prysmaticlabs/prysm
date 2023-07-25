@@ -84,9 +84,13 @@ type engineMock struct {
 func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
 	return nil, nil, false, nil
 }
+func (m *engineMock) GetPayloadV2(context.Context, [8]byte) (*pb.ExecutionPayloadCapella, error) {
+	return nil, nil
+}
 func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, m.latestValidHash, m.payloadStatus
 }
+
 func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, [][32]byte) ([]byte, error) {
 	return m.latestValidHash, m.payloadStatus
 }
