@@ -130,11 +130,30 @@ func TestReadChunkEncodedBlobs(t *testing.T) {
 			nblocks:      1,
 			streamReader: readChunkEncodedBlobsAsStreamReader,
 		},
+		{
+			name:         "test peer sending excess blobs",
+			nblocks:      1,
+			streamReader: readChunkEncodedBlobsLowMax,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			c.runTestBlobSidecarsByRoot(t)
 		})
+	}
+}
+
+// Specifies a max expected chunk parameter of 1, so that a response with one or more blobs will give ErrInvalidFetchedData.
+func readChunkEncodedBlobsLowMax(t *testing.T, s *Service, expect []*expectedBlobChunk) func(network.Stream) {
+	encoding := s.cfg.p2p.Encoding()
+	ctxMap, err := ContextByteVersionsForValRoot(s.cfg.clock.GenesisValidatorsRoot())
+	require.NoError(t, err)
+	vf := func(sidecar *ethpb.BlobSidecar) error {
+		return nil
+	}
+	return func(stream network.Stream) {
+		_, err := readChunkEncodedBlobs(stream, encoding, ctxMap, vf, 1)
+		require.ErrorIs(t, err, ErrInvalidFetchedData)
 	}
 }
 
@@ -146,7 +165,7 @@ func readChunkEncodedBlobsAsStreamReader(t *testing.T, s *Service, expect []*exp
 		return nil
 	}
 	return func(stream network.Stream) {
-		scs, err := readChunkEncodedBlobs(stream, encoding, ctxMap, vf)
+		scs, err := readChunkEncodedBlobs(stream, encoding, ctxMap, vf, params.BeaconNetworkConfig().MaxRequestBlobSidecars)
 		require.NoError(t, err)
 		require.Equal(t, len(expect), len(scs))
 		for i, sc := range scs {

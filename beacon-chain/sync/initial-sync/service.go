@@ -35,7 +35,7 @@ type blockchainService interface {
 // Config to set up the initial sync service.
 type Config struct {
 	P2P                 p2p.P2P
-	DB                  db.ReadOnlyDatabase
+	DB                  db.NoHeadAccessDatabase
 	Chain               blockchainService
 	StateNotifier       statefeed.Notifier
 	BlockNotifier       blockfeed.Notifier
