@@ -215,8 +215,8 @@ type ExecutionPayloadDeneb struct {
 	TimeStamp     string        `json:"timestamp" validate:"required"`
 	ExtraData     string        `json:"extra_data" validate:"required"`
 	BaseFeePerGas string        `json:"base_fee_per_gas" validate:"required"`
-	BlobGasUsed   string        `json:"blob_gas_used" validate:"required"`   // new in deneb
-	ExcessBlobGas string        `json:"excess_blob_gas" validate:"required"` // new in deneb
+	DataGasUsed   string        `json:"data_gas_used" validate:"required"`   // new in deneb
+	ExcessDataGas string        `json:"excess_data_gas" validate:"required"` // new in deneb
 	BlockHash     string        `json:"block_hash" validate:"required"`
 	Transactions  []string      `json:"transactions" validate:"required"`
 	Withdrawals   []*Withdrawal `json:"withdrawals" validate:"required"`
@@ -456,8 +456,8 @@ type ExecutionPayloadHeaderDeneb struct {
 	Timestamp        string `json:"timestamp" validate:"required"`
 	ExtraData        string `json:"extra_data" validate:"required"`
 	BaseFeePerGas    string `json:"base_fee_per_gas" validate:"required"`
-	BlobGasUsed      string `json:"blob_gas_used" validate:"required"`   // new in deneb
-	ExcessBlobGas    string `json:"excess_blob_gas" validate:"required"` // new in deneb
+	DataGasUsed      string `json:"data_gas_used" validate:"required"`   // new in deneb
+	ExcessDataGas    string `json:"excess_data_gas" validate:"required"` // new in deneb
 	BlockHash        string `json:"block_hash" validate:"required"`
 	TransactionsRoot string `json:"transactions_root" validate:"required"`
 	WithdrawalsRoot  string `json:"withdrawals_root" validate:"required"`
@@ -1584,13 +1584,13 @@ func convertToSignedDenebBlock(signedBlock *SignedBeaconBlockDeneb) (*eth.Signed
 	if err != nil {
 		return nil, err
 	}
-	payloadBlobGasUsed, err := strconv.ParseUint(signedBlock.Message.Body.ExecutionPayload.BlobGasUsed, 10, 64)
+	payloadDataGasUsed, err := strconv.ParseUint(signedBlock.Message.Body.ExecutionPayload.DataGasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlock.Message.Body.ExecutionPayload.BlobGasUsed")
+		return nil, errors.Wrap(err, "could not decode signedBlock.Message.Body.ExecutionPayload.DataGasUsed")
 	}
-	payloadExcessBlobGas, err := strconv.ParseUint(signedBlock.Message.Body.ExecutionPayload.ExcessBlobGas, 10, 64)
+	payloadExcessDataGas, err := strconv.ParseUint(signedBlock.Message.Body.ExecutionPayload.ExcessDataGas, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlock.Message.Body.ExecutionPayload.ExcessBlobGas")
+		return nil, errors.Wrap(err, "could not decode signedBlock.Message.Body.ExecutionPayload.ExcessDataGas")
 	}
 	return &eth.SignedBeaconBlockDeneb{
 		Block: &eth.BeaconBlockDeneb{
@@ -1631,8 +1631,8 @@ func convertToSignedDenebBlock(signedBlock *SignedBeaconBlockDeneb) (*eth.Signed
 					BlockHash:     payloadBlockHash,
 					Transactions:  txs,
 					Withdrawals:   withdrawals,
-					BlobGasUsed:   payloadBlobGasUsed,
-					ExcessBlobGas: payloadExcessBlobGas,
+					DataGasUsed:   payloadDataGasUsed,
+					ExcessDataGas: payloadExcessDataGas,
 				},
 				BlsToExecutionChanges: blsChanges,
 			},
@@ -1856,13 +1856,13 @@ func convertToSignedBlindedDenebBlock(signedBlindedBlock *SignedBlindedBeaconBlo
 	if err != nil {
 		return nil, err
 	}
-	payloadBlobGasUsed, err := strconv.ParseUint(signedBlindedBlock.Message.Body.ExecutionPayloadHeader.BlobGasUsed, 10, 64)
+	payloadDataGasUsed, err := strconv.ParseUint(signedBlindedBlock.Message.Body.ExecutionPayloadHeader.DataGasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlindedBlock.Message.Body.ExecutionPayload.BlobGasUsed")
+		return nil, errors.Wrap(err, "could not decode signedBlindedBlock.Message.Body.ExecutionPayload.DataGasUsed")
 	}
-	payloadExcessBlobGas, err := strconv.ParseUint(signedBlindedBlock.Message.Body.ExecutionPayloadHeader.ExcessBlobGas, 10, 64)
+	payloadExcessDataGas, err := strconv.ParseUint(signedBlindedBlock.Message.Body.ExecutionPayloadHeader.ExcessDataGas, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlindedBlock.Message.Body.ExecutionPayload.ExcessBlobGas")
+		return nil, errors.Wrap(err, "could not decode signedBlindedBlock.Message.Body.ExecutionPayload.ExcessDataGas")
 	}
 	return &eth.SignedBlindedBeaconBlockDeneb{
 		Block: &eth.BlindedBeaconBlockDeneb{
@@ -1903,8 +1903,8 @@ func convertToSignedBlindedDenebBlock(signedBlindedBlock *SignedBlindedBeaconBlo
 					BlockHash:        payloadBlockHash,
 					TransactionsRoot: payloadTxsRoot,
 					WithdrawalsRoot:  payloadWithdrawalsRoot,
-					BlobGasUsed:      payloadBlobGasUsed,
-					ExcessBlobGas:    payloadExcessBlobGas,
+					DataGasUsed:      payloadDataGasUsed,
+					ExcessDataGas:    payloadExcessDataGas,
 				},
 				BlsToExecutionChanges: blsChanges,
 			},
