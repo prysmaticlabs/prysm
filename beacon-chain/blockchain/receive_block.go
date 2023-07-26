@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -61,6 +62,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	// Save current justified and finalized epochs for future use.
 	currStoreJustifiedEpoch := s.CurrentJustifiedCheckpt().Epoch
 	currStoreFinalizedEpoch := s.FinalizedCheckpt().Epoch
+	currentEpoch := coreTime.CurrentEpoch(preState)
 
 	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
 	if err != nil {
@@ -98,7 +100,15 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		tracing.AnnotateError(span, err)
 		return err
 	}
-
+	if coreTime.CurrentEpoch(postState) > currentEpoch {
+		headSt, err := s.HeadState(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get head state")
+		}
+		if err := reportEpochMetrics(ctx, postState, headSt); err != nil {
+			log.WithError(err).Error("could not report epoch metrics")
+		}
+	}
 	if err := s.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch); err != nil {
 		return errors.Wrap(err, "could not update justified checkpoint")
 	}

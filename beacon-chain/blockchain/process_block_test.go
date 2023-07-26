@@ -539,8 +539,7 @@ func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 1024)
 	service.head = &head{state: s}
 	require.NoError(t, s.SetSlot(2*params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(t, service.handleEpochBoundary(ctx, s, []byte{}))
-	require.Equal(t, 3*params.BeaconConfig().SlotsPerEpoch, service.nextEpochBoundarySlot)
+	require.NoError(t, service.handleEpochBoundary(ctx, s.Slot(), s, []byte{}))
 }
 
 func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
