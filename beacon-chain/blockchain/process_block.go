@@ -352,15 +352,19 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 	return nil
 }
 
-// Epoch boundary tasks: it copies the poststate and updates the epoch boundary
+// Epoch boundary tasks: it copies the headState and updates the epoch boundary
 // caches.
-func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot, postState state.BeaconState, blockRoot []byte) error {
+func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot, headState state.BeaconState, blockRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
 	defer span.End()
+	// return early if we are advancing to a past epoch
+	if slot < headState.Slot() {
+		return nil
+	}
 	if (slot+1)%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return nil
 	}
-	copied := postState.Copy()
+	copied := headState.Copy()
 	copied, err := transition.ProcessSlotsUsingNextSlotCache(ctx, copied, blockRoot, slot+1)
 	if err != nil {
 		return err
@@ -521,7 +525,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		log.WithError(err).Debug("could not update next slot state cache")
 	}
 	if err := s.handleEpochBoundary(ctx, currentSlot, headState, headRoot[:]); err != nil {
-		log.WithError(err).Error("lastBlockTasks: could not update epoch boundary caches")
+		log.WithError(err).Error("lateBlockTasks: could not update epoch boundary caches")
 	}
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
