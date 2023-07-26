@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 )
 
 // This defines how many epochs since finality the run time will begin to save hot state on to the DB.
@@ -65,14 +66,25 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return err
 	}
-
-	postState, err := s.validateStateTransition(ctx, preState, blockCopy)
-	if err != nil {
-		return errors.Wrap(err, "failed to validate consensus state transition function")
-	}
-	isValidPayload, err := s.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, blockCopy, blockRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not notify the engine of the new payload")
+	eg, _ := errgroup.WithContext(ctx)
+	var postState state.BeaconState
+	eg.Go(func() error {
+		postState, err = s.validateStateTransition(ctx, preState, blockCopy)
+		if err != nil {
+			return errors.Wrap(err, "failed to validate consensus state transition function")
+		}
+		return nil
+	})
+	var isValidPayload bool
+	eg.Go(func() error {
+		isValidPayload, err = s.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, blockCopy, blockRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not notify the engine of the new payload")
+		}
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
