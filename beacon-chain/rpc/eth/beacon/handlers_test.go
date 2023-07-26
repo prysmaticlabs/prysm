@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
@@ -103,6 +104,23 @@ func TestPublishBlockV2(t *testing.T) {
 		server.PublishBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(denebBlockContents)))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("invalid block", func(t *testing.T) {
 		server := &Server{
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -177,6 +195,33 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 		genericBlock, err := cblock.ToGeneric()
 		require.NoError(t, err)
 		sszvalue, err := genericBlock.GetCapella().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var dblock SignedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(denebBlockContents), &dblock)
+		require.NoError(t, err)
+		genericBlock, err := dblock.ToGeneric()
+		require.NoError(t, err)
+		v2block, err := migration.V1Alpha1SignedBeaconBlockDenebAndBlobsToV2(genericBlock.GetDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v2block.MarshalSSZ()
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
 		request.Header.Set("Accept", "application/octet-stream")
@@ -269,6 +314,23 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedDenebBlockContents)))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("invalid block", func(t *testing.T) {
 		server := &Server{
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -343,6 +405,33 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 		genericBlock, err := cblock.ToGeneric()
 		require.NoError(t, err)
 		sszvalue, err := genericBlock.GetBlindedCapella().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var cblock SignedBlindedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(blindedDenebBlockContents), &cblock)
+		require.NoError(t, err)
+		genericBlock, err := cblock.ToGeneric()
+		require.NoError(t, err)
+		v1block, err := migration.V1Alpha1SignedBlindedBlockAndBlobsDenebToV2Blinded(genericBlock.GetBlindedDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v1block.MarshalSSZ()
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
 		request.Header.Set("Accept", "application/octet-stream")
@@ -1691,4 +1780,426 @@ const (
   },
   "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
 }`
+	blindedDenebBlockContents = `{
+	"signed_blinded_block":{
+  "message": {
+    "slot": "1",
+    "proposer_index": "1",
+    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+    "body": {
+      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+      "eth1_data": {
+        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "deposit_count": "1",
+        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      },
+      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "proposer_slashings": [
+        {
+          "signed_header_1": {
+            "message": {
+              "slot": "1",
+              "proposer_index": "1",
+              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+            },
+            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+          },
+          "signed_header_2": {
+            "message": {
+              "slot": "1",
+              "proposer_index": "1",
+              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+            },
+            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+          }
+        }
+      ],
+      "attester_slashings": [
+        {
+          "attestation_1": {
+            "attesting_indices": [
+              "1"
+            ],
+            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+            "data": {
+              "slot": "1",
+              "index": "1",
+              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+              "source": {
+                "epoch": "1",
+                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+              },
+              "target": {
+                "epoch": "1",
+                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+              }
+            }
+          },
+          "attestation_2": {
+            "attesting_indices": [
+              "1"
+            ],
+            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+            "data": {
+              "slot": "1",
+              "index": "1",
+              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+              "source": {
+                "epoch": "1",
+                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+              },
+              "target": {
+                "epoch": "1",
+                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+              }
+            }
+          }
+        }
+      ],
+      "attestations": [
+        {
+          "aggregation_bits": "0x01",
+          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+          "data": {
+            "slot": "1",
+            "index": "1",
+            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "source": {
+              "epoch": "1",
+              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+            },
+            "target": {
+              "epoch": "1",
+              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+            }
+          }
+        }
+      ],
+      "deposits": [
+        {
+          "proof": [
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          ],
+          "data": {
+            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
+            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+            "amount": "1",
+            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+          }
+        }
+      ],
+      "voluntary_exits": [
+        {
+          "message": {
+            "epoch": "1",
+            "validator_index": "1"
+          },
+          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+        }
+      ],
+      "sync_aggregate": {
+        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+      },
+      "execution_payload_header": {
+        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "block_number": "1",
+        "gas_limit": "1",
+        "gas_used": "1",
+        "timestamp": "1",
+        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "base_fee_per_gas": "1",
+        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"data_gas_used": "1",
+		"excess_data_gas": "2",
+        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "withdrawals_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      },
+      "bls_to_execution_changes": [
+        {
+          "message": {
+            "validator_index": "1",
+            "from_bls_pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
+            "to_execution_address": "0xabcf8e0d4e9587369b2301d0790347320302cc09"
+          },
+          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+        }
+      ],
+ 	  "blob_kzg_commitments":["0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000"]
+    }
+  },
+  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+},
+"signed_blinded_blob_sidecars":[{
+			"message":{
+				"block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"index":"1",
+				"slot":"1",
+				"block_parent_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"proposer_index":"1",
+				"blob_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"kzg_commitment":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000",
+				"kzg_proof":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000"
+			},
+			"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+		}]
+}`
 )
+
+var denebBlockContents = `{
+ 	"signed_block":{
+		 "message": {
+			"slot": "1",
+			"proposer_index": "1",
+			"parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			"state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			"body": {
+			  "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+			  "eth1_data": {
+				"deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"deposit_count": "1",
+				"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+			  },
+			  "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			  "proposer_slashings": [
+				{
+				  "signed_header_1": {
+					"message": {
+					  "slot": "1",
+					  "proposer_index": "1",
+					  "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					  "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					  "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+					},
+					"signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+				  },
+				  "signed_header_2": {
+					"message": {
+					  "slot": "1",
+					  "proposer_index": "1",
+					  "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					  "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					  "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+					},
+					"signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+				  }
+				}
+			  ],
+			  "attester_slashings": [
+				{
+				  "attestation_1": {
+					"attesting_indices": [
+					  "1"
+					],
+					"signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+					"data": {
+					  "slot": "1",
+					  "index": "1",
+					  "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					  "source": {
+						"epoch": "1",
+						"root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+					  },
+					  "target": {
+						"epoch": "1",
+						"root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+					  }
+					}
+				  },
+				  "attestation_2": {
+					"attesting_indices": [
+					  "1"
+					],
+					"signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+					"data": {
+					  "slot": "1",
+					  "index": "1",
+					  "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					  "source": {
+						"epoch": "1",
+						"root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+					  },
+					  "target": {
+						"epoch": "1",
+						"root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+					  }
+					}
+				  }
+				}
+			  ],
+			  "attestations": [
+				{
+				  "aggregation_bits": "0x01",
+				  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+				  "data": {
+					"slot": "1",
+					"index": "1",
+					"beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"source": {
+					  "epoch": "1",
+					  "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+					},
+					"target": {
+					  "epoch": "1",
+					  "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+					}
+				  }
+				}
+			  ],
+			  "deposits": [
+				{
+				  "proof": [
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+				  ],
+				  "data": {
+					"pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
+					"withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+					"amount": "1",
+					"signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+				  }
+				}
+			  ],
+			  "voluntary_exits": [
+				{
+				  "message": {
+					"epoch": "1",
+					"validator_index": "1"
+				  },
+				  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+				}
+			  ],
+			  "sync_aggregate": {
+				"sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+				"sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+			  },
+			  "execution_payload": {
+				"parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+				"state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+				"prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"block_number": "1",
+				"gas_limit": "1",
+				"gas_used": "1",
+				"timestamp": "1",
+				"extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"base_fee_per_gas": "1",
+				"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"data_gas_used": "1",
+			  	"excess_data_gas": "2",
+				"transactions": [
+				  "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
+				],
+				"withdrawals": [
+				  {
+					"index": "1",
+					"validator_index": "1",
+					"address": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+					"amount": "1"
+				  }
+				]
+			  },
+			  "bls_to_execution_changes": [
+				{
+				  "message": {
+					"validator_index": "1",
+					"from_bls_pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
+					"to_execution_address": "0xabcf8e0d4e9587369b2301d0790347320302cc09"
+				  },
+				  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+				}
+			  ],
+			  "blob_kzg_commitments":["0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000"]
+			}
+		  },
+		  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+		},
+		"signed_blob_sidecars":[{
+			"message":{
+				"block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"index":"1",
+				"slot":"1",
+				"block_parent_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+				"proposer_index":"1",
+				"blob":"` + hexutil.Encode(make([]byte, 131072)) + `",
+				"kzg_commitment":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000",
+				"kzg_proof":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000"
+			},
+			"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+		}]
+}`
