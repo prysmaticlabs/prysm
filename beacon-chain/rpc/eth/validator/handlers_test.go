@@ -287,13 +287,13 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 }
 
 func TestSubmitContributionAndProofs(t *testing.T) {
-	broadcaster := &p2pmock.MockBroadcaster{}
 	s := &Server{
-		Broadcaster:       broadcaster,
 		OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 	}
 
 	t.Run("single", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.Broadcaster = broadcaster
 		s.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer
@@ -312,6 +312,8 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 	})
 
 	t.Run("multiple", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.Broadcaster = broadcaster
 		s.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer

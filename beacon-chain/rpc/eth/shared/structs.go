@@ -16,15 +16,15 @@ type Attestation struct {
 }
 
 type AttestationData struct {
-	Slot            string     `json:"slot" validate:"required,gte=0"`
-	CommitteeIndex  string     `json:"index" validate:"required,gte=0"`
+	Slot            string     `json:"slot" validate:"required,number,gte=0"`
+	CommitteeIndex  string     `json:"index" validate:"required,number,gte=0"`
 	BeaconBlockRoot string     `json:"beacon_block_root" validate:"required,hexadecimal"`
 	Source          Checkpoint `json:"source" validate:"required"`
 	Target          Checkpoint `json:"target" validate:"required"`
 }
 
 type Checkpoint struct {
-	Epoch string `json:"epoch" validate:"required,gte=0"`
+	Epoch string `json:"epoch" validate:"required,number,gte=0"`
 	Root  string `json:"root" validate:"required,hexadecimal"`
 }
 
@@ -34,15 +34,15 @@ type SignedContributionAndProof struct {
 }
 
 type ContributionAndProof struct {
-	AggregatorIndex string                    `json:"aggregator_index" validate:"required,gte=0"`
+	AggregatorIndex string                    `json:"aggregator_index" validate:"required,number,gte=0"`
 	Contribution    SyncCommitteeContribution `json:"contribution" validate:"required"`
 	SelectionProof  string                    `json:"selection_proof" validate:"required,hexadecimal"`
 }
 
 type SyncCommitteeContribution struct {
-	Slot              string `json:"slot" validate:"required,gte=0"`
+	Slot              string `json:"slot" validate:"required,number,gte=0"`
 	BeaconBlockRoot   string `json:"beacon_block_root" hex:"true" validate:"required,hexadecimal"`
-	SubcommitteeIndex string `json:"subcommittee_index" validate:"required,gte=0"`
+	SubcommitteeIndex string `json:"subcommittee_index" validate:"required,number,gte=0"`
 	AggregationBits   string `json:"aggregation_bits" hex:"true" validate:"required,hexadecimal"`
 	Signature         string `json:"signature" hex:"true" validate:"required,hexadecimal"`
 }
