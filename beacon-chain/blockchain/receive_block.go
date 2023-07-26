@@ -66,7 +66,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return err
 	}
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, _ := errgroup.WithContext(ctx)
 	var postState state.BeaconState
 	eg.Go(func() error {
 		postState, err = s.validateStateTransition(ctx, preState, blockCopy)
