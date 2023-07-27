@@ -303,7 +303,7 @@ func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, 
 			return err
 		}
 		if committeeCache.HasEntry(string(seed[:])) {
-			return nil
+			continue
 		}
 
 		shuffledIndices, err := ShuffledIndices(state, e)

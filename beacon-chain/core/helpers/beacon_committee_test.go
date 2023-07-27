@@ -423,6 +423,41 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(indices)), "Did not save correct indices lengths")
 }
 
+func TestUpdateCommitteeCache_CanUpdateAcrossEpochs(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount
+	validators := make([]*ethpb.Validator, validatorCount)
+	indices := make([]primitives.ValidatorIndex, validatorCount)
+	for i := primitives.ValidatorIndex(0); uint64(i) < validatorCount; i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: 1,
+		}
+		indices[i] = i
+	}
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	require.NoError(t, err)
+	e := time.CurrentEpoch(state)
+	require.NoError(t, UpdateCommitteeCache(context.Background(), state, e))
+
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
+	require.NoError(t, err)
+	require.Equal(t, true, committeeCache.HasEntry(string(seed[:])))
+
+	seed, err = Seed(state, e+1, params.BeaconConfig().DomainBeaconAttester)
+	require.NoError(t, err)
+	require.Equal(t, true, committeeCache.HasEntry(string(seed[:])))
+
+	require.NoError(t, UpdateCommitteeCache(context.Background(), state, e+1))
+	seed, err = Seed(state, e+2, params.BeaconConfig().DomainBeaconAttester)
+	require.NoError(t, err)
+	require.Equal(t, true, committeeCache.HasEntry(string(seed[:])))
+}
+
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
 	validators := make([]*ethpb.Validator, 300000)
 	for i := 0; i < len(validators); i++ {
