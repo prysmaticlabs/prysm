@@ -162,13 +162,13 @@ func (executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
-// DataGasUsed --
-func (e executionPayload) DataGasUsed() (uint64, error) {
+// BlobGasUsed --
+func (e executionPayload) BlobGasUsed() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ExcessDataGas --
-func (e executionPayload) ExcessDataGas() (uint64, error) {
+// ExcessBlobGas --
+func (e executionPayload) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
@@ -333,13 +333,13 @@ func (executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
-// DataGasUsed --
-func (e executionPayloadHeader) DataGasUsed() (uint64, error) {
+// BlobGasUsed --
+func (e executionPayloadHeader) BlobGasUsed() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ExcessDataGas --
-func (e executionPayloadHeader) ExcessDataGas() (uint64, error) {
+// ExcessBlobGas --
+func (e executionPayloadHeader) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
@@ -533,13 +533,13 @@ func (executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
-// DataGasUsed --
-func (e executionPayloadCapella) DataGasUsed() (uint64, error) {
+// BlobGasUsed --
+func (e executionPayloadCapella) BlobGasUsed() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ExcessDataGas --
-func (e executionPayloadCapella) ExcessDataGas() (uint64, error) {
+// ExcessBlobGas --
+func (e executionPayloadCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
@@ -705,13 +705,13 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
-// DataGasUsed --
-func (e executionPayloadHeaderCapella) DataGasUsed() (uint64, error) {
+// BlobGasUsed --
+func (e executionPayloadHeaderCapella) BlobGasUsed() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// ExcessDataGas --
-func (e executionPayloadHeaderCapella) ExcessDataGas() (uint64, error) {
+// ExcessBlobGas --
+func (e executionPayloadHeaderCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
@@ -786,11 +786,11 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	if err != nil {
 		return nil, err
 	}
-	dataGasUsed, err := payload.DataGasUsed()
+	blobGasUsed, err := payload.BlobGasUsed()
 	if err != nil {
 		return nil, err
 	}
-	excessDataGas, err := payload.ExcessDataGas()
+	excessBlobGas, err := payload.ExcessBlobGas()
 	if err != nil {
 		return nil, err
 	}
@@ -811,8 +811,8 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
 		TransactionsRoot: txRoot[:],
 		WithdrawalsRoot:  withdrawalsRoot[:],
-		DataGasUsed:      dataGasUsed,
-		ExcessDataGas:    excessDataGas,
+		BlobGasUsed:      blobGasUsed,
+		ExcessBlobGas:    excessBlobGas,
 	}, nil
 }
 
@@ -1015,12 +1015,14 @@ func (e executionPayloadHeaderDeneb) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
-func (e executionPayloadHeaderDeneb) DataGasUsed() (uint64, error) {
-	return e.p.DataGasUsed, nil
+// BlobGasUsed
+func (e executionPayloadHeaderDeneb) BlobGasUsed() (uint64, error) {
+	return e.p.BlobGasUsed, nil
 }
 
-func (e executionPayloadHeaderDeneb) ExcessDataGas() (uint64, error) {
-	return e.p.ExcessDataGas, nil
+// ExcessBlobGas
+func (e executionPayloadHeaderDeneb) ExcessBlobGas() (uint64, error) {
+	return e.p.ExcessBlobGas, nil
 }
 
 // PbBellatrix --
@@ -1184,12 +1186,12 @@ func (e executionPayloadDeneb) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
-func (e executionPayloadDeneb) DataGasUsed() (uint64, error) {
-	return e.p.DataGasUsed, nil
+func (e executionPayloadDeneb) BlobGasUsed() (uint64, error) {
+	return e.p.BlobGasUsed, nil
 }
 
-func (e executionPayloadDeneb) ExcessDataGas() (uint64, error) {
-	return e.p.ExcessDataGas, nil
+func (e executionPayloadDeneb) ExcessBlobGas() (uint64, error) {
+	return e.p.ExcessBlobGas, nil
 }
 
 // PbBellatrix --

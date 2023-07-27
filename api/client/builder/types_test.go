@@ -137,8 +137,8 @@ var testExampleHeaderResponseDeneb = `{
 		"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         "withdrawals_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-		"data_gas_used": "1",	
-		"excess_data_gas": "1"	
+		"blob_gas_used": "1",	
+		"excess_blob_gas": "2"	
       },
       "blinded_blobs_bundle": {
         "commitments": [
@@ -588,8 +588,8 @@ var testExampleExecutionPayloadDeneb = fmt.Sprintf(`{
 			"amount": "1"
 		  }
 		],
-		"data_gas_used": "2",
- 		"excess_data_gas": "3"
+		"blob_gas_used": "2",
+ 		"excess_blob_gas": "3"
 	  },
 	"blobs_bundle": {
       "commitments": [
@@ -851,13 +851,13 @@ func TestExecutionPayloadResponseDenebUnmarshal(t *testing.T) {
 		},
 		{
 			expected: "2",
-			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.DataGasUsed),
-			name:     "ExecPayloadResponse.ExecutionPayload.DataGasUsed",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.BlobGasUsed),
+			name:     "ExecPayloadResponse.ExecutionPayload.BlobGasUsed",
 		},
 		{
 			expected: "3",
-			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.ExcessDataGas),
-			name:     "ExecPayloadResponse.ExecutionPayload.ExcessDataGas",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.ExcessBlobGas),
+			name:     "ExecPayloadResponse.ExecutionPayload.ExcessBlobGas",
 		},
 	}
 	for _, c := range cases {
@@ -873,8 +873,8 @@ func TestExecutionPayloadResponseDenebUnmarshal(t *testing.T) {
 	assert.Equal(t, uint64(1), w.ValidatorIndex.Uint64())
 	assert.DeepEqual(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943", w.Address.String())
 	assert.Equal(t, uint64(1), w.Amount.Uint64())
-	assert.Equal(t, uint64(2), uint64(epr.Data.ExecutionPayload.DataGasUsed))
-	assert.Equal(t, uint64(3), uint64(epr.Data.ExecutionPayload.ExcessDataGas))
+	assert.Equal(t, uint64(2), uint64(epr.Data.ExecutionPayload.BlobGasUsed))
+	assert.Equal(t, uint64(3), uint64(epr.Data.ExecutionPayload.ExcessBlobGas))
 }
 
 func TestExecutionPayloadResponseToProto(t *testing.T) {
@@ -1038,8 +1038,8 @@ func TestExecutionPayloadResponseDenebToProto(t *testing.T) {
 				Amount:         1,
 			},
 		},
-		DataGasUsed:   2,
-		ExcessDataGas: 3,
+		BlobGasUsed:   2,
+		ExcessBlobGas: 3,
 	}
 	require.DeepEqual(t, expected, p)
 	commitment, err := hexutil.Decode("0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f")
@@ -1312,8 +1312,8 @@ func pbExecutionPayloadHeaderDeneb(t *testing.T) *v1.ExecutionPayloadHeaderDeneb
 		BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 		TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 		WithdrawalsRoot:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-		DataGasUsed:      1,
-		ExcessDataGas:    1,
+		BlobGasUsed:      1,
+		ExcessBlobGas:    2,
 	}
 }
 
@@ -1343,7 +1343,7 @@ func TestExecutionPayloadHeaderDeneb_MarshalJSON(t *testing.T) {
 	}
 	b, err := json.Marshal(h)
 	require.NoError(t, err)
-	expected := `{"parent_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","fee_recipient":"0xabcf8e0d4e9587369b2301d0790347320302cc09","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","receipts_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","logs_bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prev_randao":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","block_number":"1","gas_limit":"1","gas_used":"1","timestamp":"1","extra_data":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","base_fee_per_gas":"452312848583266388373324160190187140051835877600158453279131187530910662656","block_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","transactions_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","withdrawals_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","data_gas_used":"1","excess_data_gas":"1"}`
+	expected := `{"parent_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","fee_recipient":"0xabcf8e0d4e9587369b2301d0790347320302cc09","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","receipts_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","logs_bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prev_randao":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","block_number":"1","gas_limit":"1","gas_used":"1","timestamp":"1","extra_data":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","base_fee_per_gas":"452312848583266388373324160190187140051835877600158453279131187530910662656","block_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","transactions_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","withdrawals_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","blob_gas_used":"1","excess_blob_gas":"2"}`
 	require.Equal(t, expected, string(b))
 }
 

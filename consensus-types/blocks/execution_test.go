@@ -264,8 +264,8 @@ func TestWrapExecutionPayloadDeneb(t *testing.T) {
 			Address:        []byte("executionaddress"),
 			Amount:         77,
 		}},
-		DataGasUsed:   88,
-		ExcessDataGas: 99,
+		BlobGasUsed:   88,
+		ExcessBlobGas: 99,
 	}
 	payload, err := blocks.WrappedExecutionPayloadDeneb(data, 420)
 	require.NoError(t, err)
@@ -273,11 +273,11 @@ func TestWrapExecutionPayloadDeneb(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(420), v)
 
-	g, err := payload.DataGasUsed()
+	g, err := payload.BlobGasUsed()
 	require.NoError(t, err)
 	require.DeepEqual(t, uint64(88), g)
 
-	g, err = payload.ExcessDataGas()
+	g, err = payload.ExcessBlobGas()
 	require.NoError(t, err)
 	require.DeepEqual(t, uint64(99), g)
 }
@@ -299,8 +299,8 @@ func TestWrapExecutionPayloadHeaderDeneb(t *testing.T) {
 		BlockHash:        []byte("blockhash"),
 		TransactionsRoot: []byte("transactionsroot"),
 		WithdrawalsRoot:  []byte("withdrawalsroot"),
-		DataGasUsed:      88,
-		ExcessDataGas:    99,
+		BlobGasUsed:      88,
+		ExcessBlobGas:    99,
 	}
 	payload, err := blocks.WrappedExecutionPayloadHeaderDeneb(data, 10)
 	require.NoError(t, err)
@@ -309,11 +309,11 @@ func TestWrapExecutionPayloadHeaderDeneb(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(10), v)
 
-	g, err := payload.DataGasUsed()
+	g, err := payload.BlobGasUsed()
 	require.NoError(t, err)
 	require.DeepEqual(t, uint64(88), g)
 
-	g, err = payload.ExcessDataGas()
+	g, err = payload.ExcessBlobGas()
 	require.NoError(t, err)
 	require.DeepEqual(t, uint64(99), g)
 }
@@ -453,8 +453,8 @@ func createWrappedPayloadDeneb(t testing.TB) interfaces.ExecutionData {
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
 		Withdrawals:   make([]*enginev1.Withdrawal, 0),
-		DataGasUsed:   0,
-		ExcessDataGas: 0,
+		BlobGasUsed:   0,
+		ExcessBlobGas: 0,
 	}, 0)
 	require.NoError(t, err)
 	return payload
@@ -477,8 +477,8 @@ func createWrappedPayloadHeaderDeneb(t testing.TB) interfaces.ExecutionData {
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
-		DataGasUsed:      0,
-		ExcessDataGas:    0,
+		BlobGasUsed:      0,
+		ExcessBlobGas:    0,
 	}, 0)
 	require.NoError(t, err)
 	return payload
