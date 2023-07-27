@@ -295,7 +295,7 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]pri
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
-// list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
+// list with committee index and epoch number. It caches the shuffled indices for the input epoch.
 func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, e primitives.Epoch) error {
 	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
