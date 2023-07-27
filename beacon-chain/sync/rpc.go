@@ -189,7 +189,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
+				log.WithError(err).WithField("topic", topic).Trace("Could not decode stream message")
 				tracing.AnnotateError(span, err)
 				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
@@ -209,7 +209,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
+				log.WithError(err).WithField("topic", topic).Trace("Could not decode stream message")
 				tracing.AnnotateError(span, err)
 				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return

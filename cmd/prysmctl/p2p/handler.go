@@ -73,7 +73,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 					log.WithError(err).Debug("Could not decode goodbye stream message")
 					return
 				}
-				log.WithError(err).Debug("Could not decode stream message")
+				log.WithError(err).Trace("Could not decode stream message")
 				return
 			}
 			if err := handle(context.Background(), msg, stream); err != nil {
@@ -89,7 +89,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := c.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).Debug("Could not decode stream message")
+				log.WithError(err).Trace("Could not decode stream message")
 				return
 			}
 			if err := handle(context.Background(), nTyp.Elem().Interface(), stream); err != nil {
