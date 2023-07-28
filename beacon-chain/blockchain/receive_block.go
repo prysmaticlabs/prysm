@@ -415,7 +415,7 @@ func (s *Service) sendBlockAttestationsToSlasher(signed interfaces.ReadOnlySigne
 
 // validateExecutionOnBlock notifies the engine of the incoming block execution payload and returns true if the payload is valid
 func (s *Service) validateExecutionOnBlock(ctx context.Context, ver int, header interfaces.ExecutionData, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) (bool, error) {
-	isValidPayload, err := s.notifyNewPayload(ctx, ver, header, signed, blockRoot)
+	isValidPayload, err := s.notifyNewPayload(ctx, ver, header, signed)
 	if err != nil {
 		return false, s.handleInvalidExecutionError(ctx, err, blockRoot, signed.Block().ParentRoot())
 	}
