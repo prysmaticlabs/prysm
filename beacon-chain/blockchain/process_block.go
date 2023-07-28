@@ -345,6 +345,9 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 		// with a custom deadline, therefore using the background context instead.
 		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 		defer cancel()
+		if err := helpers.UpdateCommitteeCache(ctx, st, e+1); err != nil {
+			log.WithError(err).Warn("Could not update committee cache")
+		}
 		if err := helpers.UpdateProposerIndicesInCache(slotCtx, st, e+1); err != nil {
 			log.WithError(err).Warn("Failed to cache next epoch proposers")
 		}

@@ -295,43 +295,39 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]pri
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
-// list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
-func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
-	for _, e := range []primitives.Epoch{epoch, epoch + 1} {
-		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return err
-		}
-		if committeeCache.HasEntry(string(seed[:])) {
-			continue
-		}
-
-		shuffledIndices, err := ShuffledIndices(state, e)
-		if err != nil {
-			return err
-		}
-
-		count := SlotCommitteeCount(uint64(len(shuffledIndices)))
-
-		// Store the sorted indices as well as shuffled indices. In current spec,
-		// sorted indices is required to retrieve proposer index. This is also
-		// used for failing verify signature fallback.
-		sortedIndices := make([]primitives.ValidatorIndex, len(shuffledIndices))
-		copy(sortedIndices, shuffledIndices)
-		sort.Slice(sortedIndices, func(i, j int) bool {
-			return sortedIndices[i] < sortedIndices[j]
-		})
-
-		if err := committeeCache.AddCommitteeShuffledList(ctx, &cache.Committees{
-			ShuffledIndices: shuffledIndices,
-			CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
-			Seed:            seed,
-			SortedIndices:   sortedIndices,
-		}); err != nil {
-			return err
-		}
+// list with committee index and epoch number. It caches the shuffled indices for the input epoch.
+func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, e primitives.Epoch) error {
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return err
+	}
+	if committeeCache.HasEntry(string(seed[:])) {
+		return nil
+	}
+	shuffledIndices, err := ShuffledIndices(state, e)
+	if err != nil {
+		return err
 	}
 
+	count := SlotCommitteeCount(uint64(len(shuffledIndices)))
+
+	// Store the sorted indices as well as shuffled indices. In current spec,
+	// sorted indices is required to retrieve proposer index. This is also
+	// used for failing verify signature fallback.
+	sortedIndices := make([]primitives.ValidatorIndex, len(shuffledIndices))
+	copy(sortedIndices, shuffledIndices)
+	sort.Slice(sortedIndices, func(i, j int) bool {
+		return sortedIndices[i] < sortedIndices[j]
+	})
+
+	if err := committeeCache.AddCommitteeShuffledList(ctx, &cache.Committees{
+		ShuffledIndices: shuffledIndices,
+		CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
+		Seed:            seed,
+		SortedIndices:   sortedIndices,
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
