@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -1989,7 +1988,7 @@ const (
 }`
 )
 
-var denebBlockContents = fmt.Sprintf(`{
+var denebBlockContents = `{
  	"signed_block":{
 		 "message": {
 			"slot": "1",
@@ -2197,10 +2196,10 @@ var denebBlockContents = fmt.Sprintf(`{
 				"slot":"1",
 				"block_parent_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
 				"proposer_index":"1",
-				"blob":%s,
+				"blob":"` + hexutil.Encode(make([]byte, 131072)) + `",
 				"kzg_commitment":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000",
 				"kzg_proof":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000"
 			},
 			"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
 		}]
-}`, hexutil.Encode(make([]byte, 131072)))
+}`
