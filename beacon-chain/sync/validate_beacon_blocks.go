@@ -200,15 +200,20 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, err
 	}
 	graffiti := blk.Block().Body().Graffiti()
+
+	sinceSlotStartTime := receivedTime.Sub(startTime)
+	validationTime := prysmTime.Now().Sub(receivedTime)
 	log.WithFields(logrus.Fields{
 		"blockSlot":          blk.Block().Slot(),
-		"sinceSlotStartTime": receivedTime.Sub(startTime),
-		"validationTime":     prysmTime.Now().Sub(receivedTime),
+		"sinceSlotStartTime": sinceSlotStartTime,
+		"validationTime":     validationTime,
 		"proposerIndex":      blk.Block().ProposerIndex(),
 		"graffiti":           string(graffiti[:]),
 	}).Debug("Received block")
 
-	blockVerificationGossipSummary.Observe(float64(prysmTime.Since(receivedTime).Milliseconds()))
+	blockArrivalGossipSummary.Observe(float64(sinceSlotStartTime))
+	blockVerificationGossipSummary.Observe(float64(validationTime))
+
 	return pubsub.ValidationAccept, nil
 }
 
