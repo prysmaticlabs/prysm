@@ -413,7 +413,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, UpdateCommitteeCache(context.Background(), state, time.CurrentEpoch(state)))
 
-	epoch := primitives.Epoch(1)
+	epoch := primitives.Epoch(0)
 	idx := primitives.CommitteeIndex(1)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
@@ -448,14 +448,13 @@ func TestUpdateCommitteeCache_CanUpdateAcrossEpochs(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, committeeCache.HasEntry(string(seed[:])))
 
-	seed, err = Seed(state, e+1, params.BeaconConfig().DomainBeaconAttester)
+	nextSeed, err := Seed(state, e+1, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	require.Equal(t, true, committeeCache.HasEntry(string(seed[:])))
+	require.Equal(t, false, committeeCache.HasEntry(string(nextSeed[:])))
 
 	require.NoError(t, UpdateCommitteeCache(context.Background(), state, e+1))
-	seed, err = Seed(state, e+2, params.BeaconConfig().DomainBeaconAttester)
-	require.NoError(t, err)
-	require.Equal(t, true, committeeCache.HasEntry(string(seed[:])))
+
+	require.Equal(t, true, committeeCache.HasEntry(string(nextSeed[:])))
 }
 
 func BenchmarkComputeCommittee300000_WithPreCache(b *testing.B) {
