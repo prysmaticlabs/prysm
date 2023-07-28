@@ -80,8 +80,6 @@ github.com/Joker/jade v1.0.1-0.20190614124447-d475f43051e7/go.mod h1:6E6s8o2AE4K
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20221202121132-bd37e8fb1d0d h1:DyFNUJjW7jX3w+QPsDw4cdwZ2j6BapkuQpiUg5IefzE=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20221202121132-bd37e8fb1d0d/go.mod h1:BSKhCg8phwi9taTm849mjagbJqs5fpFFXCc6uH4qaT4=
-github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20230727144632-9b621f5131f8 h1:TWfJgaTCz1DqjkyYSCZQgCJoppWwX+w/NeAvy1MvcSE=
-github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20230727144632-9b621f5131f8/go.mod h1:zKetLweqBR8ZS+1O9iJWI8DvmmD2NzD19apjEWDCsnw=
 github.com/MariusVanDerWijden/tx-fuzz v1.0.2 h1:H/C75+C305sWTF2ZoC4wZlJrMOpQ1YIdUBPL48ILIWI=
 github.com/MariusVanDerWijden/tx-fuzz v1.0.2/go.mod h1:jrK+Lr2mr1+6Pm3LlQ6rGHgK3WRQ9VMTiX+2mPMe6ys=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
@@ -859,6 +857,8 @@ github.com/libp2p/go-reuseport v0.2.0/go.mod h1:bvVho6eLMm6Bz5hmU0LYN3ixd3nPPvtI
 github.com/libp2p/go-sockaddr v0.0.2/go.mod h1:syPvOmNs24S3dFVGJA1/mrqdeijPxLV2Le3BRLKd68k=
 github.com/libp2p/go-yamux/v4 v4.0.0 h1:+Y80dV2Yx/kv7Y7JKu0LECyVdMXm1VUoko+VQ9rBfZQ=
 github.com/libp2p/go-yamux/v4 v4.0.0/go.mod h1:NWjl8ZTLOGlozrXSOZ/HlfG++39iKNnM5wwmtQP1YB4=
+github.com/lightclient/go-ethereum v1.10.10-0.20230731221648-91138f5278b8 h1:J4Mk2iTxrMl9Cwo/YHxWpkVy0E0zj4V9dJCYQfPiSgk=
+github.com/lightclient/go-ethereum v1.10.10-0.20230731221648-91138f5278b8/go.mod h1:zKetLweqBR8ZS+1O9iJWI8DvmmD2NzD19apjEWDCsnw=
 github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-bc2310a04743/go.mod h1:qklhhLq1aX+mtWk9cPHPzaBjWImj5ULL6C7HFJtXQMM=
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
 github.com/logrusorgru/aurora v2.0.3+incompatible h1:tOpm7WcpBTn4fjmVfgpQq0EfczGlG91VSDkswnjF5A8=

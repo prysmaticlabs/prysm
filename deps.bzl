@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 load("@prysm//tools/go:def.bzl", "go_repository", "maybe")  # gazelle:keep
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
