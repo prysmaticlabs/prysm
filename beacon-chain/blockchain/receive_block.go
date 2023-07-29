@@ -3,6 +3,10 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"path"
+	"runtime/pprof"
+	time2 "time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
@@ -15,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -53,6 +58,11 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	blockCopy, err := block.Copy()
 	if err != nil {
 		return err
+	}
+
+	bf := bytes.NewBuffer([]byte{})
+	if err := pprof.StartCPUProfile(bf); err != nil {
+		panic(err)
 	}
 
 	preState, err := s.getBlockPreState(ctx, blockCopy.Block())
@@ -161,6 +171,14 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	// Log state transition data.
 	if err := logStateTransitionData(blockCopy.Block()); err != nil {
 		log.WithError(err).Error("Unable to log state transition data")
+	}
+
+	pprof.StopCPUProfile()
+	if time.Since(receivedTime) > time2.Second {
+		dbPath := path.Join("/home/t", fmt.Sprintf("%d.profile", blockCopy.Block().Slot()))
+		if err = file.WriteFile(dbPath, bf.Bytes()); err != nil {
+			panic(err)
+		}
 	}
 
 	chainServiceProcessingTime.Observe(float64(time.Since(receivedTime).Milliseconds()))
