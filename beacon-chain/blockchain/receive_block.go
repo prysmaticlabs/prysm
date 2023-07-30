@@ -62,7 +62,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 
 	bf := bytes.NewBuffer([]byte{})
 	if err := pprof.StartCPUProfile(bf); err != nil {
-		panic(err)
+		log.WithError(err).Error("could not start cpu profile")
 	}
 
 	preState, err := s.getBlockPreState(ctx, blockCopy.Block())
@@ -174,10 +174,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	}
 
 	pprof.StopCPUProfile()
-	if time.Since(receivedTime) > time2.Second {
+	if time.Since(receivedTime) > 3/2*time2.Second {
 		dbPath := path.Join("/home/t", fmt.Sprintf("%d.profile", blockCopy.Block().Slot()))
 		if err = file.WriteFile(dbPath, bf.Bytes()); err != nil {
-			panic(err)
+			log.WithError(err).Error("could not write profile")
 		}
 	}
 
