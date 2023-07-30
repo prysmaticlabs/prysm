@@ -201,11 +201,12 @@ func ProposeExit(
 	signer iface.SigningFunc,
 	pubKey []byte,
 	epoch primitives.Epoch,
+	genesis *ethpb.Genesis,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
 	defer span.End()
 
-	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, signer, pubKey, epoch)
+	signedExit, err := CreateSignedVoluntaryExit(ctx, validatorClient, signer, pubKey, epoch, genesis)
 	if err != nil {
 		return errors.Wrap(err, "failed to create signed voluntary exit")
 	}
@@ -233,6 +234,7 @@ func CreateSignedVoluntaryExit(
 	signer iface.SigningFunc,
 	pubKey []byte,
 	epoch primitives.Epoch,
+	genesis *ethpb.Genesis,
 ) (*ethpb.SignedVoluntaryExit, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CreateSignedVoluntaryExit")
 	defer span.End()
@@ -246,7 +248,7 @@ func CreateSignedVoluntaryExit(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve slot")
 	}
-	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, slot)
+	sig, err := signVoluntaryExit(ctx, signer, pubKey, exit, slot, genesis)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign voluntary exit")
 	}
@@ -318,18 +320,13 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 // Sign voluntary exit with proposer domain and private key.
 func signVoluntaryExit(
 	ctx context.Context,
-	validatorClient iface.ValidatorClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
 	slot primitives.Slot,
+	genesis *ethpb.Genesis,
 ) ([]byte, error) {
-	req := &ethpb.DomainRequest{
-		Epoch:  exit.Epoch,
-		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
-	}
-
-	domain, err := validatorClient.DomainData(ctx, req)
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainVoluntaryExit, params.BeaconConfig().CapellaForkVersion, genesis.GenesisValidatorsRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
 	}
@@ -337,7 +334,7 @@ func signVoluntaryExit(
 		return nil, errors.New(domainDataErr)
 	}
 
-	exitRoot, err := signing.ComputeSigningRoot(exit, domain.SignatureDomain)
+	exitRoot, err := signing.ComputeSigningRoot(exit, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, signingRootErr)
 	}
@@ -345,7 +342,7 @@ func signVoluntaryExit(
 	sig, err := signer(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey,
 		SigningRoot:     exitRoot[:],
-		SignatureDomain: domain.SignatureDomain,
+		SignatureDomain: domain,
 		Object:          &validatorpb.SignRequest_Exit{Exit: exit},
 		SigningSlot:     slot,
 	})

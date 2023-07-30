@@ -697,11 +697,11 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 	if err != nil {
 		return nil, err
 	}
+	genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
+	}
 	if req.Epoch == 0 {
-		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
-		}
 		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "gRPC call to get genesis time failed: %v", err)
@@ -714,6 +714,7 @@ func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVolu
 		km.Sign,
 		req.Pubkey,
 		req.Epoch,
+		genesisResponse,
 	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
