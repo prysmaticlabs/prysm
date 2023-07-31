@@ -115,6 +115,7 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 
 	defer reportAttestationInclusion(b)
 	if headRoot == blockRoot {
+<<<<<<< HEAD
 		// Updating next slot state cache can happen in the background
 		// except in the epoch boundary in which case we lock to handle
 		// the shuffling and proposer caches updates.
@@ -137,6 +138,21 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 				}
 			}()
 		}
+		// Updating next slot state cache and the epoch boundary caches
+		// can happen in the background. It shouldn't block rest of the
+		// process. We also handle these caches only on canonical
+		// blocks, otherwise this will be handled by lateBlockTasks
+		go func() {
+			slotCtx, cancel := context.WithTimeout(context.Background(), 2*slotDeadline)
+			defer cancel()
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Error("could not update next slot state cache")
+			}
+			if err := s.handleEpochBoundary(slotCtx, postState.Slot(), postState, blockRoot[:]); err != nil {
+				log.WithError(err).Error("could not handle epoch boundary")
+			}
+
+		}()
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
