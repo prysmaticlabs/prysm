@@ -84,7 +84,8 @@ func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slo
 		Timestamp:     0,
 		ExtraData:     make([]byte, 0),
 		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
-		ExcessDataGas: 0,
+		ExcessBlobGas: 0,
+		BlobGasUsed:   0,
 		BlockHash:     blockHash[:],
 		Transactions:  encodedBinaryTxs,
 	}
