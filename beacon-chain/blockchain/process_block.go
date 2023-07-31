@@ -86,18 +86,6 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			"headRoot":       fmt.Sprintf("%#x", headRoot),
 			"headWeight":     headWeight,
 		}).Debug("Head block is not the received block")
-	} else {
-		// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-				log.WithError(err).Debug("could not update next slot state cache")
-			}
-		}()
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
@@ -126,12 +114,22 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 	})
 
 	defer reportAttestationInclusion(b)
-	//only handle epoch boundary if the incoming block is canonical,
-	//otherwise this will be handled by lateBlockTasks.
 	if headRoot == blockRoot {
-		if err := s.handleEpochBoundary(ctx, postState.Slot(), postState, blockRoot[:]); err != nil {
-			return errors.Wrap(err, "could not handle epoch boundary")
-		}
+		// Updating next slot state cache and the epoch boundary caches
+		// can happen in the background. It shouldn't block rest of the
+		// process. We also handle these caches only on canonical
+		// blocks, otherwise this will be handled by lateBlockTasks
+		go func() {
+			slotCtx, cancel := context.WithTimeout(context.Background(), 2*slotDeadline)
+			defer cancel()
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Error("could not update next slot state cache")
+			}
+			if err := s.handleEpochBoundary(slotCtx, postState.Slot(), postState, blockRoot[:]); err != nil {
+				log.WithError(err).Error("could not handle epoch boundary")
+			}
+
+		}()
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
