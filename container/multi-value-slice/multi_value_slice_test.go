@@ -73,6 +73,7 @@ func TestValue(t *testing.T) {
 	// What we want to check:
 	// - correct values are returned for first object
 	// - correct values are returned for second object
+	// - correct values are returned for an object without appended items
 
 	s := setup()
 	first := &testObject{id: id1, slice: s}
@@ -100,6 +101,17 @@ func TestValue(t *testing.T) {
 	assert.Equal(t, 2, v[5])
 	assert.Equal(t, 3, v[6])
 	assert.Equal(t, 2, v[7])
+
+	s = &Slice[int, *testObject]{}
+	s.Init([]int{1, 2, 3})
+	id := uuid.New()
+
+	v = s.Value(&testObject{id: id})
+
+	require.Equal(t, 3, len(v))
+	assert.Equal(t, 1, v[0])
+	assert.Equal(t, 2, v[1])
+	assert.Equal(t, 3, v[2])
 }
 
 func TestAt(t *testing.T) {

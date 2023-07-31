@@ -34,6 +34,59 @@
 // The Detach function should be called when an object gets garbage collected.
 // Its purpose is to clean up the slice from individual/appended values of the collected object.
 // Otherwise the slice will get polluted with values for non-existing objects.
+//
+// Example diagram illustrating what happens after copying, updating and detaching:
+//
+//		Create object o1 with value 10. At this point we only have shared values.
+//
+//		===================
+//		shared | individual
+//		===================
+//		10     |
+//
+//		Copy object o1 to object o2. o2 shares the value with o1, no individual value is created.
+//
+//		===================
+//		shared | individual
+//		===================
+//		10     |
+//
+//		Update value of object o2 to 20. An individual value is created.
+//
+//		===================
+//		shared | individual
+//		===================
+//		10     | 20: [o2]
+//
+//		 Copy object o2 to object o3. The individual value's object list is updated.
+//
+//		===================
+//		shared | individual
+//		===================
+//		10     | 20: [o2,o3]
+//
+//		 Update value of object o3 to 30. There are two individual values now, one for o2 and one for o3.
+//
+//		===================
+//		shared | individual
+//		===================
+//		10     | 20: [o2]
+//		       | 30: [o3]
+//
+//		 Update value of object o2 to 10. o2 no longer has an indivual value
+//		 because it got "reverted" to the original, shared value,
+//
+//		===================
+//		shared | individual
+//	 ===================
+//		10     | 30: [o3]
+//
+//		 Detach object o3. Individual value for o3 is removed.
+//
+//		===================
+//		shared | individual
+//		===================
+//		10     |
 package mvslice
 
 import (
@@ -109,7 +162,6 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 		}
 	}
 
-appendedLoop:
 	for _, item := range s.appendedItems {
 		found := false
 		for _, v := range item.Values {
@@ -122,7 +174,7 @@ appendedLoop:
 		if !found {
 			// This is an optimization. If we didn't find an appended item at index i,
 			// then all larger indices don't have an appended item for the object either.
-			break appendedLoop
+			break
 		}
 	}
 
@@ -137,43 +189,33 @@ func (s *Slice[V, O]) Value(obj O) []V {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	result := make([]V, len(s.sharedItems))
-	for i, item := range s.sharedItems {
-		ind, ok := s.individualItems[uint64(i)]
-		if !ok {
-			result[i] = item
-		} else {
+	l, ok := s.cachedLengths[obj.Id()]
+	if ok {
+		result := make([]V, l)
+		s.fillOriginalItems(obj, &result)
+
+		sharedLen := len(s.sharedItems)
+		for i, item := range s.appendedItems {
 			found := false
-			for _, v := range ind.Values {
+			for _, v := range item.Values {
 				_, found = containsId(v.ids, obj.Id())
 				if found {
-					result[i] = v.val
+					result[sharedLen+i] = v.val
 					break
 				}
 			}
 			if !found {
-				result[i] = item
+				// This is an optimization. If we didn't find an appended item at index i,
+				// then all larger indices don't have an appended item for the object either.
+				return result
 			}
 		}
+		return result
+	} else {
+		result := make([]V, len(s.sharedItems))
+		s.fillOriginalItems(obj, &result)
+		return result
 	}
-
-	for _, item := range s.appendedItems {
-		found := false
-		for _, v := range item.Values {
-			_, found = containsId(v.ids, obj.Id())
-			if found {
-				result = append(result, v.val)
-				break
-			}
-		}
-		if !found {
-			// This is an optimization. If we didn't find an appended item at index i,
-			// then all larger indices don't have an appended item for the object either.
-			return result
-		}
-	}
-
-	return result
 }
 
 // At returns the item at the requested index for the input object.
@@ -229,78 +271,10 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 
 	isOriginal := index < uint64(len(s.sharedItems))
 	if isOriginal {
-		ind, ok := s.individualItems[index]
-		if ok {
-			for mvi, v := range ind.Values {
-				// if we find an existing value, we remove it
-				foundIndex, found := containsId(v.ids, obj.Id())
-				if found {
-					if len(v.ids) == 1 {
-						// There is an improvement to be made here. If len(ind.Values) == 1,
-						// then after removing the item from the slice s.individualItems[i]
-						// will be a useless map entry whose value is an empty slice.
-						ind.Values = deleteElemFromSlice(ind.Values, mvi)
-					} else {
-						v.ids = deleteElemFromSlice(v.ids, foundIndex)
-					}
-					break
-				}
-			}
-		}
-
-		if val == s.sharedItems[index] {
-			return nil
-		}
-
-		if !ok {
-			s.individualItems[index] = &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}}
-		} else {
-			newValue := true
-			for _, v := range ind.Values {
-				if v.val == val {
-					v.ids = append(v.ids, obj.Id())
-					newValue = false
-					break
-				}
-			}
-			if newValue {
-				ind.Values = append(ind.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
-			}
-		}
-	} else {
-		item := s.appendedItems[index-uint64(len(s.sharedItems))]
-		found := false
-		for vi, v := range item.Values {
-			var foundIndex int
-			// if we find an existing value, we remove it
-			foundIndex, found = containsId(v.ids, obj.Id())
-			if found {
-				if len(v.ids) == 1 {
-					item.Values = deleteElemFromSlice(item.Values, vi)
-				} else {
-					v.ids = deleteElemFromSlice(v.ids, foundIndex)
-				}
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("index %d out of bounds", index)
-		}
-
-		newValue := true
-		for _, v := range item.Values {
-			if v.val == val {
-				v.ids = append(v.ids, obj.Id())
-				newValue = false
-				break
-			}
-		}
-		if newValue {
-			item.Values = append(item.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
-		}
+		s.updateOriginalItem(obj, index, val)
+		return nil
 	}
-
-	return nil
+	return s.updateAppendedItem(obj, index, val)
 }
 
 // Append adds a new item to the input object.
@@ -397,6 +371,103 @@ func (s *Slice[V, O]) Detach(obj O) {
 	}
 
 	delete(s.cachedLengths, obj.Id())
+}
+
+func (s *Slice[V, O]) fillOriginalItems(obj O, items *[]V) {
+	for i, item := range s.sharedItems {
+		ind, ok := s.individualItems[uint64(i)]
+		if !ok {
+			(*items)[i] = item
+		} else {
+			found := false
+			for _, v := range ind.Values {
+				_, found = containsId(v.ids, obj.Id())
+				if found {
+					(*items)[i] = v.val
+					break
+				}
+			}
+			if !found {
+				(*items)[i] = item
+			}
+		}
+	}
+}
+
+func (s *Slice[V, O]) updateOriginalItem(obj O, index uint64, val V) {
+	ind, ok := s.individualItems[index]
+	if ok {
+		for mvi, v := range ind.Values {
+			// if we find an existing value, we remove it
+			foundIndex, found := containsId(v.ids, obj.Id())
+			if found {
+				if len(v.ids) == 1 {
+					// There is an improvement to be made here. If len(ind.Values) == 1,
+					// then after removing the item from the slice s.individualItems[i]
+					// will be a useless map entry whose value is an empty slice.
+					ind.Values = deleteElemFromSlice(ind.Values, mvi)
+				} else {
+					v.ids = deleteElemFromSlice(v.ids, foundIndex)
+				}
+				break
+			}
+		}
+	}
+
+	if val == s.sharedItems[index] {
+		return
+	}
+
+	if !ok {
+		s.individualItems[index] = &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}}
+	} else {
+		newValue := true
+		for _, v := range ind.Values {
+			if v.val == val {
+				v.ids = append(v.ids, obj.Id())
+				newValue = false
+				break
+			}
+		}
+		if newValue {
+			ind.Values = append(ind.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
+		}
+	}
+}
+
+func (s *Slice[V, O]) updateAppendedItem(obj O, index uint64, val V) error {
+	item := s.appendedItems[index-uint64(len(s.sharedItems))]
+	found := false
+	for vi, v := range item.Values {
+		var foundIndex int
+		// if we find an existing value, we remove it
+		foundIndex, found = containsId(v.ids, obj.Id())
+		if found {
+			if len(v.ids) == 1 {
+				item.Values = deleteElemFromSlice(item.Values, vi)
+			} else {
+				v.ids = deleteElemFromSlice(v.ids, foundIndex)
+			}
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("index %d out of bounds", index)
+	}
+
+	newValue := true
+	for _, v := range item.Values {
+		if v.val == val {
+			v.ids = append(v.ids, obj.Id())
+			newValue = false
+			break
+		}
+	}
+	if newValue {
+		item.Values = append(item.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
+	}
+
+	return nil
 }
 
 func containsId(ids []uuid.UUID, wanted uuid.UUID) (int, bool) {
