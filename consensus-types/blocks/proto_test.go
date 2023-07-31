@@ -1662,8 +1662,8 @@ func getFields() fields {
 				Amount:  128,
 			},
 		},
-		DataGasUsed:   128,
-		ExcessDataGas: 128,
+		BlobGasUsed:   128,
+		ExcessBlobGas: 128,
 	}
 	execPayloadHeaderDeneb := &enginev1.ExecutionPayloadHeaderDeneb{
 		ParentHash:       root[:],
@@ -1681,8 +1681,8 @@ func getFields() fields {
 		BlockHash:        root[:],
 		TransactionsRoot: root[:],
 		WithdrawalsRoot:  root[:],
-		DataGasUsed:      128,
-		ExcessDataGas:    128,
+		BlobGasUsed:      128,
+		ExcessBlobGas:    128,
 	}
 
 	kzgCommitments := [][]byte{
