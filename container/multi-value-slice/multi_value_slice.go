@@ -37,7 +37,7 @@
 //
 // Example diagram illustrating what happens after copying, updating and detaching:
 //
-//		Create object o1 with value 10. At this point we only have shared values.
+//		Create object o1 with value 10. At this point we only have a shared value.
 //
 //		===================
 //		shared | individual
@@ -73,7 +73,7 @@
 //		10     | 20: [o2]
 //		       | 30: [o3]
 //
-//		 Update value of object o2 to 10. o2 no longer has an indivual value
+//		 Update value of object o2 to 10. o2 no longer has an individual value
 //		 because it got "reverted" to the original, shared value,
 //
 //		===================
