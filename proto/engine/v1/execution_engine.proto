@@ -82,8 +82,8 @@ message ExecutionPayloadDeneb {
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 	// MAX_WITHDRAWALS_PER_PAYLOAD
 	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
-	uint64 data_gas_used  = 16;
-	uint64 excess_data_gas  = 17;
+	uint64 blob_gas_used  = 16;
+	uint64 excess_blob_gas  = 17;
 }
 
 message ExecutionPayloadCapellaWithValue {
@@ -150,8 +150,8 @@ message ExecutionPayloadHeaderDeneb {
 	bytes block_hash        = 13 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes withdrawals_root  = 15 [(ethereum.eth.ext.ssz_size) = "32"];
-	uint64 data_gas_used  = 16;
-	uint64 excess_data_gas  = 17;
+	uint64 blob_gas_used  = 16;
+	uint64 excess_blob_gas  = 17;
 }
 
 message TransitionConfiguration {
