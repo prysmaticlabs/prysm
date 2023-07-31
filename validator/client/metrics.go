@@ -206,7 +206,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "in_next_sync_committee",
-			Help:      "validator next sync committee.New in Altair hardfork",
+			Help:      "validator next sync committee. New in Altair hardfork",
 		},
 		[]string{
 			"pubkey",
