@@ -126,16 +126,12 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 	})
 
 	defer reportAttestationInclusion(b)
-	// Get the current head state (it may be different than the incoming
-	// postState) and update epoch boundary caches. We pass the postState
-	// slot instead of the headState slot below to deal with the case of an
-	// incoming non-canonical block
-	st, err := s.HeadState(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get headState")
-	}
-	if err := s.handleEpochBoundary(ctx, postState.Slot(), st, headRoot[:]); err != nil {
-		return errors.Wrap(err, "could not handle epoch boundary")
+	//only handle epoch boundary if the incoming block is canonical,
+	//otherwise this will be handled by lateBlockTasks.
+	if headRoot == blockRoot {
+		if err := s.handleEpochBoundary(ctx, postState.Slot(), postState, blockRoot[:]); err != nil {
+			return errors.Wrap(err, "could not handle epoch boundary")
+		}
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
