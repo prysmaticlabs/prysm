@@ -2,13 +2,16 @@ package validator
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/go-playground/validator/v10"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/network"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -26,11 +29,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := s.AttestationsPool.AggregateUnaggregatedAttestations(r.Context()); err != nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "Could not aggregate unaggregated attestations: " + err.Error(),
-			Code:    http.StatusBadRequest,
-		}
-		network.WriteError(w, errJson)
+		http2.HandleError(w, "Could not aggregate unaggregated attestations: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -40,20 +39,12 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		if att.Data.Slot == primitives.Slot(slot) {
 			root, err := att.Data.HashTreeRoot()
 			if err != nil {
-				errJson := &network.DefaultErrorJson{
-					Message: "Could not get attestation data root: " + err.Error(),
-					Code:    http.StatusInternalServerError,
-				}
-				network.WriteError(w, errJson)
+				http2.HandleError(w, "Could not get attestation data root: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			attDataRootBytes, err := hexutil.Decode(attDataRoot)
 			if err != nil {
-				errJson := &network.DefaultErrorJson{
-					Message: "Could not decode attestation data root into bytes: " + err.Error(),
-					Code:    http.StatusBadRequest,
-				}
-				network.WriteError(w, errJson)
+				http2.HandleError(w, "Could not decode attestation data root into bytes: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			if bytes.Equal(root[:], attDataRootBytes) {
@@ -64,11 +55,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		}
 	}
 	if bestMatchingAtt == nil {
-		errJson := &network.DefaultErrorJson{
-			Message: "No matching attestation found",
-			Code:    http.StatusNotFound,
-		}
-		network.WriteError(w, errJson)
+		http2.HandleError(w, "No matching attestation found", http.StatusNotFound)
 		return
 	}
 
@@ -90,5 +77,37 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 			},
 			Signature: hexutil.Encode(bestMatchingAtt.Signature),
 		}}
-	network.WriteJson(w, response)
+	http2.WriteJson(w, response)
+}
+
+// SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
+func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Request) {
+	var req SubmitContributionAndProofsRequest
+
+	if r.Body == http.NoBody {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	validate := validator.New()
+	for _, item := range req.Data {
+		if err := validate.Struct(item); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		consensusItem, err := item.ToConsensus()
+		if err != nil {
+			http2.HandleError(w, "Could not convert request contribution to consensus contribution: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		rpcError := core.SubmitSignedContributionAndProof(r.Context(), consensusItem, s.Broadcaster, s.SyncCommitteePool, s.OperationNotifier)
+		if rpcError != nil {
+			http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+		}
+	}
 }
