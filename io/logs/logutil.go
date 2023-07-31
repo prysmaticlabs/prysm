@@ -24,7 +24,7 @@ func ConfigurePersistentLogging(logFileName string) error {
 	if err := os.MkdirAll(filepath.Dir(logFileName), params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, params.BeaconIoConfig().ReadWriteExecutePermissions) // #nosec G304
+	f, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, params.BeaconIoConfig().ReadWritePermissions) // #nosec G304
 	if err != nil {
 		return err
 	}
