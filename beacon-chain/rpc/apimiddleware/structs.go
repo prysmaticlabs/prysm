@@ -681,8 +681,8 @@ type ExecutionPayloadDenebJson struct {
 	TimeStamp     string            `json:"timestamp"`
 	ExtraData     string            `json:"extra_data" hex:"true"`
 	BaseFeePerGas string            `json:"base_fee_per_gas" uint256:"true"`
-	DataGasUsed   string            `json:"data_gas_used"`   // new in deneb
-	ExcessDataGas string            `json:"excess_data_gas"` // new in deneb
+	BlobGasUsed   string            `json:"blob_gas_used"`   // new in deneb
+	ExcessBlobGas string            `json:"excess_blob_gas"` // new in deneb
 	BlockHash     string            `json:"block_hash" hex:"true"`
 	Transactions  []string          `json:"transactions" hex:"true"`
 	Withdrawals   []*WithdrawalJson `json:"withdrawals"`
@@ -736,8 +736,8 @@ type ExecutionPayloadHeaderDenebJson struct {
 	TimeStamp        string `json:"timestamp"`
 	ExtraData        string `json:"extra_data" hex:"true"`
 	BaseFeePerGas    string `json:"base_fee_per_gas" uint256:"true"`
-	DataGasUsed      string `json:"data_gas_used"`   // new in deneb
-	ExcessDataGas    string `json:"excess_data_gas"` // new in deneb
+	BlobGasUsed      string `json:"blob_gas_used"`   // new in deneb
+	ExcessBlobGas    string `json:"excess_blob_gas"` // new in deneb
 	BlockHash        string `json:"block_hash" hex:"true"`
 	TransactionsRoot string `json:"transactions_root" hex:"true"`
 	WithdrawalsRoot  string `json:"withdrawals_root" hex:"true"`

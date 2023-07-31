@@ -777,8 +777,8 @@ func TestBeaconStateDenebToProto(t *testing.T) {
 			BlockHash:        bytesutil.PadTo([]byte("blockhash"), 32),
 			TransactionsRoot: bytesutil.PadTo([]byte("transactionsroot"), 32),
 			WithdrawalsRoot:  bytesutil.PadTo([]byte("withdrawalsroot"), 32),
-			DataGasUsed:      343,
-			ExcessDataGas:    676,
+			BlobGasUsed:      343,
+			ExcessBlobGas:    676,
 		}
 		state.NextWithdrawalIndex = 123
 		state.NextWithdrawalValidatorIndex = 123
@@ -883,8 +883,8 @@ func TestBeaconStateDenebToProto(t *testing.T) {
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("blockhash"), 32), resultLatestExecutionPayloadHeader.BlockHash)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("transactionsroot"), 32), resultLatestExecutionPayloadHeader.TransactionsRoot)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("withdrawalsroot"), 32), resultLatestExecutionPayloadHeader.WithdrawalsRoot)
-	assert.DeepEqual(t, uint64(343), resultLatestExecutionPayloadHeader.DataGasUsed)
-	assert.DeepEqual(t, uint64(676), resultLatestExecutionPayloadHeader.ExcessDataGas)
+	assert.DeepEqual(t, uint64(343), resultLatestExecutionPayloadHeader.BlobGasUsed)
+	assert.DeepEqual(t, uint64(676), resultLatestExecutionPayloadHeader.ExcessBlobGas)
 	assert.Equal(t, uint64(123), result.NextWithdrawalIndex)
 	assert.Equal(t, primitives.ValidatorIndex(123), result.NextWithdrawalValidatorIndex)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("blocksummaryroot"), 32), result.HistoricalSummaries[0].BlockSummaryRoot)

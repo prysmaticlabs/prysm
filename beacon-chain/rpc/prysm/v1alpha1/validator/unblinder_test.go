@@ -23,8 +23,8 @@ func Test_unblindBuilderBlock(t *testing.T) {
 	pCapella.GasLimit = 123
 	pDeneb := emptyPayloadDeneb()
 	pDeneb.GasLimit = 123
-	pDeneb.ExcessDataGas = 456
-	pDeneb.DataGasUsed = 789
+	pDeneb.ExcessBlobGas = 456
+	pDeneb.BlobGasUsed = 789
 
 	tests := []struct {
 		name                 string
@@ -312,8 +312,8 @@ func Test_unblindBuilderBlock(t *testing.T) {
 					TransactionsRoot: txRoot[:],
 					WithdrawalsRoot:  withdrawalsRoot[:],
 					GasLimit:         123,
-					ExcessDataGas:    456,
-					DataGasUsed:      789,
+					ExcessBlobGas:    456,
+					BlobGasUsed:      789,
 				}
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)

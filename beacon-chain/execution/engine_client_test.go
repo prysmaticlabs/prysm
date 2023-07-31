@@ -308,10 +308,10 @@ func TestClient_HTTP(t *testing.T) {
 		resp, blobsBundle, override, err := client.GetPayload(ctx, payloadId, 2*params.BeaconConfig().SlotsPerEpoch)
 		require.NoError(t, err)
 		require.Equal(t, true, override)
-		g, err := resp.ExcessDataGas()
+		g, err := resp.ExcessBlobGas()
 		require.NoError(t, err)
 		require.DeepEqual(t, uint64(3), g)
-		g, err = resp.DataGasUsed()
+		g, err = resp.BlobGasUsed()
 		require.NoError(t, err)
 		require.DeepEqual(t, uint64(2), g)
 
@@ -1438,8 +1438,8 @@ func fixtures() map[string]interface{} {
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 		Withdrawals:   []*pb.Withdrawal{},
-		DataGasUsed:   2,
-		ExcessDataGas: 3,
+		BlobGasUsed:   2,
+		ExcessBlobGas: 3,
 	}
 	hexUint := hexutil.Uint64(1)
 	executionPayloadWithValueFixtureCapella := &pb.GetPayloadV2ResponseJson{
@@ -1461,8 +1461,8 @@ func fixtures() map[string]interface{} {
 		},
 		BlockValue: "0x11fffffffff",
 	}
-	dgu := hexutil.Uint64(2)
-	edg := hexutil.Uint64(3)
+	bgu := hexutil.Uint64(2)
+	ebg := hexutil.Uint64(3)
 	executionPayloadWithValueFixtureDeneb := &pb.GetPayloadV3ResponseJson{
 		ShouldOverrideBuilder: true,
 		ExecutionPayload: &pb.ExecutionPayloadDenebJSON{
@@ -1480,8 +1480,8 @@ func fixtures() map[string]interface{} {
 			GasLimit:      &hexUint,
 			GasUsed:       &hexUint,
 			Timestamp:     &hexUint,
-			DataGasUsed:   &dgu,
-			ExcessDataGas: &edg,
+			BlobGasUsed:   &bgu,
+			ExcessBlobGas: &ebg,
 		},
 		BlockValue: "0x11fffffffff",
 		BlobsBundle: &pb.BlobBundleJSON{
