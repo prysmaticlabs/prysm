@@ -509,8 +509,8 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 		GasLimit:      2,
 		GasUsed:       3,
 		Timestamp:     uint64(timeStamp.Unix()),
-		DataGasUsed:   4,
-		ExcessDataGas: 5,
+		BlobGasUsed:   4,
+		ExcessBlobGas: 5,
 	}
 
 	kc := make([][]byte, 0)
