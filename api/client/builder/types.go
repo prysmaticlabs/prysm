@@ -1202,8 +1202,8 @@ type ExecutionPayloadHeaderDeneb struct {
 	BlockHash        hexutil.Bytes `json:"block_hash"`
 	TransactionsRoot hexutil.Bytes `json:"transactions_root"`
 	WithdrawalsRoot  hexutil.Bytes `json:"withdrawals_root"`
-	DataGasUsed      Uint64String  `json:"data_gas_used"`   // new in deneb
-	ExcessDataGas    Uint64String  `json:"excess_data_gas"` // new in deneb
+	BlobGasUsed      Uint64String  `json:"blob_gas_used"`   // new in deneb
+	ExcessBlobGas    Uint64String  `json:"excess_blob_gas"` // new in deneb
 	*v1.ExecutionPayloadHeaderDeneb
 }
 
@@ -1230,8 +1230,8 @@ func (h *ExecutionPayloadHeaderDeneb) MarshalJSON() ([]byte, error) {
 		BlockHash:        h.ExecutionPayloadHeaderDeneb.BlockHash,
 		TransactionsRoot: h.ExecutionPayloadHeaderDeneb.TransactionsRoot,
 		WithdrawalsRoot:  h.ExecutionPayloadHeaderDeneb.WithdrawalsRoot,
-		DataGasUsed:      Uint64String(h.ExecutionPayloadHeaderDeneb.DataGasUsed),
-		ExcessDataGas:    Uint64String(h.ExecutionPayloadHeaderDeneb.ExcessDataGas),
+		BlobGasUsed:      Uint64String(h.ExecutionPayloadHeaderDeneb.BlobGasUsed),
+		ExcessBlobGas:    Uint64String(h.ExecutionPayloadHeaderDeneb.ExcessBlobGas),
 	})
 }
 
@@ -1267,8 +1267,8 @@ func (h *ExecutionPayloadHeaderDeneb) ToProto() (*v1.ExecutionPayloadHeaderDeneb
 		BlockHash:        bytesutil.SafeCopyBytes(h.BlockHash),
 		TransactionsRoot: bytesutil.SafeCopyBytes(h.TransactionsRoot),
 		WithdrawalsRoot:  bytesutil.SafeCopyBytes(h.WithdrawalsRoot),
-		DataGasUsed:      uint64(h.DataGasUsed),
-		ExcessDataGas:    uint64(h.ExcessDataGas),
+		BlobGasUsed:      uint64(h.BlobGasUsed),
+		ExcessBlobGas:    uint64(h.ExcessBlobGas),
 	}, nil
 }
 
@@ -1301,8 +1301,8 @@ type ExecutionPayloadDeneb struct {
 	BlockHash     hexutil.Bytes   `json:"block_hash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	Withdrawals   []Withdrawal    `json:"withdrawals"`
-	DataGasUsed   Uint64String    `json:"data_gas_used"`   // new in deneb
-	ExcessDataGas Uint64String    `json:"excess_data_gas"` // new in deneb
+	BlobGasUsed   Uint64String    `json:"blob_gas_used"`   // new in deneb
+	ExcessBlobGas Uint64String    `json:"excess_blob_gas"` // new in deneb
 }
 
 // BlobsBundle is a field in ExecutionPayloadDenebAndBlobsBundle.
@@ -1392,8 +1392,8 @@ func (p *ExecutionPayloadDeneb) ToProto() (*v1.ExecutionPayloadDeneb, error) {
 		BlockHash:     bytesutil.SafeCopyBytes(p.BlockHash),
 		Transactions:  txs,
 		Withdrawals:   withdrawals,
-		DataGasUsed:   uint64(p.DataGasUsed),
-		ExcessDataGas: uint64(p.ExcessDataGas),
+		BlobGasUsed:   uint64(p.BlobGasUsed),
+		ExcessBlobGas: uint64(p.ExcessBlobGas),
 	}, nil
 }
 
