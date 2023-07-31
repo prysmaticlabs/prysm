@@ -218,8 +218,8 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		gl := hexutil.Uint64(2)
 		gu := hexutil.Uint64(3)
 		ts := hexutil.Uint64(4)
-		dgu := hexutil.Uint64(5)
-		edg := hexutil.Uint64(6)
+		bgu := hexutil.Uint64(5)
+		ebg := hexutil.Uint64(6)
 
 		resp := &enginev1.GetPayloadV3ResponseJson{
 			BlobsBundle: &enginev1.BlobBundleJSON{
@@ -249,8 +249,8 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 					Address:        bytesutil.PadTo([]byte("address"), 20),
 					Amount:         1,
 				}},
-				DataGasUsed:   &dgu,
-				ExcessDataGas: &edg,
+				BlobGasUsed:   &bgu,
+				ExcessBlobGas: &ebg,
 			},
 		}
 		enc, err := json.Marshal(resp)
@@ -267,8 +267,8 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, uint64(2), pb.Payload.GasLimit)
 		require.DeepEqual(t, uint64(3), pb.Payload.GasUsed)
 		require.DeepEqual(t, uint64(4), pb.Payload.Timestamp)
-		require.DeepEqual(t, uint64(5), pb.Payload.DataGasUsed)
-		require.DeepEqual(t, uint64(6), pb.Payload.ExcessDataGas)
+		require.DeepEqual(t, uint64(5), pb.Payload.BlobGasUsed)
+		require.DeepEqual(t, uint64(6), pb.Payload.ExcessBlobGas)
 		require.DeepEqual(t, extra.Bytes(), pb.Payload.ExtraData)
 		feePerGas := new(big.Int).SetBytes(pb.Payload.BaseFeePerGas)
 		require.Equal(t, "15832716547479101977395928904157292820330083199902421483727713169783165812736", feePerGas.String())
@@ -583,13 +583,13 @@ func TestExecutionPayloadBody_MarshalUnmarshalJSON(t *testing.T) {
 	pBody := &enginev1.ExecutionPayloadBodyV1{
 		Transactions: [][]byte{[]byte("random1"), []byte("random2"), []byte("random3")},
 		Withdrawals: []*enginev1.Withdrawal{
-			&enginev1.Withdrawal{
+			{
 				Index:          200,
 				ValidatorIndex: 20303,
 				Amount:         3200000000,
 				Address:        bytesutil.PadTo([]byte("junk"), 20),
 			},
-			&enginev1.Withdrawal{
+			{
 				Index:          200,
 				ValidatorIndex: 70303,
 				Amount:         3200000800,

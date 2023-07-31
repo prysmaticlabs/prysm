@@ -811,13 +811,13 @@ func fullPayloadFromExecutionBlock(
 			Withdrawals:   block.Withdrawals,
 		}, 0) // We can't get the block value and don't care about the block value for this instance
 	case version.Deneb:
-		edg, err := header.ExcessDataGas()
+		ebg, err := header.ExcessBlobGas()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract ExcessDataGas attribute from excution payload header")
+			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from excution payload header")
 		}
-		dgu, err := header.DataGasUsed()
+		bgu, err := header.BlobGasUsed()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract DataGasUsed attribute from excution payload header")
+			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from excution payload header")
 		}
 		return blocks.WrappedExecutionPayloadDeneb(
 			&pb.ExecutionPayloadDeneb{
@@ -836,8 +836,8 @@ func fullPayloadFromExecutionBlock(
 				BlockHash:     blockHash[:],
 				Transactions:  txs,
 				Withdrawals:   block.Withdrawals,
-				ExcessDataGas: edg,
-				DataGasUsed:   dgu,
+				ExcessBlobGas: ebg,
+				BlobGasUsed:   bgu,
 			}, 0) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version %d", block.Version)
@@ -888,13 +888,13 @@ func fullPayloadFromPayloadBody(
 			Withdrawals:   body.Withdrawals,
 		}, 0) // We can't get the block value and don't care about the block value for this instance
 	case version.Deneb:
-		edg, err := header.ExcessDataGas()
+		ebg, err := header.ExcessBlobGas()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract ExcessDataGas attribute from excution payload header")
+			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from excution payload header")
 		}
-		dgu, err := header.DataGasUsed()
+		bgu, err := header.BlobGasUsed()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract DataGasUsed attribute from excution payload header")
+			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from excution payload header")
 		}
 		return blocks.WrappedExecutionPayloadDeneb(
 			&pb.ExecutionPayloadDeneb{
@@ -913,8 +913,8 @@ func fullPayloadFromPayloadBody(
 				BlockHash:     header.BlockHash(),
 				Transactions:  body.Transactions,
 				Withdrawals:   body.Withdrawals,
-				ExcessDataGas: edg,
-				DataGasUsed:   dgu,
+				ExcessBlobGas: ebg,
+				BlobGasUsed:   bgu,
 			}, 0) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)
