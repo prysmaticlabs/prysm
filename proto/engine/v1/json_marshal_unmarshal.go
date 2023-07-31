@@ -37,8 +37,8 @@ type ExecutionBlock struct {
 	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
-	DataGasUsed     *hexutil.Uint64          `json:"dataGasUsed"`
-	ExcessDataGas   *hexutil.Uint64          `json:"excessDataGas"`
+	BlobGasUsed     *hexutil.Uint64          `json:"blobGasUsed"`
+	ExcessBlobGas   *hexutil.Uint64          `json:"excessBlobGas"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -108,25 +108,25 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		}
 		e.Withdrawals = ws
 
-		edg, has := decoded["excessDataGas"]
+		edg, has := decoded["excessBlobGas"]
 		if has && edg != nil {
 			e.Version = version.Deneb
 			uedg, err := hexutil.DecodeUint64(edg.(string))
 			if err != nil {
-				return err
+				return errors.Wrap(err, "unable to unmarshal excessBlobGas as hexutil.Uint64")
 			}
-			*e.ExcessDataGas = hexutil.Uint64(uedg)
+			*e.ExcessBlobGas = hexutil.Uint64(uedg)
 		}
 
-		dgu, has := decoded["dataGasUsed"]
+		dgu, has := decoded["blobGasUsed"]
 		log.Error(has, dgu != nil)
 		if has && dgu != nil {
 			e.Version = version.Deneb
 			udgu, err := hexutil.DecodeUint64(dgu.(string))
 			if err != nil {
-				return err
+				return errors.Wrap(err, "blobGasUsed is not a string, can not decode")
 			}
-			*e.DataGasUsed = hexutil.Uint64(udgu)
+			*e.BlobGasUsed = hexutil.Uint64(udgu)
 		}
 	}
 
@@ -283,8 +283,8 @@ type ExecutionPayloadDenebJSON struct {
 	Timestamp     *hexutil.Uint64 `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
 	BaseFeePerGas string          `json:"baseFeePerGas"`
-	DataGasUsed   *hexutil.Uint64 `json:"dataGasUsed"`
-	ExcessDataGas *hexutil.Uint64 `json:"excessDataGas"`
+	BlobGasUsed   *hexutil.Uint64 `json:"blobGasUsed"`
+	ExcessBlobGas *hexutil.Uint64 `json:"excessBlobGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	Withdrawals   []*Withdrawal   `json:"withdrawals"`
@@ -739,8 +739,8 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	if e.Withdrawals == nil {
 		e.Withdrawals = make([]*Withdrawal, 0)
 	}
-	dataGasUsed := hexutil.Uint64(e.DataGasUsed)
-	excessDataGas := hexutil.Uint64(e.ExcessDataGas)
+	blobGasUsed := hexutil.Uint64(e.BlobGasUsed)
+	excessBlobGas := hexutil.Uint64(e.ExcessBlobGas)
 
 	return json.Marshal(ExecutionPayloadDenebJSON{
 		ParentHash:    &pHash,
@@ -758,8 +758,8 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 		BlockHash:     &bHash,
 		Transactions:  transactions,
 		Withdrawals:   e.Withdrawals,
-		DataGasUsed:   &dataGasUsed,
-		ExcessDataGas: &excessDataGas,
+		BlobGasUsed:   &blobGasUsed,
+		ExcessBlobGas: &excessBlobGas,
 	})
 }
 
@@ -808,11 +808,11 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 	if dec.ExecutionPayload.GasLimit == nil {
 		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
-	if dec.ExecutionPayload.DataGasUsed == nil {
-		return errors.New("missing required field 'dataGasUsed' for ExecutionPayload")
+	if dec.ExecutionPayload.BlobGasUsed == nil {
+		return errors.New("missing required field 'blobGasUsed' for ExecutionPayload")
 	}
-	if dec.ExecutionPayload.ExcessDataGas == nil {
-		return errors.New("missing required field 'excessDataGas' for ExecutionPayload")
+	if dec.ExecutionPayload.ExcessBlobGas == nil {
+		return errors.New("missing required field 'excessBlobGas' for ExecutionPayload")
 	}
 
 	*e = ExecutionPayloadDenebWithValueAndBlobsBundle{Payload: &ExecutionPayloadDeneb{}}
@@ -833,8 +833,8 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 	}
 	e.Payload.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 
-	e.Payload.ExcessDataGas = uint64(*dec.ExecutionPayload.ExcessDataGas)
-	e.Payload.DataGasUsed = uint64(*dec.ExecutionPayload.DataGasUsed)
+	e.Payload.ExcessBlobGas = uint64(*dec.ExecutionPayload.ExcessBlobGas)
+	e.Payload.BlobGasUsed = uint64(*dec.ExecutionPayload.BlobGasUsed)
 
 	e.Payload.BlockHash = dec.ExecutionPayload.BlockHash.Bytes()
 	transactions := make([][]byte, len(dec.ExecutionPayload.Transactions))
