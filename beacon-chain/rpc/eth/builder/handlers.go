@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/network"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
@@ -22,7 +22,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Retrieve beacon state
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
-		network.WriteError(w, &network.DefaultErrorJson{
+		http2.WriteError(w, &http2.DefaultErrorJson{
 			Message: "state_id is required in URL params",
 			Code:    http.StatusBadRequest,
 		})
@@ -30,7 +30,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	}
 	st, err := s.Stater.State(r.Context(), []byte(stateId))
 	if err != nil {
-		network.WriteError(w, handleWrapError(err, "could not retrieve state", http.StatusNotFound))
+		http2.WriteError(w, handleWrapError(err, "could not retrieve state", http.StatusNotFound))
 		return
 	}
 	queryParam := r.URL.Query().Get("proposal_slot")
@@ -38,7 +38,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	if queryParam != "" {
 		pSlot, err := strconv.ParseUint(queryParam, 10, 64)
 		if err != nil {
-			network.WriteError(w, handleWrapError(err, "invalid proposal slot value", http.StatusBadRequest))
+			http2.WriteError(w, handleWrapError(err, "invalid proposal slot value", http.StatusBadRequest))
 			return
 		}
 		proposalSlot = primitives.Slot(pSlot)
@@ -48,18 +48,18 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Perform sanity checks on proposal slot before computing state
 	capellaStart, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	if err != nil {
-		network.WriteError(w, handleWrapError(err, "could not calculate Capella start slot", http.StatusInternalServerError))
+		http2.WriteError(w, handleWrapError(err, "could not calculate Capella start slot", http.StatusInternalServerError))
 		return
 	}
 	if proposalSlot < capellaStart {
-		network.WriteError(w, &network.DefaultErrorJson{
+		http2.WriteError(w, &http2.DefaultErrorJson{
 			Message: "expected withdrawals are not supported before Capella fork",
 			Code:    http.StatusBadRequest,
 		})
 		return
 	}
 	if proposalSlot <= st.Slot() {
-		network.WriteError(w, &network.DefaultErrorJson{
+		http2.WriteError(w, &http2.DefaultErrorJson{
 			Message: fmt.Sprintf("proposal slot must be bigger than state slot. proposal slot: %d, state slot: %d", proposalSlot, st.Slot()),
 			Code:    http.StatusBadRequest,
 		})
@@ -67,7 +67,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	}
 	lookAheadLimit := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().MaxSeedLookahead)))
 	if st.Slot().Add(lookAheadLimit) <= proposalSlot {
-		network.WriteError(w, &network.DefaultErrorJson{
+		http2.WriteError(w, &http2.DefaultErrorJson{
 			Message: fmt.Sprintf("proposal slot cannot be >= %d slots ahead of state slot", lookAheadLimit),
 			Code:    http.StatusBadRequest,
 		})
@@ -76,12 +76,12 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Get metadata for response
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
 	if err != nil {
-		network.WriteError(w, handleWrapError(err, "could not get optimistic mode info", http.StatusInternalServerError))
+		http2.WriteError(w, handleWrapError(err, "could not get optimistic mode info", http.StatusInternalServerError))
 		return
 	}
 	root, err := helpers.BlockRootAtSlot(st, st.Slot()-1)
 	if err != nil {
-		network.WriteError(w, handleWrapError(err, "could not get block root", http.StatusInternalServerError))
+		http2.WriteError(w, handleWrapError(err, "could not get block root", http.StatusInternalServerError))
 		return
 	}
 	var blockRoot = [32]byte(root)
@@ -89,7 +89,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Advance state forward to proposal slot
 	st, err = transition.ProcessSlots(r.Context(), st, proposalSlot)
 	if err != nil {
-		network.WriteError(w, &network.DefaultErrorJson{
+		http2.WriteError(w, &http2.DefaultErrorJson{
 			Message: "could not process slots",
 			Code:    http.StatusInternalServerError,
 		})
@@ -97,13 +97,13 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	}
 	withdrawals, err := st.ExpectedWithdrawals()
 	if err != nil {
-		network.WriteError(w, &network.DefaultErrorJson{
+		http2.WriteError(w, &http2.DefaultErrorJson{
 			Message: "could not get expected withdrawals",
 			Code:    http.StatusInternalServerError,
 		})
 		return
 	}
-	network.WriteJson(w, &ExpectedWithdrawalsResponse{
+	http2.WriteJson(w, &ExpectedWithdrawalsResponse{
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           isFinalized,
 		Data:                buildExpectedWithdrawalsData(withdrawals),
@@ -123,8 +123,8 @@ func buildExpectedWithdrawalsData(withdrawals []*enginev1.Withdrawal) []*Expecte
 	return data
 }
 
-func handleWrapError(err error, message string, code int) *network.DefaultErrorJson {
-	return &network.DefaultErrorJson{
+func handleWrapError(err error, message string, code int) *http2.DefaultErrorJson {
+	return &http2.DefaultErrorJson{
 		Message: errors.Wrapf(err, message).Error(),
 		Code:    code,
 	}

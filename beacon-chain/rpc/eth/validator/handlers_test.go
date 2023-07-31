@@ -16,7 +16,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -166,7 +166,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 		s.GetAggregateAttestation(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No matching attestation found"))
@@ -179,7 +179,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 		s.GetAggregateAttestation(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Attestation data root is required"))
@@ -192,7 +192,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 		s.GetAggregateAttestation(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Attestation data root is invalid"))
@@ -206,7 +206,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 		s.GetAggregateAttestation(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Slot is required"))
@@ -220,7 +220,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 		s.GetAggregateAttestation(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Slot is invalid"))
@@ -343,6 +343,24 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 
 		s.SubmitContributionAndProofs(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
+	})
+
+	t.Run("no body", func(t *testing.T) {
+		s.SyncCommitteePool = synccommittee.NewStore()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidContribution)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitContributionAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
 	})
 }
 
