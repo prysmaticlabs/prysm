@@ -246,7 +246,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 	if v.emitAccountMetrics {
 		for _, missingPubKey := range resp.MissingValidators {
 			fmtKey := fmt.Sprintf("%#x", missingPubKey)
-			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(float64(params.BeaconConfig().MaxEffectiveBalance))
+			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(float64(params.BeaconConfig().MaxEffectiveBalance) / float64(params.BeaconConfig().GweiPerEth))
 		}
 	}
 

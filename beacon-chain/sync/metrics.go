@@ -125,6 +125,12 @@ var (
 			Help: "Time to verify gossiped blocks",
 		},
 	)
+	blockArrivalGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_block_arrival_milliseconds",
+			Help: "Time for gossiped blocks to arrive",
+		},
+	)
 
 	// Sync committee verification performance.
 	syncMessagesForUnknownBlocks = promauto.NewCounter(

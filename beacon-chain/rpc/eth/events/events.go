@@ -6,7 +6,6 @@ import (
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -80,26 +79,18 @@ func (s *Server) StreamEvents(
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
-	blockChan := make(chan *feed.Event, 1)
-	blockSub := s.BlockNotifier.BlockFeed().Subscribe(blockChan)
-
 	opsChan := make(chan *feed.Event, 1)
 	opsSub := s.OperationNotifier.OperationFeed().Subscribe(opsChan)
 
 	stateChan := make(chan *feed.Event, 1)
 	stateSub := s.StateNotifier.StateFeed().Subscribe(stateChan)
 
-	defer blockSub.Unsubscribe()
 	defer opsSub.Unsubscribe()
 	defer stateSub.Unsubscribe()
 
 	// Handle each event received and context cancelation.
 	for {
 		select {
-		case event := <-blockChan:
-			if err := handleBlockEvents(stream, requestedTopics, event); err != nil {
-				return status.Errorf(codes.Internal, "Could not handle block event: %v", err)
-			}
 		case event := <-opsChan:
 			if err := handleBlockOperationEvents(stream, requestedTopics, event); err != nil {
 				return status.Errorf(codes.Internal, "Could not handle block operations event: %v", err)
@@ -113,37 +104,6 @@ func (s *Server) StreamEvents(
 		case <-stream.Context().Done():
 			return status.Errorf(codes.Canceled, "Context canceled")
 		}
-	}
-}
-
-func handleBlockEvents(
-	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
-) error {
-	switch event.Type {
-	case blockfeed.ReceivedBlock:
-		if _, ok := requestedTopics[BlockTopic]; !ok {
-			return nil
-		}
-		blkData, ok := event.Data.(*blockfeed.ReceivedBlockData)
-		if !ok {
-			return nil
-		}
-		v1Data, err := migration.BlockIfaceToV1BlockHeader(blkData.SignedBlock)
-		if err != nil {
-			return err
-		}
-		item, err := v1Data.Message.HashTreeRoot()
-		if err != nil {
-			return errors.Wrap(err, "could not hash tree root block")
-		}
-		eventBlock := &ethpb.EventBlock{
-			Slot:                v1Data.Message.Slot,
-			Block:               item[:],
-			ExecutionOptimistic: blkData.IsOptimistic,
-		}
-		return streamData(stream, BlockTopic, eventBlock)
-	default:
-		return nil
 	}
 }
 
@@ -252,6 +212,28 @@ func (s *Server) handleStateEvents(
 			return nil
 		}
 		return streamData(stream, ChainReorgTopic, reorg)
+	case statefeed.BlockProcessed:
+		if _, ok := requestedTopics[BlockTopic]; !ok {
+			return nil
+		}
+		blkData, ok := event.Data.(*statefeed.BlockProcessedData)
+		if !ok {
+			return nil
+		}
+		v1Data, err := migration.BlockIfaceToV1BlockHeader(blkData.SignedBlock)
+		if err != nil {
+			return err
+		}
+		item, err := v1Data.Message.HashTreeRoot()
+		if err != nil {
+			return errors.Wrap(err, "could not hash tree root block")
+		}
+		eventBlock := &ethpb.EventBlock{
+			Slot:                blkData.Slot,
+			Block:               item[:],
+			ExecutionOptimistic: blkData.Optimistic,
+		}
+		return streamData(stream, BlockTopic, eventBlock)
 	default:
 		return nil
 	}
