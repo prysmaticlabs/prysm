@@ -3394,12 +3394,11 @@ def prysm_deps():
         sum = "h1:GA6Bl6oZY+g/flt00Pnu0XtivSD8vukOu3lYhJjnGEk=",
         version = "v0.5.2",
     )
-
     go_repository(
-        name = "com_github_r3labs_sse",
-        importpath = "github.com/r3labs/sse",
-        sum = "h1:zAsgcP8MhzAbhMnB1QQ2O7ZhWYVGYSR2iVcjzQuPV+o=",
-        version = "v0.0.0-20210224172625-26fe804710bc",
+        name = "com_github_r3labs_sse_v2",
+        importpath = "github.com/r3labs/sse/v2",
+        sum = "h1:hFEkLLFY4LDifoHdiCN/LlGBAdVJYsANaLqNYa1l/v0=",
+        version = "v2.10.0",
     )
 
     go_repository(
