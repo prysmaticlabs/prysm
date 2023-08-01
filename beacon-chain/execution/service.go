@@ -752,8 +752,9 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		if eth1DataInDB.DepositSnapshot != nil {
 			s.depositTrie, err = depositsnapshot.DepositTreeFromSnapshotProto(eth1DataInDB.DepositSnapshot)
 		} else {
-			err = s.migrateOldDepositTree(eth1DataInDB)
-			return err
+			if err := s.migrateOldDepositTree(eth1DataInDB); err != nil {
+				return err
+			}
 		}
 	} else {
 		s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
