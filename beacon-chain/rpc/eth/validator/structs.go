@@ -13,3 +13,7 @@ type SubmitContributionAndProofsRequest struct {
 type SubmitAggregateAndProofsRequest struct {
 	Data []*shared.SignedAggregateAttestationAndProof `json:"data" validate:"required"`
 }
+
+type SubmitContributionAndProofsRequest struct {
+	Data []shared.SignedContributionAndProof `json:"data"`
+}
