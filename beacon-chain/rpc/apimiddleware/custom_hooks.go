@@ -130,28 +130,6 @@ func wrapValidatorIndicesArray(
 	return true, nil
 }
 
-// https://ethereum.github.io/beacon-apis/#/Validator/publishAggregateAndProofs expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
-func wrapSignedAggregateAndProofArray(
-	endpoint *apimiddleware.Endpoint,
-	_ http.ResponseWriter,
-	req *http.Request,
-) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*SubmitAggregateAndProofsRequestJson); ok {
-		data := make([]*SignedAggregateAttestationAndProofJson, 0)
-		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
-		}
-		j := &SubmitAggregateAndProofsRequestJson{Data: data}
-		b, err := json.Marshal(j)
-		if err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
-		}
-		req.Body = io.NopCloser(bytes.NewReader(b))
-	}
-	return true, nil
-}
-
 // https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconCommitteeSubnet expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapBeaconCommitteeSubscriptionsArray(
