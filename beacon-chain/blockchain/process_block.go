@@ -121,15 +121,15 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 		// We handle these caches only on canonical
 		// blocks, otherwise this will be handled by lateBlockTasks
 		slot := postState.Slot()
-		if (slot+1)%params.BeaconConfig().SlotsPerEpoch != 0 {
-			go updateNextSlotCacheOnBlock(blockRoot, postState)
-		} else {
+		if slots.IsEpochStart(slot + 1) {
 			if err := transition.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
 				return errors.Wrap(err, "could not update next slot state cache")
 			}
 			if err := s.handleEpochBoundary(ctx, slot, postState, blockRoot[:]); err != nil {
 				return errors.Wrap(err, "could not handle epoch boundary")
 			}
+		} else {
+			go updateNextSlotCacheOnBlock(blockRoot, postState)
 		}
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
@@ -327,7 +327,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 }
 
 func updateNextSlotCacheOnBlock(root [32]byte, st state.BeaconState) {
-	slotCtx, cancel := context.WithTimeout(context.Background(), 2*slotDeadline)
+	slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 	defer cancel()
 	if err := transition.UpdateNextSlotCache(slotCtx, root[:], st); err != nil {
 		log.WithError(err).Error("could not update next slot state cache")
@@ -367,7 +367,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot,
 	if slot < headState.Slot() {
 		return nil
 	}
-	if (slot+1)%params.BeaconConfig().SlotsPerEpoch != 0 {
+	if !slots.IsEpochStart(slot + 1) {
 		return nil
 	}
 	copied := headState.Copy()
