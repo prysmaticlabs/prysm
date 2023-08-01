@@ -364,6 +364,7 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 	})
 }
 
+// TODO: Test DecodeError
 /*func TestSubmitAggregateAndProofs(t *testing.T) {
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)

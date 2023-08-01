@@ -82,13 +82,12 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 
 // SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
 func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Request) {
-	var req SubmitContributionAndProofsRequest
-
 	if r.Body == http.NoBody {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
 
+	var req SubmitContributionAndProofsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
@@ -109,5 +108,54 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 		if rpcError != nil {
 			http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 		}
+	}
+}
+
+// SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request) {
+	if r.Body == http.NoBody {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+
+	var req SubmitAggregateAndProofsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	genesisTime := s.TimeFetcher.GenesisTime()
+
+	broadcastFailed := false
+	validate := validator.New()
+	for _, item := range req.Data {
+		if err := validate.Struct(item); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		consensusItem, err := item.ToConsensus()
+		if err != nil {
+			http2.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		rpcError := core.SubmitSignedAggregateSelectionProof(
+			r.Context(),
+			&ethpbalpha.SignedAggregateSubmitRequest{SignedAggregateAndProof: consensusItem},
+			genesisTime,
+			s.Broadcaster,
+		)
+		if rpcError != nil {
+			_, ok := rpcError.Err.(*core.AggregateBroadcastFailedError)
+			if ok {
+				broadcastFailed = true
+			} else {
+				http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+				return
+			}
+		}
+	}
+
+	if broadcastFailed {
+		http2.HandleError(w, "Could not broadcast one or more signed aggregated attestations", http.StatusInternalServerError)
 	}
 }
