@@ -129,7 +129,13 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 				return errors.Wrap(err, "could not handle epoch boundary")
 			}
 		} else {
-			go updateNextSlotCacheOnBlock(blockRoot, postState)
+			go func() {
+				slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+				defer cancel()
+				if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+					log.WithError(err).Error("could not update next slot state cache")
+				}
+			}()
 		}
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
@@ -324,14 +330,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 		return err
 	}
 	return s.saveHeadNoDB(ctx, lastB, lastBR, preState)
-}
-
-func updateNextSlotCacheOnBlock(root [32]byte, st state.BeaconState) {
-	slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-	defer cancel()
-	if err := transition.UpdateNextSlotCache(slotCtx, root[:], st); err != nil {
-		log.WithError(err).Error("could not update next slot state cache")
-	}
 }
 
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
