@@ -8,15 +8,22 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"golang.org/x/sync/errgroup"
 )
 
+// ComputeValidatorPerformance reports the validator's latest balance along with other important metrics on
+// rewards and penalties throughout its lifecycle in the beacon chain.
 func ComputeValidatorPerformance(
 	ctx context.Context,
 	req *ethpb.ValidatorPerformanceRequest,
@@ -165,4 +172,40 @@ func ComputeValidatorPerformance(
 		MissingValidators:             missingValidators,
 		InactivityScores:              inactivityScores, // Only populated in Altair
 	}, nil
+}
+
+// SubmitSignedContributionAndProof is called by a sync committee aggregator
+// to submit signed contribution and proof object.
+func SubmitSignedContributionAndProof(
+	ctx context.Context,
+	s *ethpb.SignedContributionAndProof,
+	p2p p2p.Broadcaster,
+	pool synccommittee.Pool,
+	notifier opfeed.Notifier,
+) *RpcError {
+	errs, ctx := errgroup.WithContext(ctx)
+
+	// Broadcasting and saving contribution into the pool in parallel. As one fail should not affect another.
+	errs.Go(func() error {
+		return p2p.Broadcast(ctx, s)
+	})
+
+	if err := pool.SaveSyncCommitteeContribution(s.Message.Contribution); err != nil {
+		return &RpcError{Err: err, Reason: Internal}
+	}
+
+	// Wait for p2p broadcast to complete and return the first error (if any)
+	err := errs.Wait()
+	if err != nil {
+		return &RpcError{Err: err, Reason: Internal}
+	}
+
+	notifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.SyncCommitteeContributionReceived,
+		Data: &opfeed.SyncCommitteeContributionReceivedData{
+			Contribution: s,
+		},
+	})
+
+	return nil
 }

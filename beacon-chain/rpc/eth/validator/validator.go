@@ -1043,36 +1043,6 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	}, nil
 }
 
-// SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
-func (vs *Server) SubmitContributionAndProofs(ctx context.Context, req *ethpbv2.SubmitContributionAndProofsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitContributionAndProofs")
-	defer span.End()
-
-	for _, item := range req.Data {
-		v1alpha1Req := &ethpbalpha.SignedContributionAndProof{
-			Message: &ethpbalpha.ContributionAndProof{
-				AggregatorIndex: item.Message.AggregatorIndex,
-				Contribution: &ethpbalpha.SyncCommitteeContribution{
-					Slot:              item.Message.Contribution.Slot,
-					BlockRoot:         item.Message.Contribution.BeaconBlockRoot,
-					SubcommitteeIndex: item.Message.Contribution.SubcommitteeIndex,
-					AggregationBits:   item.Message.Contribution.AggregationBits,
-					Signature:         item.Message.Contribution.Signature,
-				},
-				SelectionProof: item.Message.SelectionProof,
-			},
-			Signature: item.Signature,
-		}
-		_, err := vs.V1Alpha1Server.SubmitSignedContributionAndProof(ctx, v1alpha1Req)
-		// We simply return err because it's already of a gRPC error type.
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &empty.Empty{}, nil
-}
-
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
 // The beacon node might detect liveness by observing messages from the validator on the network,
 // in the beacon chain, from its API or from any other source.

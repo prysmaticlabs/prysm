@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/network"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -188,7 +188,7 @@ func TestAddTrustedPeer_EmptyBody(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 	s.AddTrustedPeer(writer, request)
-	e := &network.DefaultErrorJson{}
+	e := &http2.DefaultErrorJson{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, writer.Code)
 	assert.Equal(t, "Could not decode request body into peer address: unexpected end of JSON input", e.Message)
@@ -213,7 +213,7 @@ func TestAddTrustedPeer_BadAddress(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 	s.AddTrustedPeer(writer, request)
-	e := &network.DefaultErrorJson{}
+	e := &http2.DefaultErrorJson{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, writer.Code)
 	assert.StringContains(t, "Could not derive peer info from multiaddress", e.Message)
@@ -243,7 +243,7 @@ func TestRemoveTrustedPeer_EmptyParameter(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 	s.RemoveTrustedPeer(writer, request)
-	e := &network.DefaultErrorJson{}
+	e := &http2.DefaultErrorJson{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, writer.Code)
 	assert.Equal(t, "Could not decode peer id: failed to parse peer ID: invalid cid: cid too short", e.Message)
