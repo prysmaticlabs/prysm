@@ -1,7 +1,9 @@
 package beacon_api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -10,8 +12,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
+	gatewaymiddleware "github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -924,4 +929,45 @@ func TestGetChainHead(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedChainHead, chainHead)
 	})
+}
+
+func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
+	publicKeys := [][48]byte{
+		bytesutil.ToBytes48([]byte{1}),
+		bytesutil.ToBytes48([]byte{2}),
+		bytesutil.ToBytes48([]byte{3}),
+	}
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	request, err := json.Marshal(validator.ValidatorPerformanceRequest{
+		PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
+	})
+	require.NoError(t, err)
+
+	wantResponse := &validator.ValidatorPerformanceResponse{}
+	want := &ethpb.ValidatorPerformanceResponse{}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
+		getValidatorPerformanceEndpoint,
+		nil,
+		bytes.NewBuffer(request),
+		wantResponse,
+	).Return(
+		&gatewaymiddleware.DefaultErrorJson{},
+		nil,
+	)
+
+	c := beaconApiBeaconChainClient{
+		jsonRestHandler: jsonRestHandler,
+	}
+
+	got, err := c.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+		PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
+	})
+	require.NoError(t, err)
+	require.DeepEqual(t, want.PublicKeys, got.PublicKeys)
 }

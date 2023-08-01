@@ -66,12 +66,10 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v2/validator/blocks/{slot}",
 		"/eth/v1/validator/blinded_blocks/{slot}",
 		"/eth/v1/validator/attestation_data",
-		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
 		"/eth/v1/validator/sync_committee_subscriptions",
 		"/eth/v1/validator/aggregate_and_proofs",
 		"/eth/v1/validator/sync_committee_contribution",
-		"/eth/v1/validator/contribution_and_proofs",
 		"/eth/v1/validator/prepare_beacon_proposer",
 		"/eth/v1/validator/register_validator",
 		"/eth/v1/validator/liveness/{epoch}",
@@ -263,9 +261,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/validator/attestation_data":
 		endpoint.GetResponse = &ProduceAttestationDataResponseJson{}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
-	case "/eth/v1/validator/aggregate_attestation":
-		endpoint.GetResponse = &AggregateAttestationResponseJson{}
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "attestation_data_root", Hex: true}, {Name: "slot"}}
 	case "/eth/v1/validator/beacon_committee_subscriptions":
 		endpoint.PostRequest = &SubmitBeaconCommitteeSubscriptionsRequestJson{}
 		endpoint.Err = &NodeSyncDetailsErrorJson{}
@@ -286,11 +281,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/validator/sync_committee_contribution":
 		endpoint.GetResponse = &ProduceSyncCommitteeContributionResponseJson{}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "subcommittee_index"}, {Name: "beacon_block_root", Hex: true}}
-	case "/eth/v1/validator/contribution_and_proofs":
-		endpoint.PostRequest = &SubmitContributionAndProofsRequestJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapSignedContributionAndProofsArray,
-		}
 	case "/eth/v1/validator/prepare_beacon_proposer":
 		endpoint.PostRequest = &FeeRecipientsRequestJSON{}
 		endpoint.Hooks = apimiddleware.HookCollection{

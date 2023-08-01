@@ -75,7 +75,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
 	}
 	if err := batch.error(); err != nil {
-		log.WithError(err).Info("error in BlocksByRange batch")
+		log.WithError(err).Debug("error in BlocksByRange batch")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		tracing.AnnotateError(span, err)
 		return err
