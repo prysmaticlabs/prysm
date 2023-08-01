@@ -335,6 +335,13 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 	if err := helpers.UpdateProposerIndicesInCache(ctx, st, e); err != nil {
 		return errors.Wrap(err, "could not update proposer index cache")
 	}
+	_, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, st, e)
+	if err != nil {
+		return err
+	}
+	for k, v := range nextProposerIndexToSlots {
+		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(v[0], k, [8]byte{}, [32]byte{})
+	}
 	go func() {
 		// Use a custom deadline here, since this method runs asynchronously.
 		// We ignore the parent method's context and instead create a new one
