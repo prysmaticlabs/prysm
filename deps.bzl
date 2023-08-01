@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 0e85c154c (Use matt's branch)
 load("@prysm//tools/go:def.bzl", "go_repository", "maybe")  # gazelle:keep
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
@@ -1000,9 +1003,9 @@ def prysm_deps():
         patches = [
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
-        replace = "github.com/MariusVanDerWijden/go-ethereum",
-        sum = "h1:TWfJgaTCz1DqjkyYSCZQgCJoppWwX+w/NeAvy1MvcSE=",
-        version = "v1.8.22-0.20230727144632-9b621f5131f8",
+        replace = "github.com/lightclient/go-ethereum",
+        sum = "h1:GYst7UrpHLELRFU2pxcGzakA513yew/p4u+rOqNrj/I=",
+        version = "v1.10.10-0.20230801000638-296e2afe9e63",
     )
 
     go_repository(
@@ -3435,11 +3438,20 @@ def prysm_deps():
         sum = "h1:GA6Bl6oZY+g/flt00Pnu0XtivSD8vukOu3lYhJjnGEk=",
         version = "v0.5.2",
     )
+<<<<<<< HEAD
     go_repository(
         name = "com_github_r3labs_sse_v2",
         importpath = "github.com/r3labs/sse/v2",
         sum = "h1:hFEkLLFY4LDifoHdiCN/LlGBAdVJYsANaLqNYa1l/v0=",
         version = "v2.10.0",
+=======
+
+    go_repository(
+        name = "com_github_r3labs_sse",
+        importpath = "github.com/r3labs/sse",
+        sum = "h1:zAsgcP8MhzAbhMnB1QQ2O7ZhWYVGYSR2iVcjzQuPV+o=",
+        version = "v0.0.0-20210224172625-26fe804710bc",
+>>>>>>> 0e85c154c (Use matt's branch)
     )
 
     go_repository(
