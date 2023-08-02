@@ -17,6 +17,9 @@ func IsDataAvailable(commitments [][]byte, sidecars []*ethpb.BlobSidecar) error 
 		return fmt.Errorf("could not check data availability, expected %d commitments, obtained %d",
 			len(commitments), len(sidecars))
 	}
+	if len(commitments) == 0 {
+		return nil
+	}
 	blobs := make([]GoKZG.Blob, len(commitments))
 	proofs := make([]GoKZG.KZGProof, len(commitments))
 	cmts := make([]GoKZG.KZGCommitment, len(commitments))
