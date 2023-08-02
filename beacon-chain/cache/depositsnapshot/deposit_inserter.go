@@ -107,6 +107,11 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 		return err
 	}
 	depositTrie.tree = tree
+	// Temporary workaround
+	depositTrie.finalizedExecutionBlock = executionBlock{
+		Hash:  [32]byte{'f', 'i', 'n', 'a', 'l', 'i', 'z', 'e'},
+		Depth: 0,
+	}
 
 	c.finalizedDeposits = finalizedDepositsContainer{
 		depositTree:     depositTrie,
