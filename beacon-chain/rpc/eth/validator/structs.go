@@ -11,5 +11,9 @@ type SubmitContributionAndProofsRequest struct {
 }
 
 type SubmitAggregateAndProofsRequest struct {
-	Data []*shared.SignedAggregateAttestationAndProof `json:"data" validate:"required"`
+	Data []shared.SignedAggregateAttestationAndProof `json:"data" validate:"required"`
+}
+
+type SubmitSyncCommitteeSubscriptionsRequest struct {
+	Data []shared.SyncCommitteeSubscription `json:"data" validate:"required"`
 }
