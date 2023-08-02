@@ -343,14 +343,14 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 
 		s.SubmitContributionAndProofs(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
 
 	t.Run("no body", func(t *testing.T) {
 		s.SyncCommitteePool = synccommittee.NewStore()
 
-		var body bytes.Buffer
-		_, err := body.WriteString(invalidContribution)
-		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -364,286 +364,72 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 	})
 }
 
-// TODO: Test DecodeError
-/*func TestSubmitAggregateAndProofs(t *testing.T) {
-	ctx := context.Background()
-	params.SetupTestConfigCleanup(t)
-	c := params.BeaconNetworkConfig()
-	c.MaximumGossipClockDisparity = time.Hour
-	params.OverrideBeaconNetworkConfig(c)
-	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
-	proof := bytesutil.PadTo([]byte("proof"), fieldparams.BLSSignatureLength)
-	att := &ethpbv1.Attestation{
-		AggregationBits: []byte{0, 1},
-		Data: &ethpbv1.AttestationData{
-			Slot:            1,
-			Index:           1,
-			BeaconBlockRoot: root,
-			Source: &ethpbv1.Checkpoint{
-				Epoch: 1,
-				Root:  root,
-			},
-			Target: &ethpbv1.Checkpoint{
-				Epoch: 1,
-				Root:  root,
-			},
-		},
-		Signature: sig,
+func TestSubmitAggregateAndProofs(t *testing.T) {
+	s := &Server{
+		TimeFetcher: &mockChain.ChainService{},
 	}
 
-	t.Run("OK", func(t *testing.T) {
-		chainSlot := primitives.Slot(0)
-		chain := &mockChain.ChainService{
-			Genesis: time.Now(), Slot: &chainSlot,
-		}
+	t.Run("single", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
-		vs := Server{
-			TimeFetcher: chain,
-			Broadcaster: broadcaster,
-		}
+		s.Broadcaster = broadcaster
 
-		req := &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message: &ethpbv1.AggregateAttestationAndProof{
-						AggregatorIndex: 1,
-						Aggregate:       att,
-						SelectionProof:  proof,
-					},
-					Signature: sig,
-				},
-			},
-		}
-
-		_, err := vs.SubmitAggregateAndProofs(ctx, req)
+		var body bytes.Buffer
+		_, err := body.WriteString(singleAggregate)
 		require.NoError(t, err)
-		assert.Equal(t, true, broadcaster.BroadcastCalled)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
 	})
 
-	t.Run("nil aggregate", func(t *testing.T) {
+	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
-		vs := Server{
-			Broadcaster: broadcaster,
-		}
+		s.Broadcaster = broadcaster
+		s.SyncCommitteePool = synccommittee.NewStore()
 
-		req := &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				nil,
-			},
-		}
-		_, err := vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Signed aggregate request can't be nil", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleAggregates)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-		req = &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message:   nil,
-					Signature: sig,
-				},
-			},
-		}
-		_, err = vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Signed aggregate request can't be nil", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
-
-		req = &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message: &ethpbv1.AggregateAttestationAndProof{
-						AggregatorIndex: 1,
-						Aggregate: &ethpbv1.Attestation{
-							AggregationBits: []byte{0, 1},
-							Data:            nil,
-							Signature:       sig,
-						},
-						SelectionProof: proof,
-					},
-					Signature: sig,
-				},
-			},
-		}
-		_, err = vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Signed aggregate request can't be nil", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
 	})
 
-	t.Run("zero signature", func(t *testing.T) {
-		broadcaster := &p2pmock.MockBroadcaster{}
-		vs := Server{
-			Broadcaster: broadcaster,
-		}
-		req := &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message: &ethpbv1.AggregateAttestationAndProof{
-						AggregatorIndex: 1,
-						Aggregate:       att,
-						SelectionProof:  proof,
-					},
-					Signature: make([]byte, 96),
-				},
-			},
-		}
-		_, err := vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Signed signatures can't be zero hashes", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	t.Run("invalid", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidAggregate)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
 
-	t.Run("zero proof", func(t *testing.T) {
-		broadcaster := &p2pmock.MockBroadcaster{}
-		vs := Server{
-			Broadcaster: broadcaster,
-		}
-		req := &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message: &ethpbv1.AggregateAttestationAndProof{
-						AggregatorIndex: 1,
-						Aggregate:       att,
-						SelectionProof:  make([]byte, 96),
-					},
-					Signature: sig,
-				},
-			},
-		}
-		_, err := vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Signed signatures can't be zero hashes", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
 	})
-
-	t.Run("zero message signature", func(t *testing.T) {
-		broadcaster := &p2pmock.MockBroadcaster{}
-		vs := Server{
-			Broadcaster: broadcaster,
-		}
-		req := &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message: &ethpbv1.AggregateAttestationAndProof{
-						AggregatorIndex: 1,
-						Aggregate: &ethpbv1.Attestation{
-							AggregationBits: []byte{0, 1},
-							Data: &ethpbv1.AttestationData{
-								Slot:            1,
-								Index:           1,
-								BeaconBlockRoot: root,
-								Source: &ethpbv1.Checkpoint{
-									Epoch: 1,
-									Root:  root,
-								},
-								Target: &ethpbv1.Checkpoint{
-									Epoch: 1,
-									Root:  root,
-								},
-							},
-							Signature: make([]byte, 96),
-						},
-						SelectionProof: proof,
-					},
-					Signature: sig,
-				},
-			},
-		}
-		_, err := vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Signed signatures can't be zero hashes", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
-	})
-
-	t.Run("wrong signature length", func(t *testing.T) {
-		broadcaster := &p2pmock.MockBroadcaster{}
-		vs := Server{
-			Broadcaster: broadcaster,
-		}
-
-		req := &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message: &ethpbv1.AggregateAttestationAndProof{
-						AggregatorIndex: 1,
-						Aggregate:       att,
-						SelectionProof:  proof,
-					},
-					Signature: make([]byte, 99),
-				},
-			},
-		}
-		_, err := vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Incorrect signature length. Expected "+strconv.Itoa(96)+" bytes", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
-
-		req = &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message: &ethpbv1.AggregateAttestationAndProof{
-						AggregatorIndex: 1,
-						Aggregate: &ethpbv1.Attestation{
-							AggregationBits: []byte{0, 1},
-							Data: &ethpbv1.AttestationData{
-								Slot:            1,
-								Index:           1,
-								BeaconBlockRoot: root,
-								Source: &ethpbv1.Checkpoint{
-									Epoch: 1,
-									Root:  root,
-								},
-								Target: &ethpbv1.Checkpoint{
-									Epoch: 1,
-									Root:  root,
-								},
-							},
-							Signature: make([]byte, 99),
-						},
-						SelectionProof: proof,
-					},
-					Signature: sig,
-				},
-			},
-		}
-		_, err = vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Incorrect signature length. Expected "+strconv.Itoa(96)+" bytes", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
-	})
-
-	t.Run("invalid attestation time", func(t *testing.T) {
-		chainSlot := primitives.Slot(0)
-		chain := &mockChain.ChainService{
-			Genesis: time.Now().Add(time.Hour * 2), Slot: &chainSlot,
-		}
-		broadcaster := &p2pmock.MockBroadcaster{}
-		vs := Server{
-			TimeFetcher: chain,
-			Broadcaster: broadcaster,
-		}
-
-		req := &ethpbv1.SubmitAggregateAndProofsRequest{
-			Data: []*ethpbv1.SignedAggregateAttestationAndProof{
-				{
-					Message: &ethpbv1.AggregateAttestationAndProof{
-						AggregatorIndex: 1,
-						Aggregate:       att,
-						SelectionProof:  proof,
-					},
-					Signature: sig,
-				},
-			},
-		}
-
-		_, err := vs.SubmitAggregateAndProofs(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Attestation slot is no longer valid from current time", err)
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
-	})
-}*/
+}
 
 const (
 	singleContribution = `[
@@ -705,6 +491,110 @@ const (
         "aggregation_bits": "0x01",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
       }
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+]`
+	singleAggregate = `[
+  {
+    "message": {
+      "aggregator_index": "1",
+      "aggregate": {
+        "aggregation_bits": "0x01",
+        "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+        "data": {
+          "slot": "1",
+          "index": "1",
+          "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          "source": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          },
+          "target": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          }
+        }
+      },
+      "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+]`
+	multipleAggregates = `[
+  {
+    "message": {
+      "aggregator_index": "1",
+      "aggregate": {
+        "aggregation_bits": "0x01",
+        "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+        "data": {
+          "slot": "1",
+          "index": "1",
+          "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          "source": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          },
+          "target": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          }
+        }
+      },
+      "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  },
+{
+    "message": {
+      "aggregator_index": "1",
+      "aggregate": {
+        "aggregation_bits": "0x01",
+        "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+        "data": {
+          "slot": "1",
+          "index": "1",
+          "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          "source": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          },
+          "target": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          }
+        }
+      },
+      "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+]
+`
+	// aggregator_index is invalid
+	invalidAggregate = `[
+  {
+    "message": {
+      "aggregator_index": "foo",
+      "aggregate": {
+        "aggregation_bits": "0x01",
+        "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+        "data": {
+          "slot": "1",
+          "index": "1",
+          "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          "source": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          },
+          "target": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          }
+        }
+      },
+      "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
     },
     "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
   }
