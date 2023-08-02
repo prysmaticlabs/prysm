@@ -878,7 +878,23 @@ func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error
 			return errors.Wrapf(err, "could not insert item at index %d into deposit snapshot tree", i)
 		}
 	}
-	if err = newDepositTrie.Finalize(eth1DataInDB.BeaconState.Eth1Data, eth1DataInDB.CurrentEth1Data.BlockHeight); err != nil {
+
+	fState, err := s.cfg.beaconDB.GenesisState(context.Background())
+	if err != nil {
+		return err
+	}
+	chkPt, err := s.cfg.beaconDB.FinalizedCheckpoint(context.Background())
+	if err != nil {
+		return err
+	}
+	rt := bytesutil.ToBytes32(chkPt.Root)
+	if rt != [32]byte{} {
+		fState = s.cfg.finalizedStateAtStartup
+		if fState == nil || fState.IsNil() {
+			return errors.Errorf("finalized state with root %#x is nil", rt)
+		}
+	}
+	if err = newDepositTrie.Finalize(int64(fState.Eth1DepositIndex()), common.Hash(fState.Eth1Data().BlockHash)); err != nil {
 		return errors.Wrap(err, "could not finalize deposit snapshot tree")
 	}
 	newDepositRoot, err := newDepositTrie.HashTreeRoot()

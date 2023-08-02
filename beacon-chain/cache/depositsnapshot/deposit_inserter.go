@@ -101,7 +101,8 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	if int(eth1DepositIndex) < insertIndex {
 		return nil
 	}
-	tree, err := depositTrie.tree.Finalize(uint64(eth1DepositIndex), DepositContractDepth)
+	depositCount := eth1DepositIndex + 1
+	tree, err := depositTrie.tree.Finalize(uint64(depositCount), DepositContractDepth)
 	if err != nil {
 		return err
 	}
