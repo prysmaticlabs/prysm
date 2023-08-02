@@ -6,11 +6,11 @@ package depositsnapshot
 import (
 	"encoding/binary"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/math"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 var (
@@ -83,14 +83,15 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (*DepositTree, error) {
 }
 
 // Finalize marks a deposit as finalized.
-func (d *DepositTree) Finalize(eth1data *ethpb.Eth1Data, executionBlockHeight uint64) error {
+func (d *DepositTree) Finalize(eth1DepositIndex int64, executionHash common.Hash) error {
 	var blockHash [32]byte
-	copy(blockHash[:], eth1data.BlockHash)
+	copy(blockHash[:], executionHash[:])
 	d.finalizedExecutionBlock = executionBlock{
-		Hash:  blockHash,
-		Depth: executionBlockHeight,
+		Hash: blockHash,
+		//	Depth: 0, No easy way to retrieve this and it isn't used anywhere.
 	}
-	_, err := d.tree.Finalize(eth1data.DepositCount, DepositContractDepth)
+	depositCount := uint64(eth1DepositIndex + 1)
+	_, err := d.tree.Finalize(depositCount, DepositContractDepth)
 	if err != nil {
 		return err
 	}
