@@ -69,17 +69,17 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	}
 
 	response := &AggregateAttestationResponse{
-		Data: shared.Attestation{
+		Data: &shared.Attestation{
 			AggregationBits: hexutil.Encode(bestMatchingAtt.AggregationBits),
-			Data: shared.AttestationData{
+			Data: &shared.AttestationData{
 				Slot:            strconv.FormatUint(uint64(bestMatchingAtt.Data.Slot), 10),
 				CommitteeIndex:  strconv.FormatUint(uint64(bestMatchingAtt.Data.CommitteeIndex), 10),
 				BeaconBlockRoot: hexutil.Encode(bestMatchingAtt.Data.BeaconBlockRoot),
-				Source: shared.Checkpoint{
+				Source: &shared.Checkpoint{
 					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Source.Epoch), 10),
 					Root:  hexutil.Encode(bestMatchingAtt.Data.Source.Root),
 				},
-				Target: shared.Checkpoint{
+				Target: &shared.Checkpoint{
 					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Target.Epoch), 10),
 					Root:  hexutil.Encode(bestMatchingAtt.Data.Target.Root),
 				},
@@ -240,7 +240,7 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		if valStatus != ethpbv1.ValidatorStatus_ACTIVE_ONGOING && valStatus != ethpbv1.ValidatorStatus_ACTIVE_EXITING {
 			http2.HandleError(
 				w,
-				fmt.Sprintf("Validator at index %d is not active or exiting: %s", consensusItem.ValidatorIndex, err.Error()),
+				fmt.Sprintf("Validator at index %d is not active or exiting", consensusItem.ValidatorIndex),
 				http.StatusBadRequest,
 			)
 			return

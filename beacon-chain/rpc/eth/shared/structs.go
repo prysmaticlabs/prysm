@@ -11,17 +11,17 @@ import (
 )
 
 type Attestation struct {
-	AggregationBits string          `json:"aggregation_bits" validate:"required,hexadecimal"`
-	Data            AttestationData `json:"data" validate:"required"`
-	Signature       string          `json:"signature" validate:"required,hexadecimal"`
+	AggregationBits string           `json:"aggregation_bits" validate:"required,hexadecimal"`
+	Data            *AttestationData `json:"data" validate:"required"`
+	Signature       string           `json:"signature" validate:"required,hexadecimal"`
 }
 
 type AttestationData struct {
-	Slot            string     `json:"slot" validate:"required,number,gte=0"`
-	CommitteeIndex  string     `json:"index" validate:"required,number,gte=0"`
-	BeaconBlockRoot string     `json:"beacon_block_root" validate:"required,hexadecimal"`
-	Source          Checkpoint `json:"source" validate:"required"`
-	Target          Checkpoint `json:"target" validate:"required"`
+	Slot            string      `json:"slot" validate:"required,number,gte=0"`
+	CommitteeIndex  string      `json:"index" validate:"required,number,gte=0"`
+	BeaconBlockRoot string      `json:"beacon_block_root" validate:"required,hexadecimal"`
+	Source          *Checkpoint `json:"source" validate:"required"`
+	Target          *Checkpoint `json:"target" validate:"required"`
 }
 
 type Checkpoint struct {
@@ -30,14 +30,14 @@ type Checkpoint struct {
 }
 
 type SignedContributionAndProof struct {
-	Message   ContributionAndProof `json:"message" validate:"required"`
-	Signature string               `json:"signature" validate:"required,hexadecimal"`
+	Message   *ContributionAndProof `json:"message" validate:"required"`
+	Signature string                `json:"signature" validate:"required,hexadecimal"`
 }
 
 type ContributionAndProof struct {
-	AggregatorIndex string                    `json:"aggregator_index" validate:"required,number,gte=0"`
-	Contribution    SyncCommitteeContribution `json:"contribution" validate:"required"`
-	SelectionProof  string                    `json:"selection_proof" validate:"required,hexadecimal"`
+	AggregatorIndex string                     `json:"aggregator_index" validate:"required,number,gte=0"`
+	Contribution    *SyncCommitteeContribution `json:"contribution" validate:"required"`
+	SelectionProof  string                     `json:"selection_proof" validate:"required,hexadecimal"`
 }
 
 type SyncCommitteeContribution struct {
@@ -49,14 +49,14 @@ type SyncCommitteeContribution struct {
 }
 
 type SignedAggregateAttestationAndProof struct {
-	Message   AggregateAttestationAndProof `json:"message" validate:"required"`
-	Signature string                       `json:"signature" validate:"required,hexadecimal"`
+	Message   *AggregateAttestationAndProof `json:"message" validate:"required"`
+	Signature string                        `json:"signature" validate:"required,hexadecimal"`
 }
 
 type AggregateAttestationAndProof struct {
-	AggregatorIndex string      `json:"aggregator_index" validate:"required,number,gte=0"`
-	Aggregate       Attestation `json:"aggregate" validate:"required"`
-	SelectionProof  string      `json:"selection_proof" validate:"required,hexadecimal"`
+	AggregatorIndex string       `json:"aggregator_index" validate:"required,number,gte=0"`
+	Aggregate       *Attestation `json:"aggregate" validate:"required"`
+	SelectionProof  string       `json:"selection_proof" validate:"required,hexadecimal"`
 }
 
 type SyncCommitteeSubscription struct {
