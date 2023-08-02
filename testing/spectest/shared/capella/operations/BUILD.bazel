@@ -9,6 +9,7 @@ go_library(
         "block_header.go",
         "bls_to_execution_changes.go",
         "deposit.go",
+        "execution_payload.go",
         "helpers.go",
         "proposer_slashing.go",
         "sync_committee.go",
