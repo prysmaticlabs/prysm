@@ -106,7 +106,7 @@ go_test(
     deps = [
         "//api/gateway/apimiddleware:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
-        "//beacon-chain/rpc/eth/helpers:go_default_library",
+        "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/rpc/prysm/validator:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",

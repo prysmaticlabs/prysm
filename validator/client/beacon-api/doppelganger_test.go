@@ -10,7 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -108,7 +108,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 				},
 			},
 			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &helpers.SyncDetailsJson{
+				Data: &shared.SyncDetails{
 					IsSyncing: false,
 				},
 			},
@@ -143,7 +143,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 				},
 			},
 			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &helpers.SyncDetailsJson{
+				Data: &shared.SyncDetails{
 					IsSyncing: false,
 				},
 			},
@@ -189,7 +189,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 				},
 			},
 			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &helpers.SyncDetailsJson{
+				Data: &shared.SyncDetails{
 					IsSyncing: false,
 				},
 			},
@@ -414,7 +414,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 	}
 
 	standardGetSyncingOutput := &apimiddleware.SyncingResponseJson{
-		Data: &helpers.SyncDetailsJson{
+		Data: &shared.SyncDetails{
 			IsSyncing: false,
 		},
 	}
@@ -494,7 +494,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "beacon node not synced",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &helpers.SyncDetailsJson{
+				Data: &shared.SyncDetails{
 					IsSyncing: true,
 				},
 			},

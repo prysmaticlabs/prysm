@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -163,7 +163,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			).SetArg(
 				2,
 				apimiddleware.SyncingResponseJson{
-					Data: &helpers.SyncDetailsJson{
+					Data: &shared.SyncDetails{
 						IsOptimistic: test.isOptimistic,
 					},
 				},
