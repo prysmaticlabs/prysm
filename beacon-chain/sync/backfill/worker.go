@@ -20,16 +20,16 @@ func (w *p2pWorker) run(ctx context.Context) {
 	for {
 		select {
 		case b := <-w.todo:
-			log.WithFields(b.logFields()).Debug("Backfill worker received batch.")
-			w.done <- w.handle(b)
+			log.WithFields(b.logFields()).WithField("backfill_worker", w.id).Debug("Backfill worker received batch.")
+			w.done <- w.handle(ctx, b)
 		case <-ctx.Done():
-			log.WithField("worker_id", w.id).Info("Backfill worker exiting after context canceled.")
+			log.WithField("backfill_worker", w.id).Info("Backfill worker exiting after context canceled.")
 			return
 		}
 	}
 }
 
-func (w *p2pWorker) handle(b batch) batch {
+func (w *p2pWorker) handle(ctx context.Context, b batch) batch {
 	// if the batch is not successfully fetched and validated, increment the attempts counter
 	return b
 }

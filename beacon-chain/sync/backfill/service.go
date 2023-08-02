@@ -3,6 +3,7 @@ package backfill
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -13,20 +14,18 @@ import (
 const defaultWorkerCount = 1
 
 type Service struct {
-	ctx           context.Context
-	genesisWaiter startup.GenesisWaiter
-	genesis       *startup.Genesis
-	clock         startup.Clock
-	su            *StatusUpdater
-	db            BackfillDB
-	p2p           p2p.P2P
-	nWorkers      int
-	todo          chan batch
-	done          chan batch
-	errChan       chan error
-	workers       map[workerId]*p2pWorker
-	batcher       *batcher
-	batchSize     uint64
+	ctx         context.Context
+	clockWaiter startup.ClockWaiter
+	clock       *startup.Clock
+	su          *StatusUpdater
+	p2p         p2p.P2P
+	nWorkers    int
+	todo        chan batch
+	done        chan batch
+	errChan     chan error
+	workers     map[workerId]*p2pWorker
+	batchSeq    *batchSequencer
+	batchSize   uint64
 }
 
 var _ runtime.Service = (*Service)(nil)
@@ -40,16 +39,9 @@ func WithStatusUpdater(su *StatusUpdater) ServiceOption {
 	}
 }
 
-func WithGenesisWaiter(gw startup.GenesisWaiter) ServiceOption {
+func WithClockWaiter(gw startup.ClockWaiter) ServiceOption {
 	return func(s *Service) error {
-		s.genesisWaiter = gw
-		return nil
-	}
-}
-
-func WithBackfillDB(db BackfillDB) ServiceOption {
-	return func(s *Service) error {
-		s.db = db
+		s.clockWaiter = gw
 		return nil
 	}
 }
@@ -64,6 +56,13 @@ func WithP2P(p p2p.P2P) ServiceOption {
 func WithWorkerCount(n int) ServiceOption {
 	return func(s *Service) error {
 		s.nWorkers = n
+		return nil
+	}
+}
+
+func WithBatchSize(n uint64) ServiceOption {
+	return func(s *Service) error {
+		s.batchSize = n
 		return nil
 	}
 }
@@ -90,31 +89,47 @@ func NewService(ctx context.Context, opts ...ServiceOption) (*Service, error) {
 }
 
 func (s *Service) Start() {
-	genesis, err := s.genesisWaiter.WaitForGenesis(s.ctx)
+	var err error
+	s.clock, err = s.clockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("backfill service failed to start while waiting for genesis data")
 	}
-	s.clock = genesis.Clock()
-	if err := s.spawnBatcher(); err != nil {
-		log.WithError(err).Fatal("error starting backfill service")
+	status := s.su.Status()
+	s.batchSeq = newBatchSequencer(s.nWorkers, primitives.Slot(status.LowSlot), primitives.Slot(status.HighSlot), primitives.Slot(s.batchSize))
+	err = s.spawnWorkers()
+	if err != nil {
+		log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
 	}
-	s.spawnWorkers()
 	for {
 		select {
+		case b := <-s.done:
+			s.batchSeq.update(b)
+			importable := s.batchSeq.importable()
+			for i := range importable {
+				ib := importable[i]
+				if err := s.importBatch(ib); err != nil {
+					s.downscore(ib)
+					ib.state = batchErrRetryable
+					s.batchSeq.update(b)
+					break
+				}
+				ib.state = batchImportComplete
+				s.batchSeq.update(b)
+			}
+			b, err = s.batchSeq.sequence()
+			if err != nil {
+				if !errors.Is(err, errEndSequence) {
+					log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
+				}
+			}
+			s.todo <- b
 		case <-s.ctx.Done():
 			return
-		case err := <-s.errChan:
-			if err := s.tryRecover(err); err != nil {
-				log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
-			}
 		}
 	}
 }
 
-func (s *Service) tryRecover(err error) error {
-	log.WithError(err).Error("error from the batcher")
-	// If error is not recoverable, reply with an error, which will shut down the service.
-	return nil
+func (s *Service) downscore(b batch) {
 }
 
 func (s *Service) Stop() error {
@@ -125,16 +140,24 @@ func (s *Service) Status() error {
 	return nil
 }
 
-func (s *Service) spawnWorkers() {
+func (s *Service) importBatch(b batch) error {
+	return nil
+}
+
+func (s *Service) spawnWorkers() error {
 	for i := 0; i < s.nWorkers; i++ {
 		id := workerId(i)
 		s.workers[id] = newP2pWorker(id, s.p2p, s.todo, s.done)
 		go s.workers[id].run(s.ctx)
+		b, err := s.batchSeq.sequence()
+		if err != nil {
+			// don't bother spawning workers if all batches have already been generated.
+			if errors.Is(err, errEndSequence) {
+				return nil
+			}
+			return err
+		}
+		s.todo <- b
 	}
-}
-
-func (s *Service) spawnBatcher() error {
-	s.batcher = newBatcher(primitives.Slot(s.batchSize), s.su, s.todo, s.done)
-	go s.batcher.run(s.ctx)
 	return nil
 }
