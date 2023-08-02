@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -894,7 +895,11 @@ func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error
 			return errors.Errorf("finalized state with root %#x is nil", rt)
 		}
 	}
-	if err = newDepositTrie.Finalize(int64(fState.Eth1DepositIndex()), common.Hash(fState.Eth1Data().BlockHash)); err != nil {
+	depIdx, err := mathutil.Int(fState.Eth1DepositIndex())
+	if err != nil {
+		return err
+	}
+	if err = newDepositTrie.Finalize(int64(depIdx), common.Hash(fState.Eth1Data().BlockHash)); err != nil {
 		return errors.Wrap(err, "could not finalize deposit snapshot tree")
 	}
 	newDepositRoot, err := newDepositTrie.HashTreeRoot()
