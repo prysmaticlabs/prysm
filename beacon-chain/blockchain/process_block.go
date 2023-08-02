@@ -121,7 +121,7 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 		// We handle these caches only on canonical
 		// blocks, otherwise this will be handled by lateBlockTasks
 		slot := postState.Slot()
-		if slots.IsEpochStart(slot + 1) {
+		if slots.IsEpochEnd(slot) {
 			if err := transition.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
 				return errors.Wrap(err, "could not update next slot state cache")
 			}
@@ -365,7 +365,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot,
 	if slot < headState.Slot() {
 		return nil
 	}
-	if !slots.IsEpochStart(slot + 1) {
+	if !slots.IsEpochEnd(slot) {
 		return nil
 	}
 	copied := headState.Copy()
