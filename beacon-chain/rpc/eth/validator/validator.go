@@ -803,39 +803,6 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 	return &ethpbv1.ProduceAttestationDataResponse{Data: attData}, nil
 }
 
-// GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
-func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
-	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
-	defer span.End()
-
-	if err := vs.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations: %v", err)
-	}
-
-	allAtts := vs.AttestationsPool.AggregatedAttestations()
-	var bestMatchingAtt *ethpbalpha.Attestation
-	for _, att := range allAtts {
-		if att.Data.Slot == req.Slot {
-			root, err := att.Data.HashTreeRoot()
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get attestation data root: %v", err)
-			}
-			if bytes.Equal(root[:], req.AttestationDataRoot) {
-				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
-					bestMatchingAtt = att
-				}
-			}
-		}
-	}
-
-	if bestMatchingAtt == nil {
-		return nil, status.Error(codes.NotFound, "No matching attestation found")
-	}
-	return &ethpbv1.AggregateAttestationResponse{
-		Data: migration.V1Alpha1AttestationToV1(bestMatchingAtt),
-	}, nil
-}
-
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.SubmitAggregateAndProofsRequest) (*empty.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProofs")
@@ -1074,36 +1041,6 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
 		Data: contribution,
 	}, nil
-}
-
-// SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
-func (vs *Server) SubmitContributionAndProofs(ctx context.Context, req *ethpbv2.SubmitContributionAndProofsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitContributionAndProofs")
-	defer span.End()
-
-	for _, item := range req.Data {
-		v1alpha1Req := &ethpbalpha.SignedContributionAndProof{
-			Message: &ethpbalpha.ContributionAndProof{
-				AggregatorIndex: item.Message.AggregatorIndex,
-				Contribution: &ethpbalpha.SyncCommitteeContribution{
-					Slot:              item.Message.Contribution.Slot,
-					BlockRoot:         item.Message.Contribution.BeaconBlockRoot,
-					SubcommitteeIndex: item.Message.Contribution.SubcommitteeIndex,
-					AggregationBits:   item.Message.Contribution.AggregationBits,
-					Signature:         item.Message.Contribution.Signature,
-				},
-				SelectionProof: item.Message.SelectionProof,
-			},
-			Signature: item.Signature,
-		}
-		_, err := vs.V1Alpha1Server.SubmitSignedContributionAndProof(ctx, v1alpha1Req)
-		// We simply return err because it's already of a gRPC error type.
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &empty.Empty{}, nil
 }
 
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
