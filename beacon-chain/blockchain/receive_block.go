@@ -90,13 +90,15 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	if err := s.isDataAvailable(ctx, blockRoot, blockCopy); err != nil {
+		return errors.Wrap(err, "could not validate blob data availability")
+	}
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
 	if err := s.savePostStateInfo(ctx, blockRoot, blockCopy, postState); err != nil {
 		return errors.Wrap(err, "could not save post state info")
 	}
-
 	if err := s.postBlockProcess(ctx, blockCopy, blockRoot, postState, isValidPayload); err != nil {
 		err := errors.Wrap(err, "could not process block")
 		tracing.AnnotateError(span, err)

@@ -27,6 +27,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const blobCommitmentVersionKZG uint8 = 0x01
+
 var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
 // notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
@@ -214,14 +216,10 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 
 	var lastValidHash []byte
 	if blk.Version() >= version.Deneb {
-		var kzgs [][]byte
-		kzgs, err = blk.Block().Body().BlobKzgCommitments()
+		var versionedHashes [][32]byte
+		versionedHashes, err = kzgCommitmentsToVersionedHashes(blk.Block().Body())
 		if err != nil {
-			return false, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
-		}
-		versionedHashes := make([][32]byte, len(kzgs))
-		for i := range versionedHashes {
-			versionedHashes[i] = kzgToVersionedHash(kzgs[i])
+			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
 		}
 		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes)
 	} else {
@@ -377,13 +375,16 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 	return nil
 }
 
-const (
-	blobCommitmentVersionKZG uint8 = 0x01
-)
+func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([][32]byte, error) {
+	commitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return nil, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
+	}
 
-// kzgToVersionedHash implements kzg_to_versioned_hash from EIP-4844
-func kzgToVersionedHash(kzg []byte) (h [32]byte) {
-	h = sha256.Sum256(kzg)
-	h[0] = blobCommitmentVersionKZG
-	return
+	versionedHashes := make([][32]byte, len(commitments))
+	for i, commitment := range commitments {
+		versionedHashes[i] = sha256.Sum256(commitment)
+		versionedHashes[i][0] = blobCommitmentVersionKZG
+	}
+	return versionedHashes, nil
 }
