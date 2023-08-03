@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -495,6 +496,33 @@ func (s *Service) runLateBlockTasks() {
 			return
 		}
 	}
+}
+
+func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
+	if signed.Version() < version.Deneb {
+		return nil
+	}
+	block := signed.Block()
+	if block == nil {
+		return errors.New("invalid nil beacon block")
+	}
+	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+	if slots.ToEpoch(block.Slot())+params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest > primitives.Epoch(s.CurrentSlot()) {
+		return nil
+	}
+	body := block.Body()
+	if body == nil {
+		return errors.New("invalid nil beacon block body")
+	}
+	kzgCommitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return errors.Wrap(err, "could not get KZG commitments")
+	}
+	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
+	if err != nil {
+		return errors.Wrap(err, "could not get blob sidecars")
+	}
+	return kzg.IsDataAvailable(kzgCommitments, sidecars)
 }
 
 // lateBlockTasks  is called 4 seconds into the slot and performs tasks
