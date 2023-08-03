@@ -3,6 +3,7 @@
 package state_native
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/prysmaticlabs/go-bitfield"
