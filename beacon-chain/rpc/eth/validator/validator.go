@@ -803,55 +803,6 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 	return &ethpbv1.ProduceAttestationDataResponse{Data: attData}, nil
 }
 
-// SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.SubmitAggregateAndProofsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProofs")
-	defer span.End()
-
-	for _, agg := range req.Data {
-		if agg == nil || agg.Message == nil || agg.Message.Aggregate == nil || agg.Message.Aggregate.Data == nil {
-			return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
-		}
-		sigLen := fieldparams.BLSSignatureLength
-		emptySig := make([]byte, sigLen)
-		if bytes.Equal(agg.Signature, emptySig) || bytes.Equal(agg.Message.SelectionProof, emptySig) || bytes.Equal(agg.Message.Aggregate.Signature, emptySig) {
-			return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
-		}
-		if len(agg.Signature) != sigLen || len(agg.Message.Aggregate.Signature) != sigLen {
-			return nil, status.Errorf(codes.InvalidArgument, "Incorrect signature length. Expected %d bytes", sigLen)
-		}
-
-		// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
-		if err := helpers.ValidateAttestationTime(agg.Message.Aggregate.Data.Slot,
-			vs.TimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-			return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
-		}
-	}
-
-	broadcastFailed := false
-	for _, agg := range req.Data {
-		v1alpha1Agg := migration.V1SignedAggregateAttAndProofToV1Alpha1(agg)
-		if err := vs.Broadcaster.Broadcast(ctx, v1alpha1Agg); err != nil {
-			broadcastFailed = true
-		} else {
-			log.WithFields(log.Fields{
-				"slot":            agg.Message.Aggregate.Data.Slot,
-				"committeeIndex":  agg.Message.Aggregate.Data.Index,
-				"validatorIndex":  agg.Message.AggregatorIndex,
-				"aggregatedCount": agg.Message.Aggregate.AggregationBits.Count(),
-			}).Debug("Broadcasting aggregated attestation and proof")
-		}
-	}
-
-	if broadcastFailed {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not broadcast one or more signed aggregated attestations")
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
 // SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
 // and replaces current peers with those ones if necessary.
 func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
