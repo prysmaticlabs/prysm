@@ -1,4 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -13,5 +13,19 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_crate_crypto_go_kzg_4844//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "trusted_setup_test.go",
+        "validation_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/require:go_default_library",
+        "@com_github_crate_crypto_go_kzg_4844//:go_default_library",
     ],
 )
