@@ -8,6 +8,7 @@ go_library(
         "attester_slashing.go",
         "block_header.go",
         "deposit.go",
+        "execution_payload.go",
         "helpers.go",
         "proposer_slashing.go",
         "sync_committee.go",

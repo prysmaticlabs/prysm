@@ -86,6 +86,11 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 			}
 			log.Warn("Genesis time received, now available to process attestations")
 		}
+		// Wait for node to be synced before running the routine.
+		if err := s.waitForSync(); err != nil {
+			log.WithError(err).Error("Could not wait to sync")
+			return
+		}
 
 		reorgInterval := time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot) - reorgLateBlockCountAttestations
 		ticker := slots.NewSlotTickerWithIntervals(s.genesisTime, []time.Duration{0, reorgInterval})

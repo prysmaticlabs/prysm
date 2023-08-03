@@ -1,22 +1,53 @@
 package core
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"sort"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
+// AggregateBroadcastFailedError represents an error scenario where
+// broadcasting an aggregate selection proof failed.
+type AggregateBroadcastFailedError struct {
+	err error
+}
+
+// NewAggregateBroadcastFailedError creates a new error instance.
+func NewAggregateBroadcastFailedError(err error) AggregateBroadcastFailedError {
+	return AggregateBroadcastFailedError{
+		err: err,
+	}
+}
+
+// Error returns the underlying error message.
+func (e *AggregateBroadcastFailedError) Error() string {
+	return fmt.Sprintf("could not broadcast signed aggregated attestation: %s", e.err.Error())
+}
+
+// ComputeValidatorPerformance reports the validator's latest balance along with other important metrics on
+// rewards and penalties throughout its lifecycle in the beacon chain.
 func ComputeValidatorPerformance(
 	ctx context.Context,
 	req *ethpb.ValidatorPerformanceRequest,
@@ -165,4 +196,77 @@ func ComputeValidatorPerformance(
 		MissingValidators:             missingValidators,
 		InactivityScores:              inactivityScores, // Only populated in Altair
 	}, nil
+}
+
+// SubmitSignedContributionAndProof is called by a sync committee aggregator
+// to submit signed contribution and proof object.
+func SubmitSignedContributionAndProof(
+	ctx context.Context,
+	s *ethpb.SignedContributionAndProof,
+	broadcaster p2p.Broadcaster,
+	pool synccommittee.Pool,
+	notifier opfeed.Notifier,
+) *RpcError {
+	errs, ctx := errgroup.WithContext(ctx)
+
+	// Broadcasting and saving contribution into the pool in parallel. As one fail should not affect another.
+	errs.Go(func() error {
+		return broadcaster.Broadcast(ctx, s)
+	})
+
+	if err := pool.SaveSyncCommitteeContribution(s.Message.Contribution); err != nil {
+		return &RpcError{Err: err, Reason: Internal}
+	}
+
+	// Wait for p2p broadcast to complete and return the first error (if any)
+	err := errs.Wait()
+	if err != nil {
+		return &RpcError{Err: err, Reason: Internal}
+	}
+
+	notifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.SyncCommitteeContributionReceived,
+		Data: &opfeed.SyncCommitteeContributionReceivedData{
+			Contribution: s,
+		},
+	})
+
+	return nil
+}
+
+// SubmitSignedAggregateSelectionProof verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+func SubmitSignedAggregateSelectionProof(
+	ctx context.Context,
+	req *ethpb.SignedAggregateSubmitRequest,
+	genesisTime time.Time,
+	broadcaster p2p.Broadcaster,
+) *RpcError {
+	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
+		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
+		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
+	}
+	emptySig := make([]byte, fieldparams.BLSSignatureLength)
+	if bytes.Equal(req.SignedAggregateAndProof.Signature, emptySig) ||
+		bytes.Equal(req.SignedAggregateAndProof.Message.SelectionProof, emptySig) {
+		return &RpcError{Err: errors.New("signed signatures can't be zero hashes"), Reason: BadRequest}
+	}
+
+	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
+	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
+		genesisTime, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		return &RpcError{Err: errors.New("attestation slot is no longer valid from current time"), Reason: BadRequest}
+	}
+
+	if err := broadcaster.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
+		return &RpcError{Err: &AggregateBroadcastFailedError{err: err}, Reason: Internal}
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":            req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
+		"committeeIndex":  req.SignedAggregateAndProof.Message.Aggregate.Data.CommitteeIndex,
+		"validatorIndex":  req.SignedAggregateAndProof.Message.AggregatorIndex,
+		"aggregatedCount": req.SignedAggregateAndProof.Message.Aggregate.AggregationBits.Count(),
+	}).Debug("Broadcasting aggregated attestation and proof")
+
+	return nil
 }

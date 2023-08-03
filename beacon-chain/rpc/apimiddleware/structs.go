@@ -298,16 +298,8 @@ type SyncCommitteeSubscriptionJson struct {
 	UntilEpoch           string   `json:"until_epoch"`
 }
 
-type SubmitAggregateAndProofsRequestJson struct {
-	Data []*SignedAggregateAttestationAndProofJson `json:"data"`
-}
-
 type ProduceSyncCommitteeContributionResponseJson struct {
 	Data *SyncCommitteeContributionJson `json:"data"`
-}
-
-type SubmitContributionAndProofsRequestJson struct {
-	Data []*SignedContributionAndProofJson `json:"data"`
 }
 
 type ForkChoiceNodeResponseJson struct {
