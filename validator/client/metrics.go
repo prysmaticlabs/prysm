@@ -255,9 +255,11 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 	}
 
 	if v.emitAccountMetrics {
+		// There is no distinction between unknown and pending validators here.
+		// The balance is recorded as 0, as this metric is the effective balance of a participating validator.
 		for _, missingPubKey := range resp.MissingValidators {
 			fmtKey := fmt.Sprintf("%#x", missingPubKey)
-			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(float64(params.BeaconConfig().MaxEffectiveBalance) / float64(params.BeaconConfig().GweiPerEth))
+			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
 		}
 	}
 
