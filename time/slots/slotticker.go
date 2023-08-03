@@ -16,6 +16,20 @@ type Ticker interface {
 	Done()
 }
 
+// SlotInterval is a wrapper that contains a slot and the interval index that
+// triggered the ticker
+type SlotInterval struct {
+	Slot     primitives.Slot
+	Interval int
+}
+
+// The IntervalTicker is similar to the Ticker interface but
+// exposes also the interval along with the slot number
+type IntervalTicker interface {
+	C() <-chan SlotInterval
+	Done()
+}
+
 // SlotTicker is a special ticker for the beacon chain block.
 // The channel emits over the slot interval, and ensures that
 // the ticks are in line with the genesis time. This means that
@@ -27,14 +41,34 @@ type SlotTicker struct {
 	done chan struct{}
 }
 
+// SlotIntervalTicker is similar to a slot ticker but it returns also
+// the index of the interval that triggered the event
+type SlotIntervalTicker struct {
+	c    chan SlotInterval
+	done chan struct{}
+}
+
 // C returns the ticker channel. Call Cancel afterwards to ensure
 // that the goroutine exits cleanly.
 func (s *SlotTicker) C() <-chan primitives.Slot {
 	return s.c
 }
 
+// C returns the ticker channel. Call Cancel afterwards to ensure
+// that the goroutine exits cleanly.
+func (s *SlotIntervalTicker) C() <-chan SlotInterval {
+	return s.c
+}
+
 // Done should be called to clean up the ticker.
 func (s *SlotTicker) Done() {
+	go func() {
+		s.done <- struct{}{}
+	}()
+}
+
+// Done should be called to clean up the ticker.
+func (s *SlotIntervalTicker) Done() {
 	go func() {
 		s.done <- struct{}{}
 	}()
@@ -109,7 +143,7 @@ func (s *SlotTicker) start(
 // startWithIntervals starts a ticker that emits a tick every slot at the
 // prescribed intervals. The caller is responsible to make these intervals increasing and
 // less than secondsPerSlot
-func (s *SlotTicker) startWithIntervals(
+func (s *SlotIntervalTicker) startWithIntervals(
 	genesisTime time.Time,
 	until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time,
@@ -124,7 +158,7 @@ func (s *SlotTicker) startWithIntervals(
 			waitTime := until(nextTickTime)
 			select {
 			case <-after(waitTime):
-				s.c <- slot
+				s.c <- SlotInterval{Slot: slot, Interval: interval}
 				interval++
 				if interval == len(intervals) {
 					interval = 0
@@ -142,7 +176,7 @@ func (s *SlotTicker) startWithIntervals(
 // several offsets of time from genesis,
 // Caller is responsible to input the intervals in increasing order and none bigger or equal than
 // SecondsPerSlot
-func NewSlotTickerWithIntervals(genesisTime time.Time, intervals []time.Duration) *SlotTicker {
+func NewSlotTickerWithIntervals(genesisTime time.Time, intervals []time.Duration) *SlotIntervalTicker {
 	if genesisTime.Unix() == 0 {
 		panic("zero genesis time")
 	}
@@ -160,8 +194,8 @@ func NewSlotTickerWithIntervals(genesisTime time.Time, intervals []time.Duration
 		}
 		lastOffset = offset
 	}
-	ticker := &SlotTicker{
-		c:    make(chan primitives.Slot),
+	ticker := &SlotIntervalTicker{
+		c:    make(chan SlotInterval),
 		done: make(chan struct{}),
 	}
 	ticker.startWithIntervals(genesisTime, prysmTime.Until, time.After, intervals)
