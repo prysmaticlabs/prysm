@@ -76,7 +76,6 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		return nil, errors.Wrap(err, "could not get fee recipient in db")
 	}
 
-	log.Info(ok, payloadId)
 	if ok && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
 		var pid [8]byte
 		copy(pid[:], payloadId[:])

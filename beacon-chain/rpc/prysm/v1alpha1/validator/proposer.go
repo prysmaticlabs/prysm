@@ -180,7 +180,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}).Info("Finished building block")
 
 	pprof.StopCPUProfile()
-	if time.Since(startTime) > time.Second {
+	if time.Since(startTime) > 500*time.Millisecond {
 		dbPath := path.Join("/home/t", fmt.Sprintf("%d_proposer.profile", req.Slot))
 		if err = file.WriteFile(dbPath, bf.Bytes()); err != nil {
 			log.WithError(err).Error("could not write profile")

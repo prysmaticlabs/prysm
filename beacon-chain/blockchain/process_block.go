@@ -332,14 +332,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 	return s.saveHeadNoDB(ctx, lastB, lastBR, preState)
 }
 
-func updateNextSlotCacheOnBlock(root [32]byte, st state.BeaconState) {
-	slotCtx, cancel := context.WithTimeout(context.Background(), 2*slotDeadline)
-	defer cancel()
-	if err := transition.UpdateNextSlotCache(slotCtx, root[:], st); err != nil {
-		log.WithError(err).Error("could not update next slot state cache")
-	}
-}
-
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
 	e := coreTime.CurrentEpoch(st)
 	if err := helpers.UpdateCommitteeCache(ctx, st, e); err != nil {
