@@ -9,6 +9,7 @@ go_test(
         "block_header_test.go",
         "bls_to_execution_change_test.go",
         "deposit_test.go",
+        "execution_payload_test.go",
         "proposer_slashing_test.go",
         "sync_committee_test.go",
         "voluntary_exit_test.go",
