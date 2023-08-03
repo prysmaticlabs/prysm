@@ -428,6 +428,8 @@ func (s *Service) Start() {
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 
+	go validatorServer.ProposeEverySlot()
+
 	go func() {
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {

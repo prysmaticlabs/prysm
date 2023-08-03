@@ -1,9 +1,12 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
+	"path"
+	"runtime/pprof"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -57,6 +61,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"slot":               req.Slot,
 		"sinceSlotStartTime": time.Since(t),
 	}).Info("Begin building block")
+
+	bf := bytes.NewBuffer([]byte{})
+	startTime := time.Now()
+	if err := pprof.StartCPUProfile(bf); err != nil {
+		log.WithError(err).Error("could not start cpu profile")
+	}
 
 	// A syncing validator should not produce a block.
 	if vs.SyncChecker.Syncing() {
@@ -168,6 +178,14 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
+
+	pprof.StopCPUProfile()
+	if time.Since(startTime) > time.Second {
+		dbPath := path.Join("/home/t", fmt.Sprintf("%d_proposer.profile", req.Slot))
+		if err = file.WriteFile(dbPath, bf.Bytes()); err != nil {
+			log.WithError(err).Error("could not write profile")
+		}
+	}
 
 	pb, err := sBlk.Block().Proto()
 	if err != nil {
