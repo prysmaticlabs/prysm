@@ -99,8 +99,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 	broadcastFailed := false
 	for _, att := range validAttestations {
 		// Determine subnet to broadcast attestation to
-		wantedEpoch := slots.ToEpoch(att.Data.Slot)
-		vals, err := bs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+		vals, err := bs.HeadFetcher.HeadValidatorsIndicesFromAdvancedSlots(ctx, att.Data.Slot)
 		if err != nil {
 			return nil, err
 		}
