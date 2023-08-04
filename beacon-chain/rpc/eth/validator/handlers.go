@@ -164,26 +164,30 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
-	if r.Body == http.NoBody {
-		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	}
 	ctx := r.Context()
-
-	var req ProduceSyncCommitteeContributionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+	subIndex := r.URL.Query().Get("subcommittee_index")
+	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
+	if !valid {
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+	rawSlot := r.URL.Query().Get("slot")
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
+		return
+	}
+	blockRoot := r.URL.Query().Get("beacon_block_root")
+	valid = shared.ValidateHex(w, "Beacon Block Root", blockRoot)
+	if !valid {
 		return
 	}
 
 	syncCommitteeResp, rpcError := core.ProduceSyncCommitteeContribution(
 		ctx,
-		&ethpbv2.ProduceSyncCommitteeContributionRequest{},
+		&ethpbv2.ProduceSyncCommitteeContributionRequest{
+			Slot:              primitives.Slot(slot),
+			SubcommitteeIndex: index,
+			BeaconBlockRoot:   []byte(blockRoot),
+		},
 		s.SyncCommitteePool,
 		s.V1Alpha1Server,
 	)
