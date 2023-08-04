@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
@@ -466,6 +467,18 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
+	})
+	t.Run("not ok: missing query", func(t *testing.T) {
+		url := "http://example.com?subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		server.ProduceSyncCommitteeContribution(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		resp := &ProduceSyncCommitteeContributionResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.ErrorContains(t, "Slot is required", errors.New(writer.Body.String()))
 	})
 }
 
