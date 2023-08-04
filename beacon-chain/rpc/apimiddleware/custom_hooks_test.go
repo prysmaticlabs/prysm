@@ -140,46 +140,6 @@ func TestWrapBLSChangesArray(t *testing.T) {
 	})
 }
 
-func TestWrapSignedAggregateAndProofArray(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SubmitAggregateAndProofsRequestJson{},
-		}
-		unwrappedAggs := []*SignedAggregateAttestationAndProofJson{{Signature: "sig"}}
-		unwrappedAggsJson, err := json.Marshal(unwrappedAggs)
-		require.NoError(t, err)
-
-		var body bytes.Buffer
-		_, err = body.Write(unwrappedAggsJson)
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapSignedAggregateAndProofArray(endpoint, nil, request)
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		wrappedAggs := &SubmitAggregateAndProofsRequestJson{}
-		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedAggs))
-		require.Equal(t, 1, len(wrappedAggs.Data), "wrong number of wrapped items")
-		assert.Equal(t, "sig", wrappedAggs.Data[0].Signature)
-	})
-
-	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SubmitAggregateAndProofsRequestJson{},
-		}
-		var body bytes.Buffer
-		_, err := body.Write([]byte("invalid"))
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapSignedAggregateAndProofArray(endpoint, nil, request)
-		require.Equal(t, false, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
-		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
-		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
-	})
-}
-
 func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{

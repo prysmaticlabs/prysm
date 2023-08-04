@@ -34,14 +34,17 @@ func (s *Service) prepareForkChoiceAtts() {
 	ticker := slots.NewSlotTickerWithIntervals(time.Unix(int64(s.genesisTime), 0), intervals[:])
 	for {
 		select {
-		case <-ticker.C():
+		case slotInterval := <-ticker.C():
 			t := time.Now()
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
-			if slots.TimeIntoSlot(s.genesisTime) < intervals[1] {
-				batchForkChoiceAttsT1.Observe(float64(time.Since(t).Milliseconds()))
-			} else if slots.TimeIntoSlot(s.genesisTime) < intervals[2] {
+			switch slotInterval.Interval {
+			case 0:
+				duration := time.Since(t)
+				log.WithField("Duration", duration).Debug("aggregated unaggregated attestations")
+				batchForkChoiceAttsT1.Observe(float64(duration.Milliseconds()))
+			case 1:
 				batchForkChoiceAttsT2.Observe(float64(time.Since(t).Milliseconds()))
 			}
 		case <-s.ctx.Done():
