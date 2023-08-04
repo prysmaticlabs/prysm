@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -160,4 +161,44 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	if broadcastFailed {
 		http2.HandleError(w, "Could not broadcast one or more signed aggregated attestations", http.StatusInternalServerError)
 	}
+}
+
+func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
+	if r.Body == http.NoBody {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+
+	var req ProduceSyncCommitteeContributionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	syncCommitteeResp, rpcError := core.ProduceSyncCommitteeContribution(
+		ctx,
+		&ethpbv2.ProduceSyncCommitteeContributionRequest{},
+		s.SyncCommitteePool,
+		s.V1Alpha1Server,
+	)
+	if rpcError != nil {
+		http2.HandleError(w, "Could not compute validator performance: "+rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+		return
+	}
+	response := &ProduceSyncCommitteeContributionResponse{
+		Data: &SyncCommitteeContribution{
+			Slot:              syncCommitteeResp.Data.Slot,
+			BeaconBlockRoot:   syncCommitteeResp.Data.BeaconBlockRoot,
+			SubcommitteeIndex: syncCommitteeResp.Data.SubcommitteeIndex,
+			AggregationBits:   syncCommitteeResp.Data.AggregationBits,
+			Signature:         syncCommitteeResp.Data.Signature,
+		},
+	}
+	http2.WriteJson(w, response)
 }

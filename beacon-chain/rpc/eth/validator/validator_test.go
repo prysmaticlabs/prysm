@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
@@ -22,7 +21,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
@@ -1607,63 +1605,6 @@ func TestSubmitSyncCommitteeSubscription_SyncNotReady(t *testing.T) {
 	}
 	_, err = vs.SubmitSyncCommitteeSubscription(context.Background(), &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
-}
-
-func TestProduceSyncCommitteeContribution(t *testing.T) {
-	ctx := context.Background()
-	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bls.NewAggregateSignature().Marshal()
-	messsage := &ethpbalpha.SyncCommitteeMessage{
-		Slot:           0,
-		BlockRoot:      root,
-		ValidatorIndex: 0,
-		Signature:      sig,
-	}
-	syncCommitteePool := synccommittee.NewStore()
-	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
-	v1Server := &v1alpha1validator.Server{
-		SyncCommitteePool: syncCommitteePool,
-		HeadFetcher: &mockChain.ChainService{
-			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
-		},
-	}
-	server := Server{
-		V1Alpha1Server:    v1Server,
-		SyncCommitteePool: syncCommitteePool,
-	}
-
-	req := &ethpbv2.ProduceSyncCommitteeContributionRequest{
-		Slot:              0,
-		SubcommitteeIndex: 0,
-		BeaconBlockRoot:   root,
-	}
-	resp, err := server.ProduceSyncCommitteeContribution(ctx, req)
-	require.NoError(t, err)
-	assert.Equal(t, primitives.Slot(0), resp.Data.Slot)
-	assert.Equal(t, uint64(0), resp.Data.SubcommitteeIndex)
-	assert.DeepEqual(t, root, resp.Data.BeaconBlockRoot)
-	aggregationBits := resp.Data.AggregationBits
-	assert.Equal(t, true, aggregationBits.BitAt(0))
-	assert.DeepEqual(t, sig, resp.Data.Signature)
-
-	syncCommitteePool = synccommittee.NewStore()
-	v1Server = &v1alpha1validator.Server{
-		SyncCommitteePool: syncCommitteePool,
-		HeadFetcher: &mockChain.ChainService{
-			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
-		},
-	}
-	server = Server{
-		V1Alpha1Server:    v1Server,
-		SyncCommitteePool: syncCommitteePool,
-	}
-	req = &ethpbv2.ProduceSyncCommitteeContributionRequest{
-		Slot:              0,
-		SubcommitteeIndex: 0,
-		BeaconBlockRoot:   root,
-	}
-	_, err = server.ProduceSyncCommitteeContribution(ctx, req)
-	assert.ErrorContains(t, "No subcommittee messages found", err)
 }
 
 func TestPrepareBeaconProposer(t *testing.T) {

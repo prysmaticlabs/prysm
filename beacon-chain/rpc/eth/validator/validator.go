@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
@@ -955,21 +954,6 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	}
 
 	return &empty.Empty{}, nil
-}
-
-// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
-func (vs *Server) ProduceSyncCommitteeContribution(
-	ctx context.Context,
-	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
-) (*ethpbv2.ProduceSyncCommitteeContributionResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ProduceSyncCommitteeContribution")
-	defer span.End()
-
-	syncCommitteeResp, err := core.ProduceSyncCommitteeContribution(ctx, req, vs.SyncCommitteePool, vs.V1Alpha1Server)
-	if err != nil {
-		return nil, err.Err
-	}
-	return syncCommitteeResp, nil
 }
 
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
