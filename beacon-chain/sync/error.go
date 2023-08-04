@@ -19,6 +19,7 @@ var ErrUnrecognizedVersion = errors.New("cannot determine context bytes for unre
 var responseCodeSuccess = byte(0x00)
 var responseCodeInvalidRequest = byte(0x01)
 var responseCodeServerError = byte(0x02)
+var responseCodeResourceUnavailable = byte(0x03)
 
 func (s *Service) generateErrorResponse(code byte, reason string) ([]byte, error) {
 	return createErrorResponse(code, reason, s.cfg.p2p)

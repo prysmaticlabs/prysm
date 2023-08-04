@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -25,6 +26,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+const blobCommitmentVersionKZG uint8 = 0x01
 
 var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
@@ -210,7 +213,18 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 	if err != nil {
 		return false, errors.Wrap(invalidBlock{error: err}, "could not get execution payload")
 	}
-	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+
+	var lastValidHash []byte
+	if blk.Version() >= version.Deneb {
+		var versionedHashes [][32]byte
+		versionedHashes, err = kzgCommitmentsToVersionedHashes(blk.Block().Body())
+		if err != nil {
+			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
+		}
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes)
+	} else {
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{} /*empty version hashes before Deneb*/)
+	}
 	switch err {
 	case nil:
 		newPayloadValidNodeCount.Inc()
@@ -310,7 +324,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Capella:
+	case version.Capella, version.Deneb:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
@@ -359,4 +373,18 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 		}
 	}
 	return nil
+}
+
+func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([][32]byte, error) {
+	commitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return nil, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
+	}
+
+	versionedHashes := make([][32]byte, len(commitments))
+	for i, commitment := range commitments {
+		versionedHashes[i] = sha256.Sum256(commitment)
+		versionedHashes[i][0] = blobCommitmentVersionKZG
+	}
+	return versionedHashes, nil
 }

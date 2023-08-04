@@ -860,6 +860,42 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 	require.Equal(t, 0, len(a))
 }
 
+func Test_GetPayloadAttributeDeneb(t *testing.T) {
+	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	ctx := tr.ctx
+
+	st, _ := util.DeterministicGenesisStateDeneb(t, 1)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0, []byte{})
+	require.Equal(t, false, hasPayload)
+	require.Equal(t, primitives.ValidatorIndex(0), vId)
+
+	// Cache hit, advance state, no fee recipient
+	suggestedVid := primitives.ValidatorIndex(1)
+	slot := primitives.Slot(1)
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
+	hook := logTest.NewGlobal()
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
+	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
+	a, err := attr.Withdrawals()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(a))
+
+	// Cache hit, advance state, has fee recipient
+	suggestedAddr := common.HexToAddress("123")
+	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+	a, err = attr.Withdrawals()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(a))
+}
+
 func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -1044,4 +1080,29 @@ func TestService_getPayloadHash(t *testing.T) {
 	h, err = service.getPayloadHash(ctx, r[:])
 	require.NoError(t, err)
 	require.DeepEqual(t, [32]byte{'a'}, h)
+}
+
+func TestKZGCommitmentToVersionedHashes(t *testing.T) {
+	kzg1 := make([]byte, 96)
+	kzg1[10] = 'a'
+	kzg2 := make([]byte, 96)
+	kzg2[1] = 'b'
+	commitments := [][]byte{kzg1, kzg2}
+
+	blk := &ethpb.SignedBeaconBlockDeneb{
+		Block: &ethpb.BeaconBlockDeneb{
+			Body: &ethpb.BeaconBlockBodyDeneb{
+				BlobKzgCommitments: commitments,
+			},
+		},
+	}
+	b, err := consensusblocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	vhs, err := kzgCommitmentsToVersionedHashes(b.Block().Body())
+	require.NoError(t, err)
+	vh0 := [32]byte{1, 207, 35, 21, 201, 118, 88, 167, 237, 84, 173, 161, 129, 118, 94, 35, 179, 250, 219, 81, 80, 250, 179, 149, 9, 246, 49, 192, 185, 175, 69, 102}
+	vh1 := [32]byte{1, 226, 124, 226, 142, 82, 126, 176, 113, 150, 179, 26, 240, 245, 250, 24, 130, 172, 231, 1, 166, 130, 2, 42, 183, 121, 248, 22, 172, 57, 212, 126}
+	require.Equal(t, 2, len(vhs))
+	require.Equal(t, vhs[0], vh0)
+	require.Equal(t, vhs[1], vh1)
 }

@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/v4/api"
 )
 
 // match a number with optional decimals
@@ -21,7 +23,7 @@ func SszRequested(req *http.Request) (bool, error) {
 	for _, t := range types {
 		values := strings.Split(t, ";")
 		name := values[0]
-		if name != jsonMediaType && name != octetStreamMediaType {
+		if name != api.JsonMediaType && name != api.OctetStreamMediaType {
 			continue
 		}
 		// no params specified
@@ -47,5 +49,5 @@ func SszRequested(req *http.Request) (bool, error) {
 		}
 	}
 
-	return currentType == octetStreamMediaType, nil
+	return currentType == api.OctetStreamMediaType, nil
 }

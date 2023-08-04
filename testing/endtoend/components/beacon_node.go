@@ -301,7 +301,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		}
 	}()
 	cmd.Stderr = stderr
-	log.Infof("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
+	log.Infof("Starting beacon chain %d with flags: %s", index, strings.Join(args, " "))
 	if err = cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start beacon node: %w", err)
 	}

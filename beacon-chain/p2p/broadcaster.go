@@ -202,6 +202,67 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 	}
 }
 
+// BroadcastBlob broadcasts a blob to the p2p network, the message is assumed to be
+// broadcasted to the current fork and to the input subnet.
+func (s *Service) BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.SignedBlobSidecar) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastBlob")
+	defer span.End()
+	if blob == nil {
+		return errors.New("attempted to broadcast nil blob sidecar")
+	}
+	forkDigest, err := s.currentForkDigest()
+	if err != nil {
+		err := errors.Wrap(err, "could not retrieve fork digest")
+		tracing.AnnotateError(span, err)
+		return err
+	}
+
+	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
+	go s.broadcastBlob(ctx, subnet, blob, forkDigest)
+
+	return nil
+}
+
+func (s *Service) broadcastBlob(ctx context.Context, subnet uint64, blobSidecar *ethpb.SignedBlobSidecar, forkDigest [4]byte) {
+	_, span := trace.StartSpan(ctx, "p2p.broadcastBlob")
+	defer span.End()
+	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
+
+	oneSlot := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	ctx, cancel := context.WithTimeout(ctx, oneSlot)
+	defer cancel()
+
+	wrappedSubIdx := subnet + blobSubnetLockerVal
+	s.subnetLocker(wrappedSubIdx).RLock()
+	hasPeer := s.hasPeerWithSubnet(blobSubnetToTopic(subnet, forkDigest))
+	s.subnetLocker(wrappedSubIdx).RUnlock()
+
+	if !hasPeer {
+		blobSidecarCommitteeBroadcastAttempts.Inc()
+		if err := func() error {
+			s.subnetLocker(wrappedSubIdx).Lock()
+			defer s.subnetLocker(wrappedSubIdx).Unlock()
+			ok, err := s.FindPeersWithSubnet(ctx, blobSubnetToTopic(subnet, forkDigest), subnet, 1)
+			if err != nil {
+				return err
+			}
+			if ok {
+				blobSidecarCommitteeBroadcasts.Inc()
+				return nil
+			}
+			return errors.New("failed to find peers for subnet")
+		}(); err != nil {
+			log.WithError(err).Error("Failed to find peers")
+			tracing.AnnotateError(span, err)
+		}
+	}
+
+	if err := s.broadcastObject(ctx, blobSidecar, blobSubnetToTopic(subnet, forkDigest)); err != nil {
+		log.WithError(err).Error("Failed to broadcast blob sidecar")
+		tracing.AnnotateError(span, err)
+	}
+}
+
 // method to broadcast messages to other peers in our gossip mesh.
 func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic string) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastObject")
@@ -237,4 +298,8 @@ func attestationToTopic(subnet uint64, forkDigest [4]byte) string {
 
 func syncCommitteeToTopic(subnet uint64, forkDigest [4]byte) string {
 	return fmt.Sprintf(SyncCommitteeSubnetTopicFormat, forkDigest, subnet)
+}
+
+func blobSubnetToTopic(subnet uint64, forkDigest [4]byte) string {
+	return fmt.Sprintf(BlobSubnetTopicFormat, forkDigest, subnet)
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -160,17 +161,12 @@ func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionD
 	return preStateVersion, preStateHeader, nil
 }
 
-func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock,
-	blockRoots [][32]byte) error {
+func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
-	if len(blks) == 0 || len(blockRoots) == 0 {
+	if len(blks) == 0 {
 		return errors.New("no blocks provided")
-	}
-
-	if len(blks) != len(blockRoots) {
-		return errWrongBlockCount
 	}
 
 	if err := consensusblocks.BeaconBlockIsNil(blks[0]); err != nil {
@@ -222,7 +218,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 		}
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
-			boundaries[blockRoots[i]] = preState.Copy()
+			boundaries[b.Root()] = preState.Copy()
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
@@ -255,11 +251,12 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, len(blks))
 	var isValidPayload bool
 	for i, b := range blks {
+		root := b.Root()
 		isValidPayload, err = s.notifyNewPayload(ctx,
 			postVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].header, b)
 		if err != nil {
-			return s.handleInvalidExecutionError(ctx, err, blockRoots[i], b.Block().ParentRoot())
+			return s.handleInvalidExecutionError(ctx, err, root, b.Block().ParentRoot())
 		}
 		if isValidPayload {
 			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
@@ -271,13 +268,13 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			JustifiedCheckpoint: jCheckpoints[i],
 			FinalizedCheckpoint: fCheckpoints[i]}
 		pendingNodes[len(blks)-i-1] = args
-		if err := s.saveInitSyncBlock(ctx, blockRoots[i], b); err != nil {
+		if err := s.saveInitSyncBlock(ctx, root, b); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
 		if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 			Slot: b.Block().Slot(),
-			Root: blockRoots[i][:],
+			Root: root[:],
 		}); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
@@ -301,8 +298,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			return err
 		}
 	}
+	lastB := blks[len(blks)-1]
+	lastBR := lastB.Root()
 	// Also saves the last post state which to be used as pre state for the next batch.
-	lastBR := blockRoots[len(blks)-1]
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
 		return err
 	}
@@ -320,7 +318,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
-	lastB := blks[len(blks)-1]
 	arg := &notifyForkchoiceUpdateArg{
 		headState: preState,
 		headRoot:  lastBR,
@@ -499,6 +496,33 @@ func (s *Service) runLateBlockTasks() {
 			return
 		}
 	}
+}
+
+func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
+	if signed.Version() < version.Deneb {
+		return nil
+	}
+	block := signed.Block()
+	if block == nil {
+		return errors.New("invalid nil beacon block")
+	}
+	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+	if slots.ToEpoch(block.Slot())+params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest > primitives.Epoch(s.CurrentSlot()) {
+		return nil
+	}
+	body := block.Body()
+	if body == nil {
+		return errors.New("invalid nil beacon block body")
+	}
+	kzgCommitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return errors.Wrap(err, "could not get KZG commitments")
+	}
+	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
+	if err != nil {
+		return errors.Wrap(err, "could not get blob sidecars")
+	}
+	return kzg.IsDataAvailable(kzgCommitments, sidecars)
 }
 
 // lateBlockTasks  is called 4 seconds into the slot and performs tasks
