@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
@@ -964,34 +965,11 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceSyncCommitteeContribution")
 	defer span.End()
 
-	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
+	syncCommitteeResp, err := core.ProduceSyncCommitteeContribution(ctx, req, vs.SyncCommitteePool, vs.V1Alpha1Server)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
+		return nil, err.Err
 	}
-	if msgs == nil {
-		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
-	}
-	v1alpha1Req := &ethpbalpha.AggregatedSigAndAggregationBitsRequest{
-		Msgs:      msgs,
-		Slot:      req.Slot,
-		SubnetId:  req.SubcommitteeIndex,
-		BlockRoot: req.BeaconBlockRoot,
-	}
-	v1alpha1Resp, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
-	}
-	contribution := &ethpbv2.SyncCommitteeContribution{
-		Slot:              req.Slot,
-		BeaconBlockRoot:   req.BeaconBlockRoot,
-		SubcommitteeIndex: req.SubcommitteeIndex,
-		AggregationBits:   v1alpha1Resp.Bits,
-		Signature:         v1alpha1Resp.AggregatedSig,
-	}
-
-	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
-		Data: contribution,
-	}, nil
+	return syncCommitteeResp, nil
 }
 
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
