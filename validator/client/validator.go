@@ -911,13 +911,12 @@ func (v *validator) logDuties(slot primitives.Slot, duties []*ethpb.DutiesRespon
 			}
 		}
 		if v.emitAccountMetrics {
-			if duty.IsSyncCommittee{
+			if duty.IsSyncCommittee {
 				ValidatorInSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(1))
-			}else{
+			} else {
 				ValidatorInSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(0))
 			}
 		}
-
 		for _, proposerSlot := range duty.ProposerSlots {
 			proposerIndex := proposerSlot - slotOffset
 			if proposerIndex >= params.BeaconConfig().SlotsPerEpoch {
