@@ -200,7 +200,7 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 			Slot:              syncCommitteeResp.Data.Slot,
 			BeaconBlockRoot:   syncCommitteeResp.Data.BeaconBlockRoot,
 			SubcommitteeIndex: syncCommitteeResp.Data.SubcommitteeIndex,
-			AggregationBits:   syncCommitteeResp.Data.AggregationBits,
+			AggregationBits:   syncCommitteeResp.Data.AggregationBits.Bytes(),
 			Signature:         syncCommitteeResp.Data.Signature,
 		},
 	}
