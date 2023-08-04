@@ -104,13 +104,13 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-
 	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	for _, item := range req.Data {
-		if err := validate.Struct(item); err != nil {
-			http2.HandleError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 		consensusItem, err := item.ToConsensus()
 		if err != nil {
 			http2.HandleError(w, "Could not convert request contribution to consensus contribution: "+err.Error(), http.StatusBadRequest)
@@ -138,16 +138,16 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	genesisTime := s.TimeFetcher.GenesisTime()
 
 	broadcastFailed := false
-	validate := validator.New()
 	for _, item := range req.Data {
-		if err := validate.Struct(item); err != nil {
-			http2.HandleError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 		consensusItem, err := item.ToConsensus()
 		if err != nil {
 			http2.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
