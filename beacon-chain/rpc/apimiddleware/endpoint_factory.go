@@ -68,7 +68,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/beacon_committee_subscriptions",
 		"/eth/v1/validator/sync_committee_subscriptions",
-		"/eth/v1/validator/sync_committee_contribution",
 		"/eth/v1/validator/prepare_beacon_proposer",
 		"/eth/v1/validator/register_validator",
 		"/eth/v1/validator/liveness/{epoch}",
@@ -272,9 +271,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSubscriptionsArray,
 		}
-	case "/eth/v1/validator/sync_committee_contribution":
-		endpoint.GetResponse = &ProduceSyncCommitteeContributionResponseJson{}
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "subcommittee_index"}, {Name: "beacon_block_root", Hex: true}}
 	case "/eth/v1/validator/prepare_beacon_proposer":
 		endpoint.PostRequest = &FeeRecipientsRequestJSON{}
 		endpoint.Hooks = apimiddleware.HookCollection{
