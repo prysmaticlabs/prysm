@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/r3labs/sse"
+	"github.com/r3labs/sse/v2"
 )
 
 type testSSZResponseJson struct {

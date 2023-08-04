@@ -184,7 +184,7 @@ func innerShuffleList(input []primitives.ValidatorIndex, seed [32]byte, shuffle 
 	for {
 		buf[seedSize] = r
 		ph := hashfunc(buf[:pivotViewSize])
-		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
+		pivot := binary.LittleEndian.Uint64(ph[:8]) % listSize
 		mirror := (pivot + 1) >> 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
 		source := hashfunc(buf)

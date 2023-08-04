@@ -109,10 +109,6 @@ message SyncCommitteeContribution {
   bytes signature = 5 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message SubmitContributionAndProofsRequest {
-  repeated SignedContributionAndProof data = 1;
-}
-
 // Aggregated sync committee signature object with selection proof to support light client.
 message ContributionAndProof {
   // Index of the aggregator that produced this proof.

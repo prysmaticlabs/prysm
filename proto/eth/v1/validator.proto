@@ -175,10 +175,6 @@ message ProduceAttestationDataResponse {
     AttestationData data = 1;
 }
 
-message SubmitAggregateAndProofsRequest {
-    repeated SignedAggregateAttestationAndProof data = 1;
-}
-
 message SubmitBeaconCommitteeSubscriptionsRequest {
     repeated BeaconCommitteeSubscribe data = 1;
 }
