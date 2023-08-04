@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -638,7 +637,6 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
-	ctx := context.Background()
 	genesis := util.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
@@ -655,133 +653,152 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
-	pubKeys := make([][]byte, len(deposits))
+	pubkeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		pubKeys[i] = deposits[i].Data.PublicKey
+		pubkeys[i] = deposits[i].Data.PublicKey
 	}
 
 	chainSlot := primitives.Slot(0)
 	chain := &mockChain.ChainService{
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
-	vs := &Server{
-		HeadFetcher:    chain,
-		TimeFetcher:    chain,
-		SyncChecker:    &mockSync.Sync{IsSyncing: false},
-		V1Alpha1Server: &v1alpha1validator.Server{},
+	s := &Server{
+		HeadFetcher: chain,
+		TimeFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
-	t.Run("Single subscription", func(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
 		cache.SubnetIDs.EmptyAllCaches()
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: []*ethpbv1.BeaconCommitteeSubscribe{
-				{
-					ValidatorIndex: 1,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   false,
-				},
-			},
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+
+		var body bytes.Buffer
+		_, err := body.WriteString(singleBeaconCommitteeContribution)
 		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
 		require.Equal(t, 1, len(subnets))
-		assert.Equal(t, uint64(4), subnets[0])
+		assert.Equal(t, uint64(5), subnets[0])
 	})
-
-	t.Run("Multiple subscriptions", func(t *testing.T) {
+	t.Run("multiple", func(t *testing.T) {
 		cache.SubnetIDs.EmptyAllCaches()
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: []*ethpbv1.BeaconCommitteeSubscribe{
-				{
-					ValidatorIndex: 1,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   false,
-				},
-				{
-					ValidatorIndex: 1000,
-					CommitteeIndex: 16,
-					Slot:           1,
-					IsAggregator:   false,
-				},
-			},
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleBeaconCommitteeContribution)
 		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
 		require.Equal(t, 2, len(subnets))
+		assert.Equal(t, uint64(5), subnets[0])
+		assert.Equal(t, uint64(4), subnets[1])
 	})
-
-	t.Run("Is aggregator", func(t *testing.T) {
+	t.Run("is aggregator", func(t *testing.T) {
 		cache.SubnetIDs.EmptyAllCaches()
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: []*ethpbv1.BeaconCommitteeSubscribe{
-				{
-					ValidatorIndex: 1,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   true,
-				},
-			},
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+
+		var body bytes.Buffer
+		_, err := body.WriteString(singleBeaconCommitteeContribution2)
 		require.NoError(t, err)
-		ids := cache.SubnetIDs.GetAggregatorSubnetIDs(primitives.Slot(1))
-		assert.Equal(t, 1, len(ids))
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		subnets := cache.SubnetIDs.GetAggregatorSubnetIDs(1)
+		require.Equal(t, 1, len(subnets))
+		assert.Equal(t, uint64(5), subnets[0])
 	})
-
-	t.Run("Validators assigned to subnet", func(t *testing.T) {
+	t.Run("validators assigned to subnets", func(t *testing.T) {
 		cache.SubnetIDs.EmptyAllCaches()
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: []*ethpbv1.BeaconCommitteeSubscribe{
-				{
-					ValidatorIndex: 1,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   true,
-				},
-				{
-					ValidatorIndex: 2,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   false,
-				},
-			},
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleBeaconCommitteeContribution2)
 		require.NoError(t, err)
-		ids, ok, _ := cache.SubnetIDs.GetPersistentSubnets(pubKeys[1])
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		subnets, ok, _ := cache.SubnetIDs.GetPersistentSubnets(pubkeys[1])
 		require.Equal(t, true, ok, "subnet for validator 1 not found")
-		assert.Equal(t, 1, len(ids))
-		ids, ok, _ = cache.SubnetIDs.GetPersistentSubnets(pubKeys[2])
+		assert.Equal(t, 1, len(subnets))
+		subnets, ok, _ = cache.SubnetIDs.GetPersistentSubnets(pubkeys[2])
 		require.Equal(t, true, ok, "subnet for validator 2 not found")
-		assert.Equal(t, 1, len(ids))
+		assert.Equal(t, 1, len(subnets))
 	})
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	t.Run("No subscriptions", func(t *testing.T) {
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: make([]*ethpbv1.BeaconCommitteeSubscribe, 0),
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("empty", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("invalid", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidBeaconCommitteeContribution)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+	t.Run("sync not ready", func(t *testing.T) {
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		chainService := &mockChain.ChainService{State: st}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
 		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "No subscriptions provided", err)
-	})
-}
 
-func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	chainService := &mockChain.ChainService{State: st}
-	vs := &Server{
-		SyncChecker:           &mockSync.Sync{IsSyncing: true},
-		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
-		OptimisticModeFetcher: chainService,
-	}
-	_, err = vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
-	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "Beacon node is currently syncing"))
+	})
 }
 
 var (
@@ -1017,6 +1034,66 @@ var (
       "2"
     ],
     "until_epoch": "1"
+  }
+]`
+	singleBeaconCommitteeContribution = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  }
+]`
+	singleBeaconCommitteeContribution2 = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": true
+  }
+]`
+	multipleBeaconCommitteeContribution = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  },
+  {
+    "validator_index": "2",
+    "committee_index": "0",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  }
+]`
+	multipleBeaconCommitteeContribution2 = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": true
+  },
+  {
+    "validator_index": "2",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  }
+]`
+	// validator_index is invalid
+	invalidBeaconCommitteeContribution = `[
+  {
+    "validator_index": "foo",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
   }
 ]`
 )
