@@ -175,27 +175,6 @@ message ProduceAttestationDataResponse {
     AttestationData data = 1;
 }
 
-message SubmitBeaconCommitteeSubscriptionsRequest {
-    repeated BeaconCommitteeSubscribe data = 1;
-}
-
-message BeaconCommitteeSubscribe {
-    // The validator index to subscribe for.
-    uint64 validator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-
-    // The committee index to be subscribed to.
-    uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.CommitteeIndex"];
-
-    // The total amount of committees for the given slot.
-    uint64 committees_at_slot = 3;
-
-    // The slot to be subscribed to.
-    uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-
-    // If subscribing for aggregator, the beacon node will aggregate all attestations received.
-    bool is_aggregator = 5;
-}
-
 message PrepareBeaconProposerRequest {
     message FeeRecipientContainer {
         // The address of the fee recipient.
