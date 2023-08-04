@@ -230,9 +230,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableBuildBlockParallel)
 		cfg.BuildBlockParallel = false
 	}
-	if ctx.IsSet(aggregateParallel.Name) {
-		logEnabled(aggregateParallel)
-		cfg.AggregateParallel = true
+	cfg.AggregateParallel = true
+	if ctx.IsSet(disableAggregateParallel.Name) {
+		logEnabled(disableAggregateParallel)
+		cfg.AggregateParallel = false
 	}
 	if ctx.IsSet(disableResourceManager.Name) {
 		logEnabled(disableResourceManager)
