@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
@@ -13,45 +12,26 @@ import (
 
 const defaultWorkerCount = 1
 
+// TODO use the correct beacon param for blocks by range size instead
+const defaultBatchSize = 64
+
 type Service struct {
 	ctx         context.Context
 	clockWaiter startup.ClockWaiter
 	clock       *startup.Clock
 	su          *StatusUpdater
-	p2p         p2p.P2P
 	nWorkers    int
-	todo        chan batch
-	done        chan batch
 	errChan     chan error
-	workers     map[workerId]*p2pWorker
 	batchSeq    *batchSequencer
 	batchSize   uint64
+	pool        BatchWorkerPool
+	initialized chan struct{}
+	exited      chan struct{}
 }
 
 var _ runtime.Service = (*Service)(nil)
 
 type ServiceOption func(*Service) error
-
-func WithStatusUpdater(su *StatusUpdater) ServiceOption {
-	return func(s *Service) error {
-		s.su = su
-		return nil
-	}
-}
-
-func WithClockWaiter(gw startup.ClockWaiter) ServiceOption {
-	return func(s *Service) error {
-		s.clockWaiter = gw
-		return nil
-	}
-}
-
-func WithP2P(p p2p.P2P) ServiceOption {
-	return func(s *Service) error {
-		s.p2p = p
-		return nil
-	}
-}
 
 func WithWorkerCount(n int) ServiceOption {
 	return func(s *Service) error {
@@ -67,9 +47,14 @@ func WithBatchSize(n uint64) ServiceOption {
 	}
 }
 
-func NewService(ctx context.Context, opts ...ServiceOption) (*Service, error) {
+func NewService(ctx context.Context, su *StatusUpdater, cw startup.ClockWaiter, pool BatchWorkerPool, opts ...ServiceOption) (*Service, error) {
 	s := &Service{
-		ctx: ctx,
+		ctx:         ctx,
+		su:          su,
+		clockWaiter: cw,
+		pool:        pool,
+		initialized: make(chan struct{}),
+		exited:      make(chan struct{}),
 	}
 	for _, o := range opts {
 		if err := o(s); err != nil {
@@ -79,54 +64,74 @@ func NewService(ctx context.Context, opts ...ServiceOption) (*Service, error) {
 	if s.nWorkers == 0 {
 		s.nWorkers = defaultWorkerCount
 	}
-	if s.todo == nil {
-		s.todo = make(chan batch)
-	}
-	if s.done == nil {
-		s.done = make(chan batch)
-	}
 	return s, nil
 }
 
 func (s *Service) Start() {
+	defer close(s.exited)
 	var err error
 	s.clock, err = s.clockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("backfill service failed to start while waiting for genesis data")
 	}
+
 	status := s.su.Status()
 	s.batchSeq = newBatchSequencer(s.nWorkers, primitives.Slot(status.LowSlot), primitives.Slot(status.HighSlot), primitives.Slot(s.batchSize))
-	err = s.spawnWorkers()
-	if err != nil {
+	s.pool.Spawn(s.nWorkers)
+
+	if err = s.initBatches(); err != nil {
 		log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
 	}
+
+	close(s.initialized)
 	for {
-		select {
-		case b := <-s.done:
-			s.batchSeq.update(b)
-			importable := s.batchSeq.importable()
-			for i := range importable {
-				ib := importable[i]
-				if err := s.importBatch(ib); err != nil {
-					s.downscore(ib)
-					ib.state = batchErrRetryable
-					s.batchSeq.update(b)
-					break
-				}
-				ib.state = batchImportComplete
-				s.batchSeq.update(b)
-			}
-			b, err = s.batchSeq.sequence()
-			if err != nil {
-				if !errors.Is(err, errEndSequence) {
-					log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
-				}
-			}
-			s.todo <- b
-		case <-s.ctx.Done():
+		b, err := s.pool.Finished()
+		if err != nil {
+			log.WithError(err).Error("Non-recoverable error in backfill service, quitting.")
 			return
 		}
+		s.batchSeq.update(b)
+		importable := s.batchSeq.importable()
+		for i := range importable {
+			ib := importable[i]
+			if err := s.importBatch(ib); err != nil {
+				s.downscore(ib)
+				ib.state = batchErrRetryable
+				s.batchSeq.update(b)
+				break
+			}
+			ib.state = batchImportComplete
+			s.batchSeq.update(ib)
+		}
+		b, err = s.batchSeq.sequence()
+		if err != nil {
+			if !errors.Is(err, errEndSequence) {
+				log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
+			}
+		}
+		// We want to update the pool with the batchEndSequence batches so that the pool can detect when all batches
+		// are finished.
+		s.pool.Todo(b)
 	}
+}
+
+func (s *Service) initBatches() error {
+	for i := 0; i < s.nWorkers; i++ {
+		b, err := s.batchSeq.sequence()
+		if err != nil {
+			if errors.Is(err, errEndSequence) {
+				return nil
+			}
+			return err
+		}
+
+		s.pool.Todo(b)
+	}
+	return nil
+}
+
+func (s *Service) importBatch(b batch) error {
+	return nil
 }
 
 func (s *Service) downscore(b batch) {
@@ -137,27 +142,5 @@ func (s *Service) Stop() error {
 }
 
 func (s *Service) Status() error {
-	return nil
-}
-
-func (s *Service) importBatch(b batch) error {
-	return nil
-}
-
-func (s *Service) spawnWorkers() error {
-	for i := 0; i < s.nWorkers; i++ {
-		id := workerId(i)
-		s.workers[id] = newP2pWorker(id, s.p2p, s.todo, s.done)
-		go s.workers[id].run(s.ctx)
-		b, err := s.batchSeq.sequence()
-		if err != nil {
-			// don't bother spawning workers if all batches have already been generated.
-			if errors.Is(err, errEndSequence) {
-				return nil
-			}
-			return err
-		}
-		s.todo <- b
-	}
 	return nil
 }

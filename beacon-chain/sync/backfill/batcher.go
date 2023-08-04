@@ -14,36 +14,15 @@ type batchSequencer struct {
 	seq     []batch
 }
 
-/*
-// Allocate a buffer the same size as the existing one.
-shifted := make([]batch, len(c.seq))
-// Fill the low end with the not importable batches, leaving the higher indices as the zero value.
-copy(shifted, c.seq[i:])
-// Offset into new list where the nil batches start.
-nb := len(shifted) - i
-// Handle edge case where list is totally drained by chaining off the last element and move nb forward.
-
-	if nb == 0 {
-		shifted[nb] = c.batcher.beforeBatch(importable[i])
-		nb += 1
-	}
-
-// Populate newly opened elements in seq with the appropriate batch.
-
-	for ; nb < len(shifted); nb++ {
-		shifted[nb] = c.batcher.beforeBatch(shifted[nb-1])
-	}
-
-// Overwrite the existing sequence with the sequence containing outstanding batches and room for more.
-c.seq = shifted
-*/
 func (c *batchSequencer) update(b batch) {
 	done := 0
 	for i := 0; i < len(c.seq); i++ {
-		if c.seq[i].begin == b.begin {
+		if b.replaces(c.seq[i]) {
 			c.seq[i] = b
 		}
 		// Assumes invariant that batches complete and update is called in order.
+		// This should be true because the code using the sequencer doesn't know the expected parent
+		// for a batch until it imports the previous batch.
 		if c.seq[i].state == batchImportComplete {
 			done += 1
 			continue
@@ -57,13 +36,13 @@ func (c *batchSequencer) update(b batch) {
 	}
 }
 
-// TODO fix batchEndSequence circular invariant
 func (c *batchSequencer) sequence() (batch, error) {
 	// batch start slots are in descending order, c.seq[n].begin == c.seq[n+1].end
 	for i := range c.seq {
 		switch c.seq[i].state {
 		case batchInit, batchErrRetryable:
 			c.seq[i].state = batchSequenced
+			c.seq[i].inc()
 			return c.seq[i], nil
 		case batchNil:
 			if i == 0 {
@@ -71,6 +50,7 @@ func (c *batchSequencer) sequence() (batch, error) {
 			}
 			c.seq[i] = c.batcher.beforeBatch(c.seq[i-1])
 			c.seq[i].state = batchSequenced
+			c.seq[i].inc()
 			return c.seq[i], nil
 		case batchEndSequence:
 			return batch{}, errors.Wrapf(errEndSequence, "LowSlot=%d", c.seq[i].begin)
@@ -87,14 +67,17 @@ func (c *batchSequencer) importable() []batch {
 		if c.seq[i].state == batchImportable {
 			continue
 		}
+		// as soon as we hit a batch with a different state, we return everything leading to it.
+		// if the first element isn't importable, we'll return slice [0:0] aka nothing.
 		return c.seq[0:i]
 	}
-	return nil
+	// if we hit this condition, it means every element had state = importable
+	return c.seq
 }
 
-func newBatchSequencer(nw int, min, max, size primitives.Slot) *batchSequencer {
+func newBatchSequencer(seqLen int, min, max, size primitives.Slot) *batchSequencer {
 	b := batcher{min: min, size: size}
-	seq := make([]batch, nw)
+	seq := make([]batch, seqLen)
 	seq[0] = b.before(max)
 	return &batchSequencer{batcher: b, seq: seq}
 }

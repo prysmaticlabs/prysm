@@ -49,6 +49,7 @@ type batchId string
 
 type batch struct {
 	scheduled time.Time
+	seq       int // sequence identifier, ie how many times has the sequence() method served this batch
 	retries   int
 	begin     primitives.Slot
 	end       primitives.Slot // half-open interval, [begin, end), ie >= start, < end.
@@ -64,6 +65,20 @@ func (b batch) logFields() log.Fields {
 		"scheduled":   b.scheduled.String(),
 		"retries":     b.retries,
 	}
+}
+
+func (b *batch) inc() {
+	b.seq += 1
+}
+
+func (b batch) replaces(r batch) bool {
+	if b.begin != r.begin {
+		return false
+	}
+	if b.end != r.end {
+		return false
+	}
+	return b.seq >= r.seq
 }
 
 func (b batch) id() batchId {
