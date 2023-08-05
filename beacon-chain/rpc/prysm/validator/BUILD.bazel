@@ -13,7 +13,7 @@ go_library(
         "//beacon-chain/rpc/core:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//consensus-types/primitives:go_default_library",
-        "//network:go_default_library",
+        "//network/http:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
     ],
 )

@@ -23,7 +23,7 @@ go_library(
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_r3labs_sse//:go_default_library",
+        "@com_github_r3labs_sse_v2//:go_default_library",
     ],
 )
 
@@ -46,6 +46,6 @@ go_test(
         "//testing/require:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
-        "@com_github_r3labs_sse//:go_default_library",
+        "@com_github_r3labs_sse_v2//:go_default_library",
     ],
 )

@@ -4,6 +4,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
@@ -30,4 +31,5 @@ type Server struct {
 	ChainInfoFetcher       blockchain.ChainInfoFetcher
 	BeaconDB               db.HeadAccessDatabase
 	BlockBuilder           builder.BlockBuilder
+	OperationNotifier      operation.Notifier
 }

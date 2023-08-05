@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -197,7 +197,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "Block rewards are not supported for Phase 0 blocks", e.Message)
@@ -399,7 +399,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "foo is not a validator index or pubkey", e.Message)
@@ -420,7 +420,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "No validator index found for pubkey "+pubkey, e.Message)
@@ -438,7 +438,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "Validator index 999 is too large. Maximum allowed index is 63", e.Message)
@@ -451,7 +451,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.Equal(t, "Attestation rewards are not supported for Phase 0", e.Message)
@@ -464,7 +464,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Could not decode epoch"))
@@ -477,7 +477,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.Equal(t, "Attestation rewards are available after two epoch transitions to ensure all attestations have a chance of inclusion", e.Message)
@@ -702,7 +702,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "foo is not a validator index or pubkey", e.Message)
@@ -729,7 +729,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "No validator index found for pubkey "+pubkey, e.Message)
@@ -753,7 +753,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "Validator index 9999 is too large. Maximum allowed index is 1023", e.Message)
@@ -772,7 +772,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &network.DefaultErrorJson{}
+		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "Sync committee rewards are not supported for Phase 0", e.Message)

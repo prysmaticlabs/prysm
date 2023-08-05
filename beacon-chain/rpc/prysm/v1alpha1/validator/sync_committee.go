@@ -5,8 +5,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
-	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -121,30 +120,11 @@ func (vs *Server) GetSyncCommitteeContribution(
 func (vs *Server) SubmitSignedContributionAndProof(
 	ctx context.Context, s *ethpb.SignedContributionAndProof,
 ) (*emptypb.Empty, error) {
-	errs, ctx := errgroup.WithContext(ctx)
-
-	// Broadcasting and saving contribution into the pool in parallel. As one fail should not affect another.
-	errs.Go(func() error {
-		return vs.P2P.Broadcast(ctx, s)
-	})
-
-	if err := vs.SyncCommitteePool.SaveSyncCommitteeContribution(s.Message.Contribution); err != nil {
-		return nil, err
+	err := core.SubmitSignedContributionAndProof(ctx, s, vs.P2P, vs.SyncCommitteePool, vs.OperationNotifier)
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(core.ErrorReasonToGRPC(err.Reason), err.Err.Error())
 	}
-
-	// Wait for p2p broadcast to complete and return the first error (if any)
-	err := errs.Wait()
-
-	if err == nil {
-		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: opfeed.SyncCommitteeContributionReceived,
-			Data: &opfeed.SyncCommitteeContributionReceivedData{
-				Contribution: s,
-			},
-		})
-	}
-
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, nil
 }
 
 // AggregatedSigAndAggregationBits returns the aggregated signature and aggregation bits
