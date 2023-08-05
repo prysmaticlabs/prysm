@@ -5,7 +5,7 @@ go_library(
     srcs = [
         "errors.go",
         "log.go",
-        "server.go",
+        "service.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core",
