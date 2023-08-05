@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -216,14 +217,15 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 
 	var lastValidHash []byte
 	if blk.Version() >= version.Deneb {
-		var versionedHashes [][32]byte
+		var versionedHashes []common.Hash
 		versionedHashes, err = kzgCommitmentsToVersionedHashes(blk.Block().Body())
 		if err != nil {
 			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
 		}
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, blk.Block().ParentRoot())
+		pr := common.Hash(blk.Block().ParentRoot())
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &pr)
 	} else {
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, [][32]byte{}, [32]byte{} /*empty version hashes and root before Deneb*/)
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, []common.Hash{}, &common.Hash{} /*empty version hashes and root before Deneb*/)
 	}
 	switch err {
 	case nil:
@@ -392,13 +394,13 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 	return nil
 }
 
-func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([][32]byte, error) {
+func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([]common.Hash, error) {
 	commitments, err := body.BlobKzgCommitments()
 	if err != nil {
 		return nil, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
 	}
 
-	versionedHashes := make([][32]byte, len(commitments))
+	versionedHashes := make([]common.Hash, len(commitments))
 	for i, commitment := range commitments {
 		versionedHashes[i] = sha256.Sum256(commitment)
 		versionedHashes[i][0] = blobCommitmentVersionKZG
