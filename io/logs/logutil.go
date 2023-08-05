@@ -3,6 +3,7 @@
 package logs
 
 import (
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"io"
 	"net/url"
 	"os"
@@ -21,7 +22,7 @@ func addLogWriter(w io.Writer) {
 // ConfigurePersistentLogging adds a log-to-file writer. File content is identical to stdout.
 func ConfigurePersistentLogging(logFileName string) error {
 	logrus.WithField("logFileName", logFileName).Info("Logs will be made persistent")
-	if err := os.MkdirAll(filepath.Dir(logFileName), params.BeaconIoConfig().ReadWriteExecutePermissions); err != nil {
+	if err := file.MkdirAll(filepath.Dir(logFileName)); err != nil {
 		return err
 	}
 	f, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, params.BeaconIoConfig().ReadWritePermissions) // #nosec G304
