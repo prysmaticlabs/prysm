@@ -191,7 +191,6 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	default:
 		return nil, nil, false, errors.New("unknown beacon state version")
 	}
-
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
 		return nil, nil, false, errors.Wrap(err, "could not prepare payload")
