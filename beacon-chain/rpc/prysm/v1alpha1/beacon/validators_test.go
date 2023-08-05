@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
@@ -1797,7 +1798,9 @@ func TestGetValidatorPerformance_Syncing(t *testing.T) {
 	ctx := context.Background()
 
 	bs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		CoreService: &core.Service{
+			SyncChecker: &mockSync.Sync{IsSyncing: true},
+		},
 	}
 
 	wanted := "Syncing to latest head, not ready to respond"
@@ -1857,11 +1860,13 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{
+				State: headState,
+			},
+			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
@@ -1918,12 +1923,14 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	require.NoError(t, headState.SetValidators(validators))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			// 10 epochs into the future.
-			State: headState,
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{
+				// 10 epochs into the future.
+				State: headState,
+			},
+			SyncChecker:        &mockSync.Sync{IsSyncing: false},
+			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 	c := headState.Copy()
 	vp, bp, err := precompute.New(ctx, c)
@@ -1988,12 +1995,14 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			// 10 epochs into the future.
-			State: headState,
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{
+				// 10 epochs into the future.
+				State: headState,
+			},
+			SyncChecker:        &mockSync.Sync{IsSyncing: false},
+			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 	c := headState.Copy()
 	vp, bp, err := precompute.New(ctx, c)
@@ -2064,11 +2073,13 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{
+				State: headState,
+			},
+			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
@@ -2132,11 +2143,13 @@ func TestGetValidatorPerformanceBellatrix_OK(t *testing.T) {
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{
+				State: headState,
+			},
+			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
@@ -2200,11 +2213,13 @@ func TestGetValidatorPerformanceCapella_OK(t *testing.T) {
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{
+				State: headState,
+			},
+			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
