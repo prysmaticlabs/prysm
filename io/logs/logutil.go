@@ -3,7 +3,6 @@
 package logs
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"io"
 	"net/url"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/sirupsen/logrus"
 )
 
