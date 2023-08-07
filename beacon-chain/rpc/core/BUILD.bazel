@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "errors.go",
         "log.go",
+        "service.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core",
@@ -20,6 +21,7 @@ go_library(
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/operations/synccommittee:go_default_library",
         "//beacon-chain/p2p:go_default_library",
+        "//beacon-chain/sync:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",

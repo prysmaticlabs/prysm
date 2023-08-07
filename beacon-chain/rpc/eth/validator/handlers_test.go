@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -295,14 +296,16 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 }
 
 func TestSubmitContributionAndProofs(t *testing.T) {
-	s := &Server{
+	c := &core.Service{
 		OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 	}
 
+	s := &Server{CoreService: c}
+
 	t.Run("single", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
-		s.Broadcaster = broadcaster
-		s.SyncCommitteePool = synccommittee.NewStore()
+		c.Broadcaster = broadcaster
+		c.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer
 		_, err := body.WriteString(singleContribution)
@@ -314,14 +317,14 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		s.SubmitContributionAndProofs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
-		contributions, err := s.SyncCommitteePool.SyncCommitteeContributions(1)
+		contributions, err := c.SyncCommitteePool.SyncCommitteeContributions(1)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(contributions))
 	})
 	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
-		s.Broadcaster = broadcaster
-		s.SyncCommitteePool = synccommittee.NewStore()
+		c.Broadcaster = broadcaster
+		c.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer
 		_, err := body.WriteString(multipleContributions)
@@ -333,7 +336,7 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		s.SubmitContributionAndProofs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
-		contributions, err := s.SyncCommitteePool.SyncCommitteeContributions(1)
+		contributions, err := c.SyncCommitteePool.SyncCommitteeContributions(1)
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(contributions))
 	})
@@ -367,7 +370,7 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
 	})
 	t.Run("invalid", func(t *testing.T) {
-		s.SyncCommitteePool = synccommittee.NewStore()
+		c.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer
 		_, err := body.WriteString(invalidContribution)
@@ -382,16 +385,35 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
+
+	t.Run("no body", func(t *testing.T) {
+		c.SyncCommitteePool = synccommittee.NewStore()
+
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitContributionAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
 }
 
 func TestSubmitAggregateAndProofs(t *testing.T) {
+	c := &core.Service{
+		GenesisTimeFetcher: &mockChain.ChainService{},
+	}
+
 	s := &Server{
-		TimeFetcher: &mockChain.ChainService{},
+		CoreService: c,
 	}
 
 	t.Run("single", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
-		s.Broadcaster = broadcaster
+		c.Broadcaster = broadcaster
 
 		var body bytes.Buffer
 		_, err := body.WriteString(singleAggregate)
@@ -406,8 +428,8 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	})
 	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
-		s.Broadcaster = broadcaster
-		s.SyncCommitteePool = synccommittee.NewStore()
+		c.Broadcaster = broadcaster
+		c.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer
 		_, err := body.WriteString(multipleAggregates)
