@@ -26,6 +26,7 @@ go_test(
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/rpc/core:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//config/params:go_default_library",
