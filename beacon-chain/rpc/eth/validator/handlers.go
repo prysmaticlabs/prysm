@@ -176,7 +176,6 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	if !valid {
 		return
 	}
-
 	syncCommitteeResp, rpcError := s.CoreService.ProduceSyncCommitteeContribution(
 		ctx,
 		&ethpbv2.ProduceSyncCommitteeContributionRequest{

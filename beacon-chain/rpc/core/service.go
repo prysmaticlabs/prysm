@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type Service struct {
@@ -16,5 +15,4 @@ type Service struct {
 	Broadcaster        p2p.Broadcaster
 	SyncCommitteePool  synccommittee.Pool
 	OperationNotifier  opfeed.Notifier
-	V1Alpha1Server     ethpb.BeaconNodeValidatorServer
 }
