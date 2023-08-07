@@ -520,7 +520,59 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.ErrorContains(t, "Beacon Block Root is invalid", errors.New(writer.Body.String()))
 	})
+	t.Run("no committee messages", func(t *testing.T) {
+		url := "http://example.com?slot=1&subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		server.ProduceSyncCommitteeContribution(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &ProduceSyncCommitteeContributionResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+
+		request = httptest.NewRequest(http.MethodGet, url, nil)
+		writer = httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		syncCommitteePool = synccommittee.NewStore()
+		server = Server{
+			CoreService: &core.Service{
+				HeadFetcher: &mockChain.ChainService{
+					SyncCommitteeIndices: []primitives.CommitteeIndex{0},
+				},
+				SyncCommitteePool: syncCommitteePool,
+			},
+		}
+		server.ProduceSyncCommitteeContribution(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		resp2 := &ProduceSyncCommitteeContributionResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
+		require.ErrorContains(t, "Could not compute validator performance: No subcommittee messages found", errors.New(writer.Body.String()))
+	})
 }
+
+//func a () {
+//	syncCommitteePool = synccommittee.NewStore()
+//	v1Server = &v1alpha1validator.Server{
+//		SyncCommitteePool: syncCommitteePool,
+//		HeadFetcher: &mockChain.ChainService{
+//			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
+//		},
+//	}
+//	server = Server{
+//		V1Alpha1Server:    v1Server,
+//		SyncCommitteePool: syncCommitteePool,
+//	}
+//	req = &ethpbv2.ProduceSyncCommitteeContributionRequest{
+//		Slot:              0,
+//		SubcommitteeIndex: 0,
+//		BeaconBlockRoot:   root,
+//	}
+//	_, err = server.ProduceSyncCommitteeContribution(ctx, req)
+//	assert.ErrorContains(t, "No subcommittee messages found", err)
+//}
 
 const (
 	singleContribution = `[
