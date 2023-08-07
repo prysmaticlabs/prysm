@@ -18,6 +18,7 @@ type LRU[K comparable, V any] struct {
 	evictList     *lruList[K, V]
 	items         map[K]*entry[K, V]
 	onEvict       EvictCallback[K, V]
+	getChan       chan *entry[K, V]
 }
 
 // NewLRU constructs an LRU of the given size
@@ -25,13 +26,19 @@ func NewLRU[K comparable, V any](size int, onEvict EvictCallback[K, V]) (*LRU[K,
 	if size <= 0 {
 		return nil, errors.New("must provide a positive size")
 	}
+	// Initialize the channel buffer size as being 10% of the cache size.
+	chanSize := size / 10
 
 	c := &LRU[K, V]{
 		size:      size,
 		evictList: newList[K, V](),
 		items:     make(map[K]*entry[K, V]),
 		onEvict:   onEvict,
+		getChan:   make(chan *entry[K, V], chanSize),
 	}
+	// Spin off separate go-routine to handle evict list
+	// operations.
+	go c.handleGetRequests()
 	return c, nil
 }
 
@@ -77,12 +84,7 @@ func (c *LRU[K, V]) Get(key K) (value V, ok bool) {
 		c.itemsLock.RUnlock()
 
 		// Make this get function non-blocking for multiple readers.
-		go func() {
-			c.evictListLock.Lock()
-			c.evictList.moveToFront(ent)
-			c.evictListLock.Unlock()
-		}()
-
+		c.getChan <- ent
 		return ent.value, true
 	}
 	c.itemsLock.RUnlock()
@@ -131,5 +133,14 @@ func (c *LRU[K, V]) removeElement(e *entry[K, V]) {
 	c.itemsLock.Unlock()
 	if c.onEvict != nil {
 		c.onEvict(e.key, e.value)
+	}
+}
+
+func (c *LRU[K, V]) handleGetRequests() {
+	for {
+		entry := <-c.getChan
+		c.evictListLock.Lock()
+		c.evictList.moveToFront(entry)
+		c.evictListLock.Unlock()
 	}
 }

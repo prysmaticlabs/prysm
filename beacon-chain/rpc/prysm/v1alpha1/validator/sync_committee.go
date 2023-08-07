@@ -120,7 +120,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 func (vs *Server) SubmitSignedContributionAndProof(
 	ctx context.Context, s *ethpb.SignedContributionAndProof,
 ) (*emptypb.Empty, error) {
-	err := core.SubmitSignedContributionAndProof(ctx, s, vs.P2P, vs.SyncCommitteePool, vs.OperationNotifier)
+	err := vs.CoreService.SubmitSignedContributionAndProof(ctx, s)
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(core.ErrorReasonToGRPC(err.Reason), err.Err.Error())
 	}

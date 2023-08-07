@@ -105,19 +105,19 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-
 	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	for _, item := range req.Data {
-		if err := validate.Struct(item); err != nil {
-			http2.HandleError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 		consensusItem, err := item.ToConsensus()
 		if err != nil {
 			http2.HandleError(w, "Could not convert request contribution to consensus contribution: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		rpcError := core.SubmitSignedContributionAndProof(r.Context(), consensusItem, s.Broadcaster, s.SyncCommitteePool, s.OperationNotifier)
+		rpcError := s.CoreService.SubmitSignedContributionAndProof(r.Context(), consensusItem)
 		if rpcError != nil {
 			http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 		}
@@ -139,26 +139,22 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-
-	genesisTime := s.TimeFetcher.GenesisTime()
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	broadcastFailed := false
-	validate := validator.New()
 	for _, item := range req.Data {
-		if err := validate.Struct(item); err != nil {
-			http2.HandleError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 		consensusItem, err := item.ToConsensus()
 		if err != nil {
 			http2.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		rpcError := core.SubmitSignedAggregateSelectionProof(
+		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(
 			r.Context(),
 			&ethpbalpha.SignedAggregateSubmitRequest{SignedAggregateAndProof: consensusItem},
-			genesisTime,
-			s.Broadcaster,
 		)
 		if rpcError != nil {
 			_, ok := rpcError.Err.(*core.AggregateBroadcastFailedError)

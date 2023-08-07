@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -32,4 +33,5 @@ type Server struct {
 	BeaconDB               db.HeadAccessDatabase
 	BlockBuilder           builder.BlockBuilder
 	OperationNotifier      operation.Notifier
+	CoreService            *core.Service
 }
