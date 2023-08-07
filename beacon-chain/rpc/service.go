@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
@@ -231,6 +232,15 @@ func (s *Service) Start() {
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals).Methods(http.MethodGet)
 
+	coreService := &core.Service{
+		HeadFetcher:        s.cfg.HeadFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		SyncChecker:        s.cfg.SyncService,
+		Broadcaster:        s.cfg.Broadcaster,
+		SyncCommitteePool:  s.cfg.SyncCommitteeObjectPool,
+		OperationNotifier:  s.cfg.OperationNotifier,
+	}
+
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
 		AttestationCache:       cache.NewAttestationCache(),
@@ -266,6 +276,7 @@ func (s *Service) Start() {
 		BlockBuilder:           s.cfg.BlockBuilder,
 		BLSChangesPool:         s.cfg.BLSChangesPool,
 		ClockWaiter:            s.cfg.ClockWaiter,
+		CoreService:            coreService,
 	}
 	go validatorServer.RandomStuff()
 	validatorServerV1 := &validator.Server{
@@ -284,10 +295,12 @@ func (s *Service) Start() {
 		BeaconDB:               s.cfg.BeaconDB,
 		BlockBuilder:           s.cfg.BlockBuilder,
 		OperationNotifier:      s.cfg.OperationNotifier,
+		CoreService:            coreService,
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_attestation", validatorServerV1.GetAggregateAttestation).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/contribution_and_proofs", validatorServerV1.SubmitContributionAndProofs).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_and_proofs", validatorServerV1.SubmitAggregateAndProofs).Methods(http.MethodPost)
 
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),
@@ -354,6 +367,7 @@ func (s *Service) Start() {
 		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
 		ReplayerBuilder:             ch,
+		CoreService:                 coreService,
 	}
 	beaconChainServerV1 := &beacon.Server{
 		CanonicalHistory:              ch,
@@ -384,6 +398,7 @@ func (s *Service) Start() {
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		HeadFetcher:        s.cfg.HeadFetcher,
 		SyncChecker:        s.cfg.SyncService,
+		CoreService:        coreService,
 	}
 	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2).Methods(http.MethodPost)

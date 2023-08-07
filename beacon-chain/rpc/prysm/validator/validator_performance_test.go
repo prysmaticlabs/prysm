@@ -14,6 +14,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -28,12 +29,13 @@ import (
 func TestServer_GetValidatorPerformance(t *testing.T) {
 	t.Run("Syncing", func(t *testing.T) {
 		vs := &Server{
-			SyncChecker: &mockSync.Sync{IsSyncing: true},
+			CoreService: &core.Service{
+				SyncChecker: &mockSync.Sync{IsSyncing: true},
+			},
 		}
 
-		var buf bytes.Buffer
 		srv := httptest.NewServer(http.HandlerFunc(vs.GetValidatorPerformance))
-		req := httptest.NewRequest("POST", "/foo", &buf)
+		req := httptest.NewRequest("POST", "/foo", nil)
 
 		client := &http.Client{}
 		rawResp, err := client.Post(srv.URL, "application/json", req.Body)
@@ -57,11 +59,13 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 		vs := &Server{
-			HeadFetcher: &mock.ChainService{
-				State: headState,
+			CoreService: &core.Service{
+				HeadFetcher: &mock.ChainService{
+					State: headState,
+				},
+				GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		}
 		want := &ValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
@@ -111,12 +115,14 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 		vs := &Server{
-			HeadFetcher: &mock.ChainService{
-				// 10 epochs into the future.
-				State: headState,
+			CoreService: &core.Service{
+				HeadFetcher: &mock.ChainService{
+					// 10 epochs into the future.
+					State: headState,
+				},
+				SyncChecker:        &mockSync.Sync{IsSyncing: false},
+				GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 			},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		}
 		c := headState.Copy()
 		vp, bp, err := precompute.New(ctx, c)
@@ -174,12 +180,14 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 		vs := &Server{
-			HeadFetcher: &mock.ChainService{
-				// 10 epochs into the future.
-				State: headState,
+			CoreService: &core.Service{
+				HeadFetcher: &mock.ChainService{
+					// 10 epochs into the future.
+					State: headState,
+				},
+				SyncChecker:        &mockSync.Sync{IsSyncing: false},
+				GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 			},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		}
 		c := headState.Copy()
 		vp, bp, err := precompute.New(ctx, c)
@@ -243,11 +251,13 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 		vs := &Server{
-			HeadFetcher: &mock.ChainService{
-				State: headState,
+			CoreService: &core.Service{
+				HeadFetcher: &mock.ChainService{
+					State: headState,
+				},
+				GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		}
 		want := &ValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
@@ -303,11 +313,13 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 		vs := &Server{
-			HeadFetcher: &mock.ChainService{
-				State: headState,
+			CoreService: &core.Service{
+				HeadFetcher: &mock.ChainService{
+					State: headState,
+				},
+				GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		}
 		want := &ValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
@@ -363,11 +375,13 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 		offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 		vs := &Server{
-			HeadFetcher: &mock.ChainService{
-				State: headState,
+			CoreService: &core.Service{
+				HeadFetcher: &mock.ChainService{
+					State: headState,
+				},
+				GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		}
 		want := &ValidatorPerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},

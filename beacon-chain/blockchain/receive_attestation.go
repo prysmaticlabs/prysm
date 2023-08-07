@@ -92,24 +92,26 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 			return
 		}
 
-		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
-		pat := slots.NewSlotTickerWithOffset(s.genesisTime, -reorgLateBlockCountAttestations, params.BeaconConfig().SecondsPerSlot)
+		reorgInterval := time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot) - reorgLateBlockCountAttestations
+		ticker := slots.NewSlotTickerWithIntervals(s.genesisTime, []time.Duration{0, reorgInterval})
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
-			case <-pat.C():
-				log.Infof("proposer_mocker: calling updated head via offset ticker")
-				s.UpdateHead(s.ctx, s.CurrentSlot()+1)
-			case <-st.C():
-				log.Infof("proposer_mocker: calling updated head via normal slot ticker in spawn atts")
-				s.cfg.ForkChoiceStore.Lock()
-				if err := s.cfg.ForkChoiceStore.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
-					log.WithError(err).Error("could not process new slot")
-				}
-				s.cfg.ForkChoiceStore.Unlock()
+			case slotInterval := <-ticker.C():
+				if slotInterval.Interval > 0 {
+					log.Infof("proposer_mocker: calling updated head via offset ticker")
+					s.UpdateHead(s.ctx, slotInterval.Slot+1)
+				} else {
+					log.Infof("proposer_mocker: calling updated head via normal slot ticker in spawn atts")
+					s.cfg.ForkChoiceStore.Lock()
+					if err := s.cfg.ForkChoiceStore.NewSlot(s.ctx, slotInterval.Slot); err != nil {
+						log.WithError(err).Error("could not process new slot")
+					}
+					s.cfg.ForkChoiceStore.Unlock()
 
-				s.UpdateHead(s.ctx, s.CurrentSlot())
+					s.UpdateHead(s.ctx, slotInterval.Slot)
+				}
 			}
 		}
 	}()
