@@ -190,12 +190,12 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 		return
 	}
 	response := &ProduceSyncCommitteeContributionResponse{
-		Data: &SyncCommitteeContribution{
-			Slot:              syncCommitteeResp.Data.Slot,
-			BeaconBlockRoot:   syncCommitteeResp.Data.BeaconBlockRoot,
-			SubcommitteeIndex: syncCommitteeResp.Data.SubcommitteeIndex,
-			AggregationBits:   syncCommitteeResp.Data.AggregationBits.Bytes(),
-			Signature:         syncCommitteeResp.Data.Signature,
+		Data: &shared.SyncCommitteeContribution{
+			Slot:              strconv.FormatUint(uint64(syncCommitteeResp.Data.Slot), 10),
+			BeaconBlockRoot:   hexutil.Encode(syncCommitteeResp.Data.BeaconBlockRoot),
+			SubcommitteeIndex: strconv.FormatUint(syncCommitteeResp.Data.SubcommitteeIndex, 10),
+			AggregationBits:   hexutil.Encode(syncCommitteeResp.Data.AggregationBits),
+			Signature:         hexutil.Encode(syncCommitteeResp.Data.Signature),
 		},
 	}
 	http2.WriteJson(w, response)

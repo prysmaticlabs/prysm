@@ -17,6 +17,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -278,13 +279,15 @@ func (s *Service) ProduceSyncCommitteeContribution(
 	if msgs == nil {
 		return nil, &RpcError{Err: errors.New("No subcommittee messages found"), Reason: NotFound}
 	}
-	v1alpha1Req := &ethpb.AggregatedSigAndAggregationBitsRequest{
-		Msgs:      msgs,
-		Slot:      req.Slot,
-		SubnetId:  req.SubcommitteeIndex,
-		BlockRoot: req.BeaconBlockRoot,
-	}
-	v1alpha1Resp, err := s.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
+	v1alpha1Resp, err := s.ComputeAggregatedSigAndAggregationBits(
+		ctx,
+		&ethpb.AggregatedSigAndAggregationBitsRequest{
+			Msgs:      msgs,
+			Slot:      req.Slot,
+			SubnetId:  req.SubcommitteeIndex,
+			BlockRoot: req.BeaconBlockRoot,
+		},
+	)
 	if err != nil {
 		return nil, &RpcError{Err: errors.Wrap(err, "Could not get contribution data"), Reason: Internal}
 	}
@@ -299,4 +302,40 @@ func (s *Service) ProduceSyncCommitteeContribution(
 	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
 		Data: contribution,
 	}, nil
+}
+
+func (s *Service) ComputeAggregatedSigAndAggregationBits(
+	ctx context.Context,
+	req *ethpb.AggregatedSigAndAggregationBitsRequest) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
+
+	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+	sigs := make([][]byte, 0, subCommitteeSize)
+	bits := ethpb.NewSyncCommitteeAggregationBits()
+	for _, msg := range req.Msgs {
+		if bytes.Equal(req.BlockRoot, msg.BlockRoot) {
+			headSyncCommitteeIndices, err := s.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, req.Slot)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get sync subcommittee index")
+			}
+			for _, index := range headSyncCommitteeIndices {
+				i := uint64(index)
+				subnetIndex := i / subCommitteeSize
+				indexMod := i % subCommitteeSize
+				if subnetIndex == req.SubnetId && !bits.BitAt(indexMod) {
+					bits.SetBitAt(indexMod, true)
+					sigs = append(sigs, msg.Signature)
+				}
+			}
+		}
+	}
+	aggregatedSig := make([]byte, 96)
+	aggregatedSig[0] = 0xC0
+	if len(sigs) != 0 {
+		uncompressedSigs, err := bls.MultipleSignaturesFromBytes(sigs)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decompress signatures")
+		}
+		aggregatedSig = bls.AggregateSignatures(uncompressedSigs).Marshal()
+	}
+	return &ethpb.AggregatedSigAndAggregationBitsResponse{AggregatedSig: aggregatedSig, Bits: bits}, nil
 }
