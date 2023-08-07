@@ -476,7 +476,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
 	})
-	t.Run("not ok: missing query", func(t *testing.T) {
+	t.Run("no slot provided", func(t *testing.T) {
 		url := "http://example.com?subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 		request := httptest.NewRequest(http.MethodGet, url, nil)
 		writer := httptest.NewRecorder()
@@ -487,6 +487,42 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		resp := &ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.ErrorContains(t, "Slot is required", errors.New(writer.Body.String()))
+	})
+	t.Run("no subcommittee_index provided", func(t *testing.T) {
+		url := "http://example.com?slot=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		server.ProduceSyncCommitteeContribution(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		resp := &ProduceSyncCommitteeContributionResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.ErrorContains(t, "Subcommittee Index is required", errors.New(writer.Body.String()))
+	})
+	t.Run("no beacon_block_root provided", func(t *testing.T) {
+		url := "http://example.com?slot=1&subcommittee_index=1"
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		server.ProduceSyncCommitteeContribution(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		resp := &ProduceSyncCommitteeContributionResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.ErrorContains(t, "Beacon Block Root is required", errors.New(writer.Body.String()))
+	})
+	t.Run("invalid block root", func(t *testing.T) {
+		url := "http://example.com?slot=1&subcommittee_index=1&beacon_block_root=0"
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		server.ProduceSyncCommitteeContribution(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		resp := &ProduceSyncCommitteeContributionResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.ErrorContains(t, "Beacon Block Root is invalid", errors.New(writer.Body.String()))
 	})
 }
 
