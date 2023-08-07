@@ -279,7 +279,7 @@ func (s *Service) ProduceSyncCommitteeContribution(
 	if msgs == nil {
 		return nil, &RpcError{Err: errors.New("No subcommittee messages found"), Reason: NotFound}
 	}
-	aggregatedSigAndBits, err := s.ComputeAggregatedSigAndAggregationBits(
+	aggregatedSigAndBits, err := s.AggregatedSigAndAggregationBits(
 		ctx,
 		&ethpb.AggregatedSigAndAggregationBitsRequest{
 			Msgs:      msgs,
@@ -304,9 +304,9 @@ func (s *Service) ProduceSyncCommitteeContribution(
 	}, nil
 }
 
-// ComputeAggregatedSigAndAggregationBits returns the aggregated signature and aggregation bits
+// AggregatedSigAndAggregationBits returns the aggregated signature and aggregation bits
 // associated with a particular set of sync committee messages.
-func (s *Service) ComputeAggregatedSigAndAggregationBits(
+func (s *Service) AggregatedSigAndAggregationBits(
 	ctx context.Context,
 	req *ethpb.AggregatedSigAndAggregationBitsRequest) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount

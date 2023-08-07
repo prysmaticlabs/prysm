@@ -97,7 +97,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
 	}
-	aggregatedSigAndBits, err := vs.CoreService.ComputeAggregatedSigAndAggregationBits(
+	aggregatedSigAndBits, err := vs.CoreService.AggregatedSigAndAggregationBits(
 		ctx,
 		&ethpb.AggregatedSigAndAggregationBitsRequest{
 			Msgs:      msgs,
@@ -137,7 +137,7 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 	ctx context.Context,
 	req *ethpb.AggregatedSigAndAggregationBitsRequest,
 ) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
-	aggregatedSigAndBits, err := vs.CoreService.ComputeAggregatedSigAndAggregationBits(ctx, req)
+	aggregatedSigAndBits, err := vs.CoreService.AggregatedSigAndAggregationBits(ctx, req)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
