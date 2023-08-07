@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -454,11 +453,8 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
 	server := Server{
 		CoreService: &core.Service{
-			V1Alpha1Server: &v1alpha1validator.Server{
-				SyncCommitteePool: syncCommitteePool,
-				HeadFetcher: &mockChain.ChainService{
-					SyncCommitteeIndices: []primitives.CommitteeIndex{0},
-				},
+			HeadFetcher: &mockChain.ChainService{
+				SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 			},
 			SyncCommitteePool: syncCommitteePool,
 		},
