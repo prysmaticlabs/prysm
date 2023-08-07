@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -287,14 +288,16 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 }
 
 func TestSubmitContributionAndProofs(t *testing.T) {
-	s := &Server{
+	c := &core.Service{
 		OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 	}
 
+	s := &Server{CoreService: c}
+
 	t.Run("single", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
-		s.Broadcaster = broadcaster
-		s.SyncCommitteePool = synccommittee.NewStore()
+		c.Broadcaster = broadcaster
+		c.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer
 		_, err := body.WriteString(singleContribution)
@@ -306,15 +309,15 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		s.SubmitContributionAndProofs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
-		contributions, err := s.SyncCommitteePool.SyncCommitteeContributions(1)
+		contributions, err := c.SyncCommitteePool.SyncCommitteeContributions(1)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(contributions))
 	})
 
 	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
-		s.Broadcaster = broadcaster
-		s.SyncCommitteePool = synccommittee.NewStore()
+		c.Broadcaster = broadcaster
+		c.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer
 		_, err := body.WriteString(multipleContributions)
@@ -326,13 +329,13 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		s.SubmitContributionAndProofs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
-		contributions, err := s.SyncCommitteePool.SyncCommitteeContributions(1)
+		contributions, err := c.SyncCommitteePool.SyncCommitteeContributions(1)
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(contributions))
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		s.SyncCommitteePool = synccommittee.NewStore()
+		c.SyncCommitteePool = synccommittee.NewStore()
 
 		var body bytes.Buffer
 		_, err := body.WriteString(invalidContribution)
@@ -343,19 +346,90 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 
 		s.SubmitContributionAndProofs(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
 
 	t.Run("no body", func(t *testing.T) {
-		s.SyncCommitteePool = synccommittee.NewStore()
+		c.SyncCommitteePool = synccommittee.NewStore()
 
-		var body bytes.Buffer
-		_, err := body.WriteString(invalidContribution)
-		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
 		s.SubmitContributionAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+}
+
+func TestSubmitAggregateAndProofs(t *testing.T) {
+	c := &core.Service{
+		GenesisTimeFetcher: &mockChain.ChainService{},
+	}
+
+	s := &Server{
+		CoreService: c,
+	}
+
+	t.Run("single", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		c.Broadcaster = broadcaster
+
+		var body bytes.Buffer
+		_, err := body.WriteString(singleAggregate)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	})
+
+	t.Run("multiple", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		c.Broadcaster = broadcaster
+		c.SyncCommitteePool = synccommittee.NewStore()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleAggregates)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidAggregate)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofs(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
@@ -424,6 +498,110 @@ const (
         "aggregation_bits": "0x01",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
       }
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+]`
+	singleAggregate = `[
+  {
+    "message": {
+      "aggregator_index": "1",
+      "aggregate": {
+        "aggregation_bits": "0x01",
+        "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+        "data": {
+          "slot": "1",
+          "index": "1",
+          "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          "source": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          },
+          "target": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          }
+        }
+      },
+      "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+]`
+	multipleAggregates = `[
+  {
+    "message": {
+      "aggregator_index": "1",
+      "aggregate": {
+        "aggregation_bits": "0x01",
+        "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+        "data": {
+          "slot": "1",
+          "index": "1",
+          "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          "source": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          },
+          "target": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          }
+        }
+      },
+      "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  },
+{
+    "message": {
+      "aggregator_index": "1",
+      "aggregate": {
+        "aggregation_bits": "0x01",
+        "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+        "data": {
+          "slot": "1",
+          "index": "1",
+          "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          "source": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          },
+          "target": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          }
+        }
+      },
+      "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+]
+`
+	// aggregator_index is invalid
+	invalidAggregate = `[
+  {
+    "message": {
+      "aggregator_index": "foo",
+      "aggregate": {
+        "aggregation_bits": "0x01",
+        "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+        "data": {
+          "slot": "1",
+          "index": "1",
+          "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          "source": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          },
+          "target": {
+            "epoch": "1",
+            "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+          }
+        }
+      },
+      "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
     },
     "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
   }

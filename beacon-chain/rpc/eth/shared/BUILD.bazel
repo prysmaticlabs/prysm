@@ -1,8 +1,9 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
     srcs = [
+        "errors.go",
         "request.go",
         "structs.go",
     ],
@@ -14,6 +15,15 @@ go_library(
         "//network/http:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["errors_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//testing/assert:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
