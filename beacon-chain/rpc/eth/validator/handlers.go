@@ -177,15 +177,13 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 		return
 	}
 
-	syncCommitteeResp, rpcError := core.ProduceSyncCommitteeContribution(
+	syncCommitteeResp, rpcError := s.CoreService.ProduceSyncCommitteeContribution(
 		ctx,
 		&ethpbv2.ProduceSyncCommitteeContributionRequest{
 			Slot:              primitives.Slot(slot),
 			SubcommitteeIndex: index,
 			BeaconBlockRoot:   []byte(blockRoot),
 		},
-		s.SyncCommitteePool,
-		s.V1Alpha1Server,
 	)
 	if rpcError != nil {
 		http2.HandleError(w, "Could not compute validator performance: "+rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))

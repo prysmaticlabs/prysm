@@ -267,13 +267,11 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 }
 
 // ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
-func ProduceSyncCommitteeContribution(
+func (s *Service) ProduceSyncCommitteeContribution(
 	ctx context.Context,
 	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
-	pool synccommittee.Pool,
-	v1Alpha1Server ethpb.BeaconNodeValidatorServer,
 ) (*ethpbv2.ProduceSyncCommitteeContributionResponse, *RpcError) {
-	msgs, err := pool.SyncCommitteeMessages(req.Slot)
+	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
 	if err != nil {
 		return nil, &RpcError{Err: errors.Wrap(err, "Could not get sync subcommittee messages"), Reason: Internal}
 	}
@@ -286,7 +284,7 @@ func ProduceSyncCommitteeContribution(
 		SubnetId:  req.SubcommitteeIndex,
 		BlockRoot: req.BeaconBlockRoot,
 	}
-	v1alpha1Resp, err := v1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
+	v1alpha1Resp, err := s.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
 	if err != nil {
 		return nil, &RpcError{Err: errors.Wrap(err, "Could not get contribution data"), Reason: Internal}
 	}

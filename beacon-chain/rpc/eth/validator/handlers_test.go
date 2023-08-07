@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
+	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -451,15 +452,16 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	}
 	syncCommitteePool := synccommittee.NewStore()
 	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
-	v1Server := &v1alpha1validator.Server{
-		SyncCommitteePool: syncCommitteePool,
-		HeadFetcher: &mockChain.ChainService{
-			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
-		},
-	}
 	server := Server{
-		V1Alpha1Server:    v1Server,
-		SyncCommitteePool: syncCommitteePool,
+		CoreService: &core.Service{
+			V1Alpha1Server: &v1alpha1validator.Server{
+				SyncCommitteePool: syncCommitteePool,
+				HeadFetcher: &mockChain.ChainService{
+					SyncCommitteeIndices: []primitives.CommitteeIndex{0},
+				},
+			},
+			SyncCommitteePool: syncCommitteePool,
+		},
 	}
 	t.Run("ok", func(t *testing.T) {
 		url := "http://example.com?slot=1&subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
