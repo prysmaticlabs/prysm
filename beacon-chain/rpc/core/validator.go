@@ -279,7 +279,7 @@ func (s *Service) ProduceSyncCommitteeContribution(
 	if msgs == nil {
 		return nil, &RpcError{Err: errors.New("No subcommittee messages found"), Reason: NotFound}
 	}
-	v1alpha1Resp, err := s.ComputeAggregatedSigAndAggregationBits(
+	aggregatedSigAndBits, err := s.ComputeAggregatedSigAndAggregationBits(
 		ctx,
 		&ethpb.AggregatedSigAndAggregationBitsRequest{
 			Msgs:      msgs,
@@ -295,8 +295,8 @@ func (s *Service) ProduceSyncCommitteeContribution(
 		Slot:              req.Slot,
 		BeaconBlockRoot:   req.BeaconBlockRoot,
 		SubcommitteeIndex: req.SubcommitteeIndex,
-		AggregationBits:   v1alpha1Resp.Bits,
-		Signature:         v1alpha1Resp.AggregatedSig,
+		AggregationBits:   aggregatedSigAndBits.Bits,
+		Signature:         aggregatedSigAndBits.AggregatedSig,
 	}
 
 	return &ethpbv2.ProduceSyncCommitteeContributionResponse{

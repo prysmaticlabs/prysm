@@ -159,6 +159,7 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
 func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	subIndex := r.URL.Query().Get("subcommittee_index")
