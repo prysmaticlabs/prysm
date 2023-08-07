@@ -776,6 +776,21 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 	if err := s.initDepositCaches(ctx, eth1DataInDB.DepositContainers); err != nil {
 		return errors.Wrap(err, "could not initialize caches")
 	}
+	if features.Get().EnableEIP4881 {
+		ctrs := s.cfg.depositCache.AllDepositContainers(ctx)
+		lastFinalizedIndex := s.lastReceivedMerkleIndex
+		// Correctly initialize missing deposits into active trie.
+		for _, c := range ctrs {
+			if c.Index > lastFinalizedIndex {
+				if err := s.depositTrie.Insert(c.DepositRoot, int(c.Index)); err != nil {
+					return err
+				}
+			}
+		}
+		// Reinitialize deposit index
+		numOfItems := s.depositTrie.NumOfItems()
+		s.lastReceivedMerkleIndex = int64(numOfItems - 1)
+	}
 	return nil
 }
 

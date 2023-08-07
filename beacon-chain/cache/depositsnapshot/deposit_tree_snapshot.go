@@ -1,16 +1,10 @@
 package depositsnapshot
 
 import (
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	protodb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-)
-
-var (
-	// ErrZeroIndex occurs when the value of index is 0.
-	ErrZeroIndex = errors.New("index should be greater than 0")
 )
 
 // DepositTreeSnapshot represents the data used to create a deposit tree given a snapshot.
@@ -29,7 +23,7 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 	for i := 0; i < DepositContractDepth; i++ {
 		if (size & 1) == 1 {
 			if index == 0 {
-				return [32]byte{}, ErrZeroIndex
+				break
 			}
 			index--
 			root = hash.Hash(append(ds.finalized[index][:], root[:]...))
