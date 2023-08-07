@@ -304,10 +304,11 @@ func (s *Service) ProduceSyncCommitteeContribution(
 	}, nil
 }
 
+// ComputeAggregatedSigAndAggregationBits returns the aggregated signature and aggregation bits
+// associated with a particular set of sync committee messages.
 func (s *Service) ComputeAggregatedSigAndAggregationBits(
 	ctx context.Context,
 	req *ethpb.AggregatedSigAndAggregationBitsRequest) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
-
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	sigs := make([][]byte, 0, subCommitteeSize)
 	bits := ethpb.NewSyncCommitteeAggregationBits()
