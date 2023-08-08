@@ -17,6 +17,7 @@ type data struct {
 	prevRandao            []byte
 	suggestedFeeRecipient []byte
 	withdrawals           []*enginev1.Withdrawal
+	parentBeaconBlockRoot []byte
 }
 
 var (
@@ -33,6 +34,8 @@ func New(i interface{}) (Attributer, error) {
 		return initPayloadAttributeFromV1(a)
 	case *enginev1.PayloadAttributesV2:
 		return initPayloadAttributeFromV2(a)
+	case *enginev1.PayloadAttributesV3:
+		return initPayloadAttributeFromV3(a)
 	default:
 		return nil, errors.Wrapf(errUnsupportedPayloadAttribute, "unable to create payload attribute from type %T", i)
 	}
@@ -69,5 +72,20 @@ func initPayloadAttributeFromV2(a *enginev1.PayloadAttributesV2) (Attributer, er
 		timeStamp:             a.Timestamp,
 		suggestedFeeRecipient: a.SuggestedFeeRecipient,
 		withdrawals:           a.Withdrawals,
+	}, nil
+}
+
+func initPayloadAttributeFromV3(a *enginev1.PayloadAttributesV3) (Attributer, error) {
+	if a == nil {
+		return nil, errNilPayloadAttribute
+	}
+
+	return &data{
+		version:               version.Deneb,
+		prevRandao:            a.PrevRandao,
+		timeStamp:             a.Timestamp,
+		suggestedFeeRecipient: a.SuggestedFeeRecipient,
+		withdrawals:           a.Withdrawals,
+		parentBeaconBlockRoot: a.ParentBeaconBlockRoot,
 	}, nil
 }
