@@ -540,6 +540,14 @@ type payloadAttributesV2JSON struct {
 	Withdrawals           []*Withdrawal  `json:"withdrawals"`
 }
 
+type payloadAttributesV3JSON struct {
+	Timestamp             hexutil.Uint64 `json:"timestamp"`
+	PrevRandao            hexutil.Bytes  `json:"prevRandao"`
+	SuggestedFeeRecipient hexutil.Bytes  `json:"suggestedFeeRecipient"`
+	Withdrawals           []*Withdrawal  `json:"withdrawals"`
+	ParentBeaconBlockRoot hexutil.Bytes  `json:"parentBeaconBlockRoot"`
+}
+
 // MarshalJSON --
 func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(payloadAttributesJSON{
@@ -561,6 +569,21 @@ func (p *PayloadAttributesV2) MarshalJSON() ([]byte, error) {
 		PrevRandao:            p.PrevRandao,
 		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
 		Withdrawals:           withdrawals,
+	})
+}
+
+func (p *PayloadAttributesV3) MarshalJSON() ([]byte, error) {
+	withdrawals := p.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+
+	return json.Marshal(payloadAttributesV3JSON{
+		Timestamp:             hexutil.Uint64(p.Timestamp),
+		PrevRandao:            p.PrevRandao,
+		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
+		Withdrawals:           withdrawals,
+		ParentBeaconBlockRoot: p.ParentBeaconBlockRoot,
 	})
 }
 
@@ -591,6 +614,24 @@ func (p *PayloadAttributesV2) UnmarshalJSON(enc []byte) error {
 		withdrawals = make([]*Withdrawal, 0)
 	}
 	p.Withdrawals = withdrawals
+	return nil
+}
+
+func (p *PayloadAttributesV3) UnmarshalJSON(enc []byte) error {
+	dec := payloadAttributesV3JSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*p = PayloadAttributesV3{}
+	p.Timestamp = uint64(dec.Timestamp)
+	p.PrevRandao = dec.PrevRandao
+	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
+	withdrawals := dec.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+	p.Withdrawals = withdrawals
+	p.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
 	return nil
 }
 
