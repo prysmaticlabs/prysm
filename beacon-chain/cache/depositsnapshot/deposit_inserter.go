@@ -102,6 +102,18 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 		return nil
 	}
 	depositCount := eth1DepositIndex + 1
+	currIdx := int64(depositTrie.depositCount) - 1
+	allCtrs := c.AllDepositContainers(ctx)
+
+	// Insert deposits into deposit trie.
+	for _, ctr := range allCtrs {
+		if ctr.Index > currIdx && ctr.Index <= eth1DepositIndex {
+			if err := depositTrie.Insert(ctr.DepositRoot, int(ctr.Index)); err != nil {
+				return err
+			}
+		}
+	}
+
 	tree, err := depositTrie.tree.Finalize(uint64(depositCount), DepositContractDepth)
 	if err != nil {
 		return err
