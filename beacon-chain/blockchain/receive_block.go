@@ -50,6 +50,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
+
+	time2.Sleep(1 * time2.Second)
+
 	blockCopy, err := block.Copy()
 	if err != nil {
 		return err
