@@ -113,7 +113,7 @@ func (vs *Server) SubmitSignedAggregateSelectionProof(
 	ctx context.Context,
 	req *ethpb.SignedAggregateSubmitRequest,
 ) (*ethpb.SignedAggregateSubmitResponse, error) {
-	if err := core.SubmitSignedAggregateSelectionProof(ctx, req, vs.TimeFetcher.GenesisTime(), vs.P2P); err != nil {
+	if err := vs.CoreService.SubmitSignedAggregateSelectionProof(ctx, req); err != nil {
 		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "Could not submit aggregate: %v", err.Err)
 	}
 	return &ethpb.SignedAggregateSubmitResponse{}, nil

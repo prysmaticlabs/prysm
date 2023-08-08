@@ -105,7 +105,7 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 			http2.HandleError(w, "Could not convert request contribution to consensus contribution: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		rpcError := core.SubmitSignedContributionAndProof(r.Context(), consensusItem, s.Broadcaster, s.SyncCommitteePool, s.OperationNotifier)
+		rpcError := s.CoreService.SubmitSignedContributionAndProof(r.Context(), consensusItem)
 		if rpcError != nil {
 			http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 		}
@@ -131,8 +131,6 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	genesisTime := s.TimeFetcher.GenesisTime()
-
 	broadcastFailed := false
 	for _, item := range req.Data {
 		consensusItem, err := item.ToConsensus()
@@ -140,11 +138,9 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 			http2.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		rpcError := core.SubmitSignedAggregateSelectionProof(
+		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(
 			r.Context(),
 			&ethpbalpha.SignedAggregateSubmitRequest{SignedAggregateAndProof: consensusItem},
-			genesisTime,
-			s.Broadcaster,
 		)
 		if rpcError != nil {
 			_, ok := rpcError.Err.(*core.AggregateBroadcastFailedError)

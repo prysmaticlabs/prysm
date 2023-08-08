@@ -5,10 +5,8 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
@@ -16,8 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -48,18 +44,21 @@ func (e *AggregateBroadcastFailedError) Error() string {
 
 // ComputeValidatorPerformance reports the validator's latest balance along with other important metrics on
 // rewards and penalties throughout its lifecycle in the beacon chain.
-func ComputeValidatorPerformance(
+func (s *Service) ComputeValidatorPerformance(
 	ctx context.Context,
 	req *ethpb.ValidatorPerformanceRequest,
-	headFetcher blockchain.HeadFetcher,
-	currSlot primitives.Slot,
 ) (*ethpb.ValidatorPerformanceResponse, *RpcError) {
-	headState, err := headFetcher.HeadState(ctx)
+	if s.SyncChecker.Syncing() {
+		return nil, &RpcError{Reason: Unavailable, Err: errors.New("Syncing to latest head, not ready to respond")}
+	}
+
+	headState, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, &RpcError{Err: errors.Wrap(err, "could not get head state"), Reason: Internal}
 	}
+	currSlot := s.GenesisTimeFetcher.CurrentSlot()
 	if currSlot > headState.Slot() {
-		headRoot, err := headFetcher.HeadRoot(ctx)
+		headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 		if err != nil {
 			return nil, &RpcError{Err: errors.Wrap(err, "could not get head root"), Reason: Internal}
 		}
@@ -200,21 +199,18 @@ func ComputeValidatorPerformance(
 
 // SubmitSignedContributionAndProof is called by a sync committee aggregator
 // to submit signed contribution and proof object.
-func SubmitSignedContributionAndProof(
+func (s *Service) SubmitSignedContributionAndProof(
 	ctx context.Context,
-	s *ethpb.SignedContributionAndProof,
-	broadcaster p2p.Broadcaster,
-	pool synccommittee.Pool,
-	notifier opfeed.Notifier,
+	req *ethpb.SignedContributionAndProof,
 ) *RpcError {
 	errs, ctx := errgroup.WithContext(ctx)
 
 	// Broadcasting and saving contribution into the pool in parallel. As one fail should not affect another.
 	errs.Go(func() error {
-		return broadcaster.Broadcast(ctx, s)
+		return s.Broadcaster.Broadcast(ctx, req)
 	})
 
-	if err := pool.SaveSyncCommitteeContribution(s.Message.Contribution); err != nil {
+	if err := s.SyncCommitteePool.SaveSyncCommitteeContribution(req.Message.Contribution); err != nil {
 		return &RpcError{Err: err, Reason: Internal}
 	}
 
@@ -224,10 +220,10 @@ func SubmitSignedContributionAndProof(
 		return &RpcError{Err: err, Reason: Internal}
 	}
 
-	notifier.OperationFeed().Send(&feed.Event{
+	s.OperationNotifier.OperationFeed().Send(&feed.Event{
 		Type: opfeed.SyncCommitteeContributionReceived,
 		Data: &opfeed.SyncCommitteeContributionReceivedData{
-			Contribution: s,
+			Contribution: req,
 		},
 	})
 
@@ -235,11 +231,9 @@ func SubmitSignedContributionAndProof(
 }
 
 // SubmitSignedAggregateSelectionProof verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-func SubmitSignedAggregateSelectionProof(
+func (s *Service) SubmitSignedAggregateSelectionProof(
 	ctx context.Context,
 	req *ethpb.SignedAggregateSubmitRequest,
-	genesisTime time.Time,
-	broadcaster p2p.Broadcaster,
 ) *RpcError {
 	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
@@ -253,11 +247,11 @@ func SubmitSignedAggregateSelectionProof(
 
 	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
 	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
-		genesisTime, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		s.GenesisTimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return &RpcError{Err: errors.New("attestation slot is no longer valid from current time"), Reason: BadRequest}
 	}
 
-	if err := broadcaster.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
+	if err := s.Broadcaster.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
 		return &RpcError{Err: &AggregateBroadcastFailedError{err: err}, Reason: Internal}
 	}
 
