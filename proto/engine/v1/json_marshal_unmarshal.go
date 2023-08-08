@@ -582,6 +582,21 @@ func (p *PayloadAttributesV2) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (p *PayloadAttributesV3) MarshalJSON() ([]byte, error) {
+	withdrawals := p.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+
+	return json.Marshal(payloadAttributesV3JSON{
+		Timestamp:             hexutil.Uint64(p.Timestamp),
+		PrevRandao:            p.PrevRandao,
+		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
+		Withdrawals:           withdrawals,
+		ParentBeaconBlockRoot: p.ParentBeaconBlockRoot,
+	})
+}
+
 // UnmarshalJSON --
 func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 	dec := payloadAttributesJSON{}
@@ -609,6 +624,24 @@ func (p *PayloadAttributesV2) UnmarshalJSON(enc []byte) error {
 		withdrawals = make([]*Withdrawal, 0)
 	}
 	p.Withdrawals = withdrawals
+	return nil
+}
+
+func (p *PayloadAttributesV3) UnmarshalJSON(enc []byte) error {
+	dec := payloadAttributesV3JSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*p = PayloadAttributesV3{}
+	p.Timestamp = uint64(dec.Timestamp)
+	p.PrevRandao = dec.PrevRandao
+	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
+	withdrawals := dec.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+	p.Withdrawals = withdrawals
+	p.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
 	return nil
 }
 
