@@ -1,10 +1,12 @@
 package shared
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -55,6 +57,12 @@ type AggregateAttestationAndProof struct {
 	AggregatorIndex string       `json:"aggregator_index" validate:"required,number,gte=0"`
 	Aggregate       *Attestation `json:"aggregate" validate:"required"`
 	SelectionProof  string       `json:"selection_proof" validate:"required,hexadecimal"`
+}
+
+type SyncCommitteeSubscription struct {
+	ValidatorIndex       string   `json:"validator_index" validate:"required,number,gte=0"`
+	SyncCommitteeIndices []string `json:"sync_committee_indices" validate:"required,dive,number,gte=0"`
+	UntilEpoch           string   `json:"until_epoch" validate:"required,number,gte=0"`
 }
 
 func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndProof, error) {
@@ -227,4 +235,42 @@ func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
 		Epoch: primitives.Epoch(epoch),
 		Root:  root,
 	}, nil
+}
+
+func (s *SyncCommitteeSubscription) ToConsensus() (*validator.SyncCommitteeSubscription, error) {
+	index, err := strconv.ParseUint(s.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ValidatorIndex")
+	}
+	scIndices := make([]uint64, len(s.SyncCommitteeIndices))
+	for i, ix := range s.SyncCommitteeIndices {
+		scIndices[i], err = strconv.ParseUint(ix, 10, 64)
+		if err != nil {
+			return nil, NewDecodeError(err, fmt.Sprintf("SyncCommitteeIndices[%d]", i))
+		}
+	}
+	epoch, err := strconv.ParseUint(s.UntilEpoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "UntilEpoch")
+	}
+
+	return &validator.SyncCommitteeSubscription{
+		ValidatorIndex:       primitives.ValidatorIndex(index),
+		SyncCommitteeIndices: scIndices,
+		UntilEpoch:           primitives.Epoch(epoch),
+	}, nil
+}
+
+// SyncDetails contains information about node sync status.
+type SyncDetails struct {
+	HeadSlot     string `json:"head_slot"`
+	SyncDistance string `json:"sync_distance"`
+	IsSyncing    bool   `json:"is_syncing"`
+	IsOptimistic bool   `json:"is_optimistic"`
+	ElOffline    bool   `json:"el_offline"`
+}
+
+// SyncDetailsContainer is a wrapper for Data.
+type SyncDetailsContainer struct {
+	Data *SyncDetails `json:"data"`
 }
