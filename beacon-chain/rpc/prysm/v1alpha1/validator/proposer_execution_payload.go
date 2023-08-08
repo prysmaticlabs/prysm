@@ -150,7 +150,22 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Capella, version.Deneb:
+	case version.Deneb:
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			return nil, nil, false, err
+		}
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			Withdrawals:           withdrawals,
+			ParentBeaconBlockRoot: headRoot[:],
+		})
+		if err != nil {
+			return nil, nil, false, err
+		}
+	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			return nil, nil, false, err
@@ -176,7 +191,6 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	default:
 		return nil, nil, false, errors.New("unknown beacon state version")
 	}
-
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
 		return nil, nil, false, errors.Wrap(err, "could not prepare payload")
