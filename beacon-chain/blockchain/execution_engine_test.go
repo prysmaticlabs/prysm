@@ -894,6 +894,12 @@ func Test_GetPayloadAttributeDeneb(t *testing.T) {
 	a, err = attr.Withdrawals()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(a))
+
+	attrV3, err := attr.PbV3()
+	require.NoError(t, err)
+	hr := service.headRoot()
+	require.Equal(t, hr, [32]byte(attrV3.ParentBeaconBlockRoot))
+
 }
 
 func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
@@ -1100,9 +1106,9 @@ func TestKZGCommitmentToVersionedHashes(t *testing.T) {
 	require.NoError(t, err)
 	vhs, err := kzgCommitmentsToVersionedHashes(b.Block().Body())
 	require.NoError(t, err)
-	vh0 := [32]byte{1, 207, 35, 21, 201, 118, 88, 167, 237, 84, 173, 161, 129, 118, 94, 35, 179, 250, 219, 81, 80, 250, 179, 149, 9, 246, 49, 192, 185, 175, 69, 102}
-	vh1 := [32]byte{1, 226, 124, 226, 142, 82, 126, 176, 113, 150, 179, 26, 240, 245, 250, 24, 130, 172, 231, 1, 166, 130, 2, 42, 183, 121, 248, 22, 172, 57, 212, 126}
+	vh0 := "0x01cf2315c97658a7ed54ada181765e23b3fadb5150fab39509f631c0b9af4566"
+	vh1 := "0x01e27ce28e527eb07196b31af0f5fa1882ace701a682022ab779f816ac39d47e"
 	require.Equal(t, 2, len(vhs))
-	require.Equal(t, vhs[0], vh0)
-	require.Equal(t, vhs[1], vh1)
+	require.Equal(t, vhs[0].String(), vh0)
+	require.Equal(t, vhs[1].String(), vh1)
 }

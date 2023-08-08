@@ -91,7 +91,7 @@ func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, pay
 	return nil, m.latestValidHash, m.payloadStatus
 }
 
-func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, [][32]byte) ([]byte, error) {
+func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, []common.Hash, *common.Hash) ([]byte, error) {
 	return m.latestValidHash, m.payloadStatus
 }
 
