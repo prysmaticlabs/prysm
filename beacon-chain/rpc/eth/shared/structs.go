@@ -61,7 +61,7 @@ type AggregateAttestationAndProof struct {
 
 type SyncCommitteeSubscription struct {
 	ValidatorIndex       string   `json:"validator_index" validate:"required,number,gte=0"`
-	SyncCommitteeIndices []string `json:"sync_committee_indices" validate:"required,number,gte=0"`
+	SyncCommitteeIndices []string `json:"sync_committee_indices" validate:"required,dive,number,gte=0"`
 	UntilEpoch           string   `json:"until_epoch" validate:"required,number,gte=0"`
 }
 
