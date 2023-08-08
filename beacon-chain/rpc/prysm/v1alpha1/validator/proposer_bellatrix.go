@@ -53,6 +53,11 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 	if localPayload == nil {
 		return errors.New("local payload is nil")
 	}
+	localValueGwei, err := localPayload.ValueInGwei()
+	if err != nil {
+		return errors.Wrap(err, "failed to get local payload value")
+	}
+	localPayloadValue.Set(float64(localValueGwei))
 
 	// Use local payload if builder payload is nil.
 	if builderPayload == nil {

@@ -15,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
@@ -44,6 +46,17 @@ const (
 	// CouldNotDecodeBlock means that a signed beacon block couldn't be created from the block present in the request.
 	CouldNotDecodeBlock = "Could not decode block"
 	eth1dataTimeout     = 2 * time.Second
+)
+
+var (
+	blockProposalTimeMilliseconds = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "block_proposal_time_milliseconds",
+		Help: "Total time in milliseconds to propose a block",
+	})
+	localPayloadValue = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "local_payload_value_gwei",
+		Help: "The value of the local payload",
+	})
 )
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
@@ -178,6 +191,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
+
+	blockProposalTimeMilliseconds.Observe(float64(time.Since(t).Milliseconds()))
 
 	pprof.StopCPUProfile()
 	if time.Since(startTime) > 500*time.Millisecond {
