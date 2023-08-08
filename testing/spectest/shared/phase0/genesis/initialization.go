@@ -52,12 +52,7 @@ func RunInitializationTest(t *testing.T, config string) {
 			require.NoError(t, utils.UnmarshalYaml(eth1DataFile, eth1DataCfg))
 			blockHash, err := bytesutil.FromHexString(eth1DataCfg.Eth1BlockHash)
 			require.NoError(t, err)
-			depositsTrie, _, err := util.DepositTrieFromDeposits(deposits)
-			require.NoError(t, err)
-			trieRoot, err := depositsTrie.HashTreeRoot()
-			require.NoError(t, err)
 			eth1Data := &ethpb.Eth1Data{
-				DepositRoot:  trieRoot[:],
 				DepositCount: uint64(cfg.DepositsCount),
 				BlockHash:    blockHash,
 			}
