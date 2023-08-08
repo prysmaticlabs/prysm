@@ -167,10 +167,18 @@ message PayloadAttributes {
 }
 
 message PayloadAttributesV2 {
-	uint64 timestamp              = 1;
-	bytes prev_randao             = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes suggested_fee_recipient = 3 [(ethereum.eth.ext.ssz_size) = "20"];
+	uint64 timestamp                = 1;
+	bytes prev_randao               = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes suggested_fee_recipient   = 3 [(ethereum.eth.ext.ssz_size) = "20"];
 	repeated Withdrawal withdrawals = 4 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"]; // New in Capella.
+}
+
+message PayloadAttributesV3 {
+	uint64 timestamp                = 1;
+	bytes prev_randao               = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes suggested_fee_recipient   = 3 [(ethereum.eth.ext.ssz_size) = "20"];
+	repeated Withdrawal withdrawals = 4 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
+	bytes parent_beacon_block_root  = 5 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
 message PayloadStatus {
