@@ -999,9 +999,9 @@ def prysm_deps():
         patches = [
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
-        replace = "github.com/MariusVanDerWijden/go-ethereum",
-        sum = "h1:TWfJgaTCz1DqjkyYSCZQgCJoppWwX+w/NeAvy1MvcSE=",
-        version = "v1.8.22-0.20230727144632-9b621f5131f8",
+        replace = "github.com/lightclient/go-ethereum",
+        sum = "h1:QXkwuO3bRp7nz8iIB6evkSRBssuutSvbfMiVPu5RnUQ=",
+        version = "v1.10.10-0.20230803201230-16678fadc167",
     )
 
     go_repository(
