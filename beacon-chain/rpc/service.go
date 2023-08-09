@@ -316,7 +316,7 @@ func (s *Service) Start() {
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
-	nodeServerV1 := &node.Server{
+	nodeServerEth := &node.Server{
 		BeaconDB:                  s.cfg.BeaconDB,
 		Server:                    s.grpcServer,
 		SyncChecker:               s.cfg.SyncService,
@@ -328,6 +328,8 @@ func (s *Service) Start() {
 		HeadFetcher:               s.cfg.HeadFetcher,
 		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	}
+
+	s.cfg.Router.HandleFunc("/eth/v1/node/syncing", nodeServerEth.GetSyncStatus).Methods(http.MethodGet)
 
 	nodeServerPrysm := &nodeprysm.Server{
 		BeaconDB:                  s.cfg.BeaconDB,
@@ -404,7 +406,7 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2).Methods(http.MethodPost)
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
-	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
+	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerEth)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
