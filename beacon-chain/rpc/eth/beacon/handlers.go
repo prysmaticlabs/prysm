@@ -11,7 +11,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
@@ -38,7 +38,7 @@ const (
 // a `SignedBeaconBlock`. The broadcast behaviour may be adjusted via the `broadcast_validation`
 // query parameter.
 func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
-	if ok := bs.checkSync(r.Context(), w); !ok {
+	if shared.IsSyncing(r.Context(), w, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher) {
 		return
 	}
 	isSSZ, err := http2.SszRequested(r)
@@ -302,7 +302,7 @@ func publishBlindedBlockV2(bs *Server, w http.ResponseWriter, r *http.Request) {
 // successfully broadcast but failed integration. The broadcast behaviour may be adjusted via the
 // `broadcast_validation` query parameter.
 func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
-	if ok := bs.checkSync(r.Context(), w); !ok {
+	if shared.IsSyncing(r.Context(), w, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher) {
 		return
 	}
 	isSSZ, err := http2.SszRequested(r)
@@ -630,30 +630,4 @@ func (bs *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error
 		return fmt.Errorf("block for slot %d already exists in fork choice", blk.Slot())
 	}
 	return nil
-}
-
-func (bs *Server) checkSync(ctx context.Context, w http.ResponseWriter) bool {
-	isSyncing, syncDetails, err := helpers.ValidateSyncHTTP(ctx, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher)
-	if err != nil {
-		errJson := &http2.DefaultErrorJson{
-			Message: "Could not check if node is syncing: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		}
-		http2.WriteError(w, errJson)
-		return false
-	}
-	if isSyncing {
-		msg := "Beacon node is currently syncing and not serving request on that endpoint"
-		details, err := json.Marshal(syncDetails)
-		if err == nil {
-			msg += " Details: " + string(details)
-		}
-		errJson := &http2.DefaultErrorJson{
-			Message: msg,
-			Code:    http.StatusServiceUnavailable,
-		}
-		http2.WriteError(w, errJson)
-		return false
-	}
-	return true
 }

@@ -190,61 +190,6 @@ func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
 	})
 }
 
-func TestWrapSyncCommitteeSubscriptionsArray(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SubmitSyncCommitteeSubscriptionRequestJson{},
-		}
-		unwrappedSubs := []*SyncCommitteeSubscriptionJson{
-			{
-				ValidatorIndex:       "1",
-				SyncCommitteeIndices: []string{"1", "2"},
-				UntilEpoch:           "1",
-			},
-			{
-				ValidatorIndex:       "2",
-				SyncCommitteeIndices: []string{"3", "4"},
-				UntilEpoch:           "2",
-			},
-		}
-		unwrappedSubsJson, err := json.Marshal(unwrappedSubs)
-		require.NoError(t, err)
-
-		var body bytes.Buffer
-		_, err = body.Write(unwrappedSubsJson)
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		wrappedSubs := &SubmitSyncCommitteeSubscriptionRequestJson{}
-		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSubs))
-		require.Equal(t, 2, len(wrappedSubs.Data), "wrong number of wrapped items")
-		assert.Equal(t, "1", wrappedSubs.Data[0].ValidatorIndex)
-		require.Equal(t, 2, len(wrappedSubs.Data[0].SyncCommitteeIndices), "wrong number of committee indices")
-		assert.Equal(t, "1", wrappedSubs.Data[0].SyncCommitteeIndices[0])
-		assert.Equal(t, "2", wrappedSubs.Data[0].SyncCommitteeIndices[1])
-		assert.Equal(t, "1", wrappedSubs.Data[0].UntilEpoch)
-	})
-
-	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SubmitSyncCommitteeSubscriptionRequestJson{},
-		}
-		var body bytes.Buffer
-		_, err := body.Write([]byte("invalid"))
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapSyncCommitteeSubscriptionsArray(endpoint, nil, request)
-		require.Equal(t, false, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
-		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
-		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
-	})
-}
-
 func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{

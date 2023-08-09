@@ -60,21 +60,6 @@ message ProduceBlindedBlockResponse {
   BlindedBeaconBlockContainer data = 2;
 }
 
-message SubmitSyncCommitteeSubscriptionsRequest {
-  repeated SyncCommitteeSubscription data = 1;
-}
-
-message SyncCommitteeSubscription {
-  // The validator index to subscribe for.
-  uint64 validator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-
-  // The sync committee indices to be subscribed to.
-  repeated uint64 sync_committee_indices = 2;
-
-  // The final epoch (exclusive value) that the specified validator requires the subscription for.
-  uint64 until_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
-}
-
 message ProduceSyncCommitteeContributionRequest {
   // The slot for which a sync committee contribution should be created.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];

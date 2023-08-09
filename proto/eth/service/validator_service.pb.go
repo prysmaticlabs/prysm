@@ -205,6 +205,7 @@ var file_proto_eth_service_validator_service_proto_goTypes = []interface{}{
 	(*v1.ProduceAttestationDataRequest)(nil),             // 6: ethereum.eth.v1.ProduceAttestationDataRequest
 	(*v1.SubmitBeaconCommitteeSubscriptionsRequest)(nil), // 7: ethereum.eth.v1.SubmitBeaconCommitteeSubscriptionsRequest
 	(*v2.SubmitSyncCommitteeSubscriptionsRequest)(nil),   // 8: ethereum.eth.v2.SubmitSyncCommitteeSubscriptionsRequest
+	(*v2.ProduceSyncCommitteeContributionRequest)(nil),   // 8: ethereum.eth.v2.ProduceSyncCommitteeContributionRequest
 	(*v2.GetLivenessRequest)(nil),                        // 9: ethereum.eth.v2.GetLivenessRequest
 	(*v1.AttesterDutiesResponse)(nil),                    // 10: ethereum.eth.v1.AttesterDutiesResponse
 	(*v1.ProposerDutiesResponse)(nil),                    // 11: ethereum.eth.v1.ProposerDutiesResponse
@@ -215,6 +216,8 @@ var file_proto_eth_service_validator_service_proto_goTypes = []interface{}{
 	(*empty.Empty)(nil),                                  // 16: google.protobuf.Empty
 	(*v1.ProduceAttestationDataResponse)(nil),            // 17: ethereum.eth.v1.ProduceAttestationDataResponse
 	(*v2.GetLivenessResponse)(nil),                       // 18: ethereum.eth.v2.GetLivenessResponse
+	(*v2.ProduceSyncCommitteeContributionResponse)(nil),  // 18: ethereum.eth.v2.ProduceSyncCommitteeContributionResponse
+	(*v2.GetLivenessResponse)(nil),                       // 19: ethereum.eth.v2.GetLivenessResponse
 }
 var file_proto_eth_service_validator_service_proto_depIdxs = []int32{
 	0,  // 0: ethereum.eth.service.BeaconValidator.GetAttesterDuties:input_type -> ethereum.eth.v1.AttesterDutiesRequest
@@ -243,6 +246,8 @@ var file_proto_eth_service_validator_service_proto_depIdxs = []int32{
 	16, // 23: ethereum.eth.service.BeaconValidator.SubmitBeaconCommitteeSubscription:output_type -> google.protobuf.Empty
 	16, // 24: ethereum.eth.service.BeaconValidator.SubmitSyncCommitteeSubscription:output_type -> google.protobuf.Empty
 	18, // 25: ethereum.eth.service.BeaconValidator.GetLiveness:output_type -> ethereum.eth.v2.GetLivenessResponse
+	18, // 24: ethereum.eth.service.BeaconValidator.ProduceSyncCommitteeContribution:output_type -> ethereum.eth.v2.ProduceSyncCommitteeContributionResponse
+	19, // 25: ethereum.eth.service.BeaconValidator.GetLiveness:output_type -> ethereum.eth.v2.GetLivenessResponse
 	13, // [13:26] is the sub-list for method output_type
 	0,  // [0:13] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
@@ -298,6 +303,7 @@ type BeaconValidatorClient interface {
 	ProduceAttestationData(ctx context.Context, in *v1.ProduceAttestationDataRequest, opts ...grpc.CallOption) (*v1.ProduceAttestationDataResponse, error)
 	SubmitBeaconCommitteeSubscription(ctx context.Context, in *v1.SubmitBeaconCommitteeSubscriptionsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	SubmitSyncCommitteeSubscription(ctx context.Context, in *v2.SubmitSyncCommitteeSubscriptionsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	ProduceSyncCommitteeContribution(ctx context.Context, in *v2.ProduceSyncCommitteeContributionRequest, opts ...grpc.CallOption) (*v2.ProduceSyncCommitteeContributionResponse, error)
 	GetLiveness(ctx context.Context, in *v2.GetLivenessRequest, opts ...grpc.CallOption) (*v2.GetLivenessResponse, error)
 }
 
@@ -411,6 +417,9 @@ func (c *beaconValidatorClient) SubmitBeaconCommitteeSubscription(ctx context.Co
 func (c *beaconValidatorClient) SubmitSyncCommitteeSubscription(ctx context.Context, in *v2.SubmitSyncCommitteeSubscriptionsRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconValidator/SubmitSyncCommitteeSubscription", in, out, opts...)
+func (c *beaconValidatorClient) ProduceSyncCommitteeContribution(ctx context.Context, in *v2.ProduceSyncCommitteeContributionRequest, opts ...grpc.CallOption) (*v2.ProduceSyncCommitteeContributionResponse, error) {
+	out := new(v2.ProduceSyncCommitteeContributionResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconValidator/ProduceSyncCommitteeContribution", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -440,6 +449,7 @@ type BeaconValidatorServer interface {
 	ProduceAttestationData(context.Context, *v1.ProduceAttestationDataRequest) (*v1.ProduceAttestationDataResponse, error)
 	SubmitBeaconCommitteeSubscription(context.Context, *v1.SubmitBeaconCommitteeSubscriptionsRequest) (*empty.Empty, error)
 	SubmitSyncCommitteeSubscription(context.Context, *v2.SubmitSyncCommitteeSubscriptionsRequest) (*empty.Empty, error)
+	ProduceSyncCommitteeContribution(context.Context, *v2.ProduceSyncCommitteeContributionRequest) (*v2.ProduceSyncCommitteeContributionResponse, error)
 	GetLiveness(context.Context, *v2.GetLivenessRequest) (*v2.GetLivenessResponse, error)
 }
 
@@ -482,6 +492,8 @@ func (*UnimplementedBeaconValidatorServer) SubmitBeaconCommitteeSubscription(con
 }
 func (*UnimplementedBeaconValidatorServer) SubmitSyncCommitteeSubscription(context.Context, *v2.SubmitSyncCommitteeSubscriptionsRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitSyncCommitteeSubscription not implemented")
+func (*UnimplementedBeaconValidatorServer) ProduceSyncCommitteeContribution(context.Context, *v2.ProduceSyncCommitteeContributionRequest) (*v2.ProduceSyncCommitteeContributionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProduceSyncCommitteeContribution not implemented")
 }
 func (*UnimplementedBeaconValidatorServer) GetLiveness(context.Context, *v2.GetLivenessRequest) (*v2.GetLivenessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLiveness not implemented")
@@ -691,10 +703,14 @@ func _BeaconValidator_SubmitBeaconCommitteeSubscription_Handler(srv interface{},
 
 func _BeaconValidator_SubmitSyncCommitteeSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v2.SubmitSyncCommitteeSubscriptionsRequest)
+func _BeaconValidator_ProduceSyncCommitteeContribution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v2.ProduceSyncCommitteeContributionRequest)
+
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
+
 		return srv.(BeaconValidatorServer).SubmitSyncCommitteeSubscription(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
@@ -703,6 +719,16 @@ func _BeaconValidator_SubmitSyncCommitteeSubscription_Handler(srv interface{}, c
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BeaconValidatorServer).SubmitSyncCommitteeSubscription(ctx, req.(*v2.SubmitSyncCommitteeSubscriptionsRequest))
+
+		return srv.(BeaconValidatorServer).ProduceSyncCommitteeContribution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.eth.service.BeaconValidator/ProduceSyncCommitteeContribution",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeaconValidatorServer).ProduceSyncCommitteeContribution(ctx, req.(*v2.ProduceSyncCommitteeContributionRequest))
+
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -774,8 +800,13 @@ var _BeaconValidator_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconValidator_SubmitBeaconCommitteeSubscription_Handler,
 		},
 		{
+
 			MethodName: "SubmitSyncCommitteeSubscription",
 			Handler:    _BeaconValidator_SubmitSyncCommitteeSubscription_Handler,
+
+			MethodName: "ProduceSyncCommitteeContribution",
+			Handler:    _BeaconValidator_ProduceSyncCommitteeContribution_Handler,
+
 		},
 		{
 			MethodName: "GetLiveness",
