@@ -683,7 +683,6 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	}
 	s := &Server{
 		HeadFetcher: chain,
-		TimeFetcher: chain,
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
