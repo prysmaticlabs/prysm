@@ -23,10 +23,14 @@ import (
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"go.opencensus.io/trace"
 )
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
+	defer span.End()
+
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
 	valid := shared.ValidateHex(w, "Attestation data root", attDataRoot)
 	if !valid {
@@ -38,7 +42,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := s.AttestationsPool.AggregateUnaggregatedAttestations(r.Context()); err != nil {
+	if err := s.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
 		http2.HandleError(w, "Could not aggregate unaggregated attestations: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -92,6 +96,9 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 
 // SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
 func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitContributionAndProofs")
+	defer span.End()
+
 	if r.Body == http.NoBody {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
@@ -117,7 +124,7 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 			http2.HandleError(w, "Could not convert request contribution to consensus contribution: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		rpcError := s.CoreService.SubmitSignedContributionAndProof(r.Context(), consensusItem)
+		rpcError := s.CoreService.SubmitSignedContributionAndProof(ctx, consensusItem)
 		if rpcError != nil {
 			http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 		}
@@ -126,6 +133,9 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 
 // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitAggregateAndProofs")
+	defer span.End()
+
 	if r.Body == http.NoBody {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
@@ -153,7 +163,7 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 			return
 		}
 		rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(
-			r.Context(),
+			ctx,
 			&ethpbalpha.SignedAggregateSubmitRequest{SignedAggregateAndProof: consensusItem},
 		)
 		if rpcError != nil {
@@ -178,7 +188,10 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 // network participation, and only required if the VC has an active
 // validator in an active sync committee.
 func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.Request) {
-	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitSyncCommitteeSubscription")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
 
@@ -201,7 +214,7 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		return
 	}
 
-	st, err := s.HeadFetcher.HeadStateReadOnly(r.Context())
+	st, err := s.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -218,11 +231,11 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		subscriptions[i] = consensusItem
 		val, err := st.ValidatorAtIndexReadOnly(consensusItem.ValidatorIndex)
 		if err != nil {
-			if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-				http2.HandleError(w, "Could not get validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
-				return
-			}
-			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
+			http2.HandleError(
+				w,
+				fmt.Sprintf("Could not get validator at index %d: %s", consensusItem.ValidatorIndex, err.Error()),
+				http.StatusInternalServerError,
+			)
 			return
 		}
 		valStatus, err := rpchelpers.ValidatorSubStatus(val, currEpoch)
