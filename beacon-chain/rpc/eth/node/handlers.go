@@ -7,11 +7,15 @@ import (
 
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
 func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "node.GetSyncStatus")
+	defer span.End()
+
 	start := time.Now()
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
 	if err != nil {
