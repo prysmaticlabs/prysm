@@ -19,5 +19,5 @@ type SubmitSyncCommitteeSubscriptionsRequest struct {
 }
 
 type SubmitBeaconCommitteeSubscriptionsRequest struct {
-	Data []*shared.BeaconCommitteeSubscription `json:"data" validate:"required"`
+	Data []*shared.BeaconCommitteeSubscription `json:"data" validate:"required,dive"`
 }
