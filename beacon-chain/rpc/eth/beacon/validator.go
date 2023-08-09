@@ -109,7 +109,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		if ss > lastValidStatusValue {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid status "+ss.String())
 		}
-		filterStatus[validator.ValidatorStatus(uint8(ss))] = true
+		filterStatus[ss] = true
 	}
 	epoch := slots.ToEpoch(st.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
@@ -256,7 +256,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			valContainers[i] = &ethpb.ValidatorContainer{
 				Index:     primitives.ValidatorIndex(i),
 				Balance:   allBalances[i],
-				Status:    ethpb.ValidatorStatus(uint8(subStatus)),
+				Status:    subStatus,
 				Validator: migration.V1Alpha1ValidatorToV1(val),
 			}
 		}
@@ -299,7 +299,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			valContainers = append(valContainers, &ethpb.ValidatorContainer{
 				Index:     valIndex,
 				Balance:   allBalances[valIndex],
-				Status:    ethpb.ValidatorStatus(uint8(subStatus)),
+				Status:    subStatus,
 				Validator: v1Validator,
 			})
 		}
