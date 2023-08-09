@@ -768,27 +768,6 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	})
 }
 
-//func a () {
-//	syncCommitteePool = synccommittee.NewStore()
-//	v1Server = &v1alpha1validator.Server{
-//		SyncCommitteePool: syncCommitteePool,
-//		HeadFetcher: &mockChain.ChainService{
-//			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
-//		},
-//	}
-//	server = Server{
-//		V1Alpha1Server:    v1Server,
-//		SyncCommitteePool: syncCommitteePool,
-//	}
-//	req = &ethpbv2.ProduceSyncCommitteeContributionRequest{
-//		Slot:              0,
-//		SubcommitteeIndex: 0,
-//		BeaconBlockRoot:   root,
-//	}
-//	_, err = server.ProduceSyncCommitteeContribution(ctx, req)
-//	assert.ErrorContains(t, "No subcommittee messages found", err)
-//}
-
 var (
 	singleContribution = `[
   {

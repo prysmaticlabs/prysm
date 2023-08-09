@@ -8,8 +8,6 @@ package service
 
 import (
 	context "context"
-	reflect "reflect"
-
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -20,6 +18,7 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
 )
 
 const (
@@ -47,7 +46,7 @@ var file_proto_eth_service_validator_service_proto_rawDesc = []byte{
 	0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x32, 0x2f, 0x73, 0x73, 0x7a, 0x2e, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1c, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f,
 	0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x32, 0xfa, 0x10, 0x0a, 0x0f, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x56, 0x61, 0x6c,
+	0x74, 0x6f, 0x32, 0xc0, 0x0f, 0x0a, 0x0f, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x56, 0x61, 0x6c,
 	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x12, 0xa3, 0x01, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x41, 0x74,
 	0x74, 0x65, 0x73, 0x74, 0x65, 0x72, 0x44, 0x75, 0x74, 0x69, 0x65, 0x73, 0x12, 0x26, 0x2e, 0x65,
 	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x41,
@@ -162,37 +161,26 @@ var file_proto_eth_service_validator_service_proto_rawDesc = []byte{
 	0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61,
 	0x74, 0x6f, 0x72, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69,
 	0x74, 0x74, 0x65, 0x65, 0x5f, 0x73, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f,
-	0x6e, 0x73, 0x12, 0xb7, 0x01, 0x0a, 0x1f, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x53, 0x79, 0x6e,
-	0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72,
-	0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x38, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
-	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x53,
-	0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x53, 0x75, 0x62, 0x73,
-	0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
-	0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x42, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x3c,
-	0x3a, 0x01, 0x2a, 0x22, 0x37, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65,
-	0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f,
-	0x73, 0x79, 0x6e, 0x63, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x5f, 0x73,
-	0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x90, 0x01, 0x0a,
-	0x0b, 0x47, 0x65, 0x74, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x12, 0x23, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x47,
-	0x65, 0x74, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x24, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x76, 0x32, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x36, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x30, 0x3a,
-	0x01, 0x2a, 0x22, 0x2b, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74,
-	0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x6c,
-	0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x2f, 0x7b, 0x65, 0x70, 0x6f, 0x63, 0x68, 0x7d, 0x42,
-	0x96, 0x01, 0x0a, 0x18, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
-	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x42, 0x15, 0x56, 0x61,
-	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50, 0x72,
-	0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x33, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f,
-	0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x34, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65,
-	0x74, 0x68, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0xaa, 0x02, 0x14, 0x45, 0x74, 0x68,
-	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0xca, 0x02, 0x14, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68,
-	0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6e, 0x73, 0x12, 0x90, 0x01, 0x0a, 0x0b, 0x47, 0x65, 0x74, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65,
+	0x73, 0x73, 0x12, 0x23, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x32, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x24, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65,
+	0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x69, 0x76,
+	0x65, 0x6e, 0x65, 0x73, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x36, 0x82,
+	0xd3, 0xe4, 0x93, 0x02, 0x30, 0x3a, 0x01, 0x2a, 0x22, 0x2b, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72,
+	0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64,
+	0x61, 0x74, 0x6f, 0x72, 0x2f, 0x6c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x2f, 0x7b, 0x65,
+	0x70, 0x6f, 0x63, 0x68, 0x7d, 0x42, 0x96, 0x01, 0x0a, 0x18, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74,
+	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x42, 0x15, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x53, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x33, 0x67, 0x69, 0x74,
+	0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69,
+	0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x34, 0x2f, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0xaa, 0x02, 0x14, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e,
+	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0xca, 0x02, 0x14, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65,
+	0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var file_proto_eth_service_validator_service_proto_goTypes = []interface{}{
@@ -204,20 +192,16 @@ var file_proto_eth_service_validator_service_proto_goTypes = []interface{}{
 	(*v1.SubmitValidatorRegistrationsRequest)(nil),       // 5: ethereum.eth.v1.SubmitValidatorRegistrationsRequest
 	(*v1.ProduceAttestationDataRequest)(nil),             // 6: ethereum.eth.v1.ProduceAttestationDataRequest
 	(*v1.SubmitBeaconCommitteeSubscriptionsRequest)(nil), // 7: ethereum.eth.v1.SubmitBeaconCommitteeSubscriptionsRequest
-	(*v2.SubmitSyncCommitteeSubscriptionsRequest)(nil),   // 8: ethereum.eth.v2.SubmitSyncCommitteeSubscriptionsRequest
-	(*v2.ProduceSyncCommitteeContributionRequest)(nil),   // 8: ethereum.eth.v2.ProduceSyncCommitteeContributionRequest
-	(*v2.GetLivenessRequest)(nil),                        // 9: ethereum.eth.v2.GetLivenessRequest
-	(*v1.AttesterDutiesResponse)(nil),                    // 10: ethereum.eth.v1.AttesterDutiesResponse
-	(*v1.ProposerDutiesResponse)(nil),                    // 11: ethereum.eth.v1.ProposerDutiesResponse
-	(*v2.SyncCommitteeDutiesResponse)(nil),               // 12: ethereum.eth.v2.SyncCommitteeDutiesResponse
-	(*v2.ProduceBlockResponseV2)(nil),                    // 13: ethereum.eth.v2.ProduceBlockResponseV2
-	(*v2.SSZContainer)(nil),                              // 14: ethereum.eth.v2.SSZContainer
-	(*v2.ProduceBlindedBlockResponse)(nil),               // 15: ethereum.eth.v2.ProduceBlindedBlockResponse
-	(*empty.Empty)(nil),                                  // 16: google.protobuf.Empty
-	(*v1.ProduceAttestationDataResponse)(nil),            // 17: ethereum.eth.v1.ProduceAttestationDataResponse
-	(*v2.GetLivenessResponse)(nil),                       // 18: ethereum.eth.v2.GetLivenessResponse
-	(*v2.ProduceSyncCommitteeContributionResponse)(nil),  // 18: ethereum.eth.v2.ProduceSyncCommitteeContributionResponse
-	(*v2.GetLivenessResponse)(nil),                       // 19: ethereum.eth.v2.GetLivenessResponse
+	(*v2.GetLivenessRequest)(nil),                        // 8: ethereum.eth.v2.GetLivenessRequest
+	(*v1.AttesterDutiesResponse)(nil),                    // 9: ethereum.eth.v1.AttesterDutiesResponse
+	(*v1.ProposerDutiesResponse)(nil),                    // 10: ethereum.eth.v1.ProposerDutiesResponse
+	(*v2.SyncCommitteeDutiesResponse)(nil),               // 11: ethereum.eth.v2.SyncCommitteeDutiesResponse
+	(*v2.ProduceBlockResponseV2)(nil),                    // 12: ethereum.eth.v2.ProduceBlockResponseV2
+	(*v2.SSZContainer)(nil),                              // 13: ethereum.eth.v2.SSZContainer
+	(*v2.ProduceBlindedBlockResponse)(nil),               // 14: ethereum.eth.v2.ProduceBlindedBlockResponse
+	(*empty.Empty)(nil),                                  // 15: google.protobuf.Empty
+	(*v1.ProduceAttestationDataResponse)(nil),            // 16: ethereum.eth.v1.ProduceAttestationDataResponse
+	(*v2.GetLivenessResponse)(nil),                       // 17: ethereum.eth.v2.GetLivenessResponse
 }
 var file_proto_eth_service_validator_service_proto_depIdxs = []int32{
 	0,  // 0: ethereum.eth.service.BeaconValidator.GetAttesterDuties:input_type -> ethereum.eth.v1.AttesterDutiesRequest
@@ -231,25 +215,21 @@ var file_proto_eth_service_validator_service_proto_depIdxs = []int32{
 	5,  // 8: ethereum.eth.service.BeaconValidator.SubmitValidatorRegistration:input_type -> ethereum.eth.v1.SubmitValidatorRegistrationsRequest
 	6,  // 9: ethereum.eth.service.BeaconValidator.ProduceAttestationData:input_type -> ethereum.eth.v1.ProduceAttestationDataRequest
 	7,  // 10: ethereum.eth.service.BeaconValidator.SubmitBeaconCommitteeSubscription:input_type -> ethereum.eth.v1.SubmitBeaconCommitteeSubscriptionsRequest
-	8,  // 11: ethereum.eth.service.BeaconValidator.SubmitSyncCommitteeSubscription:input_type -> ethereum.eth.v2.SubmitSyncCommitteeSubscriptionsRequest
-	9,  // 12: ethereum.eth.service.BeaconValidator.GetLiveness:input_type -> ethereum.eth.v2.GetLivenessRequest
-	10, // 13: ethereum.eth.service.BeaconValidator.GetAttesterDuties:output_type -> ethereum.eth.v1.AttesterDutiesResponse
-	11, // 14: ethereum.eth.service.BeaconValidator.GetProposerDuties:output_type -> ethereum.eth.v1.ProposerDutiesResponse
-	12, // 15: ethereum.eth.service.BeaconValidator.GetSyncCommitteeDuties:output_type -> ethereum.eth.v2.SyncCommitteeDutiesResponse
-	13, // 16: ethereum.eth.service.BeaconValidator.ProduceBlockV2:output_type -> ethereum.eth.v2.ProduceBlockResponseV2
-	14, // 17: ethereum.eth.service.BeaconValidator.ProduceBlockV2SSZ:output_type -> ethereum.eth.v2.SSZContainer
-	15, // 18: ethereum.eth.service.BeaconValidator.ProduceBlindedBlock:output_type -> ethereum.eth.v2.ProduceBlindedBlockResponse
-	14, // 19: ethereum.eth.service.BeaconValidator.ProduceBlindedBlockSSZ:output_type -> ethereum.eth.v2.SSZContainer
-	16, // 20: ethereum.eth.service.BeaconValidator.PrepareBeaconProposer:output_type -> google.protobuf.Empty
-	16, // 21: ethereum.eth.service.BeaconValidator.SubmitValidatorRegistration:output_type -> google.protobuf.Empty
-	17, // 22: ethereum.eth.service.BeaconValidator.ProduceAttestationData:output_type -> ethereum.eth.v1.ProduceAttestationDataResponse
-	16, // 23: ethereum.eth.service.BeaconValidator.SubmitBeaconCommitteeSubscription:output_type -> google.protobuf.Empty
-	16, // 24: ethereum.eth.service.BeaconValidator.SubmitSyncCommitteeSubscription:output_type -> google.protobuf.Empty
-	18, // 25: ethereum.eth.service.BeaconValidator.GetLiveness:output_type -> ethereum.eth.v2.GetLivenessResponse
-	18, // 24: ethereum.eth.service.BeaconValidator.ProduceSyncCommitteeContribution:output_type -> ethereum.eth.v2.ProduceSyncCommitteeContributionResponse
-	19, // 25: ethereum.eth.service.BeaconValidator.GetLiveness:output_type -> ethereum.eth.v2.GetLivenessResponse
-	13, // [13:26] is the sub-list for method output_type
-	0,  // [0:13] is the sub-list for method input_type
+	8,  // 11: ethereum.eth.service.BeaconValidator.GetLiveness:input_type -> ethereum.eth.v2.GetLivenessRequest
+	9,  // 12: ethereum.eth.service.BeaconValidator.GetAttesterDuties:output_type -> ethereum.eth.v1.AttesterDutiesResponse
+	10, // 13: ethereum.eth.service.BeaconValidator.GetProposerDuties:output_type -> ethereum.eth.v1.ProposerDutiesResponse
+	11, // 14: ethereum.eth.service.BeaconValidator.GetSyncCommitteeDuties:output_type -> ethereum.eth.v2.SyncCommitteeDutiesResponse
+	12, // 15: ethereum.eth.service.BeaconValidator.ProduceBlockV2:output_type -> ethereum.eth.v2.ProduceBlockResponseV2
+	13, // 16: ethereum.eth.service.BeaconValidator.ProduceBlockV2SSZ:output_type -> ethereum.eth.v2.SSZContainer
+	14, // 17: ethereum.eth.service.BeaconValidator.ProduceBlindedBlock:output_type -> ethereum.eth.v2.ProduceBlindedBlockResponse
+	13, // 18: ethereum.eth.service.BeaconValidator.ProduceBlindedBlockSSZ:output_type -> ethereum.eth.v2.SSZContainer
+	15, // 19: ethereum.eth.service.BeaconValidator.PrepareBeaconProposer:output_type -> google.protobuf.Empty
+	15, // 20: ethereum.eth.service.BeaconValidator.SubmitValidatorRegistration:output_type -> google.protobuf.Empty
+	16, // 21: ethereum.eth.service.BeaconValidator.ProduceAttestationData:output_type -> ethereum.eth.v1.ProduceAttestationDataResponse
+	15, // 22: ethereum.eth.service.BeaconValidator.SubmitBeaconCommitteeSubscription:output_type -> google.protobuf.Empty
+	17, // 23: ethereum.eth.service.BeaconValidator.GetLiveness:output_type -> ethereum.eth.v2.GetLivenessResponse
+	12, // [12:24] is the sub-list for method output_type
+	0,  // [0:12] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
@@ -302,8 +282,6 @@ type BeaconValidatorClient interface {
 	SubmitValidatorRegistration(ctx context.Context, in *v1.SubmitValidatorRegistrationsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ProduceAttestationData(ctx context.Context, in *v1.ProduceAttestationDataRequest, opts ...grpc.CallOption) (*v1.ProduceAttestationDataResponse, error)
 	SubmitBeaconCommitteeSubscription(ctx context.Context, in *v1.SubmitBeaconCommitteeSubscriptionsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
-	SubmitSyncCommitteeSubscription(ctx context.Context, in *v2.SubmitSyncCommitteeSubscriptionsRequest, opts ...grpc.CallOption) (*empty.Empty, error)
-	ProduceSyncCommitteeContribution(ctx context.Context, in *v2.ProduceSyncCommitteeContributionRequest, opts ...grpc.CallOption) (*v2.ProduceSyncCommitteeContributionResponse, error)
 	GetLiveness(ctx context.Context, in *v2.GetLivenessRequest, opts ...grpc.CallOption) (*v2.GetLivenessResponse, error)
 }
 
@@ -414,18 +392,6 @@ func (c *beaconValidatorClient) SubmitBeaconCommitteeSubscription(ctx context.Co
 	return out, nil
 }
 
-func (c *beaconValidatorClient) SubmitSyncCommitteeSubscription(ctx context.Context, in *v2.SubmitSyncCommitteeSubscriptionsRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconValidator/SubmitSyncCommitteeSubscription", in, out, opts...)
-func (c *beaconValidatorClient) ProduceSyncCommitteeContribution(ctx context.Context, in *v2.ProduceSyncCommitteeContributionRequest, opts ...grpc.CallOption) (*v2.ProduceSyncCommitteeContributionResponse, error) {
-	out := new(v2.ProduceSyncCommitteeContributionResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconValidator/ProduceSyncCommitteeContribution", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *beaconValidatorClient) GetLiveness(ctx context.Context, in *v2.GetLivenessRequest, opts ...grpc.CallOption) (*v2.GetLivenessResponse, error) {
 	out := new(v2.GetLivenessResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconValidator/GetLiveness", in, out, opts...)
@@ -448,8 +414,6 @@ type BeaconValidatorServer interface {
 	SubmitValidatorRegistration(context.Context, *v1.SubmitValidatorRegistrationsRequest) (*empty.Empty, error)
 	ProduceAttestationData(context.Context, *v1.ProduceAttestationDataRequest) (*v1.ProduceAttestationDataResponse, error)
 	SubmitBeaconCommitteeSubscription(context.Context, *v1.SubmitBeaconCommitteeSubscriptionsRequest) (*empty.Empty, error)
-	SubmitSyncCommitteeSubscription(context.Context, *v2.SubmitSyncCommitteeSubscriptionsRequest) (*empty.Empty, error)
-	ProduceSyncCommitteeContribution(context.Context, *v2.ProduceSyncCommitteeContributionRequest) (*v2.ProduceSyncCommitteeContributionResponse, error)
 	GetLiveness(context.Context, *v2.GetLivenessRequest) (*v2.GetLivenessResponse, error)
 }
 
@@ -489,11 +453,6 @@ func (*UnimplementedBeaconValidatorServer) ProduceAttestationData(context.Contex
 }
 func (*UnimplementedBeaconValidatorServer) SubmitBeaconCommitteeSubscription(context.Context, *v1.SubmitBeaconCommitteeSubscriptionsRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitBeaconCommitteeSubscription not implemented")
-}
-func (*UnimplementedBeaconValidatorServer) SubmitSyncCommitteeSubscription(context.Context, *v2.SubmitSyncCommitteeSubscriptionsRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitSyncCommitteeSubscription not implemented")
-func (*UnimplementedBeaconValidatorServer) ProduceSyncCommitteeContribution(context.Context, *v2.ProduceSyncCommitteeContributionRequest) (*v2.ProduceSyncCommitteeContributionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProduceSyncCommitteeContribution not implemented")
 }
 func (*UnimplementedBeaconValidatorServer) GetLiveness(context.Context, *v2.GetLivenessRequest) (*v2.GetLivenessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLiveness not implemented")
@@ -701,38 +660,6 @@ func _BeaconValidator_SubmitBeaconCommitteeSubscription_Handler(srv interface{},
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BeaconValidator_SubmitSyncCommitteeSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.SubmitSyncCommitteeSubscriptionsRequest)
-func _BeaconValidator_ProduceSyncCommitteeContribution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.ProduceSyncCommitteeContributionRequest)
-
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-
-		return srv.(BeaconValidatorServer).SubmitSyncCommitteeSubscription(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconValidator/SubmitSyncCommitteeSubscription",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconValidatorServer).SubmitSyncCommitteeSubscription(ctx, req.(*v2.SubmitSyncCommitteeSubscriptionsRequest))
-
-		return srv.(BeaconValidatorServer).ProduceSyncCommitteeContribution(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconValidator/ProduceSyncCommitteeContribution",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconValidatorServer).ProduceSyncCommitteeContribution(ctx, req.(*v2.ProduceSyncCommitteeContributionRequest))
-
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _BeaconValidator_GetLiveness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v2.GetLivenessRequest)
 	if err := dec(in); err != nil {
@@ -798,15 +725,6 @@ var _BeaconValidator_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitBeaconCommitteeSubscription",
 			Handler:    _BeaconValidator_SubmitBeaconCommitteeSubscription_Handler,
-		},
-		{
-
-			MethodName: "SubmitSyncCommitteeSubscription",
-			Handler:    _BeaconValidator_SubmitSyncCommitteeSubscription_Handler,
-
-			MethodName: "ProduceSyncCommitteeContribution",
-			Handler:    _BeaconValidator_ProduceSyncCommitteeContribution_Handler,
-
 		},
 		{
 			MethodName: "GetLiveness",

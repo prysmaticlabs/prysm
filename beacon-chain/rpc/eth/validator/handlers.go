@@ -2,6 +2,7 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,8 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -180,47 +181,6 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	if broadcastFailed {
 		http2.HandleError(w, "Could not broadcast one or more signed aggregated attestations", http.StatusInternalServerError)
 	}
-
-// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
-func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	subIndex := r.URL.Query().Get("subcommittee_index")
-	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
-	if !valid {
-		return
-	}
-	rawSlot := r.URL.Query().Get("slot")
-	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
-	if !valid {
-		return
-	}
-	blockRoot := r.URL.Query().Get("beacon_block_root")
-	valid = shared.ValidateHex(w, "Beacon Block Root", blockRoot)
-	if !valid {
-		return
-	}
-	syncCommitteeResp, rpcError := s.CoreService.ProduceSyncCommitteeContribution(
-		ctx,
-		&ethpbv2.ProduceSyncCommitteeContributionRequest{
-			Slot:              primitives.Slot(slot),
-			SubcommitteeIndex: index,
-			BeaconBlockRoot:   []byte(blockRoot),
-		},
-	)
-	if rpcError != nil {
-		http2.HandleError(w, "Could not compute validator performance: "+rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
-		return
-	}
-	response := &ProduceSyncCommitteeContributionResponse{
-		Data: &shared.SyncCommitteeContribution{
-			Slot:              strconv.FormatUint(uint64(syncCommitteeResp.Data.Slot), 10),
-			BeaconBlockRoot:   hexutil.Encode(syncCommitteeResp.Data.BeaconBlockRoot),
-			SubcommitteeIndex: strconv.FormatUint(syncCommitteeResp.Data.SubcommitteeIndex, 10),
-			AggregationBits:   hexutil.Encode(syncCommitteeResp.Data.AggregationBits),
-			Signature:         hexutil.Encode(syncCommitteeResp.Data.Signature),
-		},
-	}
-	http2.WriteJson(w, response)
 }
 
 // SubmitSyncCommitteeSubscription subscribe to a number of sync committee subnets.
@@ -338,4 +298,79 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 
 		cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey48[:], startEpoch, sub.SyncCommitteeIndices, totalDuration)
 	}
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	subIndex := r.URL.Query().Get("subcommittee_index")
+	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
+	if !valid {
+		return
+	}
+	rawSlot := r.URL.Query().Get("slot")
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
+		return
+	}
+	blockRoot := r.URL.Query().Get("beacon_block_root")
+	valid = shared.ValidateHex(w, "Beacon Block Root", blockRoot)
+	if !valid {
+		return
+	}
+	contribution, ok := s.produceSyncCommitteeContribution(
+		ctx,
+		&ethpbv2.ProduceSyncCommitteeContributionRequest{
+			Slot:              primitives.Slot(slot),
+			SubcommitteeIndex: index,
+			BeaconBlockRoot:   []byte(blockRoot),
+		},
+	)
+	if !ok {
+		http2.HandleError(w, "Could not produce contribution", http.StatusInternalServerError)
+		return
+	}
+	response := &ProduceSyncCommitteeContributionResponse{
+		Data: &shared.SyncCommitteeContribution{
+			Slot:              strconv.FormatUint(uint64(contribution.Slot), 10),
+			BeaconBlockRoot:   hexutil.Encode(contribution.BeaconBlockRoot),
+			SubcommitteeIndex: strconv.FormatUint(contribution.SubcommitteeIndex, 10),
+			AggregationBits:   hexutil.Encode(contribution.AggregationBits),
+			Signature:         hexutil.Encode(contribution.Signature),
+		},
+	}
+	http2.WriteJson(w, response)
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (s *Server) produceSyncCommitteeContribution(
+	ctx context.Context,
+	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
+) (*ethpbv2.SyncCommitteeContribution, bool) {
+	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
+	if err != nil {
+		return nil, false
+	}
+	if msgs == nil {
+		return nil, false
+	}
+	aggregatedSigAndBits, err := s.CoreService.AggregatedSigAndAggregationBits(
+		ctx,
+		&ethpbalpha.AggregatedSigAndAggregationBitsRequest{
+			Msgs:      msgs,
+			Slot:      req.Slot,
+			SubnetId:  req.SubcommitteeIndex,
+			BlockRoot: req.BeaconBlockRoot,
+		},
+	)
+	if err != nil {
+		return nil, false
+	}
+	return &ethpbv2.SyncCommitteeContribution{
+		Slot:              req.Slot,
+		BeaconBlockRoot:   req.BeaconBlockRoot,
+		SubcommitteeIndex: req.SubcommitteeIndex,
+		AggregationBits:   aggregatedSigAndBits.Bits,
+		Signature:         aggregatedSigAndBits.AggregatedSig,
+	}, true
 }

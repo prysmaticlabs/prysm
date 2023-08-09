@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/sirupsen/logrus"
@@ -265,43 +264,6 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 	}).Debug("Broadcasting aggregated attestation and proof")
 
 	return nil
-}
-
-// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
-func (s *Service) ProduceSyncCommitteeContribution(
-	ctx context.Context,
-	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
-) (*ethpbv2.ProduceSyncCommitteeContributionResponse, *RpcError) {
-	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
-	if err != nil {
-		return nil, &RpcError{Err: errors.Wrap(err, "Could not get sync subcommittee messages"), Reason: Internal}
-	}
-	if msgs == nil {
-		return nil, &RpcError{Err: errors.New("No subcommittee messages found"), Reason: NotFound}
-	}
-	aggregatedSigAndBits, err := s.AggregatedSigAndAggregationBits(
-		ctx,
-		&ethpb.AggregatedSigAndAggregationBitsRequest{
-			Msgs:      msgs,
-			Slot:      req.Slot,
-			SubnetId:  req.SubcommitteeIndex,
-			BlockRoot: req.BeaconBlockRoot,
-		},
-	)
-	if err != nil {
-		return nil, &RpcError{Err: errors.Wrap(err, "Could not get contribution data"), Reason: Internal}
-	}
-	contribution := &ethpbv2.SyncCommitteeContribution{
-		Slot:              req.Slot,
-		BeaconBlockRoot:   req.BeaconBlockRoot,
-		SubcommitteeIndex: req.SubcommitteeIndex,
-		AggregationBits:   aggregatedSigAndBits.Bits,
-		Signature:         aggregatedSigAndBits.AggregatedSig,
-	}
-
-	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
-		Data: contribution,
-	}, nil
 }
 
 // AggregatedSigAndAggregationBits returns the aggregated signature and aggregation bits
