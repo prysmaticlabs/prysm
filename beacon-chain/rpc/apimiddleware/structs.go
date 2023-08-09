@@ -292,16 +292,6 @@ type ProduceSyncCommitteeContributionResponseJson struct {
 	Data *SyncCommitteeContributionJson `json:"data"`
 }
 
-type SubmitSyncCommitteeSubscriptionRequestJson struct {
-	Data []*SyncCommitteeSubscriptionJson `json:"data"`
-}
-
-type SyncCommitteeSubscriptionJson struct {
-	ValidatorIndex       string   `json:"validator_index"`
-	SyncCommitteeIndices []string `json:"sync_committee_indices"`
-	UntilEpoch           string   `json:"until_epoch"`
-}
-
 type ForkChoiceNodeResponseJson struct {
 	Slot               string                       `json:"slot"`
 	BlockRoot          string                       `json:"block_root" hex:"true"`
