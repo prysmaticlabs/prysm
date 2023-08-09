@@ -7,9 +7,13 @@ type AggregateAttestationResponse struct {
 }
 
 type SubmitContributionAndProofsRequest struct {
-	Data []*shared.SignedContributionAndProof `json:"data" validate:"required"`
+	Data []*shared.SignedContributionAndProof `json:"data" validate:"required,dive"`
 }
 
 type SubmitAggregateAndProofsRequest struct {
-	Data []*shared.SignedAggregateAttestationAndProof `json:"data" validate:"required"`
+	Data []*shared.SignedAggregateAttestationAndProof `json:"data" validate:"required,dive"`
+}
+
+type SubmitSyncCommitteeSubscriptionsRequest struct {
+	Data []*shared.SyncCommitteeSubscription `json:"data" validate:"required,dive"`
 }

@@ -2,7 +2,9 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,17 +12,22 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
+	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestGetAggregateAttestation(t *testing.T) {
@@ -313,7 +320,6 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(contributions))
 	})
-
 	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
 		c.Broadcaster = broadcaster
@@ -333,7 +339,35 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(contributions))
 	})
+	t.Run("no body", func(t *testing.T) {
+		s.SyncCommitteePool = synccommittee.NewStore()
 
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitContributionAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("empty", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitContributionAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
 	t.Run("invalid", func(t *testing.T) {
 		c.SyncCommitteePool = synccommittee.NewStore()
 
@@ -391,7 +425,6 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
 	})
-
 	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
 		c.Broadcaster = broadcaster
@@ -408,7 +441,33 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
 	})
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("empty", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
 	t.Run("invalid", func(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString(invalidAggregate)
@@ -423,22 +482,179 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
+}
 
+func TestSubmitSyncCommitteeSubscription(t *testing.T) {
+	genesis := util.NewBeaconBlock()
+	deposits, _, err := util.DeterministicDepositsAndKeys(64)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	bs, err := util.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	require.NoError(t, err, "Could not set up genesis state")
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	roots := make([][]byte, fieldparams.BlockRootsLength)
+	roots[0] = genesisRoot[:]
+	require.NoError(t, bs.SetBlockRoots(roots))
+
+	pubkeys := make([][]byte, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubkeys[i] = deposits[i].Data.PublicKey
+	}
+
+	chainSlot := primitives.Slot(0)
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+	}
+	s := &Server{
+		HeadFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+	}
+
+	t.Run("single", func(t *testing.T) {
+		cache.SyncSubnetIDs.EmptyAllCaches()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(singleSyncCommitteeSubscription)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitSyncCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		subnets, _, _, _ := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkeys[1], 0)
+		require.Equal(t, 2, len(subnets))
+		assert.Equal(t, uint64(0), subnets[0])
+		assert.Equal(t, uint64(2), subnets[1])
+	})
+	t.Run("multiple", func(t *testing.T) {
+		cache.SyncSubnetIDs.EmptyAllCaches()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleSyncCommitteeSubscription)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitSyncCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		subnets, _, _, _ := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkeys[0], 0)
+		require.Equal(t, 1, len(subnets))
+		assert.Equal(t, uint64(0), subnets[0])
+		subnets, _, _, _ = cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkeys[1], 0)
+		require.Equal(t, 1, len(subnets))
+		assert.Equal(t, uint64(2), subnets[0])
+	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
-		s.SubmitAggregateAndProofs(writer, request)
+		s.SubmitSyncCommitteeSubscription(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
 	})
+	t.Run("empty", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitSyncCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("invalid", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidSyncCommitteeSubscription)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitSyncCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+	t.Run("epoch in the past", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(singleSyncCommitteeSubscription2)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitSyncCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "Epoch for subscription at index 0 is in the past"))
+	})
+	t.Run("first epoch after the next sync committee is valid", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(singleSyncCommitteeSubscription3)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitSyncCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("epoch too far in the future", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(singleSyncCommitteeSubscription4)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitSyncCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "Epoch for subscription at index 0 is too far in the future"))
+	})
+	t.Run("sync not ready", func(t *testing.T) {
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		chainService := &mockChain.ChainService{State: st}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitSyncCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "Beacon node is currently syncing"))
+	})
 }
 
-const (
+var (
 	singleContribution = `[
   {
     "message": {
@@ -604,6 +820,73 @@ const (
       "selection_proof": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
     },
     "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+]`
+	singleSyncCommitteeSubscription = `[
+  {
+    "validator_index": "1",
+    "sync_committee_indices": [
+      "0",
+      "2"
+    ],
+    "until_epoch": "1"
+  }
+]`
+	singleSyncCommitteeSubscription2 = `[
+  {
+    "validator_index": "0",
+    "sync_committee_indices": [
+      "0",
+      "2"
+    ],
+    "until_epoch": "0"
+  }
+]`
+	singleSyncCommitteeSubscription3 = fmt.Sprintf(`[
+  {
+    "validator_index": "0",
+    "sync_committee_indices": [
+      "0",
+      "2"
+    ],
+    "until_epoch": "%d"
+  }
+]`, 2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	singleSyncCommitteeSubscription4 = fmt.Sprintf(`[
+  {
+    "validator_index": "0",
+    "sync_committee_indices": [
+      "0",
+      "2"
+    ],
+    "until_epoch": "%d"
+  }
+]`, 2*params.BeaconConfig().EpochsPerSyncCommitteePeriod+1)
+	multipleSyncCommitteeSubscription = `[
+  {
+    "validator_index": "0",
+    "sync_committee_indices": [
+      "0"
+    ],
+    "until_epoch": "1"
+  },
+  {
+    "validator_index": "1",
+    "sync_committee_indices": [
+      "2"
+    ],
+    "until_epoch": "1"
+  }
+]`
+	// validator_index is invalid
+	invalidSyncCommitteeSubscription = `[
+  {
+    "validator_index": "foo",
+    "sync_committee_indices": [
+      "0",
+      "2"
+    ],
+    "until_epoch": "1"
   }
 ]`
 )

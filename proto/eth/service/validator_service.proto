@@ -222,21 +222,6 @@ service BeaconValidator {
     };
   }
 
-  // SubmitSyncCommitteeSubscription subscribes to a number of sync committee subnets
-  //
-  // Response usage:
-  // - 200: Successful response
-  // - 400: Invalid request syntax
-  // - 500: Beacon node internal error
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/prepareSyncCommitteeSubnets
-  rpc SubmitSyncCommitteeSubscription(v2.SubmitSyncCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/validator/sync_committee_subscriptions"
-      body: "*"
-    };
-  }
-
   // ProduceSyncCommitteeContribution requests that the beacon node produces a sync committee contribution.
   //
   // HTTP response usage:
