@@ -318,14 +318,7 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	if !valid {
 		return
 	}
-	contribution, ok := s.produceSyncCommitteeContribution(
-		ctx,
-		&ethpbv2.ProduceSyncCommitteeContributionRequest{
-			Slot:              primitives.Slot(slot),
-			SubcommitteeIndex: index,
-			BeaconBlockRoot:   []byte(blockRoot),
-		},
-	)
+	contribution, ok := s.produceSyncCommitteeContribution(ctx, primitives.Slot(slot), index, []byte(blockRoot))
 	if !ok {
 		http2.HandleError(w, "Could not produce contribution", http.StatusInternalServerError)
 		return
@@ -345,9 +338,11 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 // ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
 func (s *Server) produceSyncCommitteeContribution(
 	ctx context.Context,
-	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
+	slot primitives.Slot,
+	index uint64,
+	blockRoot []byte,
 ) (*ethpbv2.SyncCommitteeContribution, bool) {
-	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
+	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
 	if err != nil {
 		return nil, false
 	}
@@ -358,18 +353,18 @@ func (s *Server) produceSyncCommitteeContribution(
 		ctx,
 		&ethpbalpha.AggregatedSigAndAggregationBitsRequest{
 			Msgs:      msgs,
-			Slot:      req.Slot,
-			SubnetId:  req.SubcommitteeIndex,
-			BlockRoot: req.BeaconBlockRoot,
+			Slot:      slot,
+			SubnetId:  index,
+			BlockRoot: blockRoot,
 		},
 	)
 	if err != nil {
 		return nil, false
 	}
 	return &ethpbv2.SyncCommitteeContribution{
-		Slot:              req.Slot,
-		BeaconBlockRoot:   req.BeaconBlockRoot,
-		SubcommitteeIndex: req.SubcommitteeIndex,
+		Slot:              slot,
+		BeaconBlockRoot:   blockRoot,
+		SubcommitteeIndex: index,
 		AggregationBits:   aggregatedSigAndBits.Bits,
 		Signature:         aggregatedSigAndBits.AggregatedSig,
 	}, true

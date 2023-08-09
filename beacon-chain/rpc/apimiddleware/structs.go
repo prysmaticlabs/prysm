@@ -288,6 +288,10 @@ type BeaconCommitteeSubscribeJson struct {
 	IsAggregator     bool   `json:"is_aggregator"`
 }
 
+type ProduceSyncCommitteeContributionResponseJson struct {
+	Data *SyncCommitteeContributionJson `json:"data"`
+}
+
 type SubmitSyncCommitteeSubscriptionRequestJson struct {
 	Data []*SyncCommitteeSubscriptionJson `json:"data"`
 }
