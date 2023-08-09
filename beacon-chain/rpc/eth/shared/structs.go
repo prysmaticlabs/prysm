@@ -70,7 +70,7 @@ type BeaconCommitteeSubscription struct {
 	CommitteeIndex   string `json:"committee_index" validate:"required,number,gte=0"`
 	CommitteesAtSlot string `json:"committees_at_slot" validate:"required,number,gte=0"`
 	Slot             string `json:"slot" validate:"required,number,gte=0"`
-	IsAggregator     bool   `json:"is_aggregator" validate:"required"`
+	IsAggregator     bool   `json:"is_aggregator"`
 }
 
 func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndProof, error) {
