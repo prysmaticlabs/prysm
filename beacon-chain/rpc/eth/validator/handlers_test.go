@@ -671,8 +671,8 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 			HeadFetcher: &mockChain.ChainService{
 				SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 			},
-			SyncCommitteePool: syncCommitteePool,
 		},
+		SyncCommitteePool: syncCommitteePool,
 	}
 	t.Run("ok", func(t *testing.T) {
 		url := "http://example.com?slot=1&subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -757,14 +757,14 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 				HeadFetcher: &mockChain.ChainService{
 					SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 				},
-				SyncCommitteePool: syncCommitteePool,
 			},
+			SyncCommitteePool: syncCommitteePool,
 		}
 		server.ProduceSyncCommitteeContribution(writer, request)
-		assert.Equal(t, http.StatusNotFound, writer.Code)
+		assert.Equal(t, http.StatusInternalServerError, writer.Code)
 		resp2 := &ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
-		require.ErrorContains(t, "Could not compute validator performance: No subcommittee messages found", errors.New(writer.Body.String()))
+		require.ErrorContains(t, "Could not produce contribution", errors.New(writer.Body.String()))
 	})
 }
 
