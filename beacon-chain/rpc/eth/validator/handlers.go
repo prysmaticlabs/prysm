@@ -318,7 +318,7 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	if !valid {
 		return
 	}
-	contribution, ok := s.produceSyncCommitteeContribution(ctx, primitives.Slot(slot), index, []byte(blockRoot))
+	contribution, ok := s.produceSyncCommitteeContribution(ctx, w, primitives.Slot(slot), index, []byte(blockRoot))
 	if !ok {
 		http2.HandleError(w, "Could not produce contribution", http.StatusInternalServerError)
 		return
@@ -338,15 +338,18 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 // ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
 func (s *Server) produceSyncCommitteeContribution(
 	ctx context.Context,
+	w http.ResponseWriter,
 	slot primitives.Slot,
 	index uint64,
 	blockRoot []byte,
 ) (*ethpbv2.SyncCommitteeContribution, bool) {
 	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
 	if err != nil {
+		http2.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
 		return nil, false
 	}
 	if msgs == nil {
+		http2.HandleError(w, "No subcommittee messages found", http.StatusNotFound)
 		return nil, false
 	}
 	aggregatedSigAndBits, err := s.CoreService.AggregatedSigAndAggregationBits(
@@ -359,6 +362,7 @@ func (s *Server) produceSyncCommitteeContribution(
 		},
 	)
 	if err != nil {
+		http2.HandleError(w, "Could not get contribution data: "+err.Error(), http.StatusInternalServerError)
 		return nil, false
 	}
 	return &ethpbv2.SyncCommitteeContribution{
