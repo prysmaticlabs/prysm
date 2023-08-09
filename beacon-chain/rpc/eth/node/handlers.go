@@ -3,10 +3,8 @@ package node
 import (
 	"net/http"
 	"strconv"
-	"time"
 
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -16,27 +14,20 @@ func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "node.GetSyncStatus")
 	defer span.End()
 
-	start := time.Now()
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Warnf("IsOptimistic: %s", time.Since(start))
 
 	headSlot := s.HeadFetcher.HeadSlot()
-	log.Warnf("HeadSlot: %s", time.Since(start))
-	isSyncing := s.SyncChecker.Syncing()
-	log.Warnf("Syncing: %s", time.Since(start))
-	elOffline := !s.ExecutionChainInfoFetcher.ExecutionClientConnected()
-	log.Warnf("ExecutionClientConnected: %s", time.Since(start))
 	response := &SyncStatusResponse{
 		Data: &SyncStatusResponseData{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(s.GenesisTimeFetcher.CurrentSlot()-headSlot), 10),
-			IsSyncing:    isSyncing,
+			IsSyncing:    s.SyncChecker.Syncing(),
 			IsOptimistic: isOptimistic,
-			ElOffline:    elOffline,
+			ElOffline:    !s.ExecutionChainInfoFetcher.ExecutionClientConnected(),
 		},
 	}
 	http2.WriteJson(w, response)
