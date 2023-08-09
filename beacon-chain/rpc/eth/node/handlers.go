@@ -17,7 +17,7 @@ func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	start := time.Now()
-	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
 		return
