@@ -761,10 +761,10 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 			SyncCommitteePool: syncCommitteePool,
 		}
 		server.ProduceSyncCommitteeContribution(writer, request)
-		assert.Equal(t, http.StatusInternalServerError, writer.Code)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
 		resp2 := &ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
-		require.ErrorContains(t, "Could not produce contribution", errors.New(writer.Body.String()))
+		require.ErrorContains(t, "No subcommittee messages found", errors.New(writer.Body.String()))
 	})
 }
 

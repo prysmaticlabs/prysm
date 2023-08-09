@@ -320,7 +320,6 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	}
 	contribution, ok := s.produceSyncCommitteeContribution(ctx, w, primitives.Slot(slot), index, []byte(blockRoot))
 	if !ok {
-		http2.HandleError(w, "Could not produce contribution", http.StatusInternalServerError)
 		return
 	}
 	response := &ProduceSyncCommitteeContributionResponse{
