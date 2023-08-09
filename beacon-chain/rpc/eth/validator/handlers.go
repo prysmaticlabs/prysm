@@ -305,7 +305,7 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitBeaconCommitteeSubscription")
 	defer span.End()
 
-	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
 
@@ -328,7 +328,7 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		return
 	}
 
-	st, err := s.HeadFetcher.HeadStateReadOnly(r.Context())
+	st, err := s.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -358,7 +358,7 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 
 	fetchValsLen := func(slot primitives.Slot) (uint64, error) {
 		wantedEpoch := slots.ToEpoch(slot)
-		vals, err := s.HeadFetcher.HeadValidatorsIndices(r.Context(), wantedEpoch)
+		vals, err := s.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return 0, err
 		}
