@@ -11,6 +11,7 @@ import (
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
@@ -102,13 +103,13 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		return &ethpb.StateValidatorsResponse{Data: valContainers, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 	}
 
-	filterStatus := make(map[ethpb.ValidatorStatus]bool, len(req.Status))
-	const lastValidStatusValue = ethpb.ValidatorStatus(12)
+	filterStatus := make(map[validator.ValidatorStatus]bool, len(req.Status))
+	const lastValidStatusValue = 12
 	for _, ss := range req.Status {
 		if ss > lastValidStatusValue {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid status "+ss.String())
 		}
-		filterStatus[ss] = true
+		filterStatus[validator.ValidatorStatus(ss)] = true
 	}
 	epoch := slots.ToEpoch(st.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
@@ -243,8 +244,8 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 	if len(validatorIds) == 0 {
 		allValidators := state.Validators()
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
-		for i, validator := range allValidators {
-			readOnlyVal, err := statenative.NewValidator(validator)
+		for i, val := range allValidators {
+			readOnlyVal, err := statenative.NewValidator(val)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 			}
@@ -255,8 +256,8 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			valContainers[i] = &ethpb.ValidatorContainer{
 				Index:     primitives.ValidatorIndex(i),
 				Balance:   allBalances[i],
-				Status:    subStatus,
-				Validator: migration.V1Alpha1ValidatorToV1(validator),
+				Status:    ethpb.ValidatorStatus(subStatus),
+				Validator: migration.V1Alpha1ValidatorToV1(val),
 			}
 		}
 	} else {
@@ -278,7 +279,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				}
 				valIndex = primitives.ValidatorIndex(index)
 			}
-			validator, err := state.ValidatorAtIndex(valIndex)
+			val, err := state.ValidatorAtIndex(valIndex)
 			if _, ok := err.(*statenative.ValidatorIndexOutOfRangeError); ok {
 				// Ignore well-formed yet unknown indexes.
 				continue
@@ -286,8 +287,8 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get validator")
 			}
-			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
-			readOnlyVal, err := statenative.NewValidator(validator)
+			v1Validator := migration.V1Alpha1ValidatorToV1(val)
+			readOnlyVal, err := statenative.NewValidator(val)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 			}
@@ -298,7 +299,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			valContainers = append(valContainers, &ethpb.ValidatorContainer{
 				Index:     valIndex,
 				Balance:   allBalances[valIndex],
-				Status:    subStatus,
+				Status:    ethpb.ValidatorStatus(subStatus),
 				Validator: v1Validator,
 			})
 		}

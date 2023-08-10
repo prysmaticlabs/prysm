@@ -276,10 +276,6 @@ type AggregateAttestationResponseJson struct {
 	Data *AttestationJson `json:"data"`
 }
 
-type SubmitBeaconCommitteeSubscriptionsRequestJson struct {
-	Data []*BeaconCommitteeSubscribeJson `json:"data"`
-}
-
 type BeaconCommitteeSubscribeJson struct {
 	ValidatorIndex   string `json:"validator_index"`
 	CommitteeIndex   string `json:"committee_index"`

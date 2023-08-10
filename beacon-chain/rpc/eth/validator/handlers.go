@@ -11,15 +11,16 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -246,7 +247,7 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 			)
 			return
 		}
-		if valStatus != ethpbv1.ValidatorStatus_ACTIVE_ONGOING && valStatus != ethpbv1.ValidatorStatus_ACTIVE_EXITING {
+		if valStatus != validator2.ActiveOngoing && valStatus != validator2.ActiveExiting {
 			http2.HandleError(
 				w,
 				fmt.Sprintf("Validator at index %d is not active or exiting", consensusItem.ValidatorIndex),
@@ -295,5 +296,105 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		totalDuration := epochDuration * time.Duration(epochsToWatch)
 
 		cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey48[:], startEpoch, sub.SyncCommitteeIndices, totalDuration)
+	}
+}
+
+// SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
+// and replaces current peers with those ones if necessary.
+func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitBeaconCommitteeSubscription")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	if r.Body == http.NoBody {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	var req SubmitBeaconCommitteeSubscriptionsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.Data) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	st, err := s.HeadFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Verify validators at the beginning to return early if request is invalid.
+	validators := make([]state.ReadOnlyValidator, len(req.Data))
+	subscriptions := make([]*validator2.BeaconCommitteeSubscription, len(req.Data))
+	for i, item := range req.Data {
+		consensusItem, err := item.ToConsensus()
+		if err != nil {
+			http2.HandleError(w, "Could not convert request subscription to consensus subscription: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		subscriptions[i] = consensusItem
+		val, err := st.ValidatorAtIndexReadOnly(consensusItem.ValidatorIndex)
+		if err != nil {
+			if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
+				http2.HandleError(w, "Could not get validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+				return
+			}
+			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		validators[i] = val
+	}
+
+	fetchValsLen := func(slot primitives.Slot) (uint64, error) {
+		wantedEpoch := slots.ToEpoch(slot)
+		vals, err := s.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+		if err != nil {
+			return 0, err
+		}
+		return uint64(len(vals)), nil
+	}
+
+	// Request the head validator indices of epoch represented by the first requested slot.
+	currValsLen, err := fetchValsLen(subscriptions[0].Slot)
+	if err != nil {
+		http2.HandleError(w, "Could not retrieve head validator length: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	currEpoch := slots.ToEpoch(subscriptions[0].Slot)
+	for _, sub := range subscriptions {
+		// If epoch has changed, re-request active validators length
+		if currEpoch != slots.ToEpoch(sub.Slot) {
+			currValsLen, err = fetchValsLen(sub.Slot)
+			if err != nil {
+				http2.HandleError(w, "Could not retrieve head validator length: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			currEpoch = slots.ToEpoch(sub.Slot)
+		}
+		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, sub.CommitteeIndex, sub.Slot)
+		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
+		if sub.IsAggregator {
+			cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
+		}
+	}
+	for _, val := range validators {
+		valStatus, err := rpchelpers.ValidatorStatus(val, currEpoch)
+		if err != nil {
+			http2.HandleError(w, "Could not retrieve validator status: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		pubkey := val.PublicKey()
+		core.AssignValidatorToSubnet(pubkey[:], valStatus)
 	}
 }
