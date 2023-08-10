@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
@@ -416,6 +418,181 @@ func TestValidateEquivocation(t *testing.T) {
 
 		assert.ErrorContains(t, "already exists", server.validateEquivocation(blk.Block()))
 	})
+}
+
+func TestServer_GetBlockRoot(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	headBlock := blkContainers[len(blkContainers)-1]
+
+	t.Run("get root", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &testing2.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		root, err := genBlk.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		tests := []struct {
+			name    string
+			blockID []byte
+			want    []byte
+			wantErr bool
+		}{
+			{
+				name:    "bad formatting",
+				blockID: []byte("3bad0"),
+				wantErr: true,
+			},
+			{
+				name:    "canonical slot",
+				blockID: []byte("30"),
+				want:    blkContainers[30].BlockRoot,
+			},
+			{
+				name:    "head",
+				blockID: []byte("head"),
+				want:    headBlock.BlockRoot,
+			},
+			{
+				name:    "finalized",
+				blockID: []byte("finalized"),
+				want:    blkContainers[64].BlockRoot,
+			},
+			{
+				name:    "genesis",
+				blockID: []byte("genesis"),
+				want:    root[:],
+			},
+			{
+				name:    "genesis root",
+				blockID: root[:],
+				want:    root[:],
+			},
+			{
+				name:    "root",
+				blockID: blkContainers[20].BlockRoot,
+				want:    blkContainers[20].BlockRoot,
+			},
+			{
+				name:    "non-existent root",
+				blockID: bytesutil.PadTo([]byte("hi there"), 32),
+				wantErr: true,
+			},
+			{
+				name:    "slot",
+				blockID: []byte("40"),
+				want:    blkContainers[40].BlockRoot,
+			},
+			{
+				name:    "no block",
+				blockID: []byte("105"),
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				url := "http://example.com?slot=1&subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+				request := httptest.NewRequest(http.MethodGet, url, nil)
+				writer := httptest.NewRecorder()
+				writer.Body = &bytes.Buffer{}
+
+				bs.GetBlockRoot(writer, request)
+				assert.Equal(t, http.StatusOK, writer.Code)
+				resp := &ethpbv1.BlockRootResponse{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				if tt.wantErr {
+					require.NotEqual(t, err, nil)
+					return
+				}
+				require.NoError(t, err)
+				assert.DeepEqual(t, tt.want, resp.Data.Root)
+			})
+		}
+	})
+
+	//t.Run("execution optimistic", func(t *testing.T) {
+	//	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+	//	require.NoError(t, err)
+	//	mockChainFetcher := &testing2.ChainService{
+	//		DB:                  beaconDB,
+	//		Block:               wsb,
+	//		Root:                headBlock.BlockRoot,
+	//		FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+	//		Optimistic:          true,
+	//		FinalizedRoots:      map[[32]byte]bool{},
+	//		OptimisticRoots: map[[32]byte]bool{
+	//			bytesutil.ToBytes32(headBlock.BlockRoot): true,
+	//		},
+	//	}
+	//	bs := &Server{
+	//		BeaconDB:              beaconDB,
+	//		ChainInfoFetcher:      mockChainFetcher,
+	//		HeadFetcher:           mockChainFetcher,
+	//		OptimisticModeFetcher: mockChainFetcher,
+	//		FinalizationFetcher:   mockChainFetcher,
+	//	}
+	//	blockRootResp, err := bs.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
+	//		BlockId: []byte("head"),
+	//	})
+	//	require.NoError(t, err)
+	//	assert.Equal(t, true, blockRootResp.ExecutionOptimistic)
+	//})
+	//
+	//t.Run("finalized", func(t *testing.T) {
+	//	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+	//	require.NoError(t, err)
+	//	mockChainFetcher := &testing2.ChainService{
+	//		DB:                  beaconDB,
+	//		Block:               wsb,
+	//		Root:                headBlock.BlockRoot,
+	//		FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+	//		Optimistic:          true,
+	//		FinalizedRoots: map[[32]byte]bool{
+	//			bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
+	//			bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
+	//		},
+	//	}
+	//	bs := &Server{
+	//		BeaconDB:              beaconDB,
+	//		ChainInfoFetcher:      mockChainFetcher,
+	//		HeadFetcher:           mockChainFetcher,
+	//		OptimisticModeFetcher: mockChainFetcher,
+	//		FinalizationFetcher:   mockChainFetcher,
+	//	}
+	//
+	//	t.Run("true", func(t *testing.T) {
+	//		blockRootResp, err := bs.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
+	//			BlockId: []byte("32"),
+	//		})
+	//		require.NoError(t, err)
+	//		assert.Equal(t, true, blockRootResp.Finalized)
+	//	})
+	//	t.Run("false", func(t *testing.T) {
+	//		blockRootResp, err := bs.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
+	//			BlockId: []byte("64"),
+	//		})
+	//		require.NoError(t, err)
+	//		assert.Equal(t, false, blockRootResp.Finalized)
+	//	})
+	//})
 }
 
 const (
