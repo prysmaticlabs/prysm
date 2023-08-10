@@ -245,7 +245,6 @@ func (s *Service) Start() {
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
-		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
 		HeadFetcher:            s.cfg.HeadFetcher,
