@@ -468,7 +468,7 @@ func TestBeaconBlockProtoHelpers_ConvertCheckpointToProto(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := convertCheckpointToProto(testCase.generateInput())
+			result, err := convertMiddlewareCheckpointToProto(testCase.generateInput())
 
 			if testCase.expectedResult != nil {
 				require.NoError(t, err)
@@ -657,7 +657,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationDataToProto(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := convertAttestationDataToProto(testCase.generateInput())
+			result, err := convertMiddlewareAttestationDataToProto(testCase.generateInput())
 
 			if testCase.expectedResult != nil {
 				require.NoError(t, err)
