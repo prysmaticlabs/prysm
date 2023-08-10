@@ -67,10 +67,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "ecba0f04f96b4960a5b250c8e8eeec42281035970aa8852dda73098274d14a1d",
+    sha256 = "727f3e4edd96ea20c29e8c2ca9e8d2af724d8c7778e7923a854b2c80952bc405",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.29.0/bazel-gazelle-v0.29.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.29.0/bazel-gazelle-v0.29.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.30.0/bazel-gazelle-v0.30.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.30.0/bazel-gazelle-v0.30.0.tar.gz",
     ],
 )
 
@@ -313,13 +313,6 @@ filegroup(
 )
 
 http_archive(
-    name = "com_github_bazelbuild_buildtools",
-    sha256 = "7a182df18df1debabd9e36ae07c8edfa1378b8424a04561b674d933b965372b3",
-    strip_prefix = "buildtools-f2aed9ee205d62d45c55cfabbfd26342f8526862",
-    url = "https://github.com/bazelbuild/buildtools/archive/f2aed9ee205d62d45c55cfabbfd26342f8526862.zip",
-)
-
-http_archive(
     name = "com_google_protobuf",
     sha256 = "4e176116949be52b0408dfd24f8925d1eb674a781ae242a75296b17a1c721395",
     strip_prefix = "protobuf-23.3",
@@ -390,10 +383,6 @@ gometalinter_dependencies()
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
-
-load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
-
-buildifier_dependencies()
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
