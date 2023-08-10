@@ -18,6 +18,10 @@ type ListAttestationsResponse struct {
 	Data []*shared.Attestation `json:"data"`
 }
 
+type SubmitAttestationsRequest struct {
+	Data []*shared.Attestation `json:"data" validate:"required,dive"`
+}
+
 type SignedBeaconBlock struct {
 	Message   BeaconBlock `json:"message" validate:"required"`
 	Signature string      `json:"signature" validate:"required"`

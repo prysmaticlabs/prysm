@@ -8,11 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
@@ -26,85 +24,6 @@ import (
 )
 
 const broadcastBLSChangesRateLimit = 128
-
-// SubmitAttestations submits Attestation object to node. If attestation passes all validation
-// constraints, node MUST publish attestation on appropriate subnet.
-func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAttestationsRequest) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitAttestation")
-	defer span.End()
-
-	var validAttestations []*ethpbalpha.Attestation
-	var attFailures []*helpers.SingleIndexedVerificationFailure
-	for i, sourceAtt := range req.Data {
-		att := migration.V1AttToV1Alpha1(sourceAtt)
-		if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
-			attFailures = append(attFailures, &helpers.SingleIndexedVerificationFailure{
-				Index:   i,
-				Message: "Incorrect attestation signature: " + err.Error(),
-			})
-			continue
-		}
-
-		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
-		// of a received unaggregated attestation.
-		// Note we can't send for aggregated att because we don't have selection proof.
-		if !corehelpers.IsAggregated(att) {
-			bs.OperationNotifier.OperationFeed().Send(&feed.Event{
-				Type: operation.UnaggregatedAttReceived,
-				Data: &operation.UnAggregatedAttReceivedData{
-					Attestation: att,
-				},
-			})
-		}
-
-		validAttestations = append(validAttestations, att)
-	}
-
-	broadcastFailed := false
-	for _, att := range validAttestations {
-		// Determine subnet to broadcast attestation to
-		wantedEpoch := slots.ToEpoch(att.Data.Slot)
-		vals, err := bs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
-		if err != nil {
-			return nil, err
-		}
-		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
-
-		if err := bs.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
-			broadcastFailed = true
-		}
-
-		if corehelpers.IsAggregated(att) {
-			if err := bs.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save aggregated att")
-			}
-		} else {
-			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save unaggregated att")
-			}
-		}
-	}
-	if broadcastFailed {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not publish one or more attestations. Some attestations could be published successfully.")
-	}
-
-	if len(attFailures) > 0 {
-		failuresContainer := &helpers.IndexedVerificationFailure{Failures: attFailures}
-		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.InvalidArgument,
-				"One or more attestations failed validation. Could not prepare attestation failure information: %v",
-				err,
-			)
-		}
-		return nil, status.Errorf(codes.InvalidArgument, "One or more attestations failed validation")
-	}
-
-	return &emptypb.Empty{}, nil
-}
 
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
 // not necessarily incorporated into any block.

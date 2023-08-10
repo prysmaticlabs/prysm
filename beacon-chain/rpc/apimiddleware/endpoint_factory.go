@@ -140,9 +140,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 			OnPreSerializeMiddlewareResponseIntoJson: serializeBlindedBlock,
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBlindedBeaconBlockSSZ}
-	case "/eth/v1/beacon/pool/attestations":
-		endpoint.PostRequest = &SubmitAttestationRequestJson{}
-		endpoint.Err = &IndexedVerificationFailureErrorJson{}
 	case "/eth/v1/beacon/pool/attester_slashings":
 		endpoint.PostRequest = &AttesterSlashingJson{}
 		endpoint.GetResponse = &AttesterSlashingsPoolResponseJson{}

@@ -241,10 +241,6 @@ message BeaconBlockContainer {
 
 // Beacon Pool related API service.
 
-message SubmitAttestationsRequest {
-    repeated ethereum.eth.v1.Attestation data = 1;
-}
-
 message AttesterSlashingsPoolResponse {
     repeated AttesterSlashing data = 1;
 }
