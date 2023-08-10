@@ -16,7 +16,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "bindings/go/blst.go",
-        "bindings/go/server.c",
+        "bindings/go/cgo_server.c",
     ],
     cgo = True,
     copts = [
