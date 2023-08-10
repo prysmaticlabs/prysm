@@ -111,7 +111,6 @@ cc_library(
             "src/*.h",
         ],
         exclude = [
-            "src/server.c",
             "src/client_*.c",
         ],
     ),
