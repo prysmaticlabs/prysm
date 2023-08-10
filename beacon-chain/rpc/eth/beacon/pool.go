@@ -27,42 +27,6 @@ import (
 
 const broadcastBLSChangesRateLimit = 128
 
-// ListPoolAttestations retrieves attestations known by the node but
-// not necessarily incorporated into any block. Allows filtering by committee index or slot.
-func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpbv1.AttestationsPoolRequest) (*ethpbv1.AttestationsPoolResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolAttestations")
-	defer span.End()
-
-	attestations := bs.AttestationsPool.AggregatedAttestations()
-	unaggAtts, err := bs.AttestationsPool.UnaggregatedAttestations()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get unaggregated attestations: %v", err)
-	}
-	attestations = append(attestations, unaggAtts...)
-	isEmptyReq := req.Slot == nil && req.CommitteeIndex == nil
-	if isEmptyReq {
-		allAtts := make([]*ethpbv1.Attestation, len(attestations))
-		for i, att := range attestations {
-			allAtts[i] = migration.V1Alpha1AttestationToV1(att)
-		}
-		return &ethpbv1.AttestationsPoolResponse{Data: allAtts}, nil
-	}
-
-	filteredAtts := make([]*ethpbv1.Attestation, 0, len(attestations))
-	for _, att := range attestations {
-		bothDefined := req.Slot != nil && req.CommitteeIndex != nil
-		committeeIndexMatch := req.CommitteeIndex != nil && att.Data.CommitteeIndex == *req.CommitteeIndex
-		slotMatch := req.Slot != nil && att.Data.Slot == *req.Slot
-
-		if bothDefined && committeeIndexMatch && slotMatch {
-			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
-		} else if !bothDefined && (committeeIndexMatch || slotMatch) {
-			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
-		}
-	}
-	return &ethpbv1.AttestationsPoolResponse{Data: filteredAtts}, nil
-}
-
 // SubmitAttestations submits Attestation object to node. If attestation passes all validation
 // constraints, node MUST publish attestation on appropriate subnet.
 func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAttestationsRequest) (*emptypb.Empty, error) {

@@ -143,10 +143,6 @@ type BlockAttestationsResponseJson struct {
 	Finalized           bool               `json:"finalized"`
 }
 
-type AttestationsPoolResponseJson struct {
-	Data []*AttestationJson `json:"data"`
-}
-
 type SubmitAttestationRequestJson struct {
 	Data []*AttestationJson `json:"data"`
 }
