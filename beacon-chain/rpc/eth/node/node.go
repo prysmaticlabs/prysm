@@ -259,29 +259,6 @@ func (_ *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.Versi
 	}, nil
 }
 
-// GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
-// if it is, what block it is up to.
-func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.SyncingResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "node.GetSyncStatus")
-	defer span.End()
-
-	isOptimistic, err := ns.OptimisticModeFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
-	}
-
-	headSlot := ns.HeadFetcher.HeadSlot()
-	return &ethpb.SyncingResponse{
-		Data: &ethpb.SyncInfo{
-			HeadSlot:     headSlot,
-			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
-			IsSyncing:    ns.SyncChecker.Syncing(),
-			IsOptimistic: isOptimistic,
-			ElOffline:    !ns.ExecutionChainInfoFetcher.ExecutionClientConnected(),
-		},
-	}, nil
-}
-
 // GetHealth returns node health status in http status codes. Useful for load balancers.
 // Response Usage:
 //

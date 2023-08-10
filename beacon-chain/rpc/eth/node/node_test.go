@@ -18,20 +18,16 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
 	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	syncmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -159,33 +155,6 @@ func TestGetIdentity(t *testing.T) {
 		_, err = s.GetIdentity(ctx, &emptypb.Empty{})
 		assert.ErrorContains(t, "Could not obtain discovery address", err)
 	})
-}
-
-func TestSyncStatus(t *testing.T) {
-	currentSlot := new(primitives.Slot)
-	*currentSlot = 110
-	state, err := util.NewBeaconState()
-	require.NoError(t, err)
-	err = state.SetSlot(100)
-	require.NoError(t, err)
-	chainService := &mock.ChainService{Slot: currentSlot, State: state, Optimistic: true}
-	syncChecker := &syncmock.Sync{}
-	syncChecker.IsSyncing = true
-
-	s := &Server{
-		HeadFetcher:               chainService,
-		GenesisTimeFetcher:        chainService,
-		OptimisticModeFetcher:     chainService,
-		SyncChecker:               syncChecker,
-		ExecutionChainInfoFetcher: &testutil.MockExecutionChainInfoFetcher{},
-	}
-	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
-	require.NoError(t, err)
-	assert.Equal(t, primitives.Slot(100), resp.Data.HeadSlot)
-	assert.Equal(t, primitives.Slot(10), resp.Data.SyncDistance)
-	assert.Equal(t, true, resp.Data.IsSyncing)
-	assert.Equal(t, true, resp.Data.IsOptimistic)
-	assert.Equal(t, false, resp.Data.ElOffline)
 }
 
 func TestGetPeer(t *testing.T) {

@@ -2458,10 +2458,8 @@ def prysm_deps():
         ],
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p",
-        patch_args = ["-p1"],
-        patches = ["//third_party:com_github_libp2p_go_libp2p.patch"],
-        sum = "h1:KwA7pXKXpz8hG6Cr1fMA7UkgleogcwQj0sxl5qquWRg=",
-        version = "v0.27.5",
+        sum = "h1:IX5x/4yKwyPQeVS2AXHZ3J4YATM9oHBGH1gBc23jBAI=",
+        version = "v0.27.8",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_asn_util",
@@ -3364,8 +3362,8 @@ def prysm_deps():
             "gazelle:exclude generate_cert.go",
         ],
         importpath = "github.com/quic-go/qtls-go1-19",
-        sum = "h1:tFxjCFcTQzK+oMxG6Zcvp4Dq8dx4yD3dDiIiyc86Z5U=",
-        version = "v0.3.2",
+        sum = "h1:wznEHvJwd+2X3PqftRha0SUKmGsnb6dfArMhy9PeJVE=",
+        version = "v0.3.3",
     )
 
     go_repository(
@@ -3374,8 +3372,8 @@ def prysm_deps():
             "gazelle:exclude generate_cert.go",
         ],
         importpath = "github.com/quic-go/qtls-go1-20",
-        sum = "h1:WLOPx6OY/hxtTxKV1Zrq20FtXtDEkeY00CGQm8GEa3E=",
-        version = "v0.2.2",
+        sum = "h1:m575dovXn1y2ATOb1XrRFcrv0F+EQmlowTkoraNkDPI=",
+        version = "v0.2.3",
     )
 
     go_repository(
