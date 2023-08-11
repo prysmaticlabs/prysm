@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
@@ -654,6 +655,170 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	})
 }
 
+func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
+	genesis := util.NewBeaconBlock()
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	require.NoError(t, err, "Could not set up genesis state")
+	// Set state to non-epoch start slot.
+	require.NoError(t, bs.SetSlot(5))
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	roots := make([][]byte, fieldparams.BlockRootsLength)
+	roots[0] = genesisRoot[:]
+	require.NoError(t, bs.SetBlockRoots(roots))
+
+	pubkeys := make([][]byte, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubkeys[i] = deposits[i].Data.PublicKey
+	}
+
+	chainSlot := primitives.Slot(0)
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+	}
+	s := &Server{
+		HeadFetcher: chain,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+	}
+
+	t.Run("single", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(singleBeaconCommitteeContribution)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		require.Equal(t, 1, len(subnets))
+		assert.Equal(t, uint64(5), subnets[0])
+	})
+	t.Run("multiple", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleBeaconCommitteeContribution)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
+		require.Equal(t, 2, len(subnets))
+		assert.Equal(t, uint64(5), subnets[0])
+		assert.Equal(t, uint64(4), subnets[1])
+	})
+	t.Run("is aggregator", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(singleBeaconCommitteeContribution2)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		subnets := cache.SubnetIDs.GetAggregatorSubnetIDs(1)
+		require.Equal(t, 1, len(subnets))
+		assert.Equal(t, uint64(5), subnets[0])
+	})
+	t.Run("validators assigned to subnets", func(t *testing.T) {
+		cache.SubnetIDs.EmptyAllCaches()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleBeaconCommitteeContribution2)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		subnets, ok, _ := cache.SubnetIDs.GetPersistentSubnets(pubkeys[1])
+		require.Equal(t, true, ok, "subnet for validator 1 not found")
+		assert.Equal(t, 1, len(subnets))
+		subnets, ok, _ = cache.SubnetIDs.GetPersistentSubnets(pubkeys[2])
+		require.Equal(t, true, ok, "subnet for validator 2 not found")
+		assert.Equal(t, 1, len(subnets))
+	})
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("empty", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("invalid", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidBeaconCommitteeContribution)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+	t.Run("sync not ready", func(t *testing.T) {
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		chainService := &mockChain.ChainService{State: st}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "Beacon node is currently syncing"))
+	})
+}
+
 var (
 	singleContribution = `[
   {
@@ -887,6 +1052,66 @@ var (
       "2"
     ],
     "until_epoch": "1"
+  }
+]`
+	singleBeaconCommitteeContribution = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  }
+]`
+	singleBeaconCommitteeContribution2 = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": true
+  }
+]`
+	multipleBeaconCommitteeContribution = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  },
+  {
+    "validator_index": "2",
+    "committee_index": "0",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  }
+]`
+	multipleBeaconCommitteeContribution2 = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": true
+  },
+  {
+    "validator_index": "2",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  }
+]`
+	// validator_index is invalid
+	invalidBeaconCommitteeContribution = `[
+  {
+    "validator_index": "foo",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
   }
 ]`
 )

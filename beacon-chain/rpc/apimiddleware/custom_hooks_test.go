@@ -140,56 +140,6 @@ func TestWrapBLSChangesArray(t *testing.T) {
 	})
 }
 
-func TestWrapBeaconCommitteeSubscriptionsArray(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SubmitBeaconCommitteeSubscriptionsRequestJson{},
-		}
-		unwrappedSubs := []*BeaconCommitteeSubscribeJson{{
-			ValidatorIndex:   "1",
-			CommitteeIndex:   "1",
-			CommitteesAtSlot: "1",
-			Slot:             "1",
-			IsAggregator:     true,
-		}}
-		unwrappedSubsJson, err := json.Marshal(unwrappedSubs)
-		require.NoError(t, err)
-
-		var body bytes.Buffer
-		_, err = body.Write(unwrappedSubsJson)
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		wrappedSubs := &SubmitBeaconCommitteeSubscriptionsRequestJson{}
-		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSubs))
-		require.Equal(t, 1, len(wrappedSubs.Data), "wrong number of wrapped items")
-		assert.Equal(t, "1", wrappedSubs.Data[0].ValidatorIndex)
-		assert.Equal(t, "1", wrappedSubs.Data[0].CommitteeIndex)
-		assert.Equal(t, "1", wrappedSubs.Data[0].CommitteesAtSlot)
-		assert.Equal(t, "1", wrappedSubs.Data[0].Slot)
-		assert.Equal(t, true, wrappedSubs.Data[0].IsAggregator)
-	})
-
-	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SubmitBeaconCommitteeSubscriptionsRequestJson{},
-		}
-		var body bytes.Buffer
-		_, err := body.Write([]byte("invalid"))
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapBeaconCommitteeSubscriptionsArray(endpoint, nil, request)
-		require.Equal(t, false, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
-		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
-		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
-	})
-}
-
 func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
