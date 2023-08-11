@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -101,6 +102,13 @@ func main() {
 		default:
 			log.Fatal("Oops, given bucket is supported for now.")
 		}
+	case "check-bucket":
+		switch *bucketName {
+		case "block-roots":
+			checkBlockRootsBucket(dbNameWithPath, *rowLimit, *bucketName)
+		default:
+			log.Fatal("Oops, given bucket is not supported for now.")
+		}
 	case "migration-check":
 		destDbNameWithPath := filepath.Join(*destDatadir, *dbName)
 		if _, err := os.Stat(destDbNameWithPath); os.IsNotExist(err) {
@@ -127,7 +135,7 @@ func printBucketStats(dbNameWithPath string) {
 func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName string) {
 	// get the keys within the supplied limit for the given bucket.
 	bucketNameInBytes := []byte(bucketName)
-	keys, sizes := keysOfBucket(dbNameWithPath, bucketNameInBytes, rowLimit)
+	keys, sizes, _ := keysValuesOfBucket(dbNameWithPath, bucketNameInBytes, rowLimit)
 
 	// create a new KV Store.
 	dbDirectory := filepath.Dir(dbNameWithPath)
@@ -377,11 +385,11 @@ func printStateSummary(stateSummaryC <-chan *modifiedStateSummary, doneC chan<- 
 
 func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	// get the keys within the supplied limit for the given bucket.
-	sourceStateKeys, _ := keysOfBucket(dbNameWithPath, []byte("state"), MaxUint64)
-	destStateKeys, _ := keysOfBucket(destDbNameWithPath, []byte("state"), MaxUint64)
+	sourceStateKeys, _, _ := keysValuesOfBucket(dbNameWithPath, []byte("state"), MaxUint64)
+	destStateKeys, _, _ := keysValuesOfBucket(destDbNameWithPath, []byte("state"), MaxUint64)
 
 	if len(destStateKeys) < len(sourceStateKeys) {
-		log.Fatalf("destination keys are lesser then source keys (%d/%d)", len(sourceStateKeys), len(destStateKeys))
+		log.Warnf("destination keys are lesser then source keys (%d/%d)", len(sourceStateKeys), len(destStateKeys))
 	}
 
 	// create the source and destination KV stores.
@@ -435,7 +443,7 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 		}
 
 		if len(sourceState.Validators()) != len(destinationState.Validators()) {
-			log.Fatalf("validator mismatch : source = %d, dest = %d", len(sourceState.Validators()), len(destinationState.Validators()))
+			log.Warnf("validator mismatch : source = %d, dest = %d", len(sourceState.Validators()), len(destinationState.Validators()))
 		}
 		sourceStateHash, err := sourceState.HashTreeRoot(ctx)
 		if err != nil {
@@ -446,13 +454,50 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 			log.WithError(err).Fatal("could not find hash of destination state")
 		}
 		if !bytes.Equal(sourceStateHash[:], destinationStateHash[:]) {
-			log.Fatalf("state mismatch : key = %s", hexutils.BytesToHex(key))
+			log.Warnf("state mismatch : key = %s", hexutils.BytesToHex(key))
 		}
 	}
 	log.Infof("number of state that did not match: %d", failCount)
 }
 
-func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([][]byte, []uint64) {
+func checkBlockRootsBucket(dbNameWithPath string, rowLimit uint64, bucketName string) {
+	// get the keys within the supplied limit for the given bucket.
+	bucketNameInBytes := []byte(bucketName)
+	keys, _, values := keysValuesOfBucket(dbNameWithPath, bucketNameInBytes, rowLimit)
+
+	// create a new KV Store.
+	dbDirectory := filepath.Dir(dbNameWithPath)
+	db, openErr := kv.NewKVStore(context.Background(), dbDirectory)
+	if openErr != nil {
+		log.WithError(openErr).Fatal("could not open db")
+	}
+
+	// don't forget to close it when ejecting out of this function.
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			log.WithError(closeErr).Fatal("could not close db")
+		}
+	}()
+
+	ctx := context.Background()
+	for idx, value := range values {
+		block, err := db.Block(ctx, bytesutil.ToBytes32(value))
+		if err != nil {
+			log.WithError(err).Errorf("could not get block for blockRoot : %s", hexutils.BytesToHex(value))
+			continue
+		}
+		blockStateRoot := block.Block().StateRoot()
+		isStateRootMatch := [32]byte(keys[idx]) == blockStateRoot
+		if isStateRootMatch {
+			log.Info(fmt.Sprintf("stateRoot=%x, blockRoot=%x, isStateRootMatch=%t", keys[idx], value, isStateRootMatch))
+		} else {
+			log.Warnf(fmt.Sprintf("stateRoot=%x, blockRoot=%x, isStateRootMatch=%t", keys[idx], value, isStateRootMatch))
+		}
+	}
+}
+
+func keysValuesOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([][]byte, []uint64, [][]byte) {
 	// open the raw database file. If the file is busy, then exit.
 	db, openErr := bolt.Open(dbNameWithPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if openErr != nil {
@@ -470,6 +515,7 @@ func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([]
 	// get all the keys of the given bucket.
 	var keys [][]byte
 	var sizes []uint64
+	var values [][]byte
 	if viewErr := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
 		c := b.Cursor()
@@ -479,18 +525,19 @@ func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([]
 				return nil
 			}
 			actualKey := make([]byte, len(k))
-			actualSizes := make([]byte, len(v))
+			actualValue := make([]byte, len(v))
 			copy(actualKey, k)
-			copy(actualSizes, v)
+			copy(actualValue, v)
 			keys = append(keys, actualKey)
 			sizes = append(sizes, uint64(len(v)))
+			values = append(values, actualValue)
 			count++
 		}
 		return nil
 	}); viewErr != nil {
 		log.WithError(viewErr).Fatal("could not read keys of bucket from db")
 	}
-	return keys, sizes
+	return keys, sizes, values
 }
 
 func sizeAndCountOfByteList(list [][]byte) (uint64, uint64) {

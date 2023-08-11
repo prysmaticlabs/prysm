@@ -232,6 +232,11 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
 
+	// Delete state root to block root mapping. Done before the next function as we need to retrieve the state root
+	if err := s.DeleteBlockRoot(ctx, root); err != nil {
+		return err
+	}
+
 	if err := s.DeleteState(ctx, root); err != nil {
 		return err
 	}

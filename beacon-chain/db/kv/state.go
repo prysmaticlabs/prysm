@@ -175,13 +175,11 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 		return err
 	}
 
-	if err := s.db.Update(func(tx *bolt.Tx) error {
+	err = s.db.Update(func(tx *bolt.Tx) error {
 		return s.saveStatesEfficientInternal(ctx, tx, blockRoots, states, validatorKeys, validatorsEntries)
-	}); err != nil {
-		return err
-	}
+	})
 
-	return nil
+	return err
 }
 
 func getValidators(states []state.ReadOnlyBeaconState) ([][]byte, map[string]*ethpb.Validator, error) {
@@ -350,7 +348,7 @@ func (s *Store) storeValidatorEntriesSeparately(ctx context.Context, tx *bolt.Tx
 
 // HasState checks if a state by root exists in the db.
 func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
+	_, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
 	hasState := false
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -367,40 +365,47 @@ func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	return hasState
 }
 
+// checkJustifiedAndFinalized check if blockRoot is finalized, genesis or head
+func checkJustifiedAndFinalized(ctx context.Context, tx *bolt.Tx, blockRoot [32]byte) error {
+	bkt := tx.Bucket(blocksBucket)
+	genesisBlockRoot := bkt.Get(genesisBlockRootKey)
+
+	bkt = tx.Bucket(checkpointBucket)
+	enc := bkt.Get(finalizedCheckpointKey)
+	finalized := &ethpb.Checkpoint{}
+	if enc == nil {
+		finalized = &ethpb.Checkpoint{Root: genesisBlockRoot}
+	} else if err := decode(ctx, enc, finalized); err != nil {
+		return err
+	}
+
+	enc = bkt.Get(justifiedCheckpointKey)
+	justified := &ethpb.Checkpoint{}
+	if enc == nil {
+		justified = &ethpb.Checkpoint{Root: genesisBlockRoot}
+	} else if err := decode(ctx, enc, justified); err != nil {
+		return err
+	}
+
+	// Safeguard against deleting genesis, finalized, head state.
+	if bytes.Equal(blockRoot[:], finalized.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], justified.Root) {
+		return ErrDeleteJustifiedAndFinalized
+	}
+	return nil
+}
+
 // DeleteState by block root.
 func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
 	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
-
-		bkt = tx.Bucket(checkpointBucket)
-		enc := bkt.Get(finalizedCheckpointKey)
-		finalized := &ethpb.Checkpoint{}
-		if enc == nil {
-			finalized = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(ctx, enc, finalized); err != nil {
+		if err := checkJustifiedAndFinalized(ctx, tx, blockRoot); err != nil {
 			return err
 		}
-
-		enc = bkt.Get(justifiedCheckpointKey)
-		justified := &ethpb.Checkpoint{}
-		if enc == nil {
-			justified = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(ctx, enc, justified); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(stateBucket)
-		// Safeguard against deleting genesis, finalized, head state.
-		if bytes.Equal(blockRoot[:], finalized.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], justified.Root) {
-			return ErrDeleteJustifiedAndFinalized
-		}
-
+		bkt := tx.Bucket(stateBucket)
 		// Nothing to delete if state doesn't exist.
-		enc = bkt.Get(blockRoot[:])
+		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
@@ -654,7 +659,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 
 // retrieves and assembles the state information from multiple buckets.
 func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateBytes")
+	_, span := trace.StartSpan(ctx, "BeaconDB.stateBytes")
 	defer span.End()
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -777,7 +782,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createStateIndicesFromStateSlot(ctx context.Context, slot primitives.Slot) map[string][]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
+	_, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search

@@ -51,6 +51,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var blkRoots [][32]byte
+	var stRoots [][32]byte
 	for i := 0; i < 97; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), primitives.Slot(i))
 		require.NoError(t, err)
@@ -58,11 +59,12 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		require.NoError(t, err)
 		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
+		bStRoot, err := bState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		stRoots = append(stRoots, bStRoot)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, service.saveInitSyncBlock(ctx, root, wsb))
-		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
-		require.NoError(t, err)
 		blks = append(blks, wsb)
 		blkRoots = append(blkRoots, root)
 	}
@@ -74,6 +76,12 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	jroot := bytesutil.ToBytes32(jcp.Root)
 	require.Equal(t, blkRoots[63], jroot)
 	require.Equal(t, primitives.Epoch(2), service.cfg.ForkChoiceStore.JustifiedCheckpoint().Epoch)
+	// Verify that state root to block root mappings are saved in block-roots bucket
+	for idx, stRoot := range stRoots {
+		blkRoot, err := service.cfg.BeaconDB.BlockRoot(ctx, stRoot)
+		require.NoError(t, err)
+		require.Equal(t, blkRoot, blkRoots[idx])
+	}
 }
 
 func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
@@ -86,6 +94,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 
 	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var blkRoots [][32]byte
+	var stRoots [][32]byte
 	blkCount := 4
 	for i := 0; i <= blkCount; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), primitives.Slot(i))
@@ -94,6 +103,9 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 		require.NoError(t, err)
 		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
+		bStRoot, err := bState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		stRoots = append(stRoots, bStRoot)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, service.saveInitSyncBlock(ctx, root, wsb))
@@ -101,6 +113,12 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 	require.NoError(t, service.onBlockBatch(ctx, blks, blkRoots))
+	// Verify that state root to block root mappings are saved in block-roots bucket
+	for idx, stRoot := range stRoots {
+		blkRoot, err := service.cfg.BeaconDB.BlockRoot(ctx, stRoot)
+		require.NoError(t, err)
+		require.Equal(t, blkRoot, blkRoots[idx])
+	}
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
@@ -550,12 +568,15 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	require.NoError(t, fcs.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: service.originBlockRoot}))
 
+	var blkRoots [][32]byte
+	var stRoots [][32]byte
 	testState := gs.Copy()
 	for i := primitives.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
+		blkRoots = append(blkRoots, r)
 		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, fcs.NewSlot(ctx, i))
@@ -575,6 +596,9 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 
 		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
 		require.NoError(t, err)
+		testStateRoot, err := testState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		stRoots = append(stRoots, testStateRoot)
 	}
 	cp := service.CurrentJustifiedCheckpt()
 	require.Equal(t, primitives.Epoch(3), cp.Epoch)
@@ -590,6 +614,12 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 	require.NoError(t, err)
 	cp = service.FinalizedCheckpt()
 	require.Equal(t, f.Epoch, cp.Epoch)
+	// Verify that state root to block root mapping is saved in block-roots bucket
+	for idx, stRoot := range stRoots {
+		blkRoot, err := service.cfg.BeaconDB.BlockRoot(ctx, stRoot)
+		require.NoError(t, err)
+		require.Equal(t, blkRoot, blkRoots[idx])
+	}
 }
 
 func TestOnBlock_CanFinalize(t *testing.T) {
@@ -599,12 +629,15 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	gs, keys := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 
+	var blkRoots [][32]byte
+	var stRoots [][32]byte
 	testState := gs.Copy()
 	for i := primitives.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
+		blkRoots = append(blkRoots, r)
 		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		// Save current justified and finalized epochs for future use.
@@ -623,6 +656,9 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 
 		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
 		require.NoError(t, err)
+		testStateRoot, err := testState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		stRoots = append(stRoots, testStateRoot)
 	}
 	cp := service.CurrentJustifiedCheckpt()
 	require.Equal(t, primitives.Epoch(3), cp.Epoch)
@@ -638,6 +674,12 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.NoError(t, err)
 	cp = service.FinalizedCheckpt()
 	require.Equal(t, f.Epoch, cp.Epoch)
+	// Verify that state root to block root mapping is saved in block-roots bucket
+	for idx, stRoot := range stRoots {
+		blkRoot, err := service.cfg.BeaconDB.BlockRoot(ctx, stRoot)
+		require.NoError(t, err)
+		require.Equal(t, blkRoot, blkRoots[idx])
+	}
 }
 
 func TestOnBlock_NilBlock(t *testing.T) {
