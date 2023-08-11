@@ -175,6 +175,15 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 			}
 			log = log.WithField("withdrawalCount", len(withdrawals))
 		}
+		if blk.Version() >= version.Deneb {
+			kzgs, err := blk.Block().Body().BlobKzgCommitments()
+			if err != nil {
+				log.WithError(err).Error("Failed to get blob KZG commitments")
+				return
+			} else if len(kzgs) != 0 {
+				log = log.WithField("blobCommitmentCount", len(kzgs))
+			}
+		}
 	}
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
