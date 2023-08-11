@@ -68,16 +68,20 @@ func NewService(ctx context.Context, su *StatusUpdater, cw startup.ClockWaiter, 
 }
 
 func (s *Service) Start() {
-	defer close(s.exited)
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer func() {
+		cancel()
+		close(s.exited)
+	}()
 	var err error
-	s.clock, err = s.clockWaiter.WaitForClock(s.ctx)
+	s.clock, err = s.clockWaiter.WaitForClock(ctx)
 	if err != nil {
 		log.WithError(err).Error("backfill service failed to start while waiting for genesis data")
 	}
 
 	status := s.su.Status()
 	s.batchSeq = newBatchSequencer(s.nWorkers, primitives.Slot(status.LowSlot), primitives.Slot(status.HighSlot), primitives.Slot(s.batchSize))
-	s.pool.Spawn(s.nWorkers)
+	s.pool.Spawn(ctx, s.nWorkers)
 
 	if err = s.initBatches(); err != nil {
 		log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
@@ -85,9 +89,13 @@ func (s *Service) Start() {
 
 	close(s.initialized)
 	for {
-		b, err := s.pool.Finished()
+		b, err := s.pool.Complete()
 		if err != nil {
-			log.WithError(err).Error("Non-recoverable error in backfill service, quitting.")
+			if errors.Is(err, errEndSequence) {
+				log.WithField("backfill_slot", b.begin).Info("Backfill is complete")
+			} else {
+				log.WithError(err).Error("Non-recoverable error in backfill service, quitting.")
+			}
 			return
 		}
 		s.batchSeq.update(b)
@@ -103,28 +111,30 @@ func (s *Service) Start() {
 			ib.state = batchImportComplete
 			s.batchSeq.update(ib)
 		}
-		b, err = s.batchSeq.sequence()
+		batches, err := s.batchSeq.sequence()
 		if err != nil {
-			if !errors.Is(err, errEndSequence) {
-				log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
+			// This typically means we have several importable batches, but they are stuck behind a batch that needs
+			// to complete first so that we can chain parent roots across batches.
+			// ie backfilling [[90..100), [80..90), [70..80)], if we complete [70..80) and [80..90) but not [90..100),
+			// we can't move forward until [90..100) completes, because we need to confirm 99 connects to 100,
+			// and then we'll have the parent_root expected by 90 to ensure it matches the root for 89,
+			// at which point we know we can process [80..90).
+			if errors.Is(err, errMaxBatches) {
+				continue
 			}
 		}
-		// We want to update the pool with the batchEndSequence batches so that the pool can detect when all batches
-		// are finished.
-		s.pool.Todo(b)
+		for _, b := range batches {
+			s.pool.Todo(b)
+		}
 	}
 }
 
 func (s *Service) initBatches() error {
-	for i := 0; i < s.nWorkers; i++ {
-		b, err := s.batchSeq.sequence()
-		if err != nil {
-			if errors.Is(err, errEndSequence) {
-				return nil
-			}
-			return err
-		}
-
+	batches, err := s.batchSeq.sequence()
+	if err != nil {
+		return err
+	}
+	for _, b := range batches {
 		s.pool.Todo(b)
 	}
 	return nil

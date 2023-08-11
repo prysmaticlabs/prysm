@@ -21,8 +21,6 @@ func (s batchState) String() string {
 		return "sequenced"
 	case batchErrRetryable:
 		return "error_retryable"
-	case batchErrFatal:
-		return "error_fatal"
 	case batchImportable:
 		return "importable"
 	case batchImportComplete:
@@ -39,7 +37,6 @@ const (
 	batchInit
 	batchSequenced
 	batchErrRetryable
-	batchErrFatal
 	batchImportable
 	batchImportComplete
 	batchEndSequence

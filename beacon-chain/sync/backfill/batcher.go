@@ -36,30 +36,37 @@ func (c *batchSequencer) update(b batch) {
 	}
 }
 
-func (c *batchSequencer) sequence() (batch, error) {
+func (c *batchSequencer) sequence() ([]batch, error) {
+	s := make([]batch, 0)
 	// batch start slots are in descending order, c.seq[n].begin == c.seq[n+1].end
 	for i := range c.seq {
 		switch c.seq[i].state {
 		case batchInit, batchErrRetryable:
 			c.seq[i].state = batchSequenced
 			c.seq[i].inc()
-			return c.seq[i], nil
+			s = append(s, c.seq[i])
 		case batchNil:
 			if i == 0 {
-				return batch{}, errSequencerMisconfigured
+				return nil, errSequencerMisconfigured
 			}
 			c.seq[i] = c.batcher.beforeBatch(c.seq[i-1])
 			c.seq[i].state = batchSequenced
 			c.seq[i].inc()
-			return c.seq[i], nil
+			s = append(s, c.seq[i])
 		case batchEndSequence:
-			return batch{}, errors.Wrapf(errEndSequence, "LowSlot=%d", c.seq[i].begin)
+			if len(s) == 0 {
+				s = append(s, c.seq[i])
+			}
+			break
 		default:
 			continue
 		}
 	}
+	if len(s) == 0 {
+		return nil, errMaxBatches
+	}
 
-	return batch{}, errMaxBatches
+	return s, nil
 }
 
 func (c *batchSequencer) importable() []batch {

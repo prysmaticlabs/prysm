@@ -16,7 +16,7 @@ func TestServiceInit(t *testing.T) {
 	db := &mockBackfillDB{}
 	su := NewStatus(db)
 	nWorkers := 5
-	var batchSize uint64 = 64
+	var batchSize uint64 = 100
 	nBatches := nWorkers * 2
 	su.status = &dbval.BackfillStatus{
 		HighSlot: 11235,
@@ -25,30 +25,25 @@ func TestServiceInit(t *testing.T) {
 	remaining := nBatches
 	cw := startup.NewClockSynchronizer()
 	require.NoError(t, cw.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	pool := &mockPool{todoChan: make(chan batch), finishedChan: make(chan batch)}
+	pool := &mockPool{todoChan: make(chan batch, nWorkers), finishedChan: make(chan batch, nWorkers)}
 	srv, err := NewService(ctx, su, cw, pool, WithBatchSize(batchSize), WithWorkerCount(nWorkers))
 	require.NoError(t, err)
 	go srv.Start()
 	todo := make([]batch, 0)
 	todo = testReadN(t, ctx, pool.todoChan, nWorkers, todo)
 	require.Equal(t, nWorkers, len(todo))
-	b := todo[0]
-	todo = todo[1:]
-	b.state = batchImportable
-	pool.finishedChan <- b
-	remaining -= 1
-	for i := 0; i <= remaining; i++ {
-		todo = testReadN(t, ctx, pool.todoChan, 1, todo)
-		b = todo[0]
+	for i := 0; i < remaining; i++ {
+		b := todo[i]
 		if b.state == batchSequenced {
 			b.state = batchImportable
 		}
-
-		todo = todo[1:]
 		pool.finishedChan <- b
+		todo = testReadN(t, ctx, pool.todoChan, 1, todo)
 	}
-	todo = testReadN(t, ctx, pool.todoChan, 1, todo)
-	require.Equal(t, nWorkers, len(todo))
+	require.Equal(t, remaining+nWorkers, len(todo))
+	for i := remaining; i < remaining+nWorkers; i++ {
+		require.Equal(t, batchEndSequence, todo[i].state)
+	}
 }
 
 func testReadN(t *testing.T, ctx context.Context, c chan batch, n int, into []batch) []batch {

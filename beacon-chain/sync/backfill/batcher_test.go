@@ -81,16 +81,18 @@ func TestBatchSequencer(t *testing.T) {
 		{begin: 10787, end: 10851},
 		{begin: 10723, end: 10787},
 	}
+	got, err := seq.sequence()
+	require.Equal(t, seqLen, len(got))
 	for i := 0; i < seqLen; i++ {
+		g := got[i]
 		exp := expected[i]
-		got, err := seq.sequence()
 		require.NoError(t, err)
-		require.Equal(t, exp.begin, got.begin)
-		require.Equal(t, exp.end, got.end)
-		require.Equal(t, batchSequenced, got.state)
+		require.Equal(t, exp.begin, g.begin)
+		require.Equal(t, exp.end, g.end)
+		require.Equal(t, batchSequenced, g.state)
 	}
 	// This should give us the error indicating there are too many outstanding batches.
-	_, err := seq.sequence()
+	_, err = seq.sequence()
 	require.ErrorIs(t, err, errMaxBatches)
 
 	// mark the last batch completed so we can call sequence again.
@@ -98,7 +100,9 @@ func TestBatchSequencer(t *testing.T) {
 	// With this state, the batch should get served back to us as the next batch.
 	last.state = batchErrRetryable
 	seq.update(last)
-	next, err := seq.sequence()
+	nextS, err := seq.sequence()
+	require.Equal(t, 1, len(nextS))
+	next := nextS[0]
 	require.NoError(t, err)
 	require.Equal(t, last.begin, next.begin)
 	require.Equal(t, last.end, next.end)
@@ -118,6 +122,7 @@ func TestBatchSequencer(t *testing.T) {
 	require.Equal(t, 1, len(seq.importable()))
 	require.Equal(t, len(seq.seq), seqLen)
 	// change the last element back to batchInit so that the importable test stays simple
+	last = seq.seq[len(seq.seq)-1]
 	last.state = batchInit
 	seq.update(last)
 	// ensure that the number of importable elements grows as the list is marked importable
@@ -183,7 +188,8 @@ func TestBatchSequencer(t *testing.T) {
 	first.state = batchImportComplete
 	// update() with a complete state will cause the sequence to be extended with an additional batch
 	seq.update(first)
-	last, err = seq.sequence()
+	lastS, err := seq.sequence()
+	last = lastS[0]
 	require.NoError(t, err)
 	require.Equal(t, newMin, last.begin)
 	require.Equal(t, seq.seq[len(seq.seq)-2].begin, last.end)
@@ -193,6 +199,10 @@ func TestBatchSequencer(t *testing.T) {
 	first.state = batchImportComplete
 	// update() with a complete state will cause the sequence to be extended with an additional batch
 	seq.update(first)
-	_, err = seq.sequence()
-	require.ErrorIs(t, err, errEndSequence)
+	endExp, err := seq.sequence()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(endExp))
+	end := endExp[0]
+	//require.ErrorIs(t, err, errEndSequence)
+	require.Equal(t, batchEndSequence, end.state)
 }

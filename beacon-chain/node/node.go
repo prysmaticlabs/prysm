@@ -209,7 +209,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := bfs.Reload(ctx); err != nil {
 		return nil, errors.Wrap(err, "backfill status initialization error")
 	}
-	bf, err := backfill.NewService(ctx, bfs, beacon.clockWaiter, backfill.NewP2PBatchWorkerPool(ctx, beacon.fetchP2P()))
+	bf, err := backfill.NewService(ctx, bfs, beacon.clockWaiter, backfill.NewP2PBatchWorkerPool(beacon.fetchP2P()))
 	if err := beacon.services.RegisterService(bf); err != nil {
 		return nil, errors.Wrap(err, "error registering backfill service")
 	}
