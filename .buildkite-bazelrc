@@ -52,5 +52,3 @@ build --workspace_status_command=./hack/workspace_status_ci.sh
 # Buildbuddy
 build --bes_results_url=https://app.buildbuddy.io/invocation/
 build --bes_backend=grpcs://remote.buildbuddy.io
-
-build --nolegacy_external_runfiles
