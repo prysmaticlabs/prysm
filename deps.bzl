@@ -1,6 +1,6 @@
-load("@prysm//tools/go:def.bzl", "go_repository", "maybe")  # gazelle:keep
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
+load("@prysm//tools/go:def.bzl", "go_repository", "maybe")  # gazelle:keep
 
 # Prysm's third party / external dependencies.
 #
@@ -3876,15 +3876,6 @@ def prysm_deps():
         version = "v1.2.0",
     )
 
-    http_archive(
-        name = "com_github_supranational_blst",
-        urls = [
-            "https://github.com/supranational/blst/archive/3dd0f804b1819e5d03fb22ca2e6fac105932043a.tar.gz",
-        ],
-        strip_prefix = "blst-3dd0f804b1819e5d03fb22ca2e6fac105932043a",
-        build_file = "//third_party:blst/blst.BUILD",
-        sha256 = "132124c074e59ead77e1828cc54b587a182ea67b781b72198e802af4696d78fe",
-    )
     go_repository(
         name = "com_github_syndtr_goleveldb",
         importpath = "github.com/syndtr/goleveldb",
@@ -5606,4 +5597,13 @@ def prysm_deps():
         importpath = "go.uber.org/zap",
         sum = "h1:FiJd5l1UOLj0wCgbSE0rwwXHzEdAZS6hiiSnxJN/D60=",
         version = "v1.24.0",
+    )
+    http_archive(
+        name = "com_github_supranational_blst",
+        urls = [
+            "https://github.com/supranational/blst/archive/3dd0f804b1819e5d03fb22ca2e6fac105932043a.tar.gz",
+        ],
+        strip_prefix = "blst-3dd0f804b1819e5d03fb22ca2e6fac105932043a",
+        build_file = "//third_party:blst/blst.BUILD",
+        sha256 = "132124c074e59ead77e1828cc54b587a182ea67b781b72198e802af4696d78fe",
     )

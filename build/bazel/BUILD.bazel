@@ -6,7 +6,6 @@ go_library(
     srcs = [
         "bazel.go",
         "data_path.go",
-        "non_bazel.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/build/bazel",
     visibility = ["//visibility:public"],
