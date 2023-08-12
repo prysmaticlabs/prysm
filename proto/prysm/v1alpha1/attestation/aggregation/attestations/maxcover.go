@@ -68,16 +68,12 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 
 		// Create aggregated attestation and update solution lists. Process aggregates only if they
 		// feature at least one unknown bit i.e. can increase the overall coverage.
-		diff, err1 := coveredBitsSoFar.Xor(coverage)
-		if err1 != nil {
-			return nil, err1
-		}
-		xc, err2 := diff.AndCount(coverage)
-		if err2 != nil {
-			return nil, err2
+		contains, err := coveredBitsSoFar.Contains(coverage)
+		if err != nil {
+			return nil, err
 		}
 
-		if xc > 0 {
+		if !contains {
 			aggIdx, err := aggregateAttestations(atts, keys, coverage)
 			if err != nil {
 				return append(aggregated, unaggregated...), err
