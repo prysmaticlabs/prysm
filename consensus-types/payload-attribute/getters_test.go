@@ -172,6 +172,16 @@ func TestPayloadAttributeGetters(t *testing.T) {
 				require.ErrorContains(t, "PbV3 is not supported for capella: unsupported getter", err)
 			},
 		},
+		{
+			name: "Get PbDeneb (nil)",
+			tc: func(t *testing.T) {
+				a, err := New(&enginev1.PayloadAttributesV3{})
+				require.NoError(t, err)
+				got, err := a.PbV3()
+				require.NoError(t, err)
+				require.Equal(t, (*enginev1.PayloadAttributesV3)(nil), got)
+			},
+		},
 	}
 
 	for _, test := range tests {
