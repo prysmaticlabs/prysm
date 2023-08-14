@@ -673,6 +673,9 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 				sentBlock, err = blocktest.NewSignedBeaconBlockFromGeneric(block)
 				assert.NoError(t, err, "Unexpected error unwrapping block")
+				if tt.version == version.Deneb {
+					require.Equal(t, 2, len(block.GetDeneb().Blobs))
+				}
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 			})
 
@@ -680,6 +683,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			g := sentBlock.Block().Body().Graffiti()
 			assert.Equal(t, string(validator.graffiti), string(g[:]))
 			require.LogsContain(t, hook, "Submitted new block")
+
 		})
 	}
 }
