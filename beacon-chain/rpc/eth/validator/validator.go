@@ -12,12 +12,10 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -990,20 +988,6 @@ func proposalDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte,
 	return root, nil
 }
 
-// Logic based on https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
-func v1ValidatorStatusToV1Alpha1(valStatus ethpbv1.ValidatorStatus) ethpbalpha.ValidatorStatus {
-	switch valStatus {
-	case ethpbv1.ValidatorStatus_ACTIVE:
-		return ethpbalpha.ValidatorStatus_ACTIVE
-	case ethpbv1.ValidatorStatus_PENDING:
-		return ethpbalpha.ValidatorStatus_PENDING
-	case ethpbv1.ValidatorStatus_WITHDRAWAL:
-		return ethpbalpha.ValidatorStatus_EXITED
-	default:
-		return ethpbalpha.ValidatorStatus_UNKNOWN_STATUS
-	}
-}
-
 func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives.Epoch {
 	currentSyncPeriodIndex := currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	// Return the last epoch of the next sync committee.
@@ -1035,4 +1019,42 @@ func syncCommitteeDuties(
 		}
 	}
 	return duties, nil
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (vs *Server) ProduceSyncCommitteeContribution(
+	ctx context.Context,
+	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
+) (*ethpbv2.ProduceSyncCommitteeContributionResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceSyncCommitteeContribution")
+	defer span.End()
+
+	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
+	}
+	if msgs == nil {
+		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
+	}
+	v1alpha1Req := &ethpbalpha.AggregatedSigAndAggregationBitsRequest{
+		Msgs:      msgs,
+		Slot:      req.Slot,
+		SubnetId:  req.SubcommitteeIndex,
+		BlockRoot: req.BeaconBlockRoot,
+	}
+	v1alpha1Resp, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
+	}
+	contribution := &ethpbv2.SyncCommitteeContribution{
+		Slot:              req.Slot,
+		BeaconBlockRoot:   req.BeaconBlockRoot,
+		SubcommitteeIndex: req.SubcommitteeIndex,
+		AggregationBits:   v1alpha1Resp.Bits,
+		Signature:         v1alpha1Resp.AggregatedSig,
+	}
+
+	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
+		Data: contribution,
+	}, nil
 }

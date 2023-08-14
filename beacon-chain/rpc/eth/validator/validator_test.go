@@ -11,9 +11,10 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -21,6 +22,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
@@ -31,10 +33,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestGetAttesterDuties(t *testing.T) {
+	helpers.ClearCache()
+
 	ctx := context.Background()
 	genesis := util.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -194,6 +197,8 @@ func TestGetAttesterDuties(t *testing.T) {
 }
 
 func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
+	helpers.ClearCache()
+
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
@@ -208,6 +213,8 @@ func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestGetProposerDuties(t *testing.T) {
+	helpers.ClearCache()
+
 	ctx := context.Background()
 	genesis := util.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -262,10 +269,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(9982), vid)
+		require.Equal(t, primitives.ValidatorIndex(12289), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, primitives.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
 	})
 
 	t.Run("Next epoch", func(t *testing.T) {
@@ -301,10 +308,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(4863), vid)
+		require.Equal(t, primitives.ValidatorIndex(1360), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
-		assert.Equal(t, primitives.ValidatorIndex(4863), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[4863], expectedDuty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(1360), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[1360], expectedDuty.Pubkey)
 	})
 
 	t.Run("Prune payload ID cache ok", func(t *testing.T) {
@@ -343,7 +350,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.Equal(t, primitives.ValidatorIndex(0), vid)
 		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(4309), vid)
+		require.Equal(t, primitives.ValidatorIndex(10565), vid)
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
@@ -411,6 +418,8 @@ func TestGetProposerDuties(t *testing.T) {
 }
 
 func TestGetProposerDuties_SyncNotReady(t *testing.T) {
+	helpers.ClearCache()
+
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
@@ -425,6 +434,8 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestGetSyncCommitteeDuties(t *testing.T) {
+	helpers.ClearCache()
+
 	ctx := context.Background()
 	genesisTime := time.Now()
 	numVals := uint64(11)
@@ -664,6 +675,8 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 }
 
 func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
+	helpers.ClearCache()
+
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
@@ -678,6 +691,8 @@ func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestSyncCommitteeDutiesLastValidEpoch(t *testing.T) {
+	helpers.ClearCache()
+
 	t.Run("first epoch of current period", func(t *testing.T) {
 		assert.Equal(t, params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1, syncCommitteeDutiesLastValidEpoch(0))
 	})
@@ -1724,4 +1739,61 @@ func TestGetLiveness(t *testing.T) {
 		})
 		require.ErrorContains(t, "Validator index 2 is invalid", err)
 	})
+}
+
+func TestProduceSyncCommitteeContribution(t *testing.T) {
+	ctx := context.Background()
+	root := bytesutil.PadTo([]byte("root"), 32)
+	sig := bls.NewAggregateSignature().Marshal()
+	messsage := &ethpbalpha.SyncCommitteeMessage{
+		Slot:           0,
+		BlockRoot:      root,
+		ValidatorIndex: 0,
+		Signature:      sig,
+	}
+	syncCommitteePool := synccommittee.NewStore()
+	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
+	v1Server := &v1alpha1validator.Server{
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher: &mockChain.ChainService{
+			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
+		},
+	}
+	server := Server{
+		V1Alpha1Server:    v1Server,
+		SyncCommitteePool: syncCommitteePool,
+	}
+
+	req := &ethpbv2.ProduceSyncCommitteeContributionRequest{
+		Slot:              0,
+		SubcommitteeIndex: 0,
+		BeaconBlockRoot:   root,
+	}
+	resp, err := server.ProduceSyncCommitteeContribution(ctx, req)
+	require.NoError(t, err)
+	assert.Equal(t, primitives.Slot(0), resp.Data.Slot)
+	assert.Equal(t, uint64(0), resp.Data.SubcommitteeIndex)
+	assert.DeepEqual(t, root, resp.Data.BeaconBlockRoot)
+	aggregationBits := resp.Data.AggregationBits
+	assert.Equal(t, true, aggregationBits.BitAt(0))
+	assert.DeepEqual(t, sig, resp.Data.Signature)
+
+	syncCommitteePool = synccommittee.NewStore()
+	v1Server = &v1alpha1validator.Server{
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher: &mockChain.ChainService{
+			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
+		},
+	}
+	server = Server{
+		V1Alpha1Server:    v1Server,
+		SyncCommitteePool: syncCommitteePool,
+	}
+	req = &ethpbv2.ProduceSyncCommitteeContributionRequest{
+		Slot:              0,
+		SubcommitteeIndex: 0,
+		BeaconBlockRoot:   root,
+	}
+	_, err = server.ProduceSyncCommitteeContribution(ctx, req)
+	assert.ErrorContains(t, "No subcommittee messages found", err)
 }

@@ -268,16 +268,8 @@ type ProduceBlindedBlockResponseJson struct {
 	Data    *BlindedBeaconBlockContainerJson `json:"data"`
 }
 
-type ProduceAttestationDataResponseJson struct {
-	Data *AttestationDataJson `json:"data"`
-}
-
 type AggregateAttestationResponseJson struct {
 	Data *AttestationJson `json:"data"`
-}
-
-type SubmitBeaconCommitteeSubscriptionsRequestJson struct {
-	Data []*BeaconCommitteeSubscribeJson `json:"data"`
 }
 
 type BeaconCommitteeSubscribeJson struct {

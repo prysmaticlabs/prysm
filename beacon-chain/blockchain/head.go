@@ -182,7 +182,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
-func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
+func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, r [32]byte, hs state.BeaconState, optimistic bool) error {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.ReadOnlySignedB
 	if err != nil {
 		return err
 	}
-	if err := s.setHeadInitialSync(r, bCp, hs); err != nil {
+	if err := s.setHeadInitialSync(r, bCp, hs, optimistic); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
 	return nil
@@ -227,7 +227,7 @@ func (s *Service) setHead(newHead *head) error {
 // This sets head view object which is used to track the head slot, root, block and state. The method
 // assumes that state being passed into the method will not be modified by any other alternate
 // caller which holds the state's reference.
-func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.ReadOnlySignedBeaconBlock, state state.BeaconState) error {
+func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.ReadOnlySignedBeaconBlock, state state.BeaconState, optimistic bool) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -237,9 +237,10 @@ func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.ReadOnlySig
 		return err
 	}
 	s.head = &head{
-		root:  root,
-		block: bCp,
-		state: state,
+		root:       root,
+		block:      bCp,
+		state:      state,
+		optimistic: optimistic,
 	}
 	return nil
 }

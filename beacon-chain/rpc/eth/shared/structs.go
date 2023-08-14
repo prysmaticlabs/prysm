@@ -65,6 +65,14 @@ type SyncCommitteeSubscription struct {
 	UntilEpoch           string   `json:"until_epoch" validate:"required,number,gte=0"`
 }
 
+type BeaconCommitteeSubscription struct {
+	ValidatorIndex   string `json:"validator_index" validate:"required,number,gte=0"`
+	CommitteeIndex   string `json:"committee_index" validate:"required,number,gte=0"`
+	CommitteesAtSlot string `json:"committees_at_slot" validate:"required,number,gte=0"`
+	Slot             string `json:"slot" validate:"required,number,gte=0"`
+	IsAggregator     bool   `json:"is_aggregator"`
+}
+
 func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndProof, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {
@@ -258,6 +266,33 @@ func (s *SyncCommitteeSubscription) ToConsensus() (*validator.SyncCommitteeSubsc
 		ValidatorIndex:       primitives.ValidatorIndex(index),
 		SyncCommitteeIndices: scIndices,
 		UntilEpoch:           primitives.Epoch(epoch),
+	}, nil
+}
+
+func (b *BeaconCommitteeSubscription) ToConsensus() (*validator.BeaconCommitteeSubscription, error) {
+	valIndex, err := strconv.ParseUint(b.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ValidatorIndex")
+	}
+	committeeIndex, err := strconv.ParseUint(b.CommitteeIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "CommitteeIndex")
+	}
+	committeesAtSlot, err := strconv.ParseUint(b.CommitteesAtSlot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "CommitteesAtSlot")
+	}
+	slot, err := strconv.ParseUint(b.Slot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Slot")
+	}
+
+	return &validator.BeaconCommitteeSubscription{
+		ValidatorIndex:   primitives.ValidatorIndex(valIndex),
+		CommitteeIndex:   primitives.CommitteeIndex(committeeIndex),
+		CommitteesAtSlot: committeesAtSlot,
+		Slot:             primitives.Slot(slot),
+		IsAggregator:     b.IsAggregator,
 	}, nil
 }
 

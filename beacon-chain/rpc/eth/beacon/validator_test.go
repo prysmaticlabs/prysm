@@ -15,6 +15,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -463,7 +464,7 @@ func TestListValidators_Status(t *testing.T) {
 			require.Equal(
 				t,
 				true,
-				status == ethpb.ValidatorStatus_ACTIVE,
+				status == validator.Active,
 			)
 			require.Equal(
 				t,
@@ -501,7 +502,7 @@ func TestListValidators_Status(t *testing.T) {
 			require.Equal(
 				t,
 				true,
-				status == ethpb.ValidatorStatus_ACTIVE_ONGOING,
+				status == validator.ActiveOngoing,
 			)
 			require.Equal(
 				t,
@@ -538,7 +539,7 @@ func TestListValidators_Status(t *testing.T) {
 			require.Equal(
 				t,
 				true,
-				status == ethpb.ValidatorStatus_EXITED,
+				status == validator.Exited,
 			)
 			require.Equal(
 				t,
@@ -574,7 +575,7 @@ func TestListValidators_Status(t *testing.T) {
 			require.Equal(
 				t,
 				true,
-				status == ethpb.ValidatorStatus_PENDING_INITIALIZED || status == ethpb.ValidatorStatus_EXITED_UNSLASHED,
+				status == validator.PendingInitialized || status == validator.ExitedUnslashed,
 			)
 			require.Equal(
 				t,
@@ -612,7 +613,7 @@ func TestListValidators_Status(t *testing.T) {
 			require.Equal(
 				t,
 				true,
-				status == ethpb.ValidatorStatus_PENDING || subStatus == ethpb.ValidatorStatus_EXITED_SLASHED,
+				status == validator.Pending || subStatus == validator.ExitedSlashed,
 			)
 			require.Equal(
 				t,
