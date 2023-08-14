@@ -97,7 +97,7 @@ func (vs *Server) GetSyncCommitteeContribution(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
 	}
-	aggregatedSigAndBits, err := vs.CoreService.AggregatedSigAndAggregationBits(
+	sig, aggregatedBits, err := vs.CoreService.AggregatedSigAndAggregationBits(
 		ctx,
 		&ethpb.AggregatedSigAndAggregationBitsRequest{
 			Msgs:      msgs,
@@ -112,8 +112,8 @@ func (vs *Server) GetSyncCommitteeContribution(
 		Slot:              req.Slot,
 		BlockRoot:         headRoot,
 		SubcommitteeIndex: req.SubnetId,
-		AggregationBits:   aggregatedSigAndBits.Bits,
-		Signature:         aggregatedSigAndBits.AggregatedSig,
+		AggregationBits:   aggregatedBits,
+		Signature:         sig,
 	}
 
 	return contribution, nil
@@ -137,9 +137,12 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 	ctx context.Context,
 	req *ethpb.AggregatedSigAndAggregationBitsRequest,
 ) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
-	aggregatedSigAndBits, err := vs.CoreService.AggregatedSigAndAggregationBits(ctx, req)
+	sig, aggregatedBits, err := vs.CoreService.AggregatedSigAndAggregationBits(ctx, req)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return aggregatedSigAndBits, nil
+	return &ethpb.AggregatedSigAndAggregationBitsResponse{
+		AggregatedSig: sig,
+		Bits:          aggregatedBits,
+	}, nil
 }

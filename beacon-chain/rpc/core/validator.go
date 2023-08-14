@@ -276,7 +276,7 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 // associated with a particular set of sync committee messages.
 func (s *Service) AggregatedSigAndAggregationBits(
 	ctx context.Context,
-	req *ethpb.AggregatedSigAndAggregationBitsRequest) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
+	req *ethpb.AggregatedSigAndAggregationBitsRequest) ([]byte, []byte, error) {
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	sigs := make([][]byte, 0, subCommitteeSize)
 	bits := ethpb.NewSyncCommitteeAggregationBits()
@@ -284,7 +284,7 @@ func (s *Service) AggregatedSigAndAggregationBits(
 		if bytes.Equal(req.BlockRoot, msg.BlockRoot) {
 			headSyncCommitteeIndices, err := s.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, req.Slot)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not get sync subcommittee index")
+				return nil, nil, errors.Wrapf(err, "could not get sync subcommittee index")
 			}
 			for _, index := range headSyncCommitteeIndices {
 				i := uint64(index)
@@ -302,11 +302,11 @@ func (s *Service) AggregatedSigAndAggregationBits(
 	if len(sigs) != 0 {
 		uncompressedSigs, err := bls.MultipleSignaturesFromBytes(sigs)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decompress signatures")
+			return nil, nil, errors.Wrapf(err, "could not decompress signatures")
 		}
 		aggregatedSig = bls.AggregateSignatures(uncompressedSigs).Marshal()
 	}
-	return &ethpb.AggregatedSigAndAggregationBitsResponse{AggregatedSig: aggregatedSig, Bits: bits}, nil
+	return aggregatedSig, bits, nil
 }
 
 // AssignValidatorToSubnet checks the status and pubkey of a particular validator

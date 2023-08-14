@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -456,7 +455,9 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 
 // ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
 func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
+	defer span.End()
+
 	subIndex := r.URL.Query().Get("subcommittee_index")
 	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
 	if !valid {
@@ -479,7 +480,7 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	response := &ProduceSyncCommitteeContributionResponse{
 		Data: &shared.SyncCommitteeContribution{
 			Slot:              strconv.FormatUint(uint64(contribution.Slot), 10),
-			BeaconBlockRoot:   hexutil.Encode(contribution.BeaconBlockRoot),
+			BeaconBlockRoot:   hexutil.Encode(contribution.BlockRoot),
 			SubcommitteeIndex: strconv.FormatUint(contribution.SubcommitteeIndex, 10),
 			AggregationBits:   hexutil.Encode(contribution.AggregationBits),
 			Signature:         hexutil.Encode(contribution.Signature),
@@ -495,7 +496,7 @@ func (s *Server) produceSyncCommitteeContribution(
 	slot primitives.Slot,
 	index uint64,
 	blockRoot []byte,
-) (*ethpbv2.SyncCommitteeContribution, bool) {
+) (*ethpbalpha.SyncCommitteeContribution, bool) {
 	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
 	if err != nil {
 		http2.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
@@ -505,7 +506,7 @@ func (s *Server) produceSyncCommitteeContribution(
 		http2.HandleError(w, "No subcommittee messages found", http.StatusNotFound)
 		return nil, false
 	}
-	aggregatedSigAndBits, err := s.CoreService.AggregatedSigAndAggregationBits(
+	sig, aggregatedBits, err := s.CoreService.AggregatedSigAndAggregationBits(
 		ctx,
 		&ethpbalpha.AggregatedSigAndAggregationBitsRequest{
 			Msgs:      msgs,
@@ -518,11 +519,11 @@ func (s *Server) produceSyncCommitteeContribution(
 		http2.HandleError(w, "Could not get contribution data: "+err.Error(), http.StatusInternalServerError)
 		return nil, false
 	}
-	return &ethpbv2.SyncCommitteeContribution{
+	return &ethpbalpha.SyncCommitteeContribution{
 		Slot:              slot,
-		BeaconBlockRoot:   blockRoot,
+		BlockRoot:         blockRoot,
 		SubcommitteeIndex: index,
-		AggregationBits:   aggregatedSigAndBits.Bits,
-		Signature:         aggregatedSigAndBits.AggregatedSig,
+		AggregationBits:   aggregatedBits,
+		Signature:         sig,
 	}, true
 }
