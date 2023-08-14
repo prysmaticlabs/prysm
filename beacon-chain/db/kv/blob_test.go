@@ -157,11 +157,26 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.ErrorIs(t, ErrNotFound, err)
 		require.Equal(t, 0, len(got))
 	})
+	t.Run("saving blob different times", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+
+		scs0 := scs[0:2]
+		scs1 := scs[2:4]
+		scs2 := scs[4:6]
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs0))
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs1))
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs2))
+
+		saved, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs0[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(saved, scs))
+	})
 	t.Run("saving a new blob for rotation", func(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 		oldBlockRoot := scs[0].BlockRoot
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(oldBlockRoot))
 		require.NoError(t, err)
@@ -227,7 +242,6 @@ func TestStore_verifySideCars(t *testing.T) {
 		{name: "invalid proposer index", scs: []*ethpb.BlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, error: "sidecar proposer index mismatch: 2 != 1"},
 		{name: "invalid root", scs: []*ethpb.BlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, error: "sidecar root mismatch: 02 != 01"},
 		{name: "invalid parent root", scs: []*ethpb.BlobSidecar{{BlockParentRoot: []byte{1}}, {BlockParentRoot: []byte{2}}}, error: "sidecar parent root mismatch: 02 != 01"},
-		{name: "invalid side index", scs: []*ethpb.BlobSidecar{{Index: 0}, {Index: 0}}, error: "sidecar index mismatch: 0 != 1"},
 		{name: "happy path", scs: []*ethpb.BlobSidecar{{Index: 0}, {Index: 1}}, error: ""},
 	}
 	for _, tt := range tests {

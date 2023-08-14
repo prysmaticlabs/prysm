@@ -12,6 +12,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -23,7 +24,7 @@ import (
 //  2. Compute key for blob as bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
 //
 //  3. Begin the save algorithm:  If the incoming blob has a slot bigger than the saved slot at the spot
-//     in the rotating keys buffer, we overwrite all elements for that slot.
+//     in the rotating keys buffer, we overwrite all elements for that slot. Otherwise, we merge the blob with an existing one.
 func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
@@ -38,6 +39,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		if err != nil {
 			return err
 		}
+
 		bkt := tx.Bucket(blobsBucket)
 		c := bkt.Cursor()
 		newKey := blobSidecarKey(scs[0])
@@ -52,16 +54,34 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
 		// store the blob by key and exit early.
 		if len(replacingKey) != 0 {
-			if err := bkt.Delete(replacingKey); err != nil {
-				log.WithError(err).Warnf("Could not delete blob with key %#x", replacingKey)
+			slotBytes := replacingKey[:8]
+			oldSlot := bytesutil.BytesToSlotBigEndian(slotBytes)
+			oldEpoch := slots.ToEpoch(oldSlot)
+			// The blob we are replacing is too old, so we delete it.
+			if slots.ToEpoch(scs[0].Slot) >= oldEpoch.Add(uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)) {
+				if err := bkt.Delete(replacingKey); err != nil {
+					log.WithError(err).Warnf("Could not delete blob with key %#x", replacingKey)
+				}
+			} else {
+				// Otherwise, we need to merge the new blob with the old blob.
+				enc := bkt.Get(replacingKey)
+				sc := &ethpb.BlobSidecars{}
+				if err := decode(ctx, enc, sc); err != nil {
+					return err
+				}
+				sc.Sidecars = append(sc.Sidecars, scs...)
+				sortSideCars(sc.Sidecars)
+				encodedBlobSidecar, err = encode(ctx, &ethpb.BlobSidecars{Sidecars: sc.Sidecars})
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return bkt.Put(newKey, encodedBlobSidecar)
 	})
 }
 
-// verifySideCars ensures that all sidecars have the same slot, parent root, block root, and proposer index.
-// It also ensures that indices are sequential and start at 0 and no more than MAX_BLOB_EPOCHS.
+// verifySideCars ensures that all sidecars have the same slot, parent root, block root, and proposer index, and no more than MAX_BLOB_EPOCHS.
 func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
 	if len(scs) == 0 {
 		return errors.New("nil or empty blob sidecars")
@@ -75,7 +95,7 @@ func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
 	r := scs[0].BlockRoot
 	p := scs[0].ProposerIndex
 
-	for i, sc := range scs {
+	for _, sc := range scs {
 		if sc.Slot != sl {
 			return fmt.Errorf("sidecar slot mismatch: %d != %d", sc.Slot, sl)
 		}
@@ -87,9 +107,6 @@ func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
 		}
 		if sc.ProposerIndex != p {
 			return fmt.Errorf("sidecar proposer index mismatch: %d != %d", sc.ProposerIndex, p)
-		}
-		if sc.Index != uint64(i) {
-			return fmt.Errorf("sidecar index mismatch: %d != %d", sc.Index, i)
 		}
 	}
 	return nil
