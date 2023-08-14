@@ -11,10 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	beaconState "github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -234,8 +234,8 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		validatorAssignments = append(validatorAssignments, assignment)
 		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
 		// Assign relevant validator to subnet.
-		assignValidatorToSubnet(pubKey, assignment.Status)
-		assignValidatorToSubnet(pubKey, nextAssignment.Status)
+		core.AssignValidatorToSubnetProto(pubKey, assignment.Status)
+		core.AssignValidatorToSubnetProto(pubKey, nextAssignment.Status)
 	}
 
 	return &ethpb.DutiesResponse{
@@ -248,32 +248,8 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 // AssignValidatorToSubnet checks the status and pubkey of a particular validator
 // to discern whether persistent subnets need to be registered for them.
 func (vs *Server) AssignValidatorToSubnet(_ context.Context, req *ethpb.AssignValidatorToSubnetRequest) (*emptypb.Empty, error) {
-	assignValidatorToSubnet(req.PublicKey, req.Status)
+	core.AssignValidatorToSubnetProto(req.PublicKey, req.Status)
 	return &emptypb.Empty{}, nil
-}
-
-func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
-	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
-		return
-	}
-
-	_, ok, expTime := cache.SubnetIDs.GetPersistentSubnets(pubkey)
-	if ok && expTime.After(prysmTime.Now()) {
-		return
-	}
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	var assignedIdxs []uint64
-	randGen := rand.NewGenerator()
-	for i := uint64(0); i < params.BeaconConfig().RandomSubnetsPerValidator; i++ {
-		assignedIdx := randGen.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
-		assignedIdxs = append(assignedIdxs, uint64(assignedIdx))
-	}
-
-	assignedDuration := uint64(randGen.Intn(int(params.BeaconConfig().EpochsPerRandomSubnetSubscription)))
-	assignedDuration += params.BeaconConfig().EpochsPerRandomSubnetSubscription
-
-	totalDuration := epochDuration * time.Duration(assignedDuration)
-	cache.SubnetIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)
 }
 
 func registerSyncSubnetCurrentPeriod(s beaconState.BeaconState, epoch primitives.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {

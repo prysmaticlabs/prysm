@@ -11,6 +11,7 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
@@ -37,6 +38,8 @@ import (
 )
 
 func TestGetAttesterDuties(t *testing.T) {
+	helpers.ClearCache()
+
 	ctx := context.Background()
 	genesis := util.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -196,6 +199,8 @@ func TestGetAttesterDuties(t *testing.T) {
 }
 
 func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
+	helpers.ClearCache()
+
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
@@ -210,6 +215,8 @@ func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestGetProposerDuties(t *testing.T) {
+	helpers.ClearCache()
+
 	ctx := context.Background()
 	genesis := util.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -264,10 +271,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(9982), vid)
+		require.Equal(t, primitives.ValidatorIndex(12289), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, primitives.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
 	})
 
 	t.Run("Next epoch", func(t *testing.T) {
@@ -303,10 +310,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(4863), vid)
+		require.Equal(t, primitives.ValidatorIndex(1360), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
-		assert.Equal(t, primitives.ValidatorIndex(4863), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[4863], expectedDuty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(1360), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[1360], expectedDuty.Pubkey)
 	})
 
 	t.Run("Prune payload ID cache ok", func(t *testing.T) {
@@ -345,7 +352,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.Equal(t, primitives.ValidatorIndex(0), vid)
 		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(4309), vid)
+		require.Equal(t, primitives.ValidatorIndex(10565), vid)
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
@@ -413,6 +420,8 @@ func TestGetProposerDuties(t *testing.T) {
 }
 
 func TestGetProposerDuties_SyncNotReady(t *testing.T) {
+	helpers.ClearCache()
+
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
@@ -427,6 +436,8 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestGetSyncCommitteeDuties(t *testing.T) {
+	helpers.ClearCache()
+
 	ctx := context.Background()
 	genesisTime := time.Now()
 	numVals := uint64(11)
@@ -666,6 +677,8 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 }
 
 func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
+	helpers.ClearCache()
+
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	chainService := &mockChain.ChainService{State: st}
@@ -680,6 +693,8 @@ func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestSyncCommitteeDutiesLastValidEpoch(t *testing.T) {
+	helpers.ClearCache()
+
 	t.Run("first epoch of current period", func(t *testing.T) {
 		assert.Equal(t, params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1, syncCommitteeDutiesLastValidEpoch(0))
 	})
@@ -1301,153 +1316,6 @@ func TestProduceAttestationData(t *testing.T) {
 	if !proto.Equal(res.Data, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
 	}
-}
-
-func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
-	ctx := context.Background()
-	genesis := util.NewBeaconBlock()
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
-	require.NoError(t, err)
-	eth1Data, err := util.DeterministicEth1Data(len(deposits))
-	require.NoError(t, err)
-	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
-	require.NoError(t, err, "Could not set up genesis state")
-	// Set state to non-epoch start slot.
-	require.NoError(t, bs.SetSlot(5))
-	genesisRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, fieldparams.BlockRootsLength)
-	roots[0] = genesisRoot[:]
-	require.NoError(t, bs.SetBlockRoots(roots))
-
-	pubKeys := make([][]byte, len(deposits))
-	for i := 0; i < len(deposits); i++ {
-		pubKeys[i] = deposits[i].Data.PublicKey
-	}
-
-	chainSlot := primitives.Slot(0)
-	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
-	}
-	vs := &Server{
-		HeadFetcher:    chain,
-		TimeFetcher:    chain,
-		SyncChecker:    &mockSync.Sync{IsSyncing: false},
-		V1Alpha1Server: &v1alpha1validator.Server{},
-	}
-
-	t.Run("Single subscription", func(t *testing.T) {
-		cache.SubnetIDs.EmptyAllCaches()
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: []*ethpbv1.BeaconCommitteeSubscribe{
-				{
-					ValidatorIndex: 1,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   false,
-				},
-			},
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
-		require.NoError(t, err)
-		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
-		require.Equal(t, 1, len(subnets))
-		assert.Equal(t, uint64(4), subnets[0])
-	})
-
-	t.Run("Multiple subscriptions", func(t *testing.T) {
-		cache.SubnetIDs.EmptyAllCaches()
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: []*ethpbv1.BeaconCommitteeSubscribe{
-				{
-					ValidatorIndex: 1,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   false,
-				},
-				{
-					ValidatorIndex: 1000,
-					CommitteeIndex: 16,
-					Slot:           1,
-					IsAggregator:   false,
-				},
-			},
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
-		require.NoError(t, err)
-		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
-		require.Equal(t, 2, len(subnets))
-	})
-
-	t.Run("Is aggregator", func(t *testing.T) {
-		cache.SubnetIDs.EmptyAllCaches()
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: []*ethpbv1.BeaconCommitteeSubscribe{
-				{
-					ValidatorIndex: 1,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   true,
-				},
-			},
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
-		require.NoError(t, err)
-		ids := cache.SubnetIDs.GetAggregatorSubnetIDs(primitives.Slot(1))
-		assert.Equal(t, 1, len(ids))
-	})
-
-	t.Run("Validators assigned to subnet", func(t *testing.T) {
-		cache.SubnetIDs.EmptyAllCaches()
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: []*ethpbv1.BeaconCommitteeSubscribe{
-				{
-					ValidatorIndex: 1,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   true,
-				},
-				{
-					ValidatorIndex: 2,
-					CommitteeIndex: 1,
-					Slot:           1,
-					IsAggregator:   false,
-				},
-			},
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
-		require.NoError(t, err)
-		ids, ok, _ := cache.SubnetIDs.GetPersistentSubnets(pubKeys[1])
-		require.Equal(t, true, ok, "subnet for validator 1 not found")
-		assert.Equal(t, 1, len(ids))
-		ids, ok, _ = cache.SubnetIDs.GetPersistentSubnets(pubKeys[2])
-		require.Equal(t, true, ok, "subnet for validator 2 not found")
-		assert.Equal(t, 1, len(ids))
-	})
-
-	t.Run("No subscriptions", func(t *testing.T) {
-		req := &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{
-			Data: make([]*ethpbv1.BeaconCommitteeSubscribe, 0),
-		}
-		_, err = vs.SubmitBeaconCommitteeSubscription(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "No subscriptions provided", err)
-	})
-}
-
-func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	chainService := &mockChain.ChainService{State: st}
-	vs := &Server{
-		SyncChecker:           &mockSync.Sync{IsSyncing: true},
-		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
-		OptimisticModeFetcher: chainService,
-	}
-	_, err = vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
-	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
 func TestProduceSyncCommitteeContribution(t *testing.T) {

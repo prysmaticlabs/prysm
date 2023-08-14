@@ -17,3 +17,7 @@ type SubmitAggregateAndProofsRequest struct {
 type SubmitSyncCommitteeSubscriptionsRequest struct {
 	Data []*shared.SyncCommitteeSubscription `json:"data" validate:"required,dive"`
 }
+
+type SubmitBeaconCommitteeSubscriptionsRequest struct {
+	Data []*shared.BeaconCommitteeSubscription `json:"data" validate:"required,dive"`
+}
