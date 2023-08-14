@@ -110,7 +110,10 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
 		belowEjectionBalance := validator.EffectiveBalance <= ejectionBal
 		if isActive && belowEjectionBalance {
-			state, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx))
+			// Here is fine to do a quadratic loop since this should
+			// barely happen
+			maxExitEpoch, churn := validators.ValidatorsMaxExitEpochsAndChurn(ctx, state)
+			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), maxExitEpoch, churn)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 			}
