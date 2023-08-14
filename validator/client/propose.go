@@ -124,16 +124,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
 	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
 		signedBlobs := make([]*ethpb.SignedBlobSidecar, len(b.GetDeneb().Blobs))
-		for _, blob := range b.GetDeneb().Blobs {
+		for i, blob := range b.GetDeneb().Blobs {
 			blobSig, err := v.signBlob(ctx, blob, pubKey)
 			if err != nil {
 				log.WithError(err).Error("Failed to sign blob")
 				return
 			}
-			signedBlobs = append(signedBlobs, &ethpb.SignedBlobSidecar{
+			signedBlobs[i] = &ethpb.SignedBlobSidecar{
 				Message:   blob,
 				Signature: blobSig,
-			})
+			}
 		}
 		denebBlock, err := blk.PbDenebBlock()
 		if err != nil {
