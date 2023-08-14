@@ -2,32 +2,27 @@ package beacon
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
-	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
 	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	p2pMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"google.golang.org/grpc"
 )
 
 func TestListAttestations(t *testing.T) {
@@ -173,9 +168,7 @@ func TestListAttestations(t *testing.T) {
 	})
 }
 
-func TestServer_SubmitAttestations_Ok(t *testing.T) {
-	ctx := context.Background()
-
+func TestServer_SubmitAttestations(t *testing.T) {
 	transition.SkipSlotCache.Disable()
 	defer transition.SkipSlotCache.Enable()
 
@@ -206,263 +199,177 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	b := bitfield.NewBitlist(1)
 	b.SetBitAt(0, true)
 
-	sourceCheckpoint := &ethpbv1.Checkpoint{
-		Epoch: 0,
-		Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
-	}
-	att1 := &ethpbv1.Attestation{
-		AggregationBits: b,
-		Data: &ethpbv1.AttestationData{
-			Slot:            0,
-			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
-			Source:          sourceCheckpoint,
-			Target: &ethpbv1.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
-	att2 := &ethpbv1.Attestation{
-		AggregationBits: b,
-		Data: &ethpbv1.AttestationData{
-			Slot:            0,
-			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
-			Source:          sourceCheckpoint,
-			Target: &ethpbv1.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
-
-	for _, att := range []*ethpbv1.Attestation{att1, att2} {
-		sb, err := signing.ComputeDomainAndSign(
-			bs,
-			slots.ToEpoch(att.Data.Slot),
-			att.Data,
-			params.BeaconConfig().DomainBeaconAttester,
-			keys[0],
-		)
-		require.NoError(t, err)
-		sig, err := bls.SignatureFromBytes(sb)
-		require.NoError(t, err)
-		att.Signature = sig.Marshal()
-	}
-
-	broadcaster := &p2pMock.MockBroadcaster{}
 	chainService := &blockchainmock.ChainService{State: bs}
 	s := &Server{
 		HeadFetcher:       chainService,
 		ChainInfoFetcher:  chainService,
-		AttestationsPool:  attestations.NewPool(),
-		Broadcaster:       broadcaster,
 		OperationNotifier: &blockchainmock.MockOperationNotifier{},
 	}
 
-	_, err = s.SubmitAttestations(ctx, &ethpbv1.SubmitAttestationsRequest{
-		Data: []*ethpbv1.Attestation{att1, att2},
-	})
-	require.NoError(t, err)
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
-	expectedAtt1, err := att1.HashTreeRoot()
-	require.NoError(t, err)
-	expectedAtt2, err := att2.HashTreeRoot()
-	require.NoError(t, err)
-	actualAtt1, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
-	require.NoError(t, err)
-	actualAtt2, err := broadcaster.BroadcastAttestations[1].HashTreeRoot()
-	require.NoError(t, err)
-	for _, r := range [][32]byte{actualAtt1, actualAtt2} {
-		assert.Equal(t, true, reflect.DeepEqual(expectedAtt1, r) || reflect.DeepEqual(expectedAtt2, r))
-	}
+	t.Run("single", func(t *testing.T) {
+		broadcaster := &p2pMock.MockBroadcaster{}
+		s.Broadcaster = broadcaster
+		s.AttestationsPool = attestations.NewPool()
 
-	require.Equal(t, 2, s.AttestationsPool.UnaggregatedAttestationCount())
+		var body bytes.Buffer
+		_, err := body.WriteString(singleAtt)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAttestations(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, true, broadcaster.BroadcastCalled)
+		assert.Equal(t, 1, len(broadcaster.BroadcastAttestations))
+		assert.Equal(t, "0x03", hexutil.Encode(broadcaster.BroadcastAttestations[0].AggregationBits))
+		assert.Equal(t, "0x8146f4397bfd8fd057ebbcd6a67327bdc7ed5fb650533edcb6377b650dea0b6da64c14ecd60846d5c0a0cd43893d6972092500f82c9d8a955e2b58c5ed3cbe885d84008ace6bd86ba9e23652f58e2ec207cec494c916063257abf285b9b15b15", hexutil.Encode(broadcaster.BroadcastAttestations[0].Signature))
+		assert.Equal(t, primitives.Slot(0), broadcaster.BroadcastAttestations[0].Data.Slot)
+		assert.Equal(t, primitives.CommitteeIndex(0), broadcaster.BroadcastAttestations[0].Data.CommitteeIndex)
+		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].Data.BeaconBlockRoot))
+		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].Data.Source.Root))
+		assert.Equal(t, primitives.Epoch(0), broadcaster.BroadcastAttestations[0].Data.Source.Epoch)
+		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(broadcaster.BroadcastAttestations[0].Data.Target.Root))
+		assert.Equal(t, primitives.Epoch(0), broadcaster.BroadcastAttestations[0].Data.Target.Epoch)
+		assert.Equal(t, 1, s.AttestationsPool.UnaggregatedAttestationCount())
+	})
+	t.Run("multiple", func(t *testing.T) {
+		broadcaster := &p2pMock.MockBroadcaster{}
+		s.Broadcaster = broadcaster
+		s.AttestationsPool = attestations.NewPool()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleAtts)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAttestations(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, true, broadcaster.BroadcastCalled)
+		assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
+		assert.Equal(t, 2, s.AttestationsPool.UnaggregatedAttestationCount())
+	})
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAttestations(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("empty", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAttestations(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("invalid", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidAtt)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAttestations(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &apimiddleware.IndexedVerificationFailureErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		require.Equal(t, 1, len(e.Failures))
+		assert.Equal(t, true, strings.Contains(e.Failures[0].Message, "Incorrect attestation signature"))
+	})
 }
 
-func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
-	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
-
-	transition.SkipSlotCache.Disable()
-	defer transition.SkipSlotCache.Enable()
-
-	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig().Copy()
-	// Required for correct committee size calculation.
-	c.SlotsPerEpoch = 1
-	params.OverrideBeaconConfig(c)
-
-	_, keys, err := util.DeterministicDepositsAndKeys(1)
-	require.NoError(t, err)
-	validators := []*ethpbv1alpha1.Validator{
-		{
-			PublicKey: keys[0].PublicKey().Marshal(),
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-	}
-	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
-		state.Validators = validators
-		state.Slot = 1
-		state.PreviousJustifiedCheckpoint = &ethpbv1alpha1.Checkpoint{
-			Epoch: 0,
-			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
-		}
-		return nil
-	})
-
-	require.NoError(t, err)
-
-	sourceCheckpoint := &ethpbv1.Checkpoint{
-		Epoch: 0,
-		Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
-	}
-	b := bitfield.NewBitlist(1)
-	b.SetBitAt(0, true)
-	attValid := &ethpbv1.Attestation{
-		AggregationBits: b,
-		Data: &ethpbv1.AttestationData{
-			Slot:            0,
-			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot1"), 32),
-			Source:          sourceCheckpoint,
-			Target: &ethpbv1.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
-	attInvalidSignature := &ethpbv1.Attestation{
-		AggregationBits: b,
-		Data: &ethpbv1.AttestationData{
-			Slot:            0,
-			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
-			Source:          sourceCheckpoint,
-			Target: &ethpbv1.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
-			},
-		},
-		Signature: make([]byte, 96),
-	}
-
-	// Don't sign attInvalidSignature.
-	sb, err := signing.ComputeDomainAndSign(
-		bs,
-		slots.ToEpoch(attValid.Data.Slot),
-		attValid.Data,
-		params.BeaconConfig().DomainBeaconAttester,
-		keys[0],
-	)
-	require.NoError(t, err)
-	sig, err := bls.SignatureFromBytes(sb)
-	require.NoError(t, err)
-	attValid.Signature = sig.Marshal()
-
-	broadcaster := &p2pMock.MockBroadcaster{}
-	chainService := &blockchainmock.ChainService{State: bs}
-	s := &Server{
-		HeadFetcher:       chainService,
-		ChainInfoFetcher:  chainService,
-		AttestationsPool:  attestations.NewPool(),
-		Broadcaster:       broadcaster,
-		OperationNotifier: &blockchainmock.MockOperationNotifier{},
-	}
-
-	_, err = s.SubmitAttestations(ctx, &ethpbv1.SubmitAttestationsRequest{
-		Data: []*ethpbv1.Attestation{attValid, attInvalidSignature},
-	})
-	require.ErrorContains(t, "One or more attestations failed validation", err)
-	expectedAtt, err := attValid.HashTreeRoot()
-	require.NoError(t, err)
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	require.Equal(t, 1, len(broadcaster.BroadcastAttestations))
-	broadcastRoot, err := broadcaster.BroadcastAttestations[0].HashTreeRoot()
-	require.NoError(t, err)
-	require.DeepEqual(t, expectedAtt, broadcastRoot)
-
-	require.Equal(t, 1, s.AttestationsPool.UnaggregatedAttestationCount())
-}
-
-func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
-	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
-
-	transition.SkipSlotCache.Disable()
-	defer transition.SkipSlotCache.Enable()
-
-	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig().Copy()
-	// Required for correct committee size calculation.
-	c.SlotsPerEpoch = 1
-	params.OverrideBeaconConfig(c)
-
-	_, keys, err := util.DeterministicDepositsAndKeys(1)
-	require.NoError(t, err)
-	validators := []*ethpbv1alpha1.Validator{
-		{
-			PublicKey: keys[0].PublicKey().Marshal(),
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-	}
-	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
-		state.Validators = validators
-		state.Slot = 1
-		state.PreviousJustifiedCheckpoint = &ethpbv1alpha1.Checkpoint{
-			Epoch: 0,
-			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
-		}
-		return nil
-	})
-
-	require.NoError(t, err)
-
-	b := bitfield.NewBitlist(1)
-	b.SetBitAt(0, true)
-	att := &ethpbv1.Attestation{
-		AggregationBits: b,
-		Data: &ethpbv1.AttestationData{
-			Slot:            0,
-			Index:           0,
-			BeaconBlockRoot: bytesutil.PadTo([]byte("beaconblockroot2"), 32),
-			Source: &ethpbv1.Checkpoint{
-				Epoch: 0,
-				Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
-			},
-			Target: &ethpbv1.Checkpoint{
-				Epoch: 1,
-				Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
-			},
-		},
-		Signature: nil,
-	}
-
-	chain := &blockchainmock.ChainService{State: bs}
-	broadcaster := &p2pMock.MockBroadcaster{}
-	s := &Server{
-		ChainInfoFetcher:  chain,
-		AttestationsPool:  attestations.NewPool(),
-		Broadcaster:       broadcaster,
-		OperationNotifier: &blockchainmock.MockOperationNotifier{},
-		HeadFetcher:       chain,
-	}
-
-	_, err = s.SubmitAttestations(ctx, &ethpbv1.SubmitAttestationsRequest{
-		Data: []*ethpbv1.Attestation{att},
-	})
-	require.ErrorContains(t, "One or more attestations failed validation", err)
-	sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)
-	require.Equal(t, true, ok, "type assertion failed")
-	md := sts.Header()
-	v, ok := md[strings.ToLower(grpcutil.CustomErrorMetadataKey)]
-	require.Equal(t, true, ok, "could not retrieve custom error metadata value")
-	assert.DeepEqual(
-		t,
-		[]string{"{\"failures\":[{\"index\":0,\"message\":\"Incorrect attestation signature: could not create signature from byte slice: signature must be 96 bytes\"}]}"},
-		v,
-	)
-}
+const (
+	singleAtt = `[
+  {
+    "aggregation_bits": "0x03",
+    "signature": "0x8146f4397bfd8fd057ebbcd6a67327bdc7ed5fb650533edcb6377b650dea0b6da64c14ecd60846d5c0a0cd43893d6972092500f82c9d8a955e2b58c5ed3cbe885d84008ace6bd86ba9e23652f58e2ec207cec494c916063257abf285b9b15b15",
+    "data": {
+      "slot": "0",
+      "index": "0",
+      "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "source": {
+        "epoch": "0",
+        "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      },
+      "target": {
+        "epoch": "0",
+        "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      }
+    }
+  }
+]`
+	multipleAtts = `[
+  {
+    "aggregation_bits": "0x03",
+    "signature": "0x8146f4397bfd8fd057ebbcd6a67327bdc7ed5fb650533edcb6377b650dea0b6da64c14ecd60846d5c0a0cd43893d6972092500f82c9d8a955e2b58c5ed3cbe885d84008ace6bd86ba9e23652f58e2ec207cec494c916063257abf285b9b15b15",
+    "data": {
+      "slot": "0",
+      "index": "0",
+      "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "source": {
+        "epoch": "0",
+        "root": "0x736f75726365726f6f7431000000000000000000000000000000000000000000"
+      },
+      "target": {
+        "epoch": "0",
+        "root": "0x746172676574726f6f7431000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  {
+    "aggregation_bits": "0x03",
+    "signature": "0x8146f4397bfd8fd057ebbcd6a67327bdc7ed5fb650533edcb6377b650dea0b6da64c14ecd60846d5c0a0cd43893d6972092500f82c9d8a955e2b58c5ed3cbe885d84008ace6bd86ba9e23652f58e2ec207cec494c916063257abf285b9b15b15",
+    "data": {
+      "slot": "0",
+      "index": "0",
+      "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "source": {
+        "epoch": "0",
+        "root": "0x736f75726365726f6f7431000000000000000000000000000000000000000000"
+      },
+      "target": {
+        "epoch": "0",
+        "root": "0x746172676574726f6f7432000000000000000000000000000000000000000000"
+      }
+    }
+  }
+]`
+	// signature is invalid
+	invalidAtt = `[
+  {
+    "aggregation_bits": "0x03",
+    "signature": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "data": {
+      "slot": "0",
+      "index": "0",
+      "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "source": {
+        "epoch": "0",
+        "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      },
+      "target": {
+        "epoch": "0",
+        "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      }
+    }
+  }
+]`
+)
