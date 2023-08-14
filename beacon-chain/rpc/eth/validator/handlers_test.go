@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
