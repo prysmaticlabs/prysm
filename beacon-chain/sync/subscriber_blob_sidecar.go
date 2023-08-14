@@ -18,7 +18,9 @@ func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 
 	s.setSeenBlobIndex(b.Message.Blob, b.Message.Index)
 
-	// TODO: Store blobs in cache. Will be addressed in subsequent PR.
+	if err := s.cfg.beaconDB.SaveBlobSidecar(ctx, []*eth.BlobSidecar{b.Message}); err != nil {
+		return err
+	}
 
 	return nil
 }
