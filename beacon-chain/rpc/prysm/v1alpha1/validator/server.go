@@ -42,7 +42,6 @@ import (
 // and more.
 type Server struct {
 	Ctx                    context.Context
-	AttestationCache       *cache.AttestationCache
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
