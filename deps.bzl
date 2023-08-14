@@ -998,8 +998,8 @@ def prysm_deps():
         importpath = "github.com/ethereum/c-kzg-4844",
         patch_args = ["-p1"],
         patches = ["//third_party:com_github_ethereum_c_kzg_4844.patch"],
-        sum = "h1:3Y3hD6l5i0dEYsBL50C+Om644kve3pNqoAcvE26o9zI=",
-        version = "v0.3.0",
+        sum = "h1:sR65+68+WdnMKxseNWxSJuAv2tsUrihTpVBTfM/U5Zg=",
+        version = "v0.3.1",
     )
 
     go_repository(
@@ -1012,8 +1012,8 @@ def prysm_deps():
         patches = [
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
-        sum = "h1:1kXDPxhLfyySuQYIfRxVBGYuaHdxNNxevA73vjIwsgk=",
-        version = "v1.12.1",
+        sum = "h1:eGHJ4ij7oyVqUQn48LBz3B7pvQ8sV0wGJiIE6gDq/6Y=",
+        version = "v1.12.2",
     )
 
     go_repository(
@@ -5431,8 +5431,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_exp",
         importpath = "golang.org/x/exp",
-        sum = "h1:mCRnTeVUjcrhlRmO0VK8a6k6Rrf6TF9htwo2pJVSjIU=",
-        version = "v0.0.0-20230515195305-f3d0a9c9a5cc",
+        sum = "h1:g0bG7Z4uG+OgH2QDODnjp6ggkk1bJDsINcuWmJN1iJU=",
+        version = "v0.0.0-20230810033253-352e893a4cad",
     )
     go_repository(
         name = "org_golang_x_image",
@@ -5457,8 +5457,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_mod",
         importpath = "golang.org/x/mod",
-        sum = "h1:lFO9qtOdlre5W1jxS3r/4szv2/6iXxScdzjoBMXNhYk=",
-        version = "v0.10.0",
+        sum = "h1:bUO06HqtnRcc/7l71XBe4WcqTZ+3AH1J59zWDDwLKgU=",
+        version = "v0.11.0",
     )
 
     go_repository(
