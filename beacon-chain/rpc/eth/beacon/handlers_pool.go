@@ -72,7 +72,6 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http2.WriteJson(w, &ListAttestationsResponse{Data: filteredAtts})
-	return
 }
 
 // SubmitAttestations submits Attestation object to node. If attestation passes all validation
