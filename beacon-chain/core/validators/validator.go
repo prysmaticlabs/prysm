@@ -15,12 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"github.com/sirupsen/logrus"
 )
 
 // ValidatorsMaxExitEpochsAndChurn returns the maximum non-FAR_FUTURE_EPOCH exit
 // epoch and the number of them
-func ValidatorsMaxExitEpochsAndChurn(ctx context.Context, s state.BeaconState) (maxExitEpoch primitives.Epoch, churn uint64) {
+func ValidatorsMaxExitEpochsAndChurn(s state.BeaconState) (maxExitEpoch primitives.Epoch, churn uint64) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		e := val.ExitEpoch()
@@ -34,9 +33,7 @@ func ValidatorsMaxExitEpochsAndChurn(ctx context.Context, s state.BeaconState) (
 		}
 		return nil
 	})
-	if err != nil {
-		logrus.WithError(err).Error("this can't happen")
-	}
+	_ = err
 	return
 }
 
@@ -140,7 +137,7 @@ func SlashValidator(
 	slashedIdx primitives.ValidatorIndex,
 	penaltyQuotient uint64,
 	proposerRewardQuotient uint64) (state.BeaconState, error) {
-	maxExitEpoch, churn := ValidatorsMaxExitEpochsAndChurn(ctx, s)
+	maxExitEpoch, churn := ValidatorsMaxExitEpochsAndChurn(s)
 	s, _, err := InitiateValidatorExit(ctx, s, slashedIdx, maxExitEpoch, churn)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)

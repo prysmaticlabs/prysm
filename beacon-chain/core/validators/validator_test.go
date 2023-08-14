@@ -340,3 +340,78 @@ func TestExitedValidatorIndices(t *testing.T) {
 		assert.DeepEqual(t, tt.wanted, exitedIndices)
 	}
 }
+
+func TestValidatorMaxExitEpochAndChurn(t *testing.T) {
+	tests := []struct {
+		state       *ethpb.BeaconState
+		wantedEpoch primitives.Epoch
+		wantedChurn uint64
+	}{
+		{
+			state: &ethpb.BeaconState{
+				Validators: []*ethpb.Validator{
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         0,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         0,
+						WithdrawableEpoch: 10,
+					},
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         0,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wantedEpoch: 0,
+			wantedChurn: 3,
+		},
+		{
+			state: &ethpb.BeaconState{
+				Validators: []*ethpb.Validator{
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wantedEpoch: 0,
+			wantedChurn: 0,
+		},
+		{
+			state: &ethpb.BeaconState{
+				Validators: []*ethpb.Validator{
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         1,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         0,
+						WithdrawableEpoch: 10,
+					},
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         1,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wantedEpoch: 1,
+			wantedChurn: 2,
+		},
+	}
+	for _, tt := range tests {
+		s, err := state_native.InitializeFromProtoPhase0(tt.state)
+		require.NoError(t, err)
+		epoch, churn := ValidatorsMaxExitEpochsAndChurn(s)
+		require.Equal(t, tt.wantedEpoch, epoch)
+		require.Equal(t, tt.wantedChurn, churn)
+	}
+}
