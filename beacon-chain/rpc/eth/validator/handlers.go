@@ -398,3 +398,56 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		core.AssignValidatorToSubnet(pubkey[:], valStatus)
 	}
 }
+
+// GetAttestationData requests that the beacon node produces attestation data for
+// the requested committee index and slot based on the nodes current head.
+func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttestationData")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	if isOptimistic, err := shared.IsOptimistic(ctx, w, s.OptimisticModeFetcher); isOptimistic || err != nil {
+		return
+	}
+
+	rawSlot := r.URL.Query().Get("slot")
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
+		return
+	}
+	rawCommitteeIndex := r.URL.Query().Get("committee_index")
+	committeeIndex, valid := shared.ValidateUint(w, "Committee Index", rawCommitteeIndex)
+	if !valid {
+		return
+	}
+
+	attestationData, rpcError := s.CoreService.GetAttestationData(ctx, &ethpbalpha.AttestationDataRequest{
+		Slot:           primitives.Slot(slot),
+		CommitteeIndex: primitives.CommitteeIndex(committeeIndex),
+	})
+
+	if rpcError != nil {
+		http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+		return
+	}
+
+	response := &GetAttestationDataResponse{
+		Data: &shared.AttestationData{
+			Slot:            strconv.FormatUint(uint64(attestationData.Slot), 10),
+			CommitteeIndex:  strconv.FormatUint(uint64(attestationData.CommitteeIndex), 10),
+			BeaconBlockRoot: hexutil.Encode(attestationData.BeaconBlockRoot),
+			Source: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(attestationData.Source.Epoch), 10),
+				Root:  hexutil.Encode(attestationData.Source.Root),
+			},
+			Target: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(attestationData.Target.Epoch), 10),
+				Root:  hexutil.Encode(attestationData.Target.Root),
+			},
+		},
+	}
+	http2.WriteJson(w, response)
+}

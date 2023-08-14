@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -34,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestGetAttesterDuties(t *testing.T) {
@@ -1240,82 +1238,6 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		_, err := v1Server.ProduceBlindedBlockSSZ(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
 	})
-}
-
-func TestProduceAttestationData(t *testing.T) {
-	block := util.NewBeaconBlock()
-	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
-	targetBlock := util.NewBeaconBlock()
-	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
-	justifiedBlock := util.NewBeaconBlock()
-	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
-	blockRoot, err := block.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not hash beacon block")
-	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root for justified block")
-	targetRoot, err := targetBlock.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root for target block")
-	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
-	beaconState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetSlot(slot))
-	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpbalpha.Checkpoint{
-		Epoch: 2,
-		Root:  justifiedRoot[:],
-	})
-	require.NoError(t, err)
-
-	blockRoots := beaconState.BlockRoots()
-	blockRoots[1] = blockRoot[:]
-	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
-	chainService := &mockChain.ChainService{
-		Genesis: time.Now(),
-	}
-	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
-	v1Alpha1Server := &v1alpha1validator.Server{
-		P2P:              &p2pmock.MockBroadcaster{},
-		SyncChecker:      &mockSync.Sync{IsSyncing: false},
-		AttestationCache: cache.NewAttestationCache(),
-		HeadFetcher: &mockChain.ChainService{
-			State: beaconState, Root: blockRoot[:],
-		},
-		FinalizationFetcher: &mockChain.ChainService{
-			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
-		},
-		TimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
-		},
-		StateNotifier: chainService.StateNotifier(),
-	}
-	v1Server := &Server{
-		V1Alpha1Server: v1Alpha1Server,
-	}
-
-	req := &ethpbv1.ProduceAttestationDataRequest{
-		CommitteeIndex: 0,
-		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
-	}
-	res, err := v1Server.ProduceAttestationData(context.Background(), req)
-	require.NoError(t, err, "Could not get attestation info at slot")
-
-	expectedInfo := &ethpbv1.AttestationData{
-		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-		BeaconBlockRoot: blockRoot[:],
-		Source: &ethpbv1.Checkpoint{
-			Epoch: 2,
-			Root:  justifiedRoot[:],
-		},
-		Target: &ethpbv1.Checkpoint{
-			Epoch: 3,
-			Root:  blockRoot[:],
-		},
-	}
-
-	if !proto.Equal(res.Data, expectedInfo) {
-		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
-	}
 }
 
 func TestProduceSyncCommitteeContribution(t *testing.T) {
