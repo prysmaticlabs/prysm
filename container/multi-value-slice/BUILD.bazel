@@ -5,13 +5,7 @@ go_library(
     srcs = ["multi_value_slice.go"],
     importpath = "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice",
     visibility = ["//visibility:public"],
-    deps = [
-        "//consensus-types:go_default_library",
-        "//container/multi-value-slice/interfaces:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
-    ],
+    deps = ["//container/multi-value-slice/interfaces:go_default_library"],
 )
 
 go_test(
@@ -19,7 +13,6 @@ go_test(
     srcs = ["multi_value_slice_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//container/multi-value-slice/interfaces:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
     ],
