@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
@@ -802,241 +800,6 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 	return &ethpbv1.ProduceAttestationDataResponse{Data: attData}, nil
 }
 
-// GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
-func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
-	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
-	defer span.End()
-
-	if err := vs.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations: %v", err)
-	}
-
-	allAtts := vs.AttestationsPool.AggregatedAttestations()
-	var bestMatchingAtt *ethpbalpha.Attestation
-	for _, att := range allAtts {
-		if att.Data.Slot == req.Slot {
-			root, err := att.Data.HashTreeRoot()
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get attestation data root: %v", err)
-			}
-			if bytes.Equal(root[:], req.AttestationDataRoot) {
-				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
-					bestMatchingAtt = att
-				}
-			}
-		}
-	}
-
-	if bestMatchingAtt == nil {
-		return nil, status.Error(codes.NotFound, "No matching attestation found")
-	}
-	return &ethpbv1.AggregateAttestationResponse{
-		Data: migration.V1Alpha1AttestationToV1(bestMatchingAtt),
-	}, nil
-}
-
-// SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.SubmitAggregateAndProofsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProofs")
-	defer span.End()
-
-	for _, agg := range req.Data {
-		if agg == nil || agg.Message == nil || agg.Message.Aggregate == nil || agg.Message.Aggregate.Data == nil {
-			return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
-		}
-		sigLen := fieldparams.BLSSignatureLength
-		emptySig := make([]byte, sigLen)
-		if bytes.Equal(agg.Signature, emptySig) || bytes.Equal(agg.Message.SelectionProof, emptySig) || bytes.Equal(agg.Message.Aggregate.Signature, emptySig) {
-			return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
-		}
-		if len(agg.Signature) != sigLen || len(agg.Message.Aggregate.Signature) != sigLen {
-			return nil, status.Errorf(codes.InvalidArgument, "Incorrect signature length. Expected %d bytes", sigLen)
-		}
-
-		// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
-		if err := helpers.ValidateAttestationTime(agg.Message.Aggregate.Data.Slot,
-			vs.TimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-			return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
-		}
-	}
-
-	broadcastFailed := false
-	for _, agg := range req.Data {
-		v1alpha1Agg := migration.V1SignedAggregateAttAndProofToV1Alpha1(agg)
-		if err := vs.Broadcaster.Broadcast(ctx, v1alpha1Agg); err != nil {
-			broadcastFailed = true
-		} else {
-			log.WithFields(log.Fields{
-				"slot":            agg.Message.Aggregate.Data.Slot,
-				"committeeIndex":  agg.Message.Aggregate.Data.Index,
-				"validatorIndex":  agg.Message.AggregatorIndex,
-				"aggregatedCount": agg.Message.Aggregate.AggregationBits.Count(),
-			}).Debug("Broadcasting aggregated attestation and proof")
-		}
-	}
-
-	if broadcastFailed {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not broadcast one or more signed aggregated attestations")
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-// SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
-// and replaces current peers with those ones if necessary.
-func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitBeaconCommitteeSubscription")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
-	}
-
-	if len(req.Data) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
-	}
-
-	s, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-
-	// Verify validators at the beginning to return early if request is invalid.
-	validators := make([]state.ReadOnlyValidator, len(req.Data))
-	for i, sub := range req.Data {
-		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", err)
-		}
-		validators[i] = val
-	}
-
-	fetchValsLen := func(slot primitives.Slot) (uint64, error) {
-		wantedEpoch := slots.ToEpoch(slot)
-		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
-		if err != nil {
-			return 0, err
-		}
-		return uint64(len(vals)), nil
-	}
-
-	// Request the head validator indices of epoch represented by the first requested slot.
-	currValsLen, err := fetchValsLen(req.Data[0].Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
-	}
-	currEpoch := slots.ToEpoch(req.Data[0].Slot)
-
-	for _, sub := range req.Data {
-		// If epoch has changed, re-request active validators length
-		if currEpoch != slots.ToEpoch(sub.Slot) {
-			currValsLen, err = fetchValsLen(sub.Slot)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
-			}
-			currEpoch = slots.ToEpoch(sub.Slot)
-		}
-		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, sub.CommitteeIndex, sub.Slot)
-		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
-		if sub.IsAggregator {
-			cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
-		}
-	}
-
-	for _, val := range validators {
-		valStatus, err := rpchelpers.ValidatorStatus(val, currEpoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve validator status: %v", err)
-		}
-		pubkey := val.PublicKey()
-		v1alpha1Req := &ethpbalpha.AssignValidatorToSubnetRequest{PublicKey: pubkey[:], Status: v1ValidatorStatusToV1Alpha1(valStatus)}
-		_, err = vs.V1Alpha1Server.AssignValidatorToSubnet(ctx, v1alpha1Req)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not assign validator to subnet")
-		}
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-// SubmitSyncCommitteeSubscription subscribe to a number of sync committee subnets.
-//
-// Subscribing to sync committee subnets is an action performed by VC to enable
-// network participation in Altair networks, and only required if the VC has an active
-// validator in an active sync committee.
-func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethpbv2.SubmitSyncCommitteeSubscriptionsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeSubscription")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
-	}
-
-	if len(req.Data) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
-	}
-	s, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	currEpoch := slots.ToEpoch(s.Slot())
-	validators := make([]state.ReadOnlyValidator, len(req.Data))
-	for i, sub := range req.Data {
-		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get validator at index %d: %v", sub.ValidatorIndex, err)
-		}
-		valStatus, err := rpchelpers.ValidatorSubStatus(val, currEpoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get validator status at index %d: %v", sub.ValidatorIndex, err)
-		}
-		if valStatus != ethpbv1.ValidatorStatus_ACTIVE_ONGOING && valStatus != ethpbv1.ValidatorStatus_ACTIVE_EXITING {
-			return nil, status.Errorf(codes.InvalidArgument, "Validator at index %d is not active or exiting: %v", sub.ValidatorIndex, err)
-		}
-		validators[i] = val
-	}
-
-	startEpoch, err := slots.SyncCommitteePeriodStartEpoch(currEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync committee period start epoch: %v.", err)
-	}
-
-	for i, sub := range req.Data {
-		if sub.UntilEpoch <= currEpoch {
-			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch+1)
-		}
-		maxValidUntilEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod*2
-		if sub.UntilEpoch > maxValidUntilEpoch {
-			return nil, status.Errorf(
-				codes.InvalidArgument,
-				"Epoch for subscription at index %d is too far in the future. It can be at most %d",
-				i,
-				maxValidUntilEpoch,
-			)
-		}
-	}
-
-	for i, sub := range req.Data {
-		pubkey48 := validators[i].PublicKey()
-		// Handle overflow in the event current epoch is less than end epoch.
-		// This is an impossible condition, so it is a defensive check.
-		epochsToWatch, err := sub.UntilEpoch.SafeSub(uint64(startEpoch))
-		if err != nil {
-			epochsToWatch = 0
-		}
-		epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
-		totalDuration := epochDuration * time.Duration(epochsToWatch)
-
-		cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey48[:], startEpoch, sub.SyncCommitteeIndices, totalDuration)
-	}
-
-	return &empty.Empty{}, nil
-}
-
 // ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
 func (vs *Server) ProduceSyncCommitteeContribution(
 	ctx context.Context,
@@ -1073,36 +836,6 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
 		Data: contribution,
 	}, nil
-}
-
-// SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
-func (vs *Server) SubmitContributionAndProofs(ctx context.Context, req *ethpbv2.SubmitContributionAndProofsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitContributionAndProofs")
-	defer span.End()
-
-	for _, item := range req.Data {
-		v1alpha1Req := &ethpbalpha.SignedContributionAndProof{
-			Message: &ethpbalpha.ContributionAndProof{
-				AggregatorIndex: item.Message.AggregatorIndex,
-				Contribution: &ethpbalpha.SyncCommitteeContribution{
-					Slot:              item.Message.Contribution.Slot,
-					BlockRoot:         item.Message.Contribution.BeaconBlockRoot,
-					SubcommitteeIndex: item.Message.Contribution.SubcommitteeIndex,
-					AggregationBits:   item.Message.Contribution.AggregationBits,
-					Signature:         item.Message.Contribution.Signature,
-				},
-				SelectionProof: item.Message.SelectionProof,
-			},
-			Signature: item.Signature,
-		}
-		_, err := vs.V1Alpha1Server.SubmitSignedContributionAndProof(ctx, v1alpha1Req)
-		// We simply return err because it's already of a gRPC error type.
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &empty.Empty{}, nil
 }
 
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
@@ -1213,20 +946,6 @@ func proposalDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte,
 		return nil, errors.Wrap(err, "could not get block root")
 	}
 	return root, nil
-}
-
-// Logic based on https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
-func v1ValidatorStatusToV1Alpha1(valStatus ethpbv1.ValidatorStatus) ethpbalpha.ValidatorStatus {
-	switch valStatus {
-	case ethpbv1.ValidatorStatus_ACTIVE:
-		return ethpbalpha.ValidatorStatus_ACTIVE
-	case ethpbv1.ValidatorStatus_PENDING:
-		return ethpbalpha.ValidatorStatus_PENDING
-	case ethpbv1.ValidatorStatus_WITHDRAWAL:
-		return ethpbalpha.ValidatorStatus_EXITED
-	default:
-		return ethpbalpha.ValidatorStatus_UNKNOWN_STATUS
-	}
 }
 
 func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives.Epoch {

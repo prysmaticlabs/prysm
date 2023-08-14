@@ -89,6 +89,12 @@ func (s *Service) Start() {
 		log.Debug("Exiting Initial Sync Service")
 		return
 	}
+	// Exit entering round-robin sync if we require 0 peers to sync.
+	if flags.Get().MinimumSyncPeers == 0 {
+		s.markSynced()
+		log.WithField("genesisTime", gt).Info("Due to number of peers required for sync being set at 0, entering regular sync immediately.")
+		return
+	}
 	if gt.After(prysmTime.Now()) {
 		s.markSynced()
 		log.WithField("genesisTime", gt).Info("Genesis time has not arrived - not syncing")

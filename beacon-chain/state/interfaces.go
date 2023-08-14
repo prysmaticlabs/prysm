@@ -5,6 +5,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -23,6 +24,7 @@ type BeaconState interface {
 	CopyAllTries()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	StateProver
+	json.Marshaler
 }
 
 // SpecParametersProvider provides fork-specific configuration parameters as

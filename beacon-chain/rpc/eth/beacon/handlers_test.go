@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,11 +11,20 @@ import (
 
 	"github.com/golang/mock/gomock"
 	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -348,6 +358,63 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
+	})
+}
+
+func TestValidateConsensus(t *testing.T) {
+	ctx := context.Background()
+
+	parentState, privs := util.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
+	parentBlock, err := util.GenerateFullBlock(parentState, privs, util.DefaultBlockGenConfig(), parentState.Slot())
+	require.NoError(t, err)
+	parentSbb, err := blocks.NewSignedBeaconBlock(parentBlock)
+	require.NoError(t, err)
+	st, err := transition.ExecuteStateTransition(ctx, parentState, parentSbb)
+	require.NoError(t, err)
+	block, err := util.GenerateFullBlock(st, privs, util.DefaultBlockGenConfig(), st.Slot())
+	require.NoError(t, err)
+	sbb, err := blocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+	parentRoot, err := parentSbb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	server := &Server{
+		Blocker: &testutil.MockBlocker{RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{parentRoot: parentSbb}},
+		Stater:  &testutil.MockStater{StatesByRoot: map[[32]byte]state.BeaconState{bytesutil.ToBytes32(parentBlock.Block.StateRoot): parentState}},
+	}
+
+	require.NoError(t, server.validateConsensus(ctx, sbb))
+}
+
+func TestValidateEquivocation(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, st.SetSlot(10))
+		fc := doublylinkedtree.New()
+		require.NoError(t, fc.InsertNode(context.Background(), st, bytesutil.ToBytes32([]byte("root"))))
+		server := &Server{
+			ForkchoiceFetcher: &testing2.ChainService{ForkChoiceStore: fc},
+		}
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+		require.NoError(t, err)
+		blk.SetSlot(st.Slot() + 1)
+
+		require.NoError(t, server.validateEquivocation(blk.Block()))
+	})
+	t.Run("block already exists", func(t *testing.T) {
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, st.SetSlot(10))
+		fc := doublylinkedtree.New()
+		require.NoError(t, fc.InsertNode(context.Background(), st, bytesutil.ToBytes32([]byte("root"))))
+		server := &Server{
+			ForkchoiceFetcher: &testing2.ChainService{ForkChoiceStore: fc},
+		}
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+		require.NoError(t, err)
+		blk.SetSlot(st.Slot())
+
+		assert.ErrorContains(t, "already exists", server.validateEquivocation(blk.Block()))
 	})
 }
 

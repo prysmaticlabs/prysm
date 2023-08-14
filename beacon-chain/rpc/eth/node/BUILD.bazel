@@ -3,8 +3,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "handlers.go",
         "node.go",
         "server.go",
+        "structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -17,6 +19,7 @@ go_library(
         "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
         "//beacon-chain/sync:go_default_library",
+        "//network/http:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
@@ -35,6 +38,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "handlers_test.go",
         "node_test.go",
         "server_test.go",
     ],

@@ -75,6 +75,8 @@ func (_ *State) replayBlocks(
 		"duration": duration,
 	}).Debug("Replayed state")
 
+	replayBlocksSummary.Observe(float64(duration.Milliseconds()))
+
 	return state, nil
 }
 

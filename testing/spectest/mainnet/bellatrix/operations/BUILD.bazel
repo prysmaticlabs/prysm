@@ -8,6 +8,7 @@ go_test(
         "attester_slashing_test.go",
         "block_header_test.go",
         "deposit_test.go",
+        "execution_payload_test.go",
         "proposer_slashing_test.go",
         "sync_committee_test.go",
         "voluntary_exit_test.go",

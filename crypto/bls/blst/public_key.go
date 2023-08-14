@@ -6,14 +6,14 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	"github.com/prysmaticlabs/prysm/v4/cache/nonblocking"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
 )
 
 var maxKeys = 1_000_000
-var pubkeyCache = lruwrpr.New(maxKeys)
+var pubkeyCache *nonblocking.LRU[[48]byte, common.PublicKey]
 
 // PublicKey used in the BLS signature scheme.
 type PublicKey struct {
@@ -27,7 +27,7 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	}
 	newKey := (*[fieldparams.BLSPubkeyLength]byte)(pubKey)
 	if cv, ok := pubkeyCache.Get(*newKey); ok {
-		return cv.(*PublicKey).Copy(), nil
+		return cv.Copy(), nil
 	}
 	// Subgroup check NOT done when decompressing pubkey.
 	p := new(blstPublicKey).Uncompress(pubKey)

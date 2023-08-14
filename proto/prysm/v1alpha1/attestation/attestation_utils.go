@@ -38,9 +38,6 @@ import (
 //	     signature=attestation.signature,
 //	 )
 func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []primitives.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "attestationutil.ConvertToIndexed")
-	defer span.End()
-
 	attIndices, err := AttestingIndices(attestation.AggregationBits, committee)
 	if err != nil {
 		return nil, err

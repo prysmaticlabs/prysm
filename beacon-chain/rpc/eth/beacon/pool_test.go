@@ -383,6 +383,9 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	ctx := context.Background()
 
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	_, keys, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	validator := &ethpbv1alpha1.Validator{
@@ -460,6 +463,9 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 	ctx := context.Background()
 
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.AltairForkEpoch = 1
@@ -536,6 +542,10 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 
 func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	bs, err := util.NewBeaconState()
 	require.NoError(t, err)
 
@@ -576,6 +586,9 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 
 func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
 
 	_, keys, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
@@ -647,6 +660,9 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 	ctx := context.Background()
 
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.AltairForkEpoch = 1
@@ -715,6 +731,10 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 
 func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	bs, err := util.NewBeaconState()
 	require.NoError(t, err)
 
@@ -748,6 +768,9 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 
 func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
 
 	_, keys, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
@@ -796,6 +819,9 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 func TestSubmitVoluntaryExit_AcrossFork(t *testing.T) {
 	ctx := context.Background()
 
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.AltairForkEpoch = params.BeaconConfig().ShardCommitteePeriod + 1
@@ -837,6 +863,9 @@ func TestSubmitVoluntaryExit_AcrossFork(t *testing.T) {
 func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 	ctx := context.Background()
 
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	_, keys, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	validator := &ethpbv1alpha1.Validator{
@@ -872,6 +901,9 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 	ctx := context.Background()
 
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	_, keys, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	validator := &ethpbv1alpha1.Validator{
@@ -906,6 +938,10 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 
 func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
@@ -1014,6 +1050,9 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
@@ -1115,6 +1154,9 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 
 func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
 
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig().Copy()
@@ -1219,6 +1261,10 @@ func TestListBLSToExecutionChanges(t *testing.T) {
 
 func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
@@ -1312,6 +1358,10 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 
 func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
@@ -1420,6 +1470,10 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 
 func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
