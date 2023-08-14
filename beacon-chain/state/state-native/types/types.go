@@ -21,16 +21,6 @@ const (
 	CompressedArray
 )
 
-// ValueType signifies whether the field supports multiple values.
-type ValueType int
-
-const (
-	// SingleValue means no support for multiple values.
-	SingleValue ValueType = iota
-	// MultiValue means support for multiple values.
-	MultiValue
-)
-
 // FieldIndex represents the relevant field position in the
 // state struct for a field.
 type FieldIndex int

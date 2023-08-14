@@ -30,7 +30,7 @@ func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex int) [][]byte {
 
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	length := f.length
-	if f.fieldInfo == types.CompressedArray {
+	if f.dataType == types.CompressedArray {
 		comLength, err := f.field.ElemsInChunk()
 		if err != nil {
 			return err

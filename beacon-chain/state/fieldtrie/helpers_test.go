@@ -77,7 +77,7 @@ func TestValidateIndices_CompressedField(t *testing.T) {
 		reference:   stateutil.NewRef(0),
 		fieldLayers: nil,
 		field:       types.Balances,
-		fieldInfo:   types.CompressedArray,
+		dataType:    types.CompressedArray,
 		length:      params.BeaconConfig().ValidatorRegistryLimit / 4,
 		numOfElems:  0,
 	}
