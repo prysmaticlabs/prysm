@@ -237,7 +237,7 @@ func (s *Service) Start() {
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
 		BeaconDB:         s.cfg.BeaconDB,
 	}
-	s.cfg.Router.HandleFunc("/eth/v1/beacon/blobs/{block_id}", blobServer.Blobs)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blob_sidecars/{block_id}", blobServer.Blobs).Methods(http.MethodGet)
 
 	coreService := &core.Service{
 		HeadFetcher:        s.cfg.HeadFetcher,
