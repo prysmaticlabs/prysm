@@ -47,7 +47,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 	}
 
 	attestationDataResponse := generateValidAttestation(uint64(slot), uint64(committeeIndex))
-	attestationDataProto, err := convertAttestationDataToProto(attestationDataResponse.Data)
+	attestationDataProto, err := attestationDataResponse.Data.ToConsensus()
 	require.NoError(t, err)
 	attestationDataRootBytes, err := attestationDataProto.HashTreeRoot()
 	require.NoError(t, err)

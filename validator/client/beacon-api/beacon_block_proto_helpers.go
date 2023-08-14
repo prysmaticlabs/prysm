@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -138,7 +137,7 @@ func convertIndexedAttestationToProto(jsonAttestation *apimiddleware.IndexedAtte
 		return nil, errors.Wrapf(err, "failed to decode attestation signature `%s`", jsonAttestation.Signature)
 	}
 
-	attestationData, err := convertMiddlewareAttestationDataToProto(jsonAttestation.Data)
+	attestationData, err := convertAttestationDataToProto(jsonAttestation.Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get attestation data")
 	}
@@ -150,28 +149,7 @@ func convertIndexedAttestationToProto(jsonAttestation *apimiddleware.IndexedAtte
 	}, nil
 }
 
-func convertCheckpointToProto(jsonCheckpoint *shared.Checkpoint) (*ethpb.Checkpoint, error) {
-	if jsonCheckpoint == nil {
-		return nil, errors.New("checkpoint is nil")
-	}
-
-	epoch, err := strconv.ParseUint(jsonCheckpoint.Epoch, 10, 64)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse checkpoint epoch `%s`", jsonCheckpoint.Epoch)
-	}
-
-	root, err := hexutil.Decode(jsonCheckpoint.Root)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to decode checkpoint root `%s`", jsonCheckpoint.Root)
-	}
-
-	return &ethpb.Checkpoint{
-		Epoch: primitives.Epoch(epoch),
-		Root:  root,
-	}, nil
-}
-
-func convertMiddlewareCheckpointToProto(jsonCheckpoint *apimiddleware.CheckpointJson) (*ethpb.Checkpoint, error) {
+func convertCheckpointToProto(jsonCheckpoint *apimiddleware.CheckpointJson) (*ethpb.Checkpoint, error) {
 	if jsonCheckpoint == nil {
 		return nil, errors.New("checkpoint is nil")
 	}
@@ -202,7 +180,7 @@ func convertAttestationToProto(jsonAttestation *apimiddleware.AttestationJson) (
 		return nil, errors.Wrapf(err, "failed to decode aggregation bits `%s`", jsonAttestation.AggregationBits)
 	}
 
-	attestationData, err := convertMiddlewareAttestationDataToProto(jsonAttestation.Data)
+	attestationData, err := convertAttestationDataToProto(jsonAttestation.Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get attestation data")
 	}
@@ -237,7 +215,7 @@ func convertAttestationsToProto(jsonAttestations []*apimiddleware.AttestationJso
 	return attestations, nil
 }
 
-func convertAttestationDataToProto(jsonAttestationData *shared.AttestationData) (*ethpb.AttestationData, error) {
+func convertAttestationDataToProto(jsonAttestationData *apimiddleware.AttestationDataJson) (*ethpb.AttestationData, error) {
 	if jsonAttestationData == nil {
 		return nil, errors.New("attestation data is nil")
 	}
@@ -263,45 +241,6 @@ func convertAttestationDataToProto(jsonAttestationData *shared.AttestationData) 
 	}
 
 	targetCheckpoint, err := convertCheckpointToProto(jsonAttestationData.Target)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get attestation target checkpoint")
-	}
-
-	return &ethpb.AttestationData{
-		Slot:            primitives.Slot(slot),
-		CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
-		BeaconBlockRoot: beaconBlockRoot,
-		Source:          sourceCheckpoint,
-		Target:          targetCheckpoint,
-	}, nil
-}
-
-func convertMiddlewareAttestationDataToProto(jsonAttestationData *apimiddleware.AttestationDataJson) (*ethpb.AttestationData, error) {
-	if jsonAttestationData == nil {
-		return nil, errors.New("attestation data is nil")
-	}
-
-	slot, err := strconv.ParseUint(jsonAttestationData.Slot, 10, 64)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse attestation slot `%s`", jsonAttestationData.Slot)
-	}
-
-	committeeIndex, err := strconv.ParseUint(jsonAttestationData.CommitteeIndex, 10, 64)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse attestation committee index `%s`", jsonAttestationData.CommitteeIndex)
-	}
-
-	beaconBlockRoot, err := hexutil.Decode(jsonAttestationData.BeaconBlockRoot)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to decode attestation beacon block root `%s`", jsonAttestationData.BeaconBlockRoot)
-	}
-
-	sourceCheckpoint, err := convertMiddlewareCheckpointToProto(jsonAttestationData.Source)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get attestation source checkpoint")
-	}
-
-	targetCheckpoint, err := convertMiddlewareCheckpointToProto(jsonAttestationData.Target)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get attestation target checkpoint")
 	}
