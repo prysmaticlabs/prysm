@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
@@ -508,8 +509,9 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 
 func testProposeBlock(t *testing.T, graffiti []byte) {
 	tests := []struct {
-		name  string
-		block *ethpb.GenericBeaconBlock
+		name    string
+		block   *ethpb.GenericBeaconBlock
+		version int
 	}{
 		{
 			name: "phase0",
@@ -583,6 +585,43 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				},
 			},
 		},
+		{
+			name:    "deneb block and blobs",
+			version: version.Deneb,
+			block: &ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_Deneb{
+					Deneb: func() *ethpb.BeaconBlockAndBlobsDeneb {
+						blk := util.NewBeaconBlockDeneb()
+						blk.Block.Body.Graffiti = graffiti
+						return &ethpb.BeaconBlockAndBlobsDeneb{
+							Block: blk.Block,
+							Blobs: []*ethpb.BlobSidecar{
+								{
+									BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
+									Index:           1,
+									Slot:            2,
+									BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot"), 32),
+									ProposerIndex:   3,
+									Blob:            bytesutil.PadTo([]byte("blob"), fieldparams.BlobLength),
+									KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment"), 48),
+									KzgProof:        bytesutil.PadTo([]byte("kzgPRoof"), 48),
+								},
+								{
+									BlockRoot:       bytesutil.PadTo([]byte("blockRoot1"), 32),
+									Index:           4,
+									Slot:            5,
+									BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot1"), 32),
+									ProposerIndex:   6,
+									Blob:            bytesutil.PadTo([]byte("blob1"), fieldparams.BlobLength),
+									KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment1"), 48),
+									KzgProof:        bytesutil.PadTo([]byte("kzgPRoof1"), 48),
+								},
+							},
+						}
+					}(),
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -616,6 +655,17 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 
 			var sentBlock interfaces.ReadOnlySignedBeaconBlock
 			var err error
+
+			if tt.version == version.Deneb {
+				m.validatorClient.EXPECT().DomainData(
+					gomock.Any(), // ctx
+					gomock.Any(), // epoch
+				).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+				m.validatorClient.EXPECT().DomainData(
+					gomock.Any(), // ctx
+					gomock.Any(), // epoch
+				).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			}
 
 			m.validatorClient.EXPECT().ProposeBeaconBlock(
 				gomock.Any(), // ctx
