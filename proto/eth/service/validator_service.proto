@@ -186,20 +186,6 @@ service BeaconValidator {
     };
   }
 
-  // ProduceAttestationData requests that the beacon node produces attestation data for
-  // the requested committee index and slot based on the nodes current head.
-  //
-  // HTTP response usage:
-  //  - 200: Successful response
-  //  - 400: Invalid request syntax
-  //  - 500: Beacon node internal error
-  //  - 503: Beacon node is currently syncing, try again later
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceAttestationData
-  rpc ProduceAttestationData(v1.ProduceAttestationDataRequest) returns (v1.ProduceAttestationDataResponse) {
-    option (google.api.http) = { get: "/internal/eth/v1/validator/attestation_data" };
-  }
-
   // ProduceSyncCommitteeContribution requests that the beacon node produces a sync committee contribution.
   //
   // HTTP response usage:

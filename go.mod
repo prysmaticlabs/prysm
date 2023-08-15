@@ -13,7 +13,7 @@ require (
 	github.com/dgraph-io/ristretto v0.0.4-0.20210318174700-74754f61e018
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
-	github.com/ethereum/go-ethereum v1.12.1
+	github.com/ethereum/go-ethereum v1.12.2
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.0
@@ -81,8 +81,8 @@ require (
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.5.2
 	golang.org/x/crypto v0.9.0
-	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
-	golang.org/x/mod v0.10.0
+	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad
+	golang.org/x/mod v0.11.0
 	golang.org/x/sync v0.3.0
 	golang.org/x/tools v0.9.1
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
@@ -125,7 +125,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dop251/goja v0.0.0-20230605162241-28ee0ee714f3 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
-	github.com/ethereum/c-kzg-4844 v0.3.0 // indirect
+	github.com/ethereum/c-kzg-4844 v0.3.1 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20210120143747-11b9eff30ea9 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect

@@ -192,7 +192,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 		}
 		optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blkRoots[i])
 		if err != nil {
-			log.WithError(err).Error("Could not check if block is optimistic")
+			log.WithError(err).Debug("Could not check if block is optimistic")
 			optimistic = true
 		}
 		// Send notification of the processed block to the state feed.
