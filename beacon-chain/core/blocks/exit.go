@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	v "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -65,12 +66,15 @@ func ProcessVoluntaryExits(
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, exitEpoch, err = v.InitiateValidatorExit(ctx, beaconState, exit.Exit.ValidatorIndex, maxExitEpoch, churn)
-		if err != nil {
+		if err == nil {
+			if exitEpoch > maxExitEpoch {
+				maxExitEpoch = exitEpoch
+				churn = 1
+			} else if exitEpoch == maxExitEpoch {
+				churn++
+			}
+		} else if err != validators.ValidatorAlreadyExitedErr {
 			return nil, err
-		}
-		if exitEpoch > maxExitEpoch {
-			maxExitEpoch = exitEpoch
-			churn = 1
 		}
 	}
 	return beaconState, nil

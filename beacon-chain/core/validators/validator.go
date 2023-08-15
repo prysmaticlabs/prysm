@@ -17,6 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
+// ValidatorAlreadyExitedErr is an error raised when trying to process an exit of
+// an already exited validator
+var ValidatorAlreadyExitedErr = errors.New("validator already exited")
+
 // ValidatorsMaxExitEpochsAndChurn returns the maximum non-FAR_FUTURE_EPOCH exit
 // epoch and the number of them
 func ValidatorsMaxExitEpochsAndChurn(s state.BeaconState) (maxExitEpoch primitives.Epoch, churn uint64) {
@@ -67,15 +71,13 @@ func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primiti
 		return nil, 0, err
 	}
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return s, validator.ExitEpoch, nil
+		return s, validator.ExitEpoch, ValidatorAlreadyExitedErr
 	}
 
-	currentEpoch := time.CurrentEpoch(s)
+	currentEpoch := helpers.ActivationExitEpoch(time.CurrentEpoch(s))
 	if currentEpoch > exitQueueEpoch {
 		exitQueueEpoch = currentEpoch
-		churn++
-	} else if currentEpoch == exitQueueEpoch {
-		churn++
+		churn = 0
 	}
 
 	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, s, time.CurrentEpoch(s))
