@@ -433,3 +433,45 @@ func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
 		})
 	}
 }
+
+func TestAggregateAttestations_filterContained(t *testing.T) {
+	tests := []struct {
+		name     string
+		atts     attList
+		wantAtts attList
+	}{
+		{
+			name: "no contained attestation",
+			atts: attList{
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00111000, 0b1}},
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011, 0b1}},
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000100, 0b1}},
+			},
+			wantAtts: attList{
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00111000, 0b1}},
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011, 0b1}},
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000100, 0b1}},
+			},
+		},
+		{
+			name: "contained attestation is filtered",
+			atts: attList{
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00111100, 0b1}},
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011, 0b1}},
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000100, 0b1}},
+			},
+			wantAtts: attList{
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00111100, 0b1}},
+				&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011, 0b1}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filtered, err := tt.atts.filterContained()
+			assert.NoError(t, err)
+			assert.DeepEqual(t, filtered, tt.wantAtts)
+		})
+	}
+}
