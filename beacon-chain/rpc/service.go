@@ -239,11 +239,12 @@ func (s *Service) Start() {
 		Broadcaster:        s.cfg.Broadcaster,
 		SyncCommitteePool:  s.cfg.SyncCommitteeObjectPool,
 		OperationNotifier:  s.cfg.OperationNotifier,
+		AttestationCache:   cache.NewAttestationCache(),
+		StateGen:           s.cfg.StateGen,
 	}
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
-		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
 		HeadFetcher:            s.cfg.HeadFetcher,
@@ -302,6 +303,7 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_and_proofs", validatorServerV1.SubmitAggregateAndProofs).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/sync_committee_subscriptions", validatorServerV1.SubmitSyncCommitteeSubscription).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/beacon_committee_subscriptions", validatorServerV1.SubmitBeaconCommitteeSubscription).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/attestation_data", validatorServerV1.GetAttestationData).Methods(http.MethodGet)
 
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),

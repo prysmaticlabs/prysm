@@ -780,26 +780,6 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 	return &empty.Empty{}, nil
 }
 
-// ProduceAttestationData requests that the beacon node produces attestation data for
-// the requested committee index and slot based on the nodes current head.
-func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.ProduceAttestationDataRequest) (*ethpbv1.ProduceAttestationDataResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ProduceAttestationData")
-	defer span.End()
-
-	v1alpha1req := &ethpbalpha.AttestationDataRequest{
-		Slot:           req.Slot,
-		CommitteeIndex: req.CommitteeIndex,
-	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetAttestationData(ctx, v1alpha1req)
-	if err != nil {
-		// We simply return err because it's already of a gRPC error type.
-		return nil, err
-	}
-	attData := migration.V1Alpha1AttDataToV1(v1alpha1resp)
-
-	return &ethpbv1.ProduceAttestationDataResponse{Data: attData}, nil
-}
-
 // ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
 func (vs *Server) ProduceSyncCommitteeContribution(
 	ctx context.Context,
