@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	v "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -72,7 +71,7 @@ func ProcessVoluntaryExits(
 			} else if exitEpoch == maxExitEpoch {
 				churn++
 			}
-		} else if err != validators.ValidatorAlreadyExitedErr {
+		} else if err != v.ValidatorAlreadyExitedErr {
 			return nil, err
 		}
 	}
