@@ -51,7 +51,6 @@ func ProcessVoluntaryExits(
 	beaconState state.BeaconState,
 	exits []*ethpb.SignedVoluntaryExit,
 ) (state.BeaconState, error) {
-
 	maxExitEpoch, churn := v.ValidatorsMaxExitEpochsAndChurn(beaconState)
 	var exitEpoch primitives.Epoch
 	for idx, exit := range exits {
