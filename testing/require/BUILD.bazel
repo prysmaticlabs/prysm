@@ -7,7 +7,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/testing/require",
     visibility = ["//visibility:public"],
     deps = [
-        "//container/multi-value-slice/interfaces:go_default_library",
         "//testing/assertions:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
