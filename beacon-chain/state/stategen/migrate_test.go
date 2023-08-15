@@ -32,7 +32,11 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	wanted := &finalizedInfo{state: beaconState, root: br, slot: 1}
 	assert.DeepEqual(t, wanted.root, service.finalizedInfo.root)
 	assert.Equal(t, wanted.slot, service.finalizedInfo.slot)
-	assert.DeepEqual(t, wanted.state, service.finalizedInfo.state)
+	expectedHTR, err := wanted.state.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err := service.finalizedInfo.state.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, actualHTR)
 }
 
 func TestMigrateToCold_HappyPath(t *testing.T) {
