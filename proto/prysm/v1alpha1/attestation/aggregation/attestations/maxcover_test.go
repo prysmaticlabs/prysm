@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
-	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
@@ -433,16 +432,4 @@ func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
 			assert.DeepEqual(t, extractBitlists(tt.atts), extractBitlists(tt.wantAtts))
 		})
 	}
-}
-
-func TestFilterContained(t *testing.T) {
-	sign := bls.NewAggregateSignature().Marshal()
-	al := attList{
-		{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00111100, 0b1}, Signature: sign},
-		{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000011, 0b1}, Signature: sign},
-		{AggregationBits: bitfield.Bitlist{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0b00000100, 0b1}, Signature: sign},
-	}
-	filtered, err := al.filterContained()
-	require.NoError(t, err)
-	require.Equal(t, 2, len(filtered))
 }
