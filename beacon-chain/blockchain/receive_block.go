@@ -185,9 +185,11 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 		return err
 	}
 
-	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blkRoots[len(blkRoots)-1])
+	lastBR := blkRoots[len(blkRoots)-1]
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(lastBR)
 	if err != nil {
-		log.WithError(err).Error("Could not check if block is optimistic")
+		lastSlot := blocks[len(blocks)-1].Block().Slot()
+		log.WithError(err).Errorf("Could not check if block is optimistic, Root: %#x, Slot: %d", lastBR, lastSlot)
 		optimistic = true
 	}
 	for i, b := range blocks {
