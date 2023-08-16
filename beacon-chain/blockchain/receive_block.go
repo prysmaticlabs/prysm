@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
 )
 
 // This defines how many epochs since finality the run time will begin to save hot state on to the DB.
@@ -61,19 +62,31 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	// Save current justified and finalized epochs for future use.
 	currStoreJustifiedEpoch := s.CurrentJustifiedCheckpt().Epoch
 	currStoreFinalizedEpoch := s.FinalizedCheckpt().Epoch
+	currentEpoch := coreTime.CurrentEpoch(preState)
 
 	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
 	if err != nil {
 		return err
 	}
-
-	postState, err := s.validateStateTransition(ctx, preState, blockCopy)
-	if err != nil {
-		return errors.Wrap(err, "failed to validate consensus state transition function")
-	}
-	isValidPayload, err := s.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, blockCopy, blockRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not notify the engine of the new payload")
+	eg, _ := errgroup.WithContext(ctx)
+	var postState state.BeaconState
+	eg.Go(func() error {
+		postState, err = s.validateStateTransition(ctx, preState, blockCopy)
+		if err != nil {
+			return errors.Wrap(err, "failed to validate consensus state transition function")
+		}
+		return nil
+	})
+	var isValidPayload bool
+	eg.Go(func() error {
+		isValidPayload, err = s.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, blockCopy, blockRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not notify the engine of the new payload")
+		}
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
@@ -87,7 +100,15 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		tracing.AnnotateError(span, err)
 		return err
 	}
-
+	if coreTime.CurrentEpoch(postState) > currentEpoch {
+		headSt, err := s.HeadState(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get head state")
+		}
+		if err := reportEpochMetrics(ctx, postState, headSt); err != nil {
+			log.WithError(err).Error("could not report epoch metrics")
+		}
+	}
 	if err := s.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch); err != nil {
 		return errors.Wrap(err, "could not update justified checkpoint")
 	}
@@ -99,7 +120,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	// Send finalized events and finalized deposits in the background
 	if newFinalized {
 		finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
-		go s.sendNewFinalizedEvent(ctx, blockCopy, postState, finalized)
+		go s.sendNewFinalizedEvent(blockCopy, postState)
 		depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
 		go func() {
 			s.insertFinalizedDeposits(depCtx, finalized.Root)
@@ -164,6 +185,13 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 		return err
 	}
 
+	lastBR := blkRoots[len(blkRoots)-1]
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(lastBR)
+	if err != nil {
+		lastSlot := blocks[len(blocks)-1].Block().Slot()
+		log.WithError(err).Errorf("Could not check if block is optimistic, Root: %#x, Slot: %d", lastBR, lastSlot)
+		optimistic = true
+	}
 	for i, b := range blocks {
 		blockCopy, err := b.Copy()
 		if err != nil {
@@ -177,6 +205,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 				BlockRoot:   blkRoots[i],
 				SignedBlock: blockCopy,
 				Verified:    true,
+				Optimistic:  optimistic,
 			},
 		})
 
@@ -336,7 +365,7 @@ func (s *Service) updateFinalizationOnBlock(ctx context.Context, preState, postS
 
 // sendNewFinalizedEvent sends a new finalization checkpoint event over the
 // event feed. It needs to be called on the background
-func (s *Service) sendNewFinalizedEvent(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, postState state.BeaconState, finalized *forkchoicetypes.Checkpoint) {
+func (s *Service) sendNewFinalizedEvent(signed interfaces.ReadOnlySignedBeaconBlock, postState state.BeaconState) {
 	isValidPayload := false
 	s.headLock.RLock()
 	if s.head != nil {

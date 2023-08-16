@@ -678,5 +678,6 @@ func (b *ExecutionPayloadBodyV1) UnmarshalJSON(enc []byte) error {
 		transactions[i] = tx
 	}
 	b.Transactions = transactions
+	b.Withdrawals = decoded.Withdrawals
 	return nil
 }

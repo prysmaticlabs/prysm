@@ -232,6 +232,29 @@ func TestProposerSettings(t *testing.T) {
 		validatorRegistrationEnabled bool
 	}{
 		{
+			name: "Happy Path default only proposer settings file with builder settings,",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/default-only-proposer-config.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return &validatorserviceconfig.ProposerSettings{
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
+						},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  true,
+							GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						},
+					},
+				}
+			},
+		},
+		{
 			name: "Happy Path Config file File, bad checksum",
 			args: args{
 				proposerSettingsFlagValues: &proposerSettingsFlag{

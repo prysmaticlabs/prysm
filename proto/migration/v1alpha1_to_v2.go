@@ -851,6 +851,10 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 			StateSummaryRoot: summary.StateSummaryRoot,
 		}
 	}
+	hRoots, err := st.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical roots")
+	}
 
 	result := &ethpbv2.BeaconStateCapella{
 		GenesisTime:           st.GenesisTime(),
@@ -925,6 +929,7 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 		NextWithdrawalIndex:          sourceNextWithdrawalIndex,
 		NextWithdrawalValidatorIndex: sourceNextWithdrawalValIndex,
 		HistoricalSummaries:          sourceHistoricalSummaries,
+		HistoricalRoots:              hRoots,
 	}
 
 	return result, nil

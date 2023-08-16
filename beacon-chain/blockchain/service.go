@@ -35,7 +35,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
@@ -46,22 +45,21 @@ import (
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                   *config
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	genesisTime           time.Time
-	head                  *head
-	headLock              sync.RWMutex
-	originBlockRoot       [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot primitives.Slot
-	boundaryRoots         [][32]byte
-	checkpointStateCache  *cache.CheckpointStateCache
-	initSyncBlocks        map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
-	initSyncBlocksLock    sync.RWMutex
-	wsVerifier            *WeakSubjectivityVerifier
-	clockSetter           startup.ClockSetter
-	clockWaiter           startup.ClockWaiter
-	syncComplete          chan struct{}
+	cfg                  *config
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	genesisTime          time.Time
+	head                 *head
+	headLock             sync.RWMutex
+	originBlockRoot      [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	boundaryRoots        [][32]byte
+	checkpointStateCache *cache.CheckpointStateCache
+	initSyncBlocks       map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+	initSyncBlocksLock   sync.RWMutex
+	wsVerifier           *WeakSubjectivityVerifier
+	clockSetter          startup.ClockSetter
+	clockWaiter          startup.ClockWaiter
+	syncComplete         chan struct{}
 }
 
 // config options for the service.

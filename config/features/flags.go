@@ -155,9 +155,9 @@ var (
 		Usage: "A temporary flag for disabling the validator registration cache instead of using the db. note: registrations do not clear on restart while using the db",
 	}
 
-	aggregateParallel = &cli.BoolFlag{
-		Name:  "aggregate-parallel",
-		Usage: "Enables parallel aggregation of attestations",
+	disableAggregateParallel = &cli.BoolFlag{
+		Name:  "disable-aggregate-parallel",
+		Usage: "Disables parallel aggregation of attestations",
 	}
 )
 
@@ -212,7 +212,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateThirdInterval,
 	disableResourceManager,
 	DisableRegistrationCache,
-	aggregateParallel,
+	disableAggregateParallel,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

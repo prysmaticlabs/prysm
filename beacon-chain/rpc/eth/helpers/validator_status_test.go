@@ -7,6 +7,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -23,7 +24,7 @@ func Test_ValidatorStatus(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    ethpb.ValidatorStatus
+		want    validator.ValidatorStatus
 		wantErr bool
 	}{
 		{
@@ -35,7 +36,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_PENDING,
+			want: validator.Pending,
 		},
 		{
 			name: "pending queued",
@@ -46,7 +47,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_PENDING,
+			want: validator.Pending,
 		},
 		{
 			name: "active ongoing",
@@ -57,7 +58,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_ACTIVE,
+			want: validator.Active,
 		},
 		{
 			name: "active slashed",
@@ -69,7 +70,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_ACTIVE,
+			want: validator.Active,
 		},
 		{
 			name: "active exiting",
@@ -81,7 +82,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_ACTIVE,
+			want: validator.Active,
 		},
 		{
 			name: "exited slashed",
@@ -94,7 +95,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(35),
 			},
-			want: ethpb.ValidatorStatus_EXITED,
+			want: validator.Exited,
 		},
 		{
 			name: "exited unslashed",
@@ -107,7 +108,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(35),
 			},
-			want: ethpb.ValidatorStatus_EXITED,
+			want: validator.Exited,
 		},
 		{
 			name: "withdrawal possible",
@@ -121,7 +122,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(45),
 			},
-			want: ethpb.ValidatorStatus_WITHDRAWAL,
+			want: validator.Withdrawal,
 		},
 		{
 			name: "withdrawal done",
@@ -135,7 +136,7 @@ func Test_ValidatorStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(45),
 			},
-			want: ethpb.ValidatorStatus_WITHDRAWAL,
+			want: validator.Withdrawal,
 		},
 	}
 	for _, tt := range tests {
@@ -161,7 +162,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    ethpb.ValidatorStatus
+		want    validator.ValidatorStatus
 		wantErr bool
 	}{
 		{
@@ -173,7 +174,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_PENDING_INITIALIZED,
+			want: validator.PendingInitialized,
 		},
 		{
 			name: "pending queued",
@@ -184,7 +185,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_PENDING_QUEUED,
+			want: validator.PendingQueued,
 		},
 		{
 			name: "active ongoing",
@@ -195,7 +196,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_ACTIVE_ONGOING,
+			want: validator.ActiveOngoing,
 		},
 		{
 			name: "active slashed",
@@ -207,7 +208,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_ACTIVE_SLASHED,
+			want: validator.ActiveSlashed,
 		},
 		{
 			name: "active exiting",
@@ -219,7 +220,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(5),
 			},
-			want: ethpb.ValidatorStatus_ACTIVE_EXITING,
+			want: validator.ActiveExiting,
 		},
 		{
 			name: "exited slashed",
@@ -232,7 +233,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(35),
 			},
-			want: ethpb.ValidatorStatus_EXITED_SLASHED,
+			want: validator.ExitedSlashed,
 		},
 		{
 			name: "exited unslashed",
@@ -245,7 +246,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(35),
 			},
-			want: ethpb.ValidatorStatus_EXITED_UNSLASHED,
+			want: validator.ExitedUnslashed,
 		},
 		{
 			name: "withdrawal possible",
@@ -259,7 +260,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(45),
 			},
-			want: ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE,
+			want: validator.WithdrawalPossible,
 		},
 		{
 			name: "withdrawal done",
@@ -273,7 +274,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 				},
 				epoch: primitives.Epoch(45),
 			},
-			want: ethpb.ValidatorStatus_WITHDRAWAL_DONE,
+			want: validator.WithdrawalDone,
 		},
 	}
 	for _, tt := range tests {

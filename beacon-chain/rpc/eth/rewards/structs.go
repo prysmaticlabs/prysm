@@ -40,3 +40,14 @@ type TotalAttestationReward struct {
 	Source         string `json:"source"`
 	InclusionDelay string `json:"inclusion_delay"`
 }
+
+type SyncCommitteeRewardsResponse struct {
+	Data                []SyncCommitteeReward `json:"data"`
+	ExecutionOptimistic bool                  `json:"execution_optimistic"`
+	Finalized           bool                  `json:"finalized"`
+}
+
+type SyncCommitteeReward struct {
+	ValidatorIndex string `json:"validator_index"`
+	Reward         string `json:"reward"`
+}

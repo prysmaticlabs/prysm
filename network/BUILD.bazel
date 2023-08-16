@@ -6,7 +6,6 @@ go_library(
         "auth.go",
         "endpoint.go",
         "external_ip.go",
-        "writer.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/network",
     visibility = ["//visibility:public"],

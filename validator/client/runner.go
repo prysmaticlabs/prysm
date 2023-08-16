@@ -108,8 +108,9 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			// create call on a separate thread to push proposer settings from the middle of an epoch.
-			if slots.SinceEpochStarts(slot) == params.BeaconConfig().SlotsPerEpoch/2 && v.ProposerSettings() != nil {
+			// call push proposer setting at the start of each epoch to account for the following edge case:
+			// proposer is activated at the start of epoch and tries to propose immediately
+			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
 				go func() {
 					// deadline set for 1 epoch from call to not overlap.
 					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)

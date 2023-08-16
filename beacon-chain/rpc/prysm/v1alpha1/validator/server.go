@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
@@ -41,7 +42,6 @@ import (
 // and more.
 type Server struct {
 	Ctx                    context.Context
-	AttestationCache       *cache.AttestationCache
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
@@ -74,6 +74,7 @@ type Server struct {
 	BlockBuilder           builder.BlockBuilder
 	BLSChangesPool         blstoexec.PoolManager
 	ClockWaiter            startup.ClockWaiter
+	CoreService            *core.Service
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

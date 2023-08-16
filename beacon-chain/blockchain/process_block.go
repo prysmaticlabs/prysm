@@ -86,18 +86,6 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			"headRoot":       fmt.Sprintf("%#x", headRoot),
 			"headWeight":     headWeight,
 		}).Debug("Head block is not the received block")
-	} else {
-		// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-				log.WithError(err).Debug("could not update next slot state cache")
-			}
-		}()
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
@@ -105,6 +93,12 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
 	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
 		return err
+	}
+
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blockRoot)
+	if err != nil {
+		log.WithError(err).Debug("Could not check if block is optimistic")
+		optimistic = true
 	}
 
 	// Send notification of the processed block to the state feed.
@@ -115,12 +109,34 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			BlockRoot:   blockRoot,
 			SignedBlock: signed,
 			Verified:    true,
+			Optimistic:  optimistic,
 		},
 	})
 
 	defer reportAttestationInclusion(b)
-	if err := s.handleEpochBoundary(ctx, postState, blockRoot[:]); err != nil {
-		return err
+	if headRoot == blockRoot {
+		// Updating next slot state cache can happen in the background
+		// except in the epoch boundary in which case we lock to handle
+		// the shuffling and proposer caches updates.
+		// We handle these caches only on canonical
+		// blocks, otherwise this will be handled by lateBlockTasks
+		slot := postState.Slot()
+		if slots.IsEpochEnd(slot) {
+			if err := transition.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
+				return errors.Wrap(err, "could not update next slot state cache")
+			}
+			if err := s.handleEpochBoundary(ctx, slot, postState, blockRoot[:]); err != nil {
+				return errors.Wrap(err, "could not handle epoch boundary")
+			}
+		} else {
+			go func() {
+				slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+				defer cancel()
+				if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+					log.WithError(err).Error("could not update next slot state cache")
+				}
+			}()
+		}
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
@@ -313,63 +329,51 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
 		return err
 	}
-	return s.saveHeadNoDB(ctx, lastB, lastBR, preState)
+	return s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
 }
 
-// Epoch boundary bookkeeping such as logging epoch summaries.
-func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState, blockRoot []byte) error {
+func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
+	e := coreTime.CurrentEpoch(st)
+	if err := helpers.UpdateCommitteeCache(ctx, st, e); err != nil {
+		return errors.Wrap(err, "could not update committee cache")
+	}
+	if err := helpers.UpdateProposerIndicesInCache(ctx, st, e); err != nil {
+		return errors.Wrap(err, "could not update proposer index cache")
+	}
+	go func() {
+		// Use a custom deadline here, since this method runs asynchronously.
+		// We ignore the parent method's context and instead create a new one
+		// with a custom deadline, therefore using the background context instead.
+		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+		defer cancel()
+		if err := helpers.UpdateCommitteeCache(slotCtx, st, e+1); err != nil {
+			log.WithError(err).Warn("Could not update committee cache")
+		}
+		if err := helpers.UpdateProposerIndicesInCache(slotCtx, st, e+1); err != nil {
+			log.WithError(err).Warn("Failed to cache next epoch proposers")
+		}
+	}()
+	return nil
+}
+
+// Epoch boundary tasks: it copies the headState and updates the epoch boundary
+// caches.
+func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot, headState state.BeaconState, blockRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
 	defer span.End()
-
-	var err error
-	if postState.Slot()+1 == s.nextEpochBoundarySlot {
-		copied := postState.Copy()
-		copied, err := transition.ProcessSlotsUsingNextSlotCache(ctx, copied, blockRoot, copied.Slot()+1)
-		if err != nil {
-			return err
-		}
-		// Update caches for the next epoch at epoch boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(ctx, copied, coreTime.CurrentEpoch(copied)); err != nil {
-			return err
-		}
-		e := coreTime.CurrentEpoch(copied)
-		if err := helpers.UpdateProposerIndicesInCache(ctx, copied, e); err != nil {
-			return err
-		}
-		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := helpers.UpdateProposerIndicesInCache(slotCtx, copied, e+1); err != nil {
-				log.WithError(err).Warn("Failed to cache next epoch proposers")
-			}
-		}()
-	} else if postState.Slot() >= s.nextEpochBoundarySlot {
-		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
-		if err != nil {
-			return err
-		}
-
-		// Update caches at epoch boundary slot.
-		// The following updates have shortcut to return nil cheaply if fulfilled during boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
-			return err
-		}
-		if err := helpers.UpdateProposerIndicesInCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
-			return err
-		}
-
-		headSt, err := s.HeadState(ctx)
-		if err != nil {
-			return err
-		}
-		if err := reportEpochMetrics(ctx, postState, headSt); err != nil {
-			return err
-		}
+	// return early if we are advancing to a past epoch
+	if slot < headState.Slot() {
+		return nil
 	}
-	return nil
+	if !slots.IsEpochEnd(slot) {
+		return nil
+	}
+	copied := headState.Copy()
+	copied, err := transition.ProcessSlotsUsingNextSlotCache(ctx, copied, blockRoot, slot+1)
+	if err != nil {
+		return err
+	}
+	return s.updateEpochBoundaryCaches(ctx, copied)
 }
 
 // This feeds in the attestations included in the block to fork choice store. It's allows fork choice store
@@ -500,8 +504,9 @@ func (s *Service) runLateBlockTasks() {
 // lateBlockTasks  is called 4 seconds into the slot and performs tasks
 // related to late blocks. It emits a MissedSlot state feed event.
 // It calls FCU and sets the right attributes if we are proposing next slot
-// it also updates the next slot cache to deal with skipped slots.
+// it also updates the next slot cache and the proposer index cache to deal with skipped slots.
 func (s *Service) lateBlockTasks(ctx context.Context) {
+	currentSlot := s.CurrentSlot()
 	if s.CurrentSlot() == s.HeadSlot() {
 		return
 	}
@@ -509,8 +514,10 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		Type: statefeed.MissedSlot,
 	})
 
+	s.headLock.RLock()
 	headRoot := s.headRoot()
 	headState := s.headState(ctx)
+	s.headLock.RUnlock()
 	lastRoot, lastState := transition.LastCachedState()
 	if lastState == nil {
 		lastRoot, lastState = headRoot[:], headState
@@ -521,7 +528,9 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if err := transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
 		log.WithError(err).Debug("could not update next slot state cache")
 	}
-
+	if err := s.handleEpochBoundary(ctx, currentSlot, headState, headRoot[:]); err != nil {
+		log.WithError(err).Error("lateBlockTasks: could not update epoch boundary caches")
+	}
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.

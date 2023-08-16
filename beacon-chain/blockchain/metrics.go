@@ -250,40 +250,45 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	slashingBalance := uint64(0)
 	slashingEffectiveBalance := uint64(0)
 
-	for i, validator := range postState.Validators() {
+	for i := 0; i < postState.NumValidators(); i++ {
+		validator, err := postState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(i))
+		if err != nil {
+			log.WithError(err).Error("Could not load validator")
+			continue
+		}
 		bal, err := postState.BalanceAtIndex(primitives.ValidatorIndex(i))
 		if err != nil {
 			log.WithError(err).Error("Could not load validator balance")
 			continue
 		}
-		if validator.Slashed {
-			if currentEpoch < validator.ExitEpoch {
+		if validator.Slashed() {
+			if currentEpoch < validator.ExitEpoch() {
 				slashingInstances++
 				slashingBalance += bal
-				slashingEffectiveBalance += validator.EffectiveBalance
+				slashingEffectiveBalance += validator.EffectiveBalance()
 			} else {
 				slashedInstances++
 			}
 			continue
 		}
-		if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			if currentEpoch < validator.ExitEpoch {
+		if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
+			if currentEpoch < validator.ExitEpoch() {
 				exitingInstances++
 				exitingBalance += bal
-				exitingEffectiveBalance += validator.EffectiveBalance
+				exitingEffectiveBalance += validator.EffectiveBalance()
 			} else {
 				exitedInstances++
 			}
 			continue
 		}
-		if currentEpoch < validator.ActivationEpoch {
+		if currentEpoch < validator.ActivationEpoch() {
 			pendingInstances++
 			pendingBalance += bal
 			continue
 		}
 		activeInstances++
 		activeBalance += bal
-		activeEffectiveBalance += validator.EffectiveBalance
+		activeEffectiveBalance += validator.EffectiveBalance()
 	}
 	activeInstances += exitingInstances + slashingInstances
 	activeBalance += exitingBalance + slashingBalance

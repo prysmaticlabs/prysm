@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 )
@@ -17,7 +16,6 @@ import (
 type Server struct {
 	Ctx               context.Context
 	StateNotifier     statefeed.Notifier
-	BlockNotifier     blockfeed.Notifier
 	OperationNotifier opfeed.Notifier
 	HeadFetcher       blockchain.HeadFetcher
 	ChainInfoFetcher  blockchain.ChainInfoFetcher

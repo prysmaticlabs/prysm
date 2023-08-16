@@ -11,7 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -46,7 +47,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 	}
 
 	attestationDataResponse := generateValidAttestation(uint64(slot), uint64(committeeIndex))
-	attestationDataProto, err := convertAttestationDataToProto(attestationDataResponse.Data)
+	attestationDataProto, err := attestationDataResponse.Data.ToConsensus()
 	require.NoError(t, err)
 	attestationDataRootBytes, err := attestationDataProto.HashTreeRoot()
 	require.NoError(t, err)
@@ -163,7 +164,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			).SetArg(
 				2,
 				apimiddleware.SyncingResponseJson{
-					Data: &helpers.SyncDetailsJson{
+					Data: &shared.SyncDetails{
 						IsOptimistic: test.isOptimistic,
 					},
 				},
@@ -218,7 +219,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				fmt.Sprintf("%s?committee_index=%d&slot=%d", attestationDataEndpoint, committeeIndex, slot),
-				&apimiddleware.ProduceAttestationDataResponseJson{},
+				&validator.GetAttestationDataResponse{},
 			).SetArg(
 				2,
 				attestationDataResponse,

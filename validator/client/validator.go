@@ -615,7 +615,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	}
 
 	v.duties = resp
-	v.logDuties(slot, v.duties.CurrentEpochDuties)
+	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
 	// Make sure to copy metadata into a new context
@@ -879,7 +879,7 @@ func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, doma
 	return res, nil
 }
 
-func (v *validator) logDuties(slot primitives.Slot, duties []*ethpb.DutiesResponse_Duty) {
+func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.DutiesResponse_Duty, nextEpochDuties []*ethpb.DutiesResponse_Duty) {
 	attesterKeys := make([][]string, params.BeaconConfig().SlotsPerEpoch)
 	for i := range attesterKeys {
 		attesterKeys[i] = make([]string, 0)
@@ -887,7 +887,7 @@ func (v *validator) logDuties(slot primitives.Slot, duties []*ethpb.DutiesRespon
 	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
 	slotOffset := slot - (slot % params.BeaconConfig().SlotsPerEpoch)
 	var totalAttestingKeys uint64
-	for _, duty := range duties {
+	for _, duty := range currentEpochDuties {
 		validatorNotTruncatedKey := fmt.Sprintf("%#x", duty.PublicKey)
 		if v.emitAccountMetrics {
 			ValidatorStatusesGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(duty.Status))
@@ -912,6 +912,9 @@ func (v *validator) logDuties(slot primitives.Slot, duties []*ethpb.DutiesRespon
 		}
 		if v.emitAccountMetrics && duty.IsSyncCommittee {
 			ValidatorInSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(1))
+		} else if v.emitAccountMetrics && !duty.IsSyncCommittee {
+			// clear the metric out if the validator is not in the current sync committee anymore otherwise it will be left at 1
+			ValidatorInSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(0))
 		}
 
 		for _, proposerSlot := range duty.ProposerSlots {
@@ -924,6 +927,23 @@ func (v *validator) logDuties(slot primitives.Slot, duties []*ethpb.DutiesRespon
 			if v.emitAccountMetrics {
 				ValidatorNextProposalSlotGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(proposerSlot))
 			}
+		}
+	}
+	for _, duty := range nextEpochDuties {
+		// for the next epoch, currently we are only interested in whether the validator is in the next sync committee or not
+		validatorNotTruncatedKey := fmt.Sprintf("%#x", duty.PublicKey)
+
+		// Only interested in validators who are attesting/proposing.
+		// Note that slashed validators will have duties but their results are ignored by the network so we don't bother with them.
+		if duty.Status != ethpb.ValidatorStatus_ACTIVE && duty.Status != ethpb.ValidatorStatus_EXITING {
+			continue
+		}
+
+		if v.emitAccountMetrics && duty.IsSyncCommittee {
+			ValidatorInNextSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(1))
+		} else if v.emitAccountMetrics && !duty.IsSyncCommittee {
+			// clear the metric out if the validator is now not in the next sync committee otherwise it will be left at 1
+			ValidatorInNextSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(0))
 		}
 	}
 	for i := primitives.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {

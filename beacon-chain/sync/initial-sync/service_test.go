@@ -31,6 +31,14 @@ func TestService_Constants(t *testing.T) {
 
 func TestService_InitStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
+	resetFlags := flags.Get()
+	flags.Init(&flags.GlobalFlags{
+		MinimumSyncPeers: 1,
+	})
+	defer func() {
+		flags.Init(resetFlags)
+	}()
+
 	tests := []struct {
 		name         string
 		assert       func()

@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/network"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -29,12 +29,6 @@ type ValidatorPerformanceResponse struct {
 
 // GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
 func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
-	if vs.SyncChecker.Syncing() {
-		handleHTTPError(w, "Syncing", http.StatusServiceUnavailable)
-		return
-	}
-	ctx := r.Context()
-	currSlot := vs.GenesisTimeFetcher.CurrentSlot()
 	var req ValidatorPerformanceRequest
 	if r.Body != http.NoBody {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -42,14 +36,12 @@ func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
-	computed, err := core.ComputeValidatorPerformance(
-		ctx,
+	computed, err := vs.CoreService.ComputeValidatorPerformance(
+		r.Context(),
 		&ethpb.ValidatorPerformanceRequest{
 			PublicKeys: req.PublicKeys,
 			Indices:    req.Indices,
 		},
-		vs.HeadFetcher,
-		currSlot,
 	)
 	if err != nil {
 		handleHTTPError(w, "Could not compute validator performance: "+err.Err.Error(), core.ErrorReasonToHTTP(err.Reason))
@@ -66,13 +58,13 @@ func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 		MissingValidators:             computed.MissingValidators,
 		InactivityScores:              computed.InactivityScores, // Only populated in Altair
 	}
-	network.WriteJson(w, response)
+	http2.WriteJson(w, response)
 }
 
 func handleHTTPError(w http.ResponseWriter, message string, code int) {
-	errJson := &network.DefaultErrorJson{
+	errJson := &http2.DefaultErrorJson{
 		Message: message,
 		Code:    code,
 	}
-	network.WriteError(w, errJson)
+	http2.WriteError(w, errJson)
 }
