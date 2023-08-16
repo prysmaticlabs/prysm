@@ -97,7 +97,7 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blockRoot)
 	if err != nil {
-		log.WithError(err).Error("Could not check if block is optimistic")
+		log.WithError(err).Debug("Could not check if block is optimistic")
 		optimistic = true
 	}
 
@@ -329,7 +329,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
 		return err
 	}
-	return s.saveHeadNoDB(ctx, lastB, lastBR, preState)
+	return s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
 }
 
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
