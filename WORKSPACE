@@ -325,22 +325,6 @@ http_archive(
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
 
 # External dependencies
-
-http_archive(
-    name = "prysm_web_ui",
-    build_file_content = """
-filegroup(
-    name = "site",
-    srcs = glob(["**/*"]),
-    visibility = ["//visibility:public"],
-)
-""",
-    sha256 = "cc5b2dc9c4ea27b617ab3f31d068134f0b5c4fd173919b32b00613b0016b029a",
-    urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.4/prysm-web-ui.tar.gz",
-    ],
-)
-
 load("//:deps.bzl", "prysm_deps")
 
 # gazelle:repository_macro deps.bzl%prysm_deps
@@ -371,10 +355,6 @@ load(
 )
 
 _cc_image_repos()
-
-load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
-
-go_embed_data_dependencies()
 
 load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
 
