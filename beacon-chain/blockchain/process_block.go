@@ -329,7 +329,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySi
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
 		return err
 	}
-	return s.saveHeadNoDB(ctx, lastB, lastBR, preState)
+	return s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
 }
 
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
