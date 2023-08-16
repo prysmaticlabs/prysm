@@ -2,7 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
-load("//tools:go_image.bzl", "go_image_alpine", "go_image_debug")
+load("//tools:go_image.bzl", "go_image_debug")
 load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 
 go_library(
@@ -46,7 +46,6 @@ go_library(
 go_image(
     name = "image",
     base = select({
-        "//tools:base_image_alpine": "//tools:alpine_cc_image",
         "//tools:base_image_cc": "//tools:cc_image",
         "//conditions:default": "//tools:cc_image",
     }),
@@ -93,25 +92,6 @@ container_bundle(
     visibility = ["//beacon-chain:__pkg__"],
 )
 
-go_image_alpine(
-    name = "image_alpine",
-    image = ":image",
-    tags = ["manual"],
-    visibility = ["//beacon-chain:__pkg__"],
-)
-
-container_bundle(
-    name = "image_bundle_alpine",
-    images = {
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:latest-alpine": ":image_alpine",
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:{DOCKER_TAG}-alpine": ":image_alpine",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:latest-alpine": ":image_alpine",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}-alpine": ":image_alpine",
-    },
-    tags = ["manual"],
-    visibility = ["//beacon-chain:__pkg__"],
-)
-
 docker_push(
     name = "push_images",
     bundle = ":image_bundle",
@@ -122,13 +102,6 @@ docker_push(
 docker_push(
     name = "push_images_debug",
     bundle = ":image_bundle_debug",
-    tags = ["manual"],
-    visibility = ["//beacon-chain:__pkg__"],
-)
-
-docker_push(
-    name = "push_images_alpine",
-    bundle = ":image_bundle_alpine",
     tags = ["manual"],
     visibility = ["//beacon-chain:__pkg__"],
 )
