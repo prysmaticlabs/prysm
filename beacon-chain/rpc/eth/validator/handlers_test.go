@@ -1403,8 +1403,10 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		resp := &ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
+		require.Equal(t, resp.Data.Slot, "1")
+		require.Equal(t, resp.Data.SubcommitteeIndex, "1")
+		require.Equal(t, resp.Data.BeaconBlockRoot, hexutil.Encode([]byte("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")))
 	})
 	t.Run("no slot provided", func(t *testing.T) {
 		url := "http://example.com?subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"

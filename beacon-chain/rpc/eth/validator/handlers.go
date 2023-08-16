@@ -502,7 +502,7 @@ func (s *Server) produceSyncCommitteeContribution(
 		http2.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
 		return nil, false
 	}
-	if msgs == nil {
+	if len(msgs) == 0 {
 		http2.HandleError(w, "No subcommittee messages found", http.StatusNotFound)
 		return nil, false
 	}
