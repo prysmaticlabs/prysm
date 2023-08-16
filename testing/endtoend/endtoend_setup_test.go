@@ -56,7 +56,7 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		ev.DenebForkTransition,
+		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
@@ -133,7 +133,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		ev.DenebForkTransition,
+		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
@@ -190,7 +190,7 @@ func scenarioEvals() []types.Evaluator {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		ev.DenebForkTransition,
+		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
@@ -212,7 +212,7 @@ func scenarioEvalsMulti() []types.Evaluator {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		ev.DenebForkTransition,
+		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
