@@ -478,13 +478,7 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 		return
 	}
 	response := &ProduceSyncCommitteeContributionResponse{
-		Data: &shared.SyncCommitteeContribution{
-			Slot:              contribution.Slot,
-			BeaconBlockRoot:   contribution.BeaconBlockRoot,
-			SubcommitteeIndex: contribution.SubcommitteeIndex,
-			AggregationBits:   contribution.AggregationBits,
-			Signature:         contribution.Signature,
-		},
+		Data: contribution,
 	}
 	http2.WriteJson(w, response)
 }
