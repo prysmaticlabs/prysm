@@ -484,7 +484,13 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 }
 
 // ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
-func (s *Server) produceSyncCommitteeContribution(ctx context.Context, w http.ResponseWriter, slot primitives.Slot, index uint64, blockRoot []byte) (*shared.SyncCommitteeContribution, bool) {
+func (s *Server) produceSyncCommitteeContribution(
+	ctx context.Context,
+	w http.ResponseWriter,
+	slot primitives.Slot,
+	index uint64,
+	blockRoot []byte,
+) (*shared.SyncCommitteeContribution, bool) {
 	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
 	if err != nil {
 		http2.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
