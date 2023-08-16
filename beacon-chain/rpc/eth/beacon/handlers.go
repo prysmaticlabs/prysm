@@ -639,20 +639,11 @@ func (bs *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error
 
 // GetBlockRoot retrieves hashTreeRoot of ReadOnlyBeaconBlock/BeaconBlockHeader.
 func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
-	//(*ethpbv1.BlockRootResponse, error)
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockRoot")
 	defer span.End()
 
+	var err error
 	blockID := r.URL.Query().Get("block_id")
-	valid := shared.ValidateHex(w, "Block ID", blockID)
-	if !valid {
-		return
-	}
-	blockIDBytes, err := hexutil.Decode(blockID)
-	if err != nil {
-		http2.HandleError(w, "Could not decode block ID into bytes: "+err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	var root []byte
 	switch blockID {
@@ -686,7 +677,12 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		}
 		root = blkRoot[:]
 	default:
-		if len(blockID) == 32 {
+		blockIDBytes, err := hexutil.Decode(blockID)
+		if err != nil {
+			http2.HandleError(w, "Could not decode block ID into bytes: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if len(blockIDBytes) == 32 {
 			var blockID32 [32]byte
 			copy(blockID32[:], blockIDBytes)
 			blk, err := bs.BeaconDB.Block(ctx, blockID32)
@@ -700,7 +696,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 			}
 			root = blockIDBytes
 		} else {
-			slot, err := strconv.ParseUint(string(blockID), 10, 64)
+			slot, err := strconv.ParseUint(string(blockIDBytes), 10, 64)
 			if err != nil {
 				http2.HandleError(w, "Could not parse block ID: "+err.Error(), http.StatusBadRequest)
 				return
