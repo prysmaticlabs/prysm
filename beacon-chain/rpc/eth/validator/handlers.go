@@ -479,24 +479,18 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	}
 	response := &ProduceSyncCommitteeContributionResponse{
 		Data: &shared.SyncCommitteeContribution{
-			Slot:              strconv.FormatUint(uint64(contribution.Slot), 10),
-			BeaconBlockRoot:   hexutil.Encode(contribution.BlockRoot),
-			SubcommitteeIndex: strconv.FormatUint(contribution.SubcommitteeIndex, 10),
-			AggregationBits:   hexutil.Encode(contribution.AggregationBits),
-			Signature:         hexutil.Encode(contribution.Signature),
+			Slot:              contribution.Slot,
+			BeaconBlockRoot:   contribution.BeaconBlockRoot,
+			SubcommitteeIndex: contribution.SubcommitteeIndex,
+			AggregationBits:   contribution.AggregationBits,
+			Signature:         contribution.Signature,
 		},
 	}
 	http2.WriteJson(w, response)
 }
 
 // ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
-func (s *Server) produceSyncCommitteeContribution(
-	ctx context.Context,
-	w http.ResponseWriter,
-	slot primitives.Slot,
-	index uint64,
-	blockRoot []byte,
-) (*ethpbalpha.SyncCommitteeContribution, bool) {
+func (s *Server) produceSyncCommitteeContribution(ctx context.Context, w http.ResponseWriter, slot primitives.Slot, index uint64, blockRoot []byte) (*shared.SyncCommitteeContribution, bool) {
 	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
 	if err != nil {
 		http2.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
@@ -519,11 +513,12 @@ func (s *Server) produceSyncCommitteeContribution(
 		http2.HandleError(w, "Could not get contribution data: "+err.Error(), http.StatusInternalServerError)
 		return nil, false
 	}
-	return &ethpbalpha.SyncCommitteeContribution{
-		Slot:              slot,
-		BlockRoot:         blockRoot,
-		SubcommitteeIndex: index,
-		AggregationBits:   aggregatedBits,
-		Signature:         sig,
+
+	return &shared.SyncCommitteeContribution{
+		Slot:              strconv.FormatUint(uint64(slot), 10),
+		BeaconBlockRoot:   hexutil.Encode(blockRoot),
+		SubcommitteeIndex: strconv.FormatUint(index, 10),
+		AggregationBits:   hexutil.Encode(aggregatedBits),
+		Signature:         hexutil.Encode(sig),
 	}, true
 }
