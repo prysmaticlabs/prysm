@@ -468,9 +468,10 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	if !valid {
 		return
 	}
-	blockRoot := r.URL.Query().Get("beacon_block_root")
-	valid = shared.ValidateHex(w, "Beacon Block Root", blockRoot)
-	if !valid {
+	rawBlockRoot := r.URL.Query().Get("beacon_block_root")
+	blockRoot, err := hexutil.Decode(rawBlockRoot)
+	if err != nil {
+		http2.HandleError(w, "Invalid Beacon Block Root: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	contribution, ok := s.produceSyncCommitteeContribution(ctx, w, primitives.Slot(slot), index, []byte(blockRoot))

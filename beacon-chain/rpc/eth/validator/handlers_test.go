@@ -1406,7 +1406,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		require.NotNil(t, resp.Data)
 		require.Equal(t, resp.Data.Slot, "1")
 		require.Equal(t, resp.Data.SubcommitteeIndex, "1")
-		require.Equal(t, resp.Data.BeaconBlockRoot, hexutil.Encode([]byte("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")))
+		require.Equal(t, resp.Data.BeaconBlockRoot, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	})
 	t.Run("no slot provided", func(t *testing.T) {
 		url := "http://example.com?subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -1442,7 +1442,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		resp := &ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.ErrorContains(t, "Beacon Block Root is required", errors.New(writer.Body.String()))
+		require.ErrorContains(t, "Invalid Beacon Block Root: empty hex string", errors.New(writer.Body.String()))
 	})
 	t.Run("invalid block root", func(t *testing.T) {
 		url := "http://example.com?slot=1&subcommittee_index=1&beacon_block_root=0"
@@ -1454,7 +1454,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		resp := &ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.ErrorContains(t, "Beacon Block Root is invalid", errors.New(writer.Body.String()))
+		require.ErrorContains(t, "Invalid Beacon Block Root: hex string without 0x prefix", errors.New(writer.Body.String()))
 	})
 	t.Run("no committee messages", func(t *testing.T) {
 		url := "http://example.com?slot=1&subcommittee_index=1&beacon_block_root=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
