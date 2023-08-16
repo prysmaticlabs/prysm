@@ -71,7 +71,7 @@ func ProcessVoluntaryExits(
 			} else if exitEpoch == maxExitEpoch {
 				churn++
 			}
-		} else if err != v.ValidatorAlreadyExitedErr {
+		} else if !errors.Is(err, v.ValidatorAlreadyExitedErr) {
 			return nil, err
 		}
 	}

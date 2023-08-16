@@ -139,7 +139,7 @@ func SlashValidator(
 	proposerRewardQuotient uint64) (state.BeaconState, error) {
 	maxExitEpoch, churn := ValidatorsMaxExitEpochAndChurn(s)
 	s, _, err := InitiateValidatorExit(ctx, s, slashedIdx, maxExitEpoch, churn)
-	if err != nil && err != ValidatorAlreadyExitedErr {
+	if err != nil && !errors.Is(err, ValidatorAlreadyExitedErr) {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
 	}
 	currentEpoch := slots.ToEpoch(s.Slot())
