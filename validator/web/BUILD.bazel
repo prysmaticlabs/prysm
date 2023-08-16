@@ -1,34 +1,20 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//extras:embed_data.bzl", "go_embed_data")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
-# gazelle:ignore site_data.go
 go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
         "handler.go",
-        "log.go",
         "headers.go",
-        ":site_data",  # keep
+        "log.go",
+        "site_data.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/web",
     visibility = [
         "//api/gateway:__pkg__",
         "//validator:__subpackages__",
     ],
-    deps = [
-        "//runtime:go_default_library",
-        "@com_github_sirupsen_logrus//:go_default_library",
-    ],
-)
-
-go_embed_data(
-    name = "site_data",
-    srcs = [
-        "@prysm_web_ui//:site",
-    ],
-    var = "site",
+    deps = ["@com_github_sirupsen_logrus//:go_default_library"],
 )
 
 go_test(
