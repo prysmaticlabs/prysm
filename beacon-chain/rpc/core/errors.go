@@ -12,7 +12,6 @@ const (
 	Internal = iota
 	Unavailable
 	BadRequest
-	NotFound
 	// Add more errors as needed
 )
 
@@ -29,8 +28,6 @@ func ErrorReasonToGRPC(reason ErrorReason) codes.Code {
 		return codes.Unavailable
 	case BadRequest:
 		return codes.InvalidArgument
-	case NotFound:
-		return codes.NotFound
 	// Add more cases for other error reasons as needed
 	default:
 		return codes.Internal
@@ -45,8 +42,6 @@ func ErrorReasonToHTTP(reason ErrorReason) int {
 		return http.StatusServiceUnavailable
 	case BadRequest:
 		return http.StatusBadRequest
-	case NotFound:
-		return http.StatusNotFound
 	// Add more cases for other error reasons as needed
 	default:
 		return http.StatusInternalServerError
