@@ -102,14 +102,20 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 10)
+	syncCommitteePool := synccommittee.NewStore()
+	headFetcher := &mock.ChainService{
+		State:                st,
+		SyncCommitteeIndices: []primitives.CommitteeIndex{10},
+	}
 	server := &Server{
-		SyncCommitteePool: synccommittee.NewStore(),
-		P2P:               &mockp2p.MockBroadcaster{},
-		HeadFetcher: &mock.ChainService{
-			State:                st,
-			SyncCommitteeIndices: []primitives.CommitteeIndex{10},
+		CoreService: &core.Service{
+			SyncCommitteePool: syncCommitteePool,
+			HeadFetcher:       headFetcher,
 		},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher:       headFetcher,
+		P2P:               &mockp2p.MockBroadcaster{},
+		TimeFetcher:       &mock.ChainService{Genesis: time.Now()},
 	}
 	secKey, err := bls.RandKey()
 	require.NoError(t, err)

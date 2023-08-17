@@ -780,44 +780,6 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 	return &empty.Empty{}, nil
 }
 
-// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
-func (vs *Server) ProduceSyncCommitteeContribution(
-	ctx context.Context,
-	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
-) (*ethpbv2.ProduceSyncCommitteeContributionResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ProduceSyncCommitteeContribution")
-	defer span.End()
-
-	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
-	}
-	if msgs == nil {
-		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
-	}
-	v1alpha1Req := &ethpbalpha.AggregatedSigAndAggregationBitsRequest{
-		Msgs:      msgs,
-		Slot:      req.Slot,
-		SubnetId:  req.SubcommitteeIndex,
-		BlockRoot: req.BeaconBlockRoot,
-	}
-	v1alpha1Resp, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
-	}
-	contribution := &ethpbv2.SyncCommitteeContribution{
-		Slot:              req.Slot,
-		BeaconBlockRoot:   req.BeaconBlockRoot,
-		SubcommitteeIndex: req.SubcommitteeIndex,
-		AggregationBits:   v1alpha1Resp.Bits,
-		Signature:         v1alpha1Resp.AggregatedSig,
-	}
-
-	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
-		Data: contribution,
-	}, nil
-}
-
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
 // The beacon node might detect liveness by observing messages from the validator on the network,
 // in the beacon chain, from its API or from any other source.
