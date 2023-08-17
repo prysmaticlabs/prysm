@@ -13,10 +13,33 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
+
+// ValidatorAlreadyExitedErr is an error raised when trying to process an exit of
+// an already exited validator
+var ValidatorAlreadyExitedErr = errors.New("validator already exited")
+
+// ValidatorsMaxExitEpochAndChurn returns the maximum non-FAR_FUTURE_EPOCH exit
+// epoch and the number of them
+func ValidatorsMaxExitEpochAndChurn(s state.BeaconState) (maxExitEpoch primitives.Epoch, churn uint64) {
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+	err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+		e := val.ExitEpoch()
+		if e != farFutureEpoch {
+			if e > maxExitEpoch {
+				maxExitEpoch = e
+				churn = 1
+			} else if e == maxExitEpoch {
+				churn++
+			}
+		}
+		return nil
+	})
+	_ = err
+	return
+}
 
 // InitiateValidatorExit takes in validator index and updates
 // validator with correct voluntary exit parameters.
@@ -42,73 +65,43 @@ import (
 //	  # Set validator exit epoch and withdrawable epoch
 //	  validator.exit_epoch = exit_queue_epoch
 //	  validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primitives.ValidatorIndex) (state.BeaconState, error) {
+func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primitives.ValidatorIndex, exitQueueEpoch primitives.Epoch, churn uint64) (state.BeaconState, primitives.Epoch, error) {
+	exitableEpoch := helpers.ActivationExitEpoch(time.CurrentEpoch(s))
+	if exitableEpoch > exitQueueEpoch {
+		exitQueueEpoch = exitableEpoch
+		churn = 0
+	}
 	validator, err := s.ValidatorAtIndex(idx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return s, nil
-	}
-	var exitEpochs []primitives.Epoch
-	err = s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
-			exitEpochs = append(exitEpochs, val.ExitEpoch())
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(time.CurrentEpoch(s)))
-
-	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
-	exitQueueEpoch := primitives.Epoch(0)
-	for _, i := range exitEpochs {
-		if exitQueueEpoch < i {
-			exitQueueEpoch = i
-		}
-	}
-
-	// We use the exit queue churn to determine if we have passed a churn limit.
-	exitQueueChurn := uint64(0)
-	err = s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		if val.ExitEpoch() == exitQueueEpoch {
-			var mErr error
-			exitQueueChurn, mErr = mathutil.Add64(exitQueueChurn, 1)
-			if mErr != nil {
-				return mErr
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
+		return s, validator.ExitEpoch, ValidatorAlreadyExitedErr
 	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, s, time.CurrentEpoch(s))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get active validator count")
+		return nil, 0, errors.Wrap(err, "could not get active validator count")
 	}
-	churn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
+	currentChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get churn limit")
+		return nil, 0, errors.Wrap(err, "could not get churn limit")
 	}
 
-	if exitQueueChurn >= churn {
+	if churn >= currentChurn {
 		exitQueueEpoch, err = exitQueueEpoch.SafeAdd(1)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
 	validator.ExitEpoch = exitQueueEpoch
 	validator.WithdrawableEpoch, err = exitQueueEpoch.SafeAddEpoch(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if err := s.UpdateValidatorAtIndex(idx, validator); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return s, nil
+	return s, exitQueueEpoch, nil
 }
 
 // SlashValidator slashes the malicious validator's balance and awards
@@ -144,8 +137,9 @@ func SlashValidator(
 	slashedIdx primitives.ValidatorIndex,
 	penaltyQuotient uint64,
 	proposerRewardQuotient uint64) (state.BeaconState, error) {
-	s, err := InitiateValidatorExit(ctx, s, slashedIdx)
-	if err != nil {
+	maxExitEpoch, churn := ValidatorsMaxExitEpochAndChurn(s)
+	s, _, err := InitiateValidatorExit(ctx, s, slashedIdx, maxExitEpoch, churn)
+	if err != nil && !errors.Is(err, ValidatorAlreadyExitedErr) {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
 	}
 	currentEpoch := slots.ToEpoch(s.Slot())
