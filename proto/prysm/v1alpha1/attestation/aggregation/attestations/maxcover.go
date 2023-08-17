@@ -277,7 +277,9 @@ func (al attList) filterContained() (attList, error) {
 		}
 	}
 	coveredBits := bitfield.NewBitlist64(candidates[0].Len())
-	coveredBits.NoAllocOr(candidates[0], coveredBits)
+	if err := coveredBits.NoAllocOr(candidates[0], coveredBits); err != nil {
+		return nil, err
+	}
 
 	for i := 1; i < len(al); i++ {
 		c, err := coveredBits.Contains(candidates[i])
@@ -288,7 +290,9 @@ func (al attList) filterContained() (attList, error) {
 			continue
 		}
 		filtered = append(filtered, al[i])
-		coveredBits.NoAllocOr(candidates[i], coveredBits)
+		if err := coveredBits.NoAllocOr(candidates[i], coveredBits); err != nil {
+			return nil, err
+		}
 	}
 	return filtered, nil
 }
