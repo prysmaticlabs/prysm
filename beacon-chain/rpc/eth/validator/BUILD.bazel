@@ -72,7 +72,6 @@ go_test(
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/rpc/core:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
-        "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
@@ -95,6 +94,7 @@ go_test(
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
