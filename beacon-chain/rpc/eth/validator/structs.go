@@ -3,7 +3,7 @@ package validator
 import "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 
 type AggregateAttestationResponse struct {
-	Data *shared.Attestation `json:"data" validate:"required"`
+	Data *shared.Attestation `json:"data"`
 }
 
 type SubmitContributionAndProofsRequest struct {
@@ -16,4 +16,16 @@ type SubmitAggregateAndProofsRequest struct {
 
 type SubmitSyncCommitteeSubscriptionsRequest struct {
 	Data []*shared.SyncCommitteeSubscription `json:"data" validate:"required,dive"`
+}
+
+type SubmitBeaconCommitteeSubscriptionsRequest struct {
+	Data []*shared.BeaconCommitteeSubscription `json:"data" validate:"required,dive"`
+}
+
+type GetAttestationDataResponse struct {
+	Data *shared.AttestationData `json:"data"`
+}
+
+type ProduceSyncCommitteeContributionResponse struct {
+	Data *shared.SyncCommitteeContribution `json:"data"`
 }

@@ -133,8 +133,8 @@ nogo(
         # nogo checks that fail with coverage enabled.
         ":coverage_enabled": [],
         "//conditions:default": [
-            "@org_golang_x_tools//go/analysis/passes/lostcancel:go_default_library",
             "@org_golang_x_tools//go/analysis/passes/composite:go_default_library",
+            "@org_golang_x_tools//go/analysis/passes/lostcancel:go_default_library",
         ],
     }),
 )
