@@ -471,7 +471,7 @@ func TestAggregateAttestations_filterContained(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			filtered, err := tt.atts.filterContained()
 			assert.NoError(t, err)
-			assert.DeepEqual(t, filtered, tt.wantAtts)
+			assert.DeepEqual(t, tt.wantAtts, filtered)
 		})
 	}
 }
