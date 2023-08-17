@@ -74,8 +74,8 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, &ListAttestationsResponse{Data: filteredAtts})
 }
 
-// SubmitAttestations submits Attestation object to node. If attestation passes all validation
-// constraints, node MUST publish attestation on appropriate subnet.
+// SubmitAttestations submits an Attestation object to node. If the attestation passes all validation
+// constraints, node MUST publish the attestation on an appropriate subnet.
 func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttestations")
 	defer span.End()
