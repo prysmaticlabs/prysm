@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
@@ -642,9 +643,18 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockRoot")
 	defer span.End()
 
-	var err error
-	blockID := r.URL.Query().Get("block_id")
+	afterPath, ok := strings.CutPrefix(r.URL.Path, "/eth/v1/beacon/blocks/")
+	if !ok {
+		http2.HandleError(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+	blockID, ok := strings.CutSuffix(afterPath, "/root")
+	if !ok {
+		http2.HandleError(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
 
+	var err error
 	var root []byte
 	switch blockID {
 	case "head":

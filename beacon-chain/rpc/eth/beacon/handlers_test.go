@@ -527,7 +527,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				url := "http://example.com?block_id=" + tt.blockID
+				url := "http://example.com/eth/v1/beacon/blocks/" + tt.blockID + "/root"
 				request := httptest.NewRequest(http.MethodGet, url, nil)
 				writer := httptest.NewRecorder()
 				writer.Body = &bytes.Buffer{}
@@ -569,7 +569,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			FinalizationFetcher:   mockChainFetcher,
 		}
 
-		url := "http://example.com?block_id=" + "head"
+		url := "http://example.com/eth/v1/beacon/blocks/head/root"
 		request := httptest.NewRequest(http.MethodGet, url, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -604,7 +604,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			FinalizationFetcher:   mockChainFetcher,
 		}
 		t.Run("true", func(t *testing.T) {
-			url := "http://example.com?block_id=" + hexutil.Encode([]byte("32"))
+			url := "http://example.com/eth/v1/beacon/blocks/" + hexutil.Encode([]byte("32")) + "/root"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
@@ -616,7 +616,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			require.DeepEqual(t, resp.Finalized, true)
 		})
 		t.Run("false", func(t *testing.T) {
-			url := "http://example.com?block_id=" + hexutil.Encode([]byte("64"))
+			url := "http://example.com/eth/v1/beacon/blocks/" + hexutil.Encode([]byte("64")) + "/root"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
