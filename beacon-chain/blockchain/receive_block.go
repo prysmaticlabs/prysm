@@ -41,7 +41,7 @@ type BlockReceiver interface {
 // BlobReceiver interface defines the methods of chain service for receiving new
 // blobs
 type BlobReceiver interface {
-	SendNewBlobEvent([32]byte)
+	SendNewBlobEvent([32]byte, uint64)
 }
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.

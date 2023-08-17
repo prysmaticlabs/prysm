@@ -518,23 +518,32 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if err != nil {
 		return errors.Wrap(err, "could not get KZG commitments")
 	}
-	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
-	if err == nil {
-		s.cfg.BlobNotifier = make(chan [32]byte)
-		return kzg.IsDataAvailable(kzgCommitments, sidecars)
+	existingBlobs := len(kzgCommitments)
+	if existingBlobs == 0 {
+		return nil
 	}
-	// Wait until the blob arrives or the context is cancelled
+	// wait until we have received all blobs for this block
+	s.blobNotifier.Lock()
+	var nc *blobNotifierChan
+	var ok bool
+	nc, ok = s.blobNotifier.chanForRoot[root]
+	if !ok {
+		nc = &blobNotifierChan{indices: make(map[uint64]struct{}), channel: make(chan struct{})}
+		s.blobNotifier.chanForRoot[root] = nc
+	}
+	s.blobNotifier.Unlock()
 	for {
 		select {
-		case blobRoot := <-s.cfg.BlobNotifier:
-			// Consume from the channel until we receive the
-			// right root
-			if blobRoot == root {
+		case <-nc.channel:
+			existingBlobs--
+			if existingBlobs == 0 {
+				s.blobNotifier.Lock()
+				delete(s.blobNotifier.chanForRoot, root)
+				s.blobNotifier.Unlock()
 				sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
 				if err != nil {
 					return errors.Wrap(err, "could not get blob sidecars")
 				}
-				s.cfg.BlobNotifier = make(chan [32]byte)
 				return kzg.IsDataAvailable(kzgCommitments, sidecars)
 			}
 		case <-ctx.Done():
