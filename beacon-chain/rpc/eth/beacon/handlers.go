@@ -735,9 +735,9 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not check if block is optimistic: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response := &ethpbv1.BlockRootResponse{
-		Data: &ethpbv1.BlockRootContainer{
-			Root: root,
+	response := &BlockRootResponse{
+		Data: &shared.BlockRootContainer{
+			Root: hexutil.Encode(root),
 		},
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, b32Root),

@@ -428,10 +428,10 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
-
 	t.Run("get root", func(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
+
 		mockChainFetcher := &testing2.ChainService{
 			DB:                  beaconDB,
 			Block:               wsb,
@@ -549,6 +549,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	t.Run("execution optimistic", func(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
+
 		mockChainFetcher := &testing2.ChainService{
 			DB:                  beaconDB,
 			Block:               wsb,
@@ -560,6 +561,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 				bytesutil.ToBytes32(headBlock.BlockRoot): true,
 			},
 		}
+
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainFetcher,
@@ -582,6 +584,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	t.Run("finalized", func(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
+
 		mockChainFetcher := &testing2.ChainService{
 			DB:                  beaconDB,
 			Block:               wsb,
@@ -593,6 +596,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
 			},
 		}
+
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainFetcher,

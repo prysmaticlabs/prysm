@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
@@ -47,5 +46,4 @@ type Server struct {
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	BLSChangesPool                blstoexec.PoolManager
 	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
-	CoreService                   *core.Service
 }
