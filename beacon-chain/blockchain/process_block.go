@@ -537,9 +537,10 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			return kzg.IsDataAvailable(kzgCommitments, sidecars)
 		}
 	}
-	// Create the channel if it didn't exist already
+	// Create the channel if it didn't exist already the index map will be
+	// created later anyway
 	if !ok {
-		nc = &blobNotifierChan{indices: make(map[uint64]struct{}), channel: make(chan struct{}, fieldparams.MaxBlobsPerBlock)}
+		nc = &blobNotifierChan{channel: make(chan struct{}, fieldparams.MaxBlobsPerBlock)}
 		s.blobNotifier.chanForRoot[root] = nc
 	}
 	// We have more commitments in the block than blobs in database
