@@ -163,18 +163,6 @@ message ProduceBlockResponse {
     BeaconBlock data = 1;
 }
 
-message ProduceAttestationDataRequest {
-    // Slot for which the attestation data should be retrieved for.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-
-    // Committee index for which the attestation data should be retrieved for.
-    uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.CommitteeIndex"];
-}
-
-message ProduceAttestationDataResponse {
-    AttestationData data = 1;
-}
-
 message PrepareBeaconProposerRequest {
     message FeeRecipientContainer {
         // The address of the fee recipient.

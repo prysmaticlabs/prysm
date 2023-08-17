@@ -260,10 +260,6 @@ type ProduceBlindedBlockResponseJson struct {
 	Data    *BlindedBeaconBlockContainerJson `json:"data"`
 }
 
-type ProduceAttestationDataResponseJson struct {
-	Data *AttestationDataJson `json:"data"`
-}
-
 type AggregateAttestationResponseJson struct {
 	Data *AttestationJson `json:"data"`
 }
