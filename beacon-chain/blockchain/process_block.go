@@ -16,6 +16,7 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -522,21 +523,38 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if existingBlobs == 0 {
 		return nil
 	}
-	// wait until we have received all blobs for this block
+
+	// Read first from db in case we have the blobs
 	s.blobNotifier.Lock()
 	var nc *blobNotifierChan
 	var ok bool
 	nc, ok = s.blobNotifier.chanForRoot[root]
+	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
+	if err == nil {
+		if len(sidecars) >= existingBlobs {
+			delete(s.blobNotifier.chanForRoot, root)
+			s.blobNotifier.Unlock()
+			return kzg.IsDataAvailable(kzgCommitments, sidecars)
+		}
+	}
+	// Create the channel if it didn't exist already
 	if !ok {
-		nc = &blobNotifierChan{indices: make(map[uint64]struct{}), channel: make(chan struct{})}
+		nc = &blobNotifierChan{indices: make(map[uint64]struct{}), channel: make(chan struct{}, fieldparams.MaxBlobsPerBlock)}
 		s.blobNotifier.chanForRoot[root] = nc
 	}
+	// We have more commitments in the block than blobs in database
+	// We sync the channel indices with the sidecars
+	nc.indices = make(map[uint64]struct{})
+	for _, sidecar := range sidecars {
+		nc.indices[sidecar.Index] = struct{}{}
+	}
 	s.blobNotifier.Unlock()
+	channelWrites := len(sidecars)
 	for {
 		select {
 		case <-nc.channel:
-			existingBlobs--
-			if existingBlobs == 0 {
+			channelWrites++
+			if channelWrites == existingBlobs {
 				s.blobNotifier.Lock()
 				delete(s.blobNotifier.chanForRoot, root)
 				s.blobNotifier.Unlock()
