@@ -88,6 +88,7 @@ go_test(
         "getters_validator_test.go",
         "getters_withdrawal_test.go",
         "hasher_test.go",
+        "mvslice_fuzz_test.go",
         "proofs_test.go",
         "readonly_validator_test.go",
         "references_test.go",
@@ -98,6 +99,7 @@ go_test(
         "state_trie_test.go",
         "types_test.go",
     ],
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/transition:go_default_library",
@@ -105,6 +107,7 @@ go_test(
         "//beacon-chain/state/state-native/types:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/testing:go_default_library",
+        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
