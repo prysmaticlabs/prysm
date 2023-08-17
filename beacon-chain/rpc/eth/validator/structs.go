@@ -25,3 +25,7 @@ type SubmitBeaconCommitteeSubscriptionsRequest struct {
 type GetAttestationDataResponse struct {
 	Data *shared.AttestationData `json:"data"`
 }
+
+type ProduceSyncCommitteeContributionResponse struct {
+	Data *shared.SyncCommitteeContribution `json:"data"`
+}
