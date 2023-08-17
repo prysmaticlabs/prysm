@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -22,7 +22,7 @@ func (c beaconApiValidatorClient) getAttestationData(
 	params.Add("committee_index", strconv.FormatUint(uint64(reqCommitteeIndex), 10))
 
 	query := buildURL("/eth/v1/validator/attestation_data", params)
-	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
 
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, query, &produceAttestationDataResponseJson); err != nil {
 		return nil, errors.Wrap(err, "failed to get json response")

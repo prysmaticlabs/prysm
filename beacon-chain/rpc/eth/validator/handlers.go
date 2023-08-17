@@ -2,6 +2,7 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,15 +12,16 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -246,7 +248,7 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 			)
 			return
 		}
-		if valStatus != ethpbv1.ValidatorStatus_ACTIVE_ONGOING && valStatus != ethpbv1.ValidatorStatus_ACTIVE_EXITING {
+		if valStatus != validator2.ActiveOngoing && valStatus != validator2.ActiveExiting {
 			http2.HandleError(
 				w,
 				fmt.Sprintf("Validator at index %d is not active or exiting", consensusItem.ValidatorIndex),
@@ -296,4 +298,228 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 
 		cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey48[:], startEpoch, sub.SyncCommitteeIndices, totalDuration)
 	}
+}
+
+// SubmitBeaconCommitteeSubscription searches using discv5 for peers related to the provided subnet information
+// and replaces current peers with those ones if necessary.
+func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitBeaconCommitteeSubscription")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	if r.Body == http.NoBody {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	var req SubmitBeaconCommitteeSubscriptionsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.Data) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	st, err := s.HeadFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Verify validators at the beginning to return early if request is invalid.
+	validators := make([]state.ReadOnlyValidator, len(req.Data))
+	subscriptions := make([]*validator2.BeaconCommitteeSubscription, len(req.Data))
+	for i, item := range req.Data {
+		consensusItem, err := item.ToConsensus()
+		if err != nil {
+			http2.HandleError(w, "Could not convert request subscription to consensus subscription: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		subscriptions[i] = consensusItem
+		val, err := st.ValidatorAtIndexReadOnly(consensusItem.ValidatorIndex)
+		if err != nil {
+			if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
+				http2.HandleError(w, "Could not get validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+				return
+			}
+			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		validators[i] = val
+	}
+
+	fetchValsLen := func(slot primitives.Slot) (uint64, error) {
+		wantedEpoch := slots.ToEpoch(slot)
+		vals, err := s.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
+		if err != nil {
+			return 0, err
+		}
+		return uint64(len(vals)), nil
+	}
+
+	// Request the head validator indices of epoch represented by the first requested slot.
+	currValsLen, err := fetchValsLen(subscriptions[0].Slot)
+	if err != nil {
+		http2.HandleError(w, "Could not retrieve head validator length: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	currEpoch := slots.ToEpoch(subscriptions[0].Slot)
+	for _, sub := range subscriptions {
+		// If epoch has changed, re-request active validators length
+		if currEpoch != slots.ToEpoch(sub.Slot) {
+			currValsLen, err = fetchValsLen(sub.Slot)
+			if err != nil {
+				http2.HandleError(w, "Could not retrieve head validator length: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			currEpoch = slots.ToEpoch(sub.Slot)
+		}
+		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, sub.CommitteeIndex, sub.Slot)
+		cache.SubnetIDs.AddAttesterSubnetID(sub.Slot, subnet)
+		if sub.IsAggregator {
+			cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
+		}
+	}
+	for _, val := range validators {
+		valStatus, err := rpchelpers.ValidatorStatus(val, currEpoch)
+		if err != nil {
+			http2.HandleError(w, "Could not retrieve validator status: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		pubkey := val.PublicKey()
+		core.AssignValidatorToSubnet(pubkey[:], valStatus)
+	}
+}
+
+// GetAttestationData requests that the beacon node produces attestation data for
+// the requested committee index and slot based on the nodes current head.
+func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttestationData")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	if isOptimistic, err := shared.IsOptimistic(ctx, w, s.OptimisticModeFetcher); isOptimistic || err != nil {
+		return
+	}
+
+	rawSlot := r.URL.Query().Get("slot")
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
+		return
+	}
+	rawCommitteeIndex := r.URL.Query().Get("committee_index")
+	committeeIndex, valid := shared.ValidateUint(w, "Committee Index", rawCommitteeIndex)
+	if !valid {
+		return
+	}
+
+	attestationData, rpcError := s.CoreService.GetAttestationData(ctx, &ethpbalpha.AttestationDataRequest{
+		Slot:           primitives.Slot(slot),
+		CommitteeIndex: primitives.CommitteeIndex(committeeIndex),
+	})
+
+	if rpcError != nil {
+		http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+		return
+	}
+
+	response := &GetAttestationDataResponse{
+		Data: &shared.AttestationData{
+			Slot:            strconv.FormatUint(uint64(attestationData.Slot), 10),
+			CommitteeIndex:  strconv.FormatUint(uint64(attestationData.CommitteeIndex), 10),
+			BeaconBlockRoot: hexutil.Encode(attestationData.BeaconBlockRoot),
+			Source: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(attestationData.Source.Epoch), 10),
+				Root:  hexutil.Encode(attestationData.Source.Root),
+			},
+			Target: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(attestationData.Target.Epoch), 10),
+				Root:  hexutil.Encode(attestationData.Target.Root),
+			},
+		},
+	}
+	http2.WriteJson(w, response)
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
+	defer span.End()
+
+	subIndex := r.URL.Query().Get("subcommittee_index")
+	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
+	if !valid {
+		return
+	}
+	rawSlot := r.URL.Query().Get("slot")
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
+		return
+	}
+	rawBlockRoot := r.URL.Query().Get("beacon_block_root")
+	blockRoot, err := hexutil.Decode(rawBlockRoot)
+	if err != nil {
+		http2.HandleError(w, "Invalid Beacon Block Root: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	contribution, ok := s.produceSyncCommitteeContribution(ctx, w, primitives.Slot(slot), index, []byte(blockRoot))
+	if !ok {
+		return
+	}
+	response := &ProduceSyncCommitteeContributionResponse{
+		Data: contribution,
+	}
+	http2.WriteJson(w, response)
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (s *Server) produceSyncCommitteeContribution(
+	ctx context.Context,
+	w http.ResponseWriter,
+	slot primitives.Slot,
+	index uint64,
+	blockRoot []byte,
+) (*shared.SyncCommitteeContribution, bool) {
+	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
+	if err != nil {
+		http2.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
+		return nil, false
+	}
+	if len(msgs) == 0 {
+		http2.HandleError(w, "No subcommittee messages found", http.StatusNotFound)
+		return nil, false
+	}
+	sig, aggregatedBits, err := s.CoreService.AggregatedSigAndAggregationBits(
+		ctx,
+		&ethpbalpha.AggregatedSigAndAggregationBitsRequest{
+			Msgs:      msgs,
+			Slot:      slot,
+			SubnetId:  index,
+			BlockRoot: blockRoot,
+		},
+	)
+	if err != nil {
+		http2.HandleError(w, "Could not get contribution data: "+err.Error(), http.StatusInternalServerError)
+		return nil, false
+	}
+
+	return &shared.SyncCommitteeContribution{
+		Slot:              strconv.FormatUint(uint64(slot), 10),
+		BeaconBlockRoot:   hexutil.Encode(blockRoot),
+		SubcommitteeIndex: strconv.FormatUint(index, 10),
+		AggregationBits:   hexutil.Encode(aggregatedBits),
+		Signature:         hexutil.Encode(sig),
+	}, true
 }

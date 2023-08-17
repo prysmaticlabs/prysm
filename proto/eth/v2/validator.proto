@@ -60,21 +60,6 @@ message ProduceBlindedBlockResponse {
   BlindedBeaconBlockContainer data = 2;
 }
 
-message ProduceSyncCommitteeContributionRequest {
-  // The slot for which a sync committee contribution should be created.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-
-  // The subcommittee index for which to produce the contribution.
-  uint64 subcommittee_index = 2;
-
-  // The block root for which to produce the contribution.
-  bytes beacon_block_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-}
-
-message ProduceSyncCommitteeContributionResponse {
-  SyncCommitteeContribution data = 1;
-}
-
 // Aggregated sync committee object to support light client.
 message SyncCommitteeContribution {
   // Slot to which this contribution pertains.
