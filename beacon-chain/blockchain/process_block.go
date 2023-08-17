@@ -518,11 +518,23 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if err != nil {
 		return errors.Wrap(err, "could not get KZG commitments")
 	}
-	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
-	if err != nil {
-		return errors.Wrap(err, "could not get blob sidecars")
+	// Wait until the blob arrives or the context is cancelled
+	for {
+		select {
+		case blobRoot := <-s.cfg.BlobNotifier:
+			// Consume from the channel until we receive the
+			// right root
+			if blobRoot == root {
+				sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
+				if err != nil {
+					return errors.Wrap(err, "could not get blob sidecars")
+				}
+				return kzg.IsDataAvailable(kzgCommitments, sidecars)
+			}
+		case <-ctx.Done():
+			return errors.Wrap(err, "context deadline waiting for blob sidecars")
+		}
 	}
-	return kzg.IsDataAvailable(kzgCommitments, sidecars)
 }
 
 // lateBlockTasks  is called 4 seconds into the slot and performs tasks

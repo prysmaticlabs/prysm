@@ -77,6 +77,7 @@ type config struct {
 	P2p                     p2p.Broadcaster
 	MaxRoutines             int
 	StateNotifier           statefeed.Notifier
+	BlobNotifier            chan [32]byte
 	ForkChoiceStore         f.ForkChoicer
 	AttService              *attestations.Service
 	StateGen                *stategen.State
@@ -103,7 +104,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
-		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
+		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(), BlobNotifier: make(chan [32]byte)},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
