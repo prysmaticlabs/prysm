@@ -2,6 +2,7 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -450,4 +451,75 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	http2.WriteJson(w, response)
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
+	defer span.End()
+
+	subIndex := r.URL.Query().Get("subcommittee_index")
+	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
+	if !valid {
+		return
+	}
+	rawSlot := r.URL.Query().Get("slot")
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
+		return
+	}
+	rawBlockRoot := r.URL.Query().Get("beacon_block_root")
+	blockRoot, err := hexutil.Decode(rawBlockRoot)
+	if err != nil {
+		http2.HandleError(w, "Invalid Beacon Block Root: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	contribution, ok := s.produceSyncCommitteeContribution(ctx, w, primitives.Slot(slot), index, []byte(blockRoot))
+	if !ok {
+		return
+	}
+	response := &ProduceSyncCommitteeContributionResponse{
+		Data: contribution,
+	}
+	http2.WriteJson(w, response)
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (s *Server) produceSyncCommitteeContribution(
+	ctx context.Context,
+	w http.ResponseWriter,
+	slot primitives.Slot,
+	index uint64,
+	blockRoot []byte,
+) (*shared.SyncCommitteeContribution, bool) {
+	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
+	if err != nil {
+		http2.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
+		return nil, false
+	}
+	if len(msgs) == 0 {
+		http2.HandleError(w, "No subcommittee messages found", http.StatusNotFound)
+		return nil, false
+	}
+	sig, aggregatedBits, err := s.CoreService.AggregatedSigAndAggregationBits(
+		ctx,
+		&ethpbalpha.AggregatedSigAndAggregationBitsRequest{
+			Msgs:      msgs,
+			Slot:      slot,
+			SubnetId:  index,
+			BlockRoot: blockRoot,
+		},
+	)
+	if err != nil {
+		http2.HandleError(w, "Could not get contribution data: "+err.Error(), http.StatusInternalServerError)
+		return nil, false
+	}
+
+	return &shared.SyncCommitteeContribution{
+		Slot:              strconv.FormatUint(uint64(slot), 10),
+		BeaconBlockRoot:   hexutil.Encode(blockRoot),
+		SubcommitteeIndex: strconv.FormatUint(index, 10),
+		AggregationBits:   hexutil.Encode(aggregatedBits),
+		Signature:         hexutil.Encode(sig),
+	}, true
 }

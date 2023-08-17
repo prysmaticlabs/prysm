@@ -186,19 +186,6 @@ service BeaconValidator {
     };
   }
 
-  // ProduceSyncCommitteeContribution requests that the beacon node produces a sync committee contribution.
-  //
-  // HTTP response usage:
-  //  - 200: Successful response
-  //  - 400: Invalid request syntax
-  //  - 500: Beacon node internal error
-  //  - 503: Beacon node is currently syncing, try again later
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceSyncCommitteeContribution
-  rpc ProduceSyncCommitteeContribution(v2.ProduceSyncCommitteeContributionRequest) returns (v2.ProduceSyncCommitteeContributionResponse) {
-    option (google.api.http) = { get: "/internal/eth/v1/validator/sync_committee_contribution" };
-  }
-
   // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
   // The beacon node might detect liveness by observing messages from the validator on the network,
   // in the beacon chain, from its API or from any other source.
