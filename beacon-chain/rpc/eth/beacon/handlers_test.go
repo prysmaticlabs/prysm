@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
@@ -535,7 +534,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 				bs.GetBlockRoot(writer, request)
 				assert.Equal(t, tt.wantCode, writer.Code)
-				resp := &ethpbv1.BlockRootResponse{}
+				resp := &BlockRootResponse{}
 				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 				if tt.wantErr != "" {
 					require.ErrorContains(t, tt.wantErr, errors.New(writer.Body.String()))
@@ -577,7 +576,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 		bs.GetBlockRoot(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &ethpbv1.BlockRootResponse{}
+		resp := &BlockRootResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.DeepEqual(t, resp.ExecutionOptimistic, true)
 	})
@@ -612,7 +611,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 			bs.GetBlockRoot(writer, request)
 			assert.Equal(t, http.StatusOK, writer.Code)
-			resp := &ethpbv1.BlockRootResponse{}
+			resp := &BlockRootResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			require.DeepEqual(t, resp.Finalized, true)
 		})
@@ -624,7 +623,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 			bs.GetBlockRoot(writer, request)
 			assert.Equal(t, http.StatusOK, writer.Code)
-			resp := &ethpbv1.BlockRootResponse{}
+			resp := &BlockRootResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			require.DeepEqual(t, resp.Finalized, false)
 		})
