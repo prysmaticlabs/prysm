@@ -2,28 +2,22 @@ package backfill
 
 import (
 	"context"
-	"sync"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	log "github.com/sirupsen/logrus"
-)
-
-type workerState int
-
-const (
-	workerIdle workerState = iota
-	workerBusy
 )
 
 type workerId int
 
 type p2pWorker struct {
-	sync.Mutex
-	ws   workerState
 	id   workerId
-	p2p  p2p.P2P
 	todo chan batch
 	done chan batch
+	p2p  p2p.P2P
+	v    *verifier
+	c    *startup.Clock
 }
 
 func (w *p2pWorker) run(ctx context.Context) {
@@ -40,27 +34,24 @@ func (w *p2pWorker) run(ctx context.Context) {
 }
 
 func (w *p2pWorker) handle(ctx context.Context, b batch) batch {
+	results, err := sync.SendBeaconBlocksByRangeRequest(ctx, w.c, w.p2p, b.pid, b.request(), nil)
 	// if the batch is not successfully fetched and validated, increment the attempts counter
+	vb, err := w.v.verify(results)
+	if err != nil {
+		b.err = err
+		return b
+	}
+	b.results = vb
 	return b
 }
 
-func (w *p2pWorker) updateState(ws workerState) {
-	w.Lock()
-	defer w.Unlock()
-	w.ws = ws
-}
-
-func (w *p2pWorker) state() workerState {
-	w.Lock()
-	defer w.Unlock()
-	return w.ws
-}
-
-func newP2pWorker(id workerId, p p2p.P2P, todo, done chan batch) *p2pWorker {
+func newP2pWorker(id workerId, p p2p.P2P, todo, done chan batch, c *startup.Clock, v *verifier) *p2pWorker {
 	return &p2pWorker{
 		id:   id,
-		p2p:  p,
 		todo: todo,
 		done: done,
+		p2p:  p,
+		v:    v,
+		c:    c,
 	}
 }

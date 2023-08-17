@@ -6,9 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	"google.golang.org/protobuf/proto"
 )
@@ -39,41 +41,21 @@ func (s *StatusUpdater) SlotCovered(sl primitives.Slot) bool {
 	s.RLock()
 	defer s.RUnlock()
 	// short circuit if the node was synced from genesis
-	if s.genesisSync {
+	if s.genesisSync || sl == 0 || s.status.LowSlot <= uint64(sl) {
 		return true
 	}
-	if s.status.LowSlot < uint64(sl) && uint64(sl) < s.status.HighSlot {
-		return false
-	}
-	return true
-}
-
-var ErrFillFwdPastUpper = errors.New("cannot move backfill StatusUpdater above upper bound of backfill")
-var ErrFillBackPastLower = errors.New("cannot move backfill StatusUpdater below lower bound of backfill")
-
-// FillFwd moves the lower bound of the backfill status to the given slot & root,
-// saving the new state to the database and then updating StatusUpdater's in-memory copy with the saved value.
-func (s *StatusUpdater) FillFwd(ctx context.Context, newLow primitives.Slot, root [32]byte) error {
-	status := s.Status()
-	unl := uint64(newLow)
-	if unl > status.HighSlot {
-		return errors.Wrapf(ErrFillFwdPastUpper, "advance slot=%d, origin slot=%d", unl, status.HighSlot)
-	}
-	status.LowSlot = unl
-	status.LowRoot = root[:]
-	return s.updateStatus(ctx, status)
+	return false
 }
 
 // FillBack moves the upper bound of the backfill status to the given slot & root,
 // saving the new state to the database and then updating StatusUpdater's in-memory copy with the saved value.
-func (s *StatusUpdater) FillBack(ctx context.Context, newHigh primitives.Slot, root [32]byte) error {
+func (s *StatusUpdater) FillBack(ctx context.Context, block blocks.ROBlock) error {
+	r := block.Root()
+	pr := block.Block().ParentRoot()
 	status := s.Status()
-	unh := uint64(newHigh)
-	if unh < status.LowSlot {
-		return errors.Wrapf(ErrFillBackPastLower, "advance slot=%d, origin slot=%d", unh, status.LowSlot)
-	}
-	status.HighSlot = unh
-	status.HighRoot = root[:]
+	status.LowSlot = uint64(block.Block().Slot())
+	status.LowRoot = r[:]
+	status.LowParentRoot = pr[:]
 	return s.updateStatus(ctx, status)
 }
 
@@ -93,21 +75,14 @@ func (s *StatusUpdater) recoverLegacy(ctx context.Context) error {
 	if err := blocks.BeaconBlockIsNil(cpb); err != nil {
 		return errors.Wrapf(err, "nil block found for origin checkpoint root=%#x", cpr)
 	}
-	gbr, err := s.store.GenesisBlockRoot(ctx)
-	if err != nil {
-		if errors.Is(err, db.ErrNotFoundGenesisBlockRoot) {
-			return errors.Wrap(err, "genesis block root required for checkpoint sync")
-		}
-		return err
-	}
 	os := uint64(cpb.Block().Slot())
+	lpr := cpb.Block().ParentRoot()
 	bs := &dbval.BackfillStatus{
-		HighSlot:   os,
-		HighRoot:   cpr[:],
-		LowSlot:    0,
-		LowRoot:    gbr[:],
-		OriginSlot: os,
-		OriginRoot: cpr[:],
+		LowSlot:       os,
+		LowRoot:       cpr[:],
+		LowParentRoot: lpr[:],
+		OriginSlot:    os,
+		OriginRoot:    cpr[:],
 	}
 	return s.updateStatus(ctx, bs)
 }
@@ -137,6 +112,13 @@ func (s *StatusUpdater) updateStatus(ctx context.Context, bs *dbval.BackfillStat
 	return nil
 }
 
+// originState looks up the state for the checkpoint sync origin. This is a hack, because StatusUpdater is the only
+// thing that needs db access and it has the origin root handy, so it's convenient to look it up here. The state is
+// needed by the verifier.
+func (s *StatusUpdater) originState(ctx context.Context) (state.BeaconState, error) {
+	return s.store.StateOrError(ctx, bytesutil.ToBytes32(s.Status().OriginRoot))
+}
+
 func (s *StatusUpdater) Status() *dbval.BackfillStatus {
 	s.RLock()
 	defer s.RUnlock()
@@ -149,5 +131,7 @@ type BackfillDB interface {
 	BackfillStatus(context.Context) (*dbval.BackfillStatus, error)
 	OriginCheckpointBlockRoot(context.Context) ([32]byte, error)
 	Block(context.Context, [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
+	SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock) error
 	GenesisBlockRoot(context.Context) ([32]byte, error)
+	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }

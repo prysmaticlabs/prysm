@@ -14,6 +14,24 @@ type batchSequencer struct {
 	seq     []batch
 }
 
+var errCannotDecreaseMinimum = errors.New("The minimum backfill slot can only be increased, not decreased")
+
+// moveMinimum enables the backfill service to change the slot where the batcher will start replying with
+// batch state batchEndSequence (signaling that no new batches will be produced). This is done in response to
+// epochs advancing, which shrinks the gap between <checkpoint slot> and <current slot>-MIN_EPOCHS_FOR_BLOCK_REQUESTS,
+// allowing the node to download a smaller number of blocks.
+func (c *batchSequencer) moveMinimum(min primitives.Slot) error {
+	if min < c.batcher.min {
+		return errCannotDecreaseMinimum
+	}
+	c.batcher.min = min
+	return nil
+}
+
+func (c *batchSequencer) minimum() primitives.Slot {
+	return c.batcher.min
+}
+
 func (c *batchSequencer) update(b batch) {
 	done := 0
 	for i := 0; i < len(c.seq); i++ {

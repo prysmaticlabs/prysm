@@ -30,12 +30,10 @@ type Assigner struct {
 	ctx       context.Context
 	ps        *Status
 	max       int
-	latest    int
 	finalized primitives.Epoch
-	best      []peer.ID
 }
 
-var ErrNoSuitablePeers = errors.New("no suitable peers")
+var ErrInsufficientSuitable = errors.New("no suitable peers")
 
 func (a *Assigner) freshPeers() ([]peer.ID, error) {
 	required := params.BeaconConfig().MaxPeersToSync
@@ -47,28 +45,21 @@ func (a *Assigner) freshPeers() ([]peer.ID, error) {
 		log.WithFields(logrus.Fields{
 			"suitable": len(peers),
 			"required": required}).Info("Unable to assign peer while suitable peers < required ")
-		return nil, ErrNoSuitablePeers
+		return nil, ErrInsufficientSuitable
 	}
 	return peers, nil
 }
 
-/*
-func filterBusy(busy map[peer.ID], all []peer.ID) []peer.ID {
-	avail := make([]peer.ID, 0)
-	for
-}
-
-*/
-
-func (a *Assigner) Assign(busy map[peer.ID]bool) (peer.ID, error) {
+func (a *Assigner) Assign(busy map[peer.ID]bool, n int) ([]peer.ID, error) {
 	best, err := a.freshPeers()
+	ps := make([]peer.ID, 0, n)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for _, p := range best {
 		if !busy[p] {
-			return p, nil
+			ps = append(ps, p)
 		}
 	}
-	return "", errors.Wrapf(ErrNoSuitablePeers, "finalized=%d, max=%d", a.finalized, a.max)
+	return ps, nil
 }

@@ -5,10 +5,27 @@ import (
 	"testing"
 	"time"
 
+	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
+
+type mockMinimumSlotter struct {
+	min primitives.Slot
+}
+
+var _ minimumSlotter = &mockMinimumSlotter{}
+
+func (m mockMinimumSlotter) minimumSlot() primitives.Slot {
+	return m.min
+}
+
+func (m mockMinimumSlotter) setClock(*startup.Clock) {
+}
 
 func TestServiceInit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*300)
@@ -18,16 +35,27 @@ func TestServiceInit(t *testing.T) {
 	nWorkers := 5
 	var batchSize uint64 = 100
 	nBatches := nWorkers * 2
+	var high uint64 = 11235
+	originRoot := [32]byte{}
+	origin, err := util.NewBeaconState()
+	require.NoError(t, err)
+	db.states = map[[32]byte]state.BeaconState{originRoot: origin}
 	su.status = &dbval.BackfillStatus{
-		HighSlot: 11235,
-		LowSlot:  11235 - batchSize*uint64(nBatches),
+		LowSlot:    high,
+		OriginRoot: originRoot[:],
 	}
 	remaining := nBatches
 	cw := startup.NewClockSynchronizer()
 	require.NoError(t, cw.SetClock(startup.NewClock(time.Now(), [32]byte{})))
 	pool := &mockPool{todoChan: make(chan batch, nWorkers), finishedChan: make(chan batch, nWorkers)}
-	srv, err := NewService(ctx, su, cw, pool, WithBatchSize(batchSize), WithWorkerCount(nWorkers))
+	p2pt := p2ptest.NewTestP2P(t)
+	srv, err := NewService(ctx, su, cw, p2pt, WithBatchSize(batchSize), WithWorkerCount(nWorkers))
 	require.NoError(t, err)
+	srv.ms = mockMinimumSlotter{min: primitives.Slot(high - batchSize*uint64(nBatches))}
+	srv.pool = pool
+	srv.batchImporter = func(context.Context, batch, *StatusUpdater) error {
+		return nil
+	}
 	go srv.Start()
 	todo := make([]batch, 0)
 	todo = testReadN(t, ctx, pool.todoChan, nWorkers, todo)

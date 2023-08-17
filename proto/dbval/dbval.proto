@@ -5,10 +5,9 @@ package ethereum.eth.dbval;
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/dbval;dbval";
 
 message BackfillStatus {
-    uint64 high_slot = 1;
-    bytes high_root = 2;
-    uint64 low_slot = 3;
-    bytes low_root = 4;
-    uint64 origin_slot = 5;
+    uint64 low_slot = 1;
+    bytes low_root = 2;
+    bytes low_parent_root = 3;
+    uint64 origin_slot = 4;
     bytes origin_root = 6;
 }

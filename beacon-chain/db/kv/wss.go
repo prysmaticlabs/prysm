@@ -18,13 +18,6 @@ import (
 // syncing, using the provided values as their point of origin. This is an alternative
 // to syncing from genesis, and should only be run on an empty database.
 func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error {
-	genesisRoot, err := s.GenesisBlockRoot(ctx)
-	if err != nil {
-		if errors.Is(err, ErrNotFoundGenesisBlockRoot) {
-			return errors.Wrap(err, "genesis block root not found: genesis must be provided for checkpoint sync")
-		}
-		return errors.Wrap(err, "genesis block root query error: checkpoint sync must verify genesis to proceed")
-	}
 	cf, err := detect.FromState(serState)
 	if err != nil {
 		return errors.Wrap(err, "could not sniff config+fork for origin state bytes")
@@ -52,10 +45,8 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	}
 
 	bf := &dbval.BackfillStatus{
-		HighSlot:   uint64(wblk.Block().Slot()),
-		HighRoot:   blockRoot[:],
-		LowSlot:    0,
-		LowRoot:    genesisRoot[:],
+		LowSlot:    uint64(wblk.Block().Slot()),
+		LowRoot:    blockRoot[:],
 		OriginRoot: blockRoot[:],
 		OriginSlot: uint64(wblk.Block().Slot()),
 	}

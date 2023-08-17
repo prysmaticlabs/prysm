@@ -180,6 +180,11 @@ func TestBatchSequencer(t *testing.T) {
 		seq.seq[i].state = batchSequenced
 	}
 
+	// TODO: break this test scenario out into its own test function. It's important to ensure batcher acts correctly
+	// when the minimum bound moves up. As epochs advance in real time, the lower slot bound of blocks we need to keep
+	// per the spec moves closer to the original sync checkpoint. We want to update the minimum bound
+	// when epochs advance in real time as an optimization to sync the smallest number of blocks possible.
+
 	// set the min for the batcher close to the lowest slot. This will force the next batch to be partial and the batch
 	// after that to be the final batch.
 	newMin := seq.seq[len(seq.seq)-1].begin - 30
