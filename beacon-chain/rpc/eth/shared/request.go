@@ -12,6 +12,18 @@ import (
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 )
 
+func UintFromQuery(w http.ResponseWriter, r *http.Request, name string) (bool, string, uint64) {
+	raw := r.URL.Query().Get(name)
+	if raw != "" {
+		v, valid := ValidateUint(w, name, raw)
+		if !valid {
+			return false, "", 0
+		}
+		return true, raw, v
+	}
+	return true, "", 0
+}
+
 func ValidateHex(w http.ResponseWriter, name string, s string) bool {
 	if s == "" {
 		errJson := &http2.DefaultErrorJson{

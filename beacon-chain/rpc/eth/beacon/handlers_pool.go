@@ -2,7 +2,10 @@ package beacon
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
@@ -23,23 +26,13 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "beacon.ListAttestations")
 	defer span.End()
 
-	rawSlot := r.URL.Query().Get("slot")
-	var slot uint64
-	if rawSlot != "" {
-		var valid bool
-		slot, valid = shared.ValidateUint(w, "Slot", rawSlot)
-		if !valid {
-			return
-		}
+	ok, rawSlot, slot := shared.UintFromQuery(w, r, "slot")
+	if !ok {
+		return
 	}
-	rawCommitteeIndex := r.URL.Query().Get("committee_index")
-	var committeeIndex uint64
-	if rawCommitteeIndex != "" {
-		var valid bool
-		committeeIndex, valid = shared.ValidateUint(w, "Committee index", rawCommitteeIndex)
-		if !valid {
-			return
-		}
+	ok, rawCommitteeIndex, committeeIndex := shared.UintFromQuery(w, r, "committee_index")
+	if !ok {
+		return
 	}
 
 	attestations := s.AttestationsPool.AggregatedAttestations()
@@ -59,15 +52,13 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	bothDefined := rawSlot != "" && rawCommitteeIndex != ""
 	filteredAtts := make([]*shared.Attestation, 0, len(attestations))
 	for _, att := range attestations {
-		bothDefined := rawSlot != "" && rawCommitteeIndex != ""
 		committeeIndexMatch := rawCommitteeIndex != "" && att.Data.CommitteeIndex == primitives.CommitteeIndex(committeeIndex)
 		slotMatch := rawSlot != "" && att.Data.Slot == primitives.Slot(slot)
-
-		if bothDefined && committeeIndexMatch && slotMatch {
-			filteredAtts = append(filteredAtts, shared.AttestationFromConsensus(att))
-		} else if !bothDefined && (committeeIndexMatch || slotMatch) {
+		shouldAppend := (bothDefined && committeeIndexMatch && slotMatch) || (!bothDefined && (committeeIndexMatch || slotMatch))
+		if shouldAppend {
 			filteredAtts = append(filteredAtts, shared.AttestationFromConsensus(att))
 		}
 	}
@@ -133,8 +124,8 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 		validAttestations = append(validAttestations, att)
 	}
 
-	broadcastFailed := false
-	for _, att := range validAttestations {
+	failedBroadcasts := make([]string, 0)
+	for i, att := range validAttestations {
 		// Determine subnet to broadcast attestation to
 		wantedEpoch := slots.ToEpoch(att.Data.Slot)
 		vals, err := s.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
@@ -145,7 +136,8 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
 
 		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
-			broadcastFailed = true
+			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
+			log.WithError(err).Error("could not broadcast attestation")
 		}
 
 		if corehelpers.IsAggregated(att) {
@@ -158,8 +150,12 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if broadcastFailed {
-		http2.HandleError(w, "Could not publish one or more attestations", http.StatusInternalServerError)
+	if len(failedBroadcasts) > 0 {
+		http2.HandleError(
+			w,
+			fmt.Sprintf("Attestations at index %s could not be broadcasted", strings.Join(failedBroadcasts, ", ")),
+			http.StatusInternalServerError,
+		)
 		return
 	}
 
