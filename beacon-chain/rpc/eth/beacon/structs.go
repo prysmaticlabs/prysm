@@ -358,6 +358,16 @@ type BlsToExecutionChange struct {
 	ToExecutionAddress string `json:"to_execution_address" validate:"required"`
 }
 
+type ValidatorCountResponse struct {
+	ExecutionOptimistic string          `json:"execution_optimistic"`
+	Finalized           string          `json:"finalized"`
+	Data                *ValidatorCount `json:"data"`
+}
+
+type ValidatorCount struct {
+	ValidatorCount string `json:"validator_count"`
+}
+
 func (b *SignedBeaconBlock) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 	sig, err := hexutil.Decode(b.Signature)
 	if err != nil {
