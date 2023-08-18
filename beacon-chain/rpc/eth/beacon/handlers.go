@@ -683,7 +683,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		root = blkRoot[:]
 	default:
 		isHex := strings.HasPrefix(blockID, "0x")
-		if isHex {
+		if isHex && len(blockID) >= 32 {
 			blockIDBytes, err := hexutil.Decode(blockID)
 			if err != nil {
 				http2.HandleError(w, "Could not decode block ID into bytes: "+err.Error(), http.StatusBadRequest)
