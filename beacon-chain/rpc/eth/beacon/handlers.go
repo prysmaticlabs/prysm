@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -638,24 +639,18 @@ func (bs *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error
 	return nil
 }
 
-// GetBlockRoot retrieves hashTreeRoot of ReadOnlyBeaconBlock/BeaconBlockHeader.
+// GetBlockRoot retrieves the root of a block.
 func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockRoot")
 	defer span.End()
 
-	afterPath, ok := strings.CutPrefix(r.URL.Path, "/eth/v1/beacon/blocks/")
-	if !ok {
-		http2.HandleError(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-	blockID, ok := strings.CutSuffix(afterPath, "/root")
-	if !ok {
-		http2.HandleError(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-
 	var err error
 	var root []byte
+	blockID := mux.Vars(r)["block_id"]
+	if blockID == "" {
+		http2.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+		return
+	}
 	switch blockID {
 	case "head":
 		root, err = bs.ChainInfoFetcher.HeadRoot(ctx)
@@ -682,19 +677,19 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		}
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
-			http2.HandleError(w, "Could not hash genesis block", http.StatusInternalServerError)
+			http2.HandleError(w, "Could not hash genesis block: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		root = blkRoot[:]
 	default:
-		blockIDBytes, err := hexutil.Decode(blockID)
-		if err != nil {
-			http2.HandleError(w, "Could not decode block ID into bytes: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		if len(blockIDBytes) == 32 {
-			var blockID32 [32]byte
-			copy(blockID32[:], blockIDBytes)
+		isHex := strings.HasPrefix(blockID, "0x")
+		if isHex {
+			blockIDBytes, err := hexutil.Decode(blockID)
+			if err != nil {
+				http2.HandleError(w, "Could not decode block ID into bytes: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			blockID32 := bytesutil.ToBytes32(blockIDBytes)
 			blk, err := bs.BeaconDB.Block(ctx, blockID32)
 			if err != nil {
 				http2.HandleError(w, fmt.Sprintf("Could not retrieve block for block root %#x: %v", blockID, err), http.StatusInternalServerError)
@@ -706,7 +701,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 			}
 			root = blockIDBytes
 		} else {
-			slot, err := strconv.ParseUint(string(blockIDBytes), 10, 64)
+			slot, err := strconv.ParseUint(blockID, 10, 64)
 			if err != nil {
 				http2.HandleError(w, "Could not parse block ID: "+err.Error(), http.StatusBadRequest)
 				return
@@ -746,7 +741,9 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := &BlockRootResponse{
-		Data: &shared.BlockRootContainer{
+		Data: &struct {
+			Root string `json:"root"`
+		}{
 			Root: hexutil.Encode(root),
 		},
 		ExecutionOptimistic: isOptimistic,

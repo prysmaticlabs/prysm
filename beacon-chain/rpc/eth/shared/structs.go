@@ -24,10 +24,6 @@ type AttestationData struct {
 	Target          *Checkpoint `json:"target" validate:"required"`
 }
 
-type BlockRootContainer struct {
-	Root string `json:"root" validate:"required,hexadecimal"`
-}
-
 type Checkpoint struct {
 	Epoch string `json:"epoch" validate:"required,number,gte=0"`
 	Root  string `json:"root" validate:"required,hexadecimal"`

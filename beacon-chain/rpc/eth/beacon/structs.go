@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	bytesutil2 "github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -15,9 +14,11 @@ import (
 )
 
 type BlockRootResponse struct {
-	Data                *shared.BlockRootContainer `json:"data"`
-	ExecutionOptimistic bool                       `json:"execution_optimistic"`
-	Finalized           bool                       `json:"finalized"`
+	Data *struct {
+		Root string `json:"root"`
+	} `json:"data"`
+	ExecutionOptimistic bool `json:"execution_optimistic"`
+	Finalized           bool `json:"finalized"`
 }
 
 type SignedBeaconBlock struct {

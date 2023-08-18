@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
@@ -425,6 +426,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
+	url := "http://example.com/eth/v1/beacon/blocks/{block_id}}/root"
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 	t.Run("get root", func(t *testing.T) {
@@ -452,84 +454,85 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 		tests := []struct {
 			name     string
-			blockID  string
+			blockID  map[string]string
 			want     string
 			wantErr  string
 			wantCode int
 		}{
 			{
 				name:     "bad formatting",
-				blockID:  "3bad0",
-				wantErr:  "Could not decode block ID",
+				blockID:  map[string]string{"block_id": "3bad0"},
+				wantErr:  "Could not parse block ID",
 				wantCode: http.StatusBadRequest,
 			},
 			{
 				name:     "canonical slot",
-				blockID:  hexutil.Encode([]byte("30")),
+				blockID:  map[string]string{"block_id": "30"},
 				want:     hexutil.Encode(blkContainers[30].BlockRoot),
 				wantErr:  "",
 				wantCode: http.StatusOK,
 			},
 			{
 				name:     "head",
-				blockID:  "head",
+				blockID:  map[string]string{"block_id": "head"},
 				want:     hexutil.Encode(headBlock.BlockRoot),
 				wantErr:  "",
 				wantCode: http.StatusOK,
 			},
 			{
 				name:     "finalized",
-				blockID:  "finalized",
+				blockID:  map[string]string{"block_id": "finalized"},
 				want:     hexutil.Encode(blkContainers[64].BlockRoot),
 				wantErr:  "",
 				wantCode: http.StatusOK,
 			},
 			{
 				name:     "genesis",
-				blockID:  "genesis",
+				blockID:  map[string]string{"block_id": "genesis"},
 				want:     hexutil.Encode(root[:]),
 				wantErr:  "",
 				wantCode: http.StatusOK,
 			},
 			{
 				name:     "genesis root",
-				blockID:  hexutil.Encode(root[:]),
+				blockID:  map[string]string{"block_id": hexutil.Encode(root[:])},
 				want:     hexutil.Encode(root[:]),
 				wantErr:  "",
 				wantCode: http.StatusOK,
 			},
 			{
 				name:     "root",
-				blockID:  hexutil.Encode(blkContainers[20].BlockRoot),
+				blockID:  map[string]string{"block_id": hexutil.Encode(blkContainers[20].BlockRoot)},
 				want:     hexutil.Encode(blkContainers[20].BlockRoot),
 				wantErr:  "",
 				wantCode: http.StatusOK,
 			},
 			{
 				name:     "non-existent root",
-				blockID:  hexutil.Encode(bytesutil.PadTo([]byte("hi there"), 32)),
+				blockID:  map[string]string{"block_id": hexutil.Encode(bytesutil.PadTo([]byte("hi there"), 32))},
 				wantErr:  "Could not find block",
 				wantCode: http.StatusNotFound,
 			},
 			{
 				name:     "slot",
-				blockID:  hexutil.Encode([]byte("40")),
+				blockID:  map[string]string{"block_id": "40"},
 				want:     hexutil.Encode(blkContainers[40].BlockRoot),
 				wantErr:  "",
 				wantCode: http.StatusOK,
 			},
 			{
 				name:     "no block",
-				blockID:  hexutil.Encode([]byte("105")),
+				blockID:  map[string]string{"block_id": "105"},
 				wantErr:  "Could not find any blocks with given slot",
 				wantCode: http.StatusNotFound,
 			},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				url := "http://example.com/eth/v1/beacon/blocks/" + tt.blockID + "/root"
 				request := httptest.NewRequest(http.MethodGet, url, nil)
+				request = mux.SetURLVars(request, tt.blockID)
 				writer := httptest.NewRecorder()
+
 				writer.Body = &bytes.Buffer{}
 
 				bs.GetBlockRoot(writer, request)
@@ -569,8 +572,8 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			FinalizationFetcher:   mockChainFetcher,
 		}
 
-		url := "http://example.com/eth/v1/beacon/blocks/head/root"
 		request := httptest.NewRequest(http.MethodGet, url, nil)
+		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -604,8 +607,8 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			FinalizationFetcher:   mockChainFetcher,
 		}
 		t.Run("true", func(t *testing.T) {
-			url := "http://example.com/eth/v1/beacon/blocks/" + hexutil.Encode([]byte("32")) + "/root"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request = mux.SetURLVars(request, map[string]string{"block_id": "32"})
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -616,8 +619,8 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			require.DeepEqual(t, resp.Finalized, true)
 		})
 		t.Run("false", func(t *testing.T) {
-			url := "http://example.com/eth/v1/beacon/blocks/" + hexutil.Encode([]byte("64")) + "/root"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request = mux.SetURLVars(request, map[string]string{"block_id": "64"})
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
