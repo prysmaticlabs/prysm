@@ -856,9 +856,9 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		if features.Get().EnableEIP4881 {
 			eth1Data.DepositSnapshot = &ethpb.DepositSnapshot{
 				Finalized:      make([][]byte, 0),
-				DepositRoot:    genState.Eth1Data().DepositRoot,
-				ExecutionHash:  genState.Eth1Data().BlockHash,
-				DepositCount:   genState.Eth1Data().DepositCount,
+				DepositRoot:    make([]byte, 32),
+				ExecutionHash:  make([]byte, 32),
+				DepositCount:   0,
 				ExecutionDepth: params.BeaconConfig().DepositContractTreeDepth,
 			}
 		} else {
