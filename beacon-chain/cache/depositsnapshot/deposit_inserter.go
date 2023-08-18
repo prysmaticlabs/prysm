@@ -103,12 +103,15 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	}
 	depositCount := eth1DepositIndex + 1
 	currIdx := int64(depositTrie.depositCount) - 1
-	allCtrs := c.AllDepositContainers(ctx)
 
 	// Insert deposits into deposit trie.
-	for _, ctr := range allCtrs {
+	for _, ctr := range c.deposits {
 		if ctr.Index > currIdx && ctr.Index <= eth1DepositIndex {
-			if err := depositTrie.Insert(ctr.DepositRoot, int(ctr.Index)); err != nil {
+			rt, err := ctr.Deposit.Data.HashTreeRoot()
+			if err != nil {
+				return err
+			}
+			if err := depositTrie.Insert(rt[:], int(ctr.Index)); err != nil {
 				return err
 			}
 		}

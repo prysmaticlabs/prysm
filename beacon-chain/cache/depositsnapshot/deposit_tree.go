@@ -171,7 +171,8 @@ func (d *DepositTree) MerkleProof(index int) ([][]byte, error) {
 	}
 	byteSlices := make([][]byte, len(proof))
 	for i, p := range proof {
-		byteSlices[i] = p[:]
+		copied := p
+		byteSlices[i] = copied[:]
 	}
 	return byteSlices, nil
 }

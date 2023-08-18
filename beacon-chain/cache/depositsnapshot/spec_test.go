@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"gopkg.in/yaml.v3"
 )
@@ -303,11 +302,7 @@ func TestFinalization(t *testing.T) {
 	}
 	originalRoot := tree.getRoot()
 	require.DeepEqual(t, testCases[127].Eth1Data.DepositRoot, originalRoot)
-	err = tree.Finalize(&ethpb.Eth1Data{
-		DepositRoot:  testCases[100].Eth1Data.DepositRoot[:],
-		DepositCount: testCases[100].Eth1Data.DepositCount,
-		BlockHash:    testCases[100].Eth1Data.BlockHash[:],
-	}, testCases[100].BlockHeight)
+	err = tree.Finalize(int64(testCases[100].Eth1Data.DepositCount-1), testCases[100].Eth1Data.BlockHash)
 	require.NoError(t, err)
 	// ensure finalization doesn't change root
 	require.Equal(t, tree.getRoot(), originalRoot)
@@ -320,11 +315,7 @@ func TestFinalization(t *testing.T) {
 	// ensure original and copy have the same root
 	require.Equal(t, tree.getRoot(), cp.getRoot())
 	//	finalize original again to check double finalization
-	err = tree.Finalize(&ethpb.Eth1Data{
-		DepositRoot:  testCases[105].Eth1Data.DepositRoot[:],
-		DepositCount: testCases[105].Eth1Data.DepositCount,
-		BlockHash:    testCases[105].Eth1Data.BlockHash[:],
-	}, testCases[105].BlockHeight)
+	err = tree.Finalize(int64(testCases[105].Eth1Data.DepositCount-1), testCases[105].Eth1Data.BlockHash)
 	require.NoError(t, err)
 	//	root should still be the same
 	require.Equal(t, originalRoot, tree.getRoot())
@@ -353,11 +344,7 @@ func TestSnapshotCases(t *testing.T) {
 		require.NoError(t, err)
 	}
 	for _, c := range testCases {
-		err = tree.Finalize(&ethpb.Eth1Data{
-			DepositRoot:  c.Eth1Data.DepositRoot[:],
-			DepositCount: c.Eth1Data.DepositCount,
-			BlockHash:    c.Eth1Data.BlockHash[:],
-		}, c.BlockHeight)
+		err = tree.Finalize(int64(c.Eth1Data.DepositCount-1), c.Eth1Data.BlockHash)
 		require.NoError(t, err)
 		s, err := tree.GetSnapshot()
 		require.NoError(t, err)

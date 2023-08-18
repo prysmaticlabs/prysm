@@ -35,7 +35,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -782,7 +781,11 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		// Correctly initialize missing deposits into active trie.
 		for _, c := range ctrs {
 			if c.Index > lastFinalizedIndex {
-				if err := s.depositTrie.Insert(c.DepositRoot, int(c.Index)); err != nil {
+				depRoot, err := c.Deposit.Data.HashTreeRoot()
+				if err != nil {
+					return err
+				}
+				if err := s.depositTrie.Insert(depRoot[:], int(c.Index)); err != nil {
 					return err
 				}
 			}
@@ -893,29 +896,6 @@ func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error
 		if err = newDepositTrie.Insert(item, i); err != nil {
 			return errors.Wrapf(err, "could not insert item at index %d into deposit snapshot tree", i)
 		}
-	}
-
-	fState, err := s.cfg.beaconDB.GenesisState(context.Background())
-	if err != nil {
-		return err
-	}
-	chkPt, err := s.cfg.beaconDB.FinalizedCheckpoint(context.Background())
-	if err != nil {
-		return err
-	}
-	rt := bytesutil.ToBytes32(chkPt.Root)
-	if rt != [32]byte{} {
-		fState = s.cfg.finalizedStateAtStartup
-		if fState == nil || fState.IsNil() {
-			return errors.Errorf("finalized state with root %#x is nil", rt)
-		}
-	}
-	depIdx, err := mathutil.Int(fState.Eth1DepositIndex())
-	if err != nil {
-		return err
-	}
-	if err = newDepositTrie.Finalize(int64(depIdx), common.Hash(fState.Eth1Data().BlockHash)); err != nil {
-		return errors.Wrap(err, "could not finalize deposit snapshot tree")
 	}
 	newDepositRoot, err := newDepositTrie.HashTreeRoot()
 	if err != nil {

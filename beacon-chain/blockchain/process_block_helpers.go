@@ -247,7 +247,7 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) {
 	// to the provided eth1 deposit index.
 	s.cfg.DepositCache.PrunePendingDeposits(ctx, int64(eth1DepositIndex)) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
 
-	log.WithField("duration", time.Since(startTime).String()).Debug("Finalized deposit insertion completed")
+	log.WithField("duration", time.Since(startTime).String()).Debugf("Finalized deposit insertion completed at index %d", finalizedEth1DepIdx)
 }
 
 // This ensures that the input root defaults to using genesis root instead of zero hashes. This is needed for handling

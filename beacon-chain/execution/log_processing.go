@@ -563,7 +563,11 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 	}
 	if features.Get().EnableEIP4881 {
-		tree, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+		fd, err := s.cfg.depositCache.FinalizedDeposits(ctx)
+		if err != nil {
+			return errors.Errorf("could not get finalized deposit tree: %v", err)
+		}
+		tree, ok := fd.Deposits().(*depositsnapshot.DepositTree)
 		if !ok {
 			return errors.New("deposit tree was not EIP4881 DepositTree")
 		}
