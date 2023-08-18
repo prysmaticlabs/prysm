@@ -770,14 +770,11 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		}
 	}
 	s.latestEth1Data = eth1DataInDB.CurrentEth1Data
-	numOfItems := s.depositTrie.NumOfItems()
-	s.lastReceivedMerkleIndex = int64(numOfItems - 1)
-	if err := s.initDepositCaches(ctx, eth1DataInDB.DepositContainers); err != nil {
-		return errors.Wrap(err, "could not initialize caches")
-	}
 	if features.Get().EnableEIP4881 {
-		ctrs := s.cfg.depositCache.AllDepositContainers(ctx)
-		lastFinalizedIndex := s.lastReceivedMerkleIndex
+		ctrs := eth1DataInDB.DepositContainers
+		// Look at previously finalized index, as we are building off a finalized
+		// snapshot rather than the full trie.
+		lastFinalizedIndex := int64(s.depositTrie.NumOfItems() - 1)
 		// Correctly initialize missing deposits into active trie.
 		for _, c := range ctrs {
 			if c.Index > lastFinalizedIndex {
@@ -790,9 +787,11 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 				}
 			}
 		}
-		// Reinitialize deposit index
-		numOfItems := s.depositTrie.NumOfItems()
-		s.lastReceivedMerkleIndex = int64(numOfItems - 1)
+	}
+	numOfItems := s.depositTrie.NumOfItems()
+	s.lastReceivedMerkleIndex = int64(numOfItems - 1)
+	if err := s.initDepositCaches(ctx, eth1DataInDB.DepositContainers); err != nil {
+		return errors.Wrap(err, "could not initialize caches")
 	}
 	return nil
 }
