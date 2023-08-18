@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 )
 
@@ -199,7 +199,7 @@ type VersionResponseJson struct {
 }
 
 type SyncingResponseJson struct {
-	Data *helpers.SyncDetailsJson `json:"data"`
+	Data *shared.SyncDetails `json:"data"`
 }
 
 type BeaconStateResponseJson struct {
@@ -268,16 +268,8 @@ type ProduceBlindedBlockResponseJson struct {
 	Data    *BlindedBeaconBlockContainerJson `json:"data"`
 }
 
-type ProduceAttestationDataResponseJson struct {
-	Data *AttestationDataJson `json:"data"`
-}
-
 type AggregateAttestationResponseJson struct {
 	Data *AttestationJson `json:"data"`
-}
-
-type SubmitBeaconCommitteeSubscriptionsRequestJson struct {
-	Data []*BeaconCommitteeSubscribeJson `json:"data"`
 }
 
 type BeaconCommitteeSubscribeJson struct {
@@ -286,20 +278,6 @@ type BeaconCommitteeSubscribeJson struct {
 	CommitteesAtSlot string `json:"committees_at_slot"`
 	Slot             string `json:"slot"`
 	IsAggregator     bool   `json:"is_aggregator"`
-}
-
-type SubmitSyncCommitteeSubscriptionRequestJson struct {
-	Data []*SyncCommitteeSubscriptionJson `json:"data"`
-}
-
-type SyncCommitteeSubscriptionJson struct {
-	ValidatorIndex       string   `json:"validator_index"`
-	SyncCommitteeIndices []string `json:"sync_committee_indices"`
-	UntilEpoch           string   `json:"until_epoch"`
-}
-
-type SubmitAggregateAndProofsRequestJson struct {
-	Data []*SignedAggregateAttestationAndProofJson `json:"data"`
 }
 
 type ProduceSyncCommitteeContributionResponseJson struct {
@@ -1215,7 +1193,7 @@ type SingleIndexedVerificationFailureJson struct {
 
 type NodeSyncDetailsErrorJson struct {
 	apimiddleware.DefaultErrorJson
-	SyncDetails helpers.SyncDetailsJson `json:"sync_details"`
+	SyncDetails shared.SyncDetails `json:"sync_details"`
 }
 
 type EventErrorJson struct {

@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
@@ -176,7 +176,7 @@ func TestGetSyncStatus(t *testing.T) {
 		{
 			name: "returns false syncing status",
 			restEndpointResponse: apimiddleware.SyncingResponseJson{
-				Data: &helpers.SyncDetailsJson{
+				Data: &shared.SyncDetails{
 					IsSyncing: false,
 				},
 			},
@@ -187,7 +187,7 @@ func TestGetSyncStatus(t *testing.T) {
 		{
 			name: "returns true syncing status",
 			restEndpointResponse: apimiddleware.SyncingResponseJson{
-				Data: &helpers.SyncDetailsJson{
+				Data: &shared.SyncDetails{
 					IsSyncing: true,
 				},
 			},

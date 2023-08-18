@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -101,14 +102,20 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 10)
+	syncCommitteePool := synccommittee.NewStore()
+	headFetcher := &mock.ChainService{
+		State:                st,
+		SyncCommitteeIndices: []primitives.CommitteeIndex{10},
+	}
 	server := &Server{
-		SyncCommitteePool: synccommittee.NewStore(),
-		P2P:               &mockp2p.MockBroadcaster{},
-		HeadFetcher: &mock.ChainService{
-			State:                st,
-			SyncCommitteeIndices: []primitives.CommitteeIndex{10},
+		CoreService: &core.Service{
+			SyncCommitteePool: syncCommitteePool,
+			HeadFetcher:       headFetcher,
 		},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher:       headFetcher,
+		P2P:               &mockp2p.MockBroadcaster{},
+		TimeFetcher:       &mock.ChainService{Genesis: time.Now()},
 	}
 	secKey, err := bls.RandKey()
 	require.NoError(t, err)
@@ -137,9 +144,11 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 
 func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 	server := &Server{
-		SyncCommitteePool: synccommittee.NewStore(),
-		P2P:               &mockp2p.MockBroadcaster{},
-		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		CoreService: &core.Service{
+			SyncCommitteePool: synccommittee.NewStore(),
+			Broadcaster:       &mockp2p.MockBroadcaster{},
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		},
 	}
 	contribution := &ethpb.SignedContributionAndProof{
 		Message: &ethpb.ContributionAndProof{
@@ -151,21 +160,23 @@ func TestSubmitSignedContributionAndProof_OK(t *testing.T) {
 	}
 	_, err := server.SubmitSignedContributionAndProof(context.Background(), contribution)
 	require.NoError(t, err)
-	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeContributions(1)
+	savedMsgs, err := server.CoreService.SyncCommitteePool.SyncCommitteeContributions(1)
 	require.NoError(t, err)
 	require.DeepEqual(t, []*ethpb.SyncCommitteeContribution{contribution.Message.Contribution}, savedMsgs)
 }
 
 func TestSubmitSignedContributionAndProof_Notification(t *testing.T) {
 	server := &Server{
-		SyncCommitteePool: synccommittee.NewStore(),
-		P2P:               &mockp2p.MockBroadcaster{},
-		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		CoreService: &core.Service{
+			SyncCommitteePool: synccommittee.NewStore(),
+			Broadcaster:       &mockp2p.MockBroadcaster{},
+			OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		},
 	}
 
 	// Subscribe to operation notifications.
 	opChannel := make(chan *feed.Event, 1024)
-	opSub := server.OperationNotifier.OperationFeed().Subscribe(opChannel)
+	opSub := server.CoreService.OperationNotifier.OperationFeed().Subscribe(opChannel)
 	defer opSub.Unsubscribe()
 
 	contribution := &ethpb.SignedContributionAndProof{

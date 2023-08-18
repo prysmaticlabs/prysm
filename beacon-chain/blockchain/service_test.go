@@ -357,7 +357,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	require.NoError(t, s.cfg.StateGen.SaveState(ctx, r, newState))
 	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	require.NoError(t, s.saveHeadNoDB(ctx, wsb, r, newState))
+	require.NoError(t, s.saveHeadNoDB(ctx, wsb, r, newState, false))
 
 	newB, err := s.cfg.BeaconDB.HeadBlock(ctx)
 	require.NoError(t, err)

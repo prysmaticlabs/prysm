@@ -129,24 +129,3 @@ message Version {
   // A string that uniquely identifies the node and its version.
   string version = 1;
 }
-
-message SyncingResponse {
-  SyncInfo data = 1;
-}
-
-message SyncInfo {
-  // A uint64 states the latest head slot of the current node.
-  uint64 head_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-
-  // A uint64 indicating how many slots are left for the beacon node sync to complete.
-  uint64 sync_distance = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-
-  // A bool indicating whether the node is currently syncing or not.
-  bool is_syncing = 3;
-
-  // A bool indicating whether the node is currently in optimistic mode.
-  bool is_optimistic = 4;
-
-  // Set to true if the execution client is offline.
-  bool el_offline = 5;
-}
