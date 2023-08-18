@@ -673,7 +673,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 	case "genesis":
 		blk, err := bs.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
-			http2.HandleError(w, "Could not retrieve blocks for genesis slot: "+err.Error(), http.StatusInternalServerError)
+			http2.HandleError(w, "Could not retrieve genesis block: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if err := blocks.BeaconBlockIsNil(blk); err != nil {
