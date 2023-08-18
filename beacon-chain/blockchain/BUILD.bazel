@@ -21,6 +21,7 @@ go_library(
         "process_block.go",
         "process_block_helpers.go",
         "receive_attestation.go",
+        "receive_blob.go",
         "receive_block.go",
         "service.go",
         "weak_subjectivity_checks.go",
