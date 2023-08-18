@@ -337,11 +337,34 @@ func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValid
 			return nil, err
 		}
 		b = beaconBlock
-	case *validatorpb.SignRequest_BlindedBlockDeneb:
-		version = "DENEB"
 	case *validatorpb.SignRequest_BlockDeneb:
 		version = "DENEB"
-
+		blockDeneb, ok := request.Object.(*validatorpb.SignRequest_BlockDeneb)
+		if !ok {
+			return nil, errors.New("failed to cast request object to deneb block")
+		}
+		if blockDeneb == nil {
+			return nil, errors.New("invalid sign request: deneb block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blockDeneb.BlockDeneb)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlindedBlockDeneb:
+		version = "DENEB"
+		blindedBlockDeneb, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockDeneb)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blinded deneb block")
+		}
+		if blindedBlockDeneb == nil {
+			return nil, errors.New("invalid sign request: blinded deneb block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockDeneb.BlindedBlockDeneb)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
 	default:
 		return nil, errors.New("invalid sign request - invalid object type")
 	}
