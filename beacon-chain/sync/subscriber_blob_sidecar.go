@@ -22,5 +22,7 @@ func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 		return err
 	}
 
+	s.cfg.chain.SendNewBlobEvent([32]byte(b.Message.BlockRoot), b.Message.Index)
+
 	return nil
 }
