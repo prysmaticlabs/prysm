@@ -689,17 +689,22 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 				http2.HandleError(w, "Could not decode block ID into bytes: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			blockID32 := bytesutil.ToBytes32(blockIDBytes)
-			blk, err := bs.BeaconDB.Block(ctx, blockID32)
-			if err != nil {
-				http2.HandleError(w, fmt.Sprintf("Could not retrieve block for block root %#x: %v", blockID, err), http.StatusInternalServerError)
+			if len(blockIDBytes) == 32 {
+				blockID32 := bytesutil.ToBytes32(blockIDBytes)
+				blk, err := bs.BeaconDB.Block(ctx, blockID32)
+				if err != nil {
+					http2.HandleError(w, fmt.Sprintf("Could not retrieve block for block root %#x: %v", blockID, err), http.StatusInternalServerError)
+					return
+				}
+				if err := blocks.BeaconBlockIsNil(blk); err != nil {
+					http2.HandleError(w, "Could not find block: "+err.Error(), http.StatusNotFound)
+					return
+				}
+				root = blockIDBytes
+			} else {
+				http2.HandleError(w, fmt.Sprintf("Block ID has length %d instead of 32", len(blockIDBytes)), http.StatusBadRequest)
 				return
 			}
-			if err := blocks.BeaconBlockIsNil(blk); err != nil {
-				http2.HandleError(w, "Could not find block: "+err.Error(), http.StatusNotFound)
-				return
-			}
-			root = blockIDBytes
 		} else {
 			slot, err := strconv.ParseUint(blockID, 10, 64)
 			if err != nil {
