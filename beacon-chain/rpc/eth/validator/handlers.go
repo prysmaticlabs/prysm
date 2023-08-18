@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
@@ -522,4 +524,50 @@ func (s *Server) produceSyncCommitteeContribution(
 		AggregationBits:   hexutil.Encode(aggregatedBits),
 		Signature:         hexutil.Encode(sig),
 	}, true
+}
+
+// RegisterValidator requests that the beacon node stores valid validator registrations and calls the builder apis to update the custom builder
+func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.RegisterValidators")
+	defer span.End()
+
+	if s.BlockBuilder == nil || !s.BlockBuilder.Configured() {
+		http2.HandleError(w, fmt.Sprintf("Could not register block builder: %v", builder.ErrNoBuilder), http.StatusBadRequest)
+		return
+	}
+
+	var jsonRegistrations []*shared.SignedValidatorRegistration
+	err := json.NewDecoder(r.Body).Decode(&jsonRegistrations)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	validate := validator.New()
+	registrations := make([]*ethpbalpha.SignedValidatorRegistrationV1, len(jsonRegistrations))
+	for i, registration := range jsonRegistrations {
+		if err := validate.Struct(registration); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		reg, err := registration.ToConsensus()
+		if err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		registrations[i] = reg
+	}
+	if len(registrations) == 0 {
+		http2.HandleError(w, "Validator registration request is empty", http.StatusBadRequest)
+		return
+	}
+	if err := s.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
