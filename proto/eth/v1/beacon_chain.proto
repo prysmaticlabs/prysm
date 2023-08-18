@@ -241,19 +241,6 @@ message BeaconBlockContainer {
 
 // Beacon Pool related API service.
 
-message AttestationsPoolRequest {
-    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-    optional uint64 committee_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.CommitteeIndex"];
-}
-
-message SubmitAttestationsRequest {
-    repeated ethereum.eth.v1.Attestation data = 1;
-}
-
-message AttestationsPoolResponse {
-    repeated ethereum.eth.v1.Attestation data = 1;
-}
-
 message AttesterSlashingsPoolResponse {
     repeated AttesterSlashing data = 1;
 }
