@@ -344,6 +344,9 @@ func sortedBlockWithVerifiedBlobSlice(blocks []interfaces.ReadOnlySignedBeaconBl
 }
 
 func blobRequest(bwb []blocks2.BlockWithVerifiedBlobs, blobWindowStart primitives.Slot) *p2ppb.BlobSidecarsByRangeRequest {
+	if len(bwb) == 0 {
+		return nil
+	}
 	lowest := lowestSlotNeedsBlob(blobWindowStart, bwb)
 	if lowest == nil {
 		return nil
