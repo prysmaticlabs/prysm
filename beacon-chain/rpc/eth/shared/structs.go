@@ -198,6 +198,14 @@ func (a *Attestation) ToConsensus() (*eth.Attestation, error) {
 	}, nil
 }
 
+func AttestationFromConsensus(a *eth.Attestation) *Attestation {
+	return &Attestation{
+		AggregationBits: hexutil.Encode(a.AggregationBits),
+		Data:            AttestationDataFromConsensus(a.Data),
+		Signature:       hexutil.Encode(a.Signature),
+	}
+}
+
 func (a *AttestationData) ToConsensus() (*eth.AttestationData, error) {
 	slot, err := strconv.ParseUint(a.Slot, 10, 64)
 	if err != nil {
@@ -229,6 +237,16 @@ func (a *AttestationData) ToConsensus() (*eth.AttestationData, error) {
 	}, nil
 }
 
+func AttestationDataFromConsensus(a *eth.AttestationData) *AttestationData {
+	return &AttestationData{
+		Slot:            strconv.FormatUint(uint64(a.Slot), 10),
+		CommitteeIndex:  strconv.FormatUint(uint64(a.CommitteeIndex), 10),
+		BeaconBlockRoot: hexutil.Encode(a.BeaconBlockRoot),
+		Source:          CheckpointFromConsensus(a.Source),
+		Target:          CheckpointFromConsensus(a.Target),
+	}
+}
+
 func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
 	epoch, err := strconv.ParseUint(c.Epoch, 10, 64)
 	if err != nil {
@@ -243,6 +261,13 @@ func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
 		Epoch: primitives.Epoch(epoch),
 		Root:  root,
 	}, nil
+}
+
+func CheckpointFromConsensus(c *eth.Checkpoint) *Checkpoint {
+	return &Checkpoint{
+		Epoch: strconv.FormatUint(uint64(c.Epoch), 10),
+		Root:  hexutil.Encode(c.Root),
+	}
 }
 
 func (s *SyncCommitteeSubscription) ToConsensus() (*validator.SyncCommitteeSubscription, error) {
